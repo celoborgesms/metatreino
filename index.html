@@ -922,13 +922,17 @@
         <input id="nomeAlunoPainel" type="text" placeholder="Ex: João Silva">
 
         <label for="planoAlunoPainel">Plano</label>
-        <select id="planoAlunoPainel">
+        <select id="planoAlunoPainel" onchange="ajustarValorPlanoPainel()">
           <option value="mensal">Mensal</option>
           <option value="trimestral">Trimestral</option>
           <option value="semestral">Semestral</option>
           <option value="anual">Anual</option>
           <option value="teste">Teste grátis 24h</option>
         </select>
+
+        <label for="valorAlunoPainel">Valor mensal (R$)</label>
+        <input id="valorAlunoPainel" type="number" min="0" step="0.01" placeholder="Ex: 29.90">
+        <p class="small">Para teste grátis, deixe 0. Use este valor para acompanhar o faturamento mensal estimado no painel.</p>
 
         <button type="button" onclick="liberarAlunoPainel()">Liberar acesso</button>
         <button type="button" class="botao-secundario" onclick="liberarTestePainel()">Liberar teste grátis 24h</button>
@@ -952,6 +956,19 @@
         <div class="alerta">
           <strong>Dúvidas ou sugestões?</strong><br>
           Entre em contato pelo e-mail <strong>celoborgesms@gmail.com</strong>.
+        </div>
+
+        <div class="historico-item">
+          <strong>Versão 1.2.9 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 12:10</p>
+          <ul>
+            <li>Adicionado campo de valor mensal no Painel do Treinador.</li>
+            <li>Adicionado faturamento mensal estimado somando alunos ativos pagos.</li>
+            <li>Testes grátis ficam com valor zerado automaticamente.</li>
+            <li>Adicionado alerta para alunos que precisam renovar em até 7 dias.</li>
+            <li>Melhorada a visão comercial para acompanhar vendas, testes e renovações.</li>
+          </ul>
         </div>
 
         <div class="historico-item">
@@ -983,16 +1000,7 @@
           </ul>
         </div>
 
-        <div class="historico-item">
-          <strong>Versão 1.2.6 Beta</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 09:40</p>
-          <ul>
-            <li>Adicionada progressão semanal inteligente para ajustar o volume conforme frequência recente.</li>
-            <li>Adicionado plano progressivo de cardio até desafio/prova.</li>
-            <li>O app passou a considerar objetivo, nível e prazo para sugerir evolução no cardio.</li>
-          </ul>
-        </div>
+
       </div>
     </section>
 
@@ -1336,6 +1344,8 @@
       const emailAluno = obterEmailAlunoPainel();
       const nomeAluno = (document.getElementById("nomeAlunoPainel").value || "").trim();
       const planoAluno = document.getElementById("planoAlunoPainel").value;
+      const campoValorAluno = document.getElementById("valorAlunoPainel");
+      const valorAluno = planoAluno === "teste" ? 0 : Math.max(Number(campoValorAluno ? campoValorAluno.value : 0) || 0, 0);
 
       if (!emailAluno || !emailAluno.includes("@")) {
         mostrarMensagemPainel("Informe um e-mail válido para liberar o aluno.", "aviso");
@@ -1359,6 +1369,7 @@
         ativo: true,
         nome: nomeAluno || emailAluno,
         plano: planoAluno,
+        valorMensal: valorAluno,
         expiraEm: dataExpiracao,
         liberadoEm: agora.toLocaleString("pt-BR"),
         atualizadoEm: agora.getTime(),
@@ -1452,15 +1463,25 @@
             const emailJS = JSON.stringify(item.email);
             const nomeJS = JSON.stringify(item.dados.nome || "");
             const planoJS = JSON.stringify(item.dados.plano || "mensal");
+            const valorJS = JSON.stringify(Number(item.dados.valorMensal || item.dados.valor || 0));
+            const diasRenovar = diasParaExpirar(item.dados.expiraEm);
+            let alertaRenovacao = "";
+            if (alunoPrecisaRenovar(item.dados)) {
+              alertaRenovacao = "<div class='alerta alerta-aviso'><strong>⚠️ Renovação próxima:</strong> vence em " + diasRenovar + " dia(s).</div>";
+            } else if (planoEstaVencido(item.dados)) {
+              alertaRenovacao = "<div class='alerta alerta-aviso'><strong>⏳ Plano vencido:</strong> renove ou bloqueie o aluno.</div>";
+            }
 
             div.innerHTML =
               "<strong>" + limparTextoSeguro(item.dados.nome || item.email) + "</strong><br>" +
               "E-mail: " + limparTextoSeguro(item.email) + "<br>" +
               "Plano: " + limparTextoSeguro(item.dados.plano || "Não informado") + "<br>" +
+              "Valor mensal: <strong>" + limparTextoSeguro(formatarMoeda(item.dados.valorMensal || item.dados.valor || 0)) + "</strong><br>" +
               "Status: <strong>" + (ativo ? "Ativo" : "Bloqueado") + "</strong><br>" +
               "Expira em: <strong>" + limparTextoSeguro(formatarDataPlano(item.dados.expiraEm)) + "</strong><br>" +
+              alertaRenovacao +
               "Atualizado em: " + limparTextoSeguro(item.dados.liberadoEm || item.dados.bloqueadoEm || "Não informado") + "<br>" +
-              "<button type='button' class='botao-secundario' onclick='preencherAlunoPainel(" + emailJS + ", " + nomeJS + ", " + planoJS + ")'>Selecionar</button>" +
+              "<button type='button' class='botao-secundario' onclick='preencherAlunoPainel(" + emailJS + ", " + nomeJS + ", " + planoJS + ", " + valorJS + ")'>Selecionar</button>" +
               "<button type='button' class='botao-secundario' onclick='renovarAlunoPainel(" + emailJS + ", 30)'>Renovar +30 dias</button>" +
               "<button type='button' class='botao-perigo' onclick='excluirAlunoPainel(" + emailJS + ")'>Excluir aluno</button>";
             lista.appendChild(div);
@@ -1484,12 +1505,39 @@
       return hoje > expira;
     }
 
+    function formatarMoeda(valor) {
+      const numero = Math.max(Number(valor || 0), 0);
+      return numero.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function diasParaExpirar(dataISO) {
+      if (!dataISO) return null;
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const expira = new Date(dataISO + "T00:00:00");
+      return Math.ceil((expira.getTime() - hoje.getTime()) / 86400000);
+    }
+
+    function alunoPrecisaRenovar(dados) {
+      if (!dados || dados.ativo !== true || dados.plano === "teste" || !dados.expiraEm) return false;
+      const dias = diasParaExpirar(dados.expiraEm);
+      return dias !== null && dias >= 0 && dias <= 7;
+    }
+
     function montarDashboardTreinador(usuarios) {
       const total = usuarios.length;
       const ativos = usuarios.filter(function(item) { return item.dados.ativo === true && !planoEstaVencido(item.dados); }).length;
       const vencidos = usuarios.filter(function(item) { return item.dados.ativo === true && planoEstaVencido(item.dados); }).length;
       const testes = usuarios.filter(function(item) { return item.dados.plano === "teste"; }).length;
       const bloqueados = usuarios.filter(function(item) { return item.dados.ativo !== true; }).length;
+      const renovar = usuarios.filter(function(item) { return alunoPrecisaRenovar(item.dados); }).length;
+      const faturamento = usuarios.reduce(function(totalAtual, item) {
+        const dados = item.dados || {};
+        if (dados.ativo === true && !planoEstaVencido(dados) && dados.plano !== "teste") {
+          return totalAtual + Math.max(Number(dados.valorMensal || dados.valor || 0), 0);
+        }
+        return totalAtual;
+      }, 0);
 
       return "" +
         "<div class='dashboard-box'><strong>" + total + "</strong><span class='small'>Total de alunos</span></div>" +
@@ -1497,7 +1545,8 @@
         "<div class='dashboard-box'><strong>" + vencidos + "</strong><span class='small'>Vencidos</span></div>" +
         "<div class='dashboard-box'><strong>" + testes + "</strong><span class='small'>Testes grátis</span></div>" +
         "<div class='dashboard-box'><strong>" + bloqueados + "</strong><span class='small'>Bloqueados</span></div>" +
-        "<div class='dashboard-box'><strong>R$</strong><span class='small'>Use esta visão para acompanhar conversões e renovações.</span></div>";
+        "<div class='dashboard-box'><strong>" + renovar + "</strong><span class='small'>Renovar em até 7 dias</span></div>" +
+        "<div class='dashboard-box'><strong>" + formatarMoeda(faturamento) + "</strong><span class='small'>Faturamento mensal estimado</span></div>";
     }
 
     function renovarAlunoPainel(emailAluno, dias) {
@@ -1519,9 +1568,13 @@
       novaData.setDate(hoje.getDate() + dias);
       const dataExpiracao = novaData.toISOString().slice(0, 10);
 
+      const campoValorAluno = document.getElementById("valorAlunoPainel");
+      const valorAluno = Math.max(Number(campoValorAluno ? campoValorAluno.value : 0) || 0, 0);
+
       db.collection("usuariosAutorizados").doc(emailAluno).set({
         ativo: true,
         plano: "mensal",
+        valorMensal: valorAluno,
         expiraEm: dataExpiracao,
         atualizadoEm: hoje.getTime(),
         renovadoEm: hoje.toLocaleString("pt-BR"),
@@ -1567,10 +1620,19 @@
         });
     }
 
-    function preencherAlunoPainel(email, nome, plano) {
+    function ajustarValorPlanoPainel() {
+      const plano = document.getElementById("planoAlunoPainel");
+      const valor = document.getElementById("valorAlunoPainel");
+      if (!plano || !valor) return;
+      if (plano.value === "teste") valor.value = "0";
+    }
+
+    function preencherAlunoPainel(email, nome, plano, valor) {
       document.getElementById("emailAlunoPainel").value = email || "";
       document.getElementById("nomeAlunoPainel").value = nome || "";
       document.getElementById("planoAlunoPainel").value = plano || "mensal";
+      const campoValor = document.getElementById("valorAlunoPainel");
+      if (campoValor) campoValor.value = Number(valor || 0);
       document.getElementById("emailAlunoPainel").scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
