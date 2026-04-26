@@ -581,9 +581,13 @@
 
 
 
-    /* Identidade visual MetaTreino - premium */
+    /* Identidade visual MetaTreino - premium refinada */
     body {
-      background: #0f172a !important;
+      background:
+        radial-gradient(circle at top left, rgba(34, 197, 94, 0.16), transparent 34%),
+        radial-gradient(circle at 85% 10%, rgba(59, 130, 246, 0.26), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.20), transparent 38%),
+        linear-gradient(180deg, #0f172a 0%, #111827 45%, #0b1120 100%) !important;
       color: #ffffff !important;
     }
 
@@ -592,9 +596,9 @@
     }
 
     .app-badge {
-      background: rgba(34, 197, 94, 0.16) !important;
-      color: #bbf7d0 !important;
-      border-color: rgba(34, 197, 94, 0.35) !important;
+      background: rgba(59, 130, 246, 0.16) !important;
+      color: #dbeafe !important;
+      border-color: rgba(59, 130, 246, 0.38) !important;
     }
 
     .card,
@@ -605,7 +609,7 @@
     .feedback-treino,
     .check-exercicio,
     .modal-card {
-      background: rgba(15, 23, 42, 0.94) !important;
+      background: rgba(15, 23, 42, 0.92) !important;
       color: #ffffff !important;
       border-color: rgba(148, 163, 184, 0.28) !important;
     }
@@ -644,16 +648,25 @@
       color: #ffffff;
     }
 
+    /* Botões principais agora usam azul confiança. O verde fica só como detalhe da marca. */
     .botao-principal,
     button {
-      background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+      background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
       color: #ffffff !important;
+      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.28) !important;
     }
 
     .botao-secundario {
-      background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+      background: rgba(30, 41, 59, 0.92) !important;
+      color: #e2e8f0 !important;
+      border-color: rgba(148, 163, 184, 0.35) !important;
+      box-shadow: none !important;
+    }
+
+    .botao-perigo {
+      background: linear-gradient(135deg, #ef4444, #dc2626) !important;
       color: #ffffff !important;
-      border-color: rgba(191, 219, 254, 0.35) !important;
+      box-shadow: 0 12px 26px rgba(239, 68, 68, 0.24) !important;
     }
 
     .card::before,
@@ -680,7 +693,25 @@
       border-left-color: #f97316 !important;
     }
 
+    .bottom-nav {
+      background: rgba(15, 23, 42, 0.88) !important;
+      border-color: rgba(148, 163, 184, 0.24) !important;
+    }
 
+    .bottom-nav button {
+      background: transparent !important;
+      color: #cbd5e1 !important;
+      box-shadow: none !important;
+      border-color: transparent !important;
+    }
+
+    .bottom-nav button:hover,
+    .bottom-nav button:active {
+      background: rgba(59, 130, 246, 0.18) !important;
+      color: #ffffff !important;
+      border-color: rgba(59, 130, 246, 0.34) !important;
+      transform: none !important;
+    }
 
     /* Correção de contraste - checkbox dos termos e caixas de marcação */
     .check-termos {
@@ -1093,6 +1124,7 @@
             <li>Testes grátis ficam com valor zerado automaticamente.</li>
             <li>Adicionado alerta para alunos que precisam renovar em até 7 dias.</li>
             <li>Adicionado botão para copiar mensagem de renovação e enviar manualmente pelo WhatsApp.</li>
+            <li>Ajuste visual da paleta MetaTreino: fundo mesclado novamente e botões/abas com azul mais limpo.</li>
             <li>Atualizada a identidade visual para MetaTreino com fundo escuro premium, verde energia e azul confiança.</li>
             <li>Adicionado texto profissional: treinos inteligentes, acompanhamento real e evolução constante.</li>
             <li>Melhorada a visão comercial para acompanhar vendas, testes e renovações.</li>
