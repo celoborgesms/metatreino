@@ -1,10 +1,11 @@
 self.addEventListener("install", function(event) {
   event.waitUntil(
-    caches.open("treino-cache").then(function(cache) {
+    caches.open("treino-cache-v2").then(function(cache) {
       return cache.addAll([
-        "index.html",
-        "manifest.json"
-  "./icon-512.png"
+        "./",
+        "./index.html",
+        "./manifest.json",
+        "./icon-512.png.png"
       ]);
     })
   );
