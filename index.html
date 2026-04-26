@@ -967,6 +967,7 @@
             <li>Adicionado faturamento mensal estimado somando alunos ativos pagos.</li>
             <li>Testes grátis ficam com valor zerado automaticamente.</li>
             <li>Adicionado alerta para alunos que precisam renovar em até 7 dias.</li>
+            <li>Adicionado botão para copiar mensagem de renovação e enviar manualmente pelo WhatsApp.</li>
             <li>Melhorada a visão comercial para acompanhar vendas, testes e renovações.</li>
           </ul>
         </div>
@@ -1483,6 +1484,7 @@
               "Atualizado em: " + limparTextoSeguro(item.dados.liberadoEm || item.dados.bloqueadoEm || "Não informado") + "<br>" +
               "<button type='button' class='botao-secundario' onclick='preencherAlunoPainel(" + emailJS + ", " + nomeJS + ", " + planoJS + ", " + valorJS + ")'>Selecionar</button>" +
               "<button type='button' class='botao-secundario' onclick='renovarAlunoPainel(" + emailJS + ", 30)'>Renovar +30 dias</button>" +
+              "<button type='button' class='botao-secundario' onclick='copiarMensagemRenovacaoAluno(" + nomeJS + ")'>📩 Copiar aviso</button>" +
               "<button type='button' class='botao-perigo' onclick='excluirAlunoPainel(" + emailJS + ")'>Excluir aluno</button>";
             lista.appendChild(div);
           });
@@ -1547,6 +1549,23 @@
         "<div class='dashboard-box'><strong>" + bloqueados + "</strong><span class='small'>Bloqueados</span></div>" +
         "<div class='dashboard-box'><strong>" + renovar + "</strong><span class='small'>Renovar em até 7 dias</span></div>" +
         "<div class='dashboard-box'><strong>" + formatarMoeda(faturamento) + "</strong><span class='small'>Faturamento mensal estimado</span></div>";
+    }
+
+    function copiarMensagemRenovacaoAluno(nomeAluno) {
+      const nome = nomeAluno && String(nomeAluno).trim() ? String(nomeAluno).trim() : "tudo bem";
+      const mensagem = "Olá " + nome + ", seu acesso ao Meu Treino Inteligente vence em breve. Quer renovar por mais 30 dias?";
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(mensagem)
+          .then(function() {
+            mostrarMensagemPainel("📩 Mensagem de renovação copiada. Agora é só colar no WhatsApp do aluno.", "sucesso");
+          })
+          .catch(function() {
+            prompt("Copie a mensagem abaixo:", mensagem);
+          });
+      } else {
+        prompt("Copie a mensagem abaixo:", mensagem);
+      }
     }
 
     function renovarAlunoPainel(emailAluno, dias) {
