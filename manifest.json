@@ -1,9 +1,16 @@
 {
-"name": "MetaTreino",
-"short_name": "MetaTreino"
-  "start_url": "index.html",
+  "name": "MetaTreino",
+  "short_name": "MetaTreino",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f2f4f8",
-  "theme_color": "#1f7aec",
-  "icons": []
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
