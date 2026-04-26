@@ -1,239 +1,2143 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Meu Treino Inteligente</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Treino Inteligente</title>
+  <meta name="theme-color" content="#1f7aec">
+  <link rel="manifest" href="manifest.json">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-2: #111827;
+      --card: rgba(255, 255, 255, 0.92);
+      --primary: #22c55e;
+      --primary-dark: #16a34a;
+      --secondary: #38bdf8;
+      --danger: #ef4444;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: rgba(226, 232, 240, 0.9);
+      --glass: rgba(255, 255, 255, 0.12);
+      --success-bg: #ecfdf5;
+      --warning-bg: #fff7ed;
+      --info-bg: #eff6ff;
+    }
 
-<style>
-body { font-family: Arial; background:#0f172a; color:white; margin:0; }
-.container { max-width:500px; margin:auto; padding:20px; }
-.card { background:white; color:black; padding:15px; border-radius:15px; margin-bottom:15px; }
-.hidden { display:none; }
+    * {
+      box-sizing: border-box;
+      font-family: Inter, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  background: #111;
-  padding: 10px;
-}
+    html {
+      scroll-behavior: smooth;
+    }
 
-.bottom-nav button {
-  min-width: 90px;
-  flex-shrink: 0;
-  background: none;
-  color: white;
-  border:none;
-}
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(34, 197, 94, 0.28), transparent 32%),
+        radial-gradient(circle at 85% 10%, rgba(56, 189, 248, 0.22), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.18), transparent 36%),
+        linear-gradient(180deg, #0f172a 0%, #111827 42%, #0b1120 100%);
+      color: var(--text);
+      padding-bottom: 86px;
+    }
 
-button {
-  padding:10px;
-  border-radius:10px;
-  border:none;
-  margin-top:10px;
-}
-</style>
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 20px;
+      animation: aparecer 0.45s ease;
+    }
+
+    .app-hero {
+      color: white;
+      padding: 18px 2px 10px;
+      animation: subir 0.35s ease;
+    }
+
+    .app-badge {
+      display: inline-block;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.16);
+      color: #bbf7d0;
+      border: 1px solid rgba(187, 247, 208, 0.25);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    h1 {
+      font-size: 34px;
+      color: white;
+      margin: 12px 0 6px;
+      letter-spacing: -1.2px;
+      line-height: 1.03;
+    }
+
+    .app-hero p {
+      margin: 0;
+      color: #cbd5e1;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    h2 {
+      margin-top: 0;
+      letter-spacing: -0.5px;
+      color: #0f172a;
+    }
+
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      padding: 20px;
+      border-radius: 26px;
+      margin-bottom: 18px;
+      border: 1px solid rgba(255,255,255,0.72);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+      animation: subir 0.35s ease;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      display: block;
+      height: 4px;
+      width: 54px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      font-weight: 900;
+      color: #1e293b;
+      font-size: 14px;
+    }
+
+    input,
+    select,
+    button,
+    textarea {
+      width: 100%;
+      padding: 15px;
+      margin-top: 8px;
+      border-radius: 18px;
+      border: 1px solid #dbe3ef;
+      font-size: 16px;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border 0.16s ease, background 0.16s ease;
+    }
+
+    input,
+    select,
+    textarea {
+      background: rgba(248, 250, 252, 0.92);
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+      background: white;
+    }
+
+    textarea {
+      min-height: 94px;
+      resize: vertical;
+    }
+
+    button {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      border: none;
+      font-weight: 950;
+      cursor: pointer;
+      min-height: 52px;
+      box-shadow: 0 12px 26px rgba(22, 163, 74, 0.28);
+      letter-spacing: -0.2px;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 30px rgba(22, 163, 74, 0.34);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .botao-secundario {
+      background: linear-gradient(135deg, #e2e8f0, #ffffff);
+      color: #0f172a;
+      box-shadow: none;
+      border: 1px solid #dbe3ef;
+    }
+
+    .botao-perigo {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      box-shadow: 0 12px 26px rgba(239, 68, 68, 0.24);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .alerta {
+      margin-top: 14px;
+      padding: 14px;
+      background: var(--info-bg);
+      border-left: 5px solid var(--secondary);
+      border-radius: 18px;
+      line-height: 1.5;
+      animation: aparecer 0.3s ease;
+      color: #0f172a;
+    }
+
+    .alerta-sucesso {
+      background: var(--success-bg);
+      border-left-color: var(--primary-dark);
+    }
+
+    .alerta-aviso {
+      background: var(--warning-bg);
+      border-left-color: #f97316;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 1000;
+      animation: aparecer 0.25s ease;
+    }
+
+    .modal-overlay.hidden {
+      display: none;
+    }
+
+    .modal-card {
+      width: min(460px, 100%);
+      max-height: 86vh;
+      overflow-y: auto;
+      background: rgba(255, 255, 255, 0.96);
+      color: #0f172a;
+      border-radius: 28px;
+      padding: 22px;
+      border: 1px solid rgba(255,255,255,0.72);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+    }
+
+    .modal-card h2 {
+      margin: 0 0 10px;
+    }
+
+    .modal-card p {
+      color: #334155;
+      line-height: 1.55;
+    }
+
+    .check-termos {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 16px 0 6px;
+      padding: 12px;
+      border-radius: 16px;
+      background: #f8fafc;
+      border: 1px solid #dbe3ef;
+      font-weight: 850;
+      color: #0f172a;
+      line-height: 1.4;
+    }
+
+    .check-termos input {
+      width: auto;
+      margin: 2px 0 0;
+      transform: scale(1.25);
+      accent-color: var(--primary);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .aviso-video {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.45;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .exercise {
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 16px;
+      margin-top: 14px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.10);
+      transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease, border 0.2s ease;
+      animation: subir 0.3s ease;
+    }
+
+    .exercise:hover {
+      transform: translateY(-2px);
+    }
+
+    .exercise strong {
+      display: block;
+      font-size: 20px;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+
+    .check-exercicio {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+      padding: 13px;
+      background: white;
+      border-radius: 18px;
+      border: 1px solid #dbe3ef;
+      font-weight: 950;
+      cursor: pointer;
+    }
+
+    .check-exercicio input {
+      width: auto;
+      margin: 0;
+      transform: scale(1.35);
+      accent-color: var(--primary);
+    }
+
+    .concluido {
+      opacity: 0.82;
+      background: linear-gradient(180deg, #ecfdf5, #ffffff);
+      border-color: rgba(34, 197, 94, 0.55);
+      transform: scale(0.995);
+    }
+
+    .concluido strong::after {
+      content: "  ✓";
+      color: var(--primary-dark);
+    }
+
+    .progresso-box {
+      margin-top: 14px;
+      padding: 15px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #ecfdf5, #eff6ff);
+      font-weight: 950;
+      border: 1px solid #bbf7d0;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 7px 10px;
+      margin-top: 8px;
+      border-radius: 999px;
+      background: #e0f2fe;
+      font-size: 12px;
+      font-weight: 900;
+      color: #075985;
+    }
+
+    .historico-item {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 15px;
+      margin-top: 12px;
+      line-height: 1.55;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+      animation: aparecer 0.3s ease;
+    }
+
+    .dias-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .dias-grid label {
+      margin-top: 0;
+      font-weight: 850;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .dias-grid input {
+      width: auto;
+      margin-right: 6px;
+      accent-color: var(--primary);
+    }
+
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      width: min(460px, calc(100% - 24px));
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.84);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+      z-index: 20;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .bottom-nav::-webkit-scrollbar {
+      display: none;
+    }
+
+    .bottom-nav button {
+      min-height: auto;
+      padding: 11px 14px;
+      border-radius: 17px;
+      font-size: 12px;
+      background: transparent;
+      box-shadow: none;
+      color: #cbd5e1;
+      border: 1px solid transparent;
+      width: auto;
+      min-width: 82px;
+      flex: 0 0 auto;
+    }
+
+    .bottom-nav button:hover,
+    .bottom-nav button:active {
+      background: rgba(34, 197, 94, 0.16);
+      color: white;
+      border-color: rgba(34, 197, 94, 0.22);
+      transform: none;
+    }
+
+    @keyframes aparecer {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes subir {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 380px) {
+      .container { padding: 14px; }
+      h1 { font-size: 30px; }
+      .card { padding: 16px; border-radius: 22px; }
+      .dias-grid { grid-template-columns: 1fr; }
+      .bottom-nav { width: calc(100% - 16px); bottom: 8px; }
+      .bottom-nav button { font-size: 11px; min-width: 78px; padding-left: 12px; padding-right: 12px; }
+    }
+  </style>
 </head>
-
 <body>
+  <div class="container">
+    <div class="app-hero">
+      <div>
+        <span class="app-badge">Fitness App</span>
+        <h1>Meu Treino Inteligente</h1>
+        <p>Treino personalizado, evolução e histórico em um só lugar.</p>
+      </div>
+    </div>
 
-<div class="container">
+    <section id="paginaPerfil">
+      <div class="card">
+        <h2>Login</h2>
+        <p class="small">Entre com sua conta Google. O app será liberado apenas para e-mails autorizados pelo treinador.</p>
+        <button type="button" onclick="loginGoogle()">Entrar com Google</button>
+        <button type="button" class="botao-secundario" onclick="logout()">Sair</button>
+        <div id="usuarioLogado" class="alerta">Verificando login...</div>
+        <div id="mensagemAcesso" class="alerta hidden"></div>
+      </div>
 
-<h1>Meu Treino Inteligente</h1>
+      <div id="cardDadosPessoa" class="card hidden">
+        <h2>Dados da pessoa</h2>
+        <p class="small">Preencha seus dados para personalizar o treino.</p>
 
-<!-- LOGIN -->
-<div id="loginArea" class="card">
-<button onclick="loginGoogle()">Entrar com Google</button>
-<div id="usuarioLogado"></div>
-</div>
+        <label for="nome">Nome</label>
+        <input id="nome" type="text" placeholder="Ex: Marcelo">
 
-<!-- APP -->
-<div id="conteudoApp" class="hidden">
+        <label for="sexo">Sexo</label>
+        <select id="sexo">
+          <option value="masculino">Masculino</option>
+          <option value="feminino">Feminino</option>
+          <option value="nao_responder">Prefiro não responder</option>
+        </select>
 
-<!-- CORRIDA -->
-<div id="corridaScreen" class="card hidden">
-<h2>Corrida</h2>
+        <label for="idade">Idade</label>
+        <input id="idade" type="number" placeholder="Ex: 30">
 
-<label>
-<input type="checkbox" id="naoCorreu"> Não corri recentemente
-</label>
+        <label for="peso">Peso atual (kg)</label>
+        <input id="peso" type="number" placeholder="Ex: 80">
 
-<input id="tempoCorrida" placeholder="Tempo (min)">
-<input id="distanciaCorrida" placeholder="Distância (km)">
+        <label for="altura">Altura atual (cm)</label>
+        <input id="altura" type="number" placeholder="Ex: 175">
 
-<button onclick="salvarCorrida()">Salvar corrida</button>
-<button onclick="mostrarCheckin()">Continuar para Check-in</button>
+        <label for="metaPrincipal">Principal meta</label>
+        <select id="metaPrincipal">
+          <option value="massa">Ganhar massa muscular</option>
+          <option value="perder_peso">Perder peso</option>
+          <option value="definicao">Ficar mais magro e definido</option>
+          <option value="forca">Levantar mais peso / ganhar força</option>
+        </select>
 
-<h3>Histórico de Corridas</h3>
-<div id="historicoCorrida"></div>
+        <label for="rotinaAtual">Rotina atual de treino</label>
+        <select id="rotinaAtual">
+          <option value="nunca">Nunca treinei</option>
+          <option value="dificuldade">Já treinei, mas tive dificuldades para manter</option>
+          <option value="voltando">Estou voltando a treinar</option>
+          <option value="regular">Já treino regularmente</option>
+        </select>
 
-<button onclick="carregarCorridas()">Atualizar histórico</button>
-<button onclick="limparCorridas()">Limpar histórico</button>
+        <label for="tempoExperiencia">Tempo de experiência</label>
+        <select id="tempoExperiencia">
+          <option value="menos_1">Menos de 1 ano</option>
+          <option value="1_2">De 1 a 2 anos</option>
+          <option value="2_4">De 2 a 4 anos</option>
+          <option value="4_mais">4 anos ou mais</option>
+        </select>
 
-</div>
+        <label for="localTreino">Onde costuma treinar?</label>
+        <select id="localTreino">
+          <option value="academia_grande">Academia completa</option>
+          <option value="academia_pequena">Academia compacta / poucos equipamentos</option>
+          <option value="garagem">Espaço próprio com equipamentos</option>
+          <option value="casa_limitado">Em casa com halteres, elásticos ou poucos equipamentos</option>
+          <option value="sem_equipamento">Sem equipamentos / peso corporal</option>
+        </select>
 
-<!-- CHECK-IN -->
-<div id="checkinScreen" class="card hidden">
-<h2>Check-in</h2>
+        <button type="button" onclick="calcularPerfil()">Calcular e salvar perfil</button>
 
-<select id="tempoDisponivel">
-<option value="30">Treino rápido — até 30 minutos</option>
-<option value="60">Treino normal — cerca de 1 hora</option>
-<option value="90">Treino longo — acima de 1 hora</option>
-</select>
+        <div id="resultadoPerfil" class="alerta hidden"></div>
+        <div id="mensagemPeso" class="alerta hidden"></div>
 
-<button onclick="irTreino()">Ir para treino</button>
+        <button id="botaoIrTreino" type="button" class="hidden" onclick="irParaCorrida()">Continuar para corrida</button>
+        <button type="button" class="botao-secundario" onclick="apagarPerfilSalvo()">Apagar perfil salvo</button>
+      </div>
+    </section>
 
-</div>
+    <section id="paginaTreino" class="hidden">
+      <div class="card">
+        <h2 id="tituloTreino">Treino do dia</h2>
+        <p id="resumoPerfilTreino" class="small"></p>
+        <button type="button" class="botao-secundario" onclick="voltarParaPerfil()">Voltar para dados da pessoa</button>
+      </div>
 
-<!-- TREINO -->
-<div id="treinoScreen" class="card hidden">
-<h2>Treino</h2>
-<p>Treino gerado baseado nas suas respostas.</p>
-</div>
+      <div class="card">
+        <h2>Treino inteligente</h2>
+        <p class="small">O treino do dia será calculado com base no seu perfil, no check-in diário e na última corrida registrada.</p>
+        <button type="button" onclick="irParaCorrida()">Revisar corrida e check-in / recalcular treino</button>
+      </div>
 
-<!-- NOVIDADES -->
-<div id="novidadesScreen" class="card hidden">
-<h2>Novidades</h2>
+      <div id="resultadoTreino" class="card hidden">
+        <h2>Treino recomendado</h2>
+        <p id="resumoTreino" class="small"></p>
+        <div id="listaExercicios"></div>
+        <div id="progressoExercicios" class="progresso-box hidden"></div>
+      </div>
 
-<p style="text-align:center;">
-Dúvidas ou sugestões?<br>
-Entre em contato:<br>
-<b>celoborgesms@gmail.com</b>
-</p>
+      <div id="registroEvolucao" class="card hidden">
+        <h2>Registrar evolução</h2>
+        <label for="exercicioRegistro">Exercício principal</label>
+        <input id="exercicioRegistro" type="text" placeholder="Ex: Supino reto">
+        <label for="carga">Carga usada (kg)</label>
+        <input id="carga" type="number" min="0" placeholder="Ex: 0 ou 40">
+        <label for="reps">Repetições feitas</label>
+        <input id="reps" type="number" placeholder="Ex: 10">
+        <label for="sensacao">Como foi?</label>
+        <select id="sensacao">
+          <option value="facil">Fácil</option>
+          <option value="normal">Normal</option>
+          <option value="dificil">Difícil</option>
+        </select>
+        <label for="observacaoTreino">Observação do treino</label>
+        <textarea id="observacaoTreino" placeholder="Ex: Treino bom, senti ombro leve, fiz menos descanso..."></textarea>
+        <button type="button" onclick="calcularEvolucao()">Calcular próxima carga</button>
+        <p id="resultadoEvolucao"></p>
+        <button type="button" onclick="salvarTreinoFeito()">Salvar treino feito</button>
+      </div>
 
-<h3>Versão 1.2.2 Beta</h3>
-<p>Atualizada em: 25/04/2026 às 20:45</p>
-<ul>
-<li>Fluxo corrigido: Perfil → Corrida → Check-in → Treino</li>
-<li>Histórico de corridas adicionado</li>
-<li>Botão limpar histórico</li>
-</ul>
+      <div class="card">
+        <h2>Resumo do histórico</h2>
+        <p class="small">Aqui aparece um resumo dos últimos treinos salvos na nuvem.</p>
+        <button type="button" class="botao-secundario" onclick="mostrarHistorico()">Atualizar resumo</button>
+        <button type="button" onclick="irParaHistoricoCompleto()">Ver histórico completo</button>
+        <button type="button" class="botao-perigo" onclick="limparHistorico()">Limpar histórico</button>
+        <div id="listaHistorico"></div>
+      </div>
+    </section>
 
-<h3>Versão 1.2.1 Beta</h3>
-<ul>
-<li>Melhoria visual</li>
-<li>Barra horizontal</li>
-</ul>
+    <section id="paginaCheckin" class="hidden">
+      <div class="card">
+        <h2>Check-in diário</h2>
+        <p class="small">Responda como você está hoje. O app usa essas respostas junto com a última corrida registrada para adaptar o treino do dia.</p>
+      </div>
 
-<h3>Versão 1.2.0 Beta</h3>
-<ul>
-<li>Adicionada aba corrida</li>
-<li>Adicionada aba check-in</li>
-</ul>
+      <div class="card">
+        <h2>Como você está hoje?</h2>
 
-</div>
+        <label for="energia">Energia do dia</label>
+        <select id="energia">
+          <option value="bem">Estou bem</option>
+          <option value="cansado">Estou cansado</option>
+          <option value="mal">Estou mal</option>
+        </select>
 
-</div>
-</div>
+        <label for="dor">Tem alguma dor?</label>
+        <select id="dor">
+          <option value="nenhuma">Nenhuma dor</option>
+          <option value="ombro">Dor no ombro</option>
+          <option value="joelho">Dor no joelho</option>
+          <option value="lombar">Dor na lombar</option>
+        </select>
 
-<!-- NAV -->
-<div class="bottom-nav">
-<button onclick="mostrar('corridaScreen')">Corrida</button>
-<button onclick="mostrar('checkinScreen')">Check-in</button>
-<button onclick="mostrar('treinoScreen')">Treino</button>
-<button onclick="mostrar('novidadesScreen')">Novidades</button>
-</div>
+        <label for="tempo">Tempo disponível</label>
+        <select id="tempo">
+          <option value="rapido">Treino rápido — até 30 minutos</option>
+          <option value="normal">Treino normal — cerca de 1 hora</option>
+          <option value="longo">Treino longo — acima de 1 hora</option>
+        </select>
 
-<script>
+        <label for="divisaoTreino">Divisão do treino</label>
+        <select id="divisaoTreino">
+          <option value="semana">Automático por dia da semana</option>
+          <option value="automatico">Automático A/B/C pelo histórico</option>
+          <option value="A">Treino A - Peito, ombro e tríceps</option>
+          <option value="B">Treino B - Costas e bíceps</option>
+          <option value="C">Treino C - Pernas e abdômen</option>
+          <option value="descanso">Descanso / mobilidade</option>
+        </select>
 
-const firebaseConfig = {
-apiKey: "SUA_API_KEY",
-authDomain: "SEU_PROJETO.firebaseapp.com",
-projectId: "SEU_PROJETO"
-};
+        <button type="button" onclick="gerarTreino()">Atualizar treino do dia</button>
+        <button type="button" class="botao-secundario" onclick="irParaTreino()">Voltar para o treino</button>
+      </div>
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+    </section>
 
-let usuarioAtual;
+    <section id="paginaCorrida" class="hidden">
+      <div class="card">
+        <h2>Corrida</h2>
+        <p class="small">Registre suas corridas para o app adaptar melhor os próximos treinos de força. Se não correu recentemente, marque a opção abaixo para o treino seguir sem ajuste por corrida.</p>
 
-function loginGoogle(){
-const provider = new firebase.auth.GoogleAuthProvider();
-auth.signInWithPopup(provider);
-}
+        <label class="check-exercicio">
+          <input id="naoCorreuRecentemente" type="checkbox" onchange="alternarCamposCorrida()">
+          Não corri recentemente
+        </label>
 
-auth.onAuthStateChanged(user=>{
-usuarioAtual = user;
-document.getElementById("usuarioLogado").innerText = user ? user.email : "";
+        <label for="distanciaCorrida">Distância (km)</label>
+        <input id="distanciaCorrida" type="number" min="0" step="0.1" placeholder="Ex: 5">
 
-if(user){
-document.getElementById("conteudoApp").classList.remove("hidden");
-mostrar("corridaScreen");
-}
-});
+        <label for="tempoCorrida">Tempo total (minutos)</label>
+        <input id="tempoCorrida" type="number" min="0" step="1" placeholder="Ex: 35">
 
-function mostrar(id){
-document.querySelectorAll(".card").forEach(el=>el.classList.add("hidden"));
-document.getElementById(id).classList.remove("hidden");
-}
+        <label for="intensidadeCorrida">Intensidade</label>
+        <select id="intensidadeCorrida">
+          <option value="leve">Leve</option>
+          <option value="moderada">Moderada</option>
+          <option value="forte">Forte</option>
+        </select>
 
-function mostrarCheckin(){
-mostrar("checkinScreen");
-}
+        <label for="sensacaoCorrida">Como você terminou?</label>
+        <select id="sensacaoCorrida">
+          <option value="bem">Bem</option>
+          <option value="cansado">Cansado</option>
+          <option value="pesado">Muito pesado</option>
+        </select>
 
-function irTreino(){
-mostrar("treinoScreen");
-}
+        <label for="observacaoCorrida">Observação</label>
+        <textarea id="observacaoCorrida" placeholder="Ex: corrida leve, subi muita ladeira, senti panturrilha..."></textarea>
 
-function salvarCorrida(){
-const naoCorreu = document.getElementById("naoCorreu").checked;
+        <button type="button" onclick="salvarCorrida()">Salvar corrida</button>
+        <button type="button" class="botao-secundario" onclick="irParaCheckin()">Continuar para check-in</button>
+        <div id="mensagemCorrida" class="alerta hidden"></div>
+      </div>
 
-if(naoCorreu){
-db.collection("usuarios").doc(usuarioAtual.uid)
-.collection("corridas")
-.add({ tipo:"nenhuma", data:new Date().toLocaleString() });
+      <div class="card">
+        <h2>Histórico de corrida</h2>
+        <p class="small">Resumo das últimas corridas registradas na nuvem.</p>
+        <button type="button" class="botao-secundario" onclick="carregarCorridas()">Ver / atualizar histórico</button>
+        <button type="button" class="botao-perigo" onclick="limparHistoricoCorridas()">Limpar histórico de corridas</button>
+        <div id="listaCorridas"></div>
+      </div>
+    </section>
 
-alert("Sem corrida registrada");
-return;
-}
+    <section id="paginaHistoricoCompleto" class="hidden">
+      <div class="card">
+        <h2>Histórico completo</h2>
+        <p class="small">Veja todos os detalhes dos treinos salvos na nuvem.</p>
+        <button type="button" class="botao-secundario" onclick="irParaTreino()">Voltar para o treino</button>
+        <button type="button" class="botao-secundario" onclick="mostrarHistoricoCompleto()">Atualizar histórico completo</button>
+        <div id="listaHistoricoCompleto"></div>
+      </div>
+    </section>
 
-db.collection("usuarios").doc(usuarioAtual.uid)
-.collection("corridas")
-.add({
-tempo:document.getElementById("tempoCorrida").value,
-distancia:document.getElementById("distanciaCorrida").value,
-data:new Date().toLocaleString()
-});
 
-alert("Corrida salva");
-}
+    <section id="paginaPainelTreinador" class="hidden">
+      <div class="card">
+        <h2>Painel do Treinador</h2>
+        <p class="small">Use esta área para liberar, bloquear ou excluir alunos pelo e-mail cadastrado no Firebase.</p>
 
-function carregarCorridas(){
-db.collection("usuarios").doc(usuarioAtual.uid)
-.collection("corridas")
-.get()
-.then(snapshot=>{
-let html="";
-snapshot.forEach(doc=>{
-html += "<p>"+JSON.stringify(doc.data())+"</p>";
-});
-document.getElementById("historicoCorrida").innerHTML = html;
-});
-}
+        <label for="emailAlunoPainel">E-mail do aluno</label>
+        <input id="emailAlunoPainel" type="email" placeholder="Ex: aluno@gmail.com">
 
-function limparCorridas(){
-if(confirm("Deseja apagar todas as corridas?")){
-db.collection("usuarios").doc(usuarioAtual.uid)
-.collection("corridas")
-.get()
-.then(snapshot=>{
-snapshot.forEach(doc=>doc.ref.delete());
-});
-alert("Histórico apagado");
-}
-}
+        <label for="nomeAlunoPainel">Nome do aluno</label>
+        <input id="nomeAlunoPainel" type="text" placeholder="Ex: João Silva">
 
-</script>
+        <label for="planoAlunoPainel">Plano</label>
+        <select id="planoAlunoPainel">
+          <option value="mensal">Mensal</option>
+          <option value="trimestral">Trimestral</option>
+          <option value="semestral">Semestral</option>
+          <option value="anual">Anual</option>
+          <option value="teste">Teste</option>
+        </select>
 
+        <button type="button" onclick="liberarAlunoPainel()">Liberar acesso</button>
+        <button type="button" class="botao-secundario" onclick="bloquearAlunoPainel()">Bloquear acesso</button>
+        <button type="button" class="botao-secundario" onclick="carregarUsuariosAutorizados()">Atualizar lista</button>
+        <div id="mensagemPainelTreinador" class="alerta hidden"></div>
+      </div>
+
+      <div class="card">
+        <h2>Usuários autorizados</h2>
+        <p class="small">Lista carregada da coleção <strong>usuariosAutorizados</strong>.</p>
+        <div id="listaUsuariosAutorizados"></div>
+      </div>
+    </section>
+
+    <section id="paginaNovidades" class="hidden">
+      <div class="card">
+        <h2>Novidades</h2>
+        <p class="small">Acompanhe aqui as atualizações feitas no aplicativo.</p>
+        <div class="alerta">
+          <strong>Dúvidas ou sugestões?</strong><br>
+          Entre em contato pelo e-mail <strong>celoborgesms@gmail.com</strong>.
+        </div>
+
+        <div class="historico-item">
+          <strong>Versão 1.2.2 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 25/04/2026 às 20:45</p>
+          <ul>
+            <li>Corrigido o fluxo principal para Perfil → Corrida → Check-in → Treino.</li>
+            <li>O botão do perfil agora leva primeiro para a aba Corrida.</li>
+            <li>Adicionado botão para continuar da Corrida para o Check-in.</li>
+            <li>Adicionado histórico de corridas dentro da aba Corrida.</li>
+            <li>Adicionados botões para atualizar/ver e limpar o histórico de corridas.</li>
+          </ul>
+        </div>
+        <div class="historico-item">
+          <strong>Versão 1.2.0 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 25/04/2026 às 17:10</p>
+          <ul>
+            <li>Adicionada aba Corrida para registrar distância, tempo, intensidade e sensação.</li>
+            <li>Adicionada aba Check-in diário separada da tela de treino.</li>
+            <li>Treino do dia agora pode ser adaptado conforme a última corrida registrada.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
+          <strong>Versão 1.0.9 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 25/04/2026 às 16:30</p>
+          <ul>
+            <li>Adicionada data e hora nas versões exibidas em Novidades.</li>
+            <li>Adicionado aceite obrigatório do Aviso Importante antes de continuar.</li>
+            <li>Incluídos Termos de Uso simples dentro do aviso inicial.</li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <nav class="bottom-nav">
+      <button type="button" onclick="voltarParaPerfil()">Perfil</button>
+      <button type="button" onclick="irParaCorrida()">Corrida</button>
+      <button type="button" onclick="irParaCheckin()">Check-in</button>
+      <button type="button" onclick="irParaTreino()">Treino</button>
+      <button type="button" onclick="irParaHistorico()">Histórico</button>
+      <button id="botaoPainelTreinador" type="button" class="hidden" onclick="irParaPainelTreinador()">Painel</button>
+      <button type="button" onclick="irParaNovidades()">Novidades</button>
+    </nav>
+  </div>
+
+
+
+  <div id="modalAvisoInicial" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Aviso importante</h2>
+      <p>Este aplicativo oferece sugestões de treino com base nas informações preenchidas pelo usuário. Ele não substitui avaliação médica, acompanhamento de profissional de Educação Física ou orientação individualizada.</p>
+      <p>Treine com consciência, respeite seus limites e interrompa o exercício em caso de dor, tontura, mal-estar ou desconforto incomum. Em caso de dúvidas, condições de saúde, lesões ou uso de medicamentos, procure um médico ou profissional qualificado antes de iniciar ou continuar os treinos.</p>
+      <p><strong>Termos de Uso:</strong> o uso do aplicativo é de responsabilidade do usuário. As informações inseridas devem ser verdadeiras e usadas apenas como apoio para organização dos treinos. Ao continuar, você declara estar ciente dessas condições.</p>
+
+      <label class="check-termos">
+        <input id="aceiteTermosAviso" type="checkbox" onchange="atualizarBotaoAceiteAviso()">
+        <span>Li e concordo com o Aviso Importante e com os Termos de Uso.</span>
+      </label>
+
+      <button id="botaoAceitarAvisoInicial" type="button" class="botao-secundario" onclick="aceitarAvisoInicial()" disabled>Entendi e concordo</button>
+    </div>
+  </div>
+
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBMjCfbTjKkh04WLcyY-TWWPzwkrDUKEfg",
+      authDomain: "meu-treino-inteligente.firebaseapp.com",
+      projectId: "meu-treino-inteligente",
+      storageBucket: "meu-treino-inteligente.firebasestorage.app",
+      messagingSenderId: "51290225183",
+      appId: "1:51290225183:web:dfebcf71e6ce3a65db332a",
+      measurementId: "G-6413FEHHXL"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    let usuarioAtual = null;
+    let acessoLiberado = false;
+    let usuarioAdmin = false;
+    let dadosAcessoAtual = null;
+
+    function loginGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+
+      auth.signInWithPopup(provider)
+        .then(function(result) {
+          usuarioAtual = result.user;
+          atualizarTelaLogin(usuarioAtual);
+        })
+        .catch(function(error) {
+          alert("Erro ao fazer login: " + error.message);
+        });
+    }
+
+    function logout() {
+      auth.signOut()
+        .then(function() {
+          usuarioAtual = null;
+          usuarioAdmin = false;
+          dadosAcessoAtual = null;
+          atualizarBotaoPainelTreinador();
+          atualizarTelaLogin(null);
+        })
+        .catch(function(error) {
+          alert("Erro ao sair: " + error.message);
+        });
+    }
+
+    function atualizarTelaLogin(user) {
+      const campo = document.getElementById("usuarioLogado");
+
+      if (!campo) {
+        return;
+      }
+
+      if (user) {
+        campo.innerHTML = "<strong>Logado como:</strong><br>" + (user.displayName || "Usuário") + "<br>" + (user.email || "");
+      } else {
+        campo.innerHTML = "Você ainda não está logado.";
+      }
+    }
+
+    auth.onAuthStateChanged(function(user) {
+      usuarioAtual = user;
+      atualizarTelaLogin(user);
+
+      if (user) {
+        verificarAcessoUsuario(user);
+        verificarAdminUsuario(user);
+      } else {
+        usuarioAdmin = false;
+        atualizarBotaoPainelTreinador();
+        bloquearApp("Faça login com Google para verificar seu acesso.");
+      }
+    }, function(error) {
+      usuarioAtual = null;
+      atualizarTelaLogin(null);
+      bloquearApp("Não foi possível verificar o login agora. Tente novamente em alguns instantes.");
+    });
+
+    let perfilUsuario = null;
+    let db = null;
+
+    try {
+      if (firebase.firestore) {
+        db = firebase.firestore();
+      }
+    } catch (erro) {
+      db = null;
+    }
+
+    function mostrarMensagemAcesso(mensagem, tipo) {
+      const caixa = document.getElementById("mensagemAcesso");
+      if (!caixa) return;
+      caixa.className = "alerta";
+      if (tipo === "sucesso") caixa.classList.add("alerta-sucesso");
+      if (tipo === "aviso") caixa.classList.add("alerta-aviso");
+      caixa.innerHTML = mensagem;
+    }
+
+    function bloquearApp(mensagem) {
+      acessoLiberado = false;
+      dadosAcessoAtual = null;
+
+      const cardDadosPessoa = document.getElementById("cardDadosPessoa");
+      const paginaTreino = document.getElementById("paginaTreino");
+      const paginaNovidades = document.getElementById("paginaNovidades");
+      const paginaHistoricoCompleto = document.getElementById("paginaHistoricoCompleto");
+      const paginaCheckin = document.getElementById("paginaCheckin");
+      const paginaCorrida = document.getElementById("paginaCorrida");
+      const paginaPainelTreinador = document.getElementById("paginaPainelTreinador");
+      const paginaPerfil = document.getElementById("paginaPerfil");
+
+      if (cardDadosPessoa) cardDadosPessoa.classList.add("hidden");
+      if (paginaTreino) paginaTreino.classList.add("hidden");
+      if (paginaHistoricoCompleto) paginaHistoricoCompleto.classList.add("hidden");
+      if (paginaCheckin) paginaCheckin.classList.add("hidden");
+      if (paginaCorrida) paginaCorrida.classList.add("hidden");
+      if (paginaPainelTreinador) paginaPainelTreinador.classList.add("hidden");
+      if (paginaNovidades) paginaNovidades.classList.add("hidden");
+      if (paginaPerfil) paginaPerfil.classList.remove("hidden");
+
+      mostrarMensagemAcesso(
+        mensagem || "Seu acesso ainda não foi liberado. Entre em contato com o treinador para ativar sua conta.",
+        "aviso"
+      );
+    }
+
+    function formatarDataPlano(dataISO) {
+      if (!dataISO) return "Sem vencimento";
+      const partes = String(dataISO).split("-");
+      if (partes.length === 3) {
+        return partes[2] + "/" + partes[1] + "/" + partes[0];
+      }
+      return dataISO;
+    }
+
+    function obterMensagemValidadePlano(dados) {
+      if (!dados || !dados.expiraEm) {
+        return "✅ Acesso liberado. Seu plano está ativo e sem data de vencimento cadastrada.";
+      }
+
+      return "✅ Acesso liberado. Seu plano expira em <strong>" + limparTextoSeguro(formatarDataPlano(dados.expiraEm)) + "</strong>.";
+    }
+
+    function liberarApp(dadosAcesso) {
+      acessoLiberado = true;
+      dadosAcessoAtual = dadosAcesso || null;
+
+      const cardDadosPessoa = document.getElementById("cardDadosPessoa");
+      if (cardDadosPessoa) cardDadosPessoa.classList.remove("hidden");
+
+      mostrarMensagemAcesso(obterMensagemValidadePlano(dadosAcessoAtual), "sucesso");
+      mostrarAvisoInicialSeNecessario();
+    }
+
+
+    function chaveAvisoInicial() {
+      const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : "usuario";
+      return "avisoInicialAceito-" + email;
+    }
+
+    function mostrarAvisoInicialSeNecessario() {
+      const modal = document.getElementById("modalAvisoInicial");
+      if (!modal || !usuarioAtual) return;
+      if (localStorage.getItem(chaveAvisoInicial()) === "sim") return;
+
+      const aceite = document.getElementById("aceiteTermosAviso");
+      const botao = document.getElementById("botaoAceitarAvisoInicial");
+      if (aceite) aceite.checked = false;
+      if (botao) botao.disabled = true;
+
+      modal.classList.remove("hidden");
+    }
+
+    function atualizarBotaoAceiteAviso() {
+      const aceite = document.getElementById("aceiteTermosAviso");
+      const botao = document.getElementById("botaoAceitarAvisoInicial");
+      if (!aceite || !botao) return;
+      botao.disabled = !aceite.checked;
+    }
+
+    function aceitarAvisoInicial() {
+      const aceite = document.getElementById("aceiteTermosAviso");
+      if (!aceite || !aceite.checked) {
+        alert("Para continuar, marque a opção confirmando que leu e concorda com o Aviso Importante e os Termos de Uso.");
+        return;
+      }
+
+      localStorage.setItem(chaveAvisoInicial(), "sim");
+      const modal = document.getElementById("modalAvisoInicial");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    function verificarAcessoUsuario(user) {
+      if (!user || !db) {
+        bloquearApp("Não foi possível verificar seu acesso. Tente novamente em alguns instantes.");
+        return;
+      }
+
+      const emailUsuario = (user.email || "").toLowerCase();
+
+      db.collection("usuariosAutorizados")
+        .doc(emailUsuario)
+        .get()
+        .then(function(doc) {
+          if (doc.exists && doc.data().ativo === true) {
+            const dados = doc.data() || {};
+
+            // Versão 1.0.5 Beta:
+            // expiraEm é opcional. Se existir, o app verifica vencimento.
+            // Se não existir, usuários cadastrados manualmente no Firebase continuam acessando normalmente.
+            if (dados.expiraEm) {
+              const hoje = new Date();
+              const expira = new Date(dados.expiraEm + "T23:59:59");
+
+              if (hoje > expira) {
+                bloquearApp("Seu plano expirou. Entre em contato com o treinador para renovar o acesso.");
+                return;
+              }
+            }
+
+            liberarApp(dados);
+          } else {
+            bloquearApp("Seu e-mail ainda não está autorizado. Entre em contato com o treinador para liberar o acesso.");
+          }
+        })
+        .catch(function(erro) {
+          console.log("Erro ao verificar acesso:", erro);
+          bloquearApp("Não foi possível verificar seu acesso agora. Confira sua conexão e tente novamente.");
+        });
+    }
+
+
+    function atualizarBotaoPainelTreinador() {
+      const botao = document.getElementById("botaoPainelTreinador");
+      if (!botao) return;
+      if (usuarioAdmin) botao.classList.remove("hidden");
+      else botao.classList.add("hidden");
+    }
+
+    function verificarAdminUsuario(user) {
+      usuarioAdmin = false;
+      atualizarBotaoPainelTreinador();
+
+      if (!user || !db) return;
+      const emailUsuario = (user.email || "").toLowerCase();
+
+      db.collection("admins")
+        .doc(emailUsuario)
+        .get()
+        .then(function(doc) {
+          usuarioAdmin = doc.exists && doc.data().ativo === true;
+          atualizarBotaoPainelTreinador();
+        })
+        .catch(function(erro) {
+          console.log("Erro ao verificar admin:", erro);
+          usuarioAdmin = false;
+          atualizarBotaoPainelTreinador();
+        });
+    }
+
+    function mostrarMensagemPainel(mensagem, tipo) {
+      const caixa = document.getElementById("mensagemPainelTreinador");
+      if (!caixa) return;
+      caixa.className = "alerta";
+      if (tipo === "sucesso") caixa.classList.add("alerta-sucesso");
+      if (tipo === "aviso") caixa.classList.add("alerta-aviso");
+      caixa.innerHTML = mensagem;
+    }
+
+    function limparTextoSeguro(texto) {
+      return String(texto || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function ocultarPaginasDoApp() {
+      const ids = ["paginaPerfil", "paginaTreino", "paginaCheckin", "paginaCorrida", "paginaHistoricoCompleto", "paginaPainelTreinador", "paginaNovidades"];
+      ids.forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add("hidden");
+      });
+    }
+
+    function irParaPainelTreinador() {
+      if (!acessoLiberado || !usuarioAdmin) {
+        bloquearApp("Apenas o treinador administrador pode acessar o painel.");
+        return;
+      }
+
+      ocultarPaginasDoApp();
+      document.getElementById("paginaPainelTreinador").classList.remove("hidden");
+      carregarUsuariosAutorizados();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function obterEmailAlunoPainel() {
+      return (document.getElementById("emailAlunoPainel").value || "").trim().toLowerCase();
+    }
+
+    function liberarAlunoPainel() {
+      if (!usuarioAdmin || !db) {
+        mostrarMensagemPainel("Você não tem permissão para liberar alunos.", "aviso");
+        return;
+      }
+
+      const emailAluno = obterEmailAlunoPainel();
+      const nomeAluno = (document.getElementById("nomeAlunoPainel").value || "").trim();
+      const planoAluno = document.getElementById("planoAlunoPainel").value;
+
+      if (!emailAluno || !emailAluno.includes("@")) {
+        mostrarMensagemPainel("Informe um e-mail válido para liberar o aluno.", "aviso");
+        return;
+      }
+
+      const agora = new Date();
+      const diasPorPlano = {
+        teste: 7,
+        mensal: 30,
+        trimestral: 90,
+        semestral: 180,
+        anual: 365
+      };
+      const diasPlano = diasPorPlano[planoAluno] || 30;
+      const expira = new Date();
+      expira.setDate(agora.getDate() + diasPlano);
+      const dataExpiracao = expira.toISOString().slice(0, 10);
+
+      db.collection("usuariosAutorizados").doc(emailAluno).set({
+        ativo: true,
+        nome: nomeAluno || emailAluno,
+        plano: planoAluno,
+        expiraEm: dataExpiracao,
+        liberadoEm: agora.toLocaleString("pt-BR"),
+        atualizadoEm: agora.getTime(),
+        liberadoPor: usuarioAtual ? usuarioAtual.email : "treinador"
+      }, { merge: true })
+        .then(function() {
+          mostrarMensagemPainel("✅ Acesso liberado para " + limparTextoSeguro(emailAluno) + " até " + limparTextoSeguro(dataExpiracao) + ".", "sucesso");
+          carregarUsuariosAutorizados();
+        })
+        .catch(function(erro) {
+          console.log("Erro ao liberar aluno:", erro);
+          mostrarMensagemPainel("Não foi possível liberar o aluno. Confira as permissões do Firestore.", "aviso");
+        });
+    }
+
+    function bloquearAlunoPainel() {
+      if (!usuarioAdmin || !db) {
+        mostrarMensagemPainel("Você não tem permissão para bloquear alunos.", "aviso");
+        return;
+      }
+
+      const emailAluno = obterEmailAlunoPainel();
+      if (!emailAluno || !emailAluno.includes("@")) {
+        mostrarMensagemPainel("Informe o e-mail do aluno que deseja bloquear.", "aviso");
+        return;
+      }
+
+      if (!confirm("Tem certeza que deseja bloquear o acesso de " + emailAluno + "?")) return;
+
+      const agora = new Date();
+      db.collection("usuariosAutorizados").doc(emailAluno).set({
+        ativo: false,
+        bloqueadoEm: agora.toLocaleString("pt-BR"),
+        atualizadoEm: agora.getTime(),
+        bloqueadoPor: usuarioAtual ? usuarioAtual.email : "treinador"
+      }, { merge: true })
+        .then(function() {
+          mostrarMensagemPainel("Acesso bloqueado para " + limparTextoSeguro(emailAluno) + ".", "sucesso");
+          carregarUsuariosAutorizados();
+        })
+        .catch(function(erro) {
+          console.log("Erro ao bloquear aluno:", erro);
+          mostrarMensagemPainel("Não foi possível bloquear o aluno. Confira as permissões do Firestore.", "aviso");
+        });
+    }
+
+    function carregarUsuariosAutorizados() {
+      const lista = document.getElementById("listaUsuariosAutorizados");
+      if (!lista) return;
+
+      if (!usuarioAdmin || !db) {
+        lista.innerHTML = "<p class='small'>Área disponível apenas para administrador.</p>";
+        return;
+      }
+
+      lista.innerHTML = "<p class='small'>Carregando usuários...</p>";
+
+      db.collection("usuariosAutorizados").get()
+        .then(function(snapshot) {
+          const usuarios = [];
+          snapshot.forEach(function(doc) {
+            const dados = doc.data() || {};
+            usuarios.push({ email: doc.id, dados: dados });
+          });
+
+          usuarios.sort(function(a, b) {
+            return Number(b.dados.atualizadoEm || 0) - Number(a.dados.atualizadoEm || 0);
+          });
+
+          if (usuarios.length === 0) {
+            lista.innerHTML = "<p class='small'>Nenhum usuário autorizado ainda.</p>";
+            return;
+          }
+
+          lista.innerHTML = "";
+          usuarios.forEach(function(item) {
+            const div = document.createElement("div");
+            div.className = "historico-item";
+            const ativo = item.dados.ativo === true;
+            const emailJS = JSON.stringify(item.email);
+            const nomeJS = JSON.stringify(item.dados.nome || "");
+            const planoJS = JSON.stringify(item.dados.plano || "mensal");
+
+            div.innerHTML =
+              "<strong>" + limparTextoSeguro(item.dados.nome || item.email) + "</strong><br>" +
+              "E-mail: " + limparTextoSeguro(item.email) + "<br>" +
+              "Plano: " + limparTextoSeguro(item.dados.plano || "Não informado") + "<br>" +
+              "Status: <strong>" + (ativo ? "Ativo" : "Bloqueado") + "</strong><br>" +
+              "Expira em: <strong>" + limparTextoSeguro(formatarDataPlano(item.dados.expiraEm)) + "</strong><br>" +
+              "Atualizado em: " + limparTextoSeguro(item.dados.liberadoEm || item.dados.bloqueadoEm || "Não informado") + "<br>" +
+              "<button type='button' class='botao-secundario' onclick='preencherAlunoPainel(" + emailJS + ", " + nomeJS + ", " + planoJS + ")'>Selecionar</button>" +
+              "<button type='button' class='botao-perigo' onclick='excluirAlunoPainel(" + emailJS + ")'>Excluir aluno</button>";
+            lista.appendChild(div);
+          });
+        })
+        .catch(function(erro) {
+          console.log("Erro ao carregar usuários autorizados:", erro);
+          lista.innerHTML = "<p class='small'>Não foi possível carregar a lista. Confira as permissões do Firestore.</p>";
+        });
+    }
+
+    function excluirAlunoPainel(emailAluno) {
+      if (!usuarioAdmin || !db) {
+        mostrarMensagemPainel("Você não tem permissão para excluir alunos.", "aviso");
+        return;
+      }
+
+      emailAluno = String(emailAluno || "").trim().toLowerCase();
+      if (!emailAluno || !emailAluno.includes("@")) {
+        mostrarMensagemPainel("E-mail inválido para exclusão.", "aviso");
+        return;
+      }
+
+      if (!confirm("Tem certeza que deseja excluir definitivamente o aluno " + emailAluno + "? Ele perderá o acesso e sairá da lista do painel.")) return;
+
+      db.collection("usuariosAutorizados").doc(emailAluno).delete()
+        .then(function() {
+          mostrarMensagemPainel("Aluno excluído do painel: " + limparTextoSeguro(emailAluno) + ".", "sucesso");
+          const campoEmail = document.getElementById("emailAlunoPainel");
+          const campoNome = document.getElementById("nomeAlunoPainel");
+          if (campoEmail && campoEmail.value.trim().toLowerCase() === emailAluno) campoEmail.value = "";
+          if (campoNome) campoNome.value = "";
+          carregarUsuariosAutorizados();
+        })
+        .catch(function(erro) {
+          console.log("Erro ao excluir aluno:", erro);
+          mostrarMensagemPainel("Não foi possível excluir o aluno. Confira as permissões do Firestore.", "aviso");
+        });
+    }
+
+    function preencherAlunoPainel(email, nome, plano) {
+      document.getElementById("emailAlunoPainel").value = email || "";
+      document.getElementById("nomeAlunoPainel").value = nome || "";
+      document.getElementById("planoAlunoPainel").value = plano || "mensal";
+      document.getElementById("emailAlunoPainel").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function salvarNaNuvem(caminho, dados) {
+      if (!usuarioAtual || !db) {
+        return;
+      }
+
+      db.collection("usuarios")
+        .doc(usuarioAtual.uid)
+        .collection(caminho)
+        .add(dados)
+        .catch(function(erro) {
+          console.log("Erro ao salvar na nuvem:", erro);
+        });
+    }
+
+    function carregarDaNuvem(caminho, callback) {
+      if (!usuarioAtual || !db) {
+        callback([]);
+        return;
+      }
+
+      db.collection("usuarios")
+        .doc(usuarioAtual.uid)
+        .collection(caminho)
+        .get()
+        .then(function(snapshot) {
+          const lista = [];
+          snapshot.forEach(function(doc) {
+            lista.push(doc.data());
+          });
+          callback(lista);
+        })
+        .catch(function(erro) {
+          console.log("Erro ao carregar da nuvem:", erro);
+          callback([]);
+        });
+    }
+
+    function carregarDaNuvem(caminho, callback) {
+      if (!usuarioAtual || !firebase.firestore) return;
+      const firestore = firebase.firestore();
+      firestore.collection("usuarios").doc(usuarioAtual.uid).collection(caminho).get()
+        .then(snapshot => {
+          const lista = [];
+          snapshot.forEach(doc => lista.push(doc.data()));
+          callback(lista);
+        });
+    }
+    let treinoAtual = [];
+    let mensagemEvolucaoAtual = "";
+    let exerciciosConcluidos = [];
+    let sugestoesCarga = {};
+    let ultimaCorridaCache = null;
+
+    const substituicoes = {
+      "Supino reto": ["Flexão de braço", "Supino com halteres", "Crucifixo no chão"],
+      "Flexão de braço": ["Supino reto", "Supino com halteres", "Flexão com joelhos apoiados"],
+      "Desenvolvimento com halteres": ["Desenvolvimento com elástico", "Elevação frontal", "Pike push-up"],
+      "Elevação lateral": ["Elevação lateral com elástico", "Elevação lateral com garrafas", "Desenvolvimento leve"],
+      "Tríceps corda": ["Tríceps com elástico", "Tríceps banco", "Tríceps francês"],
+      "Tríceps banco": ["Tríceps corda", "Tríceps francês", "Flexão fechada"],
+      "Remada baixa": ["Remada com elástico", "Remada unilateral com halter", "Remada invertida"],
+      "Puxada frente": ["Remada com elástico", "Pullover com halter", "Barra fixa assistida"],
+      "Remada unilateral": ["Remada baixa", "Remada com elástico", "Remada invertida"],
+      "Rosca direta": ["Rosca com halteres", "Rosca com elástico", "Rosca martelo"],
+      "Rosca martelo": ["Rosca direta", "Rosca com elástico", "Rosca concentrada"],
+      "Face pull": ["Face pull com elástico", "Crucifixo inverso", "Remada alta leve"],
+      "Agachamento": ["Agachamento livre", "Agachamento com mochila", "Cadeira extensora"],
+      "Leg press": ["Agachamento livre", "Afundo", "Step-up no banco"],
+      "Afundo": ["Agachamento", "Step-up no banco", "Agachamento búlgaro"],
+      "Mesa flexora": ["Stiff com halteres", "Ponte de glúteo", "Flexora com bola"],
+      "Panturrilha em pé": ["Panturrilha sentado", "Panturrilha unilateral", "Panturrilha no degrau"],
+      "Abdominal prancha": ["Abdominal curto", "Dead bug", "Prancha com joelhos apoiados"],
+      "Caminhada leve": ["Bicicleta leve", "Mobilidade geral", "Alongamento leve"],
+      "Mobilidade geral": ["Alongamento leve", "Caminhada leve", "Respiração e mobilidade"]
+    };
+
+    const bibliotecaExercicios = {
+      A: [
+        { nome: "Supino reto", grupo: "Peito", equipamento: "Banco e barra", nivel: "intermediario", local: ["academia_grande", "academia_pequena", "garagem"], evitar: "ombro", passos: ["Deite no banco com os pés firmes.", "Desça a barra controlando.", "Empurre a barra para cima.", "Mantenha os ombros estáveis."] },
+        { nome: "Flexão de braço", grupo: "Peito", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "ombro", passos: ["Apoie as mãos no chão.", "Mantenha o corpo alinhado.", "Desça com controle.", "Suba empurrando o chão."] },
+        { nome: "Supino com halteres", grupo: "Peito", equipamento: "Halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Deite em banco ou no chão.", "Segure os halteres alinhados.", "Desça com controle.", "Suba sem bater os pesos."] },
+        { nome: "Desenvolvimento com halteres", grupo: "Ombros", equipamento: "Halteres", nivel: "intermediario", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Segure os halteres nos ombros.", "Empurre para cima.", "Não arqueie demais a lombar.", "Desça devagar."] },
+        { nome: "Elevação lateral", grupo: "Ombros", equipamento: "Halteres ou elástico", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Segure um peso em cada mão.", "Eleve até a altura dos ombros.", "Evite balanço.", "Desça devagar."] },
+        { nome: "Tríceps corda", grupo: "Tríceps", equipamento: "Polia", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "ombro", passos: ["Mantenha cotovelos próximos ao corpo.", "Empurre a corda para baixo.", "Estenda os braços.", "Volte controlando."] },
+        { nome: "Tríceps banco", grupo: "Tríceps", equipamento: "Banco ou cadeira", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "ombro", passos: ["Apoie as mãos no banco.", "Desça dobrando os cotovelos.", "Mantenha o tronco próximo.", "Suba com controle."] }
+      ],
+      B: [
+        { nome: "Remada baixa", grupo: "Costas", equipamento: "Máquina ou cabo", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "lombar", passos: ["Sente com a coluna reta.", "Puxe o cabo ao abdômen.", "Contraia as costas.", "Volte devagar."] },
+        { nome: "Puxada frente", grupo: "Costas", equipamento: "Máquina ou cabo", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "ombro", passos: ["Segure a barra.", "Puxe em direção ao peito.", "Mantenha o tronco firme.", "Volte controlando."] },
+        { nome: "Remada unilateral", grupo: "Costas", equipamento: "Halter ou mochila", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "lombar", passos: ["Apoie uma mão em superfície firme.", "Puxe o peso ao quadril.", "Contraia as costas.", "Desça com controle."] },
+        { nome: "Remada invertida", grupo: "Costas", equipamento: "Barra baixa", nivel: "intermediario", local: ["academia_grande", "garagem", "sem_equipamento"], evitar: "ombro", passos: ["Segure uma barra baixa.", "Mantenha o corpo alinhado.", "Puxe o peito em direção à barra.", "Desça controlando."] },
+        { nome: "Rosca direta", grupo: "Bíceps", equipamento: "Barra ou halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "nenhuma", passos: ["Segure com palmas para cima.", "Cotovelos próximos ao corpo.", "Suba contraindo o bíceps.", "Desça devagar."] },
+        { nome: "Rosca martelo", grupo: "Bíceps", equipamento: "Halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "nenhuma", passos: ["Palmas viradas uma para a outra.", "Mantenha cotovelos fixos.", "Suba com controle.", "Desça devagar."] },
+        { nome: "Face pull", grupo: "Ombro posterior", equipamento: "Polia ou elástico", nivel: "intermediario", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Puxe em direção ao rosto.", "Abra os cotovelos.", "Contraia ombro posterior.", "Volte controlando."] }
+      ],
+      C: [
+        { nome: "Agachamento", grupo: "Pernas", equipamento: "Peso corporal, barra ou halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "joelho", passos: ["Pés na largura dos ombros.", "Desça empurrando quadril para trás.", "Mantenha coluna firme.", "Suba empurrando o chão."] },
+        { nome: "Leg press", grupo: "Pernas", equipamento: "Máquina", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "joelho", passos: ["Sente com costas apoiadas.", "Pés na plataforma.", "Desça com controle.", "Empurre sem travar joelhos."] },
+        { nome: "Afundo", grupo: "Pernas", equipamento: "Peso corporal ou halteres", nivel: "intermediario", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "joelho", passos: ["Dê um passo à frente.", "Desça controlando.", "Mantenha o tronco firme.", "Volte empurrando a perna da frente."] },
+        { nome: "Mesa flexora", grupo: "Posterior de coxa", equipamento: "Máquina", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "joelho", passos: ["Ajuste o aparelho.", "Flexione os joelhos.", "Contraia posterior de coxa.", "Volte devagar."] },
+        { nome: "Ponte de glúteo", grupo: "Glúteos", equipamento: "Nenhum ou peso", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "lombar", passos: ["Deite de barriga para cima.", "Pés no chão.", "Suba o quadril contraindo glúteos.", "Desça com controle."] },
+        { nome: "Panturrilha em pé", grupo: "Panturrilha", equipamento: "Peso corporal ou halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "nenhuma", passos: ["Fique em pé.", "Suba na ponta dos pés.", "Contraia no topo.", "Desça devagar."] },
+        { nome: "Abdominal prancha", grupo: "Abdômen", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "lombar", passos: ["Apoie cotovelos e pés.", "Mantenha corpo alinhado.", "Contraia abdômen.", "Não deixe quadril cair."] }
+      ],
+      descanso: [
+        { nome: "Caminhada leve", grupo: "Recuperação", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "nenhuma", passos: ["Caminhe em ritmo confortável.", "Respire de forma controlada.", "Não transforme em treino pesado.", "Finalize com alongamentos leves."] },
+        { nome: "Mobilidade geral", grupo: "Recuperação", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "nenhuma", passos: ["Movimente ombros, quadril e coluna.", "Evite dor.", "Mantenha controle.", "Use o dia para recuperar."] }
+      ]
+    };
+
+    function carregarPerfilAutomaticamente() {
+      const perfilSalvo = localStorage.getItem("perfilUsuario");
+      if (!perfilSalvo) return;
+      perfilUsuario = JSON.parse(perfilSalvo);
+      document.getElementById("nome").value = perfilUsuario.nome || "";
+      document.getElementById("sexo").value = perfilUsuario.sexo || "nao_responder";
+      document.getElementById("idade").value = perfilUsuario.idade || "";
+      document.getElementById("peso").value = perfilUsuario.peso || "";
+      document.getElementById("altura").value = perfilUsuario.alturaCm || "";
+      document.getElementById("metaPrincipal").value = perfilUsuario.metaPrincipal || "massa";
+      document.getElementById("rotinaAtual").value = perfilUsuario.rotinaAtual || "nunca";
+      document.getElementById("tempoExperiencia").value = perfilUsuario.tempoExperiencia || "menos_1";
+      document.getElementById("localTreino").value = perfilUsuario.localTreino || "academia_grande";
+      mostrarResumoPerfilCarregado();
+      document.getElementById("botaoIrTreino").classList.remove("hidden");
+    }
+
+    function mostrarResumoPerfilCarregado() {
+      const resultadoPerfil = document.getElementById("resultadoPerfil");
+      resultadoPerfil.classList.remove("hidden");
+      resultadoPerfil.innerHTML = "<strong>Perfil carregado automaticamente</strong><br>" + perfilUsuario.nome + ", seu IMC salvo é " + perfilUsuario.imc + ".<br>Classificação: " + perfilUsuario.classificacao + ".<br>Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + ".<br>Local de treino: " + traduzirLocal(perfilUsuario.localTreino) + ".<br><br><span class='small'>Se quiser alterar seus dados, edite os campos e clique em Calcular e salvar perfil.</span>";
+    }
+
+    function calcularPerfil() {
+      if (!acessoLiberado) {
+        bloquearApp("Faça login com um e-mail autorizado para usar o app.");
+        return;
+      }
+
+      const nome = document.getElementById("nome").value.trim();
+      const sexo = document.getElementById("sexo").value;
+      const idade = Number(document.getElementById("idade").value);
+      const peso = Number(document.getElementById("peso").value);
+      const alturaCm = Number(document.getElementById("altura").value);
+      const metaPrincipal = document.getElementById("metaPrincipal").value;
+      const rotinaAtual = document.getElementById("rotinaAtual").value;
+      const tempoExperiencia = document.getElementById("tempoExperiencia").value;
+      const localTreino = document.getElementById("localTreino").value;
+      const resultadoPerfil = document.getElementById("resultadoPerfil");
+      const botaoIrTreino = document.getElementById("botaoIrTreino");
+
+      if (nome === "" || idade <= 0 || peso <= 0 || alturaCm <= 0) {
+        resultadoPerfil.classList.remove("hidden");
+        resultadoPerfil.innerHTML = "Preencha todos os campos corretamente.";
+        botaoIrTreino.classList.add("hidden");
+        return;
+      }
+
+      const perfilAntigo = JSON.parse(localStorage.getItem("perfilUsuario") || "null");
+      const alturaM = alturaCm / 100;
+      const imc = peso / (alturaM * alturaM);
+      let classificacao = "";
+      let mensagem = "";
+
+      if (imc < 18.5) { classificacao = "abaixo do peso"; mensagem = "Seu foco pode ser ganhar massa muscular com alimentação adequada."; }
+      else if (imc < 25) { classificacao = "dentro da faixa considerada normal"; mensagem = "Seu foco pode ser melhorar composição corporal, força e condicionamento."; }
+      else if (imc < 30) { classificacao = "acima do peso"; mensagem = "Seu foco pode ser reduzir gordura corporal e manter ou ganhar massa magra."; }
+      else { classificacao = "em faixa de obesidade pelo IMC"; mensagem = "O ideal é começar com treinos seguros, progressivos e, se possível, acompanhamento profissional."; }
+
+      perfilUsuario = { nome, sexo, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino };
+      localStorage.setItem("perfilUsuario", JSON.stringify(perfilUsuario));
+      registrarPeso(peso);
+      mostrarMensagemMudancaPeso(perfilAntigo, peso);
+
+      resultadoPerfil.classList.remove("hidden");
+      resultadoPerfil.innerHTML = "<strong>" + nome + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Classificação: " + classificacao + ".<br>" + mensagem + "<br>Meta: " + traduzirMeta(metaPrincipal) + ".<br>Rotina: " + traduzirRotina(rotinaAtual) + ".<br>Experiência: " + traduzirExperiencia(tempoExperiencia) + ".<br>Local: " + traduzirLocal(localTreino) + ".<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
+      botaoIrTreino.classList.remove("hidden");
+    }
+
+    function registrarPeso(peso) {
+      const historicoPeso = JSON.parse(localStorage.getItem("historicoPeso") || "[]");
+      historicoPeso.unshift({ data: new Date().toLocaleString("pt-BR"), peso: peso });
+      localStorage.setItem("historicoPeso", JSON.stringify(historicoPeso));
+    }
+
+    function mostrarMensagemMudancaPeso(perfilAntigo, pesoNovo) {
+      const caixa = document.getElementById("mensagemPeso");
+      caixa.className = "alerta hidden";
+      if (!perfilAntigo || !perfilAntigo.peso) return;
+      const pesoAntigo = Number(perfilAntigo.peso);
+      const diferenca = pesoNovo - pesoAntigo;
+      if (Math.abs(diferenca) < 0.1) return;
+      caixa.classList.remove("hidden");
+      if (diferenca < 0) {
+        caixa.classList.add("alerta-sucesso");
+        caixa.innerHTML = "👏 Parabéns! Você reduziu " + Math.abs(diferenca).toFixed(1) + " kg desde o último registro. Continue com foco, constância e paciência. Resultado bom vem de pequenas escolhas repetidas todos os dias.";
+      } else {
+        caixa.classList.add("alerta-aviso");
+        caixa.innerHTML = "⚠️ Seu peso aumentou " + diferenca.toFixed(1) + " kg desde o último registro. Isso pode acontecer por retenção, alimentação, ganho de massa ou falta de rotina. Como foi sua semana? Vale revisar sono, alimentação, frequência nos treinos e manter o foco sem desanimar.";
+      }
+    }
+
+    function apagarPerfilSalvo() {
+      if (!confirm("Tem certeza que deseja apagar o perfil salvo?")) return;
+      localStorage.removeItem("perfilUsuario");
+      perfilUsuario = null;
+      document.getElementById("nome").value = "";
+      document.getElementById("idade").value = "";
+      document.getElementById("peso").value = "";
+      document.getElementById("altura").value = "";
+      document.getElementById("resultadoPerfil").classList.add("hidden");
+      document.getElementById("mensagemPeso").classList.add("hidden");
+      document.getElementById("botaoIrTreino").classList.add("hidden");
+    }
+
+    function traduzirMeta(valor) {
+      const mapa = { massa: "ganhar massa muscular", perder_peso: "perder peso", definicao: "ficar mais magro e definido", forca: "levantar mais peso / ganhar força" };
+      return mapa[valor] || valor;
+    }
+    function traduzirRotina(valor) {
+      const mapa = { nunca: "nunca treinou", dificuldade: "já treinou, mas teve dificuldades", voltando: "voltando a treinar", regular: "treina regularmente" };
+      return mapa[valor] || valor;
+    }
+    function traduzirExperiencia(valor) {
+      const mapa = { menos_1: "menos de 1 ano", "1_2": "de 1 a 2 anos", "2_4": "de 2 a 4 anos", "4_mais": "4 anos ou mais" };
+      return mapa[valor] || valor;
+    }
+    function traduzirLocal(valor) {
+      const mapa = { academia_grande: "academia completa", academia_pequena: "academia compacta", garagem: "espaço próprio com equipamentos", casa_limitado: "casa com poucos equipamentos", sem_equipamento: "sem equipamentos" };
+      return mapa[valor] || valor;
+    }
+
+    function irParaTreino() {
+      if (!acessoLiberado) {
+        bloquearApp("Faça login com um e-mail autorizado para acessar os treinos.");
+        return;
+      }
+
+      if (perfilUsuario === null) calcularPerfil();
+      if (perfilUsuario === null) return;
+      ocultarPaginasDoApp();
+      document.getElementById("paginaTreino").classList.remove("hidden");
+      document.getElementById("tituloTreino").innerText = "Treino de " + perfilUsuario.nome;
+      document.getElementById("resumoPerfilTreino").innerText = "Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + " | Experiência: " + traduzirExperiencia(perfilUsuario.tempoExperiencia) + " | Local: " + traduzirLocal(perfilUsuario.localTreino) + " | IMC: " + perfilUsuario.imc;
+      mostrarHistorico();
+      carregarUltimaCorrida();
+    }
+
+    function voltarParaPerfil() {
+      ocultarPaginasDoApp();
+      document.getElementById("paginaPerfil").classList.remove("hidden");
+    }
+
+    function irParaCheckin() {
+      if (!acessoLiberado) {
+        bloquearApp("Faça login com um e-mail autorizado para responder o check-in.");
+        return;
+      }
+
+      ocultarPaginasDoApp();
+      document.getElementById("paginaCheckin").classList.remove("hidden");
+      carregarUltimaCorrida();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function irParaCorrida() {
+      if (!acessoLiberado) {
+        bloquearApp("Faça login com um e-mail autorizado para registrar corridas.");
+        return;
+      }
+
+      ocultarPaginasDoApp();
+      document.getElementById("paginaCorrida").classList.remove("hidden");
+      carregarCorridas();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function irParaNovidades() {
+      if (!acessoLiberado) {
+        bloquearApp("Faça login com um e-mail autorizado para ver as novidades do app.");
+        return;
+      }
+
+      ocultarPaginasDoApp();
+      document.getElementById("paginaNovidades").classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function irParaHistorico() {
+      irParaHistoricoCompleto();
+    }
+
+    function irParaHistoricoCompleto() {
+      if (!acessoLiberado) {
+        bloquearApp("Faça login com um e-mail autorizado para ver o histórico.");
+        return;
+      }
+
+      ocultarPaginasDoApp();
+      document.getElementById("paginaHistoricoCompleto").classList.remove("hidden");
+      mostrarHistoricoCompleto();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function nomeDoDiaDaSemana() {
+      const dias = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+      return dias[new Date().getDay()];
+    }
+
+    function escolherTreinoPorDiaDaSemana() {
+      const hoje = new Date().getDay();
+      if (hoje === 0) return "descanso";
+      if (hoje === 1 || hoje === 4) return "A";
+      if (hoje === 2 || hoje === 5) return "B";
+      if (hoje === 3 || hoje === 6) return "C";
+      return "A";
+    }
+
+    function escolherTreinoABC(divisaoSelecionada) {
+      if (divisaoSelecionada === "semana") return escolherTreinoPorDiaDaSemana();
+      if (divisaoSelecionada === "descanso") return "descanso";
+      if (divisaoSelecionada !== "automatico") return divisaoSelecionada;
+      const historico = JSON.parse(localStorage.getItem("historicoTreinos") || "[]");
+      if (historico.length === 0 || !historico[0].letraTreino) return "A";
+      const ultimoTreino = historico[0].letraTreino;
+      if (ultimoTreino === "A") return "B";
+      if (ultimoTreino === "B") return "C";
+      return "A";
+    }
+
+    function nivelPermitido(exercicio) {
+      if (!perfilUsuario) return true;
+      const iniciante = perfilUsuario.rotinaAtual === "nunca" || perfilUsuario.rotinaAtual === "dificuldade" || perfilUsuario.tempoExperiencia === "menos_1";
+      if (iniciante && exercicio.nivel === "avancado") return false;
+      return true;
+    }
+
+    function ajustarExercicioPorMeta(exercicio) {
+      const copia = Object.assign({}, exercicio);
+      if (!perfilUsuario) return copia;
+      if (perfilUsuario.metaPrincipal === "forca") { copia.series = "4 a 5 séries"; copia.reps = "4 a 8 reps"; }
+      if (perfilUsuario.metaPrincipal === "massa") { copia.series = "3 a 4 séries"; copia.reps = "8 a 12 reps"; }
+      if (perfilUsuario.metaPrincipal === "definicao") { copia.series = "3 séries"; copia.reps = "10 a 15 reps"; }
+      if (perfilUsuario.metaPrincipal === "perder_peso") { copia.series = "3 séries"; copia.reps = "12 a 15 reps"; }
+      return copia;
+    }
+
+    function diasDesdeTimestamp(timestamp) {
+      if (!timestamp) return 999;
+      const agora = new Date().getTime();
+      return (agora - Number(timestamp)) / (1000 * 60 * 60 * 24);
+    }
+
+    function traduzirIntensidadeCorrida(valor) {
+      const mapa = { leve: "leve", moderada: "moderada", forte: "forte" };
+      return mapa[valor] || valor || "não informada";
+    }
+
+    function analisarImpactoUltimaCorrida(letraTreino) {
+      const resposta = { mensagem: "", reduzirVolume: false, sugerirDescanso: false };
+
+      if (!ultimaCorridaCache || !ultimaCorridaCache.criadoEm || ultimaCorridaCache.tipo === "sem_corrida") {
+        return resposta;
+      }
+
+      const dias = diasDesdeTimestamp(ultimaCorridaCache.criadoEm);
+      if (dias > 1.5) {
+        return resposta;
+      }
+
+      const intensidade = ultimaCorridaCache.intensidade || "leve";
+      const sensacao = ultimaCorridaCache.sensacao || "bem";
+      const foiForte = intensidade === "forte" || sensacao === "pesado";
+      const foiModerada = intensidade === "moderada" || sensacao === "cansado";
+
+      if (foiForte) {
+        resposta.reduzirVolume = true;
+        resposta.mensagem = "Como sua última corrida foi forte ou muito pesada, o app reduziu um pouco o volume do treino de hoje.";
+        if (letraTreino === "C") {
+          resposta.sugerirDescanso = true;
+          resposta.mensagem = "Como sua última corrida foi forte ou muito pesada e hoje seria treino de pernas, o app sugeriu recuperação/mobilidade para proteger sua recuperação.";
+        }
+      } else if (foiModerada && letraTreino === "C") {
+        resposta.reduzirVolume = true;
+        resposta.mensagem = "Como você correu recentemente em intensidade moderada, o treino de pernas foi ajustado com menos volume.";
+      } else {
+        resposta.mensagem = "Última corrida registrada considerada leve; treino mantido normalmente.";
+      }
+
+      return resposta;
+    }
+
+    function alternarCamposCorrida() {
+      const naoCorreu = document.getElementById("naoCorreuRecentemente");
+      const desativar = naoCorreu && naoCorreu.checked;
+      ["distanciaCorrida", "tempoCorrida", "intensidadeCorrida", "sensacaoCorrida", "observacaoCorrida"].forEach(function(id) {
+        const campo = document.getElementById(id);
+        if (campo) campo.disabled = desativar;
+      });
+    }
+
+    function salvarCorrida() {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login com um e-mail autorizado para salvar corridas.");
+        return;
+      }
+
+      const naoCorreu = document.getElementById("naoCorreuRecentemente") && document.getElementById("naoCorreuRecentemente").checked;
+      const distancia = Number(document.getElementById("distanciaCorrida").value);
+      const tempo = Number(document.getElementById("tempoCorrida").value);
+      const intensidade = document.getElementById("intensidadeCorrida").value;
+      const sensacao = document.getElementById("sensacaoCorrida").value;
+      const observacao = document.getElementById("observacaoCorrida").value.trim();
+      const caixa = document.getElementById("mensagemCorrida");
+
+      if (naoCorreu) {
+        const agora = new Date();
+        const registroSemCorrida = {
+          tipo: "sem_corrida",
+          data: agora.toLocaleString("pt-BR"),
+          criadoEm: agora.getTime(),
+          diaSemana: nomeDoDiaDaSemana(),
+          nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário",
+          observacao: "Usuário informou que não correu recentemente."
+        };
+
+        db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").add(registroSemCorrida)
+          .then(function() {
+            ultimaCorridaCache = registroSemCorrida;
+            if (caixa) {
+              caixa.className = "alerta alerta-sucesso";
+              caixa.innerHTML = "✅ Registro salvo: nenhuma corrida recente será considerada no próximo treino.";
+            }
+            document.getElementById("naoCorreuRecentemente").checked = false;
+            alternarCamposCorrida();
+            carregarCorridas();
+          })
+          .catch(function(erro) {
+            console.log("Erro ao salvar registro sem corrida:", erro);
+            if (caixa) {
+              caixa.className = "alerta alerta-aviso";
+              caixa.innerHTML = "Não foi possível salvar o registro agora. Confira sua conexão e tente novamente.";
+            }
+          });
+        return;
+      }
+
+      if (distancia < 0 || tempo <= 0) {
+        if (caixa) {
+          caixa.className = "alerta alerta-aviso";
+          caixa.innerHTML = "Informe distância com 0 km ou mais e tempo maior que zero.";
+        }
+        return;
+      }
+
+      const agora = new Date();
+      const corrida = {
+        data: agora.toLocaleString("pt-BR"),
+        criadoEm: agora.getTime(),
+        diaSemana: nomeDoDiaDaSemana(),
+        distancia: distancia,
+        tempo: tempo,
+        intensidade: intensidade,
+        sensacao: sensacao,
+        observacao: observacao,
+        nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário"
+      };
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").add(corrida)
+        .then(function() {
+          ultimaCorridaCache = corrida;
+          if (caixa) {
+            caixa.className = "alerta alerta-sucesso";
+            caixa.innerHTML = "✅ Corrida salva. O próximo treino poderá ser adaptado com base nesse registro.";
+          }
+          document.getElementById("observacaoCorrida").value = "";
+          carregarCorridas();
+        })
+        .catch(function(erro) {
+          console.log("Erro ao salvar corrida:", erro);
+          if (caixa) {
+            caixa.className = "alerta alerta-aviso";
+            caixa.innerHTML = "Não foi possível salvar a corrida agora. Confira sua conexão e tente novamente.";
+          }
+        });
+    }
+
+    function obterCorridasDaNuvem(callback) {
+      if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").get()
+        .then(function(snapshot) {
+          const lista = [];
+          snapshot.forEach(function(doc) { lista.push(doc.data()); });
+          lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
+          callback(lista);
+        })
+        .catch(function(erro) { console.log("Erro ao carregar corridas:", erro); callback([]); });
+    }
+
+    function carregarUltimaCorrida() {
+      obterCorridasDaNuvem(function(lista) {
+        ultimaCorridaCache = lista && lista.length ? lista[0] : null;
+      });
+    }
+
+    function carregarCorridas() {
+      obterCorridasDaNuvem(function(lista) {
+        const caixa = document.getElementById("listaCorridas");
+        if (!caixa) return;
+
+        caixa.innerHTML = "";
+        if (!lista || lista.length === 0) {
+          caixa.innerHTML = "<p class='small'>Nenhuma corrida salva ainda.</p>";
+          ultimaCorridaCache = null;
+          return;
+        }
+
+        ultimaCorridaCache = lista[0];
+
+        lista.slice(0, 5).forEach(function(item) {
+          const div = document.createElement("div");
+          div.className = "historico-item";
+          if (item.tipo === "sem_corrida") {
+            div.innerHTML =
+              "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
+              "Status: não correu recentemente<br>" +
+              "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
+          } else {
+            div.innerHTML =
+              "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
+              "Distância: " + limparTextoSeguro(item.distancia || 0) + " km<br>" +
+              "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
+              "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCorrida(item.intensidade)) + "<br>" +
+              "Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
+              "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
+          }
+          caixa.appendChild(div);
+        });
+      });
+    }
+
+    function limparHistoricoCorridas() {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login com um e-mail autorizado para limpar o histórico de corridas.");
+        return;
+      }
+
+      if (!confirm("Tem certeza que deseja apagar todo o histórico de corridas?")) return;
+
+      db.collection("usuarios")
+        .doc(usuarioAtual.uid)
+        .collection("corridas")
+        .get()
+        .then(function(snapshot) {
+          const batch = db.batch();
+          snapshot.forEach(function(doc) {
+            batch.delete(doc.ref);
+          });
+          return batch.commit();
+        })
+        .then(function() {
+          ultimaCorridaCache = null;
+          carregarCorridas();
+          const caixa = document.getElementById("mensagemCorrida");
+          if (caixa) {
+            caixa.className = "alerta alerta-sucesso";
+            caixa.innerHTML = "Histórico de corridas apagado com sucesso.";
+          }
+        })
+        .catch(function(erro) {
+          console.log("Erro ao limpar histórico de corridas:", erro);
+          alert("Não foi possível limpar o histórico de corridas agora.");
+        });
+    }
+
+    function gerarTreino() {
+      const energia = document.getElementById("energia").value;
+      const dor = document.getElementById("dor").value;
+      const tempo = document.getElementById("tempo").value;
+      const divisaoSelecionada = document.getElementById("divisaoTreino").value;
+      const letraTreino = escolherTreinoABC(divisaoSelecionada);
+      const local = perfilUsuario ? perfilUsuario.localTreino : "academia_grande";
+
+      let treinoFiltrado = bibliotecaExercicios[letraTreino].filter(function(exercicio) {
+        return exercicio.evitar !== dor && exercicio.local.includes(local) && nivelPermitido(exercicio);
+      }).map(ajustarExercicioPorMeta);
+
+      if (treinoFiltrado.length === 0) {
+        treinoFiltrado = bibliotecaExercicios[letraTreino].filter(function(exercicio) { return exercicio.evitar !== dor; }).map(ajustarExercicioPorMeta);
+      }
+
+      if (tempo === "rapido") treinoFiltrado = treinoFiltrado.slice(0, 4);
+      else if (tempo === "normal") treinoFiltrado = treinoFiltrado.slice(0, 6);
+
+      const ajusteCorrida = analisarImpactoUltimaCorrida(letraTreino);
+      if (ajusteCorrida.reduzirVolume && treinoFiltrado.length > 4) {
+        treinoFiltrado = treinoFiltrado.slice(0, Math.max(4, treinoFiltrado.length - 1));
+      }
+      if (ajusteCorrida.sugerirDescanso && letraTreino === "C") {
+        treinoFiltrado = bibliotecaExercicios.descanso.map(ajustarExercicioPorMeta);
+      }
+
+      treinoAtual = treinoFiltrado;
+      treinoAtual.letra = letraTreino === "descanso" ? "Descanso" : letraTreino;
+      exerciciosConcluidos = new Array(treinoAtual.length).fill(false);
+
+      let ajuste = "";
+      if (letraTreino === "descanso") {
+        ajuste = "Hoje é " + nomeDoDiaDaSemana() + ". O app sugeriu descanso ativo/mobilidade para recuperação.";
+      } else {
+        if (energia === "bem") ajuste = "Hoje você pode treinar normalmente e tentar evoluir carga se a execução estiver boa.";
+        else if (energia === "cansado") ajuste = "Hoje reduza um pouco o volume. Faça uma série a menos em cada exercício.";
+        else ajuste = "Hoje faça um treino leve. Priorize técnica, mobilidade e não force carga.";
+        if (divisaoSelecionada === "semana") ajuste = "Hoje é " + nomeDoDiaDaSemana() + ". Treino " + letraTreino + " selecionado pelo dia da semana. " + ajuste;
+        else if (divisaoSelecionada === "automatico") ajuste = "Treino " + letraTreino + " selecionado pelo histórico A/B/C. " + ajuste;
+        else ajuste = "Treino " + letraTreino + " selecionado manualmente. " + ajuste;
+      }
+      ajuste += " Personalizado para meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + ", local: " + traduzirLocal(perfilUsuario.localTreino) + ".";
+      if (tempo === "rapido") ajuste += " Treino rápido: pensado para aproximadamente 30 minutos.";
+      else if (tempo === "normal") ajuste += " Treino normal: pensado para aproximadamente 1 hora.";
+      else ajuste += " Treino longo: pensado para mais de 1 hora, com maior volume de exercícios.";
+      if (dor !== "nenhuma" && letraTreino !== "descanso") ajuste += " Exercícios que podem incomodar sua dor foram removidos.";
+      if (ajusteCorrida.mensagem) ajuste += " " + ajusteCorrida.mensagem;
+
+      document.getElementById("resultadoTreino").classList.remove("hidden");
+      document.getElementById("registroEvolucao").classList.remove("hidden");
+      document.getElementById("resumoTreino").innerText = ajuste;
+      mostrarTreinoNaTela();
+    }
+
+
+    function abrirVideoExercicio(nomeExercicio) {
+      const busca = encodeURIComponent("como fazer " + nomeExercicio + " exercício musculação corretamente");
+      window.open("https://www.youtube.com/results?search_query=" + busca, "_blank");
+    }
+
+    function mostrarTreinoNaTela() {
+      const lista = document.getElementById("listaExercicios");
+      const progresso = document.getElementById("progressoExercicios");
+      lista.innerHTML = "";
+      sugestoesCarga = buscarSugestoesDeCarga(treinoAtual);
+      treinoAtual.forEach(function(exercicio, index) {
+        const div = document.createElement("div");
+        div.className = "exercise";
+        div.id = "cardExercicio" + index;
+        if (exerciciosConcluidos[index]) div.classList.add("concluido");
+        let passosHTML = "";
+        exercicio.passos.forEach(function(passo) { passosHTML += "<li>" + passo + "</li>"; });
+        const marcado = exerciciosConcluidos[index] ? "checked" : "";
+        div.innerHTML = "<strong>" + exercicio.nome + "</strong>" +
+          "<span>" + exercicio.series + " | " + exercicio.reps + "</span><br>" +
+          "<span class='tag'>Grupo: " + exercicio.grupo + "</span> " +
+          "<span class='tag'>Equipamento: " + exercicio.equipamento + "</span>" +
+          "<div class='alerta'>" + obterTextoSugestaoCarga(exercicio.nome) + "</div>" +
+          "<h4>Como fazer:</h4><ol>" + passosHTML + "</ol>" +
+          "<div class='aviso-video'>Use o vídeo apenas como apoio. Em caso de dor, pare o exercício.</div>" +
+          "<button type='button' class='botao-secundario' onclick='abrirVideoExercicio(" + JSON.stringify(exercicio.nome) + ")'>Ver execução</button>" +
+          "<label class='check-exercicio'><input type='checkbox' " + marcado + " onchange='marcarExercicioConcluido(" + index + ", this.checked)'>Exercício concluído</label>" +
+          "<button type='button' class='botao-secundario' onclick='preencherRegistroComExercicio(" + index + ")'>Registrar este exercício</button>" +
+          "<button type='button' class='botao-secundario' onclick='substituirExercicio(" + index + ")'>Não tenho esse equipamento / substituir</button>";
+        lista.appendChild(div);
+      });
+      progresso.classList.remove("hidden");
+      atualizarProgressoExercicios();
+    }
+
+    function marcarExercicioConcluido(index, concluido) {
+      exerciciosConcluidos[index] = concluido;
+      const card = document.getElementById("cardExercicio" + index);
+      if (card) concluido ? card.classList.add("concluido") : card.classList.remove("concluido");
+      atualizarProgressoExercicios();
+    }
+
+    function atualizarProgressoExercicios() {
+      const progresso = document.getElementById("progressoExercicios");
+      const total = exerciciosConcluidos.length;
+      const feitos = exerciciosConcluidos.filter(function(item) { return item === true; }).length;
+      progresso.innerText = total === 0 ? "Nenhum exercício gerado ainda." : "Progresso do treino: " + feitos + " de " + total + " exercícios concluídos.";
+    }
+
+    function substituirExercicio(index) {
+      const exercicioAtual = treinoAtual[index];
+      const opcoes = substituicoes[exercicioAtual.nome];
+      if (!opcoes || opcoes.length === 0) { alert("Ainda não há substituições cadastradas para esse exercício."); return; }
+      let textoOpcoes = "Escolha uma substituição:\n\n";
+      opcoes.forEach(function(opcao, i) { textoOpcoes += (i + 1) + " - " + opcao + "\n"; });
+      const numero = Number(prompt(textoOpcoes + "\nDigite o número da opção:"));
+      if (numero < 1 || numero > opcoes.length) { alert("Opção inválida."); return; }
+      const novoNome = opcoes[numero - 1];
+      treinoAtual[index] = { nome: novoNome, grupo: exercicioAtual.grupo, equipamento: "Alternativo", series: exercicioAtual.series, reps: exercicioAtual.reps, evitar: exercicioAtual.evitar, passos: ["Execute o movimento com controle e sem dor.", "Mantenha a postura firme durante todo o exercício.", "Use uma carga ou dificuldade que permita boa execução.", "Se sentir dor articular, pare e escolha outra variação."] };
+      exerciciosConcluidos[index] = false;
+      mostrarTreinoNaTela();
+    }
+
+    function normalizarNomeExercicio(nome) { return nome.trim().toLowerCase(); }
+
+    function buscarSugestoesDeCarga(treino) {
+      // O histórico agora fica somente na nuvem. Para manter a tela rápida,
+      // a sugestão de carga será evoluída em uma próxima etapa lendo os últimos registros do Firestore.
+      return {};
+    }
+
+    function obterTextoSugestaoCarga(nomeExercicio) {
+      const sugestao = sugestoesCarga[nomeExercicio];
+      if (!sugestao) return "Carga sugerida: ainda sem histórico para este exercício.";
+      return "Última carga: " + sugestao.ultimaCarga + " kg em " + sugestao.data + ". Sugestão para hoje: " + sugestao.cargaSugerida + " kg. " + sugestao.motivo;
+    }
+
+    function preencherRegistroComExercicio(index) {
+      const exercicio = treinoAtual[index];
+      document.getElementById("exercicioRegistro").value = exercicio.nome;
+      const sugestao = sugestoesCarga[exercicio.nome];
+      if (sugestao) document.getElementById("carga").value = sugestao.cargaSugerida;
+      document.getElementById("exercicioRegistro").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function calcularEvolucao() {
+      const carga = Number(document.getElementById("carga").value);
+      const reps = Number(document.getElementById("reps").value);
+      const sensacao = document.getElementById("sensacao").value;
+      const resultadoEvolucao = document.getElementById("resultadoEvolucao");
+      if (document.getElementById("carga").value === "" || carga < 0 || reps <= 0) { resultadoEvolucao.innerText = "Preencha carga com 0 kg ou mais e repetições corretamente."; return; }
+      let proximaCarga = carga;
+      let mensagem = "";
+      if (sensacao === "facil") { proximaCarga = carga + 2; mensagem = "No próximo treino, aumente para " + proximaCarga + " kg."; }
+      else if (sensacao === "normal") mensagem = "Mantenha " + carga + " kg no próximo treino e tente melhorar a execução ou as repetições.";
+      else { proximaCarga = Math.max(carga - 2, 0); mensagem = "Reduza para " + proximaCarga + " kg no próximo treino e foque na técnica."; }
+      mensagemEvolucaoAtual = mensagem;
+      resultadoEvolucao.innerText = mensagem;
+    }
+
+    function salvarTreinoFeito() {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login com um e-mail autorizado para salvar o treino na nuvem.");
+        return;
+      }
+
+      if (treinoAtual.length === 0) { alert("Gere um treino antes de salvar."); return; }
+
+      const exercicioRegistro = document.getElementById("exercicioRegistro").value.trim();
+      const carga = document.getElementById("carga").value;
+      const reps = document.getElementById("reps").value;
+      const sensacao = document.getElementById("sensacao").value;
+      const observacao = document.getElementById("observacaoTreino").value.trim();
+
+      if (carga === "" || Number(carga) < 0 || Number(reps) <= 0) {
+        alert("Informe uma carga de 0 kg ou mais e as repetições feitas.");
+        return;
+      }
+
+      const nomesExercicios = treinoAtual.map(function(exercicio) { return exercicio.nome; });
+      const totalExercicios = exerciciosConcluidos.length;
+      const totalConcluidos = exerciciosConcluidos.filter(function(item) { return item === true; }).length;
+      const agora = new Date();
+
+      const treinoSalvo = { data: agora.toLocaleString("pt-BR"), criadoEm: agora.getTime(), diaSemana: nomeDoDiaDaSemana(), letraTreino: treinoAtual.letra || "Não informado", meta: perfilUsuario ? perfilUsuario.metaPrincipal : "", local: perfilUsuario ? perfilUsuario.localTreino : "", totalExercicios, totalConcluidos, nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário", exercicios: nomesExercicios, exercicioRegistro, carga, reps, sensacao, evolucao: mensagemEvolucaoAtual, observacao, ultimaCorridaConsiderada: ultimaCorridaCache ? { data: ultimaCorridaCache.data, intensidade: ultimaCorridaCache.intensidade, sensacao: ultimaCorridaCache.sensacao, distancia: ultimaCorridaCache.distancia, tempo: ultimaCorridaCache.tempo } : null };
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").add(treinoSalvo)
+        .then(function() { alert("Treino salvo na nuvem."); mostrarHistorico(); })
+        .catch(function(erro) { console.log("Erro ao salvar treino na nuvem:", erro); alert("Não foi possível salvar o treino na nuvem. Confira sua conexão e tente novamente."); });
+    }
+
+    function obterHistoricoDaNuvem(callback) {
+      if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").get()
+        .then(function(snapshot) {
+          const lista = [];
+          snapshot.forEach(function(doc) { lista.push(doc.data()); });
+          lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
+          callback(lista);
+        })
+        .catch(function(erro) { console.log("Erro ao carregar histórico da nuvem:", erro); callback([]); });
+    }
+
+    function mostrarHistorico() { obterHistoricoDaNuvem(function(historico) { renderResumoHistorico(historico); }); }
+
+    function mostrarHistoricoCompleto() { obterHistoricoDaNuvem(function(historico) { renderHistoricoCompleto(historico); }); }
+
+    function renderResumoHistorico(historico) {
+      const listaHistorico = document.getElementById("listaHistorico");
+      listaHistorico.innerHTML = "";
+
+      if (!historico || historico.length === 0) { listaHistorico.innerHTML = "<p class='small'>Nenhum treino salvo na nuvem ainda.</p>"; return; }
+
+      historico.slice(0, 3).forEach(function(item) {
+        const div = document.createElement("div");
+        div.className = "historico-item";
+        div.innerHTML = "<strong>" + (item.data || "Sem data") + "</strong><br>" +
+          "Treino: " + (item.letraTreino || "Não informado") + "<br>" +
+          "Concluídos: " + (item.totalConcluidos || 0) + " de " + (item.totalExercicios || (item.exercicios ? item.exercicios.length : 0)) + " exercícios<br>" +
+          "Registro principal: " + (item.exercicioRegistro || "Não informado") +
+          "<br><button type='button' class='botao-secundario' onclick='irParaHistoricoCompleto()'>Ver detalhes</button>";
+        listaHistorico.appendChild(div);
+      });
+    }
+
+    function renderHistoricoCompleto(historico) {
+      const listaHistoricoCompleto = document.getElementById("listaHistoricoCompleto");
+      listaHistoricoCompleto.innerHTML = "";
+
+      if (!historico || historico.length === 0) { listaHistoricoCompleto.innerHTML = "<p class='small'>Nenhum treino salvo na nuvem ainda.</p>"; return; }
+
+      historico.forEach(function(item) {
+        const div = document.createElement("div");
+        div.className = "historico-item";
+        div.innerHTML = "<strong>" + (item.data || "Sem data") + "</strong><br>" +
+          "Dia: " + (item.diaSemana || "Não informado") + "<br>" +
+          "Pessoa: " + (item.nomeUsuario || "Usuário") + "<br>" +
+          "Treino: " + (item.letraTreino || "Não informado") + "<br>" +
+          "Meta: " + traduzirMeta(item.meta) + "<br>" +
+          "Local: " + traduzirLocal(item.local) + "<br>" +
+          "Concluídos: " + (item.totalConcluidos || 0) + " de " + (item.totalExercicios || (item.exercicios ? item.exercicios.length : 0)) + " exercícios<br>" +
+          "Exercícios: " + (item.exercicios ? item.exercicios.join(", ") : "Não informado") + "<br>" +
+          "Registro principal: " + (item.exercicioRegistro || "Não informado") + "<br>" +
+          "Carga: " + (item.carga !== undefined && item.carga !== "" ? item.carga : "-") + " kg | Reps: " + (item.reps || "-") + " | Sensação: " + (item.sensacao || "-") + "<br>" +
+          "Evolução: " + (item.evolucao || "Não calculada") + "<br>" +
+          "Observação: " + (item.observacao || "Nenhuma");
+        listaHistoricoCompleto.appendChild(div);
+      });
+    }
+
+    function limparHistorico() {
+      if (!confirm("Tem certeza que deseja apagar todo o histórico de treinos da nuvem?")) return;
+
+      if (!acessoLiberado || !usuarioAtual || !db) { alert("Faça login com um e-mail autorizado para limpar o histórico."); return; }
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").get()
+        .then(function(snapshot) {
+          const batch = db.batch();
+          snapshot.forEach(function(doc) { batch.delete(doc.ref); });
+          return batch.commit();
+        })
+        .then(function() { mostrarHistorico(); mostrarHistoricoCompleto(); })
+        .catch(function(erro) { console.log("Erro ao limpar histórico da nuvem:", erro); alert("Não foi possível limpar o histórico agora."); });
+    }
+
+    window.onload = function() {
+      carregarPerfilAutomaticamente();
+      if ("serviceWorker" in navigator) navigator.serviceWorker.register("service-worker.js");
+    };
+  </script>
 </body>
 </html>
