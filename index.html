@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meu Treino Inteligente</title>
-  <meta name="theme-color" content="#1f7aec">
+  <title>MetaTreino</title>
+  <meta name="theme-color" content="#22c55e">
   <link rel="manifest" href="manifest.json">
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -17,10 +17,10 @@
       --card: rgba(255, 255, 255, 0.92);
       --primary: #22c55e;
       --primary-dark: #16a34a;
-      --secondary: #38bdf8;
+      --secondary: #3b82f6;
       --danger: #ef4444;
-      --text: #0f172a;
-      --muted: #64748b;
+      --text: #ffffff;
+      --muted: #cbd5e1;
       --line: rgba(226, 232, 240, 0.9);
       --glass: rgba(255, 255, 255, 0.12);
       --success-bg: #ecfdf5;
@@ -579,6 +579,107 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+
+
+    /* Identidade visual MetaTreino - premium */
+    body {
+      background: #0f172a !important;
+      color: #ffffff !important;
+    }
+
+    .app-hero p {
+      color: #e2e8f0 !important;
+    }
+
+    .app-badge {
+      background: rgba(34, 197, 94, 0.16) !important;
+      color: #bbf7d0 !important;
+      border-color: rgba(34, 197, 94, 0.35) !important;
+    }
+
+    .card,
+    .historico-item,
+    .exercise,
+    .grafico-card,
+    .dashboard-box,
+    .feedback-treino,
+    .check-exercicio,
+    .modal-card {
+      background: rgba(15, 23, 42, 0.94) !important;
+      color: #ffffff !important;
+      border-color: rgba(148, 163, 184, 0.28) !important;
+    }
+
+    h1, h2,
+    .card h2,
+    .historico-item strong,
+    .exercise strong,
+    .dashboard-box strong,
+    label {
+      color: #ffffff !important;
+    }
+
+    .small,
+    .modal-card p,
+    .aviso-video,
+    .grafico-label {
+      color: #cbd5e1 !important;
+    }
+
+    input,
+    select,
+    textarea {
+      background: rgba(15, 23, 42, 0.86) !important;
+      color: #ffffff !important;
+      border-color: rgba(148, 163, 184, 0.42) !important;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #94a3b8 !important;
+    }
+
+    select option {
+      background: #0f172a;
+      color: #ffffff;
+    }
+
+    .botao-principal,
+    button {
+      background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+      color: #ffffff !important;
+    }
+
+    .botao-secundario {
+      background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+      color: #ffffff !important;
+      border-color: rgba(191, 219, 254, 0.35) !important;
+    }
+
+    .card::before,
+    .grafico-barra {
+      background: linear-gradient(90deg, #22c55e, #3b82f6) !important;
+    }
+
+    .alerta,
+    .resumo-dia-box,
+    .mensagem-inteligente,
+    .progresso-box {
+      background: rgba(59, 130, 246, 0.14) !important;
+      color: #ffffff !important;
+      border-color: rgba(59, 130, 246, 0.55) !important;
+    }
+
+    .alerta-sucesso {
+      background: rgba(34, 197, 94, 0.14) !important;
+      border-left-color: #22c55e !important;
+    }
+
+    .alerta-aviso {
+      background: rgba(249, 115, 22, 0.16) !important;
+      border-left-color: #f97316 !important;
+    }
+
     @media (max-width: 380px) {
       .container { padding: 14px; }
       h1 { font-size: 30px; }
@@ -593,9 +694,9 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">Fitness App</span>
-        <h1>Meu Treino Inteligente</h1>
-        <p>Treino personalizado, evolução e histórico em um só lugar.</p>
+        <span class="app-badge">MetaTreino App</span>
+        <h1><span style="color:#22c55e;">Meta</span>Treino</h1>
+        <p>Treinos inteligentes, acompanhamento real e evolução constante. Tudo no seu celular.</p>
       </div>
     </div>
 
@@ -968,6 +1069,8 @@
             <li>Testes grátis ficam com valor zerado automaticamente.</li>
             <li>Adicionado alerta para alunos que precisam renovar em até 7 dias.</li>
             <li>Adicionado botão para copiar mensagem de renovação e enviar manualmente pelo WhatsApp.</li>
+            <li>Atualizada a identidade visual para MetaTreino com fundo escuro premium, verde energia e azul confiança.</li>
+            <li>Adicionado texto profissional: treinos inteligentes, acompanhamento real e evolução constante.</li>
             <li>Melhorada a visão comercial para acompanhar vendas, testes e renovações.</li>
           </ul>
         </div>
@@ -1553,7 +1656,7 @@
 
     function copiarMensagemRenovacaoAluno(nomeAluno) {
       const nome = nomeAluno && String(nomeAluno).trim() ? String(nomeAluno).trim() : "tudo bem";
-      const mensagem = "Olá " + nome + ", seu acesso ao Meu Treino Inteligente vence em breve. Quer renovar por mais 30 dias?";
+      const mensagem = "Olá " + nome + ", seu acesso ao MetaTreino vence em breve. Quer renovar por mais 30 dias?";
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(mensagem)
