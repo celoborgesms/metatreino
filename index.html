@@ -676,6 +676,7 @@
         <select id="tipoAtividadeCardio" onchange="atualizarTextoTipoCardio()">
           <option value="corrida">Corrida</option>
           <option value="caminhada">Caminhada</option>
+          <option value="bicicleta">Bicicleta</option>
         </select>
 
         <label class="check-exercicio">
@@ -693,8 +694,9 @@
 
         <label for="objetivoCardio">Objetivo no cardio</label>
         <select id="objetivoCardio">
-          <option value="comecar">Começar a correr com segurança</option>
-          <option value="5k">Correr 5 km</option>
+          <option value="comecar">Começar com segurança</option>
+          <option value="3k">Completar 3 km</option>
+          <option value="5k">Completar 5 km</option>
           <option value="10k">Correr 10 km</option>
           <option value="meia">Evoluir para meia maratona</option>
           <option value="pace">Melhorar ritmo / pace</option>
@@ -825,6 +827,19 @@
         </div>
 
         <div class="historico-item">
+          <strong>Versão 1.2.5 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 09:00</p>
+          <ul>
+            <li>Adicionado descanso inteligente baseado no histórico recente de treino e cardio.</li>
+            <li>Adicionada opção Bicicleta no Cardio inteligente.</li>
+            <li>Melhorado o volume dos treinos para quem treina sem equipamentos / peso corporal.</li>
+            <li>Adicionados complementos opcionais para perda de peso, como dança, Zumba, HIIT baixo impacto e aeróbico em casa.</li>
+            <li>Adicionado lembrete discreto de hidratação, alimentação adequada, descanso e segurança durante o treino.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
           <strong>Versão 1.2.4 Beta</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 26/04/2026 às 22:20</p>
@@ -848,19 +863,6 @@
             <li>Adicionado campo de desafio/prova com data e distância.</li>
             <li>O app agora gera sugestões de cardio conforme perfil, objetivo, IMC e prazo do desafio.</li>
             <li>Histórico de cardio passou a salvar também nível, objetivo e treino sugerido.</li>
-          </ul>
-        </div>
-
-        <div class="historico-item">
-          <strong>Versão 1.2.2 Beta</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 25/04/2026 às 20:45</p>
-          <ul>
-            <li>Corrigido o fluxo principal para Perfil → Cardio → Check-in → Treino.</li>
-            <li>O botão do perfil agora leva primeiro para a aba Cardio.</li>
-            <li>Adicionado botão para continuar do Cardio para o Check-in.</li>
-            <li>Adicionado histórico de cardio dentro da aba Cardio.</li>
-            <li>Adicionados botões para atualizar/ver e limpar o histórico de cardio.</li>
           </ul>
         </div>
       </div>
@@ -1683,10 +1685,10 @@
 
     function escolherTreinoPorDiaDaSemana() {
       const hoje = new Date().getDay();
-      if (hoje === 0) return "descanso";
       if (hoje === 1 || hoje === 4) return "A";
       if (hoje === 2 || hoje === 5) return "B";
       if (hoje === 3 || hoje === 6) return "C";
+      if (hoje === 0) return "A";
       return "A";
     }
 
@@ -1783,6 +1785,12 @@
       return mapa[valor] || valor;
     }
 
+    function traduzirTipoAtividadeCardio(valor) {
+      const mapa = { corrida: "Corrida", caminhada: "Caminhada", bicicleta: "Bicicleta" };
+      return mapa[valor] || valor || "Cardio";
+    }
+
+
     function calcularDiasAte(dataISO) {
       if (!dataISO) return null;
       const hoje = new Date();
@@ -1822,15 +1830,23 @@
       let desafio = "";
 
       if (imc >= 30 && (nivel === "iniciante" || nivel === "voltando")) {
-        cuidado = "<br><br><strong>Atenção:</strong> pelo seu perfil atual, comece com calma. Priorize caminhada, trotes curtos, respiração confortável e ausência de dor. Se sentir dor no peito, tontura, falta de ar fora do normal ou dor articular forte, pare e procure orientação profissional.";
+        cuidado = "<br><br><strong>Atenção:</strong> pelo seu perfil atual, comece com calma. Priorize ritmo confortável, respiração controlada e ausência de dor. Se sentir dor no peito, tontura, falta de ar fora do normal ou dor articular forte, pare e procure orientação profissional.";
       } else if (nivel === "iniciante") {
-        cuidado = "<br><br><strong>Dica:</strong> não tente correr tudo de uma vez. O início ideal é alternar caminhada e trote leve para criar base sem sobrecarregar.";
+        cuidado = "<br><br><strong>Dica:</strong> não tente evoluir tudo de uma vez. O início ideal é alternar esforço leve e recuperação para criar base sem sobrecarregar.";
       }
 
-      if (tipoAtividade === "caminhada") {
+      if (tipoAtividade === "bicicleta") {
+        if (nivel === "iniciante" || condicao === "caminho") {
+          treino = "Faça 20 a 30 minutos de bicicleta em ritmo confortável. Mantenha cadência leve/moderada e evite carga pesada nos primeiros treinos.";
+        } else if (objetivo === "pace" || objetivo === "10k" || objetivo === "meia") {
+          treino = "Faça 10 minutos leves. Depois faça 6 blocos de 2 minutos em ritmo moderado/forte controlado + 2 minutos leves. Finalize com 5 minutos bem leves.";
+        } else {
+          treino = "Faça 30 a 45 minutos de bicicleta em ritmo constante, confortável e sustentável. Se estiver cansado, reduza a carga e mantenha o movimento.";
+        }
+      } else if (tipoAtividade === "caminhada") {
         if (nivel === "iniciante" || condicao === "caminho") {
           treino = "Faça 20 a 35 minutos de caminhada confortável. Mantenha respiração controlada e aumente o ritmo apenas se estiver sem dor e sem falta de ar exagerada.";
-        } else if (objetivo === "5k") {
+        } else if (objetivo === "5k" || objetivo === "3k") {
           treino = "Faça 35 a 45 minutos de caminhada firme, tentando manter ritmo constante. Finalize com 5 minutos bem leves.";
         } else if (objetivo === "10k" || objetivo === "meia") {
           treino = "Faça 45 a 60 minutos de caminhada firme, com postura boa e ritmo sustentável. Se ficar muito pesado, reduza o ritmo e preserve a constância.";
@@ -1853,7 +1869,7 @@
         treino = "Faça uma corrida leve e confortável, priorizando constância e boa sensação no final.";
       }
 
-      if (tipoAtividade !== "caminhada" && condicao === "caminho") {
+      if (tipoAtividade === "corrida" && condicao === "caminho") {
         treino = "Faça 20 a 30 minutos de caminhada firme. Se estiver bem, inclua 4 a 6 trotes leves de 30 segundos, sempre sem dor e sem falta de ar exagerada.";
       }
 
@@ -1867,7 +1883,7 @@
         }
       }
 
-      return "<strong>Sugestão de cardio do dia</strong><br>Atividade: " + (tipoAtividade === "caminhada" ? "Caminhada" : "Corrida") + " | Perfil: " + traduzirNivelCardio(nivel) + " | Objetivo: " + traduzirObjetivoCardio(objetivo) + ".<br><br>" + treino + cuidado + desafio;
+      return "<strong>Sugestão de cardio do dia</strong><br>Atividade: " + traduzirTipoAtividadeCardio(tipoAtividade) + " | Perfil: " + traduzirNivelCardio(nivel) + " | Objetivo: " + traduzirObjetivoCardio(objetivo) + ".<br><br>" + treino + cuidado + desafio;
     }
 
     function gerarTreinoCardio() {
@@ -2032,7 +2048,7 @@
           } else {
             div.innerHTML =
               "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
-              "Atividade: " + limparTextoSeguro(item.tipoAtividade === "caminhada" ? "Caminhada" : "Corrida") + "<br>" +
+              "Atividade: " + limparTextoSeguro(traduzirTipoAtividadeCardio(item.tipoAtividade)) + "<br>" +
               "Distância: " + limparTextoSeguro(item.distancia || 0) + " km<br>" +
               "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
               "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCardio(item.intensidade)) + "<br>" +
@@ -2081,14 +2097,122 @@
         });
     }
 
+    function analisarEsforcoRecente(callback) {
+      if (!usuarioAtual || !db) {
+        callback({ sugerirDescanso: false, mensagem: "" });
+        return;
+      }
+
+      const agora = new Date().getTime();
+      const limite3Dias = agora - (3 * 24 * 60 * 60 * 1000);
+      let treinosRecentes = [];
+      let cardiosRecentes = [];
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").get()
+        .then(function(snapshot) {
+          snapshot.forEach(function(doc) {
+            const item = doc.data() || {};
+            if (Number(item.criadoEm || 0) >= limite3Dias) treinosRecentes.push(item);
+          });
+          return db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").get();
+        })
+        .then(function(snapshot) {
+          snapshot.forEach(function(doc) {
+            const item = doc.data() || {};
+            if (Number(item.criadoEm || 0) >= limite3Dias && item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida") cardiosRecentes.push(item);
+          });
+
+          const totalEsforcos = treinosRecentes.length + cardiosRecentes.length;
+          const cardioForte = cardiosRecentes.some(function(item) {
+            return item.intensidade === "forte" || item.sensacao === "pesado";
+          });
+          const treinoPesado = treinosRecentes.some(function(item) {
+            return item.sensacao === "dificil" || Number(item.totalConcluidos || 0) >= 6;
+          });
+
+          if (totalEsforcos >= 3 || (cardioForte && treinoPesado)) {
+            callback({
+              sugerirDescanso: true,
+              mensagem: "Descanso inteligente: o app identificou esforço recente acumulado em treinos/cardio e sugeriu recuperação ativa para reduzir risco de excesso."
+            });
+          } else {
+            callback({ sugerirDescanso: false, mensagem: "" });
+          }
+        })
+        .catch(function(erro) {
+          console.log("Erro ao analisar esforço recente:", erro);
+          callback({ sugerirDescanso: false, mensagem: "" });
+        });
+    }
+
+    function criarExercicioPesoCorporal(nome, grupo, evitar, passos) {
+      return ajustarExercicioPorMeta({
+        nome: nome,
+        grupo: grupo,
+        equipamento: "Peso corporal",
+        nivel: "iniciante",
+        local: ["sem_equipamento", "casa_limitado"],
+        evitar: evitar || "nenhuma",
+        passos: passos || [
+          "Execute com controle e sem pressa.",
+          "Mantenha respiração constante.",
+          "Respeite seus limites e evite dor articular.",
+          "Se ficar muito difícil, reduza o ritmo ou faça menos repetições."
+        ]
+      });
+    }
+
+    function completarTreinoSemEquipamento(treino, letraTreino, dor, tempo) {
+      if (!perfilUsuario || perfilUsuario.localTreino !== "sem_equipamento") return treino;
+
+      const alvo = tempo === "rapido" ? 4 : (tempo === "normal" ? 6 : 8);
+      const extras = [
+        criarExercicioPesoCorporal("Agachamento livre", "Pernas", "joelho", ["Pés na largura dos ombros.", "Desça com controle.", "Mantenha coluna firme.", "Suba empurrando o chão."]),
+        criarExercicioPesoCorporal("Flexão de braço", "Peito", "ombro", ["Apoie as mãos no chão.", "Mantenha corpo alinhado.", "Desça com controle.", "Suba empurrando o chão."]),
+        criarExercicioPesoCorporal("Prancha", "Abdômen", "lombar", ["Apoie cotovelos e pés.", "Contraia o abdômen.", "Mantenha o corpo alinhado.", "Pare se sentir dor lombar."]),
+        criarExercicioPesoCorporal("Ponte de glúteo", "Glúteos", "lombar", ["Deite de barriga para cima.", "Pés firmes no chão.", "Suba o quadril contraindo glúteos.", "Desça com controle."]),
+        criarExercicioPesoCorporal("Afundo alternado", "Pernas", "joelho", ["Dê um passo à frente.", "Desça com controle.", "Mantenha tronco firme.", "Alterne as pernas."]),
+        criarExercicioPesoCorporal("Abdominal curto", "Abdômen", "lombar", ["Deite com joelhos flexionados.", "Suba o tronco parcialmente.", "Contraia abdômen.", "Volte devagar."]),
+        criarExercicioPesoCorporal("Polichinelo", "Cardio", "joelho", ["Abra e feche pernas e braços.", "Mantenha ritmo confortável.", "Faça sem impacto se necessário.", "Pare se sentir dor."]),
+        criarExercicioPesoCorporal("Mountain climber", "Cardio/Abdômen", "lombar", ["Apoie as mãos no chão.", "Traga os joelhos alternadamente.", "Mantenha abdômen firme.", "Faça devagar se precisar."])
+      ];
+
+      const nomes = treino.map(function(exercicio) { return normalizarNomeExercicio(exercicio.nome); });
+      extras.forEach(function(exercicio) {
+        if (treino.length >= alvo) return;
+        if (exercicio.evitar === dor) return;
+        if (!nomes.includes(normalizarNomeExercicio(exercicio.nome))) {
+          treino.push(exercicio);
+          nomes.push(normalizarNomeExercicio(exercicio.nome));
+        }
+      });
+
+      return treino;
+    }
+
+    function abrirAulaCardio(tipo) {
+      const busca = encodeURIComponent(tipo + " treino em casa para iniciantes queima gordura");
+      window.open("https://www.youtube.com/results?search_query=" + busca, "_blank");
+    }
+
     function gerarTreino() {
+      analisarEsforcoRecente(function(esforcoRecente) {
+        gerarTreinoComEsforco(esforcoRecente || { sugerirDescanso: false, mensagem: "" });
+      });
+    }
+
+    function gerarTreinoComEsforco(esforcoRecente) {
       const energia = document.getElementById("energia").value;
       const dor = document.getElementById("dor").value;
       const tempo = document.getElementById("tempo").value;
       const divisaoSelecionada = document.getElementById("divisaoTreino").value;
       const cardioNoTreino = document.getElementById("cardioNoTreino") ? document.getElementById("cardioNoTreino").value : "nao";
-      const letraTreino = escolherTreinoABC(divisaoSelecionada);
+      let letraTreino = escolherTreinoABC(divisaoSelecionada);
       const local = perfilUsuario ? perfilUsuario.localTreino : "academia_grande";
+
+      if (divisaoSelecionada === "semana" && esforcoRecente.sugerirDescanso) {
+        letraTreino = "descanso";
+      }
 
       let treinoFiltrado = bibliotecaExercicios[letraTreino].filter(function(exercicio) {
         return exercicio.evitar !== dor && exercicio.local.includes(local) && nivelPermitido(exercicio);
@@ -2098,8 +2222,13 @@
         treinoFiltrado = bibliotecaExercicios[letraTreino].filter(function(exercicio) { return exercicio.evitar !== dor; }).map(ajustarExercicioPorMeta);
       }
 
+      if (local === "sem_equipamento" && letraTreino !== "descanso") {
+        treinoFiltrado = completarTreinoSemEquipamento(treinoFiltrado, letraTreino, dor, tempo);
+      }
+
       if (tempo === "rapido") treinoFiltrado = treinoFiltrado.slice(0, 4);
       else if (tempo === "normal") treinoFiltrado = treinoFiltrado.slice(0, 6);
+      else if (local === "sem_equipamento" && letraTreino !== "descanso") treinoFiltrado = treinoFiltrado.slice(0, 8);
 
       const localComCardio = ["academia_grande", "academia_pequena", "garagem"].includes(local);
       let mensagemCardioTreino = "";
@@ -2128,28 +2257,31 @@
 
       let ajuste = "";
       if (letraTreino === "descanso") {
-        ajuste = "Hoje é " + nomeDoDiaDaSemana() + ". O app sugeriu descanso ativo/mobilidade para recuperação.";
+        ajuste = "O app sugeriu descanso ativo/mobilidade para recuperação.";
       } else {
         if (energia === "bem") ajuste = "Hoje você pode treinar normalmente e tentar evoluir carga se a execução estiver boa.";
         else if (energia === "cansado") ajuste = "Hoje reduza um pouco o volume. Faça uma série a menos em cada exercício.";
         else ajuste = "Hoje faça um treino leve. Priorize técnica, mobilidade e não force carga.";
-        if (divisaoSelecionada === "semana") ajuste = "Hoje é " + nomeDoDiaDaSemana() + ". Treino " + letraTreino + " selecionado pelo dia da semana. " + ajuste;
+        if (divisaoSelecionada === "semana") ajuste = "Hoje é " + nomeDoDiaDaSemana() + ". Treino " + letraTreino + " selecionado pelo dia da semana com descanso inteligente. " + ajuste;
         else if (divisaoSelecionada === "automatico") ajuste = "Treino " + letraTreino + " selecionado pelo histórico A/B/C. " + ajuste;
         else ajuste = "Treino " + letraTreino + " selecionado manualmente. " + ajuste;
       }
+
       ajuste += " Personalizado para meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + ", local: " + traduzirLocal(perfilUsuario.localTreino) + ".";
       if (tempo === "rapido") ajuste += " Treino rápido: pensado para aproximadamente 30 minutos.";
       else if (tempo === "normal") ajuste += " Treino normal: pensado para aproximadamente 1 hora.";
       else ajuste += " Treino longo: pensado para mais de 1 hora, com maior volume de exercícios.";
       if (dor !== "nenhuma" && letraTreino !== "descanso") ajuste += " Exercícios que podem incomodar sua dor foram removidos.";
       if (ajusteCardio.mensagem) ajuste += " " + ajusteCardio.mensagem;
+      if (esforcoRecente.mensagem) ajuste += " " + esforcoRecente.mensagem;
+      if (mensagemCardioTreino) ajuste += mensagemCardioTreino;
+      ajuste += " Lembrete: hidrate-se, respeite seus limites e evite treinar forte em jejum, com dor ou mal-estar.";
 
       document.getElementById("resultadoTreino").classList.remove("hidden");
       document.getElementById("registroEvolucao").classList.remove("hidden");
       document.getElementById("resumoTreino").innerText = ajuste;
       mostrarTreinoNaTela();
     }
-
 
     function abrirVideoExercicio(nomeExercicio) {
       const busca = encodeURIComponent("como fazer " + nomeExercicio + " exercício musculação corretamente");
@@ -2182,6 +2314,23 @@
           "<button type='button' class='botao-secundario' onclick='substituirExercicio(" + index + ")'>Não tenho esse equipamento / substituir</button>";
         lista.appendChild(div);
       });
+      if (perfilUsuario && perfilUsuario.localTreino === "sem_equipamento" && perfilUsuario.metaPrincipal === "perder_peso") {
+        const extra = document.createElement("div");
+        extra.className = "exercise";
+        extra.innerHTML =
+          "<strong>Complemento opcional para queima de calorias</strong>" +
+          "<p class='small'>Se estiver bem e sem dor, você pode complementar com uma aula curta em casa. Escolha uma opção e respeite seus limites.</p>" +
+          "<button type='button' class='botao-secundario' onclick='abrirAulaCardio(" + JSON.stringify("zumba") + ")'>Ver aula de dança / zumba</button>" +
+          "<button type='button' class='botao-secundario' onclick='abrirAulaCardio(" + JSON.stringify("hiit baixo impacto") + ")'>Ver cardio HIIT baixo impacto</button>" +
+          "<button type='button' class='botao-secundario' onclick='abrirAulaCardio(" + JSON.stringify("aerohit iniciante") + ")'>Ver aula aeróbica em casa</button>";
+        lista.appendChild(extra);
+      }
+
+      const lembreteSaude = document.createElement("div");
+      lembreteSaude.className = "alerta";
+      lembreteSaude.innerHTML = "<strong>Lembrete de segurança:</strong> beba água, respeite seus limites e evite treinar forte em jejum, com dor, tontura ou mal-estar.";
+      lista.appendChild(lembreteSaude);
+
       progresso.classList.remove("hidden");
       atualizarProgressoExercicios();
     }
