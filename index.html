@@ -556,7 +556,7 @@
         <div id="resultadoPerfil" class="alerta hidden"></div>
         <div id="mensagemPeso" class="alerta hidden"></div>
 
-        <button id="botaoIrTreino" type="button" class="hidden" onclick="irParaCorrida()">Continuar para corrida</button>
+        <button id="botaoIrTreino" type="button" class="hidden" onclick="irParaCardio()">Continuar para cardio</button>
         <button type="button" class="botao-secundario" onclick="apagarPerfilSalvo()">Apagar perfil salvo</button>
       </div>
     </section>
@@ -570,8 +570,8 @@
 
       <div class="card">
         <h2>Treino inteligente</h2>
-        <p class="small">O treino do dia será calculado com base no seu perfil, no check-in diário e na última corrida registrada.</p>
-        <button type="button" onclick="irParaCorrida()">Revisar corrida e check-in / recalcular treino</button>
+        <p class="small">O treino do dia será calculado com base no seu perfil, no check-in diário e no último cardio registrado.</p>
+        <button type="button" onclick="irParaCardio()">Revisar cardio e check-in / recalcular treino</button>
       </div>
 
       <div id="resultadoTreino" class="card hidden">
@@ -615,7 +615,7 @@
     <section id="paginaCheckin" class="hidden">
       <div class="card">
         <h2>Check-in diário</h2>
-        <p class="small">Responda como você está hoje. O app usa essas respostas junto com a última corrida registrada para adaptar o treino do dia.</p>
+        <p class="small">Responda como você está hoje. O app usa essas respostas junto com ao último cardio registrado para adaptar o treino do dia.</p>
       </div>
 
       <div class="card">
@@ -643,6 +643,14 @@
           <option value="longo">Treino longo — acima de 1 hora</option>
         </select>
 
+        <label for="cardioNoTreino">Deseja incluir cardio no treino de hoje?</label>
+        <select id="cardioNoTreino">
+          <option value="nao">Não incluir cardio</option>
+          <option value="esteira">Esteira</option>
+          <option value="bicicleta">Bicicleta</option>
+        </select>
+        <p class="small">Se escolher Esteira ou Bicicleta em treino normal/longo e seu local tiver estrutura, o app reduz alguns exercícios para encaixar o cardio sem deixar o treino pesado.</p>
+
         <label for="divisaoTreino">Divisão do treino</label>
         <select id="divisaoTreino">
           <option value="semana">Automático por dia da semana</option>
@@ -659,26 +667,32 @@
 
     </section>
 
-    <section id="paginaCorrida" class="hidden">
+    <section id="paginaCardio" class="hidden">
       <div class="card">
-        <h2>Corrida inteligente</h2>
-        <p class="small">Use esta área para montar uma sugestão de corrida conforme seu nível, objetivo e evolução. O app também usa essas informações para adaptar melhor o treino de força.</p>
+        <h2>Cardio inteligente</h2>
+        <p class="small">Use esta área para montar uma sugestão de corrida ou caminhada conforme seu nível, objetivo e evolução. O app também usa essas informações para adaptar melhor o treino de força.</p>
+
+        <label for="tipoAtividadeCardio">Tipo de atividade</label>
+        <select id="tipoAtividadeCardio" onchange="atualizarTextoTipoCardio()">
+          <option value="corrida">Corrida</option>
+          <option value="caminhada">Caminhada</option>
+        </select>
 
         <label class="check-exercicio">
-          <input id="naoCorreuRecentemente" type="checkbox" onchange="alternarCamposCorrida()">
-          Não corri recentemente
+          <input id="naoCorreuRecentemente" type="checkbox" onchange="alternarCamposCardio()">
+          Não fiz cardio recentemente
         </label>
 
-        <label for="nivelCorrida">Seu nível na corrida</label>
-        <select id="nivelCorrida">
+        <label for="nivelCardio">Seu nível no cardio</label>
+        <select id="nivelCardio">
           <option value="iniciante">Estou começando agora</option>
           <option value="voltando">Estou voltando a correr</option>
           <option value="regular">Já corro regularmente</option>
           <option value="avancado">Tenho experiência / já participei de provas</option>
         </select>
 
-        <label for="objetivoCorrida">Objetivo na corrida</label>
-        <select id="objetivoCorrida">
+        <label for="objetivoCardio">Objetivo no cardio</label>
+        <select id="objetivoCardio">
           <option value="comecar">Começar a correr com segurança</option>
           <option value="5k">Correr 5 km</option>
           <option value="10k">Correr 10 km</option>
@@ -686,72 +700,72 @@
           <option value="pace">Melhorar ritmo / pace</option>
         </select>
 
-        <label for="condicaoCorrida">Condição atual</label>
-        <select id="condicaoCorrida">
+        <label for="condicaoCardio">Condição atual</label>
+        <select id="condicaoCardio">
           <option value="caminho">Consigo caminhar bem, mas ainda corro pouco</option>
-          <option value="intercalo">Consigo intercalar caminhada e corrida</option>
+          <option value="intercalo">Consigo intercalar caminhada e trote/corrida</option>
           <option value="corro_pouco">Consigo correr poucos km</option>
           <option value="corro_bem">Já corro alguns km com segurança</option>
         </select>
 
         <label class="check-exercicio">
-          <input id="temDesafioCorrida" type="checkbox" onchange="alternarDesafioCorrida()">
+          <input id="temDesafioCardio" type="checkbox" onchange="alternarDesafioCardio()">
           Tenho um desafio/prova marcada
         </label>
 
-        <label for="distanciaDesafioCorrida">Distância do desafio</label>
-        <select id="distanciaDesafioCorrida" disabled>
+        <label for="distanciaDesafioCardio">Distância do desafio</label>
+        <select id="distanciaDesafioCardio" disabled>
           <option value="5k">5 km</option>
           <option value="10k">10 km</option>
           <option value="meia">Meia maratona</option>
           <option value="outro">Outro objetivo</option>
         </select>
 
-        <label for="dataDesafioCorrida">Data do desafio</label>
-        <input id="dataDesafioCorrida" type="date" disabled>
+        <label for="dataDesafioCardio">Data do desafio</label>
+        <input id="dataDesafioCardio" type="date" disabled>
 
-        <button type="button" onclick="gerarTreinoCorrida()">Gerar sugestão de corrida</button>
-        <div id="sugestaoCorrida" class="alerta hidden"></div>
+        <button type="button" onclick="gerarTreinoCardio()">Gerar sugestão de cardio</button>
+        <div id="sugestaoCardio" class="alerta hidden"></div>
       </div>
 
       <div class="card">
-        <h2>Registrar evolução da corrida</h2>
-        <p class="small">Depois da corrida, registre como foi. Isso ajuda o app a entender sua evolução e adaptar melhor os próximos treinos.</p>
+        <h2>Registrar evolução do cardio</h2>
+        <p class="small">Depois da atividade, registre como foi. Isso ajuda o app a entender sua evolução e adaptar melhor os próximos treinos.</p>
 
-        <label for="distanciaCorrida">Distância feita (km)</label>
-        <input id="distanciaCorrida" type="number" min="0" step="0.1" placeholder="Ex: 5">
+        <label for="distanciaCardio">Distância feita (km)</label>
+        <input id="distanciaCardio" type="number" min="0" step="0.1" placeholder="Ex: 5">
 
-        <label for="tempoCorrida">Tempo total (minutos)</label>
-        <input id="tempoCorrida" type="number" min="0" step="1" placeholder="Ex: 35">
+        <label for="tempoCardio">Tempo total (minutos)</label>
+        <input id="tempoCardio" type="number" min="0" step="1" placeholder="Ex: 35">
 
-        <label for="intensidadeCorrida">Intensidade</label>
-        <select id="intensidadeCorrida">
+        <label for="intensidadeCardio">Intensidade</label>
+        <select id="intensidadeCardio">
           <option value="leve">Leve</option>
           <option value="moderada">Moderada</option>
           <option value="forte">Forte</option>
         </select>
 
-        <label for="sensacaoCorrida">Como você terminou?</label>
-        <select id="sensacaoCorrida">
+        <label for="sensacaoCardio">Como você terminou?</label>
+        <select id="sensacaoCardio">
           <option value="bem">Bem</option>
           <option value="cansado">Cansado</option>
           <option value="pesado">Muito pesado</option>
         </select>
 
-        <label for="observacaoCorrida">Observação</label>
-        <textarea id="observacaoCorrida" placeholder="Ex: corrida leve, subi muita ladeira, senti panturrilha..."></textarea>
+        <label for="observacaoCardio">Observação</label>
+        <textarea id="observacaoCardio" placeholder="Ex: caminhada forte, corrida leve, subi ladeira, senti panturrilha..."></textarea>
 
-        <button type="button" onclick="salvarCorrida()">Salvar evolução da corrida</button>
+        <button type="button" onclick="salvarCardio()">Salvar evolução do cardio</button>
         <button type="button" class="botao-secundario" onclick="irParaCheckin()">Continuar para check-in</button>
-        <div id="mensagemCorrida" class="alerta hidden"></div>
+        <div id="mensagemCardio" class="alerta hidden"></div>
       </div>
 
       <div class="card">
-        <h2>Histórico de corrida</h2>
-        <p class="small">Resumo das últimas corridas registradas na nuvem.</p>
-        <button type="button" class="botao-secundario" onclick="carregarCorridas()">Ver / atualizar histórico</button>
-        <button type="button" class="botao-perigo" onclick="limparHistoricoCorridas()">Limpar histórico de corridas</button>
-        <div id="listaCorridas"></div>
+        <h2>Histórico de cardio</h2>
+        <p class="small">Resumo das últimas atividades registradas na nuvem.</p>
+        <button type="button" class="botao-secundario" onclick="carregarCardios()">Ver / atualizar histórico</button>
+        <button type="button" class="botao-perigo" onclick="limparHistoricoCardios()">Limpar histórico de cardio</button>
+        <div id="listaCardios"></div>
       </div>
     </section>
 
@@ -783,10 +797,11 @@
           <option value="trimestral">Trimestral</option>
           <option value="semestral">Semestral</option>
           <option value="anual">Anual</option>
-          <option value="teste">Teste</option>
+          <option value="teste">Teste grátis 24h</option>
         </select>
 
         <button type="button" onclick="liberarAlunoPainel()">Liberar acesso</button>
+        <button type="button" class="botao-secundario" onclick="liberarTestePainel()">Liberar teste grátis 24h</button>
         <button type="button" class="botao-secundario" onclick="bloquearAlunoPainel()">Bloquear acesso</button>
         <button type="button" class="botao-secundario" onclick="carregarUsuariosAutorizados()">Atualizar lista</button>
         <div id="mensagemPainelTreinador" class="alerta hidden"></div>
@@ -809,16 +824,29 @@
         </div>
 
         <div class="historico-item">
+          <strong>Versão 1.2.4 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 26/04/2026 às 22:20</p>
+          <ul>
+            <li>Adicionado teste grátis de 24 horas pelo Painel do Treinador.</li>
+            <li>A aba Corrida foi reformulada para Cardio inteligente, com Corrida e Caminhada.</li>
+            <li>Adicionada opção de incluir cardio no treino: Esteira ou Bicicleta.</li>
+            <li>O app reduz automaticamente o volume de exercícios quando o cardio é incluído em treino normal ou longo.</li>
+            <li>Melhorada a preparação do app para validação com clientes antes da versão Release Candidate.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
           <strong>Versão 1.2.3 Beta</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 26/04/2026 às 21:30</p>
           <ul>
-            <li>Reformulada a aba Corrida para funcionar como Corrida Inteligente.</li>
+            <li>Reformulada a aba Cardio para funcionar como Cardio Inteligente.</li>
             <li>Adicionado perfil de corrida: iniciante, voltando, regular ou experiente.</li>
             <li>Adicionado objetivo de corrida: começar, 5 km, 10 km, meia maratona ou melhorar pace.</li>
             <li>Adicionado campo de desafio/prova com data e distância.</li>
-            <li>O app agora gera sugestões de corrida conforme perfil, objetivo, IMC e prazo do desafio.</li>
-            <li>Histórico de corrida passou a salvar também nível, objetivo e treino sugerido.</li>
+            <li>O app agora gera sugestões de cardio conforme perfil, objetivo, IMC e prazo do desafio.</li>
+            <li>Histórico de cardio passou a salvar também nível, objetivo e treino sugerido.</li>
           </ul>
         </div>
 
@@ -827,23 +855,11 @@
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 25/04/2026 às 20:45</p>
           <ul>
-            <li>Corrigido o fluxo principal para Perfil → Corrida → Check-in → Treino.</li>
-            <li>O botão do perfil agora leva primeiro para a aba Corrida.</li>
-            <li>Adicionado botão para continuar da Corrida para o Check-in.</li>
-            <li>Adicionado histórico de corridas dentro da aba Corrida.</li>
-            <li>Adicionados botões para atualizar/ver e limpar o histórico de corridas.</li>
-          </ul>
-        </div>
-
-        <div class="historico-item">
-          <strong>Versão 1.2.1 Beta</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 25/04/2026 às 19:55</p>
-          <ul>
-            <li>Reorganizada a navegação para Perfil, Corrida, Check-in, Treino, Histórico, Painel e Novidades.</li>
-            <li>Barra inferior ajustada com rolagem horizontal para evitar quebra em celulares.</li>
-            <li>Adicionada opção “Não corri recentemente” na aba Corrida.</li>
-            <li>Melhorados os textos do tempo disponível no Check-in.</li>
+            <li>Corrigido o fluxo principal para Perfil → Cardio → Check-in → Treino.</li>
+            <li>O botão do perfil agora leva primeiro para a aba Cardio.</li>
+            <li>Adicionado botão para continuar do Cardio para o Check-in.</li>
+            <li>Adicionado histórico de cardio dentro da aba Cardio.</li>
+            <li>Adicionados botões para atualizar/ver e limpar o histórico de cardio.</li>
           </ul>
         </div>
       </div>
@@ -851,7 +867,7 @@
 
     <nav class="bottom-nav">
       <button type="button" onclick="voltarParaPerfil()">Perfil</button>
-      <button type="button" onclick="irParaCorrida()">Corrida</button>
+      <button type="button" onclick="irParaCardio()">Cardio</button>
       <button type="button" onclick="irParaCheckin()">Check-in</button>
       <button type="button" onclick="irParaTreino()">Treino</button>
       <button type="button" onclick="irParaHistorico()">Histórico</button>
@@ -985,7 +1001,7 @@
       const paginaNovidades = document.getElementById("paginaNovidades");
       const paginaHistoricoCompleto = document.getElementById("paginaHistoricoCompleto");
       const paginaCheckin = document.getElementById("paginaCheckin");
-      const paginaCorrida = document.getElementById("paginaCorrida");
+      const paginaCardio = document.getElementById("paginaCardio");
       const paginaPainelTreinador = document.getElementById("paginaPainelTreinador");
       const paginaPerfil = document.getElementById("paginaPerfil");
 
@@ -993,7 +1009,7 @@
       if (paginaTreino) paginaTreino.classList.add("hidden");
       if (paginaHistoricoCompleto) paginaHistoricoCompleto.classList.add("hidden");
       if (paginaCheckin) paginaCheckin.classList.add("hidden");
-      if (paginaCorrida) paginaCorrida.classList.add("hidden");
+      if (paginaCardio) paginaCardio.classList.add("hidden");
       if (paginaPainelTreinador) paginaPainelTreinador.classList.add("hidden");
       if (paginaNovidades) paginaNovidades.classList.add("hidden");
       if (paginaPerfil) paginaPerfil.classList.remove("hidden");
@@ -1157,7 +1173,7 @@
     }
 
     function ocultarPaginasDoApp() {
-      const ids = ["paginaPerfil", "paginaTreino", "paginaCheckin", "paginaCorrida", "paginaHistoricoCompleto", "paginaPainelTreinador", "paginaNovidades"];
+      const ids = ["paginaPerfil", "paginaTreino", "paginaCheckin", "paginaCardio", "paginaHistoricoCompleto", "paginaPainelTreinador", "paginaNovidades"];
       ids.forEach(function(id) {
         const el = document.getElementById(id);
         if (el) el.classList.add("hidden");
@@ -1197,7 +1213,7 @@
 
       const agora = new Date();
       const diasPorPlano = {
-        teste: 7,
+        teste: 1,
         mensal: 30,
         trimestral: 90,
         semestral: 180,
@@ -1225,6 +1241,12 @@
           console.log("Erro ao liberar aluno:", erro);
           mostrarMensagemPainel("Não foi possível liberar o aluno. Confira as permissões do Firestore.", "aviso");
         });
+    }
+
+    function liberarTestePainel() {
+      const selectPlano = document.getElementById("planoAlunoPainel");
+      if (selectPlano) selectPlano.value = "teste";
+      liberarAlunoPainel();
     }
 
     function bloquearAlunoPainel() {
@@ -1400,7 +1422,7 @@
     let mensagemEvolucaoAtual = "";
     let exerciciosConcluidos = [];
     let sugestoesCarga = {};
-    let ultimaCorridaCache = null;
+    let ultimaCardioCache = null;
 
     const substituicoes = {
       "Supino reto": ["Flexão de braço", "Supino com halteres", "Crucifixo no chão"],
@@ -1594,7 +1616,7 @@
       document.getElementById("tituloTreino").innerText = "Treino de " + perfilUsuario.nome;
       document.getElementById("resumoPerfilTreino").innerText = "Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + " | Experiência: " + traduzirExperiencia(perfilUsuario.tempoExperiencia) + " | Local: " + traduzirLocal(perfilUsuario.localTreino) + " | IMC: " + perfilUsuario.imc;
       mostrarHistorico();
-      carregarUltimaCorrida();
+      carregarUltimaCardio();
     }
 
     function voltarParaPerfil() {
@@ -1610,19 +1632,19 @@
 
       ocultarPaginasDoApp();
       document.getElementById("paginaCheckin").classList.remove("hidden");
-      carregarUltimaCorrida();
+      carregarUltimaCardio();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    function irParaCorrida() {
+    function irParaCardio() {
       if (!acessoLiberado) {
-        bloquearApp("Faça login com um e-mail autorizado para registrar corridas.");
+        bloquearApp("Faça login com um e-mail autorizado para registrar atividades de cardio.");
         return;
       }
 
       ocultarPaginasDoApp();
-      document.getElementById("paginaCorrida").classList.remove("hidden");
-      carregarCorridas();
+      document.getElementById("paginaCardio").classList.remove("hidden");
+      carregarCardios();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
@@ -1702,60 +1724,60 @@
       return (agora - Number(timestamp)) / (1000 * 60 * 60 * 24);
     }
 
-    function traduzirIntensidadeCorrida(valor) {
+    function traduzirIntensidadeCardio(valor) {
       const mapa = { leve: "leve", moderada: "moderada", forte: "forte" };
       return mapa[valor] || valor || "não informada";
     }
 
-    function analisarImpactoUltimaCorrida(letraTreino) {
+    function analisarImpactoUltimaCardio(letraTreino) {
       const resposta = { mensagem: "", reduzirVolume: false, sugerirDescanso: false };
 
-      if (!ultimaCorridaCache || !ultimaCorridaCache.criadoEm || ultimaCorridaCache.tipo === "sem_corrida") {
+      if (!ultimaCardioCache || !ultimaCardioCache.criadoEm || (ultimaCardioCache.tipo === "sem_cardio" || ultimaCardioCache.tipo === "sem_corrida")) {
         return resposta;
       }
 
-      const dias = diasDesdeTimestamp(ultimaCorridaCache.criadoEm);
+      const dias = diasDesdeTimestamp(ultimaCardioCache.criadoEm);
       if (dias > 1.5) {
         return resposta;
       }
 
-      const intensidade = ultimaCorridaCache.intensidade || "leve";
-      const sensacao = ultimaCorridaCache.sensacao || "bem";
+      const intensidade = ultimaCardioCache.intensidade || "leve";
+      const sensacao = ultimaCardioCache.sensacao || "bem";
       const foiForte = intensidade === "forte" || sensacao === "pesado";
       const foiModerada = intensidade === "moderada" || sensacao === "cansado";
 
       if (foiForte) {
         resposta.reduzirVolume = true;
-        resposta.mensagem = "Como sua última corrida foi forte ou muito pesada, o app reduziu um pouco o volume do treino de hoje.";
+        resposta.mensagem = "Como seu último cardio foi forte ou muito pesado, o app reduziu um pouco o volume do treino de hoje.";
         if (letraTreino === "C") {
           resposta.sugerirDescanso = true;
-          resposta.mensagem = "Como sua última corrida foi forte ou muito pesada e hoje seria treino de pernas, o app sugeriu recuperação/mobilidade para proteger sua recuperação.";
+          resposta.mensagem = "Como seu último cardio foi forte ou muito pesado e hoje seria treino de pernas, o app sugeriu recuperação/mobilidade para proteger sua recuperação.";
         }
       } else if (foiModerada && letraTreino === "C") {
         resposta.reduzirVolume = true;
         resposta.mensagem = "Como você correu recentemente em intensidade moderada, o treino de pernas foi ajustado com menos volume.";
       } else {
-        resposta.mensagem = "Última corrida registrada considerada leve; treino mantido normalmente.";
+        resposta.mensagem = "Último cardio registrado considerado leve; treino mantido normalmente.";
       }
 
       return resposta;
     }
 
-    function alternarDesafioCorrida() {
-      const temDesafio = document.getElementById("temDesafioCorrida");
+    function alternarDesafioCardio() {
+      const temDesafio = document.getElementById("temDesafioCardio");
       const ativo = temDesafio && temDesafio.checked;
-      ["distanciaDesafioCorrida", "dataDesafioCorrida"].forEach(function(id) {
+      ["distanciaDesafioCardio", "dataDesafioCardio"].forEach(function(id) {
         const campo = document.getElementById(id);
         if (campo) campo.disabled = !ativo;
       });
     }
 
-    function traduzirNivelCorrida(valor) {
+    function traduzirNivelCardio(valor) {
       const mapa = { iniciante: "começando agora", voltando: "voltando a correr", regular: "corre regularmente", avancado: "experiente" };
       return mapa[valor] || valor;
     }
 
-    function traduzirObjetivoCorrida(valor) {
+    function traduzirObjetivoCardio(valor) {
       const mapa = { comecar: "começar com segurança", "5k": "correr 5 km", "10k": "correr 10 km", meia: "evoluir para meia maratona", pace: "melhorar ritmo / pace", outro: "outro objetivo" };
       return mapa[valor] || valor;
     }
@@ -1775,13 +1797,23 @@
       return partes[2] + "/" + partes[1] + "/" + partes[0];
     }
 
-    function gerarTextoSugestaoCorrida() {
-      const nivel = document.getElementById("nivelCorrida").value;
-      const objetivo = document.getElementById("objetivoCorrida").value;
-      const condicao = document.getElementById("condicaoCorrida").value;
-      const temDesafio = document.getElementById("temDesafioCorrida").checked;
-      const distanciaDesafio = document.getElementById("distanciaDesafioCorrida").value;
-      const dataDesafio = document.getElementById("dataDesafioCorrida").value;
+    function atualizarTextoTipoCardio() {
+      const tipo = document.getElementById("tipoAtividadeCardio") ? document.getElementById("tipoAtividadeCardio").value : "corrida";
+      const objetivo = document.getElementById("objetivoCardio");
+      const condicao = document.getElementById("condicaoCardio");
+      if (tipo === "caminhada") {
+        if (objetivo && objetivo.value === "pace") objetivo.value = "5k";
+      }
+    }
+
+    function gerarTextoSugestaoCardio() {
+      const tipoAtividade = document.getElementById("tipoAtividadeCardio") ? document.getElementById("tipoAtividadeCardio").value : "corrida";
+      const nivel = document.getElementById("nivelCardio").value;
+      const objetivo = document.getElementById("objetivoCardio").value;
+      const condicao = document.getElementById("condicaoCardio").value;
+      const temDesafio = document.getElementById("temDesafioCardio").checked;
+      const distanciaDesafio = document.getElementById("distanciaDesafioCardio").value;
+      const dataDesafio = document.getElementById("dataDesafioCardio").value;
       const diasAte = calcularDiasAte(dataDesafio);
       const imc = perfilUsuario ? Number(perfilUsuario.imc) : 0;
       let treino = "";
@@ -1794,7 +1826,17 @@
         cuidado = "<br><br><strong>Dica:</strong> não tente correr tudo de uma vez. O início ideal é alternar caminhada e trote leve para criar base sem sobrecarregar.";
       }
 
-      if (nivel === "iniciante" || objetivo === "comecar") {
+      if (tipoAtividade === "caminhada") {
+        if (nivel === "iniciante" || condicao === "caminho") {
+          treino = "Faça 20 a 35 minutos de caminhada confortável. Mantenha respiração controlada e aumente o ritmo apenas se estiver sem dor e sem falta de ar exagerada.";
+        } else if (objetivo === "5k") {
+          treino = "Faça 35 a 45 minutos de caminhada firme, tentando manter ritmo constante. Finalize com 5 minutos bem leves.";
+        } else if (objetivo === "10k" || objetivo === "meia") {
+          treino = "Faça 45 a 60 minutos de caminhada firme, com postura boa e ritmo sustentável. Se ficar muito pesado, reduza o ritmo e preserve a constância.";
+        } else {
+          treino = "Faça 30 a 45 minutos de caminhada firme, mantendo ritmo confortável e seguro.";
+        }
+      } else if (nivel === "iniciante" || objetivo === "comecar") {
         treino = "Faça 5 minutos de caminhada leve para aquecer. Depois repita 8 vezes: 1 minuto de trote leve + 2 minutos de caminhada. Finalize com 5 minutos caminhando devagar.";
       } else if (nivel === "voltando") {
         treino = "Faça 8 minutos de caminhada/trote leve. Depois repita 6 vezes: 2 minutos correndo leve + 2 minutos caminhando. Termine com 5 minutos leves.";
@@ -1810,13 +1852,13 @@
         treino = "Faça uma corrida leve e confortável, priorizando constância e boa sensação no final.";
       }
 
-      if (condicao === "caminho") {
+      if (tipoAtividade !== "caminhada" && condicao === "caminho") {
         treino = "Faça 20 a 30 minutos de caminhada firme. Se estiver bem, inclua 4 a 6 trotes leves de 30 segundos, sempre sem dor e sem falta de ar exagerada.";
       }
 
       if (temDesafio) {
         if (diasAte !== null && diasAte >= 0) {
-          desafio = "<br><br><strong>Desafio:</strong> objetivo de " + traduzirObjetivoCorrida(distanciaDesafio) + " em " + formatarDataBrasileira(dataDesafio) + " (faltam aproximadamente " + diasAte + " dia(s)).";
+          desafio = "<br><br><strong>Desafio:</strong> objetivo de " + traduzirObjetivoCardio(distanciaDesafio) + " em " + formatarDataBrasileira(dataDesafio) + " (faltam aproximadamente " + diasAte + " dia(s)).";
           if (diasAte <= 14) desafio += " Como está próximo, evite aumentar volume de forma agressiva. Priorize regularidade e recuperação.";
           else desafio += " Como ainda há tempo, o ideal é evoluir aos poucos, aumentando volume de forma progressiva.";
         } else {
@@ -1824,70 +1866,71 @@
         }
       }
 
-      return "<strong>Sugestão de corrida do dia</strong><br>Perfil: " + traduzirNivelCorrida(nivel) + " | Objetivo: " + traduzirObjetivoCorrida(objetivo) + ".<br><br>" + treino + cuidado + desafio;
+      return "<strong>Sugestão de cardio do dia</strong><br>Atividade: " + (tipoAtividade === "caminhada" ? "Caminhada" : "Corrida") + " | Perfil: " + traduzirNivelCardio(nivel) + " | Objetivo: " + traduzirObjetivoCardio(objetivo) + ".<br><br>" + treino + cuidado + desafio;
     }
 
-    function gerarTreinoCorrida() {
-      const caixa = document.getElementById("sugestaoCorrida");
+    function gerarTreinoCardio() {
+      const caixa = document.getElementById("sugestaoCardio");
       if (!caixa) return;
       caixa.className = "alerta alerta-sucesso";
-      caixa.innerHTML = gerarTextoSugestaoCorrida();
+      caixa.innerHTML = gerarTextoSugestaoCardio();
     }
 
-    function alternarCamposCorrida() {
+    function alternarCamposCardio() {
       const naoCorreu = document.getElementById("naoCorreuRecentemente");
       const desativar = naoCorreu && naoCorreu.checked;
-      ["distanciaCorrida", "tempoCorrida", "intensidadeCorrida", "sensacaoCorrida", "observacaoCorrida", "nivelCorrida", "objetivoCorrida", "condicaoCorrida", "temDesafioCorrida", "distanciaDesafioCorrida", "dataDesafioCorrida"].forEach(function(id) {
+      ["distanciaCardio", "tempoCardio", "intensidadeCardio", "sensacaoCardio", "observacaoCardio", "nivelCardio", "objetivoCardio", "condicaoCardio", "temDesafioCardio", "distanciaDesafioCardio", "dataDesafioCardio"].forEach(function(id) {
         const campo = document.getElementById(id);
         if (campo) campo.disabled = desativar;
       });
     }
 
-    function salvarCorrida() {
+    function salvarCardio() {
       if (!acessoLiberado || !usuarioAtual || !db) {
-        alert("Faça login com um e-mail autorizado para salvar corridas.");
+        alert("Faça login com um e-mail autorizado para salvar atividades de cardio.");
         return;
       }
 
       const naoCorreu = document.getElementById("naoCorreuRecentemente") && document.getElementById("naoCorreuRecentemente").checked;
-      const distancia = Number(document.getElementById("distanciaCorrida").value);
-      const tempo = Number(document.getElementById("tempoCorrida").value);
-      const intensidade = document.getElementById("intensidadeCorrida").value;
-      const sensacao = document.getElementById("sensacaoCorrida").value;
-      const observacao = document.getElementById("observacaoCorrida").value.trim();
-      const nivelCorrida = document.getElementById("nivelCorrida") ? document.getElementById("nivelCorrida").value : "iniciante";
-      const objetivoCorrida = document.getElementById("objetivoCorrida") ? document.getElementById("objetivoCorrida").value : "comecar";
-      const condicaoCorrida = document.getElementById("condicaoCorrida") ? document.getElementById("condicaoCorrida").value : "caminho";
-      const temDesafioCorrida = document.getElementById("temDesafioCorrida") ? document.getElementById("temDesafioCorrida").checked : false;
-      const distanciaDesafioCorrida = document.getElementById("distanciaDesafioCorrida") ? document.getElementById("distanciaDesafioCorrida").value : "";
-      const dataDesafioCorrida = document.getElementById("dataDesafioCorrida") ? document.getElementById("dataDesafioCorrida").value : "";
-      const sugestaoCorridaHTML = document.getElementById("sugestaoCorrida") && !document.getElementById("sugestaoCorrida").classList.contains("hidden") ? document.getElementById("sugestaoCorrida").innerText : "";
-      const caixa = document.getElementById("mensagemCorrida");
+      const tipoAtividadeCardio = document.getElementById("tipoAtividadeCardio") ? document.getElementById("tipoAtividadeCardio").value : "corrida";
+      const distancia = Number(document.getElementById("distanciaCardio").value);
+      const tempo = Number(document.getElementById("tempoCardio").value);
+      const intensidade = document.getElementById("intensidadeCardio").value;
+      const sensacao = document.getElementById("sensacaoCardio").value;
+      const observacao = document.getElementById("observacaoCardio").value.trim();
+      const nivelCardio = document.getElementById("nivelCardio") ? document.getElementById("nivelCardio").value : "iniciante";
+      const objetivoCardio = document.getElementById("objetivoCardio") ? document.getElementById("objetivoCardio").value : "comecar";
+      const condicaoCardio = document.getElementById("condicaoCardio") ? document.getElementById("condicaoCardio").value : "caminho";
+      const temDesafioCardio = document.getElementById("temDesafioCardio") ? document.getElementById("temDesafioCardio").checked : false;
+      const distanciaDesafioCardio = document.getElementById("distanciaDesafioCardio") ? document.getElementById("distanciaDesafioCardio").value : "";
+      const dataDesafioCardio = document.getElementById("dataDesafioCardio") ? document.getElementById("dataDesafioCardio").value : "";
+      const sugestaoCardioHTML = document.getElementById("sugestaoCardio") && !document.getElementById("sugestaoCardio").classList.contains("hidden") ? document.getElementById("sugestaoCardio").innerText : "";
+      const caixa = document.getElementById("mensagemCardio");
 
       if (naoCorreu) {
         const agora = new Date();
-        const registroSemCorrida = {
-          tipo: "sem_corrida",
+        const registroSemCardio = {
+          tipo: "sem_cardio",
           data: agora.toLocaleString("pt-BR"),
           criadoEm: agora.getTime(),
           diaSemana: nomeDoDiaDaSemana(),
           nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário",
-          observacao: "Usuário informou que não correu recentemente."
+          observacao: "Usuário informou que não fez cardio recentemente."
         };
 
-        db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").add(registroSemCorrida)
+        db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").add(registroSemCardio)
           .then(function() {
-            ultimaCorridaCache = registroSemCorrida;
+            ultimaCardioCache = registroSemCardio;
             if (caixa) {
               caixa.className = "alerta alerta-sucesso";
-              caixa.innerHTML = "✅ Registro salvo: nenhuma corrida recente será considerada no próximo treino.";
+              caixa.innerHTML = "✅ Registro salvo: nenhum cardio recente será considerado no próximo treino.";
             }
             document.getElementById("naoCorreuRecentemente").checked = false;
-            alternarCamposCorrida();
-            carregarCorridas();
+            alternarCamposCardio();
+            carregarCardios();
           })
           .catch(function(erro) {
-            console.log("Erro ao salvar registro sem corrida:", erro);
+            console.log("Erro ao salvar registro sem cardio:", erro);
             if (caixa) {
               caixa.className = "alerta alerta-aviso";
               caixa.innerHTML = "Não foi possível salvar o registro agora. Confira sua conexão e tente novamente.";
@@ -1909,41 +1952,42 @@
         data: agora.toLocaleString("pt-BR"),
         criadoEm: agora.getTime(),
         diaSemana: nomeDoDiaDaSemana(),
+        tipoAtividade: tipoAtividadeCardio,
         distancia: distancia,
         tempo: tempo,
         intensidade: intensidade,
         sensacao: sensacao,
         observacao: observacao,
-        nivelCorrida: nivelCorrida,
-        objetivoCorrida: objetivoCorrida,
-        condicaoCorrida: condicaoCorrida,
-        temDesafio: temDesafioCorrida,
-        distanciaDesafio: temDesafioCorrida ? distanciaDesafioCorrida : "",
-        dataDesafio: temDesafioCorrida ? dataDesafioCorrida : "",
-        treinoSugerido: sugestaoCorridaHTML,
+        nivelCardio: nivelCardio,
+        objetivoCardio: objetivoCardio,
+        condicaoCardio: condicaoCardio,
+        temDesafio: temDesafioCardio,
+        distanciaDesafio: temDesafioCardio ? distanciaDesafioCardio : "",
+        dataDesafio: temDesafioCardio ? dataDesafioCardio : "",
+        treinoSugerido: sugestaoCardioHTML,
         nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário"
       };
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").add(corrida)
         .then(function() {
-          ultimaCorridaCache = corrida;
+          ultimaCardioCache = corrida;
           if (caixa) {
             caixa.className = "alerta alerta-sucesso";
-            caixa.innerHTML = "✅ Corrida salva. O próximo treino poderá ser adaptado com base nesse registro.";
+            caixa.innerHTML = "✅ Cardio salvo. O próximo treino poderá ser adaptado com base nesse registro.";
           }
-          document.getElementById("observacaoCorrida").value = "";
-          carregarCorridas();
+          document.getElementById("observacaoCardio").value = "";
+          carregarCardios();
         })
         .catch(function(erro) {
-          console.log("Erro ao salvar corrida:", erro);
+          console.log("Erro ao salvar cardio:", erro);
           if (caixa) {
             caixa.className = "alerta alerta-aviso";
-            caixa.innerHTML = "Não foi possível salvar a corrida agora. Confira sua conexão e tente novamente.";
+            caixa.innerHTML = "Não foi possível salvar o cardio agora. Confira sua conexão e tente novamente.";
           }
         });
     }
 
-    function obterCorridasDaNuvem(callback) {
+    function obterCardiosDaNuvem(callback) {
       if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").get()
@@ -1953,47 +1997,48 @@
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
           callback(lista);
         })
-        .catch(function(erro) { console.log("Erro ao carregar corridas:", erro); callback([]); });
+        .catch(function(erro) { console.log("Erro ao carregar cardios:", erro); callback([]); });
     }
 
-    function carregarUltimaCorrida() {
-      obterCorridasDaNuvem(function(lista) {
-        ultimaCorridaCache = lista && lista.length ? lista[0] : null;
+    function carregarUltimaCardio() {
+      obterCardiosDaNuvem(function(lista) {
+        ultimaCardioCache = lista && lista.length ? lista[0] : null;
       });
     }
 
-    function carregarCorridas() {
-      obterCorridasDaNuvem(function(lista) {
-        const caixa = document.getElementById("listaCorridas");
+    function carregarCardios() {
+      obterCardiosDaNuvem(function(lista) {
+        const caixa = document.getElementById("listaCardios");
         if (!caixa) return;
 
         caixa.innerHTML = "";
         if (!lista || lista.length === 0) {
-          caixa.innerHTML = "<p class='small'>Nenhuma corrida salva ainda.</p>";
-          ultimaCorridaCache = null;
+          caixa.innerHTML = "<p class='small'>Nenhuma cardio salvo ainda.</p>";
+          ultimaCardioCache = null;
           return;
         }
 
-        ultimaCorridaCache = lista[0];
+        ultimaCardioCache = lista[0];
 
         lista.slice(0, 5).forEach(function(item) {
           const div = document.createElement("div");
           div.className = "historico-item";
-          if (item.tipo === "sem_corrida") {
+          if ((item.tipo === "sem_cardio" || item.tipo === "sem_corrida")) {
             div.innerHTML =
               "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
-              "Status: não correu recentemente<br>" +
+              "Status: não fez cardio recentemente<br>" +
               "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
           } else {
             div.innerHTML =
               "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
+              "Atividade: " + limparTextoSeguro(item.tipoAtividade === "caminhada" ? "Caminhada" : "Corrida") + "<br>" +
               "Distância: " + limparTextoSeguro(item.distancia || 0) + " km<br>" +
               "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
-              "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCorrida(item.intensidade)) + "<br>" +
+              "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCardio(item.intensidade)) + "<br>" +
               "Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
-              "Nível: " + limparTextoSeguro(traduzirNivelCorrida(item.nivelCorrida || "")) + "<br>" +
-              "Objetivo: " + limparTextoSeguro(traduzirObjetivoCorrida(item.objetivoCorrida || "")) + "<br>" +
-              (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCorrida(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
+              "Nível: " + limparTextoSeguro(traduzirNivelCardio(item.nivelCardio || "")) + "<br>" +
+              "Objetivo: " + limparTextoSeguro(traduzirObjetivoCardio(item.objetivoCardio || "")) + "<br>" +
+              (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCardio(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
               "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
           }
           caixa.appendChild(div);
@@ -2001,13 +2046,13 @@
       });
     }
 
-    function limparHistoricoCorridas() {
+    function limparHistoricoCardios() {
       if (!acessoLiberado || !usuarioAtual || !db) {
-        alert("Faça login com um e-mail autorizado para limpar o histórico de corridas.");
+        alert("Faça login com um e-mail autorizado para limpar o histórico de cardio.");
         return;
       }
 
-      if (!confirm("Tem certeza que deseja apagar todo o histórico de corridas?")) return;
+      if (!confirm("Tem certeza que deseja apagar todo o histórico de cardio?")) return;
 
       db.collection("usuarios")
         .doc(usuarioAtual.uid)
@@ -2021,17 +2066,17 @@
           return batch.commit();
         })
         .then(function() {
-          ultimaCorridaCache = null;
-          carregarCorridas();
-          const caixa = document.getElementById("mensagemCorrida");
+          ultimaCardioCache = null;
+          carregarCardios();
+          const caixa = document.getElementById("mensagemCardio");
           if (caixa) {
             caixa.className = "alerta alerta-sucesso";
-            caixa.innerHTML = "Histórico de corridas apagado com sucesso.";
+            caixa.innerHTML = "Histórico de cardios apagado com sucesso.";
           }
         })
         .catch(function(erro) {
-          console.log("Erro ao limpar histórico de corridas:", erro);
-          alert("Não foi possível limpar o histórico de corridas agora.");
+          console.log("Erro ao limpar histórico de cardio:", erro);
+          alert("Não foi possível limpar o histórico de cardio agora.");
         });
     }
 
@@ -2040,6 +2085,7 @@
       const dor = document.getElementById("dor").value;
       const tempo = document.getElementById("tempo").value;
       const divisaoSelecionada = document.getElementById("divisaoTreino").value;
+      const cardioNoTreino = document.getElementById("cardioNoTreino") ? document.getElementById("cardioNoTreino").value : "nao";
       const letraTreino = escolherTreinoABC(divisaoSelecionada);
       const local = perfilUsuario ? perfilUsuario.localTreino : "academia_grande";
 
@@ -2054,11 +2100,24 @@
       if (tempo === "rapido") treinoFiltrado = treinoFiltrado.slice(0, 4);
       else if (tempo === "normal") treinoFiltrado = treinoFiltrado.slice(0, 6);
 
-      const ajusteCorrida = analisarImpactoUltimaCorrida(letraTreino);
-      if (ajusteCorrida.reduzirVolume && treinoFiltrado.length > 4) {
+      const localComCardio = ["academia_grande", "academia_pequena", "garagem"].includes(local);
+      let mensagemCardioTreino = "";
+      if (cardioNoTreino !== "nao" && localComCardio && letraTreino !== "descanso") {
+        const reducaoCardio = tempo === "longo" ? 2 : (tempo === "normal" ? 1 : 0);
+        if (reducaoCardio > 0 && treinoFiltrado.length > 4) {
+          treinoFiltrado = treinoFiltrado.slice(0, Math.max(4, treinoFiltrado.length - reducaoCardio));
+        }
+        const nomeCardio = cardioNoTreino === "esteira" ? "esteira" : "bicicleta";
+        mensagemCardioTreino = " Cardio incluído hoje: " + nomeCardio + ". O app reduziu o volume de exercícios para encaixar o cardio sem deixar o treino pesado.";
+      } else if (cardioNoTreino !== "nao" && !localComCardio) {
+        mensagemCardioTreino = " Você marcou cardio no treino, mas seu local cadastrado não indica estrutura de academia. Faça apenas se tiver equipamento disponível e com segurança.";
+      }
+
+      const ajusteCardio = analisarImpactoUltimaCardio(letraTreino);
+      if (ajusteCardio.reduzirVolume && treinoFiltrado.length > 4) {
         treinoFiltrado = treinoFiltrado.slice(0, Math.max(4, treinoFiltrado.length - 1));
       }
-      if (ajusteCorrida.sugerirDescanso && letraTreino === "C") {
+      if (ajusteCardio.sugerirDescanso && letraTreino === "C") {
         treinoFiltrado = bibliotecaExercicios.descanso.map(ajustarExercicioPorMeta);
       }
 
@@ -2082,7 +2141,7 @@
       else if (tempo === "normal") ajuste += " Treino normal: pensado para aproximadamente 1 hora.";
       else ajuste += " Treino longo: pensado para mais de 1 hora, com maior volume de exercícios.";
       if (dor !== "nenhuma" && letraTreino !== "descanso") ajuste += " Exercícios que podem incomodar sua dor foram removidos.";
-      if (ajusteCorrida.mensagem) ajuste += " " + ajusteCorrida.mensagem;
+      if (ajusteCardio.mensagem) ajuste += " " + ajusteCardio.mensagem;
 
       document.getElementById("resultadoTreino").classList.remove("hidden");
       document.getElementById("registroEvolucao").classList.remove("hidden");
@@ -2215,7 +2274,7 @@
       const totalConcluidos = exerciciosConcluidos.filter(function(item) { return item === true; }).length;
       const agora = new Date();
 
-      const treinoSalvo = { data: agora.toLocaleString("pt-BR"), criadoEm: agora.getTime(), diaSemana: nomeDoDiaDaSemana(), letraTreino: treinoAtual.letra || "Não informado", meta: perfilUsuario ? perfilUsuario.metaPrincipal : "", local: perfilUsuario ? perfilUsuario.localTreino : "", totalExercicios, totalConcluidos, nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário", exercicios: nomesExercicios, exercicioRegistro, carga, reps, sensacao, evolucao: mensagemEvolucaoAtual, observacao, ultimaCorridaConsiderada: ultimaCorridaCache ? { data: ultimaCorridaCache.data, intensidade: ultimaCorridaCache.intensidade, sensacao: ultimaCorridaCache.sensacao, distancia: ultimaCorridaCache.distancia, tempo: ultimaCorridaCache.tempo } : null };
+      const treinoSalvo = { data: agora.toLocaleString("pt-BR"), criadoEm: agora.getTime(), diaSemana: nomeDoDiaDaSemana(), letraTreino: treinoAtual.letra || "Não informado", meta: perfilUsuario ? perfilUsuario.metaPrincipal : "", local: perfilUsuario ? perfilUsuario.localTreino : "", totalExercicios, totalConcluidos, nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário", exercicios: nomesExercicios, exercicioRegistro, carga, reps, sensacao, evolucao: mensagemEvolucaoAtual, observacao, ultimaCardioConsiderada: ultimaCardioCache ? { data: ultimaCardioCache.data, intensidade: ultimaCardioCache.intensidade, sensacao: ultimaCardioCache.sensacao, distancia: ultimaCardioCache.distancia, tempo: ultimaCardioCache.tempo } : null };
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").add(treinoSalvo)
         .then(function() { alert("Treino salvo na nuvem."); mostrarHistorico(); })
