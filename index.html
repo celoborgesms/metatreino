@@ -556,7 +556,7 @@
         <div id="resultadoPerfil" class="alerta hidden"></div>
         <div id="mensagemPeso" class="alerta hidden"></div>
 
-        <button id="botaoIrTreino" type="button" class="hidden" onclick="irParaTreino()">Continuar para o treino</button>
+        <button id="botaoIrTreino" type="button" class="hidden" onclick="irParaCorrida()">Continuar para corrida</button>
         <button type="button" class="botao-secundario" onclick="apagarPerfilSalvo()">Apagar perfil salvo</button>
       </div>
     </section>
@@ -571,7 +571,7 @@
       <div class="card">
         <h2>Treino inteligente</h2>
         <p class="small">O treino do dia será calculado com base no seu perfil, no check-in diário e na última corrida registrada.</p>
-        <button type="button" onclick="irParaCheckin()">Responder check-in / recalcular treino</button>
+        <button type="button" onclick="irParaCorrida()">Revisar corrida e check-in / recalcular treino</button>
       </div>
 
       <div id="resultadoTreino" class="card hidden">
@@ -693,13 +693,15 @@
         <textarea id="observacaoCorrida" placeholder="Ex: corrida leve, subi muita ladeira, senti panturrilha..."></textarea>
 
         <button type="button" onclick="salvarCorrida()">Salvar corrida</button>
+        <button type="button" class="botao-secundario" onclick="irParaCheckin()">Continuar para check-in</button>
         <div id="mensagemCorrida" class="alerta hidden"></div>
       </div>
 
       <div class="card">
         <h2>Histórico de corrida</h2>
         <p class="small">Resumo das últimas corridas registradas na nuvem.</p>
-        <button type="button" class="botao-secundario" onclick="carregarCorridas()">Atualizar corridas</button>
+        <button type="button" class="botao-secundario" onclick="carregarCorridas()">Ver / atualizar histórico</button>
+        <button type="button" class="botao-perigo" onclick="limparHistoricoCorridas()">Limpar histórico de corridas</button>
         <div id="listaCorridas"></div>
       </div>
     </section>
@@ -1830,6 +1832,40 @@
           caixa.appendChild(div);
         });
       });
+    }
+
+    function limparHistoricoCorridas() {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login com um e-mail autorizado para limpar o histórico de corridas.");
+        return;
+      }
+
+      if (!confirm("Tem certeza que deseja apagar todo o histórico de corridas?")) return;
+
+      db.collection("usuarios")
+        .doc(usuarioAtual.uid)
+        .collection("corridas")
+        .get()
+        .then(function(snapshot) {
+          const batch = db.batch();
+          snapshot.forEach(function(doc) {
+            batch.delete(doc.ref);
+          });
+          return batch.commit();
+        })
+        .then(function() {
+          ultimaCorridaCache = null;
+          carregarCorridas();
+          const caixa = document.getElementById("mensagemCorrida");
+          if (caixa) {
+            caixa.className = "alerta alerta-sucesso";
+            caixa.innerHTML = "Histórico de corridas apagado com sucesso.";
+          }
+        })
+        .catch(function(erro) {
+          console.log("Erro ao limpar histórico de corridas:", erro);
+          alert("Não foi possível limpar o histórico de corridas agora.");
+        });
     }
 
     function gerarTreino() {
