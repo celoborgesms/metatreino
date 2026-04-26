@@ -345,6 +345,68 @@
     }
 
 
+
+    .grafico-card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 15px;
+      margin-top: 12px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    }
+
+    .grafico-linha {
+      margin-top: 12px;
+    }
+
+    .grafico-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 900;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    .grafico-trilho {
+      width: 100%;
+      height: 12px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+
+    .grafico-barra {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      min-width: 4px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .dashboard-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 13px;
+      line-height: 1.35;
+    }
+
+    .dashboard-box strong {
+      display: block;
+      font-size: 22px;
+      color: #0f172a;
+      margin-bottom: 3px;
+    }
+
+
     .small {
       color: var(--muted);
       font-size: 14px;
@@ -873,6 +935,7 @@
         <button type="button" class="botao-secundario" onclick="bloquearAlunoPainel()">Bloquear acesso</button>
         <button type="button" class="botao-secundario" onclick="carregarUsuariosAutorizados()">Atualizar lista</button>
         <div id="mensagemPainelTreinador" class="alerta hidden"></div>
+        <div id="dashboardTreinador" class="dashboard-grid"></div>
       </div>
 
       <div class="card">
@@ -892,6 +955,19 @@
         </div>
 
         <div class="historico-item">
+          <strong>Versão 1.2.8 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 11:20</p>
+          <ul>
+            <li>Adicionados gráficos simples de evolução no histórico completo.</li>
+            <li>Melhorada a evolução de cardio com leitura de distância, tempo e ritmo médio.</li>
+            <li>Painel do treinador recebeu resumo comercial com alunos ativos, vencidos, testes e total de alunos.</li>
+            <li>Adicionado botão de renovação rápida por +30 dias no painel.</li>
+            <li>Melhorada a visualização geral para acompanhamento e venda do app.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
           <strong>Versão 1.2.7 Beta</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 10:30</p>
@@ -904,7 +980,6 @@
             <li>Adicionado feedback final: fácil, médio ou difícil.</li>
             <li>Melhorados os nomes dos treinos para linguagem mais profissional.</li>
             <li>Adicionados ícones leves, botão principal destacado e mensagens inteligentes de experiência.</li>
-            <li>Melhorada a organização visual do histórico para facilitar acompanhamento da evolução.</li>
           </ul>
         </div>
 
@@ -916,19 +991,6 @@
             <li>Adicionada progressão semanal inteligente para ajustar o volume conforme frequência recente.</li>
             <li>Adicionado plano progressivo de cardio até desafio/prova.</li>
             <li>O app passou a considerar objetivo, nível e prazo para sugerir evolução no cardio.</li>
-          </ul>
-        </div>
-
-        <div class="historico-item">
-          <strong>Versão 1.2.5 Beta</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 08:55</p>
-          <ul>
-            <li>Adicionado descanso inteligente baseado em histórico de treino e cardio.</li>
-            <li>Adicionada Bicicleta no Cardio inteligente.</li>
-            <li>Melhorado o volume dos treinos sem equipamentos.</li>
-            <li>Adicionadas sugestões extras para perda de peso, como HIIT, dança e zumba/aeróbico.</li>
-            <li>Incluído aviso discreto de hidratação, alimentação e descanso.</li>
           </ul>
         </div>
       </div>
@@ -1351,10 +1413,12 @@
 
     function carregarUsuariosAutorizados() {
       const lista = document.getElementById("listaUsuariosAutorizados");
+      const dashboard = document.getElementById("dashboardTreinador");
       if (!lista) return;
 
       if (!usuarioAdmin || !db) {
         lista.innerHTML = "<p class='small'>Área disponível apenas para administrador.</p>";
+        if (dashboard) dashboard.innerHTML = "";
         return;
       }
 
@@ -1374,8 +1438,11 @@
 
           if (usuarios.length === 0) {
             lista.innerHTML = "<p class='small'>Nenhum usuário autorizado ainda.</p>";
+            if (dashboard) dashboard.innerHTML = "";
             return;
           }
+
+          if (dashboard) dashboard.innerHTML = montarDashboardTreinador(usuarios);
 
           lista.innerHTML = "";
           usuarios.forEach(function(item) {
@@ -1394,6 +1461,7 @@
               "Expira em: <strong>" + limparTextoSeguro(formatarDataPlano(item.dados.expiraEm)) + "</strong><br>" +
               "Atualizado em: " + limparTextoSeguro(item.dados.liberadoEm || item.dados.bloqueadoEm || "Não informado") + "<br>" +
               "<button type='button' class='botao-secundario' onclick='preencherAlunoPainel(" + emailJS + ", " + nomeJS + ", " + planoJS + ")'>Selecionar</button>" +
+              "<button type='button' class='botao-secundario' onclick='renovarAlunoPainel(" + emailJS + ", 30)'>Renovar +30 dias</button>" +
               "<button type='button' class='botao-perigo' onclick='excluirAlunoPainel(" + emailJS + ")'>Excluir aluno</button>";
             lista.appendChild(div);
           });
@@ -1403,6 +1471,72 @@
           lista.innerHTML = "<p class='small'>Não foi possível carregar a lista. Confira as permissões do Firestore.</p>";
         });
     }
+
+
+    function dataHojeISO() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function planoEstaVencido(dados) {
+      if (!dados || dados.ativo !== true || !dados.expiraEm) return false;
+      const hoje = new Date();
+      const expira = new Date(dados.expiraEm + "T23:59:59");
+      return hoje > expira;
+    }
+
+    function montarDashboardTreinador(usuarios) {
+      const total = usuarios.length;
+      const ativos = usuarios.filter(function(item) { return item.dados.ativo === true && !planoEstaVencido(item.dados); }).length;
+      const vencidos = usuarios.filter(function(item) { return item.dados.ativo === true && planoEstaVencido(item.dados); }).length;
+      const testes = usuarios.filter(function(item) { return item.dados.plano === "teste"; }).length;
+      const bloqueados = usuarios.filter(function(item) { return item.dados.ativo !== true; }).length;
+
+      return "" +
+        "<div class='dashboard-box'><strong>" + total + "</strong><span class='small'>Total de alunos</span></div>" +
+        "<div class='dashboard-box'><strong>" + ativos + "</strong><span class='small'>Ativos</span></div>" +
+        "<div class='dashboard-box'><strong>" + vencidos + "</strong><span class='small'>Vencidos</span></div>" +
+        "<div class='dashboard-box'><strong>" + testes + "</strong><span class='small'>Testes grátis</span></div>" +
+        "<div class='dashboard-box'><strong>" + bloqueados + "</strong><span class='small'>Bloqueados</span></div>" +
+        "<div class='dashboard-box'><strong>R$</strong><span class='small'>Use esta visão para acompanhar conversões e renovações.</span></div>";
+    }
+
+    function renovarAlunoPainel(emailAluno, dias) {
+      if (!usuarioAdmin || !db) {
+        mostrarMensagemPainel("Você não tem permissão para renovar alunos.", "aviso");
+        return;
+      }
+
+      emailAluno = String(emailAluno || "").trim().toLowerCase();
+      dias = Number(dias || 30);
+
+      if (!emailAluno || !emailAluno.includes("@")) {
+        mostrarMensagemPainel("E-mail inválido para renovação.", "aviso");
+        return;
+      }
+
+      const hoje = new Date();
+      const novaData = new Date();
+      novaData.setDate(hoje.getDate() + dias);
+      const dataExpiracao = novaData.toISOString().slice(0, 10);
+
+      db.collection("usuariosAutorizados").doc(emailAluno).set({
+        ativo: true,
+        plano: "mensal",
+        expiraEm: dataExpiracao,
+        atualizadoEm: hoje.getTime(),
+        renovadoEm: hoje.toLocaleString("pt-BR"),
+        renovadoPor: usuarioAtual ? usuarioAtual.email : "treinador"
+      }, { merge: true })
+        .then(function() {
+          mostrarMensagemPainel("✅ Plano renovado por +" + dias + " dias para " + limparTextoSeguro(emailAluno) + ".", "sucesso");
+          carregarUsuariosAutorizados();
+        })
+        .catch(function(erro) {
+          console.log("Erro ao renovar aluno:", erro);
+          mostrarMensagemPainel("Não foi possível renovar o aluno agora.", "aviso");
+        });
+    }
+
 
     function excluirAlunoPainel(emailAluno) {
       if (!usuarioAdmin || !db) {
@@ -1965,6 +2099,40 @@
       }
     }
 
+
+    function montarPlanoProgressivoCardio(tipoAtividade, nivel, objetivo, diasAte) {
+      let plano = "<br><br><strong>Plano progressivo sugerido:</strong><br>";
+
+      if (tipoAtividade === "bicicleta") {
+        if (nivel === "iniciante" || nivel === "voltando") {
+          return plano + "Semana atual: pedale 20 a 30 minutos em ritmo confortável.<br>Próxima etapa: aumente 5 minutos por semana se terminar bem e sem dor.";
+        }
+        return plano + "Semana atual: 30 a 45 minutos com ritmo constante.<br>Próxima etapa: inclua blocos de 2 a 3 minutos mais fortes, sempre com recuperação leve.";
+      }
+
+      if (tipoAtividade === "caminhada") {
+        return plano + "Semana atual: mantenha caminhada firme e confortável.<br>Próxima etapa: aumente 5 a 10 minutos na semana ou inclua pequenos trechos de subida, se estiver bem.";
+      }
+
+      if (nivel === "iniciante" || objetivo === "comecar") {
+        return plano + "Semana atual: caminhada + trotes curtos.<br>Próxima etapa: reduza aos poucos o tempo caminhando e aumente o tempo trotando, sem forçar.";
+      }
+
+      if (objetivo === "10k" || objetivo === "meia") {
+        if (diasAte !== null && diasAte <= 21) {
+          return plano + "Como o desafio está próximo, evite aumentar muito o volume. Foque em manter constância, sono, hidratação e recuperação.";
+        }
+        return plano + "Semana atual: rodagem leve + um treino um pouco mais longo.<br>Próxima etapa: aumentar distância gradualmente, sem subir volume de forma agressiva.";
+      }
+
+      if (objetivo === "pace") {
+        return plano + "Semana atual: tiros curtos controlados.<br>Próxima etapa: melhorar ritmo mantendo boa recuperação entre os estímulos.";
+      }
+
+      return plano + "Evolua aos poucos: aumente volume ou intensidade apenas se terminar bem e sem dor.";
+    }
+
+
     function gerarTextoSugestaoCardio() {
       const tipoAtividade = document.getElementById("tipoAtividadeCardio") ? document.getElementById("tipoAtividadeCardio").value : "corrida";
       const nivel = document.getElementById("nivelCardio").value;
@@ -2034,7 +2202,8 @@
         }
       }
 
-      return "<strong>Sugestão de cardio do dia</strong><br>Atividade: " + traduzirTipoAtividadeCardio(tipoAtividade) + " | Perfil: " + traduzirNivelCardio(nivel) + " | Objetivo: " + traduzirObjetivoCardio(objetivo) + ".<br><br>" + treino + cuidado + desafio;
+      const planoProgressivo = montarPlanoProgressivoCardio(tipoAtividade, nivel, objetivo, diasAte);
+      return "<strong>Sugestão de cardio do dia</strong><br>Atividade: " + traduzirTipoAtividadeCardio(tipoAtividade) + " | Perfil: " + traduzirNivelCardio(nivel) + " | Objetivo: " + traduzirObjetivoCardio(objetivo) + ".<br><br>" + treino + cuidado + desafio + planoProgressivo;
     }
 
     function gerarTreinoCardio() {
@@ -2203,6 +2372,7 @@
               "Atividade: " + limparTextoSeguro(traduzirTipoAtividadeCardio(item.tipoAtividade)) + "<br>" +
               "Distância: " + limparTextoSeguro(item.distancia || 0) + " km<br>" +
               "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
+              "Ritmo médio: " + limparTextoSeguro(calcularPaceMedio(item) || "Não calculado") + "<br>" +
               "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCardio(item.intensidade)) + "<br>" +
               "Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
               "Nível: " + limparTextoSeguro(traduzirNivelCardio(item.nivelCardio || "")) + "<br>" +
@@ -2816,6 +2986,81 @@
       });
     }
 
+
+    function calcularPaceMedio(item) {
+      const distancia = Number(item.distancia || 0);
+      const tempo = Number(item.tempo || 0);
+      if (!distancia || !tempo || distancia <= 0) return null;
+      const pace = tempo / distancia;
+      const min = Math.floor(pace);
+      const seg = Math.round((pace - min) * 60);
+      return min + ":" + String(seg).padStart(2, "0") + " min/km";
+    }
+
+    function montarLinhaGrafico(rotulo, valor, maximo, detalhe) {
+      const percentual = maximo > 0 ? Math.min(100, Math.round((valor / maximo) * 100)) : 0;
+      return "<div class='grafico-linha'>" +
+        "<div class='grafico-label'><span>" + limparTextoSeguro(rotulo) + "</span><span>" + limparTextoSeguro(detalhe || valor) + "</span></div>" +
+        "<div class='grafico-trilho'><div class='grafico-barra' style='width:" + percentual + "%'></div></div>" +
+      "</div>";
+    }
+
+    function montarGraficosEvolucao(treinos, cardios) {
+      treinos = treinos || [];
+      cardios = (cardios || []).filter(function(item) { return item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida"; });
+
+      const mapaTreinos = { A: 0, B: 0, C: 0, Descanso: 0 };
+      treinos.forEach(function(item) {
+        const letra = String(item.letraTreino || "").toUpperCase();
+        if (letra === "A") mapaTreinos.A++;
+        else if (letra === "B") mapaTreinos.B++;
+        else if (letra === "C") mapaTreinos.C++;
+        else mapaTreinos.Descanso++;
+      });
+
+      const mapaCardio = { Corrida: 0, Caminhada: 0, Bicicleta: 0 };
+      let distanciaTotal = 0;
+      let tempoTotal = 0;
+      let melhorDistancia = 0;
+      let melhorPace = null;
+      cardios.forEach(function(item) {
+        const tipo = item.tipoAtividade === "caminhada" ? "Caminhada" : (item.tipoAtividade === "bicicleta" ? "Bicicleta" : "Corrida");
+        mapaCardio[tipo] = (mapaCardio[tipo] || 0) + 1;
+        const distancia = Number(item.distancia || 0);
+        const tempo = Number(item.tempo || 0);
+        distanciaTotal += distancia;
+        tempoTotal += tempo;
+        if (distancia > melhorDistancia) melhorDistancia = distancia;
+        if (distancia > 0 && tempo > 0) {
+          const pace = tempo / distancia;
+          if (melhorPace === null || pace < melhorPace) melhorPace = pace;
+        }
+      });
+
+      const maxTreino = Math.max(1, mapaTreinos.A, mapaTreinos.B, mapaTreinos.C, mapaTreinos.Descanso);
+      const maxCardio = Math.max(1, mapaCardio.Corrida, mapaCardio.Caminhada, mapaCardio.Bicicleta);
+      const paceTexto = melhorPace ? (Math.floor(melhorPace) + ":" + String(Math.round((melhorPace - Math.floor(melhorPace)) * 60)).padStart(2, "0") + " min/km") : "Sem pace ainda";
+
+      return "<div class='grafico-card'>" +
+        "<strong>📈 Gráficos simples de evolução</strong><br>" +
+        "<span class='small'>Resumo visual leve, sem pesar o app.</span>" +
+        montarLinhaGrafico("Treino de membros superiores", mapaTreinos.A, maxTreino, mapaTreinos.A + " registro(s)") +
+        montarLinhaGrafico("Treino de costas e bíceps", mapaTreinos.B, maxTreino, mapaTreinos.B + " registro(s)") +
+        montarLinhaGrafico("Treino de pernas e core", mapaTreinos.C, maxTreino, mapaTreinos.C + " registro(s)") +
+        montarLinhaGrafico("Recuperação / descanso", mapaTreinos.Descanso, maxTreino, mapaTreinos.Descanso + " registro(s)") +
+        "<br><strong>🏃 Cardio</strong>" +
+        montarLinhaGrafico("Corrida", mapaCardio.Corrida, maxCardio, mapaCardio.Corrida + " registro(s)") +
+        montarLinhaGrafico("Caminhada", mapaCardio.Caminhada, maxCardio, mapaCardio.Caminhada + " registro(s)") +
+        montarLinhaGrafico("Bicicleta", mapaCardio.Bicicleta, maxCardio, mapaCardio.Bicicleta + " registro(s)") +
+        "<div class='alerta'><strong>Evolução de cardio:</strong><br>" +
+        "Distância total registrada: " + distanciaTotal.toFixed(1) + " km<br>" +
+        "Tempo total registrado: " + tempoTotal + " min<br>" +
+        "Maior distância em um registro: " + melhorDistancia.toFixed(1) + " km<br>" +
+        "Melhor ritmo estimado: " + paceTexto + "</div>" +
+      "</div>";
+    }
+
+
     function renderHistoricoCompleto(historico, historicoCardio) {
       const listaHistoricoCompleto = document.getElementById("listaHistoricoCompleto");
       listaHistoricoCompleto.innerHTML = "";
@@ -2829,6 +3074,7 @@
       }
 
       listaHistoricoCompleto.innerHTML += montarResumoPessoal(treinos, cardios);
+      listaHistoricoCompleto.innerHTML += montarGraficosEvolucao(treinos, cardios);
 
       const tituloTreinos = document.createElement("div");
       tituloTreinos.className = "alerta";
@@ -2889,6 +3135,7 @@
             "Atividade: " + limparTextoSeguro(atividade) + "<br>" +
             "Distância: " + limparTextoSeguro(item.distancia || 0) + " km<br>" +
             "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
+            "Ritmo médio: " + limparTextoSeguro(calcularPaceMedio(item) || "Não calculado") + "<br>" +
             "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCardio(item.intensidade)) + "<br>" +
             "Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
             "Nível: " + limparTextoSeguro(traduzirNivelCardio(item.nivelCardio || "")) + "<br>" +
