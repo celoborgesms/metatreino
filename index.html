@@ -293,6 +293,58 @@
       line-height: 1.45;
     }
 
+    .botao-principal {
+      background: linear-gradient(135deg, #22c55e, #0ea5e9);
+      color: white;
+      font-size: 17px;
+      font-weight: 950;
+      min-height: 58px;
+      box-shadow: 0 16px 34px rgba(14, 165, 233, 0.24);
+    }
+
+    .resumo-dia-box {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #ecfdf5, #eff6ff);
+      border: 1px solid rgba(34, 197, 94, 0.28);
+      line-height: 1.55;
+      color: #0f172a;
+    }
+
+    .mensagem-inteligente {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(34, 197, 94, 0.10);
+      border: 1px solid rgba(34, 197, 94, 0.18);
+      color: #166534;
+      font-weight: 850;
+      line-height: 1.45;
+    }
+
+    .feedback-treino {
+      margin-top: 16px;
+      padding: 15px;
+      border-radius: 20px;
+      background: #f8fafc;
+      border: 1px solid #dbe3ef;
+    }
+
+    .feedback-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .feedback-grid button {
+      min-height: 44px;
+      padding: 10px 8px;
+      font-size: 13px;
+    }
+
+
     .small {
       color: var(--muted);
       font-size: 14px;
@@ -487,7 +539,7 @@
 
     <section id="paginaPerfil">
       <div class="card">
-        <h2>Login</h2>
+        <h2>🔐 Login</h2>
         <p class="small">Entre com sua conta Google. O app será liberado apenas para e-mails autorizados pelo treinador.</p>
         <button type="button" onclick="loginGoogle()">Entrar com Google</button>
         <button type="button" class="botao-secundario" onclick="logout()">Sair</button>
@@ -496,7 +548,7 @@
       </div>
 
       <div id="cardDadosPessoa" class="card hidden">
-        <h2>Dados da pessoa</h2>
+        <h2>⚙️ Dados da pessoa</h2>
         <p class="small">Preencha seus dados para personalizar o treino.</p>
 
         <label for="nome">Nome</label>
@@ -556,33 +608,45 @@
         <div id="resultadoPerfil" class="alerta hidden"></div>
         <div id="mensagemPeso" class="alerta hidden"></div>
 
-        <button id="botaoIrTreino" type="button" class="hidden" onclick="irParaCardio()">Continuar para cardio</button>
+        <button id="botaoIrTreino" type="button" class="hidden botao-principal" onclick="irParaCardio()">➡️ Continuar para cardio</button>
         <button type="button" class="botao-secundario" onclick="apagarPerfilSalvo()">Apagar perfil salvo</button>
       </div>
     </section>
 
     <section id="paginaTreino" class="hidden">
       <div class="card">
-        <h2 id="tituloTreino">Treino do dia</h2>
+        <h2 id="tituloTreino">💪 Treino do dia</h2>
         <p id="resumoPerfilTreino" class="small"></p>
         <button type="button" class="botao-secundario" onclick="voltarParaPerfil()">Voltar para dados da pessoa</button>
       </div>
 
       <div class="card">
-        <h2>Treino inteligente</h2>
+        <h2>💪 Treino inteligente</h2>
         <p class="small">O treino do dia será calculado com base no seu perfil, no check-in diário e no último cardio registrado.</p>
-        <button type="button" onclick="irParaCardio()">Revisar cardio e check-in / recalcular treino</button>
+        <button type="button" class="botao-principal" onclick="irParaCardio()">➡️ Revisar cardio e check-in / recalcular treino</button>
       </div>
 
       <div id="resultadoTreino" class="card hidden">
-        <h2>Treino recomendado</h2>
+        <h2>💪 Treino recomendado</h2>
+        <div id="resumoDiaTreino" class="resumo-dia-box hidden"></div>
+        <div id="mensagemInteligenteTreino" class="mensagem-inteligente hidden"></div>
         <p id="resumoTreino" class="small"></p>
         <div id="listaExercicios"></div>
         <div id="progressoExercicios" class="progresso-box hidden"></div>
+        <div id="feedbackTreinoFinal" class="feedback-treino hidden">
+          <strong>Como foi o treino?</strong>
+          <p class="small">Esse feedback ajuda o app a ajustar melhor sua evolução nas próximas versões.</p>
+          <div class="feedback-grid">
+            <button type="button" class="botao-secundario" onclick="salvarFeedbackTreinoFinal('facil')">Fácil</button>
+            <button type="button" class="botao-secundario" onclick="salvarFeedbackTreinoFinal('medio')">Médio</button>
+            <button type="button" class="botao-secundario" onclick="salvarFeedbackTreinoFinal('dificil')">Difícil</button>
+          </div>
+          <div id="mensagemFeedbackTreino" class="alerta hidden"></div>
+        </div>
       </div>
 
       <div id="registroEvolucao" class="card hidden">
-        <h2>Registrar evolução</h2>
+        <h2>📈 Registrar evolução</h2>
         <label for="exercicioRegistro">Exercício principal</label>
         <input id="exercicioRegistro" type="text" placeholder="Ex: Supino reto">
         <label for="carga">Carga usada (kg)</label>
@@ -603,7 +667,7 @@
       </div>
 
       <div class="card">
-        <h2>Resumo do histórico</h2>
+        <h2>📊 Resumo do histórico</h2>
         <p class="small">Aqui aparece um resumo dos últimos treinos salvos na nuvem.</p>
         <button type="button" class="botao-secundario" onclick="mostrarHistorico()">Atualizar resumo</button>
         <button type="button" onclick="irParaHistoricoCompleto()">Ver histórico completo</button>
@@ -614,12 +678,12 @@
 
     <section id="paginaCheckin" class="hidden">
       <div class="card">
-        <h2>Check-in diário</h2>
+        <h2>✅ Check-in diário</h2>
         <p class="small">Responda como você está hoje. O app usa essas respostas junto com ao último cardio registrado para adaptar o treino do dia.</p>
       </div>
 
       <div class="card">
-        <h2>Como você está hoje?</h2>
+        <h2>✅ Como você está hoje?</h2>
 
         <label for="energia">Energia do dia</label>
         <select id="energia">
@@ -655,13 +719,13 @@
         <select id="divisaoTreino">
           <option value="semana">Automático por dia da semana</option>
           <option value="automatico">Automático A/B/C pelo histórico</option>
-          <option value="A">Treino A - Peito, ombro e tríceps</option>
-          <option value="B">Treino B - Costas e bíceps</option>
-          <option value="C">Treino C - Pernas e abdômen</option>
-          <option value="descanso">Descanso / mobilidade</option>
+          <option value="A">Treino de membros superiores — empurrar</option>
+          <option value="B">Treino de membros superiores — puxar</option>
+          <option value="C">Treino de membros inferiores e abdômen</option>
+          <option value="descanso">Treino leve / recuperação</option>
         </select>
 
-        <button type="button" onclick="gerarTreino()">Atualizar treino do dia</button>
+        <button type="button" class="botao-principal" onclick="gerarTreino()">💪 Gerar / atualizar treino do dia</button>
         <button type="button" class="botao-secundario" onclick="irParaTreino()">Voltar para o treino</button>
       </div>
 
@@ -669,7 +733,7 @@
 
     <section id="paginaCardio" class="hidden">
       <div class="card">
-        <h2>Cardio inteligente</h2>
+        <h2>🏃 Cardio inteligente</h2>
         <p class="small">Use esta área para montar uma sugestão de corrida ou caminhada conforme seu nível, objetivo e evolução. O app também usa essas informações para adaptar melhor o treino de força.</p>
 
         <label for="tipoAtividadeCardio">Tipo de atividade</label>
@@ -732,7 +796,7 @@
       </div>
 
       <div class="card">
-        <h2>Registrar evolução do cardio</h2>
+        <h2>📈 Registrar evolução do cardio</h2>
         <p class="small">Depois da atividade, registre como foi. Isso ajuda o app a entender sua evolução e adaptar melhor os próximos treinos.</p>
 
         <label for="distanciaCardio">Distância feita (km)</label>
@@ -775,7 +839,7 @@
 
     <section id="paginaHistoricoCompleto" class="hidden">
       <div class="card">
-        <h2>Histórico completo</h2>
+        <h2>📊 Histórico completo</h2>
         <p class="small">Veja todos os detalhes dos treinos salvos na nuvem.</p>
         <button type="button" class="botao-secundario" onclick="irParaTreino()">Voltar para o treino</button>
         <button type="button" class="botao-secundario" onclick="mostrarHistoricoCompleto()">Atualizar histórico completo</button>
@@ -786,7 +850,7 @@
 
     <section id="paginaPainelTreinador" class="hidden">
       <div class="card">
-        <h2>Painel do Treinador</h2>
+        <h2>🧑‍🏫 Painel do Treinador</h2>
         <p class="small">Use esta área para liberar, bloquear ou excluir alunos pelo e-mail cadastrado no Firebase.</p>
 
         <label for="emailAlunoPainel">E-mail do aluno</label>
@@ -812,7 +876,7 @@
       </div>
 
       <div class="card">
-        <h2>Usuários autorizados</h2>
+        <h2>👥 Usuários autorizados</h2>
         <p class="small">Lista carregada da coleção <strong>usuariosAutorizados</strong>.</p>
         <div id="listaUsuariosAutorizados"></div>
       </div>
@@ -820,7 +884,7 @@
 
     <section id="paginaNovidades" class="hidden">
       <div class="card">
-        <h2>Novidades</h2>
+        <h2>✨ Novidades</h2>
         <p class="small">Acompanhe aqui as atualizações feitas no aplicativo.</p>
         <div class="alerta">
           <strong>Dúvidas ou sugestões?</strong><br>
@@ -836,6 +900,10 @@
             <li>A aba Cardio mostra apenas os últimos 3 registros para ficar mais limpa.</li>
             <li>Adicionado resumo pessoal com nível do aluno, dias seguidos de atividade e ranking pessoal.</li>
             <li>Adicionada mensagem de parabéns ao concluir todos os exercícios do treino.</li>
+            <li>Adicionado resumo do dia antes do treino recomendado.</li>
+            <li>Adicionado feedback final: fácil, médio ou difícil.</li>
+            <li>Melhorados os nomes dos treinos para linguagem mais profissional.</li>
+            <li>Adicionados ícones leves, botão principal destacado e mensagens inteligentes de experiência.</li>
             <li>Melhorada a organização visual do histórico para facilitar acompanhamento da evolução.</li>
           </ul>
         </div>
@@ -867,13 +935,13 @@
     </section>
 
     <nav class="bottom-nav">
-      <button type="button" onclick="voltarParaPerfil()">Perfil</button>
-      <button type="button" onclick="irParaCardio()">Cardio</button>
-      <button type="button" onclick="irParaCheckin()">Check-in</button>
-      <button type="button" onclick="irParaTreino()">Treino</button>
-      <button type="button" onclick="irParaHistorico()">Histórico</button>
-      <button id="botaoPainelTreinador" type="button" class="hidden" onclick="irParaPainelTreinador()">Painel</button>
-      <button type="button" onclick="irParaNovidades()">Novidades</button>
+      <button type="button" onclick="voltarParaPerfil()">⚙️ Perfil</button>
+      <button type="button" onclick="irParaCardio()">🏃 Cardio</button>
+      <button type="button" onclick="irParaCheckin()">✅ Check-in</button>
+      <button type="button" onclick="irParaTreino()">💪 Treino</button>
+      <button type="button" onclick="irParaHistorico()">📊 Histórico</button>
+      <button id="botaoPainelTreinador" type="button" class="hidden" onclick="irParaPainelTreinador()">🧑‍🏫 Painel</button>
+      <button type="button" onclick="irParaNovidades()">✨ Novidades</button>
     </nav>
   </div>
 
@@ -1421,6 +1489,7 @@
     }
     let treinoAtual = [];
     let mensagemEvolucaoAtual = "";
+    let feedbackTreinoFinalAtual = "";
     let exerciciosConcluidos = [];
     let sugestoesCarga = {};
     let ultimaCardioCache = null;
@@ -1614,7 +1683,7 @@
       if (perfilUsuario === null) return;
       ocultarPaginasDoApp();
       document.getElementById("paginaTreino").classList.remove("hidden");
-      document.getElementById("tituloTreino").innerText = "Treino de " + perfilUsuario.nome;
+      document.getElementById("tituloTreino").innerText = "💪 Treino de " + perfilUsuario.nome;
       document.getElementById("resumoPerfilTreino").innerText = "Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + " | Experiência: " + traduzirExperiencia(perfilUsuario.tempoExperiencia) + " | Local: " + traduzirLocal(perfilUsuario.localTreino) + " | IMC: " + perfilUsuario.imc;
       mostrarHistorico();
       carregarUltimaCardio();
@@ -1674,6 +1743,58 @@
       document.getElementById("paginaHistoricoCompleto").classList.remove("hidden");
       mostrarHistoricoCompleto();
       window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+
+    function nomeAmigavelTreino(letra) {
+      const mapa = {
+        A: "Treino de membros superiores — empurrar",
+        B: "Treino de membros superiores — puxar",
+        C: "Treino de membros inferiores e abdômen",
+        descanso: "Treino leve / recuperação",
+        Descanso: "Treino leve / recuperação"
+      };
+      return mapa[letra] || (letra ? "Treino " + letra : "Treino do dia");
+    }
+
+    function estimarDuracaoTreino(tempo, cardioNoTreino) {
+      let base = tempo === "rapido" ? 30 : (tempo === "normal" ? 55 : 75);
+      if (cardioNoTreino && cardioNoTreino !== "nao") base += tempo === "rapido" ? 10 : 15;
+      return base;
+    }
+
+    function intensidadeTreinoTexto(energia, progressaoSemanal, letraTreino) {
+      if (letraTreino === "descanso") return "leve / recuperação";
+      if (energia === "mal") return "leve";
+      if (energia === "cansado" || (progressaoSemanal && progressaoSemanal.reduzirVolume)) return "moderada reduzida";
+      return "moderada";
+    }
+
+    function montarResumoDoDia(letraTreino, tempo, cardioNoTreino, energia, progressaoSemanal) {
+      const cardioTexto = cardioNoTreino && cardioNoTreino !== "nao" ? (cardioNoTreino === "esteira" ? "Esteira" : "Bicicleta") : "opcional / não incluído";
+      const duracao = estimarDuracaoTreino(tempo, cardioNoTreino);
+      const intensidade = intensidadeTreinoTexto(energia, progressaoSemanal, letraTreino);
+      return "<strong>Hoje você vai fazer:</strong><br>" +
+        "✔ " + limparTextoSeguro(nomeAmigavelTreino(letraTreino)) + " (" + intensidade + ")<br>" +
+        "✔ Cardio: " + limparTextoSeguro(cardioTexto) + "<br>" +
+        "✔ Duração estimada: aproximadamente " + duracao + " min";
+    }
+
+    function obterMensagemInteligente(energia, letraTreino, progressaoSemanal) {
+      if (letraTreino === "descanso") return "Hoje é um ótimo dia para recuperar. Recuperação também faz parte da evolução.";
+      if (energia === "bem" && progressaoSemanal && progressaoSemanal.fase === "evolucao") return "Boa fase para evoluir com controle. Consistência é o que traz resultado.";
+      if (energia === "cansado") return "Hoje o foco é fazer bem feito, sem exagerar. Um treino ajustado ainda conta muito.";
+      if (energia === "mal") return "Respeite seu corpo hoje. Técnica, leveza e segurança vêm em primeiro lugar.";
+      return "Boa escolha! Consistência é o que traz resultado.";
+    }
+
+    function salvarFeedbackTreinoFinal(nivel) {
+      feedbackTreinoFinalAtual = nivel;
+      const caixa = document.getElementById("mensagemFeedbackTreino");
+      if (caixa) {
+        caixa.className = "alerta alerta-sucesso";
+        caixa.innerHTML = "Feedback salvo: " + limparTextoSeguro(nivel) + ". Quando salvar o treino, esse dado será registrado junto ao histórico.";
+      }
     }
 
     function nomeDoDiaDaSemana() {
@@ -2369,6 +2490,7 @@
 
       treinoAtual = treinoFiltrado;
       treinoAtual.letra = letraTreino === "descanso" ? "Descanso" : letraTreino;
+      feedbackTreinoFinalAtual = "";
       exerciciosConcluidos = new Array(treinoAtual.length).fill(false);
 
       let ajuste = "";
@@ -2378,9 +2500,9 @@
         if (energia === "bem") ajuste = "Hoje você pode treinar normalmente e tentar evoluir carga se a execução estiver boa.";
         else if (energia === "cansado") ajuste = "Hoje reduza um pouco o volume. Faça uma série a menos em cada exercício.";
         else ajuste = "Hoje faça um treino leve. Priorize técnica, mobilidade e não force carga.";
-        if (divisaoSelecionada === "semana") ajuste = "Hoje é " + nomeDoDiaDaSemana() + ". Treino " + letraTreino + " selecionado pelo dia da semana com descanso inteligente. " + ajuste;
-        else if (divisaoSelecionada === "automatico") ajuste = "Treino " + letraTreino + " selecionado pelo histórico A/B/C. " + ajuste;
-        else ajuste = "Treino " + letraTreino + " selecionado manualmente. " + ajuste;
+        if (divisaoSelecionada === "semana") ajuste = "Hoje é " + nomeDoDiaDaSemana() + ". " + nomeAmigavelTreino(letraTreino) + " selecionado pelo dia da semana com descanso inteligente. " + ajuste;
+        else if (divisaoSelecionada === "automatico") ajuste = nomeAmigavelTreino(letraTreino) + " selecionado pelo histórico A/B/C. " + ajuste;
+        else ajuste = nomeAmigavelTreino(letraTreino) + " selecionado manualmente. " + ajuste;
       }
 
       ajuste += " Personalizado para meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + ", local: " + traduzirLocal(perfilUsuario.localTreino) + ".";
@@ -2396,6 +2518,16 @@
 
       document.getElementById("resultadoTreino").classList.remove("hidden");
       document.getElementById("registroEvolucao").classList.remove("hidden");
+      const resumoDia = document.getElementById("resumoDiaTreino");
+      if (resumoDia) {
+        resumoDia.classList.remove("hidden");
+        resumoDia.innerHTML = montarResumoDoDia(letraTreino, tempo, cardioNoTreino, energia, progressaoSemanal);
+      }
+      const mensagemInteligente = document.getElementById("mensagemInteligenteTreino");
+      if (mensagemInteligente) {
+        mensagemInteligente.classList.remove("hidden");
+        mensagemInteligente.innerHTML = obterMensagemInteligente(energia, letraTreino, progressaoSemanal);
+      }
       document.getElementById("resumoTreino").innerText = ajuste;
       mostrarTreinoNaTela();
     }
@@ -2408,6 +2540,10 @@
     function mostrarTreinoNaTela() {
       const lista = document.getElementById("listaExercicios");
       const progresso = document.getElementById("progressoExercicios");
+      const feedbackBox = document.getElementById("feedbackTreinoFinal");
+      const mensagemFeedback = document.getElementById("mensagemFeedbackTreino");
+      if (feedbackBox) feedbackBox.classList.add("hidden");
+      if (mensagemFeedback) mensagemFeedback.classList.add("hidden");
       lista.innerHTML = "";
       sugestoesCarga = buscarSugestoesDeCarga(treinoAtual);
       treinoAtual.forEach(function(exercicio, index) {
@@ -2471,11 +2607,14 @@
 
       let texto = "Progresso do treino: " + feitos + " de " + total + " exercícios concluídos.";
 
+      const feedbackBox = document.getElementById("feedbackTreinoFinal");
       if (feitos === total) {
         texto += " 🎉 Parabéns! Você concluiu o treino de hoje. Salve seu treino para registrar sua evolução.";
         progresso.classList.add("alerta-sucesso");
+        if (feedbackBox) feedbackBox.classList.remove("hidden");
       } else {
         progresso.classList.remove("alerta-sucesso");
+        if (feedbackBox) feedbackBox.classList.add("hidden");
       }
 
       progresso.innerText = texto;
@@ -2556,7 +2695,7 @@
       const totalConcluidos = exerciciosConcluidos.filter(function(item) { return item === true; }).length;
       const agora = new Date();
 
-      const treinoSalvo = { data: agora.toLocaleString("pt-BR"), criadoEm: agora.getTime(), diaSemana: nomeDoDiaDaSemana(), letraTreino: treinoAtual.letra || "Não informado", meta: perfilUsuario ? perfilUsuario.metaPrincipal : "", local: perfilUsuario ? perfilUsuario.localTreino : "", totalExercicios, totalConcluidos, nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário", exercicios: nomesExercicios, exercicioRegistro, carga, reps, sensacao, evolucao: mensagemEvolucaoAtual, observacao, ultimaCardioConsiderada: ultimaCardioCache ? { data: ultimaCardioCache.data, intensidade: ultimaCardioCache.intensidade, sensacao: ultimaCardioCache.sensacao, distancia: ultimaCardioCache.distancia, tempo: ultimaCardioCache.tempo } : null };
+      const treinoSalvo = { data: agora.toLocaleString("pt-BR"), criadoEm: agora.getTime(), diaSemana: nomeDoDiaDaSemana(), letraTreino: treinoAtual.letra || "Não informado", meta: perfilUsuario ? perfilUsuario.metaPrincipal : "", local: perfilUsuario ? perfilUsuario.localTreino : "", totalExercicios, totalConcluidos, nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário", exercicios: nomesExercicios, exercicioRegistro, carga, reps, sensacao, evolucao: mensagemEvolucaoAtual, feedbackFinalTreino: feedbackTreinoFinalAtual || "não informado", observacao, ultimaCardioConsiderada: ultimaCardioCache ? { data: ultimaCardioCache.data, intensidade: ultimaCardioCache.intensidade, sensacao: ultimaCardioCache.sensacao, distancia: ultimaCardioCache.distancia, tempo: ultimaCardioCache.tempo } : null };
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").add(treinoSalvo)
         .then(function() { alert("Treino salvo na nuvem."); mostrarHistorico(); })
@@ -2669,7 +2808,7 @@
         const div = document.createElement("div");
         div.className = "historico-item";
         div.innerHTML = "<strong>" + (item.data || "Sem data") + "</strong><br>" +
-          "Treino: " + (item.letraTreino || "Não informado") + "<br>" +
+          "Treino: " + limparTextoSeguro(nomeAmigavelTreino(item.letraTreino || "")) + "<br>" +
           "Concluídos: " + (item.totalConcluidos || 0) + " de " + (item.totalExercicios || (item.exercicios ? item.exercicios.length : 0)) + " exercícios<br>" +
           "Registro principal: " + (item.exercicioRegistro || "Não informado") +
           "<br><button type='button' class='botao-secundario' onclick='irParaHistoricoCompleto()'>Ver detalhes</button>";
@@ -2709,7 +2848,7 @@
         div.innerHTML = "<strong>" + (item.data || "Sem data") + "</strong><br>" +
           "Dia: " + (item.diaSemana || "Não informado") + "<br>" +
           "Pessoa: " + (item.nomeUsuario || "Usuário") + "<br>" +
-          "Treino: " + (item.letraTreino || "Não informado") + "<br>" +
+          "Treino: " + limparTextoSeguro(nomeAmigavelTreino(item.letraTreino || "")) + "<br>" +
           "Meta: " + traduzirMeta(item.meta) + "<br>" +
           "Local: " + traduzirLocal(item.local) + "<br>" +
           "Concluídos: " + (item.totalConcluidos || 0) + " de " + (item.totalExercicios || (item.exercicios ? item.exercicios.length : 0)) + " exercícios<br>" +
@@ -2717,6 +2856,7 @@
           "Registro principal: " + (item.exercicioRegistro || "Não informado") + "<br>" +
           "Carga: " + (item.carga !== undefined && item.carga !== "" ? item.carga : "-") + " kg | Reps: " + (item.reps || "-") + " | Sensação: " + (item.sensacao || "-") + "<br>" +
           "Evolução: " + (item.evolucao || "Não calculada") + "<br>" +
+          "Feedback final: " + (item.feedbackFinalTreino || "Não informado") + "<br>" +
           "Observação: " + (item.observacao || "Nenhuma");
         listaHistoricoCompleto.appendChild(div);
       });
