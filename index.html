@@ -827,6 +827,18 @@
         </div>
 
         <div class="historico-item">
+          <strong>Versão 1.2.6 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 10:30</p>
+          <ul>
+            <li>Adicionada progressão semanal inteligente para ajustar volume conforme frequência recente.</li>
+            <li>Adicionado plano progressivo de cardio até desafio/prova, considerando prazo, objetivo e nível.</li>
+            <li>Melhorado o resumo do treino com indicação de fase: retomada, construção, evolução ou recuperação.</li>
+            <li>Cardio inteligente passa a orientar melhor a evolução até 3 km, 5 km, 10 km, meia maratona ou outro objetivo.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
           <strong>Versão 1.2.5 Beta</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 09:00</p>
@@ -852,20 +864,7 @@
           </ul>
         </div>
 
-        <div class="historico-item">
-          <strong>Versão 1.2.3 Beta</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 26/04/2026 às 21:30</p>
-          <ul>
-            <li>Reformulada a aba Cardio para funcionar como Cardio Inteligente.</li>
-            <li>Adicionado perfil de corrida: iniciante, voltando, regular ou experiente.</li>
-            <li>Adicionado objetivo de corrida: começar, 5 km, 10 km, meia maratona ou melhorar pace.</li>
-            <li>Adicionado campo de desafio/prova com data e distância.</li>
-            <li>O app agora gera sugestões de cardio conforme perfil, objetivo, IMC e prazo do desafio.</li>
-            <li>Histórico de cardio passou a salvar também nível, objetivo e treino sugerido.</li>
-          </ul>
-        </div>
-      </div>
+     </div>
     </section>
 
     <nav class="bottom-nav">
@@ -1806,6 +1805,37 @@
       return partes[2] + "/" + partes[1] + "/" + partes[0];
     }
 
+    function gerarPlanoCardioAteDesafio(tipoAtividade, nivel, objetivo, distanciaDesafio, dataDesafio, diasAte) {
+      if (!dataDesafio || diasAte === null || diasAte < 0) return "";
+
+      const semanas = Math.max(1, Math.ceil(diasAte / 7));
+      let distanciaTexto = traduzirObjetivoCardio(distanciaDesafio || objetivo);
+      let base = "";
+
+      if (tipoAtividade === "bicicleta") {
+        base = "Plano progressivo: faça 2 a 3 pedais por semana, alternando um dia leve, um dia moderado e um dia mais longo. Aumente o tempo aos poucos, sem subir carga de forma agressiva.";
+      } else if (tipoAtividade === "caminhada") {
+        base = "Plano progressivo: faça 3 caminhadas por semana. Mantenha uma caminhada leve, uma caminhada firme e uma caminhada um pouco mais longa, aumentando o tempo aos poucos.";
+      } else if (nivel === "iniciante" || objetivo === "comecar") {
+        base = "Plano progressivo: faça 3 sessões por semana alternando caminhada e trote leve. A cada 1 ou 2 semanas, aumente um pouco o tempo correndo e reduza a caminhada, sempre sem dor.";
+      } else if (objetivo === "pace") {
+        base = "Plano progressivo: mantenha 1 treino leve, 1 treino de ritmo/intervalado controlado e 1 treino confortável mais longo por semana.";
+      } else {
+        base = "Plano progressivo: faça 3 treinos por semana, com um treino leve, um treino de ritmo controlado e um treino mais longo. Aumente volume aos poucos e preserve recuperação.";
+      }
+
+      let alertaPrazo = "";
+      if (semanas <= 2) {
+        alertaPrazo = " Como faltam menos de 2 semanas, evite tentar ganhar condicionamento rápido demais. Foque em chegar bem, descansado e sem dor.";
+      } else if (semanas <= 6) {
+        alertaPrazo = " Como o prazo é curto, evolua com cuidado e evite aumentar distância e intensidade na mesma semana.";
+      } else {
+        alertaPrazo = " Como há mais tempo, a evolução pode ser gradual, aumentando cerca de 5% a 10% do volume quando a sensação estiver boa.";
+      }
+
+      return "<br><br><strong>Plano até o desafio:</strong> faltam aproximadamente " + semanas + " semana(s) para " + distanciaTexto + ". " + base + alertaPrazo;
+    }
+
     function atualizarTextoTipoCardio() {
       const tipo = document.getElementById("tipoAtividadeCardio") ? document.getElementById("tipoAtividadeCardio").value : "corrida";
       const objetivo = document.getElementById("objetivoCardio");
@@ -1878,6 +1908,7 @@
           desafio = "<br><br><strong>Desafio:</strong> objetivo de " + traduzirObjetivoCardio(distanciaDesafio) + " em " + formatarDataBrasileira(dataDesafio) + " (faltam aproximadamente " + diasAte + " dia(s)).";
           if (diasAte <= 14) desafio += " Como está próximo, evite aumentar volume de forma agressiva. Priorize regularidade e recuperação.";
           else desafio += " Como ainda há tempo, o ideal é evoluir aos poucos, aumentando volume de forma progressiva.";
+          desafio += gerarPlanoCardioAteDesafio(tipoAtividade, nivel, objetivo, distanciaDesafio, dataDesafio, diasAte);
         } else {
           desafio = "<br><br><strong>Desafio:</strong> informe uma data futura para o app considerar melhor o prazo.";
         }
@@ -1981,6 +2012,7 @@
         temDesafio: temDesafioCardio,
         distanciaDesafio: temDesafioCardio ? distanciaDesafioCardio : "",
         dataDesafio: temDesafioCardio ? dataDesafioCardio : "",
+        planoProgressivo: temDesafioCardio ? "Plano progressivo gerado conforme prazo, objetivo e nível do usuário." : "",
         treinoSugerido: sugestaoCardioHTML,
         nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário"
       };
@@ -2195,13 +2227,96 @@
       window.open("https://www.youtube.com/results?search_query=" + busca, "_blank");
     }
 
+    function analisarProgressaoSemanal(callback) {
+      if (!usuarioAtual || !db) {
+        callback({ fase: "neutra", reduzirVolume: false, mensagem: "" });
+        return;
+      }
+
+      const agora = new Date().getTime();
+      const limite7Dias = agora - (7 * 24 * 60 * 60 * 1000);
+      const limite28Dias = agora - (28 * 24 * 60 * 60 * 1000);
+      let treinos7 = 0;
+      let cardios7 = 0;
+      let treinos28 = 0;
+      let cardios28 = 0;
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").get()
+        .then(function(snapshot) {
+          snapshot.forEach(function(doc) {
+            const item = doc.data() || {};
+            const t = Number(item.criadoEm || 0);
+            if (t >= limite28Dias) treinos28++;
+            if (t >= limite7Dias) treinos7++;
+          });
+          return db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").get();
+        })
+        .then(function(snapshot) {
+          snapshot.forEach(function(doc) {
+            const item = doc.data() || {};
+            if (item.tipo === "sem_cardio" || item.tipo === "sem_corrida") return;
+            const t = Number(item.criadoEm || 0);
+            if (t >= limite28Dias) cardios28++;
+            if (t >= limite7Dias) cardios7++;
+          });
+
+          const sessoes7 = treinos7 + cardios7;
+          const sessoes28 = treinos28 + cardios28;
+
+          if (sessoes7 >= 5) {
+            callback({
+              fase: "recuperacao",
+              reduzirVolume: true,
+              mensagem: "Progressão semanal: você acumulou bastante treino/cardio nos últimos 7 dias. O app reduziu o volume para favorecer recuperação."
+            });
+          } else if (sessoes28 <= 2) {
+            callback({
+              fase: "retomada",
+              reduzirVolume: false,
+              mensagem: "Progressão semanal: fase de retomada/adaptação. O app prioriza constância, técnica e segurança antes de aumentar intensidade."
+            });
+          } else if (sessoes28 >= 10 && sessoes7 <= 4) {
+            callback({
+              fase: "evolucao",
+              reduzirVolume: false,
+              mensagem: "Progressão semanal: sua frequência recente permite manter uma fase de evolução controlada, sem aumentar tudo de uma vez."
+            });
+          } else {
+            callback({
+              fase: "construcao",
+              reduzirVolume: false,
+              mensagem: "Progressão semanal: fase de construção. Mantenha regularidade e aumente dificuldade apenas se a execução estiver boa."
+            });
+          }
+        })
+        .catch(function(erro) {
+          console.log("Erro ao analisar progressão semanal:", erro);
+          callback({ fase: "neutra", reduzirVolume: false, mensagem: "" });
+        });
+    }
+
+    function aplicarProgressaoSemanalAoTreino(treino, progressaoSemanal, tempo) {
+      if (!progressaoSemanal || !treino || treino.length === 0) return treino;
+
+      if (progressaoSemanal.reduzirVolume && treino.length > 4) {
+        return treino.slice(0, Math.max(4, treino.length - 1));
+      }
+
+      return treino;
+    }
+
     function gerarTreino() {
       analisarEsforcoRecente(function(esforcoRecente) {
-        gerarTreinoComEsforco(esforcoRecente || { sugerirDescanso: false, mensagem: "" });
+        analisarProgressaoSemanal(function(progressaoSemanal) {
+          gerarTreinoComEsforco(
+            esforcoRecente || { sugerirDescanso: false, mensagem: "" },
+            progressaoSemanal || { fase: "neutra", reduzirVolume: false, mensagem: "" }
+          );
+        });
       });
     }
 
-    function gerarTreinoComEsforco(esforcoRecente) {
+    function gerarTreinoComEsforco(esforcoRecente, progressaoSemanal) {
       const energia = document.getElementById("energia").value;
       const dor = document.getElementById("dor").value;
       const tempo = document.getElementById("tempo").value;
@@ -2225,6 +2340,8 @@
       if (local === "sem_equipamento" && letraTreino !== "descanso") {
         treinoFiltrado = completarTreinoSemEquipamento(treinoFiltrado, letraTreino, dor, tempo);
       }
+
+      treinoFiltrado = aplicarProgressaoSemanalAoTreino(treinoFiltrado, progressaoSemanal, tempo);
 
       if (tempo === "rapido") treinoFiltrado = treinoFiltrado.slice(0, 4);
       else if (tempo === "normal") treinoFiltrado = treinoFiltrado.slice(0, 6);
@@ -2274,6 +2391,7 @@
       if (dor !== "nenhuma" && letraTreino !== "descanso") ajuste += " Exercícios que podem incomodar sua dor foram removidos.";
       if (ajusteCardio.mensagem) ajuste += " " + ajusteCardio.mensagem;
       if (esforcoRecente.mensagem) ajuste += " " + esforcoRecente.mensagem;
+      if (progressaoSemanal && progressaoSemanal.mensagem) ajuste += " " + progressaoSemanal.mensagem;
       if (mensagemCardioTreino) ajuste += mensagemCardioTreino;
       ajuste += " Lembrete: hidrate-se, respeite seus limites e evite treinar forte em jejum, com dor ou mal-estar.";
 
