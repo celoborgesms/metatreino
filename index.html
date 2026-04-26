@@ -764,9 +764,10 @@
       </div>
 
       <div class="card">
-        <h2>Histórico de cardio</h2>
-        <p class="small">Resumo das últimas atividades registradas na nuvem.</p>
-        <button type="button" class="botao-secundario" onclick="carregarCardios()">Ver / atualizar histórico</button>
+        <h2>Resumo do cardio</h2>
+        <p class="small">Mostra apenas os últimos 3 registros para manter esta aba leve e organizada.</p>
+        <button type="button" class="botao-secundario" onclick="carregarCardios()">Atualizar resumo</button>
+        <button type="button" onclick="irParaHistoricoCompleto()">Ver histórico completo</button>
         <button type="button" class="botao-perigo" onclick="limparHistoricoCardios()">Limpar histórico de cardio</button>
         <div id="listaCardios"></div>
       </div>
@@ -827,44 +828,42 @@
         </div>
 
         <div class="historico-item">
-          <strong>Versão 1.2.6 Beta</strong><br>
+          <strong>Versão 1.2.7 Beta</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 10:30</p>
           <ul>
-            <li>Adicionada progressão semanal inteligente para ajustar volume conforme frequência recente.</li>
-            <li>Adicionado plano progressivo de cardio até desafio/prova, considerando prazo, objetivo e nível.</li>
-            <li>Melhorado o resumo do treino com indicação de fase: retomada, construção, evolução ou recuperação.</li>
-            <li>Cardio inteligente passa a orientar melhor a evolução até 3 km, 5 km, 10 km, meia maratona ou outro objetivo.</li>
+            <li>Histórico completo agora reúne treinos e cardio na mesma aba.</li>
+            <li>A aba Cardio mostra apenas os últimos 3 registros para ficar mais limpa.</li>
+            <li>Adicionado resumo pessoal com nível do aluno, dias seguidos de atividade e ranking pessoal.</li>
+            <li>Adicionada mensagem de parabéns ao concluir todos os exercícios do treino.</li>
+            <li>Melhorada a organização visual do histórico para facilitar acompanhamento da evolução.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
+          <strong>Versão 1.2.6 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 09:40</p>
+          <ul>
+            <li>Adicionada progressão semanal inteligente para ajustar o volume conforme frequência recente.</li>
+            <li>Adicionado plano progressivo de cardio até desafio/prova.</li>
+            <li>O app passou a considerar objetivo, nível e prazo para sugerir evolução no cardio.</li>
           </ul>
         </div>
 
         <div class="historico-item">
           <strong>Versão 1.2.5 Beta</strong><br>
           <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 09:00</p>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 08:55</p>
           <ul>
-            <li>Adicionado descanso inteligente baseado no histórico recente de treino e cardio.</li>
-            <li>Adicionada opção Bicicleta no Cardio inteligente.</li>
-            <li>Melhorado o volume dos treinos para quem treina sem equipamentos / peso corporal.</li>
-            <li>Adicionados complementos opcionais para perda de peso, como dança, Zumba, HIIT baixo impacto e aeróbico em casa.</li>
-            <li>Adicionado lembrete discreto de hidratação, alimentação adequada, descanso e segurança durante o treino.</li>
+            <li>Adicionado descanso inteligente baseado em histórico de treino e cardio.</li>
+            <li>Adicionada Bicicleta no Cardio inteligente.</li>
+            <li>Melhorado o volume dos treinos sem equipamentos.</li>
+            <li>Adicionadas sugestões extras para perda de peso, como HIIT, dança e zumba/aeróbico.</li>
+            <li>Incluído aviso discreto de hidratação, alimentação e descanso.</li>
           </ul>
         </div>
-
-        <div class="historico-item">
-          <strong>Versão 1.2.4 Beta</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 26/04/2026 às 22:20</p>
-          <ul>
-            <li>Adicionado teste grátis de 24 horas pelo Painel do Treinador.</li>
-            <li>A aba Corrida foi reformulada para Cardio inteligente, com Corrida e Caminhada.</li>
-            <li>Adicionada opção de incluir cardio no treino: Esteira ou Bicicleta.</li>
-            <li>O app reduz automaticamente o volume de exercícios quando o cardio é incluído em treino normal ou longo.</li>
-            <li>Melhorada a preparação do app para validação com clientes antes da versão Release Candidate.</li>
-          </ul>
-        </div>
-
-     </div>
+      </div>
     </section>
 
     <nav class="bottom-nav">
@@ -2069,7 +2068,7 @@
 
         ultimaCardioCache = lista[0];
 
-        lista.slice(0, 5).forEach(function(item) {
+        lista.slice(0, 3).forEach(function(item) {
           const div = document.createElement("div");
           div.className = "historico-item";
           if ((item.tipo === "sem_cardio" || item.tipo === "sem_corrida")) {
@@ -2464,7 +2463,22 @@
       const progresso = document.getElementById("progressoExercicios");
       const total = exerciciosConcluidos.length;
       const feitos = exerciciosConcluidos.filter(function(item) { return item === true; }).length;
-      progresso.innerText = total === 0 ? "Nenhum exercício gerado ainda." : "Progresso do treino: " + feitos + " de " + total + " exercícios concluídos.";
+
+      if (total === 0) {
+        progresso.innerText = "Nenhum exercício gerado ainda.";
+        return;
+      }
+
+      let texto = "Progresso do treino: " + feitos + " de " + total + " exercícios concluídos.";
+
+      if (feitos === total) {
+        texto += " 🎉 Parabéns! Você concluiu o treino de hoje. Salve seu treino para registrar sua evolução.";
+        progresso.classList.add("alerta-sucesso");
+      } else {
+        progresso.classList.remove("alerta-sucesso");
+      }
+
+      progresso.innerText = texto;
     }
 
     function substituirExercicio(index) {
@@ -2564,7 +2578,86 @@
 
     function mostrarHistorico() { obterHistoricoDaNuvem(function(historico) { renderResumoHistorico(historico); }); }
 
-    function mostrarHistoricoCompleto() { obterHistoricoDaNuvem(function(historico) { renderHistoricoCompleto(historico); }); }
+    function dataRegistroParaDia(registro) {
+      const timestamp = Number(registro && registro.criadoEm ? registro.criadoEm : 0);
+      if (timestamp > 0) {
+        const data = new Date(timestamp);
+        return data.getFullYear() + "-" + String(data.getMonth() + 1).padStart(2, "0") + "-" + String(data.getDate()).padStart(2, "0");
+      }
+
+      const texto = registro && registro.data ? String(registro.data) : "";
+      const partes = texto.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+      if (partes) return partes[3] + "-" + partes[2] + "-" + partes[1];
+      return "";
+    }
+
+    function calcularStreakAtividades(treinos, cardios) {
+      const dias = {};
+      (treinos || []).forEach(function(item) {
+        const dia = dataRegistroParaDia(item);
+        if (dia) dias[dia] = true;
+      });
+      (cardios || []).forEach(function(item) {
+        const dia = dataRegistroParaDia(item);
+        if (dia && item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida") dias[dia] = true;
+      });
+
+      let streak = 0;
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
+      for (let i = 0; i < 60; i++) {
+        const data = new Date(hoje);
+        data.setDate(hoje.getDate() - i);
+        const chave = data.getFullYear() + "-" + String(data.getMonth() + 1).padStart(2, "0") + "-" + String(data.getDate()).padStart(2, "0");
+
+        if (dias[chave]) streak++;
+        else if (i === 0) continue;
+        else break;
+      }
+
+      return streak;
+    }
+
+    function calcularNivelAluno(treinos, cardios) {
+      const totalTreinos = (treinos || []).length;
+      const totalCardios = (cardios || []).filter(function(item) {
+        return item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida";
+      }).length;
+      const pontuacao = totalTreinos + totalCardios;
+
+      if (pontuacao >= 24) return { nome: "Avançado", texto: "Você já tem boa constância registrada. Continue evoluindo com recuperação inteligente." };
+      if (pontuacao >= 8) return { nome: "Intermediário", texto: "Você está criando uma base consistente. O foco agora é manter regularidade." };
+      return { nome: "Iniciante", texto: "Você está construindo sua base. Priorize constância, técnica e segurança." };
+    }
+
+    function montarResumoPessoal(treinos, cardios) {
+      const streak = calcularStreakAtividades(treinos, cardios);
+      const nivel = calcularNivelAluno(treinos, cardios);
+      const totalTreinos = (treinos || []).length;
+      const totalCardios = (cardios || []).filter(function(item) {
+        return item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida";
+      }).length;
+      const pontos = (totalTreinos * 10) + (totalCardios * 6) + (streak * 3);
+
+      return "<div class='historico-item'>" +
+        "<strong>Resumo pessoal</strong><br>" +
+        "Nível do aluno: <strong>" + limparTextoSeguro(nivel.nome) + "</strong><br>" +
+        "Dias seguidos com atividade: <strong>" + streak + "</strong><br>" +
+        "Treinos registrados: " + totalTreinos + "<br>" +
+        "Cardios registrados: " + totalCardios + "<br>" +
+        "Ranking pessoal: <strong>" + pontos + " pontos</strong><br>" +
+        "<span class='small'>" + limparTextoSeguro(nivel.texto) + "</span>" +
+        "</div>";
+    }
+
+    function mostrarHistoricoCompleto() {
+      obterHistoricoDaNuvem(function(historicoTreinos) {
+        obterCardiosDaNuvem(function(historicoCardios) {
+          renderHistoricoCompleto(historicoTreinos, historicoCardios);
+        });
+      });
+    }
 
     function renderResumoHistorico(historico) {
       const listaHistorico = document.getElementById("listaHistorico");
@@ -2584,13 +2677,33 @@
       });
     }
 
-    function renderHistoricoCompleto(historico) {
+    function renderHistoricoCompleto(historico, historicoCardio) {
       const listaHistoricoCompleto = document.getElementById("listaHistoricoCompleto");
       listaHistoricoCompleto.innerHTML = "";
 
-      if (!historico || historico.length === 0) { listaHistoricoCompleto.innerHTML = "<p class='small'>Nenhum treino salvo na nuvem ainda.</p>"; return; }
+      const treinos = historico || [];
+      const cardios = historicoCardio || [];
 
-      historico.forEach(function(item) {
+      if (treinos.length === 0 && cardios.length === 0) {
+        listaHistoricoCompleto.innerHTML = "<p class='small'>Nenhum treino ou cardio salvo na nuvem ainda.</p>";
+        return;
+      }
+
+      listaHistoricoCompleto.innerHTML += montarResumoPessoal(treinos, cardios);
+
+      const tituloTreinos = document.createElement("div");
+      tituloTreinos.className = "alerta";
+      tituloTreinos.innerHTML = "<strong>Histórico de treinos</strong><br><span class='small'>Treinos de força registrados na nuvem.</span>";
+      listaHistoricoCompleto.appendChild(tituloTreinos);
+
+      if (treinos.length === 0) {
+        const vazioTreino = document.createElement("p");
+        vazioTreino.className = "small";
+        vazioTreino.innerText = "Nenhum treino salvo ainda.";
+        listaHistoricoCompleto.appendChild(vazioTreino);
+      }
+
+      treinos.forEach(function(item) {
         const div = document.createElement("div");
         div.className = "historico-item";
         div.innerHTML = "<strong>" + (item.data || "Sem data") + "</strong><br>" +
@@ -2605,6 +2718,45 @@
           "Carga: " + (item.carga !== undefined && item.carga !== "" ? item.carga : "-") + " kg | Reps: " + (item.reps || "-") + " | Sensação: " + (item.sensacao || "-") + "<br>" +
           "Evolução: " + (item.evolucao || "Não calculada") + "<br>" +
           "Observação: " + (item.observacao || "Nenhuma");
+        listaHistoricoCompleto.appendChild(div);
+      });
+
+      const tituloCardio = document.createElement("div");
+      tituloCardio.className = "alerta";
+      tituloCardio.innerHTML = "<strong>Histórico de cardio</strong><br><span class='small'>Corrida, caminhada e bicicleta registrados na nuvem.</span>";
+      listaHistoricoCompleto.appendChild(tituloCardio);
+
+      if (cardios.length === 0) {
+        const vazioCardio = document.createElement("p");
+        vazioCardio.className = "small";
+        vazioCardio.innerText = "Nenhum cardio salvo ainda.";
+        listaHistoricoCompleto.appendChild(vazioCardio);
+      }
+
+      cardios.forEach(function(item) {
+        const div = document.createElement("div");
+        div.className = "historico-item";
+
+        if (item.tipo === "sem_cardio" || item.tipo === "sem_corrida") {
+          div.innerHTML =
+            "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
+            "Status: não fez cardio recentemente<br>" +
+            "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
+        } else {
+          const atividade = item.tipoAtividade === "caminhada" ? "Caminhada" : (item.tipoAtividade === "bicicleta" ? "Bicicleta" : "Corrida");
+          div.innerHTML =
+            "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
+            "Atividade: " + limparTextoSeguro(atividade) + "<br>" +
+            "Distância: " + limparTextoSeguro(item.distancia || 0) + " km<br>" +
+            "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
+            "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCardio(item.intensidade)) + "<br>" +
+            "Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
+            "Nível: " + limparTextoSeguro(traduzirNivelCardio(item.nivelCardio || "")) + "<br>" +
+            "Objetivo: " + limparTextoSeguro(traduzirObjetivoCardio(item.objetivoCardio || "")) + "<br>" +
+            (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCardio(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
+            "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
+        }
+
         listaHistoricoCompleto.appendChild(div);
       });
     }
