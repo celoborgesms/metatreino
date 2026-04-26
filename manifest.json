@@ -1,0 +1,9 @@
+{
+  "name": "Meu Treino Inteligente",
+  "short_name": "Treino",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f2f4f8",
+  "theme_color": "#1f7aec",
+  "icons": []
+}
