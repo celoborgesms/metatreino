@@ -661,15 +661,64 @@
 
     <section id="paginaCorrida" class="hidden">
       <div class="card">
-        <h2>Corrida</h2>
-        <p class="small">Registre suas corridas para o app adaptar melhor os próximos treinos de força. Se não correu recentemente, marque a opção abaixo para o treino seguir sem ajuste por corrida.</p>
+        <h2>Corrida inteligente</h2>
+        <p class="small">Use esta área para montar uma sugestão de corrida conforme seu nível, objetivo e evolução. O app também usa essas informações para adaptar melhor o treino de força.</p>
 
         <label class="check-exercicio">
           <input id="naoCorreuRecentemente" type="checkbox" onchange="alternarCamposCorrida()">
           Não corri recentemente
         </label>
 
-        <label for="distanciaCorrida">Distância (km)</label>
+        <label for="nivelCorrida">Seu nível na corrida</label>
+        <select id="nivelCorrida">
+          <option value="iniciante">Estou começando agora</option>
+          <option value="voltando">Estou voltando a correr</option>
+          <option value="regular">Já corro regularmente</option>
+          <option value="avancado">Tenho experiência / já participei de provas</option>
+        </select>
+
+        <label for="objetivoCorrida">Objetivo na corrida</label>
+        <select id="objetivoCorrida">
+          <option value="comecar">Começar a correr com segurança</option>
+          <option value="5k">Correr 5 km</option>
+          <option value="10k">Correr 10 km</option>
+          <option value="meia">Evoluir para meia maratona</option>
+          <option value="pace">Melhorar ritmo / pace</option>
+        </select>
+
+        <label for="condicaoCorrida">Condição atual</label>
+        <select id="condicaoCorrida">
+          <option value="caminho">Consigo caminhar bem, mas ainda corro pouco</option>
+          <option value="intercalo">Consigo intercalar caminhada e corrida</option>
+          <option value="corro_pouco">Consigo correr poucos km</option>
+          <option value="corro_bem">Já corro alguns km com segurança</option>
+        </select>
+
+        <label class="check-exercicio">
+          <input id="temDesafioCorrida" type="checkbox" onchange="alternarDesafioCorrida()">
+          Tenho um desafio/prova marcada
+        </label>
+
+        <label for="distanciaDesafioCorrida">Distância do desafio</label>
+        <select id="distanciaDesafioCorrida" disabled>
+          <option value="5k">5 km</option>
+          <option value="10k">10 km</option>
+          <option value="meia">Meia maratona</option>
+          <option value="outro">Outro objetivo</option>
+        </select>
+
+        <label for="dataDesafioCorrida">Data do desafio</label>
+        <input id="dataDesafioCorrida" type="date" disabled>
+
+        <button type="button" onclick="gerarTreinoCorrida()">Gerar sugestão de corrida</button>
+        <div id="sugestaoCorrida" class="alerta hidden"></div>
+      </div>
+
+      <div class="card">
+        <h2>Registrar evolução da corrida</h2>
+        <p class="small">Depois da corrida, registre como foi. Isso ajuda o app a entender sua evolução e adaptar melhor os próximos treinos.</p>
+
+        <label for="distanciaCorrida">Distância feita (km)</label>
         <input id="distanciaCorrida" type="number" min="0" step="0.1" placeholder="Ex: 5">
 
         <label for="tempoCorrida">Tempo total (minutos)</label>
@@ -692,7 +741,7 @@
         <label for="observacaoCorrida">Observação</label>
         <textarea id="observacaoCorrida" placeholder="Ex: corrida leve, subi muita ladeira, senti panturrilha..."></textarea>
 
-        <button type="button" onclick="salvarCorrida()">Salvar corrida</button>
+        <button type="button" onclick="salvarCorrida()">Salvar evolução da corrida</button>
         <button type="button" class="botao-secundario" onclick="irParaCheckin()">Continuar para check-in</button>
         <div id="mensagemCorrida" class="alerta hidden"></div>
       </div>
@@ -760,6 +809,20 @@
         </div>
 
         <div class="historico-item">
+          <strong>Versão 1.2.3 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 26/04/2026 às 21:30</p>
+          <ul>
+            <li>Reformulada a aba Corrida para funcionar como Corrida Inteligente.</li>
+            <li>Adicionado perfil de corrida: iniciante, voltando, regular ou experiente.</li>
+            <li>Adicionado objetivo de corrida: começar, 5 km, 10 km, meia maratona ou melhorar pace.</li>
+            <li>Adicionado campo de desafio/prova com data e distância.</li>
+            <li>O app agora gera sugestões de corrida conforme perfil, objetivo, IMC e prazo do desafio.</li>
+            <li>Histórico de corrida passou a salvar também nível, objetivo e treino sugerido.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
           <strong>Versão 1.2.2 Beta</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 25/04/2026 às 20:45</p>
@@ -771,28 +834,18 @@
             <li>Adicionados botões para atualizar/ver e limpar o histórico de corridas.</li>
           </ul>
         </div>
-        <div class="historico-item">
-          <strong>Versão 1.2.0 Beta</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 25/04/2026 às 17:10</p>
-          <ul>
-            <li>Adicionada aba Corrida para registrar distância, tempo, intensidade e sensação.</li>
-            <li>Adicionada aba Check-in diário separada da tela de treino.</li>
-            <li>Treino do dia agora pode ser adaptado conforme a última corrida registrada.</li>
-          </ul>
-        </div>
 
         <div class="historico-item">
-          <strong>Versão 1.0.9 Beta</strong><br>
+          <strong>Versão 1.2.1 Beta</strong><br>
           <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 25/04/2026 às 16:30</p>
+          <p class="small"><strong>Atualizada em:</strong> 25/04/2026 às 19:55</p>
           <ul>
-            <li>Adicionada data e hora nas versões exibidas em Novidades.</li>
-            <li>Adicionado aceite obrigatório do Aviso Importante antes de continuar.</li>
-            <li>Incluídos Termos de Uso simples dentro do aviso inicial.</li>
+            <li>Reorganizada a navegação para Perfil, Corrida, Check-in, Treino, Histórico, Painel e Novidades.</li>
+            <li>Barra inferior ajustada com rolagem horizontal para evitar quebra em celulares.</li>
+            <li>Adicionada opção “Não corri recentemente” na aba Corrida.</li>
+            <li>Melhorados os textos do tempo disponível no Check-in.</li>
           </ul>
         </div>
-
       </div>
     </section>
 
@@ -1688,10 +1741,103 @@
       return resposta;
     }
 
+    function alternarDesafioCorrida() {
+      const temDesafio = document.getElementById("temDesafioCorrida");
+      const ativo = temDesafio && temDesafio.checked;
+      ["distanciaDesafioCorrida", "dataDesafioCorrida"].forEach(function(id) {
+        const campo = document.getElementById(id);
+        if (campo) campo.disabled = !ativo;
+      });
+    }
+
+    function traduzirNivelCorrida(valor) {
+      const mapa = { iniciante: "começando agora", voltando: "voltando a correr", regular: "corre regularmente", avancado: "experiente" };
+      return mapa[valor] || valor;
+    }
+
+    function traduzirObjetivoCorrida(valor) {
+      const mapa = { comecar: "começar com segurança", "5k": "correr 5 km", "10k": "correr 10 km", meia: "evoluir para meia maratona", pace: "melhorar ritmo / pace", outro: "outro objetivo" };
+      return mapa[valor] || valor;
+    }
+
+    function calcularDiasAte(dataISO) {
+      if (!dataISO) return null;
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const alvo = new Date(dataISO + "T00:00:00");
+      return Math.ceil((alvo.getTime() - hoje.getTime()) / 86400000);
+    }
+
+    function formatarDataBrasileira(dataISO) {
+      if (!dataISO) return "não informada";
+      const partes = dataISO.split("-");
+      if (partes.length !== 3) return dataISO;
+      return partes[2] + "/" + partes[1] + "/" + partes[0];
+    }
+
+    function gerarTextoSugestaoCorrida() {
+      const nivel = document.getElementById("nivelCorrida").value;
+      const objetivo = document.getElementById("objetivoCorrida").value;
+      const condicao = document.getElementById("condicaoCorrida").value;
+      const temDesafio = document.getElementById("temDesafioCorrida").checked;
+      const distanciaDesafio = document.getElementById("distanciaDesafioCorrida").value;
+      const dataDesafio = document.getElementById("dataDesafioCorrida").value;
+      const diasAte = calcularDiasAte(dataDesafio);
+      const imc = perfilUsuario ? Number(perfilUsuario.imc) : 0;
+      let treino = "";
+      let cuidado = "";
+      let desafio = "";
+
+      if (imc >= 30 && (nivel === "iniciante" || nivel === "voltando")) {
+        cuidado = "<br><br><strong>Atenção:</strong> pelo seu perfil atual, comece com calma. Priorize caminhada, trotes curtos, respiração confortável e ausência de dor. Se sentir dor no peito, tontura, falta de ar fora do normal ou dor articular forte, pare e procure orientação profissional.";
+      } else if (nivel === "iniciante") {
+        cuidado = "<br><br><strong>Dica:</strong> não tente correr tudo de uma vez. O início ideal é alternar caminhada e trote leve para criar base sem sobrecarregar.";
+      }
+
+      if (nivel === "iniciante" || objetivo === "comecar") {
+        treino = "Faça 5 minutos de caminhada leve para aquecer. Depois repita 8 vezes: 1 minuto de trote leve + 2 minutos de caminhada. Finalize com 5 minutos caminhando devagar.";
+      } else if (nivel === "voltando") {
+        treino = "Faça 8 minutos de caminhada/trote leve. Depois repita 6 vezes: 2 minutos correndo leve + 2 minutos caminhando. Termine com 5 minutos leves.";
+      } else if (objetivo === "5k") {
+        treino = "Faça 10 minutos leves. Depois corra de 20 a 30 minutos em ritmo confortável, sem forçar pace. Finalize caminhando 5 minutos.";
+      } else if (objetivo === "10k") {
+        treino = "Faça 10 minutos leves. Depois faça 3 blocos de 8 minutos em ritmo confortável com 2 minutos de caminhada/trote leve entre eles. Finalize leve.";
+      } else if (objetivo === "meia") {
+        treino = "Faça uma rodagem leve de 35 a 50 minutos, mantendo ritmo confortável. Se estiver cansado, reduza o volume e preserve a constância.";
+      } else if (objetivo === "pace") {
+        treino = "Aqueça 10 minutos. Depois faça 6 repetições de 1 minuto em ritmo mais forte controlado + 2 minutos leves. Termine com 5 a 10 minutos leves.";
+      } else {
+        treino = "Faça uma corrida leve e confortável, priorizando constância e boa sensação no final.";
+      }
+
+      if (condicao === "caminho") {
+        treino = "Faça 20 a 30 minutos de caminhada firme. Se estiver bem, inclua 4 a 6 trotes leves de 30 segundos, sempre sem dor e sem falta de ar exagerada.";
+      }
+
+      if (temDesafio) {
+        if (diasAte !== null && diasAte >= 0) {
+          desafio = "<br><br><strong>Desafio:</strong> objetivo de " + traduzirObjetivoCorrida(distanciaDesafio) + " em " + formatarDataBrasileira(dataDesafio) + " (faltam aproximadamente " + diasAte + " dia(s)).";
+          if (diasAte <= 14) desafio += " Como está próximo, evite aumentar volume de forma agressiva. Priorize regularidade e recuperação.";
+          else desafio += " Como ainda há tempo, o ideal é evoluir aos poucos, aumentando volume de forma progressiva.";
+        } else {
+          desafio = "<br><br><strong>Desafio:</strong> informe uma data futura para o app considerar melhor o prazo.";
+        }
+      }
+
+      return "<strong>Sugestão de corrida do dia</strong><br>Perfil: " + traduzirNivelCorrida(nivel) + " | Objetivo: " + traduzirObjetivoCorrida(objetivo) + ".<br><br>" + treino + cuidado + desafio;
+    }
+
+    function gerarTreinoCorrida() {
+      const caixa = document.getElementById("sugestaoCorrida");
+      if (!caixa) return;
+      caixa.className = "alerta alerta-sucesso";
+      caixa.innerHTML = gerarTextoSugestaoCorrida();
+    }
+
     function alternarCamposCorrida() {
       const naoCorreu = document.getElementById("naoCorreuRecentemente");
       const desativar = naoCorreu && naoCorreu.checked;
-      ["distanciaCorrida", "tempoCorrida", "intensidadeCorrida", "sensacaoCorrida", "observacaoCorrida"].forEach(function(id) {
+      ["distanciaCorrida", "tempoCorrida", "intensidadeCorrida", "sensacaoCorrida", "observacaoCorrida", "nivelCorrida", "objetivoCorrida", "condicaoCorrida", "temDesafioCorrida", "distanciaDesafioCorrida", "dataDesafioCorrida"].forEach(function(id) {
         const campo = document.getElementById(id);
         if (campo) campo.disabled = desativar;
       });
@@ -1709,6 +1855,13 @@
       const intensidade = document.getElementById("intensidadeCorrida").value;
       const sensacao = document.getElementById("sensacaoCorrida").value;
       const observacao = document.getElementById("observacaoCorrida").value.trim();
+      const nivelCorrida = document.getElementById("nivelCorrida") ? document.getElementById("nivelCorrida").value : "iniciante";
+      const objetivoCorrida = document.getElementById("objetivoCorrida") ? document.getElementById("objetivoCorrida").value : "comecar";
+      const condicaoCorrida = document.getElementById("condicaoCorrida") ? document.getElementById("condicaoCorrida").value : "caminho";
+      const temDesafioCorrida = document.getElementById("temDesafioCorrida") ? document.getElementById("temDesafioCorrida").checked : false;
+      const distanciaDesafioCorrida = document.getElementById("distanciaDesafioCorrida") ? document.getElementById("distanciaDesafioCorrida").value : "";
+      const dataDesafioCorrida = document.getElementById("dataDesafioCorrida") ? document.getElementById("dataDesafioCorrida").value : "";
+      const sugestaoCorridaHTML = document.getElementById("sugestaoCorrida") && !document.getElementById("sugestaoCorrida").classList.contains("hidden") ? document.getElementById("sugestaoCorrida").innerText : "";
       const caixa = document.getElementById("mensagemCorrida");
 
       if (naoCorreu) {
@@ -1761,6 +1914,13 @@
         intensidade: intensidade,
         sensacao: sensacao,
         observacao: observacao,
+        nivelCorrida: nivelCorrida,
+        objetivoCorrida: objetivoCorrida,
+        condicaoCorrida: condicaoCorrida,
+        temDesafio: temDesafioCorrida,
+        distanciaDesafio: temDesafioCorrida ? distanciaDesafioCorrida : "",
+        dataDesafio: temDesafioCorrida ? dataDesafioCorrida : "",
+        treinoSugerido: sugestaoCorridaHTML,
         nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário"
       };
 
@@ -1831,6 +1991,9 @@
               "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
               "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCorrida(item.intensidade)) + "<br>" +
               "Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
+              "Nível: " + limparTextoSeguro(traduzirNivelCorrida(item.nivelCorrida || "")) + "<br>" +
+              "Objetivo: " + limparTextoSeguro(traduzirObjetivoCorrida(item.objetivoCorrida || "")) + "<br>" +
+              (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCorrida(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
               "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
           }
           caixa.appendChild(div);
