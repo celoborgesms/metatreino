@@ -715,6 +715,7 @@
 
         <label for="distanciaDesafioCardio">Distância do desafio</label>
         <select id="distanciaDesafioCardio" disabled>
+          <option value="3k">3 km</option>
           <option value="5k">5 km</option>
           <option value="10k">10 km</option>
           <option value="meia">Meia maratona</option>
@@ -1778,7 +1779,7 @@
     }
 
     function traduzirObjetivoCardio(valor) {
-      const mapa = { comecar: "começar com segurança", "5k": "correr 5 km", "10k": "correr 10 km", meia: "evoluir para meia maratona", pace: "melhorar ritmo / pace", outro: "outro objetivo" };
+      const mapa = { comecar: "começar com segurança", "3k": "3 km", "5k": "correr 5 km", "10k": "correr 10 km", meia: "evoluir para meia maratona", pace: "melhorar ritmo / pace", outro: "outro objetivo" };
       return mapa[valor] || valor;
     }
 
