@@ -738,6 +738,40 @@
       color: #e2e8f0 !important;
     }
 
+
+    .btn-login-google.hidden, .btn-logout.hidden {
+      display: none !important;
+    }
+
+    .link-venda-login {
+      margin-top: 12px;
+      padding: 13px;
+      border-radius: 18px;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.32);
+      color: #e2e8f0 !important;
+      line-height: 1.45;
+      font-weight: 800;
+    }
+
+    .acoes-exercicio-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .botao-pular {
+      background: rgba(249, 115, 22, 0.18) !important;
+      border: 1px solid rgba(249, 115, 22, 0.36) !important;
+      color: #fed7aa !important;
+      box-shadow: none !important;
+    }
+
+    .admin-lista-controle {
+      margin-top: 12px;
+    }
+
     @media (max-width: 380px) {
       .container { padding: 14px; }
       h1 { font-size: 30px; }
@@ -762,10 +796,11 @@
       <div class="card">
         <h2>🔐 Login</h2>
         <p class="small">Entre com sua conta Google. O app será liberado apenas para e-mails autorizados pelo treinador.</p>
-        <button type="button" onclick="loginGoogle()">Entrar com Google</button>
-        <button type="button" class="botao-secundario" onclick="logout()">Sair</button>
+        <button id="botaoLoginGoogle" type="button" class="btn-login-google" onclick="loginGoogle()">Entrar com Google</button>
+        <button id="botaoLogoutGoogle" type="button" class="botao-secundario btn-logout hidden" onclick="logout()">Sair</button>
         <div id="usuarioLogado" class="alerta">Verificando login...</div>
         <div id="mensagemAcesso" class="alerta hidden"></div>
+        <div class="link-venda-login">Dúvidas ou para adquirir o plano:<br><strong>celoborgesms@gmail.com</strong></div>
       </div>
 
       <div id="cardDadosPessoa" class="card hidden">
@@ -773,10 +808,11 @@
         <p class="small">Preencha seus dados para personalizar o treino.</p>
 
         <label for="nome">Nome</label>
-        <input id="nome" type="text" placeholder="Ex: Marcelo">
+        <input id="nome" type="text" placeholder="Ex: Usuário">
 
         <label for="sexo">Sexo</label>
         <select id="sexo">
+          <option value="">Escolher</option>
           <option value="masculino">Masculino</option>
           <option value="feminino">Feminino</option>
           <option value="nao_responder">Prefiro não responder</option>
@@ -786,7 +822,7 @@
         <input id="idade" type="number" placeholder="Ex: 30">
 
         <label for="peso">Peso atual (kg)</label>
-        <input id="peso" type="number" placeholder="Ex: 80">
+        <input id="peso" type="number" min="1" max="700" placeholder="Ex: 80">
 
         <label for="altura">Altura atual (cm)</label>
         <input id="altura" type="number" placeholder="Ex: 175">
@@ -916,9 +952,12 @@
         <label for="dor">Tem alguma dor?</label>
         <select id="dor">
           <option value="nenhuma">Nenhuma dor</option>
-          <option value="ombro">Dor no ombro</option>
-          <option value="joelho">Dor no joelho</option>
-          <option value="lombar">Dor na lombar</option>
+          <option value="pernas">Pernas cansadas/doloridas</option>
+          <option value="bracos">Braços cansados/doloridos</option>
+          <option value="coluna">Coluna/costas</option>
+          <option value="ombro">Ombro</option>
+          <option value="joelho">Joelho</option>
+          <option value="lombar">Lombar</option>
         </select>
 
         <label for="tempo">Tempo disponível</label>
@@ -1086,6 +1125,7 @@
           <option value="trimestral">Trimestral</option>
           <option value="semestral">Semestral</option>
           <option value="anual">Anual</option>
+          <option value="vitalicio">Vitalício / VIP</option>
           <option value="teste">Teste grátis 24h</option>
         </select>
 
@@ -1115,6 +1155,26 @@
         <div class="alerta">
           <strong>Dúvidas ou sugestões?</strong><br>
           Entre em contato pelo e-mail <strong>celoborgesms@gmail.com</strong>.
+        </div>
+
+        <div class="historico-item">
+          <strong>Versão 1.3.0 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026</p>
+          <ul>
+            <li>Progresso do treino salvo no aparelho: ao sair e voltar, exercícios marcados continuam marcados.</li>
+            <li>Treino mais diferente por perfil: iniciante, sobrepeso e avançado recebem ajustes de volume/intensidade.</li>
+            <li>Substituição de exercício evita sugerir opção repetida que já está na lista.</li>
+            <li>Adicionado botão para pular exercício sem travar a conclusão do treino.</li>
+            <li>Ajustada quantidade de exercícios conforme treino rápido, normal ou longo.</li>
+            <li>Login mais limpo: botão de entrar some após login e botão sair fica disponível.</li>
+            <li>Check-in de dor mais completo: pernas, braços, coluna/costas, ombro, joelho e lombar.</li>
+            <li>Painel do treinador mais organizado: mostra 3 últimos alunos e permite ver todos.</li>
+            <li>Adicionado plano Vitalício / VIP sem data de vencimento.</li>
+            <li>Histórico carregado limitado aos últimos 30 dias para reduzir peso.</li>
+            <li>Mensagem de venda no login com contato por e-mail.</li>
+            <li>Peso limitado até 700 kg e campo de nome alterado para sugestão “Usuário”.</li>
+          </ul>
         </div>
 
         <div class="historico-item">
@@ -1216,6 +1276,131 @@
     let usuarioAdmin = false;
     let dadosAcessoAtual = null;
 
+
+    function atualizarBotoesLogin(user) {
+      const botaoLogin = document.getElementById("botaoLoginGoogle");
+      const botaoSair = document.getElementById("botaoLogoutGoogle");
+      if (botaoLogin) user ? botaoLogin.classList.add("hidden") : botaoLogin.classList.remove("hidden");
+      if (botaoSair) user ? botaoSair.classList.remove("hidden") : botaoSair.classList.add("hidden");
+    }
+
+    function chaveTreinoAtual() {
+      const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : "anonimo";
+      return "metatreino-treino-atual-" + email;
+    }
+
+    function salvarTreinoAtualLocal() {
+      try {
+        if (!treinoAtual || treinoAtual.length === 0) return;
+        localStorage.setItem(chaveTreinoAtual(), JSON.stringify({
+          treino: treinoAtual,
+          letra: treinoAtual.letra || "",
+          concluidos: exerciciosConcluidos || [],
+          feedback: feedbackTreinoFinalAtual || "",
+          salvoEm: Date.now()
+        }));
+      } catch (erro) {
+        console.log("Não foi possível salvar o progresso local:", erro);
+      }
+    }
+
+    function carregarTreinoAtualLocal() {
+      try {
+        const bruto = localStorage.getItem(chaveTreinoAtual());
+        if (!bruto) return false;
+        const dados = JSON.parse(bruto);
+        if (!dados || !dados.treino || !dados.treino.length) return false;
+        treinoAtual = dados.treino;
+        treinoAtual.letra = dados.letra || "";
+        exerciciosConcluidos = dados.concluidos || treinoAtual.map(function() { return false; });
+        feedbackTreinoFinalAtual = dados.feedback || "";
+        const resultadoTreino = document.getElementById("resultadoTreino");
+        const registroEvolucao = document.getElementById("registroEvolucao");
+        if (resultadoTreino) resultadoTreino.classList.remove("hidden");
+        if (registroEvolucao) registroEvolucao.classList.remove("hidden");
+        mostrarTreinoNaTela();
+        return true;
+      } catch (erro) {
+        console.log("Não foi possível recuperar treino local:", erro);
+        return false;
+      }
+    }
+
+    function limparTreinoAtualLocal() {
+      try { localStorage.removeItem(chaveTreinoAtual()); } catch (erro) {}
+    }
+
+    function determinarPerfilTreino() {
+      const imc = perfilUsuario ? Number(perfilUsuario.imc || 0) : 0;
+      const rotina = perfilUsuario ? perfilUsuario.rotinaAtual : "";
+      const experiencia = perfilUsuario ? perfilUsuario.tempoExperiencia : "";
+      const sexo = perfilUsuario ? perfilUsuario.sexo : "";
+      const iniciante = rotina === "nunca" || rotina === "dificuldade" || experiencia === "menos_1";
+      const avancado = rotina === "regular" && (experiencia === "2_4" || experiencia === "4_mais");
+      const sobrepeso = imc >= 30 || imc >= 25;
+      return {
+        iniciante: iniciante,
+        avancado: avancado,
+        sobrepeso: sobrepeso,
+        sexo: sexo,
+        imc: imc
+      };
+    }
+
+    function filtrarExerciciosUnicos(lista) {
+      const vistos = {};
+      return (lista || []).filter(function(exercicio) {
+        const chave = normalizarNomeExercicio(exercicio.nome || "");
+        if (!chave || vistos[chave]) return false;
+        vistos[chave] = true;
+        return true;
+      });
+    }
+
+    function alvoQuantidadeExercicios(tempo, perfil) {
+      if (tempo === "rapido") return perfil && perfil.avancado ? 5 : 4;
+      if (tempo === "normal") return perfil && perfil.iniciante ? 5 : 6;
+      return perfil && perfil.iniciante ? 6 : 8;
+    }
+
+    function adaptarTreinoPorPerfil(treino, tempo) {
+      const perfil = determinarPerfilTreino();
+      let ajustado = (treino || []).map(function(exercicio) {
+        const copia = Object.assign({}, exercicio);
+        if (perfil.iniciante || perfil.sobrepeso) {
+          if (copia.reps && copia.reps.includes("15")) copia.reps = "8 a 12 reps";
+          if (copia.series && copia.series.includes("4")) copia.series = "2 a 3 séries";
+        }
+        if (perfil.avancado && !perfil.sobrepeso) {
+          if (!copia.series || copia.series.includes("3")) copia.series = "3 a 4 séries";
+        }
+        return copia;
+      });
+
+      if (perfil.sobrepeso || perfil.iniciante) {
+        ajustado = ajustado.filter(function(exercicio) {
+          const nome = normalizarNomeExercicio(exercicio.nome || "");
+          return !["polichinelo", "mountain climber"].includes(nome);
+        });
+      }
+
+      return ajustado;
+    }
+
+    function pularExercicio(index) {
+      if (!treinoAtual[index]) return;
+      if (!confirm("Deseja pular este exercício e continuar o treino?")) return;
+      treinoAtual.splice(index, 1);
+      exerciciosConcluidos.splice(index, 1);
+      salvarTreinoAtualLocal();
+      mostrarTreinoNaTela();
+    }
+
+    function alternarListaCompletaAlunos() {
+      mostrarTodosAlunosPainel = !mostrarTodosAlunosPainel;
+      renderizarUsuariosAutorizados(usuariosAutorizadosCache);
+    }
+
     function loginGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
 
@@ -1245,6 +1430,7 @@
 
     function atualizarTelaLogin(user) {
       const campo = document.getElementById("usuarioLogado");
+      atualizarBotoesLogin(user);
 
       if (!campo) {
         return;
@@ -1333,6 +1519,10 @@
     }
 
     function obterMensagemValidadePlano(dados) {
+      if (dados && dados.plano === "vitalicio") {
+        return "✅ Acesso liberado. Seu plano <strong>Vitalício / VIP</strong> está ativo.";
+      }
+
       if (!dados || !dados.expiraEm) {
         return "✅ Acesso liberado. Seu plano está ativo e sem data de vencimento cadastrada.";
       }
@@ -1349,6 +1539,7 @@
 
       mostrarMensagemAcesso(obterMensagemValidadePlano(dadosAcessoAtual), "sucesso");
       mostrarAvisoInicialSeNecessario();
+      atualizarBotoesLogin(usuarioAtual);
     }
 
 
@@ -1404,10 +1595,7 @@
           if (doc.exists && doc.data().ativo === true) {
             const dados = doc.data() || {};
 
-            // Versão 1.0.5 Beta:
-            // expiraEm é opcional. Se existir, o app verifica vencimento.
-            // Se não existir, usuários cadastrados manualmente no Firebase continuam acessando normalmente.
-            if (dados.expiraEm) {
+            if (dados.plano !== "vitalicio" && dados.expiraEm) {
               const hoje = new Date();
               const expira = new Date(dados.expiraEm + "T23:59:59");
 
@@ -1424,7 +1612,11 @@
         })
         .catch(function(erro) {
           console.log("Erro ao verificar acesso:", erro);
-          bloquearApp("Não foi possível verificar seu acesso agora. Confira sua conexão e tente novamente.");
+          if (usuarioAtual) {
+            mostrarMensagemAcesso("Você está logado, mas o app não conseguiu confirmar o acesso agora. Confira a conexão e toque novamente em Perfil ou recarregue a página.", "aviso");
+          } else {
+            bloquearApp("Não foi possível verificar seu acesso agora. Confira sua conexão e tente novamente.");
+          }
         });
     }
 
@@ -1509,7 +1701,7 @@
       const nomeAluno = (document.getElementById("nomeAlunoPainel").value || "").trim();
       const planoAluno = document.getElementById("planoAlunoPainel").value;
       const campoValorAluno = document.getElementById("valorAlunoPainel");
-      const valorAluno = planoAluno === "teste" ? 0 : Math.max(Number(campoValorAluno ? campoValorAluno.value : 0) || 0, 0);
+      const valorAluno = (planoAluno === "teste" || planoAluno === "vitalicio") ? 0 : Math.max(Number(campoValorAluno ? campoValorAluno.value : 0) || 0, 0);
 
       if (!emailAluno || !emailAluno.includes("@")) {
         mostrarMensagemPainel("Informe um e-mail válido para liberar o aluno.", "aviso");
@@ -1524,23 +1716,30 @@
         semestral: 180,
         anual: 365
       };
-      const diasPlano = diasPorPlano[planoAluno] || 30;
-      const expira = new Date();
-      expira.setDate(agora.getDate() + diasPlano);
-      const dataExpiracao = expira.toISOString().slice(0, 10);
 
-      db.collection("usuariosAutorizados").doc(emailAluno).set({
+      const dadosLiberacao = {
         ativo: true,
         nome: nomeAluno || emailAluno,
         plano: planoAluno,
         valorMensal: valorAluno,
-        expiraEm: dataExpiracao,
         liberadoEm: agora.toLocaleString("pt-BR"),
         atualizadoEm: agora.getTime(),
         liberadoPor: usuarioAtual ? usuarioAtual.email : "treinador"
-      }, { merge: true })
+      };
+
+      if (planoAluno === "vitalicio") {
+        dadosLiberacao.expiraEm = "";
+      } else {
+        const diasPlano = diasPorPlano[planoAluno] || 30;
+        const expira = new Date();
+        expira.setDate(agora.getDate() + diasPlano);
+        dadosLiberacao.expiraEm = expira.toISOString().slice(0, 10);
+      }
+
+      db.collection("usuariosAutorizados").doc(emailAluno).set(dadosLiberacao, { merge: true })
         .then(function() {
-          mostrarMensagemPainel("✅ Acesso liberado para " + limparTextoSeguro(emailAluno) + " até " + limparTextoSeguro(dataExpiracao) + ".", "sucesso");
+          const vencimentoTexto = planoAluno === "vitalicio" ? "sem vencimento (Vitalício/VIP)" : "até " + limparTextoSeguro(dadosLiberacao.expiraEm);
+          mostrarMensagemPainel("✅ Acesso liberado para " + limparTextoSeguro(emailAluno) + " " + vencimentoTexto + ".", "sucesso");
           carregarUsuariosAutorizados();
         })
         .catch(function(erro) {
@@ -1611,51 +1810,69 @@
             return Number(b.dados.atualizadoEm || 0) - Number(a.dados.atualizadoEm || 0);
           });
 
-          if (usuarios.length === 0) {
-            lista.innerHTML = "<p class='small'>Nenhum usuário autorizado ainda.</p>";
-            if (dashboard) dashboard.innerHTML = "";
-            return;
-          }
-
-          if (dashboard) dashboard.innerHTML = montarDashboardTreinador(usuarios);
-
-          lista.innerHTML = "";
-          usuarios.forEach(function(item) {
-            const div = document.createElement("div");
-            div.className = "historico-item";
-            const ativo = item.dados.ativo === true;
-            const emailJS = JSON.stringify(item.email);
-            const nomeJS = JSON.stringify(item.dados.nome || "");
-            const planoJS = JSON.stringify(item.dados.plano || "mensal");
-            const valorJS = JSON.stringify(Number(item.dados.valorMensal || item.dados.valor || 0));
-            const diasRenovar = diasParaExpirar(item.dados.expiraEm);
-            let alertaRenovacao = "";
-            if (alunoPrecisaRenovar(item.dados)) {
-              alertaRenovacao = "<div class='alerta alerta-aviso'><strong>⚠️ Renovação próxima:</strong> vence em " + diasRenovar + " dia(s).</div>";
-            } else if (planoEstaVencido(item.dados)) {
-              alertaRenovacao = "<div class='alerta alerta-aviso'><strong>⏳ Plano vencido:</strong> renove ou bloqueie o aluno.</div>";
-            }
-
-            div.innerHTML =
-              "<strong>" + limparTextoSeguro(item.dados.nome || item.email) + "</strong><br>" +
-              "E-mail: " + limparTextoSeguro(item.email) + "<br>" +
-              "Plano: " + limparTextoSeguro(item.dados.plano || "Não informado") + "<br>" +
-              "Valor mensal: <strong>" + limparTextoSeguro(formatarMoeda(item.dados.valorMensal || item.dados.valor || 0)) + "</strong><br>" +
-              "Status: <strong>" + (ativo ? "Ativo" : "Bloqueado") + "</strong><br>" +
-              "Expira em: <strong>" + limparTextoSeguro(formatarDataPlano(item.dados.expiraEm)) + "</strong><br>" +
-              alertaRenovacao +
-              "Atualizado em: " + limparTextoSeguro(item.dados.liberadoEm || item.dados.bloqueadoEm || "Não informado") + "<br>" +
-              "<button type='button' class='botao-secundario' onclick='preencherAlunoPainel(" + emailJS + ", " + nomeJS + ", " + planoJS + ", " + valorJS + ")'>Selecionar</button>" +
-              "<button type='button' class='botao-secundario' onclick='renovarAlunoPainel(" + emailJS + ", 30)'>Renovar +30 dias</button>" +
-              "<button type='button' class='botao-secundario' onclick='copiarMensagemRenovacaoAluno(" + nomeJS + ")'>📩 Copiar aviso</button>" +
-              "<button type='button' class='botao-perigo' onclick='excluirAlunoPainel(" + emailJS + ")'>Excluir aluno</button>";
-            lista.appendChild(div);
-          });
+          usuariosAutorizadosCache = usuarios;
+          renderizarUsuariosAutorizados(usuarios);
         })
         .catch(function(erro) {
           console.log("Erro ao carregar usuários autorizados:", erro);
           lista.innerHTML = "<p class='small'>Não foi possível carregar a lista. Confira as permissões do Firestore.</p>";
         });
+    }
+
+    function renderizarUsuariosAutorizados(usuarios) {
+      const lista = document.getElementById("listaUsuariosAutorizados");
+      const dashboard = document.getElementById("dashboardTreinador");
+      if (!lista) return;
+
+      if (!usuarios || usuarios.length === 0) {
+        lista.innerHTML = "<p class='small'>Nenhum usuário autorizado ainda.</p>";
+        if (dashboard) dashboard.innerHTML = "";
+        return;
+      }
+
+      if (dashboard) dashboard.innerHTML = montarDashboardTreinador(usuarios);
+
+      const usuariosParaExibir = mostrarTodosAlunosPainel ? usuarios : usuarios.slice(0, 3);
+      lista.innerHTML = "";
+
+      if (usuarios.length > 3) {
+        const controle = document.createElement("div");
+        controle.className = "admin-lista-controle";
+        controle.innerHTML = "<button type='button' class='botao-secundario' onclick='alternarListaCompletaAlunos()'>" + (mostrarTodosAlunosPainel ? "Mostrar apenas os 3 últimos alunos" : "Mostrar todos os alunos") + "</button>";
+        lista.appendChild(controle);
+      }
+
+      usuariosParaExibir.forEach(function(item) {
+        const div = document.createElement("div");
+        div.className = "historico-item";
+        const ativo = item.dados.ativo === true;
+        const emailJS = JSON.stringify(item.email);
+        const nomeJS = JSON.stringify(item.dados.nome || "");
+        const planoJS = JSON.stringify(item.dados.plano || "mensal");
+        const valorJS = JSON.stringify(Number(item.dados.valorMensal || item.dados.valor || 0));
+        const diasRenovar = diasParaExpirar(item.dados.expiraEm);
+        let alertaRenovacao = "";
+        if (alunoPrecisaRenovar(item.dados)) {
+          alertaRenovacao = "<div class='alerta alerta-aviso'><strong>⚠️ Renovação próxima:</strong> vence em " + diasRenovar + " dia(s).</div>";
+        } else if (planoEstaVencido(item.dados)) {
+          alertaRenovacao = "<div class='alerta alerta-aviso'><strong>⏳ Plano vencido:</strong> renove ou bloqueie o aluno.</div>";
+        }
+
+        div.innerHTML =
+          "<strong>" + limparTextoSeguro(item.dados.nome || item.email) + "</strong><br>" +
+          "E-mail: " + limparTextoSeguro(item.email) + "<br>" +
+          "Plano: " + limparTextoSeguro(item.dados.plano || "Não informado") + "<br>" +
+          "Valor mensal: <strong>" + limparTextoSeguro(formatarMoeda(item.dados.valorMensal || item.dados.valor || 0)) + "</strong><br>" +
+          "Status: <strong>" + (ativo ? "Ativo" : "Bloqueado") + "</strong><br>" +
+          "Expira em: <strong>" + limparTextoSeguro(item.dados.plano === "vitalicio" ? "Vitalício / VIP" : formatarDataPlano(item.dados.expiraEm)) + "</strong><br>" +
+          alertaRenovacao +
+          "Atualizado em: " + limparTextoSeguro(item.dados.liberadoEm || item.dados.bloqueadoEm || "Não informado") + "<br>" +
+          "<button type='button' class='botao-secundario' onclick='preencherAlunoPainel(" + emailJS + ", " + nomeJS + ", " + planoJS + ", " + valorJS + ")'>Selecionar</button>" +
+          "<button type='button' class='botao-secundario' onclick='renovarAlunoPainel(" + emailJS + ", 30)'>Renovar +30 dias</button>" +
+          "<button type='button' class='botao-secundario' onclick='copiarMensagemRenovacaoAluno(" + nomeJS + ")'>📩 Copiar aviso</button>" +
+          "<button type='button' class='botao-perigo' onclick='excluirAlunoPainel(" + emailJS + ")'>Excluir aluno</button>";
+        lista.appendChild(div);
+      });
     }
 
 
@@ -1664,7 +1881,7 @@
     }
 
     function planoEstaVencido(dados) {
-      if (!dados || dados.ativo !== true || !dados.expiraEm) return false;
+      if (!dados || dados.ativo !== true || dados.plano === "vitalicio" || !dados.expiraEm) return false;
       const hoje = new Date();
       const expira = new Date(dados.expiraEm + "T23:59:59");
       return hoje > expira;
@@ -1684,7 +1901,7 @@
     }
 
     function alunoPrecisaRenovar(dados) {
-      if (!dados || dados.ativo !== true || dados.plano === "teste" || !dados.expiraEm) return false;
+      if (!dados || dados.ativo !== true || dados.plano === "teste" || dados.plano === "vitalicio" || !dados.expiraEm) return false;
       const dias = diasParaExpirar(dados.expiraEm);
       return dias !== null && dias >= 0 && dias <= 7;
     }
@@ -1694,11 +1911,12 @@
       const ativos = usuarios.filter(function(item) { return item.dados.ativo === true && !planoEstaVencido(item.dados); }).length;
       const vencidos = usuarios.filter(function(item) { return item.dados.ativo === true && planoEstaVencido(item.dados); }).length;
       const testes = usuarios.filter(function(item) { return item.dados.plano === "teste"; }).length;
+      const vitalicios = usuarios.filter(function(item) { return item.dados.plano === "vitalicio"; }).length;
       const bloqueados = usuarios.filter(function(item) { return item.dados.ativo !== true; }).length;
       const renovar = usuarios.filter(function(item) { return alunoPrecisaRenovar(item.dados); }).length;
       const faturamento = usuarios.reduce(function(totalAtual, item) {
         const dados = item.dados || {};
-        if (dados.ativo === true && !planoEstaVencido(dados) && dados.plano !== "teste") {
+        if (dados.ativo === true && !planoEstaVencido(dados) && dados.plano !== "teste" && dados.plano !== "vitalicio") {
           return totalAtual + Math.max(Number(dados.valorMensal || dados.valor || 0), 0);
         }
         return totalAtual;
@@ -1709,6 +1927,7 @@
         "<div class='dashboard-box'><strong>" + ativos + "</strong><span class='small'>Ativos</span></div>" +
         "<div class='dashboard-box'><strong>" + vencidos + "</strong><span class='small'>Vencidos</span></div>" +
         "<div class='dashboard-box'><strong>" + testes + "</strong><span class='small'>Testes grátis</span></div>" +
+        "<div class='dashboard-box'><strong>" + vitalicios + "</strong><span class='small'>Vitalícios / VIP</span></div>" +
         "<div class='dashboard-box'><strong>" + bloqueados + "</strong><span class='small'>Bloqueados</span></div>" +
         "<div class='dashboard-box'><strong>" + renovar + "</strong><span class='small'>Renovar em até 7 dias</span></div>" +
         "<div class='dashboard-box'><strong>" + formatarMoeda(faturamento) + "</strong><span class='small'>Faturamento mensal estimado</span></div>";
@@ -1806,7 +2025,7 @@
       const plano = document.getElementById("planoAlunoPainel");
       const valor = document.getElementById("valorAlunoPainel");
       if (!plano || !valor) return;
-      if (plano.value === "teste") valor.value = "0";
+      if (plano.value === "teste" || plano.value === "vitalicio") valor.value = "0";
     }
 
     function preencherAlunoPainel(email, nome, plano, valor) {
@@ -1871,6 +2090,8 @@
     let exerciciosConcluidos = [];
     let sugestoesCarga = {};
     let ultimaCardioCache = null;
+    let mostrarTodosAlunosPainel = false;
+    let usuariosAutorizadosCache = [];
 
     const substituicoes = {
       "Supino reto": ["Flexão de braço", "Supino com halteres", "Crucifixo no chão"],
@@ -1934,7 +2155,7 @@
       if (!perfilSalvo) return;
       perfilUsuario = JSON.parse(perfilSalvo);
       document.getElementById("nome").value = perfilUsuario.nome || "";
-      document.getElementById("sexo").value = perfilUsuario.sexo || "nao_responder";
+      document.getElementById("sexo").value = perfilUsuario.sexo || "";
       document.getElementById("idade").value = perfilUsuario.idade || "";
       document.getElementById("peso").value = perfilUsuario.peso || "";
       document.getElementById("altura").value = perfilUsuario.alturaCm || "";
@@ -1970,9 +2191,16 @@
       const resultadoPerfil = document.getElementById("resultadoPerfil");
       const botaoIrTreino = document.getElementById("botaoIrTreino");
 
-      if (nome === "" || idade <= 0 || peso <= 0 || alturaCm <= 0) {
+      if (sexo === "") {
         resultadoPerfil.classList.remove("hidden");
-        resultadoPerfil.innerHTML = "Preencha todos os campos corretamente.";
+        resultadoPerfil.innerHTML = "Escolha uma opção no campo Sexo para continuar.";
+        botaoIrTreino.classList.add("hidden");
+        return;
+      }
+
+      if (nome === "" || idade <= 0 || peso <= 0 || peso > 700 || alturaCm <= 0) {
+        resultadoPerfil.classList.remove("hidden");
+        resultadoPerfil.innerHTML = "Preencha todos os campos corretamente. O peso deve estar entre 1 e 700 kg.";
         botaoIrTreino.classList.add("hidden");
         return;
       }
@@ -2065,6 +2293,7 @@
       document.getElementById("resumoPerfilTreino").innerText = "Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + " | Experiência: " + traduzirExperiencia(perfilUsuario.tempoExperiencia) + " | Local: " + traduzirLocal(perfilUsuario.localTreino) + " | IMC: " + perfilUsuario.imc;
       mostrarHistorico();
       carregarUltimaCardio();
+      carregarTreinoAtualLocal();
     }
 
     function voltarParaPerfil() {
@@ -2572,10 +2801,15 @@
     function obterCardiosDaNuvem(callback) {
       if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
 
+      const limite30Dias = new Date().getTime() - (30 * 24 * 60 * 60 * 1000);
+
       db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").get()
         .then(function(snapshot) {
           const lista = [];
-          snapshot.forEach(function(doc) { lista.push(doc.data()); });
+          snapshot.forEach(function(doc) {
+            const item = doc.data();
+            if (!item.criadoEm || Number(item.criadoEm) >= limite30Dias) lista.push(item);
+          });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
           callback(lista);
         })
@@ -2863,8 +3097,15 @@
         letraTreino = "descanso";
       }
 
+      const dorBloqueiaGrupo = function(exercicio) {
+        if (dor === "pernas" && ["Pernas", "Glúteos", "Panturrilha", "Posterior de coxa"].includes(exercicio.grupo)) return true;
+        if (dor === "bracos" && ["Bíceps", "Tríceps", "Peito", "Ombros"].includes(exercicio.grupo)) return true;
+        if (dor === "coluna" && (exercicio.evitar === "lombar" || exercicio.grupo === "Costas" || exercicio.grupo === "Abdômen")) return true;
+        return exercicio.evitar === dor;
+      };
+
       let treinoFiltrado = bibliotecaExercicios[letraTreino].filter(function(exercicio) {
-        return exercicio.evitar !== dor && exercicio.local.includes(local) && nivelPermitido(exercicio);
+        return !dorBloqueiaGrupo(exercicio) && exercicio.local.includes(local) && nivelPermitido(exercicio);
       }).map(ajustarExercicioPorMeta);
 
       if (treinoFiltrado.length === 0) {
@@ -2875,11 +3116,13 @@
         treinoFiltrado = completarTreinoSemEquipamento(treinoFiltrado, letraTreino, dor, tempo);
       }
 
+      treinoFiltrado = filtrarExerciciosUnicos(treinoFiltrado);
+      treinoFiltrado = adaptarTreinoPorPerfil(treinoFiltrado, tempo);
       treinoFiltrado = aplicarProgressaoSemanalAoTreino(treinoFiltrado, progressaoSemanal, tempo);
 
-      if (tempo === "rapido") treinoFiltrado = treinoFiltrado.slice(0, 4);
-      else if (tempo === "normal") treinoFiltrado = treinoFiltrado.slice(0, 6);
-      else if (local === "sem_equipamento" && letraTreino !== "descanso") treinoFiltrado = treinoFiltrado.slice(0, 8);
+      const perfilTreino = determinarPerfilTreino();
+      const alvoExercicios = alvoQuantidadeExercicios(tempo, perfilTreino);
+      treinoFiltrado = treinoFiltrado.slice(0, alvoExercicios);
 
       const localComCardio = ["academia_grande", "academia_pequena", "garagem"].includes(local);
       let mensagemCardioTreino = "";
@@ -2959,6 +3202,9 @@
       if (feedbackBox) feedbackBox.classList.add("hidden");
       if (mensagemFeedback) mensagemFeedback.classList.add("hidden");
       lista.innerHTML = "";
+      if (!exerciciosConcluidos || exerciciosConcluidos.length !== treinoAtual.length) {
+        exerciciosConcluidos = new Array(treinoAtual.length).fill(false);
+      }
       sugestoesCarga = buscarSugestoesDeCarga(treinoAtual);
       treinoAtual.forEach(function(exercicio, index) {
         const div = document.createElement("div");
@@ -2977,8 +3223,11 @@
           "<div class='aviso-video'>Use o vídeo apenas como apoio. Em caso de dor, pare o exercício.</div>" +
           "<button type='button' class='botao-secundario' onclick='abrirVideoExercicio(" + JSON.stringify(exercicio.nome) + ")'>Ver execução</button>" +
           "<label class='check-exercicio'><input type='checkbox' " + marcado + " onchange='marcarExercicioConcluido(" + index + ", this.checked)'>Exercício concluído</label>" +
+          "<div class='acoes-exercicio-grid'>" +
           "<button type='button' class='botao-secundario' onclick='preencherRegistroComExercicio(" + index + ")'>Registrar este exercício</button>" +
-          "<button type='button' class='botao-secundario' onclick='substituirExercicio(" + index + ")'>Não tenho esse equipamento / substituir</button>";
+          "<button type='button' class='botao-secundario' onclick='substituirExercicio(" + index + ")'>Não tenho esse equipamento / substituir</button>" +
+          "<button type='button' class='botao-pular' onclick='pularExercicio(" + index + ")'>Pular este exercício</button>" +
+          "</div>";
         lista.appendChild(div);
       });
       if (perfilUsuario && perfilUsuario.localTreino === "sem_equipamento" && perfilUsuario.metaPrincipal === "perder_peso") {
@@ -3006,6 +3255,7 @@
       exerciciosConcluidos[index] = concluido;
       const card = document.getElementById("cardExercicio" + index);
       if (card) concluido ? card.classList.add("concluido") : card.classList.remove("concluido");
+      salvarTreinoAtualLocal();
       atualizarProgressoExercicios();
     }
 
@@ -3036,8 +3286,19 @@
 
     function substituirExercicio(index) {
       const exercicioAtual = treinoAtual[index];
-      const opcoes = substituicoes[exercicioAtual.nome];
-      if (!opcoes || opcoes.length === 0) { alert("Ainda não há substituições cadastradas para esse exercício."); return; }
+      const nomesAtuais = treinoAtual.map(function(exercicio, i) {
+        return i === index ? "" : normalizarNomeExercicio(exercicio.nome || "");
+      });
+      let opcoes = substituicoes[exercicioAtual.nome] || [];
+      opcoes = opcoes.filter(function(opcao) {
+        return !nomesAtuais.includes(normalizarNomeExercicio(opcao));
+      });
+
+      if (!opcoes || opcoes.length === 0) {
+        alert("Ainda não há substituições disponíveis sem repetir exercícios da lista. Você pode pular este exercício e seguir o treino.");
+        return;
+      }
+
       let textoOpcoes = "Escolha uma substituição:\n\n";
       opcoes.forEach(function(opcao, i) { textoOpcoes += (i + 1) + " - " + opcao + "\n"; });
       const numero = Number(prompt(textoOpcoes + "\nDigite o número da opção:"));
@@ -3045,6 +3306,7 @@
       const novoNome = opcoes[numero - 1];
       treinoAtual[index] = { nome: novoNome, grupo: exercicioAtual.grupo, equipamento: "Alternativo", series: exercicioAtual.series, reps: exercicioAtual.reps, evitar: exercicioAtual.evitar, passos: ["Execute o movimento com controle e sem dor.", "Mantenha a postura firme durante todo o exercício.", "Use uma carga ou dificuldade que permita boa execução.", "Se sentir dor articular, pare e escolha outra variação."] };
       exerciciosConcluidos[index] = false;
+      salvarTreinoAtualLocal();
       mostrarTreinoNaTela();
     }
 
@@ -3119,10 +3381,15 @@
     function obterHistoricoDaNuvem(callback) {
       if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
 
+      const limite30Dias = new Date().getTime() - (30 * 24 * 60 * 60 * 1000);
+
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").get()
         .then(function(snapshot) {
           const lista = [];
-          snapshot.forEach(function(doc) { lista.push(doc.data()); });
+          snapshot.forEach(function(doc) {
+            const item = doc.data();
+            if (!item.criadoEm || Number(item.criadoEm) >= limite30Dias) lista.push(item);
+          });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
           callback(lista);
         })
@@ -3409,6 +3676,7 @@
 
     window.onload = function() {
       carregarPerfilAutomaticamente();
+      atualizarBotoesLogin(usuarioAtual);
       if ("serviceWorker" in navigator) navigator.serviceWorker.register("service-worker.js");
     };
   </script>
