@@ -744,14 +744,26 @@
     }
 
     .link-venda-login {
-      margin-top: 12px;
-      padding: 13px;
-      border-radius: 18px;
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 22px;
       background: rgba(34, 197, 94, 0.12);
       border: 1px solid rgba(34, 197, 94, 0.32);
       color: #e2e8f0 !important;
       line-height: 1.45;
-      font-weight: 800;
+      font-weight: 850;
+      text-align: center;
+    }
+
+    .link-venda-login strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 16px;
+      color: #ffffff !important;
+    }
+
+    .logout-final {
+      margin-top: 18px;
     }
 
     .acoes-exercicio-grid {
@@ -797,10 +809,9 @@
         <h2>🔐 Login</h2>
         <p class="small">Entre com sua conta Google. O app será liberado apenas para e-mails autorizados pelo treinador.</p>
         <button id="botaoLoginGoogle" type="button" class="btn-login-google" onclick="loginGoogle()">Entrar com Google</button>
-        <button id="botaoLogoutGoogle" type="button" class="botao-secundario btn-logout hidden" onclick="logout()">Sair</button>
         <div id="usuarioLogado" class="alerta">Verificando login...</div>
         <div id="mensagemAcesso" class="alerta hidden"></div>
-        <div class="link-venda-login">Dúvidas ou para adquirir o plano:<br><strong>celoborgesms@gmail.com</strong></div>
+        <div id="linkVendaLogin" class="link-venda-login">Dúvidas ou para adquirir o plano:<br><strong>celoborgesms@gmail.com</strong></div>
       </div>
 
       <div id="cardDadosPessoa" class="card hidden">
@@ -867,6 +878,12 @@
 
         <button id="botaoIrTreino" type="button" class="hidden botao-principal" onclick="irParaCardio()">➡️ Continuar para cardio</button>
         <button type="button" class="botao-secundario" onclick="apagarPerfilSalvo()">Apagar perfil salvo</button>
+      </div>
+
+      <div id="cardSairConta" class="card logout-final hidden">
+        <h2>🚪 Conta</h2>
+        <p class="small">Use esta opção apenas se quiser sair da sua conta neste aparelho.</p>
+        <button id="botaoLogoutGoogle" type="button" class="botao-secundario btn-logout hidden" onclick="logout()">Sair da conta</button>
       </div>
     </section>
 
@@ -1162,6 +1179,9 @@
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 27/04/2026</p>
           <ul>
+            <li>Login ajustado para iPhone/Safari usando redirecionamento quando popup for bloqueado.</li>
+            <li>Mensagem de venda aparece somente antes do login e ficou centralizada.</li>
+            <li>Botão sair movido para o final da área de perfil.</li>
             <li>Progresso do treino salvo no aparelho: ao sair e voltar, exercícios marcados continuam marcados.</li>
             <li>Treino mais diferente por perfil: iniciante, sobrepeso e avançado recebem ajustes de volume/intensidade.</li>
             <li>Substituição de exercício evita sugerir opção repetida que já está na lista.</li>
@@ -1280,8 +1300,13 @@
     function atualizarBotoesLogin(user) {
       const botaoLogin = document.getElementById("botaoLoginGoogle");
       const botaoSair = document.getElementById("botaoLogoutGoogle");
+      const cardSair = document.getElementById("cardSairConta");
+      const linkVenda = document.getElementById("linkVendaLogin");
+
       if (botaoLogin) user ? botaoLogin.classList.add("hidden") : botaoLogin.classList.remove("hidden");
       if (botaoSair) user ? botaoSair.classList.remove("hidden") : botaoSair.classList.add("hidden");
+      if (cardSair) user ? cardSair.classList.remove("hidden") : cardSair.classList.add("hidden");
+      if (linkVenda) user ? linkVenda.classList.add("hidden") : linkVenda.classList.remove("hidden");
     }
 
     function chaveTreinoAtual() {
@@ -1404,15 +1429,38 @@
     function loginGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
 
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+      if (isIOS) {
+        auth.signInWithRedirect(provider);
+        return;
+      }
+
       auth.signInWithPopup(provider)
         .then(function(result) {
           usuarioAtual = result.user;
           atualizarTelaLogin(usuarioAtual);
         })
         .catch(function(error) {
+          if (error && (error.code === "auth/popup-blocked" || error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request")) {
+            auth.signInWithRedirect(provider);
+            return;
+          }
+
           alert("Erro ao fazer login: " + error.message);
         });
     }
+
+    auth.getRedirectResult()
+      .then(function(result) {
+        if (result && result.user) {
+          usuarioAtual = result.user;
+          atualizarTelaLogin(usuarioAtual);
+        }
+      })
+      .catch(function(error) {
+        console.log("Erro no retorno do login por redirecionamento:", error);
+      });
 
     function logout() {
       auth.signOut()
