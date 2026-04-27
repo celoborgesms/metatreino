@@ -877,7 +877,7 @@
         <div id="resultadoPerfil" class="alerta hidden"></div>
         <div id="mensagemPeso" class="alerta hidden"></div>
 
-        <button id="botaoIrTreino" type="button" class="hidden botao-principal" onclick="irParaCardio()">➡️ Continuar para cardio</button>
+        <button id="botaoIrTreino" type="button" class="hidden botao-principal" onclick="irParaCheckin()">➡️ Continuar para check-in</button>
         <button type="button" class="botao-secundario" onclick="apagarPerfilSalvo()">Apagar perfil salvo</button>
       </div>
 
@@ -897,8 +897,9 @@
 
       <div class="card">
         <h2>💪 Treino inteligente</h2>
-        <p class="small">O treino do dia será calculado com base no seu perfil, no check-in diário e no último cardio registrado.</p>
-        <button type="button" class="botao-principal" onclick="irParaCardio()">➡️ Revisar cardio e check-in / recalcular treino</button>
+        <p class="small">O treino do dia será calculado com base no seu perfil e no check-in diário. Se hoje você não quiser treinar força, pode pular direto para o cardio.</p>
+        <button type="button" class="botao-principal" onclick="irParaCheckin()">✅ Fazer check-in / recalcular treino</button>
+        <button type="button" class="botao-secundario" onclick="pularTreinoEIrParaCardio()">⏭️ Pular treino e ir para Cardio</button>
       </div>
 
       <div id="resultadoTreino" class="card hidden">
@@ -1010,9 +1011,13 @@
     </section>
 
     <section id="paginaCardio" class="hidden">
+      <div id="avisoCardioSemCheckin" class="alerta alerta-aviso hidden">
+        ⚠️ Para uma sugestão mais inteligente, responda o check-in antes. Mesmo assim, você pode usar o Cardio normalmente.
+      </div>
+
       <div class="card">
         <h2>🏃 Cardio inteligente</h2>
-        <p class="small">Use esta área para montar uma sugestão de corrida ou caminhada conforme seu nível, objetivo e evolução. O app também usa essas informações para adaptar melhor o treino de força.</p>
+        <p class="small">Use esta área para montar uma sugestão de corrida, caminhada ou bicicleta conforme seu nível, objetivo e evolução. O app também usa essas informações para adaptar melhor o treino de força.</p>
 
         <label for="tipoAtividadeCardio">Tipo de atividade</label>
         <select id="tipoAtividadeCardio" onchange="atualizarTextoTipoCardio()">
@@ -1101,7 +1106,6 @@
         <textarea id="observacaoCardio" placeholder="Ex: caminhada forte, corrida leve, subi ladeira, senti panturrilha..."></textarea>
 
         <button type="button" onclick="salvarCardio()">Salvar evolução do cardio</button>
-        <button type="button" class="botao-secundario" onclick="irParaCheckin()">Continuar para check-in</button>
         <div id="mensagemCardio" class="alerta hidden"></div>
       </div>
 
@@ -1184,6 +1188,8 @@
             <li>Service Worker profissional com versionamento de cache.</li>
             <li>Atualização automática melhorada para Android e iOS.</li>
             <li>Botão fixo em Novidades para verificar se há nova atualização.</li>
+            <li>Fluxo reorganizado: Perfil → Check-in → Treino → Cardio → Histórico → Novidades.</li>
+            <li>Cardio continua acessível, mas avisa quando o check-in do dia ainda não foi feito.</li>
             <li>Cache antigo é removido automaticamente quando a versão muda.</li>
             <li>Arquivos principais recebem controle de versão para reduzir tela travada em atualização antiga.</li>
           </ul>
@@ -1243,9 +1249,9 @@
 
     <nav class="bottom-nav">
       <button type="button" onclick="voltarParaPerfil()">⚙️ Perfil</button>
-      <button type="button" onclick="irParaCardio()">🏃 Cardio</button>
       <button type="button" onclick="irParaCheckin()">✅ Check-in</button>
       <button type="button" onclick="irParaTreino()">💪 Treino</button>
+      <button type="button" onclick="irParaCardio()">🏃 Cardio</button>
       <button type="button" onclick="irParaHistorico()">📊 Histórico</button>
       <button id="botaoPainelTreinador" type="button" class="hidden" onclick="irParaPainelTreinador()">🧑‍🏫 Painel</button>
       <button type="button" onclick="irParaNovidades()">✨ Novidades</button>
@@ -1288,6 +1294,38 @@
     let acessoLiberado = false;
     let usuarioAdmin = false;
     let dadosAcessoAtual = null;
+
+
+    function chaveFluxoApp(sufixo) {
+      const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : "anonimo";
+      return "metatreino-fluxo-" + sufixo + "-" + email;
+    }
+
+    function marcarCheckinRespondido() {
+      try {
+        localStorage.setItem(chaveFluxoApp("checkin"), new Date().toISOString().slice(0, 10));
+      } catch (erro) {}
+    }
+
+    function checkinRespondidoHoje() {
+      try {
+        return localStorage.getItem(chaveFluxoApp("checkin")) === new Date().toISOString().slice(0, 10);
+      } catch (erro) {
+        return false;
+      }
+    }
+
+    function atualizarAvisoCardioSemCheckin() {
+      const aviso = document.getElementById("avisoCardioSemCheckin");
+      if (!aviso) return;
+      if (checkinRespondidoHoje()) aviso.classList.add("hidden");
+      else aviso.classList.remove("hidden");
+    }
+
+    function pularTreinoEIrParaCardio() {
+      irParaCardio();
+    }
+
 
 
     function atualizarBotoesLogin(user) {
@@ -2362,6 +2400,7 @@
 
       ocultarPaginasDoApp();
       document.getElementById("paginaCardio").classList.remove("hidden");
+      atualizarAvisoCardioSemCheckin();
       carregarCardios();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -3115,7 +3154,9 @@
     }
 
     function gerarTreino() {
-      analisarEsforcoRecente(function(esforcoRecente) {
+      
+      marcarCheckinRespondido();
+analisarEsforcoRecente(function(esforcoRecente) {
         analisarProgressaoSemanal(function(progressaoSemanal) {
           gerarTreinoComEsforco(
             esforcoRecente || { sugerirDescanso: false, mensagem: "" },
