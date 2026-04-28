@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="1.3.3">
+  <meta name="app-version" content="1.3.1">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=1.3.3">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=1.3.3">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=1.3.3">
+  <link rel="manifest" href="manifest.json?v=1.3.1">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=1.3.1">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=1.3.1">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -785,179 +785,35 @@
     }
 
 
-
-    /* Versao 1.3.2 - exercicios concluidos e calendario de historico */
-    .exercise.concluido {
-      opacity: 0.42 !important;
-      filter: grayscale(100%) brightness(0.62) !important;
-      background: rgba(2, 6, 23, 0.92) !important;
-      border-color: rgba(15, 23, 42, 0.85) !important;
-      box-shadow: none !important;
-      transform: none !important;
-    }
-
-    .exercise.concluido strong,
-    .exercise.concluido span,
-    .exercise.concluido h4,
-    .exercise.concluido li,
-    .exercise.concluido .aviso-video {
-      color: #64748b !important;
-    }
-
-    .exercise.concluido strong::after {
-      content: "  ✓ concluído";
-      color: #22c55e !important;
-      font-size: 13px;
-    }
-
-    .calendario-historico {
-      display: flex;
-      gap: 10px;
-      overflow-x: auto;
-      padding: 10px 2px 4px;
-      margin-top: 10px;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    .calendario-historico::-webkit-scrollbar {
+    .app-update-banner {
+      position: fixed;
+      left: 50%;
+      bottom: 96px;
+      transform: translateX(-50%);
+      width: min(460px, calc(100% - 24px));
+      z-index: 9999;
+      padding: 14px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(59, 130, 246, 0.45);
+      box-shadow: 0 18px 42px rgba(0,0,0,0.35);
+      color: #ffffff;
       display: none;
+      line-height: 1.45;
     }
 
-    .dia-historico-btn {
-      flex: 0 0 auto;
-      width: auto;
-      min-width: 92px;
-      min-height: 54px;
-      padding: 10px 12px;
-      border-radius: 18px;
-      background: rgba(30, 41, 59, 0.92) !important;
-      color: #e2e8f0 !important;
-      border: 1px solid rgba(148, 163, 184, 0.35) !important;
-      box-shadow: none !important;
-      font-size: 12px;
-      line-height: 1.25;
+    .app-update-banner strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #ffffff;
     }
 
-    .dia-historico-btn.ativo {
+    .app-update-banner button {
+      margin-top: 10px;
+      min-height: 44px;
       background: linear-gradient(135deg, #22c55e, #3b82f6) !important;
       color: #ffffff !important;
-      border-color: rgba(255, 255, 255, 0.42) !important;
-    }
-
-    .detalhe-dia-historico {
-      margin-top: 14px;
-    }
-
-
-    /* Versão 1.3.2 - Painel SaaS leve, ranking e gráficos reais */
-    .saas-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 12px;
-    }
-
-    .saas-box {
-      background: rgba(30, 41, 59, 0.92);
-      border: 1px solid rgba(148, 163, 184, 0.32);
-      border-radius: 20px;
-      padding: 14px;
-      line-height: 1.35;
-    }
-
-    .saas-box strong {
-      display: block;
-      font-size: 22px;
-      color: #ffffff !important;
-      margin-bottom: 4px;
-    }
-
-    .saas-box span {
-      color: #cbd5e1 !important;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .ranking-item {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 13px;
-      margin-top: 10px;
-      border-radius: 18px;
-      background: rgba(15, 23, 42, 0.72);
-      border: 1px solid rgba(148, 163, 184, 0.28);
-    }
-
-    .ranking-posicao {
-      flex: 0 0 auto;
-      width: 34px;
-      height: 34px;
-      display: grid;
-      place-items: center;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #22c55e, #3b82f6);
-      color: #ffffff;
-      font-weight: 950;
-    }
-
-    .ranking-conteudo {
-      flex: 1;
-      min-width: 0;
-      line-height: 1.45;
-    }
-
-    .ranking-conteudo strong {
-      display: block;
-      color: #ffffff !important;
-    }
-
-    .ranking-conteudo span {
-      display: block;
-      color: #cbd5e1 !important;
-      font-size: 13px;
-    }
-
-    .ranking-pontos {
-      flex: 0 0 auto;
-      text-align: right;
-      color: #22c55e;
-      font-weight: 950;
-      font-size: 14px;
-    }
-
-    .grafico-mini {
-      margin-top: 12px;
-      padding: 13px;
-      border-radius: 18px;
-      background: rgba(15, 23, 42, 0.72);
-      border: 1px solid rgba(148, 163, 184, 0.28);
-    }
-
-
-    /* Versão 1.3.3 - ajustes de UX, histórico e treino por ambiente */
-    .aviso-repeticao-treino {
-      margin-top: 12px;
-      padding: 14px;
-      border-radius: 18px;
-      background: rgba(249, 115, 22, 0.16);
-      border-left: 5px solid #f97316;
-      color: #ffffff;
-      line-height: 1.45;
-    }
-
-    .badge-ambiente {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(34, 197, 94, 0.14);
-      border: 1px solid rgba(34, 197, 94, 0.35);
-      color: #bbf7d0;
-      font-size: 12px;
-      font-weight: 900;
+      box-shadow: none !important;
     }
 
     @media (max-width: 380px) {
@@ -971,6 +827,12 @@
   </style>
 </head>
 <body>
+
+  <div id="appUpdateBanner" class="app-update-banner">
+    <strong>Nova atualização disponível</strong>
+    Toque no botão abaixo para carregar a versão mais recente do MetaTreino.
+    <button type="button" onclick="atualizarAppAgora()">Atualizar agora</button>
+  </div>
 
   <div class="container">
     <div class="app-hero">
@@ -986,7 +848,7 @@
         <h2>🔐 Login</h2>
         <p class="small">Entre com sua conta Google. O app será liberado apenas para e-mails autorizados pelo treinador.</p>
         <button id="botaoLoginGoogle" type="button" class="btn-login-google" onclick="loginGoogle()">Entrar com Google</button>
-        <div id="usuarioLogado" class="alerta">Verificando login...</div>
+        <div id="usuarioLogado" class="alerta">Você ainda não está logado.</div>
         <div id="mensagemAcesso" class="alerta hidden"></div>
         <div id="linkVendaLogin" class="link-venda-login">Dúvidas ou para adquirir o plano:<br><strong>celoborgesms@gmail.com</strong></div>
       </div>
@@ -1053,7 +915,7 @@
         <div id="resultadoPerfil" class="alerta hidden"></div>
         <div id="mensagemPeso" class="alerta hidden"></div>
 
-        <button id="botaoIrTreino" type="button" class="hidden botao-principal" onclick="irParaCheckin()">➡️ Continuar para check-in</button>
+        <button id="botaoIrTreino" type="button" class="hidden botao-principal" onclick="irParaCardio()">➡️ Continuar para cardio</button>
         <button type="button" class="botao-secundario" onclick="apagarPerfilSalvo()">Apagar perfil salvo</button>
       </div>
 
@@ -1073,9 +935,8 @@
 
       <div class="card">
         <h2>💪 Treino inteligente</h2>
-        <p class="small">O treino do dia será calculado com base no seu perfil e no check-in diário. Se hoje você não quiser treinar força, pode pular direto para o cardio.</p>
-        <button type="button" class="botao-principal" onclick="irParaCheckin()">✅ Fazer check-in / recalcular treino</button>
-        <button type="button" class="botao-secundario" onclick="pularTreinoEIrParaCardio()">⏭️ Pular treino e ir para Cardio</button>
+        <p class="small">O treino do dia será calculado com base no seu perfil, no check-in diário e no último cardio registrado.</p>
+        <button type="button" class="botao-principal" onclick="irParaCardio()">➡️ Revisar cardio e check-in / recalcular treino</button>
       </div>
 
       <div id="resultadoTreino" class="card hidden">
@@ -1120,9 +981,9 @@
 
       <div class="card">
         <h2>📊 Resumo do histórico</h2>
-        <p class="small">Mostra apenas os 3 últimos registros para manter esta área limpa. Para ver tudo, use o botão abaixo.</p>
+        <p class="small">Aqui aparece um resumo dos últimos treinos salvos na nuvem.</p>
         <button type="button" class="botao-secundario" onclick="mostrarHistorico()">Atualizar resumo</button>
-        <button type="button" onclick="irParaHistoricoCompleto()">Acompanhar histórico completo</button>
+        <button type="button" onclick="irParaHistoricoCompleto()">Ver histórico completo</button>
         <button type="button" class="botao-perigo" onclick="limparHistorico()">Limpar histórico</button>
         <div id="listaHistorico"></div>
       </div>
@@ -1131,7 +992,7 @@
     <section id="paginaCheckin" class="hidden">
       <div class="card">
         <h2>✅ Check-in diário</h2>
-        <p class="small">Responda como você está hoje. O app usa essas respostas para adaptar o treino do dia com mais segurança.</p>
+        <p class="small">Responda como você está hoje. O app usa essas respostas junto com ao último cardio registrado para adaptar o treino do dia.</p>
       </div>
 
       <div class="card">
@@ -1187,13 +1048,9 @@
     </section>
 
     <section id="paginaCardio" class="hidden">
-      <div id="avisoCardioSemCheckin" class="alerta alerta-aviso hidden">
-        ⚠️ Para uma sugestão mais inteligente, responda o check-in antes. Mesmo assim, você pode usar o Cardio normalmente.
-      </div>
-
       <div class="card">
         <h2>🏃 Cardio inteligente</h2>
-        <p class="small">Use esta área para montar uma sugestão de corrida, caminhada ou bicicleta conforme seu nível, objetivo e evolução. O app também usa essas informações para adaptar melhor o treino de força.</p>
+        <p class="small">Use esta área para montar uma sugestão de corrida ou caminhada conforme seu nível, objetivo e evolução. O app também usa essas informações para adaptar melhor o treino de força.</p>
 
         <label for="tipoAtividadeCardio">Tipo de atividade</label>
         <select id="tipoAtividadeCardio" onchange="atualizarTextoTipoCardio()">
@@ -1201,7 +1058,13 @@
           <option value="caminhada">Caminhada</option>
           <option value="bicicleta">Bicicleta</option>
         </select>
-<label for="nivelCardio">Seu nível no cardio</label>
+
+        <label class="check-exercicio">
+          <input id="naoCorreuRecentemente" type="checkbox" onchange="alternarCamposCardio()">
+          Não fiz cardio recentemente
+        </label>
+
+        <label for="nivelCardio">Seu nível no cardio</label>
         <select id="nivelCardio">
           <option value="iniciante">Estou começando agora</option>
           <option value="voltando">Estou voltando a correr</option>
@@ -1276,6 +1139,7 @@
         <textarea id="observacaoCardio" placeholder="Ex: caminhada forte, corrida leve, subi ladeira, senti panturrilha..."></textarea>
 
         <button type="button" onclick="salvarCardio()">Salvar evolução do cardio</button>
+        <button type="button" class="botao-secundario" onclick="irParaCheckin()">Continuar para check-in</button>
         <div id="mensagemCardio" class="alerta hidden"></div>
       </div>
 
@@ -1283,7 +1147,7 @@
         <h2>Resumo do cardio</h2>
         <p class="small">Mostra apenas os últimos 3 registros para manter esta aba leve e organizada.</p>
         <button type="button" class="botao-secundario" onclick="carregarCardios()">Atualizar resumo</button>
-        <button type="button" onclick="irParaHistoricoCompleto()">Acompanhar histórico completo</button>
+        <button type="button" onclick="irParaHistoricoCompleto()">Ver histórico completo</button>
         <button type="button" class="botao-perigo" onclick="limparHistoricoCardios()">Limpar histórico de cardio</button>
         <div id="listaCardios"></div>
       </div>
@@ -1292,7 +1156,7 @@
     <section id="paginaHistoricoCompleto" class="hidden">
       <div class="card">
         <h2>📊 Histórico completo</h2>
-        <p class="small">Veja treinos e cardios dos últimos 90 dias. Use as datas abaixo como um calendário rápido para abrir o que foi feito em cada dia.</p>
+        <p class="small">Veja todos os detalhes dos treinos salvos na nuvem.</p>
         <button type="button" class="botao-secundario" onclick="irParaTreino()">Voltar para o treino</button>
         <button type="button" class="botao-secundario" onclick="mostrarHistoricoCompleto()">Atualizar histórico completo</button>
         <div id="listaHistoricoCompleto"></div>
@@ -1331,8 +1195,6 @@
         <button type="button" class="botao-secundario" onclick="carregarUsuariosAutorizados()">Atualizar lista</button>
         <div id="mensagemPainelTreinador" class="alerta hidden"></div>
         <div id="dashboardTreinador" class="dashboard-grid"></div>
-        <div id="painelSaasTreinador" class="grafico-card"></div>
-        <div id="rankingAlunosTreinador" class="grafico-card"></div>
       </div>
 
       <div class="card">
@@ -1352,50 +1214,98 @@
         </div>
 
 
-        
-
         <div class="historico-item">
-          <strong>Versão 1.3.2</strong><br>
+          <strong>Versão 1.3.1 Beta</strong><br>
           <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 22:00</p>
-          <ul>
-            <li>Exercícios concluídos agora descem para o final da lista e ficam desfocados para evitar confusão.</li>
-            <li>Histórico ampliado para os últimos 90 dias.</li>
-            <li>Histórico completo ganhou calendário de datas com rolagem e clique para ver o treino/cardio do dia.</li>
-            <li>A aba Perfil passou a se chamar Início no menu inferior, com ícone de casinha.</li>
-            <li>Atualizado o controle interno de versão para 1.3.2 no index, manifest e service worker.</li>
-          </ul>
-        </div>
-
-        <div class="historico-item">
-          <strong>Versão 1.3.1</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 21:00</p>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026</p>
           <ul>
             <li>Service Worker profissional com versionamento de cache.</li>
             <li>Atualização automática melhorada para Android e iOS.</li>
-            <li>Botão fixo em Novidades para verificar se há nova atualização.</li>
-            <li>Fluxo reorganizado: Início → Check-in → Treino → Cardio → Histórico → Novidades.</li>
-            <li>Cardio continua acessível, mas avisa quando o check-in do dia ainda não foi feito.</li>
+            <li>Banner de nova versão disponível com botão Atualizar agora.</li>
             <li>Cache antigo é removido automaticamente quando a versão muda.</li>
             <li>Arquivos principais recebem controle de versão para reduzir tela travada em atualização antiga.</li>
           </ul>
         </div>
-<div class="historico-item">
-          <strong>🔄 Atualização do app</strong><br>
-          <p class="small">Use este botão quando quiser verificar se existe uma versão mais recente do MetaTreino.</p>
-          <button type="button" class="botao-principal" onclick="verificarAtualizacaoManual()">Verificar se há nova atualização</button>
-          <div id="statusAtualizacaoManual" class="alerta hidden"></div>
+
+        <div class="historico-item">
+          <strong>Versão 1.3.0 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026</p>
+          <ul>
+            <li>Login ajustado para iPhone/Safari usando redirecionamento quando popup for bloqueado.</li>
+            <li>Mensagem de venda aparece somente antes do login e ficou centralizada.</li>
+            <li>Botão sair movido para o final da área de perfil.</li>
+            <li>Progresso do treino salvo no aparelho: ao sair e voltar, exercícios marcados continuam marcados.</li>
+            <li>Treino mais diferente por perfil: iniciante, sobrepeso e avançado recebem ajustes de volume/intensidade.</li>
+            <li>Substituição de exercício evita sugerir opção repetida que já está na lista.</li>
+            <li>Adicionado botão para pular exercício sem travar a conclusão do treino.</li>
+            <li>Ajustada quantidade de exercícios conforme treino rápido, normal ou longo.</li>
+            <li>Login mais limpo: botão de entrar some após login e botão sair fica disponível.</li>
+            <li>Check-in de dor mais completo: pernas, braços, coluna/costas, ombro, joelho e lombar.</li>
+            <li>Painel do treinador mais organizado: mostra 3 últimos alunos e permite ver todos.</li>
+            <li>Adicionado plano Vitalício / VIP sem data de vencimento.</li>
+            <li>Histórico carregado limitado aos últimos 30 dias para reduzir peso.</li>
+            <li>Mensagem de venda no login com contato por e-mail.</li>
+            <li>Peso limitado até 700 kg e campo de nome alterado para sugestão “Usuário”.</li>
+          </ul>
         </div>
+
+        <div class="historico-item">
+          <strong>Versão 1.2.9 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 12:10</p>
+          <ul>
+            <li>Adicionado campo de valor mensal no Painel do Treinador.</li>
+            <li>Adicionado faturamento mensal estimado somando alunos ativos pagos.</li>
+            <li>Testes grátis ficam com valor zerado automaticamente.</li>
+            <li>Adicionado alerta para alunos que precisam renovar em até 7 dias.</li>
+            <li>Adicionado botão para copiar mensagem de renovação e enviar manualmente pelo WhatsApp.</li>
+            <li>Ajuste visual da paleta MetaTreino: fundo mesclado novamente e botões/abas com azul mais limpo.</li>
+            <li>Atualizada a identidade visual para MetaTreino com fundo escuro premium, verde energia e azul confiança.</li>
+            <li>Adicionado texto profissional: treinos inteligentes, acompanhamento real e evolução constante.</li>
+            <li>Melhorada a visão comercial para acompanhar vendas, testes e renovações.</li>
+            <li>Corrigido contraste visual da caixa de aceite dos termos na identidade MetaTreino.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
+          <strong>Versão 1.2.8 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 11:20</p>
+          <ul>
+            <li>Adicionados gráficos simples de evolução no histórico completo.</li>
+            <li>Melhorada a evolução de cardio com leitura de distância, tempo e ritmo médio.</li>
+            <li>Painel do treinador recebeu resumo comercial com alunos ativos, vencidos, testes e total de alunos.</li>
+            <li>Adicionado botão de renovação rápida por +30 dias no painel.</li>
+            <li>Melhorada a visualização geral para acompanhamento e venda do app.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
+          <strong>Versão 1.2.7 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 10:30</p>
+          <ul>
+            <li>Histórico completo agora reúne treinos e cardio na mesma aba.</li>
+            <li>A aba Cardio mostra apenas os últimos 3 registros para ficar mais limpa.</li>
+            <li>Adicionado resumo pessoal com nível do aluno, dias seguidos de atividade e ranking pessoal.</li>
+            <li>Adicionada mensagem de parabéns ao concluir todos os exercícios do treino.</li>
+            <li>Adicionado resumo do dia antes do treino recomendado.</li>
+            <li>Adicionado feedback final: fácil, médio ou difícil.</li>
+            <li>Melhorados os nomes dos treinos para linguagem mais profissional.</li>
+            <li>Adicionados ícones leves, botão principal destacado e mensagens inteligentes de experiência.</li>
+          </ul>
+        </div>
+
 
       </div>
     </section>
 
     <nav class="bottom-nav">
-      <button type="button" onclick="voltarParaPerfil()">🏠 Início</button>
+      <button type="button" onclick="voltarParaPerfil()">⚙️ Perfil</button>
+      <button type="button" onclick="irParaCardio()">🏃 Cardio</button>
       <button type="button" onclick="irParaCheckin()">✅ Check-in</button>
       <button type="button" onclick="irParaTreino()">💪 Treino</button>
-      <button type="button" onclick="irParaCardio()">🏃 Cardio</button>
       <button type="button" onclick="irParaHistorico()">📊 Histórico</button>
       <button id="botaoPainelTreinador" type="button" class="hidden" onclick="irParaPainelTreinador()">🧑‍🏫 Painel</button>
       <button type="button" onclick="irParaNovidades()">✨ Novidades</button>
@@ -1440,45 +1350,21 @@
     let dadosAcessoAtual = null;
 
 
-    function chaveFluxoApp(sufixo) {
-      const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : "anonimo";
-      return "metatreino-fluxo-" + sufixo + "-" + email;
-    }
-
-    function marcarCheckinRespondido() {
-      try {
-        localStorage.setItem(chaveFluxoApp("checkin"), new Date().toISOString().slice(0, 10));
-      } catch (erro) {}
-    }
-
-    function checkinRespondidoHoje() {
-      try {
-        return localStorage.getItem(chaveFluxoApp("checkin")) === new Date().toISOString().slice(0, 10);
-      } catch (erro) {
-        return false;
-      }
-    }
-
-    function atualizarAvisoCardioSemCheckin() {
-      const aviso = document.getElementById("avisoCardioSemCheckin");
-      if (!aviso) return;
-      if (checkinRespondidoHoje()) aviso.classList.add("hidden");
-      else aviso.classList.remove("hidden");
-    }
-
-    function pularTreinoEIrParaCardio() {
-      irParaCardio();
-    }
-
-
-
     function atualizarBotoesLogin(user) {
       const botaoLogin = document.getElementById("botaoLoginGoogle");
       const botaoSair = document.getElementById("botaoLogoutGoogle");
       const cardSair = document.getElementById("cardSairConta");
       const linkVenda = document.getElementById("linkVendaLogin");
 
-      if (botaoLogin) user ? botaoLogin.classList.add("hidden") : botaoLogin.classList.remove("hidden");
+      if (botaoLogin) {
+        if (user) {
+          botaoLogin.classList.add("hidden");
+        } else {
+          botaoLogin.classList.remove("hidden");
+          botaoLogin.disabled = false;
+        }
+      }
+
       if (botaoSair) user ? botaoSair.classList.remove("hidden") : botaoSair.classList.add("hidden");
       if (cardSair) user ? cardSair.classList.remove("hidden") : cardSair.classList.add("hidden");
       if (linkVenda) user ? linkVenda.classList.add("hidden") : linkVenda.classList.remove("hidden");
@@ -1602,7 +1488,15 @@
     }
 
     function loginGoogle() {
+      const botaoLogin = document.getElementById("botaoLoginGoogle");
+      const campo = document.getElementById("usuarioLogado");
       const provider = new firebase.auth.GoogleAuthProvider();
+
+      if (botaoLogin) botaoLogin.disabled = true;
+      if (campo) {
+        campo.className = "alerta";
+        campo.innerHTML = "Abrindo login com Google...";
+      }
 
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
@@ -1617,12 +1511,19 @@
           atualizarTelaLogin(usuarioAtual);
         })
         .catch(function(error) {
+          if (botaoLogin) botaoLogin.disabled = false;
+
           if (error && (error.code === "auth/popup-blocked" || error.code === "auth/popup-closed-by-user" || error.code === "auth/cancelled-popup-request")) {
             auth.signInWithRedirect(provider);
             return;
           }
 
-          alert("Erro ao fazer login: " + error.message);
+          if (campo) {
+            campo.className = "alerta alerta-aviso";
+            campo.innerHTML = "Não foi possível abrir o login. Tente novamente.";
+          } else {
+            alert("Erro ao fazer login: " + error.message);
+          }
         });
     }
 
@@ -1635,6 +1536,13 @@
       })
       .catch(function(error) {
         console.log("Erro no retorno do login por redirecionamento:", error);
+        const botaoLogin = document.getElementById("botaoLoginGoogle");
+        const campo = document.getElementById("usuarioLogado");
+        if (botaoLogin) botaoLogin.disabled = false;
+        if (campo && !auth.currentUser) {
+          campo.className = "alerta";
+          campo.innerHTML = "Você ainda não está logado.";
+        }
       });
 
     function logout() {
@@ -1659,10 +1567,17 @@
         return;
       }
 
+      campo.className = "alerta";
+
       if (user) {
         campo.innerHTML = "<strong>Logado como:</strong><br>" + (user.displayName || "Usuário") + "<br>" + (user.email || "");
       } else {
         campo.innerHTML = "Você ainda não está logado.";
+        const botaoLogin = document.getElementById("botaoLoginGoogle");
+        if (botaoLogin) {
+          botaoLogin.classList.remove("hidden");
+          botaoLogin.disabled = false;
+        }
       }
     }
 
@@ -1683,6 +1598,12 @@
       atualizarTelaLogin(null);
       bloquearApp("Não foi possível verificar o login agora. Tente novamente em alguns instantes.");
     });
+
+    setTimeout(function() {
+      if (!auth.currentUser && !usuarioAtual) {
+        atualizarTelaLogin(null);
+      }
+    }, 1800);
 
     let perfilUsuario = null;
     let db = null;
@@ -2016,10 +1937,6 @@
       if (!usuarioAdmin || !db) {
         lista.innerHTML = "<p class='small'>Área disponível apenas para administrador.</p>";
         if (dashboard) dashboard.innerHTML = "";
-        const painelSaas = document.getElementById("painelSaasTreinador");
-        const rankingBox = document.getElementById("rankingAlunosTreinador");
-        if (painelSaas) painelSaas.innerHTML = "";
-        if (rankingBox) rankingBox.innerHTML = "";
         return;
       }
 
@@ -2058,11 +1975,6 @@
       }
 
       if (dashboard) dashboard.innerHTML = montarDashboardTreinador(usuarios);
-
-      const painelSaas = document.getElementById("painelSaasTreinador");
-      const rankingBox = document.getElementById("rankingAlunosTreinador");
-      if (painelSaas) painelSaas.innerHTML = montarPainelSaaSTreinador(usuarios);
-      if (rankingBox) rankingBox.innerHTML = montarRankingComercialAlunos(usuarios);
 
       const usuariosParaExibir = mostrarTodosAlunosPainel ? usuarios : usuarios.slice(0, 3);
       lista.innerHTML = "";
@@ -2164,158 +2076,6 @@
         "<div class='dashboard-box'><strong>" + renovar + "</strong><span class='small'>Renovar em até 7 dias</span></div>" +
         "<div class='dashboard-box'><strong>" + formatarMoeda(faturamento) + "</strong><span class='small'>Faturamento mensal estimado</span></div>";
     }
-
-
-    function montarPainelSaaSTreinador(usuarios) {
-      usuarios = usuarios || [];
-      const ativosPagos = usuarios.filter(function(item) {
-        const dados = item.dados || {};
-        return dados.ativo === true && !planoEstaVencido(dados) && dados.plano !== "teste" && dados.plano !== "vitalicio";
-      });
-
-      const testes = usuarios.filter(function(item) { return item.dados && item.dados.plano === "teste"; }).length;
-      const vitalicios = usuarios.filter(function(item) { return item.dados && item.dados.plano === "vitalicio"; }).length;
-      const renovacao = usuarios.filter(function(item) { return alunoPrecisaRenovar(item.dados || {}); }).length;
-      const vencidos = usuarios.filter(function(item) { return planoEstaVencido(item.dados || {}); }).length;
-      const receita = ativosPagos.reduce(function(total, item) {
-        return total + Math.max(Number((item.dados || {}).valorMensal || (item.dados || {}).valor || 0), 0);
-      }, 0);
-      const ticketMedio = ativosPagos.length ? receita / ativosPagos.length : 0;
-      const conversaoBasica = usuarios.length ? Math.round((ativosPagos.length / usuarios.length) * 100) : 0;
-
-      return "" +
-        "<strong>💼 Painel do treinador estilo SaaS</strong><br>" +
-        "<span class='small'>Visão de negócio simples, rápida e leve para vender, renovar e acompanhar alunos.</span>" +
-        "<div class='saas-grid'>" +
-          "<div class='saas-box'><strong>" + formatarMoeda(receita) + "</strong><span>Receita mensal ativa</span></div>" +
-          "<div class='saas-box'><strong>" + formatarMoeda(ticketMedio) + "</strong><span>Ticket médio</span></div>" +
-          "<div class='saas-box'><strong>" + conversaoBasica + "%</strong><span>Base paga ativa</span></div>" +
-          "<div class='saas-box'><strong>" + renovacao + "</strong><span>Renovar em até 7 dias</span></div>" +
-          "<div class='saas-box'><strong>" + vencidos + "</strong><span>Vencidos para recuperar</span></div>" +
-          "<div class='saas-box'><strong>" + testes + "</strong><span>Testes grátis</span></div>" +
-          "<div class='saas-box'><strong>" + vitalicios + "</strong><span>Vitalícios / VIP</span></div>" +
-          "<div class='saas-box'><strong>" + usuarios.length + "</strong><span>Total na base</span></div>" +
-        "</div>" +
-        "<div class='grafico-mini'>" +
-          montarLinhaGrafico("Alunos pagos ativos", ativosPagos.length, Math.max(1, usuarios.length), ativosPagos.length + " aluno(s)") +
-          montarLinhaGrafico("Testes grátis", testes, Math.max(1, usuarios.length), testes + " teste(s)") +
-          montarLinhaGrafico("Renovações próximas", renovacao, Math.max(1, usuarios.length), renovacao + " alerta(s)") +
-          montarLinhaGrafico("Vencidos", vencidos, Math.max(1, usuarios.length), vencidos + " aluno(s)") +
-        "</div>" +
-        "<button type='button' class='botao-secundario' onclick='carregarRankingRealDeTreinos()'>🏆 Carregar ranking real de atividade</button>" +
-        "<p class='small'>O ranking real tenta buscar treinos salvos na nuvem. Se as permissões não permitirem, o ranking comercial abaixo continua funcionando.</p>";
-    }
-
-    function calcularPontuacaoComercialAluno(item) {
-      const dados = item.dados || {};
-      let pontos = 0;
-      if (dados.ativo === true && !planoEstaVencido(dados)) pontos += 50;
-      if (dados.plano !== "teste" && dados.plano !== "vitalicio") pontos += 20;
-      if (dados.plano === "vitalicio") pontos += 30;
-      if (alunoPrecisaRenovar(dados)) pontos += 10;
-      pontos += Math.min(40, Math.round(Math.max(Number(dados.valorMensal || dados.valor || 0), 0)));
-      return pontos;
-    }
-
-    function montarRankingComercialAlunos(usuarios) {
-      usuarios = (usuarios || []).slice().sort(function(a, b) {
-        return calcularPontuacaoComercialAluno(b) - calcularPontuacaoComercialAluno(a);
-      }).slice(0, 5);
-
-      let htmlRanking = "<strong>🏆 Ranking entre alunos</strong><br>" +
-        "<span class='small'>Ranking leve baseado em status, plano e valor mensal. O ranking real de treino pode ser carregado no botão acima.</span>";
-
-      if (usuarios.length === 0) {
-        return htmlRanking + "<p class='small'>Nenhum aluno para ranquear ainda.</p>";
-      }
-
-      usuarios.forEach(function(item, indice) {
-        const dados = item.dados || {};
-        const pontos = calcularPontuacaoComercialAluno(item);
-        htmlRanking += "<div class='ranking-item'>" +
-          "<div class='ranking-posicao'>" + (indice + 1) + "</div>" +
-          "<div class='ranking-conteudo'>" +
-            "<strong>" + limparTextoSeguro(dados.nome || item.email) + "</strong>" +
-            "<span>" + limparTextoSeguro(item.email) + "</span>" +
-            "<span>Plano: " + limparTextoSeguro(dados.plano || "Não informado") + " | Valor: " + limparTextoSeguro(formatarMoeda(dados.valorMensal || dados.valor || 0)) + "</span>" +
-          "</div>" +
-          "<div class='ranking-pontos'>" + pontos + " pts</div>" +
-        "</div>";
-      });
-
-      return htmlRanking;
-    }
-
-    function carregarRankingRealDeTreinos() {
-      const rankingBox = document.getElementById("rankingAlunosTreinador");
-      if (!rankingBox) return;
-
-      if (!usuarioAdmin || !db) {
-        rankingBox.innerHTML = "<strong>🏆 Ranking real de atividade</strong><p class='small'>Área disponível apenas para administrador.</p>";
-        return;
-      }
-
-      rankingBox.innerHTML = "<strong>🏆 Ranking real de atividade</strong><p class='small'>Carregando treinos salvos na nuvem...</p>";
-
-      db.collectionGroup("treinos").get()
-        .then(function(snapshot) {
-          const alunos = {};
-          const limite90Dias = new Date().getTime() - (90 * 24 * 60 * 60 * 1000);
-
-          snapshot.forEach(function(doc) {
-            const treino = doc.data() || {};
-            const criadoEm = Number(treino.criadoEm || 0);
-            if (criadoEm && criadoEm < limite90Dias) return;
-
-            const nome = treino.nomeUsuario || "Aluno";
-            if (!alunos[nome]) {
-              alunos[nome] = { nome: nome, treinos: 0, concluidos: 0, total: 0, ultimo: 0 };
-            }
-
-            alunos[nome].treinos += 1;
-            alunos[nome].concluidos += Number(treino.totalConcluidos || 0);
-            alunos[nome].total += Number(treino.totalExercicios || 0);
-            if (criadoEm > alunos[nome].ultimo) alunos[nome].ultimo = criadoEm;
-          });
-
-          const lista = Object.keys(alunos).map(function(nome) { return alunos[nome]; })
-            .sort(function(a, b) {
-              const pontosA = (a.treinos * 10) + a.concluidos;
-              const pontosB = (b.treinos * 10) + b.concluidos;
-              return pontosB - pontosA;
-            })
-            .slice(0, 10);
-
-          let htmlRanking = "<strong>🏆 Ranking real de atividade</strong><br>" +
-            "<span class='small'>Baseado nos treinos salvos nos últimos 90 dias.</span>";
-
-          if (lista.length === 0) {
-            rankingBox.innerHTML = htmlRanking + "<p class='small'>Ainda não há treinos suficientes para montar ranking real.</p>";
-            return;
-          }
-
-          lista.forEach(function(aluno, indice) {
-            const pontos = (aluno.treinos * 10) + aluno.concluidos;
-            const aproveitamento = aluno.total > 0 ? Math.round((aluno.concluidos / aluno.total) * 100) : 0;
-            htmlRanking += "<div class='ranking-item'>" +
-              "<div class='ranking-posicao'>" + (indice + 1) + "</div>" +
-              "<div class='ranking-conteudo'>" +
-                "<strong>" + limparTextoSeguro(aluno.nome) + "</strong>" +
-                "<span>" + aluno.treinos + " treino(s) | " + aluno.concluidos + " exercício(s) concluído(s)</span>" +
-                "<span>Aproveitamento: " + aproveitamento + "%</span>" +
-              "</div>" +
-              "<div class='ranking-pontos'>" + pontos + " pts</div>" +
-            "</div>";
-          });
-
-          rankingBox.innerHTML = htmlRanking;
-        })
-        .catch(function(erro) {
-          console.log("Não foi possível carregar ranking real:", erro);
-          rankingBox.innerHTML = "<strong>🏆 Ranking real de atividade</strong><p class='small'>Não foi possível carregar o ranking real. Confira permissões do Firestore para collectionGroup('treinos'). O ranking comercial continua funcionando.</p>";
-        });
-    }
-
 
     function copiarMensagemRenovacaoAluno(nomeAluno) {
       const nome = nomeAluno && String(nomeAluno).trim() ? String(nomeAluno).trim() : "tudo bem";
@@ -2478,19 +2238,19 @@
     let usuariosAutorizadosCache = [];
 
     const substituicoes = {
-      "Supino reto": ["Flexão de braço", "Flexção ajoelhada", "Supino com halteres", "Crucifixo no chão"],
-      "Flexão de braço": ["Flexão ajoelhada", "Flexão diamante", "Tríceps banco", "Supino com halteres"],
+      "Supino reto": ["Flexão de braço", "Supino com halteres", "Crucifixo no chão"],
+      "Flexão de braço": ["Supino reto", "Supino com halteres", "Flexão com joelhos apoiados"],
       "Desenvolvimento com halteres": ["Desenvolvimento com elástico", "Elevação frontal", "Pike push-up"],
       "Elevação lateral": ["Elevação lateral com elástico", "Elevação lateral com garrafas", "Desenvolvimento leve"],
       "Tríceps corda": ["Tríceps com elástico", "Tríceps banco", "Tríceps francês"],
       "Tríceps banco": ["Tríceps corda", "Tríceps francês", "Flexão fechada"],
-      "Remada baixa": ["Remada com elástico", "Remada com mochila", "Remada unilateral com halter", "Remada invertida"],
+      "Remada baixa": ["Remada com elástico", "Remada unilateral com halter", "Remada invertida"],
       "Puxada frente": ["Remada com elástico", "Pullover com halter", "Barra fixa assistida"],
       "Remada unilateral": ["Remada baixa", "Remada com elástico", "Remada invertida"],
       "Rosca direta": ["Rosca com halteres", "Rosca com elástico", "Rosca martelo"],
       "Rosca martelo": ["Rosca direta", "Rosca com elástico", "Rosca concentrada"],
       "Face pull": ["Face pull com elástico", "Crucifixo inverso", "Remada alta leve"],
-      "Agachamento": ["Agachamento búlgaro", "Cadeirinha na parede", "Agachamento com mochila", "Afundo"],
+      "Agachamento": ["Agachamento livre", "Agachamento com mochila", "Cadeira extensora"],
       "Leg press": ["Agachamento livre", "Afundo", "Step-up no banco"],
       "Afundo": ["Agachamento", "Step-up no banco", "Agachamento búlgaro"],
       "Mesa flexora": ["Stiff com halteres", "Ponte de glúteo", "Flexora com bola"],
@@ -2508,10 +2268,7 @@
         { nome: "Desenvolvimento com halteres", grupo: "Ombros", equipamento: "Halteres", nivel: "intermediario", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Segure os halteres nos ombros.", "Empurre para cima.", "Não arqueie demais a lombar.", "Desça devagar."] },
         { nome: "Elevação lateral", grupo: "Ombros", equipamento: "Halteres ou elástico", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Segure um peso em cada mão.", "Eleve até a altura dos ombros.", "Evite balanço.", "Desça devagar."] },
         { nome: "Tríceps corda", grupo: "Tríceps", equipamento: "Polia", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "ombro", passos: ["Mantenha cotovelos próximos ao corpo.", "Empurre a corda para baixo.", "Estenda os braços.", "Volte controlando."] },
-        { nome: "Tríceps banco", grupo: "Tríceps", equipamento: "Banco ou cadeira", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "ombro", passos: ["Apoie as mãos no banco.", "Desça dobrando os cotovelos.", "Mantenha o tronco próximo.", "Suba com controle."] },
-        { nome: "Flexão ajoelhada", grupo: "Peito", equipamento: "Peso corporal", nivel: "iniciante", local: ["sem_equipamento", "casa_limitado"], evitar: "ombro", passos: ["Apoie os joelhos no chão.", "Mantenha abdômen firme.", "Desça com controle.", "Suba empurrando o chão."] },
-        { nome: "Flexão diamante", grupo: "Tríceps", equipamento: "Peso corporal", nivel: "intermediario", local: ["sem_equipamento", "casa_limitado"], evitar: "ombro", passos: ["Aproxime as mãos no chão.", "Mantenha corpo alinhado.", "Desça com controle.", "Suba sem perder postura."] },
-        { nome: "Pike push-up", grupo: "Ombros", equipamento: "Peso corporal", nivel: "intermediario", local: ["sem_equipamento", "casa_limitado"], evitar: "ombro", passos: ["Eleve o quadril formando um V invertido.", "Flexione os cotovelos.", "Desça a cabeça em direção ao chão.", "Empurre para voltar."] }
+        { nome: "Tríceps banco", grupo: "Tríceps", equipamento: "Banco ou cadeira", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "ombro", passos: ["Apoie as mãos no banco.", "Desça dobrando os cotovelos.", "Mantenha o tronco próximo.", "Suba com controle."] }
       ],
       B: [
         { nome: "Remada baixa", grupo: "Costas", equipamento: "Máquina ou cabo", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "lombar", passos: ["Sente com a coluna reta.", "Puxe o cabo ao abdômen.", "Contraia as costas.", "Volte devagar."] },
@@ -2520,10 +2277,7 @@
         { nome: "Remada invertida", grupo: "Costas", equipamento: "Barra baixa", nivel: "intermediario", local: ["academia_grande", "garagem", "sem_equipamento"], evitar: "ombro", passos: ["Segure uma barra baixa.", "Mantenha o corpo alinhado.", "Puxe o peito em direção à barra.", "Desça controlando."] },
         { nome: "Rosca direta", grupo: "Bíceps", equipamento: "Barra ou halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "nenhuma", passos: ["Segure com palmas para cima.", "Cotovelos próximos ao corpo.", "Suba contraindo o bíceps.", "Desça devagar."] },
         { nome: "Rosca martelo", grupo: "Bíceps", equipamento: "Halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "nenhuma", passos: ["Palmas viradas uma para a outra.", "Mantenha cotovelos fixos.", "Suba com controle.", "Desça devagar."] },
-        { nome: "Face pull", grupo: "Ombro posterior", equipamento: "Polia ou elástico", nivel: "intermediario", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Puxe em direção ao rosto.", "Abra os cotovelos.", "Contraia ombro posterior.", "Volte controlando."] },
-        { nome: "Remada com elástico", grupo: "Costas", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Prenda o elástico ou passe pelos pés.", "Puxe em direção ao peito.", "Contraia as costas.", "Volte devagar."] },
-        { nome: "Remada com mochila", grupo: "Costas", equipamento: "Mochila", nivel: "iniciante", local: ["casa_limitado", "sem_equipamento"], evitar: "lombar", passos: ["Incline o tronco com coluna firme.", "Puxe a mochila em direção ao abdômen.", "Contraia as costas.", "Desça controlando."] },
-        { nome: "Super-homem", grupo: "Lombar", equipamento: "Peso corporal", nivel: "iniciante", local: ["sem_equipamento", "casa_limitado"], evitar: "lombar", passos: ["Deite de barriga para baixo.", "Eleve braços e pernas levemente.", "Segure por 1 a 2 segundos.", "Desça controlando."] }
+        { nome: "Face pull", grupo: "Ombro posterior", equipamento: "Polia ou elástico", nivel: "intermediario", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Puxe em direção ao rosto.", "Abra os cotovelos.", "Contraia ombro posterior.", "Volte controlando."] }
       ],
       C: [
         { nome: "Agachamento", grupo: "Pernas", equipamento: "Peso corporal, barra ou halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "joelho", passos: ["Pés na largura dos ombros.", "Desça empurrando quadril para trás.", "Mantenha coluna firme.", "Suba empurrando o chão."] },
@@ -2532,13 +2286,7 @@
         { nome: "Mesa flexora", grupo: "Posterior de coxa", equipamento: "Máquina", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "joelho", passos: ["Ajuste o aparelho.", "Flexione os joelhos.", "Contraia posterior de coxa.", "Volte devagar."] },
         { nome: "Ponte de glúteo", grupo: "Glúteos", equipamento: "Nenhum ou peso", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "lombar", passos: ["Deite de barriga para cima.", "Pés no chão.", "Suba o quadril contraindo glúteos.", "Desça com controle."] },
         { nome: "Panturrilha em pé", grupo: "Panturrilha", equipamento: "Peso corporal ou halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "nenhuma", passos: ["Fique em pé.", "Suba na ponta dos pés.", "Contraia no topo.", "Desça devagar."] },
-        { nome: "Abdominal prancha", grupo: "Abdômen", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "lombar", passos: ["Apoie cotovelos e pés.", "Mantenha corpo alinhado.", "Contraia abdômen.", "Não deixe quadril cair."] },
-        { nome: "Agachamento búlgaro", grupo: "Pernas", equipamento: "Peso corporal", nivel: "intermediario", local: ["sem_equipamento", "casa_limitado", "garagem"], evitar: "joelho", passos: ["Apoie o pé de trás em cadeira ou banco.", "Desça com controle.", "Mantenha joelho alinhado.", "Suba empurrando o chão."] },
-        { nome: "Cadeirinha na parede", grupo: "Pernas", equipamento: "Peso corporal", nivel: "iniciante", local: ["sem_equipamento", "casa_limitado"], evitar: "joelho", passos: ["Encoste as costas na parede.", "Desça até posição confortável.", "Segure a posição.", "Respire sem travar."] },
-        { nome: "Abdominal infra", grupo: "Abdômen", equipamento: "Peso corporal", nivel: "iniciante", local: ["sem_equipamento", "casa_limitado"], evitar: "lombar", passos: ["Deite de barriga para cima.", "Contraia abdômen.", "Eleve as pernas com controle.", "Desça sem arquear lombar."] },
-        { nome: "Mountain climber", grupo: "Core/Cardio", equipamento: "Peso corporal", nivel: "intermediario", local: ["sem_equipamento", "casa_limitado"], evitar: "joelho", passos: ["Fique em posição de prancha.", "Alterne joelhos em direção ao peito.", "Mantenha abdômen firme.", "Controle o ritmo."] },
-        { nome: "Polichinelo", grupo: "Cardio/HIIT", equipamento: "Peso corporal", nivel: "iniciante", local: ["sem_equipamento", "casa_limitado"], evitar: "joelho", passos: ["Abra pernas e braços ao mesmo tempo.", "Mantenha ritmo confortável.", "Aterrisse leve.", "Reduza impacto se necessário."] },
-        { nome: "Burpee adaptado", grupo: "Cardio/HIIT", equipamento: "Peso corporal", nivel: "intermediario", local: ["sem_equipamento", "casa_limitado"], evitar: "joelho", passos: ["Agache com controle.", "Leve as mãos ao chão.", "Estenda as pernas sem impacto exagerado.", "Volte e fique em pé."] }
+        { nome: "Abdominal prancha", grupo: "Abdômen", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "lombar", passos: ["Apoie cotovelos e pés.", "Mantenha corpo alinhado.", "Contraia abdômen.", "Não deixe quadril cair."] }
       ],
       descanso: [
         { nome: "Caminhada leve", grupo: "Recuperação", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "nenhuma", passos: ["Caminhe em ritmo confortável.", "Respire de forma controlada.", "Não transforme em treino pesado.", "Finalize com alongamentos leves."] },
@@ -2717,7 +2465,6 @@
 
       ocultarPaginasDoApp();
       document.getElementById("paginaCardio").classList.remove("hidden");
-      atualizarAvisoCardioSemCheckin();
       carregarCardios();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -2785,7 +2532,7 @@
     }
 
     function obterMensagemInteligente(energia, letraTreino, progressaoSemanal) {
-      if (letraTreino === "descanso") return "Hoje é domingo, um ótimo dia para descanso e recuperação. Se ainda quiser treinar, faça algo mais leve, com técnica, mobilidade e sem exagerar.";
+      if (letraTreino === "descanso") return "Hoje é um ótimo dia para recuperar. Recuperação também faz parte da evolução.";
       if (energia === "bem" && progressaoSemanal && progressaoSemanal.fase === "evolucao") return "Boa fase para evoluir com controle. Consistência é o que traz resultado.";
       if (energia === "cansado") return "Hoje o foco é fazer bem feito, sem exagerar. Um treino ajustado ainda conta muito.";
       if (energia === "mal") return "Respeite seu corpo hoje. Técnica, leveza e segurança vêm em primeiro lugar.";
@@ -2801,109 +2548,6 @@
       }
     }
 
-
-    function ultimoTreinoSalvoLocal() {
-      try {
-        const historico = JSON.parse(localStorage.getItem("historicoTreinos") || "[]");
-        if (Array.isArray(historico) && historico.length > 0) return historico[0];
-      } catch (erro) {}
-      return null;
-    }
-
-    function treinoFoiOntemOuHoje(registro) {
-      if (!registro) return false;
-      const criadoEm = Number(registro.criadoEm || 0);
-      if (!criadoEm) return false;
-      const hoje = new Date();
-      const dataRegistro = new Date(criadoEm);
-      hoje.setHours(0,0,0,0);
-      dataRegistro.setHours(0,0,0,0);
-      const diff = Math.floor((hoje.getTime() - dataRegistro.getTime()) / 86400000);
-      return diff >= 0 && diff <= 1;
-    }
-
-    function escolherTreinoAlternativo(letra) {
-      if (letra === "A") return "B";
-      if (letra === "B") return "C";
-      if (letra === "C") return "A";
-      return "A";
-    }
-
-    function mensagemRepeticaoTreino(letraSolicitada, letraSugerida) {
-      if (!letraSolicitada || letraSolicitada === "descanso") return "";
-      return "<div class='aviso-repeticao-treino'><strong>⚠️ Atenção:</strong> você treinou " + limparTextoSeguro(nomeAmigavelTreino(letraSolicitada)) + " recentemente. Para melhorar recuperação e evolução, o app sugeriu " + limparTextoSeguro(nomeAmigavelTreino(letraSugerida)) + ". Se ainda quiser repetir a mesma região, faça com carga menor, mais técnica e menos volume.</div>";
-    }
-
-    function equipamentoPermitidoParaAmbiente(exercicio) {
-      if (!perfilUsuario || !exercicio) return true;
-      const equipamento = String(exercicio.equipamento || "").toLowerCase();
-
-      if (perfilUsuario.localTreino === "sem_equipamento") {
-        return equipamento.includes("nenhum") || equipamento.includes("peso corporal") || equipamento.includes("banco ou cadeira") || equipamento.includes("cadeira");
-      }
-
-      if (perfilUsuario.localTreino === "casa_limitado") {
-        return equipamento.includes("nenhum") || equipamento.includes("peso corporal") || equipamento.includes("halter") || equipamento.includes("elástico") || equipamento.includes("mochila") || equipamento.includes("banco ou cadeira") || equipamento.includes("cadeira");
-      }
-
-      if (perfilUsuario.localTreino === "garagem") {
-        return equipamento.includes("nenhum") || equipamento.includes("peso corporal") || equipamento.includes("halter") || equipamento.includes("elástico") || equipamento.includes("mochila") || equipamento.includes("barra") || equipamento.includes("banco") || equipamento.includes("estação") || equipamento.includes("polia");
-      }
-
-      return true;
-    }
-
-    function aplicarFiltroAmbiente(lista) {
-      return (lista || []).filter(function(exercicio) {
-        if (!perfilUsuario) return true;
-        const locais = exercicio.local || [];
-        return locais.includes(perfilUsuario.localTreino) && equipamentoPermitidoParaAmbiente(exercicio);
-      });
-    }
-
-    function orientacaoTreinoPesoCorporal() {
-      if (!perfilUsuario || perfilUsuario.localTreino !== "sem_equipamento") return "";
-      return "<span class='badge-ambiente'>Peso corporal / calistenia</span><br><span class='small'>Adapte quando necessário: use joelhos no chão nas flexões, reduza amplitude no agachamento e priorize controle. Faça 3 séries de 10 a 15 repetições ou circuitos de 30 segundos por movimento. Consistência é mais importante que intensidade exagerada.</span><br>";
-    }
-
-    function limparCamposRegistroEvolucao(manterNome) {
-      if (!manterNome) {
-        const exercicioRegistro = document.getElementById("exercicioRegistro");
-        if (exercicioRegistro) exercicioRegistro.value = "";
-      }
-      const carga = document.getElementById("carga");
-      const reps = document.getElementById("reps");
-      const sensacao = document.getElementById("sensacao");
-      const obs = document.getElementById("observacaoTreino");
-      const resultado = document.getElementById("resultadoEvolucao");
-      if (carga) carga.value = "";
-      if (reps) reps.value = "";
-      if (sensacao) sensacao.value = "normal";
-      if (obs) obs.value = "";
-      if (resultado) resultado.innerHTML = "";
-    }
-
-    function rolarParaPrimeiroExercicioPendente() {
-      setTimeout(function() {
-        const cards = document.querySelectorAll("#listaExercicios .exercise");
-        let alvo = null;
-        for (let i = 0; i < cards.length; i++) {
-          if (!cards[i].classList.contains("concluido")) {
-            alvo = cards[i];
-            break;
-          }
-        }
-        if (!alvo) alvo = document.getElementById("resultadoTreino");
-        if (alvo) alvo.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 250);
-    }
-
-    function finalizarRegistroEVoltarAoTreino() {
-      limparCamposRegistroEvolucao(false);
-      rolarParaPrimeiroExercicioPendente();
-    }
-
-
     function nomeDoDiaDaSemana() {
       const dias = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
       return dias[new Date().getDay()];
@@ -2911,38 +2555,23 @@
 
     function escolherTreinoPorDiaDaSemana() {
       const hoje = new Date().getDay();
-      if (hoje === 0) return "descanso";
       if (hoje === 1 || hoje === 4) return "A";
       if (hoje === 2 || hoje === 5) return "B";
       if (hoje === 3 || hoje === 6) return "C";
+      if (hoje === 0) return "A";
       return "A";
     }
 
     function escolherTreinoABC(divisaoSelecionada) {
-      let escolhido = "";
-
-      if (divisaoSelecionada === "semana") escolhido = escolherTreinoPorDiaDaSemana();
-      else if (divisaoSelecionada === "descanso") escolhido = "descanso";
-      else if (divisaoSelecionada !== "automatico") escolhido = divisaoSelecionada;
-      else {
-        const historico = JSON.parse(localStorage.getItem("historicoTreinos") || "[]");
-        if (historico.length === 0 || !historico[0].letraTreino) escolhido = "A";
-        else {
-          const ultimoTreino = historico[0].letraTreino;
-          if (ultimoTreino === "A") escolhido = "B";
-          else if (ultimoTreino === "B") escolhido = "C";
-          else escolhido = "A";
-        }
-      }
-
-      const ultimo = ultimoTreinoSalvoLocal();
-      if (ultimo && treinoFoiOntemOuHoje(ultimo) && ultimo.letraTreino === escolhido && escolhido !== "descanso") {
-        const sugerido = escolherTreinoAlternativo(escolhido);
-        mensagemEvolucaoAtual = (mensagemEvolucaoAtual || "") + mensagemRepeticaoTreino(escolhido, sugerido);
-        return sugerido;
-      }
-
-      return escolhido;
+      if (divisaoSelecionada === "semana") return escolherTreinoPorDiaDaSemana();
+      if (divisaoSelecionada === "descanso") return "descanso";
+      if (divisaoSelecionada !== "automatico") return divisaoSelecionada;
+      const historico = JSON.parse(localStorage.getItem("historicoTreinos") || "[]");
+      if (historico.length === 0 || !historico[0].letraTreino) return "A";
+      const ultimoTreino = historico[0].letraTreino;
+      if (ultimoTreino === "A") return "B";
+      if (ultimoTreino === "B") return "C";
+      return "A";
     }
 
     function nivelPermitido(exercicio) {
@@ -3201,13 +2830,23 @@
       caixa.innerHTML = gerarTextoSugestaoCardio();
     }
 
+    function alternarCamposCardio() {
+      const naoCorreu = document.getElementById("naoCorreuRecentemente");
+      const desativar = naoCorreu && naoCorreu.checked;
+      ["distanciaCardio", "tempoCardio", "intensidadeCardio", "sensacaoCardio", "observacaoCardio", "nivelCardio", "objetivoCardio", "condicaoCardio", "temDesafioCardio", "distanciaDesafioCardio", "dataDesafioCardio"].forEach(function(id) {
+        const campo = document.getElementById(id);
+        if (campo) campo.disabled = desativar;
+      });
+    }
+
     function salvarCardio() {
       if (!acessoLiberado || !usuarioAtual || !db) {
         alert("Faça login com um e-mail autorizado para salvar atividades de cardio.");
         return;
       }
-      const naoCorreu = null;
-const tipoAtividadeCardio = document.getElementById("tipoAtividadeCardio") ? document.getElementById("tipoAtividadeCardio").value : "corrida";
+
+      const naoCorreu = document.getElementById("naoCorreuRecentemente") && document.getElementById("naoCorreuRecentemente").checked;
+      const tipoAtividadeCardio = document.getElementById("tipoAtividadeCardio") ? document.getElementById("tipoAtividadeCardio").value : "corrida";
       const distancia = Number(document.getElementById("distanciaCardio").value);
       const tempo = Number(document.getElementById("tempoCardio").value);
       const intensidade = document.getElementById("intensidadeCardio").value;
@@ -3306,14 +2945,14 @@ const tipoAtividadeCardio = document.getElementById("tipoAtividadeCardio") ? doc
     function obterCardiosDaNuvem(callback) {
       if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
 
-      const limite90Dias = new Date().getTime() - (90 * 24 * 60 * 60 * 1000);
+      const limite30Dias = new Date().getTime() - (30 * 24 * 60 * 60 * 1000);
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").get()
         .then(function(snapshot) {
           const lista = [];
           snapshot.forEach(function(doc) {
             const item = doc.data();
-            if (!item.criadoEm || Number(item.criadoEm) >= limite90Dias) lista.push(item);
+            if (!item.criadoEm || Number(item.criadoEm) >= limite30Dias) lista.push(item);
           });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
           callback(lista);
@@ -3579,9 +3218,7 @@ const tipoAtividadeCardio = document.getElementById("tipoAtividadeCardio") ? doc
     }
 
     function gerarTreino() {
-      
-      marcarCheckinRespondido();
-analisarEsforcoRecente(function(esforcoRecente) {
+      analisarEsforcoRecente(function(esforcoRecente) {
         analisarProgressaoSemanal(function(progressaoSemanal) {
           gerarTreinoComEsforco(
             esforcoRecente || { sugerirDescanso: false, mensagem: "" },
@@ -3713,16 +3350,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
         exerciciosConcluidos = new Array(treinoAtual.length).fill(false);
       }
       sugestoesCarga = buscarSugestoesDeCarga(treinoAtual);
-      const ordemExercicios = treinoAtual
-        .map(function(exercicio, index) { return { exercicio: exercicio, index: index, concluido: exerciciosConcluidos[index] === true }; })
-        .sort(function(a, b) {
-          if (a.concluido === b.concluido) return a.index - b.index;
-          return a.concluido ? 1 : -1;
-        });
-
-      ordemExercicios.forEach(function(itemOrdem) {
-        const exercicio = itemOrdem.exercicio;
-        const index = itemOrdem.index;
+      treinoAtual.forEach(function(exercicio, index) {
         const div = document.createElement("div");
         div.className = "exercise";
         div.id = "cardExercicio" + index;
@@ -3769,18 +3397,9 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
     function marcarExercicioConcluido(index, concluido) {
       exerciciosConcluidos[index] = concluido;
-
-      if (concluido && treinoAtual[index]) {
-        preencherRegistroComExercicio(index);
-      }
-
+      const card = document.getElementById("cardExercicio" + index);
+      if (card) concluido ? card.classList.add("concluido") : card.classList.remove("concluido");
       salvarTreinoAtualLocal();
-      mostrarTreinoNaTela();
-      atualizarProgressoExercicios();
-    }
-
-      salvarTreinoAtualLocal();
-      mostrarTreinoNaTela();
       atualizarProgressoExercicios();
     }
 
@@ -3851,15 +3470,10 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
     function preencherRegistroComExercicio(index) {
       const exercicio = treinoAtual[index];
-      if (!exercicio) return;
-
-      const campo = document.getElementById("exercicioRegistro");
-      if (campo) campo.value = exercicio.nome || "";
-
-      limparCamposRegistroEvolucao(true);
-
-      const registro = document.getElementById("registroEvolucao");
-      if (registro) registro.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("exercicioRegistro").value = exercicio.nome;
+      const sugestao = sugestoesCarga[exercicio.nome];
+      if (sugestao) document.getElementById("carga").value = sugestao.cargaSugerida;
+      document.getElementById("exercicioRegistro").scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     function calcularEvolucao() {
@@ -3906,21 +3520,19 @@ analisarEsforcoRecente(function(esforcoRecente) {
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").add(treinoSalvo)
         .then(function() { alert("Treino salvo na nuvem."); mostrarHistorico(); })
         .catch(function(erro) { console.log("Erro ao salvar treino na nuvem:", erro); alert("Não foi possível salvar o treino na nuvem. Confira sua conexão e tente novamente."); });
-    
-      finalizarRegistroEVoltarAoTreino();
-    
+    }
 
     function obterHistoricoDaNuvem(callback) {
       if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
 
-      const limite90Dias = new Date().getTime() - (90 * 24 * 60 * 60 * 1000);
+      const limite30Dias = new Date().getTime() - (30 * 24 * 60 * 60 * 1000);
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").get()
         .then(function(snapshot) {
           const lista = [];
           snapshot.forEach(function(doc) {
             const item = doc.data();
-            if (!item.criadoEm || Number(item.criadoEm) >= limite90Dias) lista.push(item);
+            if (!item.criadoEm || Number(item.criadoEm) >= limite30Dias) lista.push(item);
           });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
           callback(lista);
@@ -4080,31 +3692,13 @@ analisarEsforcoRecente(function(esforcoRecente) {
         }
       });
 
-      const historicoPeso = JSON.parse(localStorage.getItem("historicoPeso") || "[]");
-      const pesos = historicoPeso.slice(0, 10).map(function(item) { return Number(item.peso || 0); }).filter(function(p) { return p > 0; });
-      const pesoAtual = pesos.length ? pesos[0] : (perfilUsuario ? Number(perfilUsuario.peso || 0) : 0);
-      const pesoMaisAntigo = pesos.length ? pesos[pesos.length - 1] : pesoAtual;
-      const diferencaPeso = pesoAtual && pesoMaisAntigo ? (pesoAtual - pesoMaisAntigo) : 0;
-
-      const diasAtivos = {};
-      treinos.forEach(function(item) { const d = dataRegistroParaDia(item); if (d) diasAtivos[d] = true; });
-      cardios.forEach(function(item) { const d = dataRegistroParaDia(item); if (d) diasAtivos[d] = true; });
-      const frequencia = Object.keys(diasAtivos).length;
-
       const maxTreino = Math.max(1, mapaTreinos.A, mapaTreinos.B, mapaTreinos.C, mapaTreinos.Descanso);
       const maxCardio = Math.max(1, mapaCardio.Corrida, mapaCardio.Caminhada, mapaCardio.Bicicleta);
       const paceTexto = melhorPace ? (Math.floor(melhorPace) + ":" + String(Math.round((melhorPace - Math.floor(melhorPace)) * 60)).padStart(2, "0") + " min/km") : "Sem pace ainda";
 
       return "<div class='grafico-card'>" +
-        "<strong>📈 Gráficos reais de evolução</strong><br>" +
-        "<span class='small'>Resumo visual baseado em peso registrado, treinos, cardio e frequência dos últimos 90 dias.</span>" +
-        "<div class='alerta'><strong>Resumo real:</strong><br>" +
-        "Peso atual registrado: " + (pesoAtual ? pesoAtual.toFixed(1) + " kg" : "sem peso registrado") + "<br>" +
-        "Variação de peso: " + (diferencaPeso > 0 ? "+" : "") + diferencaPeso.toFixed(1) + " kg<br>" +
-        "Frequência: " + frequencia + " dia(s) com treino/cardio<br>" +
-        "Treinos salvos: " + treinos.length + " | Cardios salvos: " + cardios.length + "</div>" +
-        montarLinhaGrafico("Frequência nos últimos 90 dias", frequencia, 90, frequencia + " dia(s)") +
-        "<br><strong>💪 Partes treinadas</strong>" +
+        "<strong>📈 Gráficos simples de evolução</strong><br>" +
+        "<span class='small'>Resumo visual leve, sem pesar o app.</span>" +
         montarLinhaGrafico("Treino de membros superiores", mapaTreinos.A, maxTreino, mapaTreinos.A + " registro(s)") +
         montarLinhaGrafico("Treino de costas e bíceps", mapaTreinos.B, maxTreino, mapaTreinos.B + " registro(s)") +
         montarLinhaGrafico("Treino de pernas e core", mapaTreinos.C, maxTreino, mapaTreinos.C + " registro(s)") +
@@ -4121,102 +3715,6 @@ analisarEsforcoRecente(function(esforcoRecente) {
       "</div>";
     }
 
-    function formatarDiaHistorico(chave) {
-      if (!chave) return "Sem data";
-      const partes = chave.split("-");
-      if (partes.length !== 3) return chave;
-      return partes[2] + "/" + partes[1];
-    }
-
-    function formatarDataCompletaHistorico(chave) {
-      if (!chave) return "Sem data";
-      const partes = chave.split("-");
-      if (partes.length !== 3) return chave;
-      return partes[2] + "/" + partes[1] + "/" + partes[0];
-    }
-
-    function agruparRegistrosPorDia(treinos, cardios) {
-      const mapa = {};
-
-      (treinos || []).forEach(function(item) {
-        const dia = dataRegistroParaDia(item);
-        if (!dia) return;
-        if (!mapa[dia]) mapa[dia] = { treinos: [], cardios: [] };
-        mapa[dia].treinos.push(item);
-      });
-
-      (cardios || []).forEach(function(item) {
-        const dia = dataRegistroParaDia(item);
-        if (!dia) return;
-        if (!mapa[dia]) mapa[dia] = { treinos: [], cardios: [] };
-        mapa[dia].cardios.push(item);
-      });
-
-      return mapa;
-    }
-
-    function montarCardTreinoHistorico(item) {
-      return "<div class='historico-item'>" +
-        "<strong>💪 " + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
-        "Dia: " + limparTextoSeguro(item.diaSemana || "Não informado") + "<br>" +
-        "Pessoa: " + limparTextoSeguro(item.nomeUsuario || "Usuário") + "<br>" +
-        "Treino: " + limparTextoSeguro(nomeAmigavelTreino(item.letraTreino || "")) + "<br>" +
-        "Meta: " + limparTextoSeguro(traduzirMeta(item.meta)) + "<br>" +
-        "Local: " + limparTextoSeguro(traduzirLocal(item.local)) + "<br>" +
-        "Concluídos: " + limparTextoSeguro(item.totalConcluidos || 0) + " de " + limparTextoSeguro(item.totalExercicios || (item.exercicios ? item.exercicios.length : 0)) + " exercícios<br>" +
-        "Exercícios: " + limparTextoSeguro(item.exercicios ? item.exercicios.join(", ") : "Não informado") + "<br>" +
-        "Registro principal: " + limparTextoSeguro(item.exercicioRegistro || "Não informado") + "<br>" +
-        "Carga: " + limparTextoSeguro(item.carga !== undefined && item.carga !== "" ? item.carga : "-") + " kg | Reps: " + limparTextoSeguro(item.reps || "-") + " | Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
-        "Evolução: " + limparTextoSeguro(item.evolucao || "Não calculada") + "<br>" +
-        "Feedback final: " + limparTextoSeguro(item.feedbackFinalTreino || "Não informado") + "<br>" +
-        "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
-      "</div>";
-    }
-
-    function montarCardCardioHistorico(item) {
-      if (item.tipo === "sem_cardio" || item.tipo === "sem_corrida") {
-        return "<div class='historico-item'>" +
-          "<strong>🏃 " + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
-          "Status: não fez cardio recentemente<br>" +
-          "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
-        "</div>";
-      }
-
-      const atividade = item.tipoAtividade === "caminhada" ? "Caminhada" : (item.tipoAtividade === "bicicleta" ? "Bicicleta" : "Corrida");
-      return "<div class='historico-item'>" +
-        "<strong>🏃 " + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
-        "Atividade: " + limparTextoSeguro(atividade) + "<br>" +
-        "Distância: " + limparTextoSeguro(item.distancia || 0) + " km<br>" +
-        "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
-        "Ritmo médio: " + limparTextoSeguro(calcularPaceMedio(item) || "Não calculado") + "<br>" +
-        "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCardio(item.intensidade)) + "<br>" +
-        "Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
-        "Nível: " + limparTextoSeguro(traduzirNivelCardio(item.nivelCardio || "")) + "<br>" +
-        "Objetivo: " + limparTextoSeguro(traduzirObjetivoCardio(item.objetivoCardio || "")) + "<br>" +
-        (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCardio(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
-        "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
-      "</div>";
-    }
-
-    function renderizarDetalheDiaHistorico(chaveDia, mapaDias) {
-      const detalhe = document.getElementById("detalheDiaHistorico");
-      if (!detalhe || !mapaDias || !mapaDias[chaveDia]) return;
-
-      document.querySelectorAll(".dia-historico-btn").forEach(function(botao) {
-        botao.classList.remove("ativo");
-      });
-      const botaoAtivo = document.getElementById("diaHistorico" + chaveDia.replace(/-/g, ""));
-      if (botaoAtivo) botaoAtivo.classList.add("ativo");
-
-      const grupo = mapaDias[chaveDia];
-      let htmlDia = "<div class='alerta'><strong>" + formatarDataCompletaHistorico(chaveDia) + "</strong><br>" +
-        "Treinos: " + grupo.treinos.length + " | Cardios: " + grupo.cardios.length + "</div>";
-
-      grupo.treinos.forEach(function(item) { htmlDia += montarCardTreinoHistorico(item); });
-      grupo.cardios.forEach(function(item) { htmlDia += montarCardCardioHistorico(item); });
-
-      detalhe.innerHTML = htmlDia;
-    }
 
     function renderHistoricoCompleto(historico, historicoCardio) {
       const listaHistoricoCompleto = document.getElementById("listaHistoricoCompleto");
@@ -4233,57 +3731,76 @@ analisarEsforcoRecente(function(esforcoRecente) {
       listaHistoricoCompleto.innerHTML += montarResumoPessoal(treinos, cardios);
       listaHistoricoCompleto.innerHTML += montarGraficosEvolucao(treinos, cardios);
 
-      const mapaDias = agruparRegistrosPorDia(treinos, cardios);
-      const diasOrdenados = Object.keys(mapaDias).sort(function(a, b) { return b.localeCompare(a); });
-
-      if (diasOrdenados.length > 0) {
-        const calendarioBox = document.createElement("div");
-        calendarioBox.className = "grafico-card";
-        let calendarioHTML = "<strong>📅 Calendário de treinos</strong><br>" +
-          "<span class='small'>Toque em uma data para ver o treino/cardio daquele dia.</span>" +
-          "<div class='calendario-historico'>";
-
-        diasOrdenados.forEach(function(dia, indice) {
-          const grupo = mapaDias[dia];
-          calendarioHTML += "<button type='button' id='diaHistorico" + dia.replace(/-/g, "") + "' class='dia-historico-btn" + (indice === 0 ? " ativo" : "") + "' onclick='renderizarDetalheDiaHistorico(" + JSON.stringify(dia) + ", window.__metatreinoMapaHistorico)'>" +
-            formatarDiaHistorico(dia) + "<br><span>💪 " + grupo.treinos.length + " | 🏃 " + grupo.cardios.length + "</span></button>";
-        });
-
-        calendarioHTML += "</div><div id='detalheDiaHistorico' class='detalhe-dia-historico'></div>";
-        calendarioBox.innerHTML = calendarioHTML;
-        listaHistoricoCompleto.appendChild(calendarioBox);
-        window.__metatreinoMapaHistorico = mapaDias;
-        renderizarDetalheDiaHistorico(diasOrdenados[0], mapaDias);
-      }
-
       const tituloTreinos = document.createElement("div");
       tituloTreinos.className = "alerta";
-      tituloTreinos.innerHTML = "<strong>Histórico geral dos últimos 90 dias</strong><br><span class='small'>Lista completa abaixo, separada por treino e cardio.</span>";
+      tituloTreinos.innerHTML = "<strong>Histórico de treinos</strong><br><span class='small'>Treinos de força registrados na nuvem.</span>";
       listaHistoricoCompleto.appendChild(tituloTreinos);
 
-      if (treinos.length > 0) {
-        const tituloTreinosForca = document.createElement("div");
-        tituloTreinosForca.className = "alerta";
-        tituloTreinosForca.innerHTML = "<strong>Treinos de força</strong>";
-        listaHistoricoCompleto.appendChild(tituloTreinosForca);
-        treinos.forEach(function(item) {
-          const wrapper = document.createElement("div");
-          wrapper.innerHTML = montarCardTreinoHistorico(item);
-          listaHistoricoCompleto.appendChild(wrapper.firstChild);
-        });
+      if (treinos.length === 0) {
+        const vazioTreino = document.createElement("p");
+        vazioTreino.className = "small";
+        vazioTreino.innerText = "Nenhum treino salvo ainda.";
+        listaHistoricoCompleto.appendChild(vazioTreino);
       }
 
-      if (cardios.length > 0) {
-        const tituloCardio = document.createElement("div");
-        tituloCardio.className = "alerta";
-        tituloCardio.innerHTML = "<strong>Histórico de cardio</strong>";
-        listaHistoricoCompleto.appendChild(tituloCardio);
-        cardios.forEach(function(item) {
-          const wrapper = document.createElement("div");
-          wrapper.innerHTML = montarCardCardioHistorico(item);
-          listaHistoricoCompleto.appendChild(wrapper.firstChild);
-        });
+      treinos.forEach(function(item) {
+        const div = document.createElement("div");
+        div.className = "historico-item";
+        div.innerHTML = "<strong>" + (item.data || "Sem data") + "</strong><br>" +
+          "Dia: " + (item.diaSemana || "Não informado") + "<br>" +
+          "Pessoa: " + (item.nomeUsuario || "Usuário") + "<br>" +
+          "Treino: " + limparTextoSeguro(nomeAmigavelTreino(item.letraTreino || "")) + "<br>" +
+          "Meta: " + traduzirMeta(item.meta) + "<br>" +
+          "Local: " + traduzirLocal(item.local) + "<br>" +
+          "Concluídos: " + (item.totalConcluidos || 0) + " de " + (item.totalExercicios || (item.exercicios ? item.exercicios.length : 0)) + " exercícios<br>" +
+          "Exercícios: " + (item.exercicios ? item.exercicios.join(", ") : "Não informado") + "<br>" +
+          "Registro principal: " + (item.exercicioRegistro || "Não informado") + "<br>" +
+          "Carga: " + (item.carga !== undefined && item.carga !== "" ? item.carga : "-") + " kg | Reps: " + (item.reps || "-") + " | Sensação: " + (item.sensacao || "-") + "<br>" +
+          "Evolução: " + (item.evolucao || "Não calculada") + "<br>" +
+          "Feedback final: " + (item.feedbackFinalTreino || "Não informado") + "<br>" +
+          "Observação: " + (item.observacao || "Nenhuma");
+        listaHistoricoCompleto.appendChild(div);
+      });
+
+      const tituloCardio = document.createElement("div");
+      tituloCardio.className = "alerta";
+      tituloCardio.innerHTML = "<strong>Histórico de cardio</strong><br><span class='small'>Corrida, caminhada e bicicleta registrados na nuvem.</span>";
+      listaHistoricoCompleto.appendChild(tituloCardio);
+
+      if (cardios.length === 0) {
+        const vazioCardio = document.createElement("p");
+        vazioCardio.className = "small";
+        vazioCardio.innerText = "Nenhum cardio salvo ainda.";
+        listaHistoricoCompleto.appendChild(vazioCardio);
       }
+
+      cardios.forEach(function(item) {
+        const div = document.createElement("div");
+        div.className = "historico-item";
+
+        if (item.tipo === "sem_cardio" || item.tipo === "sem_corrida") {
+          div.innerHTML =
+            "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
+            "Status: não fez cardio recentemente<br>" +
+            "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
+        } else {
+          const atividade = item.tipoAtividade === "caminhada" ? "Caminhada" : (item.tipoAtividade === "bicicleta" ? "Bicicleta" : "Corrida");
+          div.innerHTML =
+            "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
+            "Atividade: " + limparTextoSeguro(atividade) + "<br>" +
+            "Distância: " + limparTextoSeguro(item.distancia || 0) + " km<br>" +
+            "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
+            "Ritmo médio: " + limparTextoSeguro(calcularPaceMedio(item) || "Não calculado") + "<br>" +
+            "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCardio(item.intensidade)) + "<br>" +
+            "Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
+            "Nível: " + limparTextoSeguro(traduzirNivelCardio(item.nivelCardio || "")) + "<br>" +
+            "Objetivo: " + limparTextoSeguro(traduzirObjetivoCardio(item.objetivoCardio || "")) + "<br>" +
+            (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCardio(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
+            "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
+        }
+
+        listaHistoricoCompleto.appendChild(div);
+      });
     }
 
     function limparHistorico() {
@@ -4304,54 +3821,30 @@ analisarEsforcoRecente(function(esforcoRecente) {
     window.onload = function() {
       carregarPerfilAutomaticamente();
       atualizarBotoesLogin(usuarioAtual);
+      if ("serviceWorker" in navigator) navigator.serviceWorker.register("service-worker.js");
     };
   </script>
 
-
 <script>
-  const METATREINO_APP_VERSION = "1.3.3";
+  const METATREINO_APP_VERSION = "1.3.1";
 
-  function verificarAtualizacaoManual() {
-    const status = document.getElementById("statusAtualizacaoManual");
-    if (status) {
-      status.className = "alerta";
-      status.innerHTML = "🔄 Verificando atualização e recarregando o app...";
+  function mostrarBannerAtualizacao() {
+    const banner = document.getElementById("appUpdateBanner");
+    if (banner) banner.style.display = "block";
+  }
+
+  function atualizarAppAgora() {
+    try {
+      localStorage.setItem("metatreino-ultima-atualizacao-forcada", String(Date.now()));
+    } catch (e) {}
+
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
     }
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.getRegistrations()
-        .then(function(registrations) {
-          const updates = registrations.map(function(registration) {
-            return registration.update();
-          });
-          return Promise.all(updates);
-        })
-        .then(function() {
-          if (status) {
-            status.className = "alerta alerta-sucesso";
-            status.innerHTML = "✅ Verificação concluída. Se houver versão nova, ela será carregada ao atualizar a página.";
-          }
-
-          setTimeout(function() {
-            window.location.reload();
-          }, 900);
-        })
-        .catch(function() {
-          if (status) {
-            status.className = "alerta alerta-aviso";
-            status.innerHTML = "A verificação terminou. Se a versão ainda não mudou, feche e abra o app novamente.";
-          }
-        });
-    } else {
-      if (status) {
-        status.className = "alerta alerta-aviso";
-        status.innerHTML = "Seu navegador não usa Service Worker neste modo. Atualize a página normalmente.";
-      }
-
-      setTimeout(function() {
-        window.location.reload();
-      }, 900);
-    }
+    setTimeout(function() {
+      window.location.reload();
+    }, 350);
   }
 
   if ("serviceWorker" in navigator) {
@@ -4359,10 +3852,32 @@ analisarEsforcoRecente(function(esforcoRecente) {
       navigator.serviceWorker.register("./service-worker.js?v=" + METATREINO_APP_VERSION)
         .then(function(registration) {
           registration.update();
+
+          if (registration.waiting) {
+            mostrarBannerAtualizacao();
+          }
+
+          registration.addEventListener("updatefound", function() {
+            const novoWorker = registration.installing;
+            if (!novoWorker) return;
+
+            novoWorker.addEventListener("statechange", function() {
+              if (novoWorker.state === "installed" && navigator.serviceWorker.controller) {
+                mostrarBannerAtualizacao();
+              }
+            });
+          });
         })
         .catch(function(error) {
           console.log("Falha ao registrar service worker:", error);
         });
+
+      navigator.serviceWorker.addEventListener("controllerchange", function() {
+        if (!window.__metatreinoAtualizando) {
+          window.__metatreinoAtualizando = true;
+          window.location.reload();
+        }
+      });
     });
   }
 </script>
