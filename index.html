@@ -4319,34 +4319,47 @@ analisarEsforcoRecente(function(esforcoRecente) {
         renderizarDetalheDiaHistorico(diasOrdenados[0], mapaDias);
       }
 
-      const tituloTreinos = document.createElement("div");
-      tituloTreinos.className = "alerta";
-      tituloTreinos.innerHTML = "<strong>Histórico geral dos últimos 90 dias</strong><br><span class='small'>Lista completa abaixo, separada por treino e cardio.</span>";
-      listaHistoricoCompleto.appendChild(tituloTreinos);
+      const historicoGeral = [];
+      treinos.forEach(function(item) { historicoGeral.push({ tipo: "treino", criadoEm: Number(item.criadoEm || 0), dados: item }); });
+      cardios.forEach(function(item) { historicoGeral.push({ tipo: "cardio", criadoEm: Number(item.criadoEm || 0), dados: item }); });
+      historicoGeral.sort(function(a, b) { return b.criadoEm - a.criadoEm; });
+
+      const tituloResumo = document.createElement("div");
+      tituloResumo.className = "alerta";
+      tituloResumo.innerHTML = "<strong>Histórico resumido dos últimos 90 dias</strong><br><span class='small'>Mostrando somente os 3 últimos registros para manter esta aba organizada.</span>";
+      listaHistoricoCompleto.appendChild(tituloResumo);
+
+      historicoGeral.slice(0, 3).forEach(function(item) {
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = item.tipo === "treino" ? montarCardTreinoHistorico(item.dados) : montarCardCardioHistorico(item.dados);
+        listaHistoricoCompleto.appendChild(wrapper.firstChild);
+      });
+
+      if (historicoGeral.length > 3) {
+        const controleCompleto = document.createElement("div");
+        controleCompleto.className = "historico-item";
+        controleCompleto.innerHTML = "<strong>Quer ver todos os registros?</strong><br><span class='small'>Toque no botão abaixo para acompanhar o histórico completo dos últimos 90 dias, separado por treino e cardio.</span><br><button id='botaoAbrirHistoricoCompleto90' type='button' class='botao-principal' onclick='document.getElementById(\"historicoCompletoLista90\").classList.remove(\"hidden\"); this.classList.add(\"hidden\");'>Acompanhar histórico completo</button>";
+        listaHistoricoCompleto.appendChild(controleCompleto);
+      }
+
+      const listaCompleta90 = document.createElement("div");
+      listaCompleta90.id = "historicoCompletoLista90";
+      listaCompleta90.className = historicoGeral.length > 3 ? "hidden" : "";
+
+      let htmlCompleto = "<div class='alerta'><strong>Histórico completo dos últimos 90 dias</strong><br><span class='small'>Lista completa separada por treino e cardio.</span></div>";
 
       if (treinos.length > 0) {
-        const tituloTreinosForca = document.createElement("div");
-        tituloTreinosForca.className = "alerta";
-        tituloTreinosForca.innerHTML = "<strong>Treinos de força</strong>";
-        listaHistoricoCompleto.appendChild(tituloTreinosForca);
-        treinos.forEach(function(item) {
-          const wrapper = document.createElement("div");
-          wrapper.innerHTML = montarCardTreinoHistorico(item);
-          listaHistoricoCompleto.appendChild(wrapper.firstChild);
-        });
+        htmlCompleto += "<div class='alerta'><strong>Treinos de força</strong></div>";
+        treinos.forEach(function(item) { htmlCompleto += montarCardTreinoHistorico(item); });
       }
 
       if (cardios.length > 0) {
-        const tituloCardio = document.createElement("div");
-        tituloCardio.className = "alerta";
-        tituloCardio.innerHTML = "<strong>Histórico de cardio</strong>";
-        listaHistoricoCompleto.appendChild(tituloCardio);
-        cardios.forEach(function(item) {
-          const wrapper = document.createElement("div");
-          wrapper.innerHTML = montarCardCardioHistorico(item);
-          listaHistoricoCompleto.appendChild(wrapper.firstChild);
-        });
+        htmlCompleto += "<div class='alerta'><strong>Histórico de cardio</strong></div>";
+        cardios.forEach(function(item) { htmlCompleto += montarCardCardioHistorico(item); });
       }
+
+      listaCompleta90.innerHTML = htmlCompleto;
+      listaHistoricoCompleto.appendChild(listaCompleta90);
     }
 
     function limparHistorico() {
