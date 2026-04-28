@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="1.3.1">
+  <meta name="app-version" content="1.3.2">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=1.3.1">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=1.3.1">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=1.3.1">
+  <link rel="manifest" href="manifest.json?v=1.3.2">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=1.3.2">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=1.3.2">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -784,6 +784,71 @@
       margin-top: 12px;
     }
 
+
+
+    /* Versao 1.3.2 - exercicios concluidos e calendario de historico */
+    .exercise.concluido {
+      opacity: 0.42 !important;
+      filter: grayscale(100%) brightness(0.62) !important;
+      background: rgba(2, 6, 23, 0.92) !important;
+      border-color: rgba(15, 23, 42, 0.85) !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+
+    .exercise.concluido strong,
+    .exercise.concluido span,
+    .exercise.concluido h4,
+    .exercise.concluido li,
+    .exercise.concluido .aviso-video {
+      color: #64748b !important;
+    }
+
+    .exercise.concluido strong::after {
+      content: "  ✓ concluído";
+      color: #22c55e !important;
+      font-size: 13px;
+    }
+
+    .calendario-historico {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 10px 2px 4px;
+      margin-top: 10px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .calendario-historico::-webkit-scrollbar {
+      display: none;
+    }
+
+    .dia-historico-btn {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: 92px;
+      min-height: 54px;
+      padding: 10px 12px;
+      border-radius: 18px;
+      background: rgba(30, 41, 59, 0.92) !important;
+      color: #e2e8f0 !important;
+      border: 1px solid rgba(148, 163, 184, 0.35) !important;
+      box-shadow: none !important;
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .dia-historico-btn.ativo {
+      background: linear-gradient(135deg, #22c55e, #3b82f6) !important;
+      color: #ffffff !important;
+      border-color: rgba(255, 255, 255, 0.42) !important;
+    }
+
+    .detalhe-dia-historico {
+      margin-top: 14px;
+    }
+
     @media (max-width: 380px) {
       .container { padding: 14px; }
       h1 { font-size: 30px; }
@@ -1122,7 +1187,7 @@
     <section id="paginaHistoricoCompleto" class="hidden">
       <div class="card">
         <h2>📊 Histórico completo</h2>
-        <p class="small">Veja todos os detalhes dos treinos salvos na nuvem.</p>
+        <p class="small">Veja treinos e cardios dos últimos 90 dias. Use as datas abaixo como um calendário rápido para abrir o que foi feito em cada dia.</p>
         <button type="button" class="botao-secundario" onclick="irParaTreino()">Voltar para o treino</button>
         <button type="button" class="botao-secundario" onclick="mostrarHistoricoCompleto()">Atualizar histórico completo</button>
         <div id="listaHistoricoCompleto"></div>
@@ -1180,15 +1245,30 @@
         </div>
 
 
+        
+
         <div class="historico-item">
-          <strong>Versão 1.3.1 Beta</strong><br>
+          <strong>Versão 1.3.2</strong><br>
           <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 27/04/2026</p>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 22:00</p>
+          <ul>
+            <li>Exercícios concluídos agora descem para o final da lista e ficam desfocados para evitar confusão.</li>
+            <li>Histórico ampliado para os últimos 90 dias.</li>
+            <li>Histórico completo ganhou calendário de datas com rolagem e clique para ver o treino/cardio do dia.</li>
+            <li>A aba Perfil passou a se chamar Início no menu inferior, com ícone de casinha.</li>
+            <li>Atualizado o controle interno de versão para 1.3.2 no index, manifest e service worker.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
+          <strong>Versão 1.3.1</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 21:00</p>
           <ul>
             <li>Service Worker profissional com versionamento de cache.</li>
             <li>Atualização automática melhorada para Android e iOS.</li>
             <li>Botão fixo em Novidades para verificar se há nova atualização.</li>
-            <li>Fluxo reorganizado: Perfil → Check-in → Treino → Cardio → Histórico → Novidades.</li>
+            <li>Fluxo reorganizado: Início → Check-in → Treino → Cardio → Histórico → Novidades.</li>
             <li>Cardio continua acessível, mas avisa quando o check-in do dia ainda não foi feito.</li>
             <li>Cache antigo é removido automaticamente quando a versão muda.</li>
             <li>Arquivos principais recebem controle de versão para reduzir tela travada em atualização antiga.</li>
@@ -1196,9 +1276,9 @@
         </div>
 
         <div class="historico-item">
-          <strong>Versão 1.3.0 Beta</strong><br>
+          <strong>Versão 1.3.0</strong><br>
           <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 27/04/2026</p>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 20:00</p>
           <ul>
             <li>Login ajustado para iPhone/Safari usando redirecionamento quando popup for bloqueado.</li>
             <li>Mensagem de venda aparece somente antes do login e ficou centralizada.</li>
@@ -1208,33 +1288,12 @@
             <li>Substituição de exercício evita sugerir opção repetida que já está na lista.</li>
             <li>Adicionado botão para pular exercício sem travar a conclusão do treino.</li>
             <li>Ajustada quantidade de exercícios conforme treino rápido, normal ou longo.</li>
-            <li>Login mais limpo: botão de entrar some após login e botão sair fica disponível.</li>
             <li>Check-in de dor mais completo: pernas, braços, coluna/costas, ombro, joelho e lombar.</li>
             <li>Painel do treinador mais organizado: mostra 3 últimos alunos e permite ver todos.</li>
-            <li>Adicionado plano Vitalício / VIP sem data de vencimento.</li>
-            <li>Histórico carregado limitado aos últimos 30 dias para reduzir peso.</li>
-            <li>Mensagem de venda no login com contato por e-mail.</li>
-            <li>Peso limitado até 700 kg e campo de nome alterado para sugestão “Usuário”.</li>
           </ul>
         </div>
 
-        <div class="historico-item">
-          <strong>Versão 1.2.9 Beta</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 12:10</p>
-          <ul>
-            <li>Adicionado campo de valor mensal no Painel do Treinador.</li>
-            <li>Adicionado faturamento mensal estimado somando alunos ativos pagos.</li>
-            <li>Testes grátis ficam com valor zerado automaticamente.</li>
-            <li>Adicionado alerta para alunos que precisam renovar em até 7 dias.</li>
-            <li>Adicionado botão para copiar mensagem de renovação e enviar manualmente pelo WhatsApp.</li>
-            <li>Ajuste visual da paleta MetaTreino: fundo mesclado novamente e botões/abas com azul mais limpo.</li>
-            <li>Atualizada a identidade visual para MetaTreino com fundo escuro premium, verde energia e azul confiança.</li>
-            <li>Adicionado texto profissional: treinos inteligentes, acompanhamento real e evolução constante.</li>
-            <li>Melhorada a visão comercial para acompanhar vendas, testes e renovações.</li>
-            <li>Corrigido contraste visual da caixa de aceite dos termos na identidade MetaTreino.</li>
-          </ul>
-        </div>
+        
 
         
         <div class="historico-item">
@@ -1248,7 +1307,7 @@
     </section>
 
     <nav class="bottom-nav">
-      <button type="button" onclick="voltarParaPerfil()">⚙️ Perfil</button>
+      <button type="button" onclick="voltarParaPerfil()">🏠 Início</button>
       <button type="button" onclick="irParaCheckin()">✅ Check-in</button>
       <button type="button" onclick="irParaTreino()">💪 Treino</button>
       <button type="button" onclick="irParaCardio()">🏃 Cardio</button>
@@ -2881,14 +2940,14 @@
     function obterCardiosDaNuvem(callback) {
       if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
 
-      const limite30Dias = new Date().getTime() - (30 * 24 * 60 * 60 * 1000);
+      const limite90Dias = new Date().getTime() - (90 * 24 * 60 * 60 * 1000);
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").get()
         .then(function(snapshot) {
           const lista = [];
           snapshot.forEach(function(doc) {
             const item = doc.data();
-            if (!item.criadoEm || Number(item.criadoEm) >= limite30Dias) lista.push(item);
+            if (!item.criadoEm || Number(item.criadoEm) >= limite90Dias) lista.push(item);
           });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
           callback(lista);
@@ -3288,7 +3347,16 @@ analisarEsforcoRecente(function(esforcoRecente) {
         exerciciosConcluidos = new Array(treinoAtual.length).fill(false);
       }
       sugestoesCarga = buscarSugestoesDeCarga(treinoAtual);
-      treinoAtual.forEach(function(exercicio, index) {
+      const ordemExercicios = treinoAtual
+        .map(function(exercicio, index) { return { exercicio: exercicio, index: index, concluido: exerciciosConcluidos[index] === true }; })
+        .sort(function(a, b) {
+          if (a.concluido === b.concluido) return a.index - b.index;
+          return a.concluido ? 1 : -1;
+        });
+
+      ordemExercicios.forEach(function(itemOrdem) {
+        const exercicio = itemOrdem.exercicio;
+        const index = itemOrdem.index;
         const div = document.createElement("div");
         div.className = "exercise";
         div.id = "cardExercicio" + index;
@@ -3335,9 +3403,8 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
     function marcarExercicioConcluido(index, concluido) {
       exerciciosConcluidos[index] = concluido;
-      const card = document.getElementById("cardExercicio" + index);
-      if (card) concluido ? card.classList.add("concluido") : card.classList.remove("concluido");
       salvarTreinoAtualLocal();
+      mostrarTreinoNaTela();
       atualizarProgressoExercicios();
     }
 
@@ -3463,14 +3530,14 @@ analisarEsforcoRecente(function(esforcoRecente) {
     function obterHistoricoDaNuvem(callback) {
       if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
 
-      const limite30Dias = new Date().getTime() - (30 * 24 * 60 * 60 * 1000);
+      const limite90Dias = new Date().getTime() - (90 * 24 * 60 * 60 * 1000);
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").get()
         .then(function(snapshot) {
           const lista = [];
           snapshot.forEach(function(doc) {
             const item = doc.data();
-            if (!item.criadoEm || Number(item.criadoEm) >= limite30Dias) lista.push(item);
+            if (!item.criadoEm || Number(item.criadoEm) >= limite90Dias) lista.push(item);
           });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
           callback(lista);
@@ -3654,6 +3721,104 @@ analisarEsforcoRecente(function(esforcoRecente) {
     }
 
 
+
+    function formatarDiaHistorico(chave) {
+      if (!chave) return "Sem data";
+      const partes = chave.split("-");
+      if (partes.length !== 3) return chave;
+      return partes[2] + "/" + partes[1];
+    }
+
+    function formatarDataCompletaHistorico(chave) {
+      if (!chave) return "Sem data";
+      const partes = chave.split("-");
+      if (partes.length !== 3) return chave;
+      return partes[2] + "/" + partes[1] + "/" + partes[0];
+    }
+
+    function agruparRegistrosPorDia(treinos, cardios) {
+      const mapa = {};
+
+      (treinos || []).forEach(function(item) {
+        const dia = dataRegistroParaDia(item);
+        if (!dia) return;
+        if (!mapa[dia]) mapa[dia] = { treinos: [], cardios: [] };
+        mapa[dia].treinos.push(item);
+      });
+
+      (cardios || []).forEach(function(item) {
+        const dia = dataRegistroParaDia(item);
+        if (!dia) return;
+        if (!mapa[dia]) mapa[dia] = { treinos: [], cardios: [] };
+        mapa[dia].cardios.push(item);
+      });
+
+      return mapa;
+    }
+
+    function montarCardTreinoHistorico(item) {
+      return "<div class='historico-item'>" +
+        "<strong>💪 " + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
+        "Dia: " + limparTextoSeguro(item.diaSemana || "Não informado") + "<br>" +
+        "Pessoa: " + limparTextoSeguro(item.nomeUsuario || "Usuário") + "<br>" +
+        "Treino: " + limparTextoSeguro(nomeAmigavelTreino(item.letraTreino || "")) + "<br>" +
+        "Meta: " + limparTextoSeguro(traduzirMeta(item.meta)) + "<br>" +
+        "Local: " + limparTextoSeguro(traduzirLocal(item.local)) + "<br>" +
+        "Concluídos: " + limparTextoSeguro(item.totalConcluidos || 0) + " de " + limparTextoSeguro(item.totalExercicios || (item.exercicios ? item.exercicios.length : 0)) + " exercícios<br>" +
+        "Exercícios: " + limparTextoSeguro(item.exercicios ? item.exercicios.join(", ") : "Não informado") + "<br>" +
+        "Registro principal: " + limparTextoSeguro(item.exercicioRegistro || "Não informado") + "<br>" +
+        "Carga: " + limparTextoSeguro(item.carga !== undefined && item.carga !== "" ? item.carga : "-") + " kg | Reps: " + limparTextoSeguro(item.reps || "-") + " | Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
+        "Evolução: " + limparTextoSeguro(item.evolucao || "Não calculada") + "<br>" +
+        "Feedback final: " + limparTextoSeguro(item.feedbackFinalTreino || "Não informado") + "<br>" +
+        "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+      "</div>";
+    }
+
+    function montarCardCardioHistorico(item) {
+      if (item.tipo === "sem_cardio" || item.tipo === "sem_corrida") {
+        return "<div class='historico-item'>" +
+          "<strong>🏃 " + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
+          "Status: não fez cardio recentemente<br>" +
+          "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+        "</div>";
+      }
+
+      const atividade = item.tipoAtividade === "caminhada" ? "Caminhada" : (item.tipoAtividade === "bicicleta" ? "Bicicleta" : "Corrida");
+      return "<div class='historico-item'>" +
+        "<strong>🏃 " + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
+        "Atividade: " + limparTextoSeguro(atividade) + "<br>" +
+        "Distância: " + limparTextoSeguro(item.distancia || 0) + " km<br>" +
+        "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
+        "Ritmo médio: " + limparTextoSeguro(calcularPaceMedio(item) || "Não calculado") + "<br>" +
+        "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCardio(item.intensidade)) + "<br>" +
+        "Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
+        "Nível: " + limparTextoSeguro(traduzirNivelCardio(item.nivelCardio || "")) + "<br>" +
+        "Objetivo: " + limparTextoSeguro(traduzirObjetivoCardio(item.objetivoCardio || "")) + "<br>" +
+        (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCardio(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
+        "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+      "</div>";
+    }
+
+    function renderizarDetalheDiaHistorico(chaveDia, mapaDias) {
+      const detalhe = document.getElementById("detalheDiaHistorico");
+      if (!detalhe || !mapaDias || !mapaDias[chaveDia]) return;
+
+      document.querySelectorAll(".dia-historico-btn").forEach(function(botao) {
+        botao.classList.remove("ativo");
+      });
+      const botaoAtivo = document.getElementById("diaHistorico" + chaveDia.replace(/-/g, ""));
+      if (botaoAtivo) botaoAtivo.classList.add("ativo");
+
+      const grupo = mapaDias[chaveDia];
+      let htmlDia = "<div class='alerta'><strong>" + formatarDataCompletaHistorico(chaveDia) + "</strong><br>" +
+        "Treinos: " + grupo.treinos.length + " | Cardios: " + grupo.cardios.length + "</div>";
+
+      grupo.treinos.forEach(function(item) { htmlDia += montarCardTreinoHistorico(item); });
+      grupo.cardios.forEach(function(item) { htmlDia += montarCardCardioHistorico(item); });
+
+      detalhe.innerHTML = htmlDia;
+    }
+
     function renderHistoricoCompleto(historico, historicoCardio) {
       const listaHistoricoCompleto = document.getElementById("listaHistoricoCompleto");
       listaHistoricoCompleto.innerHTML = "";
@@ -3669,76 +3834,57 @@ analisarEsforcoRecente(function(esforcoRecente) {
       listaHistoricoCompleto.innerHTML += montarResumoPessoal(treinos, cardios);
       listaHistoricoCompleto.innerHTML += montarGraficosEvolucao(treinos, cardios);
 
+      const mapaDias = agruparRegistrosPorDia(treinos, cardios);
+      const diasOrdenados = Object.keys(mapaDias).sort(function(a, b) { return b.localeCompare(a); });
+
+      if (diasOrdenados.length > 0) {
+        const calendarioBox = document.createElement("div");
+        calendarioBox.className = "grafico-card";
+        let calendarioHTML = "<strong>📅 Calendário de treinos</strong><br>" +
+          "<span class='small'>Toque em uma data para ver o treino/cardio daquele dia.</span>" +
+          "<div class='calendario-historico'>";
+
+        diasOrdenados.forEach(function(dia, indice) {
+          const grupo = mapaDias[dia];
+          calendarioHTML += "<button type='button' id='diaHistorico" + dia.replace(/-/g, "") + "' class='dia-historico-btn" + (indice === 0 ? " ativo" : "") + "' onclick='renderizarDetalheDiaHistorico(" + JSON.stringify(dia) + ", window.__metatreinoMapaHistorico)'>" +
+            formatarDiaHistorico(dia) + "<br><span>💪 " + grupo.treinos.length + " | 🏃 " + grupo.cardios.length + "</span></button>";
+        });
+
+        calendarioHTML += "</div><div id='detalheDiaHistorico' class='detalhe-dia-historico'></div>";
+        calendarioBox.innerHTML = calendarioHTML;
+        listaHistoricoCompleto.appendChild(calendarioBox);
+        window.__metatreinoMapaHistorico = mapaDias;
+        renderizarDetalheDiaHistorico(diasOrdenados[0], mapaDias);
+      }
+
       const tituloTreinos = document.createElement("div");
       tituloTreinos.className = "alerta";
-      tituloTreinos.innerHTML = "<strong>Histórico de treinos</strong><br><span class='small'>Treinos de força registrados na nuvem.</span>";
+      tituloTreinos.innerHTML = "<strong>Histórico geral dos últimos 90 dias</strong><br><span class='small'>Lista completa abaixo, separada por treino e cardio.</span>";
       listaHistoricoCompleto.appendChild(tituloTreinos);
 
-      if (treinos.length === 0) {
-        const vazioTreino = document.createElement("p");
-        vazioTreino.className = "small";
-        vazioTreino.innerText = "Nenhum treino salvo ainda.";
-        listaHistoricoCompleto.appendChild(vazioTreino);
+      if (treinos.length > 0) {
+        const tituloTreinosForca = document.createElement("div");
+        tituloTreinosForca.className = "alerta";
+        tituloTreinosForca.innerHTML = "<strong>Treinos de força</strong>";
+        listaHistoricoCompleto.appendChild(tituloTreinosForca);
+        treinos.forEach(function(item) {
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = montarCardTreinoHistorico(item);
+          listaHistoricoCompleto.appendChild(wrapper.firstChild);
+        });
       }
 
-      treinos.forEach(function(item) {
-        const div = document.createElement("div");
-        div.className = "historico-item";
-        div.innerHTML = "<strong>" + (item.data || "Sem data") + "</strong><br>" +
-          "Dia: " + (item.diaSemana || "Não informado") + "<br>" +
-          "Pessoa: " + (item.nomeUsuario || "Usuário") + "<br>" +
-          "Treino: " + limparTextoSeguro(nomeAmigavelTreino(item.letraTreino || "")) + "<br>" +
-          "Meta: " + traduzirMeta(item.meta) + "<br>" +
-          "Local: " + traduzirLocal(item.local) + "<br>" +
-          "Concluídos: " + (item.totalConcluidos || 0) + " de " + (item.totalExercicios || (item.exercicios ? item.exercicios.length : 0)) + " exercícios<br>" +
-          "Exercícios: " + (item.exercicios ? item.exercicios.join(", ") : "Não informado") + "<br>" +
-          "Registro principal: " + (item.exercicioRegistro || "Não informado") + "<br>" +
-          "Carga: " + (item.carga !== undefined && item.carga !== "" ? item.carga : "-") + " kg | Reps: " + (item.reps || "-") + " | Sensação: " + (item.sensacao || "-") + "<br>" +
-          "Evolução: " + (item.evolucao || "Não calculada") + "<br>" +
-          "Feedback final: " + (item.feedbackFinalTreino || "Não informado") + "<br>" +
-          "Observação: " + (item.observacao || "Nenhuma");
-        listaHistoricoCompleto.appendChild(div);
-      });
-
-      const tituloCardio = document.createElement("div");
-      tituloCardio.className = "alerta";
-      tituloCardio.innerHTML = "<strong>Histórico de cardio</strong><br><span class='small'>Corrida, caminhada e bicicleta registrados na nuvem.</span>";
-      listaHistoricoCompleto.appendChild(tituloCardio);
-
-      if (cardios.length === 0) {
-        const vazioCardio = document.createElement("p");
-        vazioCardio.className = "small";
-        vazioCardio.innerText = "Nenhum cardio salvo ainda.";
-        listaHistoricoCompleto.appendChild(vazioCardio);
+      if (cardios.length > 0) {
+        const tituloCardio = document.createElement("div");
+        tituloCardio.className = "alerta";
+        tituloCardio.innerHTML = "<strong>Histórico de cardio</strong>";
+        listaHistoricoCompleto.appendChild(tituloCardio);
+        cardios.forEach(function(item) {
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = montarCardCardioHistorico(item);
+          listaHistoricoCompleto.appendChild(wrapper.firstChild);
+        });
       }
-
-      cardios.forEach(function(item) {
-        const div = document.createElement("div");
-        div.className = "historico-item";
-
-        if (item.tipo === "sem_cardio" || item.tipo === "sem_corrida") {
-          div.innerHTML =
-            "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
-            "Status: não fez cardio recentemente<br>" +
-            "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
-        } else {
-          const atividade = item.tipoAtividade === "caminhada" ? "Caminhada" : (item.tipoAtividade === "bicicleta" ? "Bicicleta" : "Corrida");
-          div.innerHTML =
-            "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
-            "Atividade: " + limparTextoSeguro(atividade) + "<br>" +
-            "Distância: " + limparTextoSeguro(item.distancia || 0) + " km<br>" +
-            "Tempo: " + limparTextoSeguro(item.tempo || 0) + " min<br>" +
-            "Ritmo médio: " + limparTextoSeguro(calcularPaceMedio(item) || "Não calculado") + "<br>" +
-            "Intensidade: " + limparTextoSeguro(traduzirIntensidadeCardio(item.intensidade)) + "<br>" +
-            "Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
-            "Nível: " + limparTextoSeguro(traduzirNivelCardio(item.nivelCardio || "")) + "<br>" +
-            "Objetivo: " + limparTextoSeguro(traduzirObjetivoCardio(item.objetivoCardio || "")) + "<br>" +
-            (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCardio(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
-            "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
-        }
-
-        listaHistoricoCompleto.appendChild(div);
-      });
     }
 
     function limparHistorico() {
@@ -3764,7 +3910,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
 
 <script>
-  const METATREINO_APP_VERSION = "1.3.1";
+  const METATREINO_APP_VERSION = "1.3.2";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
