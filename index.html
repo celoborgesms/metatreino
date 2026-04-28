@@ -1586,9 +1586,13 @@
     }
 
     function alvoQuantidadeExercicios(tempo, perfil) {
-      if (tempo === "rapido") return perfil && perfil.avancado ? 5 : 4;
-      if (tempo === "normal") return perfil && perfil.iniciante ? 5 : 6;
-      return perfil && perfil.iniciante ? 6 : 8;
+      // Ajuste fino 1.3.3: quantidade por tempo disponível
+      // Treino rápido (até 30 min): 3 a 4 exercícios
+      // Treino normal (cerca de 1h): 6 a 8 exercícios
+      // Treino longo (mais de 1h): 8 exercícios
+      if (tempo === "rapido") return perfil && perfil.iniciante ? 3 : 4;
+      if (tempo === "normal") return perfil && perfil.iniciante ? 6 : (perfil && perfil.avancado ? 8 : 7);
+      return 8;
     }
 
     function adaptarTreinoPorPerfil(treino, tempo) {
@@ -2629,14 +2633,25 @@
           criarExercicioPesoCorporal("Pike push-up", "Ombros", "ombro", ["Eleve o quadril formando um V invertido.", "Flexione os cotovelos.", "Aproxime a cabeça do chão com cuidado.", "Suba controlando."]),
           { nome: "Supino no chão com halteres", grupo: "Peito", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Deite no chão.", "Segure os halteres alinhados ao peito.", "Desça até o braço tocar levemente o chão.", "Suba sem bater os pesos."] },
           { nome: "Elevação lateral com elástico", grupo: "Ombros", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Pise no elástico.", "Segure as pontas.", "Eleve os braços lateralmente.", "Desça devagar."] },
-          { nome: "Tríceps francês com halter", grupo: "Tríceps", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Segure um halter acima da cabeça.", "Flexione os cotovelos.", "Estenda os braços com controle.", "Evite arquear a lombar."] }
+          { nome: "Tríceps francês com halter", grupo: "Tríceps", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Segure um halter acima da cabeça.", "Flexione os cotovelos.", "Estenda os braços com controle.", "Evite arquear a lombar."] },
+          { nome: "Supino na estação", grupo: "Peito", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Ajuste o banco e a pegada da estação.", "Mantenha os pés firmes no chão.", "Empurre com controle sem travar os cotovelos.", "Volte devagar sentindo o peitoral."] },
+          { nome: "Voador na estação", grupo: "Peito", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Ajuste os braços da máquina na altura do peito.", "Mantenha o tronco apoiado.", "Feche os braços contraindo o peitoral.", "Abra devagar sem forçar os ombros."] },
+          { nome: "Desenvolvimento na estação", grupo: "Ombros", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "ombro", passos: ["Ajuste a pegada na altura dos ombros.", "Contraia o abdômen.", "Empurre para cima com controle.", "Desça devagar sem perder a postura."] },
+          { nome: "Tríceps corda na estação", grupo: "Tríceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Prenda a corda na polia alta.", "Mantenha os cotovelos próximos ao corpo.", "Estenda os braços para baixo.", "Volte controlando a carga."] },
+          { nome: "Paralelas assistidas", grupo: "Peito/Tríceps", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "ombro", passos: ["Apoie as mãos nas barras paralelas.", "Desça somente até onde for confortável.", "Mantenha o tronco firme.", "Suba com controle, sem impulso."] }
         ],
         B: [
           criarExercicioPesoCorporal("Super-homem", "Lombar", "lombar", ["Deite de barriga para baixo.", "Eleve braços e pernas levemente.", "Segure por alguns segundos.", "Volte com controle."]),
           criarExercicioPesoCorporal("Prancha com toque no ombro", "Abdômen", "ombro", ["Fique em posição de prancha alta.", "Toque um ombro com a mão oposta.", "Alterne os lados.", "Evite balançar o quadril."]),
           { nome: "Remada com elástico sentado", grupo: "Costas", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Sente no chão.", "Passe o elástico pelos pés.", "Puxe as pontas em direção ao peito.", "Volte devagar."] },
           { nome: "Remada curvada com halteres", grupo: "Costas", equipamento: "Halteres", nivel: "intermediario", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Incline o tronco com coluna firme.", "Puxe os halteres em direção ao quadril.", "Contraia as costas.", "Desça controlando."] },
-          { nome: "Rosca bíceps com elástico", grupo: "Bíceps", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "nenhuma", passos: ["Pise no elástico.", "Segure as pontas.", "Flexione os cotovelos.", "Desça devagar."] }
+          { nome: "Rosca bíceps com elástico", grupo: "Bíceps", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "nenhuma", passos: ["Pise no elástico.", "Segure as pontas.", "Flexione os cotovelos.", "Desça devagar."] },
+          { nome: "Puxada alta na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Ajuste a polia alta.", "Puxe a barra em direção ao peito.", "Mantenha o tronco firme.", "Volte controlando a carga."] },
+          { nome: "Puxada baixa na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Sente com a coluna firme.", "Puxe a pegada em direção ao abdômen.", "Contraia as costas.", "Volte devagar sem arredondar a lombar."] },
+          { nome: "Remada na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Ajuste a pegada da remada.", "Puxe os cotovelos para trás.", "Contraia as costas no final.", "Retorne com controle."] },
+          { nome: "Rosca direta na estação", grupo: "Bíceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "nenhuma", passos: ["Use a polia baixa ou barra apropriada.", "Mantenha os cotovelos próximos ao corpo.", "Flexione os braços sem balançar.", "Desça devagar."] },
+          { nome: "Rosca Scott na estação", grupo: "Bíceps", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "nenhuma", passos: ["Apoie os braços no suporte Scott.", "Segure a pegada com firmeza.", "Suba contraindo o bíceps.", "Desça sem esticar demais os cotovelos."] },
+          { nome: "Barra fixa assistida", grupo: "Costas/Bíceps", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "ombro", passos: ["Segure a barra com firmeza.", "Ative as costas antes de puxar.", "Suba até onde conseguir com controle.", "Desça devagar sem soltar o corpo."] }
         ],
         C: [
           criarExercicioPesoCorporal("Agachamento isométrico na parede", "Pernas", "joelho", ["Encoste as costas na parede.", "Desça até uma posição confortável.", "Segure sem prender a respiração.", "Suba devagar."]),
@@ -2645,7 +2660,15 @@
           criarExercicioPesoCorporal("Mountain climber controlado", "Cardio/Abdômen", "lombar", ["Apoie as mãos no chão.", "Traga os joelhos alternadamente.", "Mantenha abdômen firme.", "Faça devagar se necessário."]),
           { nome: "Agachamento goblet", grupo: "Pernas", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "joelho", passos: ["Segure um halter junto ao peito.", "Desça com controle.", "Mantenha coluna firme.", "Suba empurrando o chão."] },
           { nome: "Elevação de quadril com mini band", grupo: "Glúteos", equipamento: "Elástico / mini band", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Coloque a mini band acima dos joelhos.", "Deite com pés no chão.", "Suba o quadril contraindo glúteos.", "Desça controlando."] },
-          { nome: "Levantamento terra com halteres", grupo: "Posterior de coxa", equipamento: "Halteres", nivel: "intermediario", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Segure os halteres à frente do corpo.", "Incline o tronco com coluna firme.", "Sinta posterior de coxa alongar.", "Suba contraindo glúteos."] }
+          { nome: "Levantamento terra com halteres", grupo: "Posterior de coxa", equipamento: "Halteres", nivel: "intermediario", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Segure os halteres à frente do corpo.", "Incline o tronco com coluna firme.", "Sinta posterior de coxa alongar.", "Suba contraindo glúteos."] },
+          { nome: "Extensão de pernas na estação", grupo: "Quadríceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "joelho", passos: ["Ajuste o apoio próximo ao tornozelo.", "Estenda os joelhos com controle.", "Contraia o quadríceps no topo.", "Desça devagar sem bater a carga."] },
+          { nome: "Flexora unilateral na estação", grupo: "Posterior de coxa", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "joelho", passos: ["Ajuste a polia ou apoio para uma perna.", "Flexione o joelho com controle.", "Contraia posterior de coxa.", "Volte devagar e troque a perna."] },
+          { nome: "Agachamento V Squat", grupo: "Quadríceps/Glúteos", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "joelho", passos: ["Ajuste a plataforma e os apoios.", "Mantenha os pés firmes.", "Desça com amplitude confortável.", "Suba sem travar os joelhos."] },
+          { nome: "Bom dia na estação", grupo: "Posterior de coxa/Lombar", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "lombar", passos: ["Use carga leve e postura firme.", "Incline o tronco mantendo a coluna neutra.", "Sinta posterior de coxa alongar.", "Volte contraindo glúteos e abdômen."] },
+          { nome: "Panturrilha em pé na estação", grupo: "Panturrilha", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "nenhuma", passos: ["Fique em pé com apoio seguro.", "Suba na ponta dos pés.", "Contraia no topo.", "Desça devagar até alongar a panturrilha."] },
+          { nome: "Avanço unilateral", grupo: "Quadríceps/Glúteos", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "joelho", passos: ["Dê um passo à frente com controle.", "Desça mantendo o tronco firme.", "Empurre o chão para voltar.", "Alterne as pernas sem pressa."] },
+          { nome: "Búlgaro na estação", grupo: "Quadríceps/Glúteos", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "joelho", passos: ["Apoie o pé de trás com segurança.", "Segure a carga ou apoio da estação se necessário.", "Desça com controle.", "Suba empurrando a perna da frente."] },
+          { nome: "Abdominal na estação", grupo: "Abdômen", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Ajuste a polia ou apoio abdominal.", "Contraia o abdômen para iniciar o movimento.", "Evite puxar com os braços.", "Volte devagar mantendo controle."] }
         ],
         descanso: [
           criarExercicioPesoCorporal("Respiração e mobilidade", "Recuperação", "nenhuma", ["Respire profundamente.", "Movimente ombros, quadril e coluna.", "Evite posições dolorosas.", "Finalize leve."])
