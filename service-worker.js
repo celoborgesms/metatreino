@@ -1,4 +1,4 @@
-const CACHE_NAME = "metatreino-cache-v1.3.2";
+const CACHE_NAME = "metatreino-cache-v1.3.3";
 
 const APP_SHELL = [
   "./",
@@ -7,7 +7,6 @@ const APP_SHELL = [
   "./icon-512.png.png"
 ];
 
-// INSTALAÇÃO
 self.addEventListener("install", function(event) {
   self.skipWaiting();
 
@@ -18,7 +17,6 @@ self.addEventListener("install", function(event) {
   );
 });
 
-// ATIVAÇÃO (REMOVE CACHE ANTIGO)
 self.addEventListener("activate", function(event) {
   event.waitUntil(
     caches.keys().then(function(keys) {
@@ -35,14 +33,12 @@ self.addEventListener("activate", function(event) {
   );
 });
 
-// PERMITIR ATUALIZAÇÃO IMEDIATA
 self.addEventListener("message", function(event) {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
 });
 
-// FETCH (ESTRATÉGIA INTELIGENTE)
 self.addEventListener("fetch", function(event) {
   if (event.request.method !== "GET") {
     return;
@@ -50,7 +46,6 @@ self.addEventListener("fetch", function(event) {
 
   const requestUrl = new URL(event.request.url);
 
-  // Navegação (index.html)
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request)
@@ -68,7 +63,6 @@ self.addEventListener("fetch", function(event) {
     return;
   }
 
-  // Firebase / Google APIs (sempre online)
   if (
     requestUrl.hostname.includes("firebase") ||
     requestUrl.hostname.includes("googleapis") ||
@@ -83,7 +77,6 @@ self.addEventListener("fetch", function(event) {
     return;
   }
 
-  // Demais arquivos
   event.respondWith(
     fetch(event.request)
       .then(function(response) {
