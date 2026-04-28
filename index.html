@@ -849,6 +849,93 @@
       margin-top: 14px;
     }
 
+
+    /* Versão 1.3.2 - Painel SaaS leve, ranking e gráficos reais */
+    .saas-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .saas-box {
+      background: rgba(30, 41, 59, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.32);
+      border-radius: 20px;
+      padding: 14px;
+      line-height: 1.35;
+    }
+
+    .saas-box strong {
+      display: block;
+      font-size: 22px;
+      color: #ffffff !important;
+      margin-bottom: 4px;
+    }
+
+    .saas-box span {
+      color: #cbd5e1 !important;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .ranking-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 13px;
+      margin-top: 10px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+    }
+
+    .ranking-posicao {
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #22c55e, #3b82f6);
+      color: #ffffff;
+      font-weight: 950;
+    }
+
+    .ranking-conteudo {
+      flex: 1;
+      min-width: 0;
+      line-height: 1.45;
+    }
+
+    .ranking-conteudo strong {
+      display: block;
+      color: #ffffff !important;
+    }
+
+    .ranking-conteudo span {
+      display: block;
+      color: #cbd5e1 !important;
+      font-size: 13px;
+    }
+
+    .ranking-pontos {
+      flex: 0 0 auto;
+      text-align: right;
+      color: #22c55e;
+      font-weight: 950;
+      font-size: 14px;
+    }
+
+    .grafico-mini {
+      margin-top: 12px;
+      padding: 13px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+    }
+
     @media (max-width: 380px) {
       .container { padding: 14px; }
       h1 { font-size: 30px; }
@@ -1226,6 +1313,8 @@
         <button type="button" class="botao-secundario" onclick="carregarUsuariosAutorizados()">Atualizar lista</button>
         <div id="mensagemPainelTreinador" class="alerta hidden"></div>
         <div id="dashboardTreinador" class="dashboard-grid"></div>
+        <div id="painelSaasTreinador" class="grafico-card"></div>
+        <div id="rankingAlunosTreinador" class="grafico-card"></div>
       </div>
 
       <div class="card">
@@ -1931,6 +2020,10 @@
       if (!usuarioAdmin || !db) {
         lista.innerHTML = "<p class='small'>Área disponível apenas para administrador.</p>";
         if (dashboard) dashboard.innerHTML = "";
+        const painelSaas = document.getElementById("painelSaasTreinador");
+        const rankingBox = document.getElementById("rankingAlunosTreinador");
+        if (painelSaas) painelSaas.innerHTML = "";
+        if (rankingBox) rankingBox.innerHTML = "";
         return;
       }
 
@@ -1969,6 +2062,11 @@
       }
 
       if (dashboard) dashboard.innerHTML = montarDashboardTreinador(usuarios);
+
+      const painelSaas = document.getElementById("painelSaasTreinador");
+      const rankingBox = document.getElementById("rankingAlunosTreinador");
+      if (painelSaas) painelSaas.innerHTML = montarPainelSaaSTreinador(usuarios);
+      if (rankingBox) rankingBox.innerHTML = montarRankingComercialAlunos(usuarios);
 
       const usuariosParaExibir = mostrarTodosAlunosPainel ? usuarios : usuarios.slice(0, 3);
       lista.innerHTML = "";
@@ -2070,6 +2168,158 @@
         "<div class='dashboard-box'><strong>" + renovar + "</strong><span class='small'>Renovar em até 7 dias</span></div>" +
         "<div class='dashboard-box'><strong>" + formatarMoeda(faturamento) + "</strong><span class='small'>Faturamento mensal estimado</span></div>";
     }
+
+
+    function montarPainelSaaSTreinador(usuarios) {
+      usuarios = usuarios || [];
+      const ativosPagos = usuarios.filter(function(item) {
+        const dados = item.dados || {};
+        return dados.ativo === true && !planoEstaVencido(dados) && dados.plano !== "teste" && dados.plano !== "vitalicio";
+      });
+
+      const testes = usuarios.filter(function(item) { return item.dados && item.dados.plano === "teste"; }).length;
+      const vitalicios = usuarios.filter(function(item) { return item.dados && item.dados.plano === "vitalicio"; }).length;
+      const renovacao = usuarios.filter(function(item) { return alunoPrecisaRenovar(item.dados || {}); }).length;
+      const vencidos = usuarios.filter(function(item) { return planoEstaVencido(item.dados || {}); }).length;
+      const receita = ativosPagos.reduce(function(total, item) {
+        return total + Math.max(Number((item.dados || {}).valorMensal || (item.dados || {}).valor || 0), 0);
+      }, 0);
+      const ticketMedio = ativosPagos.length ? receita / ativosPagos.length : 0;
+      const conversaoBasica = usuarios.length ? Math.round((ativosPagos.length / usuarios.length) * 100) : 0;
+
+      return "" +
+        "<strong>💼 Painel do treinador estilo SaaS</strong><br>" +
+        "<span class='small'>Visão de negócio simples, rápida e leve para vender, renovar e acompanhar alunos.</span>" +
+        "<div class='saas-grid'>" +
+          "<div class='saas-box'><strong>" + formatarMoeda(receita) + "</strong><span>Receita mensal ativa</span></div>" +
+          "<div class='saas-box'><strong>" + formatarMoeda(ticketMedio) + "</strong><span>Ticket médio</span></div>" +
+          "<div class='saas-box'><strong>" + conversaoBasica + "%</strong><span>Base paga ativa</span></div>" +
+          "<div class='saas-box'><strong>" + renovacao + "</strong><span>Renovar em até 7 dias</span></div>" +
+          "<div class='saas-box'><strong>" + vencidos + "</strong><span>Vencidos para recuperar</span></div>" +
+          "<div class='saas-box'><strong>" + testes + "</strong><span>Testes grátis</span></div>" +
+          "<div class='saas-box'><strong>" + vitalicios + "</strong><span>Vitalícios / VIP</span></div>" +
+          "<div class='saas-box'><strong>" + usuarios.length + "</strong><span>Total na base</span></div>" +
+        "</div>" +
+        "<div class='grafico-mini'>" +
+          montarLinhaGrafico("Alunos pagos ativos", ativosPagos.length, Math.max(1, usuarios.length), ativosPagos.length + " aluno(s)") +
+          montarLinhaGrafico("Testes grátis", testes, Math.max(1, usuarios.length), testes + " teste(s)") +
+          montarLinhaGrafico("Renovações próximas", renovacao, Math.max(1, usuarios.length), renovacao + " alerta(s)") +
+          montarLinhaGrafico("Vencidos", vencidos, Math.max(1, usuarios.length), vencidos + " aluno(s)") +
+        "</div>" +
+        "<button type='button' class='botao-secundario' onclick='carregarRankingRealDeTreinos()'>🏆 Carregar ranking real de atividade</button>" +
+        "<p class='small'>O ranking real tenta buscar treinos salvos na nuvem. Se as permissões não permitirem, o ranking comercial abaixo continua funcionando.</p>";
+    }
+
+    function calcularPontuacaoComercialAluno(item) {
+      const dados = item.dados || {};
+      let pontos = 0;
+      if (dados.ativo === true && !planoEstaVencido(dados)) pontos += 50;
+      if (dados.plano !== "teste" && dados.plano !== "vitalicio") pontos += 20;
+      if (dados.plano === "vitalicio") pontos += 30;
+      if (alunoPrecisaRenovar(dados)) pontos += 10;
+      pontos += Math.min(40, Math.round(Math.max(Number(dados.valorMensal || dados.valor || 0), 0)));
+      return pontos;
+    }
+
+    function montarRankingComercialAlunos(usuarios) {
+      usuarios = (usuarios || []).slice().sort(function(a, b) {
+        return calcularPontuacaoComercialAluno(b) - calcularPontuacaoComercialAluno(a);
+      }).slice(0, 5);
+
+      let htmlRanking = "<strong>🏆 Ranking entre alunos</strong><br>" +
+        "<span class='small'>Ranking leve baseado em status, plano e valor mensal. O ranking real de treino pode ser carregado no botão acima.</span>";
+
+      if (usuarios.length === 0) {
+        return htmlRanking + "<p class='small'>Nenhum aluno para ranquear ainda.</p>";
+      }
+
+      usuarios.forEach(function(item, indice) {
+        const dados = item.dados || {};
+        const pontos = calcularPontuacaoComercialAluno(item);
+        htmlRanking += "<div class='ranking-item'>" +
+          "<div class='ranking-posicao'>" + (indice + 1) + "</div>" +
+          "<div class='ranking-conteudo'>" +
+            "<strong>" + limparTextoSeguro(dados.nome || item.email) + "</strong>" +
+            "<span>" + limparTextoSeguro(item.email) + "</span>" +
+            "<span>Plano: " + limparTextoSeguro(dados.plano || "Não informado") + " | Valor: " + limparTextoSeguro(formatarMoeda(dados.valorMensal || dados.valor || 0)) + "</span>" +
+          "</div>" +
+          "<div class='ranking-pontos'>" + pontos + " pts</div>" +
+        "</div>";
+      });
+
+      return htmlRanking;
+    }
+
+    function carregarRankingRealDeTreinos() {
+      const rankingBox = document.getElementById("rankingAlunosTreinador");
+      if (!rankingBox) return;
+
+      if (!usuarioAdmin || !db) {
+        rankingBox.innerHTML = "<strong>🏆 Ranking real de atividade</strong><p class='small'>Área disponível apenas para administrador.</p>";
+        return;
+      }
+
+      rankingBox.innerHTML = "<strong>🏆 Ranking real de atividade</strong><p class='small'>Carregando treinos salvos na nuvem...</p>";
+
+      db.collectionGroup("treinos").get()
+        .then(function(snapshot) {
+          const alunos = {};
+          const limite90Dias = new Date().getTime() - (90 * 24 * 60 * 60 * 1000);
+
+          snapshot.forEach(function(doc) {
+            const treino = doc.data() || {};
+            const criadoEm = Number(treino.criadoEm || 0);
+            if (criadoEm && criadoEm < limite90Dias) return;
+
+            const nome = treino.nomeUsuario || "Aluno";
+            if (!alunos[nome]) {
+              alunos[nome] = { nome: nome, treinos: 0, concluidos: 0, total: 0, ultimo: 0 };
+            }
+
+            alunos[nome].treinos += 1;
+            alunos[nome].concluidos += Number(treino.totalConcluidos || 0);
+            alunos[nome].total += Number(treino.totalExercicios || 0);
+            if (criadoEm > alunos[nome].ultimo) alunos[nome].ultimo = criadoEm;
+          });
+
+          const lista = Object.keys(alunos).map(function(nome) { return alunos[nome]; })
+            .sort(function(a, b) {
+              const pontosA = (a.treinos * 10) + a.concluidos;
+              const pontosB = (b.treinos * 10) + b.concluidos;
+              return pontosB - pontosA;
+            })
+            .slice(0, 10);
+
+          let htmlRanking = "<strong>🏆 Ranking real de atividade</strong><br>" +
+            "<span class='small'>Baseado nos treinos salvos nos últimos 90 dias.</span>";
+
+          if (lista.length === 0) {
+            rankingBox.innerHTML = htmlRanking + "<p class='small'>Ainda não há treinos suficientes para montar ranking real.</p>";
+            return;
+          }
+
+          lista.forEach(function(aluno, indice) {
+            const pontos = (aluno.treinos * 10) + aluno.concluidos;
+            const aproveitamento = aluno.total > 0 ? Math.round((aluno.concluidos / aluno.total) * 100) : 0;
+            htmlRanking += "<div class='ranking-item'>" +
+              "<div class='ranking-posicao'>" + (indice + 1) + "</div>" +
+              "<div class='ranking-conteudo'>" +
+                "<strong>" + limparTextoSeguro(aluno.nome) + "</strong>" +
+                "<span>" + aluno.treinos + " treino(s) | " + aluno.concluidos + " exercício(s) concluído(s)</span>" +
+                "<span>Aproveitamento: " + aproveitamento + "%</span>" +
+              "</div>" +
+              "<div class='ranking-pontos'>" + pontos + " pts</div>" +
+            "</div>";
+          });
+
+          rankingBox.innerHTML = htmlRanking;
+        })
+        .catch(function(erro) {
+          console.log("Não foi possível carregar ranking real:", erro);
+          rankingBox.innerHTML = "<strong>🏆 Ranking real de atividade</strong><p class='small'>Não foi possível carregar o ranking real. Confira permissões do Firestore para collectionGroup('treinos'). O ranking comercial continua funcionando.</p>";
+        });
+    }
+
 
     function copiarMensagemRenovacaoAluno(nomeAluno) {
       const nome = nomeAluno && String(nomeAluno).trim() ? String(nomeAluno).trim() : "tudo bem";
@@ -3403,6 +3653,11 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
     function marcarExercicioConcluido(index, concluido) {
       exerciciosConcluidos[index] = concluido;
+
+      if (concluido && treinoAtual[index]) {
+        preencherRegistroComExercicio(index);
+      }
+
       salvarTreinoAtualLocal();
       mostrarTreinoNaTela();
       atualizarProgressoExercicios();
@@ -3697,13 +3952,31 @@ analisarEsforcoRecente(function(esforcoRecente) {
         }
       });
 
+      const historicoPeso = JSON.parse(localStorage.getItem("historicoPeso") || "[]");
+      const pesos = historicoPeso.slice(0, 10).map(function(item) { return Number(item.peso || 0); }).filter(function(p) { return p > 0; });
+      const pesoAtual = pesos.length ? pesos[0] : (perfilUsuario ? Number(perfilUsuario.peso || 0) : 0);
+      const pesoMaisAntigo = pesos.length ? pesos[pesos.length - 1] : pesoAtual;
+      const diferencaPeso = pesoAtual && pesoMaisAntigo ? (pesoAtual - pesoMaisAntigo) : 0;
+
+      const diasAtivos = {};
+      treinos.forEach(function(item) { const d = dataRegistroParaDia(item); if (d) diasAtivos[d] = true; });
+      cardios.forEach(function(item) { const d = dataRegistroParaDia(item); if (d) diasAtivos[d] = true; });
+      const frequencia = Object.keys(diasAtivos).length;
+
       const maxTreino = Math.max(1, mapaTreinos.A, mapaTreinos.B, mapaTreinos.C, mapaTreinos.Descanso);
       const maxCardio = Math.max(1, mapaCardio.Corrida, mapaCardio.Caminhada, mapaCardio.Bicicleta);
       const paceTexto = melhorPace ? (Math.floor(melhorPace) + ":" + String(Math.round((melhorPace - Math.floor(melhorPace)) * 60)).padStart(2, "0") + " min/km") : "Sem pace ainda";
 
       return "<div class='grafico-card'>" +
-        "<strong>📈 Gráficos simples de evolução</strong><br>" +
-        "<span class='small'>Resumo visual leve, sem pesar o app.</span>" +
+        "<strong>📈 Gráficos reais de evolução</strong><br>" +
+        "<span class='small'>Resumo visual baseado em peso registrado, treinos, cardio e frequência dos últimos 90 dias.</span>" +
+        "<div class='alerta'><strong>Resumo real:</strong><br>" +
+        "Peso atual registrado: " + (pesoAtual ? pesoAtual.toFixed(1) + " kg" : "sem peso registrado") + "<br>" +
+        "Variação de peso: " + (diferencaPeso > 0 ? "+" : "") + diferencaPeso.toFixed(1) + " kg<br>" +
+        "Frequência: " + frequencia + " dia(s) com treino/cardio<br>" +
+        "Treinos salvos: " + treinos.length + " | Cardios salvos: " + cardios.length + "</div>" +
+        montarLinhaGrafico("Frequência nos últimos 90 dias", frequencia, 90, frequencia + " dia(s)") +
+        "<br><strong>💪 Partes treinadas</strong>" +
         montarLinhaGrafico("Treino de membros superiores", mapaTreinos.A, maxTreino, mapaTreinos.A + " registro(s)") +
         montarLinhaGrafico("Treino de costas e bíceps", mapaTreinos.B, maxTreino, mapaTreinos.B + " registro(s)") +
         montarLinhaGrafico("Treino de pernas e core", mapaTreinos.C, maxTreino, mapaTreinos.C + " registro(s)") +
@@ -3719,8 +3992,6 @@ analisarEsforcoRecente(function(esforcoRecente) {
         "Melhor ritmo estimado: " + paceTexto + "</div>" +
       "</div>";
     }
-
-
 
     function formatarDiaHistorico(chave) {
       if (!chave) return "Sem data";
