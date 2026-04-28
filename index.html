@@ -936,31 +936,6 @@
       border: 1px solid rgba(148, 163, 184, 0.28);
     }
 
-
-    /* Versão 1.3.3 - ajustes leves e seguros */
-    .aviso-repeticao-treino {
-      margin-top: 12px;
-      padding: 14px;
-      border-radius: 18px;
-      background: rgba(249, 115, 22, 0.16);
-      border-left: 5px solid #f97316;
-      color: #ffffff;
-      line-height: 1.45;
-    }
-
-    .badge-ambiente {
-      display: inline-block;
-      margin-top: 8px;
-      margin-bottom: 8px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(34, 197, 94, 0.14);
-      border: 1px solid rgba(34, 197, 94, 0.35);
-      color: #bbf7d0;
-      font-size: 12px;
-      font-weight: 900;
-    }
-
     @media (max-width: 380px) {
       .container { padding: 14px; }
       h1 { font-size: 30px; }
@@ -1041,13 +1016,27 @@
         </select>
 
         <label for="localTreino">Onde costuma treinar?</label>
-        <select id="localTreino">
+        <select id="localTreino" onchange="atualizarFormularioEquipamentos()">
           <option value="academia_grande">Academia completa</option>
           <option value="academia_pequena">Academia compacta / poucos equipamentos</option>
           <option value="garagem">Espaço próprio com equipamentos</option>
           <option value="casa_limitado">Em casa com halteres, elásticos ou poucos equipamentos</option>
           <option value="sem_equipamento">Sem equipamentos / peso corporal</option>
         </select>
+
+        <div id="boxEquipamentosCasa" class="hidden">
+          <label>Quais equipamentos você tem disponível?</label>
+          <p class="small">Marque apenas o que você realmente tem. O treino tentará usar somente essas opções.</p>
+          <div class="dias-grid">
+            <label><input type="checkbox" class="equipamento-casa" value="halteres"> Halteres</label>
+            <label><input type="checkbox" class="equipamento-casa" value="elasticos"> Elásticos / mini band</label>
+            <label><input type="checkbox" class="equipamento-casa" value="banco"> Banco / cadeira firme</label>
+            <label><input type="checkbox" class="equipamento-casa" value="corda"> Corda</label>
+            <label><input type="checkbox" class="equipamento-casa" value="estacao"> Estação / multifuncional</label>
+            <label><input type="checkbox" class="equipamento-casa" value="barra"> Barra / anilhas</label>
+          </div>
+          <p class="small">Se não marcar nada, o app prioriza peso corporal e exercícios mais simples.</p>
+        </div>
 
         <button type="button" onclick="calcularPerfil()">Calcular e salvar perfil</button>
 
@@ -1121,9 +1110,9 @@
 
       <div class="card">
         <h2>📊 Resumo do histórico</h2>
-        <p class="small">Mostra apenas os 3 últimos registros para manter esta área limpa. Para ver tudo, use o botão abaixo.</p>
+        <p class="small">Aqui aparece um resumo dos últimos treinos salvos na nuvem.</p>
         <button type="button" class="botao-secundario" onclick="mostrarHistorico()">Atualizar resumo</button>
-        <button type="button" onclick="irParaHistoricoCompleto()">Acompanhar histórico completo</button>
+        <button type="button" onclick="irParaHistoricoCompleto()">Ver histórico completo</button>
         <button type="button" class="botao-perigo" onclick="limparHistorico()">Limpar histórico</button>
         <div id="listaHistorico"></div>
       </div>
@@ -1132,7 +1121,7 @@
     <section id="paginaCheckin" class="hidden">
       <div class="card">
         <h2>✅ Check-in diário</h2>
-        <p class="small">Responda como você está hoje. O app usa essas respostas para adaptar o treino do dia com mais segurança.</p>
+        <p class="small">Responda como você está hoje. O app usa essas respostas junto com ao último cardio registrado para adaptar o treino do dia.</p>
       </div>
 
       <div class="card">
@@ -1202,7 +1191,8 @@
           <option value="caminhada">Caminhada</option>
           <option value="bicicleta">Bicicleta</option>
         </select>
-<label for="nivelCardio">Seu nível no cardio</label>
+
+        <label for="nivelCardio">Seu nível no cardio</label>
         <select id="nivelCardio">
           <option value="iniciante">Estou começando agora</option>
           <option value="voltando">Estou voltando a correr</option>
@@ -1284,7 +1274,7 @@
         <h2>Resumo do cardio</h2>
         <p class="small">Mostra apenas os últimos 3 registros para manter esta aba leve e organizada.</p>
         <button type="button" class="botao-secundario" onclick="carregarCardios()">Atualizar resumo</button>
-        <button type="button" onclick="irParaHistoricoCompleto()">Acompanhar histórico completo</button>
+        <button type="button" onclick="irParaHistoricoCompleto()">Ver histórico completo</button>
         <button type="button" class="botao-perigo" onclick="limparHistoricoCardios()">Limpar histórico de cardio</button>
         <div id="listaCardios"></div>
       </div>
@@ -1356,6 +1346,24 @@
         
 
         <div class="historico-item">
+          <strong>Versão 1.3.3</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 28/04/2026</p>
+          <ul>
+            <li>Removido o botão “Não fiz cardio recentemente” da aba Cardio.</li>
+            <li>Histórico resumido mantém somente os 3 últimos registros, com botão para acompanhar o histórico completo.</li>
+            <li>Descanso automático por dia da semana passa a ser sugerido aos domingos, sem bloquear treino leve caso o aluno queira treinar.</li>
+            <li>App agora orienta quando a mesma divisão de treino é repetida recentemente.</li>
+            <li>Biblioteca de treino e substituições ampliadas para academia, casa, espaço próprio e peso corporal.</li>
+            <li>Treinos sem equipamento passam a priorizar calistenia, funcional, core, isometria e HIIT adaptado.</li>
+            <li>Adicionado formulário para informar equipamentos disponíveis em casa ou espaço próprio.</li>
+            <li>Ao salvar registro de evolução, o app sobe para o próximo exercício pendente.</li>
+            <li>Campo de exercício é preenchido automaticamente, mas carga, repetições e observação são zeradas para evitar registro antigo.</li>
+            <li>Atualização automática do app foi reforçada ao abrir, voltar para a tela e clicar em verificar atualização.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
           <strong>Versão 1.3.2</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 22:00</p>
@@ -1382,7 +1390,29 @@
             <li>Arquivos principais recebem controle de versão para reduzir tela travada em atualização antiga.</li>
           </ul>
         </div>
-<div class="historico-item">
+
+        <div class="historico-item">
+          <strong>Versão 1.3.0</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 20:00</p>
+          <ul>
+            <li>Login ajustado para iPhone/Safari usando redirecionamento quando popup for bloqueado.</li>
+            <li>Mensagem de venda aparece somente antes do login e ficou centralizada.</li>
+            <li>Botão sair movido para o final da área de perfil.</li>
+            <li>Progresso do treino salvo no aparelho: ao sair e voltar, exercícios marcados continuam marcados.</li>
+            <li>Treino mais diferente por perfil: iniciante, sobrepeso e avançado recebem ajustes de volume/intensidade.</li>
+            <li>Substituição de exercício evita sugerir opção repetida que já está na lista.</li>
+            <li>Adicionado botão para pular exercício sem travar a conclusão do treino.</li>
+            <li>Ajustada quantidade de exercícios conforme treino rápido, normal ou longo.</li>
+            <li>Check-in de dor mais completo: pernas, braços, coluna/costas, ombro, joelho e lombar.</li>
+            <li>Painel do treinador mais organizado: mostra 3 últimos alunos e permite ver todos.</li>
+          </ul>
+        </div>
+
+        
+
+        
+        <div class="historico-item">
           <strong>🔄 Atualização do app</strong><br>
           <p class="small">Use este botão quando quiser verificar se existe uma versão mais recente do MetaTreino.</p>
           <button type="button" class="botao-principal" onclick="verificarAtualizacaoManual()">Verificar se há nova atualização</button>
@@ -2479,19 +2509,19 @@
     let usuariosAutorizadosCache = [];
 
     const substituicoes = {
-      "Supino reto": ["Flexão de braço", "Flexão ajoelhada", "Supino com halteres", "Crucifixo no chão"],
-      "Flexão de braço": ["Flexão ajoelhada", "Flexão diamante", "Tríceps banco", "Supino com halteres"],
+      "Supino reto": ["Flexão de braço", "Supino com halteres", "Crucifixo no chão"],
+      "Flexão de braço": ["Supino reto", "Supino com halteres", "Flexão com joelhos apoiados"],
       "Desenvolvimento com halteres": ["Desenvolvimento com elástico", "Elevação frontal", "Pike push-up"],
       "Elevação lateral": ["Elevação lateral com elástico", "Elevação lateral com garrafas", "Desenvolvimento leve"],
       "Tríceps corda": ["Tríceps com elástico", "Tríceps banco", "Tríceps francês"],
       "Tríceps banco": ["Tríceps corda", "Tríceps francês", "Flexão fechada"],
-      "Remada baixa": ["Remada com elástico", "Remada com mochila", "Remada unilateral com halter", "Remada invertida"],
+      "Remada baixa": ["Remada com elástico", "Remada unilateral com halter", "Remada invertida"],
       "Puxada frente": ["Remada com elástico", "Pullover com halter", "Barra fixa assistida"],
       "Remada unilateral": ["Remada baixa", "Remada com elástico", "Remada invertida"],
       "Rosca direta": ["Rosca com halteres", "Rosca com elástico", "Rosca martelo"],
       "Rosca martelo": ["Rosca direta", "Rosca com elástico", "Rosca concentrada"],
       "Face pull": ["Face pull com elástico", "Crucifixo inverso", "Remada alta leve"],
-      "Agachamento": ["Agachamento búlgaro", "Cadeirinha na parede", "Afundo", "Agachamento com mochila"],
+      "Agachamento": ["Agachamento livre", "Agachamento com mochila", "Cadeira extensora"],
       "Leg press": ["Agachamento livre", "Afundo", "Step-up no banco"],
       "Afundo": ["Agachamento", "Step-up no banco", "Agachamento búlgaro"],
       "Mesa flexora": ["Stiff com halteres", "Ponte de glúteo", "Flexora com bola"],
@@ -2509,10 +2539,7 @@
         { nome: "Desenvolvimento com halteres", grupo: "Ombros", equipamento: "Halteres", nivel: "intermediario", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Segure os halteres nos ombros.", "Empurre para cima.", "Não arqueie demais a lombar.", "Desça devagar."] },
         { nome: "Elevação lateral", grupo: "Ombros", equipamento: "Halteres ou elástico", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Segure um peso em cada mão.", "Eleve até a altura dos ombros.", "Evite balanço.", "Desça devagar."] },
         { nome: "Tríceps corda", grupo: "Tríceps", equipamento: "Polia", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "ombro", passos: ["Mantenha cotovelos próximos ao corpo.", "Empurre a corda para baixo.", "Estenda os braços.", "Volte controlando."] },
-        { nome: "Tríceps banco", grupo: "Tríceps", equipamento: "Banco ou cadeira", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "ombro", passos: ["Apoie as mãos no banco.", "Desça dobrando os cotovelos.", "Mantenha o tronco próximo.", "Suba com controle."] },
-        { nome: "Flexão ajoelhada", grupo: "Peito", equipamento: "Peso corporal", nivel: "iniciante", local: ["sem_equipamento", "casa_limitado"], evitar: "ombro", passos: ["Apoie os joelhos no chão.", "Mantenha abdômen firme.", "Desça com controle.", "Suba empurrando o chão."] },
-        { nome: "Flexão diamante", grupo: "Tríceps", equipamento: "Peso corporal", nivel: "intermediario", local: ["sem_equipamento", "casa_limitado"], evitar: "ombro", passos: ["Aproxime as mãos no chão.", "Mantenha corpo alinhado.", "Desça com controle.", "Suba sem perder postura."] },
-        { nome: "Pike push-up", grupo: "Ombros", equipamento: "Peso corporal", nivel: "intermediario", local: ["sem_equipamento", "casa_limitado"], evitar: "ombro", passos: ["Eleve o quadril formando um V invertido.", "Flexione os cotovelos.", "Desça a cabeça em direção ao chão.", "Empurre para voltar."] }
+        { nome: "Tríceps banco", grupo: "Tríceps", equipamento: "Banco ou cadeira", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "ombro", passos: ["Apoie as mãos no banco.", "Desça dobrando os cotovelos.", "Mantenha o tronco próximo.", "Suba com controle."] }
       ],
       B: [
         { nome: "Remada baixa", grupo: "Costas", equipamento: "Máquina ou cabo", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "lombar", passos: ["Sente com a coluna reta.", "Puxe o cabo ao abdômen.", "Contraia as costas.", "Volte devagar."] },
@@ -2521,10 +2548,7 @@
         { nome: "Remada invertida", grupo: "Costas", equipamento: "Barra baixa", nivel: "intermediario", local: ["academia_grande", "garagem", "sem_equipamento"], evitar: "ombro", passos: ["Segure uma barra baixa.", "Mantenha o corpo alinhado.", "Puxe o peito em direção à barra.", "Desça controlando."] },
         { nome: "Rosca direta", grupo: "Bíceps", equipamento: "Barra ou halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "nenhuma", passos: ["Segure com palmas para cima.", "Cotovelos próximos ao corpo.", "Suba contraindo o bíceps.", "Desça devagar."] },
         { nome: "Rosca martelo", grupo: "Bíceps", equipamento: "Halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "nenhuma", passos: ["Palmas viradas uma para a outra.", "Mantenha cotovelos fixos.", "Suba com controle.", "Desça devagar."] },
-        { nome: "Face pull", grupo: "Ombro posterior", equipamento: "Polia ou elástico", nivel: "intermediario", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Puxe em direção ao rosto.", "Abra os cotovelos.", "Contraia ombro posterior.", "Volte controlando."] },
-        { nome: "Remada com elástico", grupo: "Costas", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Sente ou fique em pé com o elástico firme.", "Puxe as pontas em direção ao peito.", "Contraia as costas.", "Volte devagar."] },
-        { nome: "Remada com mochila", grupo: "Costas", equipamento: "Mochila", nivel: "iniciante", local: ["casa_limitado", "sem_equipamento"], evitar: "lombar", passos: ["Incline o tronco com coluna firme.", "Puxe a mochila em direção ao abdômen.", "Contraia as costas.", "Desça controlando."] },
-        { nome: "Super-homem", grupo: "Lombar", equipamento: "Peso corporal", nivel: "iniciante", local: ["sem_equipamento", "casa_limitado"], evitar: "lombar", passos: ["Deite de barriga para baixo.", "Eleve braços e pernas levemente.", "Segure por 1 a 2 segundos.", "Desça controlando."] }
+        { nome: "Face pull", grupo: "Ombro posterior", equipamento: "Polia ou elástico", nivel: "intermediario", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado"], evitar: "ombro", passos: ["Puxe em direção ao rosto.", "Abra os cotovelos.", "Contraia ombro posterior.", "Volte controlando."] }
       ],
       C: [
         { nome: "Agachamento", grupo: "Pernas", equipamento: "Peso corporal, barra ou halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "joelho", passos: ["Pés na largura dos ombros.", "Desça empurrando quadril para trás.", "Mantenha coluna firme.", "Suba empurrando o chão."] },
@@ -2533,19 +2557,110 @@
         { nome: "Mesa flexora", grupo: "Posterior de coxa", equipamento: "Máquina", nivel: "iniciante", local: ["academia_grande", "academia_pequena"], evitar: "joelho", passos: ["Ajuste o aparelho.", "Flexione os joelhos.", "Contraia posterior de coxa.", "Volte devagar."] },
         { nome: "Ponte de glúteo", grupo: "Glúteos", equipamento: "Nenhum ou peso", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "lombar", passos: ["Deite de barriga para cima.", "Pés no chão.", "Suba o quadril contraindo glúteos.", "Desça com controle."] },
         { nome: "Panturrilha em pé", grupo: "Panturrilha", equipamento: "Peso corporal ou halteres", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "nenhuma", passos: ["Fique em pé.", "Suba na ponta dos pés.", "Contraia no topo.", "Desça devagar."] },
-        { nome: "Abdominal prancha", grupo: "Abdômen", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "lombar", passos: ["Apoie cotovelos e pés.", "Mantenha corpo alinhado.", "Contraia abdômen.", "Não deixe quadril cair."] },
-        { nome: "Agachamento búlgaro", grupo: "Pernas", equipamento: "Peso corporal", nivel: "intermediario", local: ["sem_equipamento", "casa_limitado", "garagem"], evitar: "joelho", passos: ["Apoie o pé de trás em cadeira ou banco.", "Desça com controle.", "Mantenha joelho alinhado.", "Suba empurrando o chão."] },
-        { nome: "Cadeirinha na parede", grupo: "Pernas", equipamento: "Peso corporal", nivel: "iniciante", local: ["sem_equipamento", "casa_limitado"], evitar: "joelho", passos: ["Encoste as costas na parede.", "Desça até posição confortável.", "Segure a posição.", "Respire sem travar."] },
-        { nome: "Abdominal infra", grupo: "Abdômen", equipamento: "Peso corporal", nivel: "iniciante", local: ["sem_equipamento", "casa_limitado"], evitar: "lombar", passos: ["Deite de barriga para cima.", "Contraia abdômen.", "Eleve as pernas com controle.", "Desça sem arquear lombar."] },
-        { nome: "Mountain climber", grupo: "Core/Cardio", equipamento: "Peso corporal", nivel: "intermediario", local: ["sem_equipamento", "casa_limitado"], evitar: "joelho", passos: ["Fique em posição de prancha.", "Alterne joelhos em direção ao peito.", "Mantenha abdômen firme.", "Controle o ritmo."] },
-        { nome: "Polichinelo", grupo: "Cardio/HIIT", equipamento: "Peso corporal", nivel: "iniciante", local: ["sem_equipamento", "casa_limitado"], evitar: "joelho", passos: ["Abra pernas e braços ao mesmo tempo.", "Mantenha ritmo confortável.", "Aterrisse leve.", "Reduza impacto se necessário."] },
-        { nome: "Burpee adaptado", grupo: "Cardio/HIIT", equipamento: "Peso corporal", nivel: "intermediario", local: ["sem_equipamento", "casa_limitado"], evitar: "joelho", passos: ["Agache com controle.", "Leve as mãos ao chão.", "Estenda as pernas sem impacto exagerado.", "Volte e fique em pé."] }
+        { nome: "Abdominal prancha", grupo: "Abdômen", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "lombar", passos: ["Apoie cotovelos e pés.", "Mantenha corpo alinhado.", "Contraia abdômen.", "Não deixe quadril cair."] }
       ],
       descanso: [
         { nome: "Caminhada leve", grupo: "Recuperação", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "nenhuma", passos: ["Caminhe em ritmo confortável.", "Respire de forma controlada.", "Não transforme em treino pesado.", "Finalize com alongamentos leves."] },
         { nome: "Mobilidade geral", grupo: "Recuperação", equipamento: "Nenhum", nivel: "iniciante", local: ["academia_grande", "academia_pequena", "garagem", "casa_limitado", "sem_equipamento"], evitar: "nenhuma", passos: ["Movimente ombros, quadril e coluna.", "Evite dor.", "Mantenha controle.", "Use o dia para recuperar."] }
       ]
     };
+
+    function atualizarFormularioEquipamentos() {
+      const local = document.getElementById("localTreino") ? document.getElementById("localTreino").value : "";
+      const box = document.getElementById("boxEquipamentosCasa");
+      if (!box) return;
+      if (local === "casa_limitado" || local === "garagem") box.classList.remove("hidden");
+      else box.classList.add("hidden");
+    }
+
+    function obterEquipamentosCasaSelecionados() {
+      return Array.from(document.querySelectorAll(".equipamento-casa:checked")).map(function(item) { return item.value; });
+    }
+
+    function restaurarEquipamentosCasa(lista) {
+      const mapa = {};
+      (lista || []).forEach(function(item) { mapa[item] = true; });
+      document.querySelectorAll(".equipamento-casa").forEach(function(input) { input.checked = !!mapa[input.value]; });
+    }
+
+    function ajustarEquipamentoVisualPorLocal(exercicio) {
+      if (!perfilUsuario || !exercicio) return exercicio;
+      const local = perfilUsuario.localTreino || "";
+      const copia = Object.assign({}, exercicio);
+      const equipamento = String(copia.equipamento || "").toLowerCase();
+      if (local === "sem_equipamento" && (equipamento.includes("peso corporal") || equipamento.includes("nenhum"))) {
+        copia.equipamento = "Peso corporal";
+      }
+      if ((local === "casa_limitado" || local === "garagem") && (!perfilUsuario.equipamentosCasa || perfilUsuario.equipamentosCasa.length === 0) && (equipamento.includes("peso corporal") || equipamento.includes("nenhum"))) {
+        copia.equipamento = "Peso corporal";
+      }
+      return copia;
+    }
+
+    function equipamentoCompativelComPerfil(exercicio) {
+      if (!perfilUsuario) return true;
+      const local = perfilUsuario.localTreino || "academia_grande";
+      const equipamento = String(exercicio.equipamento || "").toLowerCase();
+
+      if (local === "sem_equipamento") {
+        return equipamento.includes("peso corporal") || equipamento.includes("nenhum") || equipamento.includes("cadeira opcional");
+      }
+
+      if (local === "casa_limitado" || local === "garagem") {
+        const selecionados = perfilUsuario.equipamentosCasa || [];
+        if (!selecionados.length) {
+          return equipamento.includes("peso corporal") || equipamento.includes("nenhum") || equipamento.includes("cadeira opcional");
+        }
+        if (equipamento.includes("peso corporal") || equipamento.includes("nenhum")) return true;
+        if (equipamento.includes("halter") && selecionados.includes("halteres")) return true;
+        if ((equipamento.includes("elástico") || equipamento.includes("mini band")) && selecionados.includes("elasticos")) return true;
+        if ((equipamento.includes("banco") || equipamento.includes("cadeira")) && selecionados.includes("banco")) return true;
+        if (equipamento.includes("corda") && selecionados.includes("corda")) return true;
+        if ((equipamento.includes("estação") || equipamento.includes("multifuncional") || equipamento.includes("polia")) && selecionados.includes("estacao")) return true;
+        if ((equipamento.includes("barra") || equipamento.includes("anilha")) && selecionados.includes("barra")) return true;
+        return false;
+      }
+
+      return true;
+    }
+
+    function instalarExerciciosVersao133() {
+      const novos = {
+        A: [
+          criarExercicioPesoCorporal("Flexão ajoelhada", "Peito", "ombro", ["Apoie joelhos no chão.", "Mantenha tronco alinhado.", "Desça com controle.", "Suba empurrando o chão."]),
+          criarExercicioPesoCorporal("Flexão diamante adaptada", "Tríceps", "ombro", ["Aproxime as mãos em formato de diamante.", "Use joelhos no chão se necessário.", "Desça sem abrir demais os cotovelos.", "Suba com controle."]),
+          criarExercicioPesoCorporal("Pike push-up", "Ombros", "ombro", ["Eleve o quadril formando um V invertido.", "Flexione os cotovelos.", "Aproxime a cabeça do chão com cuidado.", "Suba controlando."]),
+          { nome: "Supino no chão com halteres", grupo: "Peito", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Deite no chão.", "Segure os halteres alinhados ao peito.", "Desça até o braço tocar levemente o chão.", "Suba sem bater os pesos."] },
+          { nome: "Elevação lateral com elástico", grupo: "Ombros", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Pise no elástico.", "Segure as pontas.", "Eleve os braços lateralmente.", "Desça devagar."] },
+          { nome: "Tríceps francês com halter", grupo: "Tríceps", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Segure um halter acima da cabeça.", "Flexione os cotovelos.", "Estenda os braços com controle.", "Evite arquear a lombar."] }
+        ],
+        B: [
+          criarExercicioPesoCorporal("Super-homem", "Lombar", "lombar", ["Deite de barriga para baixo.", "Eleve braços e pernas levemente.", "Segure por alguns segundos.", "Volte com controle."]),
+          criarExercicioPesoCorporal("Prancha com toque no ombro", "Abdômen", "ombro", ["Fique em posição de prancha alta.", "Toque um ombro com a mão oposta.", "Alterne os lados.", "Evite balançar o quadril."]),
+          { nome: "Remada com elástico sentado", grupo: "Costas", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Sente no chão.", "Passe o elástico pelos pés.", "Puxe as pontas em direção ao peito.", "Volte devagar."] },
+          { nome: "Remada curvada com halteres", grupo: "Costas", equipamento: "Halteres", nivel: "intermediario", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Incline o tronco com coluna firme.", "Puxe os halteres em direção ao quadril.", "Contraia as costas.", "Desça controlando."] },
+          { nome: "Rosca bíceps com elástico", grupo: "Bíceps", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "nenhuma", passos: ["Pise no elástico.", "Segure as pontas.", "Flexione os cotovelos.", "Desça devagar."] }
+        ],
+        C: [
+          criarExercicioPesoCorporal("Agachamento isométrico na parede", "Pernas", "joelho", ["Encoste as costas na parede.", "Desça até uma posição confortável.", "Segure sem prender a respiração.", "Suba devagar."]),
+          criarExercicioPesoCorporal("Agachamento búlgaro sem carga", "Pernas", "joelho", ["Apoie o pé de trás em cadeira firme se tiver.", "Desça com controle.", "Mantenha o tronco estável.", "Troque a perna."]),
+          criarExercicioPesoCorporal("Abdominal infra", "Abdômen", "lombar", ["Deite de barriga para cima.", "Eleve as pernas com controle.", "Contraia o abdômen.", "Volte sem perder a postura."]),
+          criarExercicioPesoCorporal("Mountain climber controlado", "Cardio/Abdômen", "lombar", ["Apoie as mãos no chão.", "Traga os joelhos alternadamente.", "Mantenha abdômen firme.", "Faça devagar se necessário."]),
+          { nome: "Agachamento goblet", grupo: "Pernas", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "joelho", passos: ["Segure um halter junto ao peito.", "Desça com controle.", "Mantenha coluna firme.", "Suba empurrando o chão."] },
+          { nome: "Elevação de quadril com mini band", grupo: "Glúteos", equipamento: "Elástico / mini band", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Coloque a mini band acima dos joelhos.", "Deite com pés no chão.", "Suba o quadril contraindo glúteos.", "Desça controlando."] },
+          { nome: "Levantamento terra com halteres", grupo: "Posterior de coxa", equipamento: "Halteres", nivel: "intermediario", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Segure os halteres à frente do corpo.", "Incline o tronco com coluna firme.", "Sinta posterior de coxa alongar.", "Suba contraindo glúteos."] }
+        ],
+        descanso: [
+          criarExercicioPesoCorporal("Respiração e mobilidade", "Recuperação", "nenhuma", ["Respire profundamente.", "Movimente ombros, quadril e coluna.", "Evite posições dolorosas.", "Finalize leve."])
+        ]
+      };
+      Object.keys(novos).forEach(function(chave) {
+        bibliotecaExercicios[chave] = filtrarExerciciosUnicos((bibliotecaExercicios[chave] || []).concat(novos[chave]));
+      });
+    }
+
+    instalarExerciciosVersao133();
+
 
     function carregarPerfilAutomaticamente() {
       const perfilSalvo = localStorage.getItem("perfilUsuario");
@@ -2560,6 +2675,8 @@
       document.getElementById("rotinaAtual").value = perfilUsuario.rotinaAtual || "nunca";
       document.getElementById("tempoExperiencia").value = perfilUsuario.tempoExperiencia || "menos_1";
       document.getElementById("localTreino").value = perfilUsuario.localTreino || "academia_grande";
+      atualizarFormularioEquipamentos();
+      restaurarEquipamentosCasa(perfilUsuario.equipamentosCasa || []);
       mostrarResumoPerfilCarregado();
       document.getElementById("botaoIrTreino").classList.remove("hidden");
     }
@@ -2585,6 +2702,7 @@
       const rotinaAtual = document.getElementById("rotinaAtual").value;
       const tempoExperiencia = document.getElementById("tempoExperiencia").value;
       const localTreino = document.getElementById("localTreino").value;
+      const equipamentosCasa = obterEquipamentosCasaSelecionados();
       const resultadoPerfil = document.getElementById("resultadoPerfil");
       const botaoIrTreino = document.getElementById("botaoIrTreino");
 
@@ -2613,13 +2731,13 @@
       else if (imc < 30) { classificacao = "acima do peso"; mensagem = "Seu foco pode ser reduzir gordura corporal e manter ou ganhar massa magra."; }
       else { classificacao = "em faixa de obesidade pelo IMC"; mensagem = "O ideal é começar com treinos seguros, progressivos e, se possível, acompanhamento profissional."; }
 
-      perfilUsuario = { nome, sexo, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino };
+      perfilUsuario = { nome, sexo, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, equipamentosCasa };
       localStorage.setItem("perfilUsuario", JSON.stringify(perfilUsuario));
       registrarPeso(peso);
       mostrarMensagemMudancaPeso(perfilAntigo, peso);
 
       resultadoPerfil.classList.remove("hidden");
-      resultadoPerfil.innerHTML = "<strong>" + nome + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Classificação: " + classificacao + ".<br>" + mensagem + "<br>Meta: " + traduzirMeta(metaPrincipal) + ".<br>Rotina: " + traduzirRotina(rotinaAtual) + ".<br>Experiência: " + traduzirExperiencia(tempoExperiencia) + ".<br>Local: " + traduzirLocal(localTreino) + ".<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
+      resultadoPerfil.innerHTML = "<strong>" + nome + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Classificação: " + classificacao + ".<br>" + mensagem + "<br>Meta: " + traduzirMeta(metaPrincipal) + ".<br>Rotina: " + traduzirRotina(rotinaAtual) + ".<br>Experiência: " + traduzirExperiencia(tempoExperiencia) + ".<br>Local: " + traduzirLocal(localTreino) + ".<br>Equipamentos: " + limparTextoSeguro(equipamentosCasa.length ? equipamentosCasa.join(", ") : (localTreino === "sem_equipamento" ? "peso corporal" : "não informado")) + ".<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
       botaoIrTreino.classList.remove("hidden");
     }
 
@@ -2654,6 +2772,8 @@
       document.getElementById("idade").value = "";
       document.getElementById("peso").value = "";
       document.getElementById("altura").value = "";
+      restaurarEquipamentosCasa([]);
+      atualizarFormularioEquipamentos();
       document.getElementById("resultadoPerfil").classList.add("hidden");
       document.getElementById("mensagemPeso").classList.add("hidden");
       document.getElementById("botaoIrTreino").classList.add("hidden");
@@ -2786,7 +2906,7 @@
     }
 
     function obterMensagemInteligente(energia, letraTreino, progressaoSemanal) {
-      if (letraTreino === "descanso") return "Hoje é domingo, um ótimo dia para descanso e recuperação. Se ainda quiser treinar, faça algo mais leve, com técnica, mobilidade e sem exagerar.";
+      if (letraTreino === "descanso") return "Hoje é um ótimo dia para recuperar. Recuperação também faz parte da evolução.";
       if (energia === "bem" && progressaoSemanal && progressaoSemanal.fase === "evolucao") return "Boa fase para evoluir com controle. Consistência é o que traz resultado.";
       if (energia === "cansado") return "Hoje o foco é fazer bem feito, sem exagerar. Um treino ajustado ainda conta muito.";
       if (energia === "mal") return "Respeite seu corpo hoje. Técnica, leveza e segurança vêm em primeiro lugar.";
@@ -2802,135 +2922,6 @@
       }
     }
 
-
-    function obterUltimoTreinoLocalOuNuvemCache() {
-      try {
-        const historicoLocal = JSON.parse(localStorage.getItem("historicoTreinos") || "[]");
-        if (Array.isArray(historicoLocal) && historicoLocal.length > 0) return historicoLocal[0];
-      } catch (erro) {}
-      return null;
-    }
-
-    function salvarTreinoEmCacheLocal(treinoSalvo) {
-      try {
-        const historicoLocal = JSON.parse(localStorage.getItem("historicoTreinos") || "[]");
-        const lista = Array.isArray(historicoLocal) ? historicoLocal : [];
-        lista.unshift(treinoSalvo);
-        const limite90Dias = Date.now() - (90 * 24 * 60 * 60 * 1000);
-        const filtrado = lista
-          .filter(function(item) { return !item.criadoEm || Number(item.criadoEm) >= limite90Dias; })
-          .slice(0, 90);
-        localStorage.setItem("historicoTreinos", JSON.stringify(filtrado));
-      } catch (erro) {}
-    }
-
-    function treinoRecenteMesmoGrupo(letraTreino) {
-      const ultimo = obterUltimoTreinoLocalOuNuvemCache();
-      if (!ultimo || !ultimo.letraTreino || !letraTreino || letraTreino === "descanso") return false;
-      const ultimaLetra = String(ultimo.letraTreino).replace("Descanso", "descanso");
-      if (ultimaLetra !== letraTreino) return false;
-      const criadoEm = Number(ultimo.criadoEm || 0);
-      if (!criadoEm) return true;
-      return (Date.now() - criadoEm) <= (36 * 60 * 60 * 1000);
-    }
-
-    function escolherTreinoAlternativo(letraTreino) {
-      if (letraTreino === "A") return "B";
-      if (letraTreino === "B") return "C";
-      if (letraTreino === "C") return "A";
-      return letraTreino;
-    }
-
-    function equipamentoPermitidoParaAmbiente(exercicio) {
-      if (!perfilUsuario || !exercicio) return true;
-      const local = perfilUsuario.localTreino;
-      const equipamento = String(exercicio.equipamento || "").toLowerCase();
-
-      if (local === "sem_equipamento") {
-        return equipamento.includes("nenhum") ||
-               equipamento.includes("peso corporal") ||
-               equipamento.includes("banco ou cadeira") ||
-               equipamento.includes("cadeira");
-      }
-
-      if (local === "casa_limitado") {
-        return equipamento.includes("nenhum") ||
-               equipamento.includes("peso corporal") ||
-               equipamento.includes("halter") ||
-               equipamento.includes("elástico") ||
-               equipamento.includes("mochila") ||
-               equipamento.includes("banco ou cadeira") ||
-               equipamento.includes("cadeira");
-      }
-
-      if (local === "garagem") {
-        return equipamento.includes("nenhum") ||
-               equipamento.includes("peso corporal") ||
-               equipamento.includes("halter") ||
-               equipamento.includes("elástico") ||
-               equipamento.includes("mochila") ||
-               equipamento.includes("barra") ||
-               equipamento.includes("banco") ||
-               equipamento.includes("estação") ||
-               equipamento.includes("polia");
-      }
-
-      return true;
-    }
-
-    function buscarExercicioPorNome(nome) {
-      const alvo = normalizarNomeExercicio(nome || "");
-      const grupos = ["A", "B", "C", "descanso"];
-      for (let g = 0; g < grupos.length; g++) {
-        const lista = bibliotecaExercicios[grupos[g]] || [];
-        for (let i = 0; i < lista.length; i++) {
-          if (normalizarNomeExercicio(lista[i].nome || "") === alvo) return lista[i];
-        }
-      }
-      return null;
-    }
-
-    function limparCamposRegistroEvolucao(manterNome) {
-      if (!manterNome) {
-        const exercicioRegistro = document.getElementById("exercicioRegistro");
-        if (exercicioRegistro) exercicioRegistro.value = "";
-      }
-
-      const carga = document.getElementById("carga");
-      const reps = document.getElementById("reps");
-      const sensacao = document.getElementById("sensacao");
-      const observacao = document.getElementById("observacaoTreino");
-      const resultado = document.getElementById("resultadoEvolucao");
-
-      if (carga) carga.value = "";
-      if (reps) reps.value = "";
-      if (sensacao) sensacao.value = "normal";
-      if (observacao) observacao.value = "";
-      if (resultado) resultado.innerText = "";
-    }
-
-    function rolarParaPrimeiroExercicioPendente() {
-      setTimeout(function() {
-        const cards = document.querySelectorAll("#listaExercicios .exercise");
-        let alvo = null;
-        for (let i = 0; i < cards.length; i++) {
-          if (!cards[i].classList.contains("concluido")) {
-            alvo = cards[i];
-            break;
-          }
-        }
-        if (!alvo) alvo = document.getElementById("resultadoTreino");
-        if (alvo) alvo.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 250);
-    }
-
-    function orientacaoTreinoPesoCorporal() {
-      if (!perfilUsuario || perfilUsuario.localTreino !== "sem_equipamento") return "";
-      return "<span class='badge-ambiente'>Peso corporal / calistenia</span><br>" +
-        "<span class='small'>Treino adaptado para peso corporal. Use joelhos no chão nas flexões se precisar, diminua a amplitude do agachamento em caso de desconforto e priorize controle, constância e segurança.</span><br><br>";
-    }
-
-
     function nomeDoDiaDaSemana() {
       const dias = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
       return dias[new Date().getDay()];
@@ -2938,29 +2929,23 @@
 
     function escolherTreinoPorDiaDaSemana() {
       const hoje = new Date().getDay();
-      if (hoje === 0) return "descanso";
       if (hoje === 1 || hoje === 4) return "A";
       if (hoje === 2 || hoje === 5) return "B";
       if (hoje === 3 || hoje === 6) return "C";
+      if (hoje === 0) return "A";
       return "A";
     }
 
     function escolherTreinoABC(divisaoSelecionada) {
-      let escolhido = "";
-      if (divisaoSelecionada === "semana") escolhido = escolherTreinoPorDiaDaSemana();
-      else if (divisaoSelecionada === "descanso") escolhido = "descanso";
-      else if (divisaoSelecionada !== "automatico") escolhido = divisaoSelecionada;
-      else {
-        const historico = JSON.parse(localStorage.getItem("historicoTreinos") || "[]");
-        if (historico.length === 0 || !historico[0].letraTreino) escolhido = "A";
-        else {
-          const ultimoTreino = String(historico[0].letraTreino || "").replace("Descanso", "descanso");
-          if (ultimoTreino === "A") escolhido = "B";
-          else if (ultimoTreino === "B") escolhido = "C";
-          else escolhido = "A";
-        }
-      }
-      return escolhido;
+      if (divisaoSelecionada === "semana") return escolherTreinoPorDiaDaSemana();
+      if (divisaoSelecionada === "descanso") return "descanso";
+      if (divisaoSelecionada !== "automatico") return divisaoSelecionada;
+      const historico = JSON.parse(localStorage.getItem("historicoTreinos") || "[]");
+      if (historico.length === 0 || !historico[0].letraTreino) return "A";
+      const ultimoTreino = historico[0].letraTreino;
+      if (ultimoTreino === "A") return "B";
+      if (ultimoTreino === "B") return "C";
+      return "A";
     }
 
     function nivelPermitido(exercicio) {
@@ -3220,8 +3205,7 @@
     }
 
     function alternarCamposCardio() {
-      // Botão "Não fiz cardio recentemente" removido na versão 1.3.3.
-      return;
+      alternarDesafioCardio();
     }
 
     function salvarCardio() {
@@ -3264,8 +3248,6 @@
               caixa.className = "alerta alerta-sucesso";
               caixa.innerHTML = "✅ Registro salvo: nenhum cardio recente será considerado no próximo treino.";
             }
-            document.getElementById("naoCorreuRecentemente").checked = false;
-            alternarCamposCardio();
             carregarCardios();
           })
           .catch(function(erro) {
@@ -3622,17 +3604,10 @@ analisarEsforcoRecente(function(esforcoRecente) {
       const divisaoSelecionada = document.getElementById("divisaoTreino").value;
       const cardioNoTreino = document.getElementById("cardioNoTreino") ? document.getElementById("cardioNoTreino").value : "nao";
       let letraTreino = escolherTreinoABC(divisaoSelecionada);
-      let mensagemRepeticaoTreino = "";
-      if (treinoRecenteMesmoGrupo(letraTreino)) {
-        const letraOriginal = letraTreino;
-        letraTreino = escolherTreinoAlternativo(letraTreino);
-        mensagemRepeticaoTreino = "<div class='aviso-repeticao-treino'><strong>⚠️ Atenção:</strong> você treinou " + limparTextoSeguro(nomeAmigavelTreino(letraOriginal)) + " recentemente. Para melhorar recuperação e evolução, o app sugeriu " + limparTextoSeguro(nomeAmigavelTreino(letraTreino)) + ". Se ainda quiser repetir a mesma região, faça com menos carga, mais técnica e menos volume.</div>";
-      }
       const local = perfilUsuario ? perfilUsuario.localTreino : "academia_grande";
 
-      // Na 1.3.3, o descanso automático fixo fica aos domingos.
-      // Esforço recente apenas gera orientação e ajuste de volume, sem trocar o treino do dia para descanso.
-      if (divisaoSelecionada === "semana" && letraTreino === "descanso") {
+      const hojeSemana = new Date().getDay();
+      if (divisaoSelecionada === "semana" && hojeSemana === 0) {
         letraTreino = "descanso";
       }
 
@@ -3643,12 +3618,20 @@ analisarEsforcoRecente(function(esforcoRecente) {
         return exercicio.evitar === dor;
       };
 
+      const treinoOntem = obterUltimoTreinoLocal();
+      let avisoRepeticaoTreino = "";
+      if (treinoOntem && treinoOntem.letra && treinoOntem.letra !== "Descanso" && treinoOntem.letra === letraTreino) {
+        avisoRepeticaoTreino = "Você treinou " + nomeAmigavelTreino(letraTreino) + " recentemente. O ideal hoje é alternar para outra parte do corpo. Se ainda quiser repetir, o app manteve a escolha com variações e menor risco de repetição.";
+      }
+
       let treinoFiltrado = bibliotecaExercicios[letraTreino].filter(function(exercicio) {
-        return !dorBloqueiaGrupo(exercicio) && exercicio.local.includes(local) && equipamentoPermitidoParaAmbiente(exercicio) && nivelPermitido(exercicio);
+        return !dorBloqueiaGrupo(exercicio) && exercicio.local.includes(local) && nivelPermitido(exercicio) && equipamentoCompativelComPerfil(exercicio);
       }).map(ajustarExercicioPorMeta);
 
       if (treinoFiltrado.length === 0) {
-        treinoFiltrado = bibliotecaExercicios[letraTreino].filter(function(exercicio) { return exercicio.evitar !== dor && exercicio.local.includes(local) && equipamentoPermitidoParaAmbiente(exercicio); }).map(ajustarExercicioPorMeta);
+        treinoFiltrado = bibliotecaExercicios[letraTreino].filter(function(exercicio) {
+          return exercicio.evitar !== dor && exercicio.local.includes(local) && equipamentoCompativelComPerfil(exercicio);
+        }).map(ajustarExercicioPorMeta);
       }
 
       if (local === "sem_equipamento" && letraTreino !== "descanso") {
@@ -3656,6 +3639,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       }
 
       treinoFiltrado = filtrarExerciciosUnicos(treinoFiltrado);
+      treinoFiltrado = treinoFiltrado.map(ajustarEquipamentoVisualPorLocal);
       treinoFiltrado = adaptarTreinoPorPerfil(treinoFiltrado, tempo);
       treinoFiltrado = aplicarProgressaoSemanalAoTreino(treinoFiltrado, progressaoSemanal, tempo);
 
@@ -3691,7 +3675,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
       let ajuste = "";
       if (letraTreino === "descanso") {
-        ajuste = "O app sugeriu descanso ativo/mobilidade para recuperação.";
+        ajuste = "Hoje é domingo, dia sugerido para descanso ativo. Se você quiser treinar mesmo assim, mantenha um treino leve, com mobilidade, técnica e baixa intensidade.";
       } else {
         if (energia === "bem") ajuste = "Hoje você pode treinar normalmente e tentar evoluir carga se a execução estiver boa.";
         else if (energia === "cansado") ajuste = "Hoje reduza um pouco o volume. Faça uma série a menos em cada exercício.";
@@ -3710,6 +3694,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       if (esforcoRecente.mensagem) ajuste += " " + esforcoRecente.mensagem;
       if (progressaoSemanal && progressaoSemanal.mensagem) ajuste += " " + progressaoSemanal.mensagem;
       if (mensagemCardioTreino) ajuste += mensagemCardioTreino;
+      if (avisoRepeticaoTreino) ajuste += " " + avisoRepeticaoTreino;
       ajuste += " Lembrete: hidrate-se, respeite seus limites e evite treinar forte em jejum, com dor ou mal-estar.";
 
       document.getElementById("resultadoTreino").classList.remove("hidden");
@@ -3840,43 +3825,40 @@ analisarEsforcoRecente(function(esforcoRecente) {
       const nomesAtuais = treinoAtual.map(function(exercicio, i) {
         return i === index ? "" : normalizarNomeExercicio(exercicio.nome || "");
       });
+      const local = perfilUsuario ? perfilUsuario.localTreino : "academia_grande";
+      const grupoAtual = exercicioAtual.grupo;
+      let opcoesObjetos = [];
 
-      let opcoes = substituicoes[exercicioAtual.nome] || [];
-      opcoes = opcoes.filter(function(opcao) {
-        const candidato = buscarExercicioPorNome(opcao);
-        const naoRepete = !nomesAtuais.includes(normalizarNomeExercicio(opcao));
-        if (!naoRepete) return false;
-        if (!candidato) return true;
-        return equipamentoPermitidoParaAmbiente(candidato);
+      Object.keys(bibliotecaExercicios).forEach(function(chave) {
+        (bibliotecaExercicios[chave] || []).forEach(function(exercicio) {
+          if (normalizarNomeExercicio(exercicio.nome) === normalizarNomeExercicio(exercicioAtual.nome)) return;
+          if (nomesAtuais.includes(normalizarNomeExercicio(exercicio.nome))) return;
+          const mesmoGrupo = exercicio.grupo === grupoAtual || (grupoAtual === "Ombros" && exercicio.grupo === "Ombro posterior") || (grupoAtual === "Abdômen" && (exercicio.grupo === "Core" || exercicio.grupo === "Cardio/Abdômen"));
+          if (!mesmoGrupo) return;
+          if (!exercicio.local.includes(local)) return;
+          if (!equipamentoCompativelComPerfil(exercicio)) return;
+          opcoesObjetos.push(ajustarExercicioPorMeta(Object.assign({}, exercicio)));
+        });
       });
 
-      if (!opcoes || opcoes.length === 0) {
-        alert("Ainda não há substituições disponíveis sem repetir exercícios da lista e respeitando seu local de treino. Você pode pular este exercício e seguir o treino.");
+      let opcoesNomes = substituicoes[exercicioAtual.nome] || [];
+      opcoesNomes.forEach(function(nome) {
+        if (nomesAtuais.includes(normalizarNomeExercicio(nome))) return;
+        opcoesObjetos.push({ nome: nome, grupo: exercicioAtual.grupo, equipamento: "Alternativo compatível", series: exercicioAtual.series, reps: exercicioAtual.reps, evitar: exercicioAtual.evitar, passos: ["Execute o movimento com controle e sem dor.", "Mantenha a postura firme durante todo o exercício.", "Use uma carga ou dificuldade que permita boa execução.", "Se sentir dor articular, pare e escolha outra variação."] });
+      });
+
+      opcoesObjetos = filtrarExerciciosUnicos(opcoesObjetos).slice(0, 8);
+
+      if (!opcoesObjetos || opcoesObjetos.length === 0) {
+        alert("Ainda não há substituições compatíveis sem repetir exercícios da lista. Você pode pular este exercício e seguir o treino.");
         return;
       }
 
-      let textoOpcoes = "Escolha uma substituição:\n\n";
-      opcoes.forEach(function(opcao, i) { textoOpcoes += (i + 1) + " - " + opcao + "\n"; });
+      let textoOpcoes = "Escolha uma substituição para " + exercicioAtual.nome + ":\n\n";
+      opcoesObjetos.forEach(function(opcao, i) { textoOpcoes += (i + 1) + " - " + opcao.nome + " (" + opcao.equipamento + ")\n"; });
       const numero = Number(prompt(textoOpcoes + "\nDigite o número da opção:"));
-      if (numero < 1 || numero > opcoes.length) { alert("Opção inválida."); return; }
-
-      const novoNome = opcoes[numero - 1];
-      const exercicioBase = buscarExercicioPorNome(novoNome);
-      if (exercicioBase) {
-        const novoExercicio = ajustarExercicioPorMeta(Object.assign({}, exercicioBase));
-        treinoAtual[index] = novoExercicio;
-      } else {
-        treinoAtual[index] = {
-          nome: novoNome,
-          grupo: exercicioAtual.grupo,
-          equipamento: "Alternativo",
-          series: exercicioAtual.series,
-          reps: exercicioAtual.reps,
-          evitar: exercicioAtual.evitar,
-          passos: ["Execute o movimento com controle e sem dor.", "Mantenha a postura firme durante todo o exercício.", "Use uma carga ou dificuldade que permita boa execução.", "Se sentir dor articular, pare e escolha outra variação."]
-        };
-      }
-
+      if (numero < 1 || numero > opcoesObjetos.length) { alert("Opção inválida."); return; }
+      treinoAtual[index] = opcoesObjetos[numero - 1];
       exerciciosConcluidos[index] = false;
       salvarTreinoAtualLocal();
       mostrarTreinoNaTela();
@@ -3898,15 +3880,14 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
     function preencherRegistroComExercicio(index) {
       const exercicio = treinoAtual[index];
-      if (!exercicio) return;
-
-      const campoExercicio = document.getElementById("exercicioRegistro");
-      if (campoExercicio) campoExercicio.value = exercicio.nome;
-
-      limparCamposRegistroEvolucao(true);
-
-      const registro = document.getElementById("registroEvolucao");
-      if (registro) registro.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("exercicioRegistro").value = exercicio.nome;
+      document.getElementById("carga").value = "";
+      document.getElementById("reps").value = "";
+      document.getElementById("sensacao").value = "normal";
+      document.getElementById("observacaoTreino").value = "";
+      document.getElementById("resultadoEvolucao").innerText = "";
+      mensagemEvolucaoAtual = "";
+      document.getElementById("exercicioRegistro").scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     function calcularEvolucao() {
@@ -3922,6 +3903,36 @@ analisarEsforcoRecente(function(esforcoRecente) {
       else { proximaCarga = Math.max(carga - 2, 0); mensagem = "Reduza para " + proximaCarga + " kg no próximo treino e foque na técnica."; }
       mensagemEvolucaoAtual = mensagem;
       resultadoEvolucao.innerText = mensagem;
+    }
+
+    function chaveUltimoTreinoLocal() {
+      const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : "anonimo";
+      return "metatreino-ultimo-treino-salvo-" + email;
+    }
+
+    function salvarUltimoTreinoLocal(treinoSalvo) {
+      try {
+        localStorage.setItem(chaveUltimoTreinoLocal(), JSON.stringify({ letra: treinoSalvo.letraTreino, criadoEm: treinoSalvo.criadoEm }));
+      } catch (erro) {}
+    }
+
+    function obterUltimoTreinoLocal() {
+      try {
+        return JSON.parse(localStorage.getItem(chaveUltimoTreinoLocal()) || "null");
+      } catch (erro) {
+        return null;
+      }
+    }
+
+    function rolarParaProximoExercicioPendente() {
+      const proximoIndex = exerciciosConcluidos.findIndex(function(item) { return item !== true; });
+      if (proximoIndex >= 0) {
+        const alvo = document.getElementById("cardExercicio" + proximoIndex);
+        if (alvo) alvo.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        const topo = document.getElementById("resultadoTreino");
+        if (topo) topo.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }
 
     function salvarTreinoFeito() {
@@ -3950,14 +3961,12 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
       const treinoSalvo = { data: agora.toLocaleString("pt-BR"), criadoEm: agora.getTime(), diaSemana: nomeDoDiaDaSemana(), letraTreino: treinoAtual.letra || "Não informado", meta: perfilUsuario ? perfilUsuario.metaPrincipal : "", local: perfilUsuario ? perfilUsuario.localTreino : "", totalExercicios, totalConcluidos, nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário", exercicios: nomesExercicios, exercicioRegistro, carga, reps, sensacao, evolucao: mensagemEvolucaoAtual, feedbackFinalTreino: feedbackTreinoFinalAtual || "não informado", observacao, ultimaCardioConsiderada: ultimaCardioCache ? { data: ultimaCardioCache.data, intensidade: ultimaCardioCache.intensidade, sensacao: ultimaCardioCache.sensacao, distancia: ultimaCardioCache.distancia, tempo: ultimaCardioCache.tempo } : null };
 
-      salvarTreinoEmCacheLocal(treinoSalvo);
-
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").add(treinoSalvo)
         .then(function() {
+          salvarUltimoTreinoLocal(treinoSalvo);
           alert("Treino salvo na nuvem.");
           mostrarHistorico();
-          limparCamposRegistroEvolucao(false);
-          rolarParaPrimeiroExercicioPendente();
+          rolarParaProximoExercicioPendente();
         })
         .catch(function(erro) { console.log("Erro ao salvar treino na nuvem:", erro); alert("Não foi possível salvar o treino na nuvem. Confira sua conexão e tente novamente."); });
     }
@@ -4068,6 +4077,11 @@ analisarEsforcoRecente(function(esforcoRecente) {
       listaHistorico.innerHTML = "";
 
       if (!historico || historico.length === 0) { listaHistorico.innerHTML = "<p class='small'>Nenhum treino salvo na nuvem ainda.</p>"; return; }
+
+      const botaoCompleto = document.createElement("div");
+      botaoCompleto.className = "historico-item";
+      botaoCompleto.innerHTML = "<strong>Histórico resumido</strong><br><span class='small'>Mostrando os 3 últimos registros para manter a tela organizada.</span><br><button type='button' class='botao-principal' onclick='irParaHistoricoCompleto()'>Acompanhar histórico completo</button>";
+      listaHistorico.appendChild(botaoCompleto);
 
       historico.slice(0, 3).forEach(function(item) {
         const div = document.createElement("div");
@@ -4355,6 +4369,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
     window.onload = function() {
       carregarPerfilAutomaticamente();
+      atualizarFormularioEquipamentos();
       atualizarBotoesLogin(usuarioAtual);
     };
   </script>
@@ -4367,7 +4382,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
     const status = document.getElementById("statusAtualizacaoManual");
     if (status) {
       status.className = "alerta";
-      status.innerHTML = "🔄 Verificando atualização e recarregando o app...";
+      status.innerHTML = "🔄 Verificando atualização...";
     }
 
     if ("serviceWorker" in navigator) {
@@ -4381,7 +4396,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
         .then(function() {
           if (status) {
             status.className = "alerta alerta-sucesso";
-            status.innerHTML = "✅ Verificação concluída. O app será recarregado para buscar a versão mais recente.";
+            status.innerHTML = "✅ Verificação concluída. Se houver versão nova, o app tentará carregar agora.";
           }
 
           setTimeout(function() {
@@ -4391,11 +4406,10 @@ analisarEsforcoRecente(function(esforcoRecente) {
         .catch(function() {
           if (status) {
             status.className = "alerta alerta-aviso";
-            status.innerHTML = "A verificação automática não respondeu neste aparelho. O app será recarregado mesmo assim para tentar buscar a versão mais recente.";
+            status.innerHTML = "Não foi possível verificar automaticamente pelo Service Worker. O app vai tentar recarregar a página com a versão nova.";
           }
-
           setTimeout(function() {
-            window.location.reload();
+            window.location.href = window.location.pathname + "?v=" + METATREINO_APP_VERSION + "&t=" + Date.now();
           }, 900);
         });
     } else {
@@ -4410,11 +4424,38 @@ analisarEsforcoRecente(function(esforcoRecente) {
     }
   }
 
+  function tentarAtualizacaoAutomatica() {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      registrations.forEach(function(registration) { registration.update(); });
+    }).catch(function(error) { console.log("Atualização automática não concluída:", error); });
+  }
+
   if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("controllerchange", function() {
+      if (!window.__metatreinoRecarregouAtualizacao) {
+        window.__metatreinoRecarregouAtualizacao = true;
+        window.location.reload();
+      }
+    });
+    window.addEventListener("focus", tentarAtualizacaoAutomatica);
+    document.addEventListener("visibilitychange", function() {
+      if (!document.hidden) tentarAtualizacaoAutomatica();
+    });
     window.addEventListener("load", function() {
       navigator.serviceWorker.register("./service-worker.js?v=" + METATREINO_APP_VERSION)
         .then(function(registration) {
           registration.update();
+          if (registration.waiting) registration.waiting.postMessage({ type: "SKIP_WAITING" });
+          registration.addEventListener("updatefound", function() {
+            const novoWorker = registration.installing;
+            if (!novoWorker) return;
+            novoWorker.addEventListener("statechange", function() {
+              if (novoWorker.state === "installed" && navigator.serviceWorker.controller) {
+                novoWorker.postMessage({ type: "SKIP_WAITING" });
+              }
+            });
+          });
         })
         .catch(function(error) {
           console.log("Falha ao registrar service worker:", error);

@@ -3,6 +3,7 @@ const CACHE_NAME = "metatreino-cache-v1.3.3";
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./index.html?v=1.3.3",
   "./manifest.json",
   "./icon-512.png.png"
 ];
