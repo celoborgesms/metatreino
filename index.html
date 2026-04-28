@@ -936,24 +936,6 @@
       border: 1px solid rgba(148, 163, 184, 0.28);
     }
 
-
-    /* Correcao 1.3.3 - contraste das opcoes de equipamentos na pagina inicial */
-    #boxEquipamentosCasa .dias-grid label {
-      background: rgba(30, 41, 59, 0.92) !important;
-      color: #e2e8f0 !important;
-      border-color: rgba(148, 163, 184, 0.45) !important;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 58px;
-      line-height: 1.25;
-    }
-
-    #boxEquipamentosCasa .dias-grid input {
-      background: #ffffff !important;
-      accent-color: #22c55e !important;
-      flex: 0 0 auto;
-    }
     @media (max-width: 380px) {
       .container { padding: 14px; }
       h1 { font-size: 30px; }
@@ -1372,7 +1354,7 @@
             <li>Histórico resumido mantém somente os 3 últimos registros, com botão para acompanhar o histórico completo.</li>
             <li>Descanso automático por dia da semana passa a ser sugerido aos domingos, sem bloquear treino leve caso o aluno queira treinar.</li>
             <li>App agora orienta quando a mesma divisão de treino é repetida recentemente.</li>
-            <li>Biblioteca de treino e substituições ampliadas para academia, casa, espaço próprio e peso corporal.</li>
+            <li>Biblioteca de treino e substituições ampliadas para academia, casa, espaço próprio, peso corporal e estação multifuncional 10 em 1.</li>
             <li>Treinos sem equipamento passam a priorizar calistenia, funcional, core, isometria e HIIT adaptado.</li>
             <li>Adicionado formulário para informar equipamentos disponíveis em casa ou espaço próprio.</li>
             <li>Ao salvar registro de evolução, o app sobe para o próximo exercício pendente.</li>
@@ -1409,7 +1391,28 @@
           </ul>
         </div>
 
-<div class="historico-item">
+        <div class="historico-item">
+          <strong>Versão 1.3.0</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 20:00</p>
+          <ul>
+            <li>Login ajustado para iPhone/Safari usando redirecionamento quando popup for bloqueado.</li>
+            <li>Mensagem de venda aparece somente antes do login e ficou centralizada.</li>
+            <li>Botão sair movido para o final da área de perfil.</li>
+            <li>Progresso do treino salvo no aparelho: ao sair e voltar, exercícios marcados continuam marcados.</li>
+            <li>Treino mais diferente por perfil: iniciante, sobrepeso e avançado recebem ajustes de volume/intensidade.</li>
+            <li>Substituição de exercício evita sugerir opção repetida que já está na lista.</li>
+            <li>Adicionado botão para pular exercício sem travar a conclusão do treino.</li>
+            <li>Ajustada quantidade de exercícios conforme treino rápido, normal ou longo.</li>
+            <li>Check-in de dor mais completo: pernas, braços, coluna/costas, ombro, joelho e lombar.</li>
+            <li>Painel do treinador mais organizado: mostra 3 últimos alunos e permite ver todos.</li>
+          </ul>
+        </div>
+
+        
+
+        
+        <div class="historico-item">
           <strong>🔄 Atualização do app</strong><br>
           <p class="small">Use este botão quando quiser verificar se existe uma versão mais recente do MetaTreino.</p>
           <button type="button" class="botao-principal" onclick="verificarAtualizacaoManual()">Verificar se há nova atualização</button>
@@ -1586,12 +1589,10 @@
     }
 
     function alvoQuantidadeExercicios(tempo, perfil) {
-      // Ajuste fino 1.3.3: quantidade por tempo disponível
-      // Treino rápido (até 30 min): 3 a 4 exercícios
-      // Treino normal (cerca de 1h): 6 a 8 exercícios
-      // Treino longo (mais de 1h): 8 exercícios
-      if (tempo === "rapido") return perfil && perfil.iniciante ? 3 : 4;
-      if (tempo === "normal") return perfil && perfil.iniciante ? 6 : (perfil && perfil.avancado ? 8 : 7);
+      // Versao 1.3.3 - ajuste de volume por tempo disponivel
+      // rapido: 3 a 4 exercicios | normal: 6 a 8 exercicios | longo: 8 exercicios
+      if (tempo === "rapido") return perfil && perfil.avancado ? 4 : 3;
+      if (tempo === "normal") return perfil && perfil.iniciante ? 6 : 8;
       return 8;
     }
 
@@ -2634,11 +2635,9 @@
           { nome: "Supino no chão com halteres", grupo: "Peito", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Deite no chão.", "Segure os halteres alinhados ao peito.", "Desça até o braço tocar levemente o chão.", "Suba sem bater os pesos."] },
           { nome: "Elevação lateral com elástico", grupo: "Ombros", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Pise no elástico.", "Segure as pontas.", "Eleve os braços lateralmente.", "Desça devagar."] },
           { nome: "Tríceps francês com halter", grupo: "Tríceps", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Segure um halter acima da cabeça.", "Flexione os cotovelos.", "Estenda os braços com controle.", "Evite arquear a lombar."] },
-          { nome: "Supino na estação", grupo: "Peito", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Ajuste o banco e a pegada da estação.", "Mantenha os pés firmes no chão.", "Empurre com controle sem travar os cotovelos.", "Volte devagar sentindo o peitoral."] },
-          { nome: "Voador na estação", grupo: "Peito", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Ajuste os braços da máquina na altura do peito.", "Mantenha o tronco apoiado.", "Feche os braços contraindo o peitoral.", "Abra devagar sem forçar os ombros."] },
-          { nome: "Desenvolvimento na estação", grupo: "Ombros", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "ombro", passos: ["Ajuste a pegada na altura dos ombros.", "Contraia o abdômen.", "Empurre para cima com controle.", "Desça devagar sem perder a postura."] },
-          { nome: "Tríceps corda na estação", grupo: "Tríceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Prenda a corda na polia alta.", "Mantenha os cotovelos próximos ao corpo.", "Estenda os braços para baixo.", "Volte controlando a carga."] },
-          { nome: "Paralelas assistidas", grupo: "Peito/Tríceps", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "ombro", passos: ["Apoie as mãos nas barras paralelas.", "Desça somente até onde for confortável.", "Mantenha o tronco firme.", "Suba com controle, sem impulso."] }
+          { nome: "Supino na estação", grupo: "Peito", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Ajuste o banco e a pegada da estação.", "Mantenha as costas apoiadas.", "Empurre as alças à frente com controle.", "Volte devagar sem bater os pesos."] },
+          { nome: "Voador na estação", grupo: "Peito", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Ajuste o assento para alinhar braços ao peitoral.", "Aproxime as alças à frente do corpo.", "Contraia o peito sem forçar os ombros.", "Abra os braços controlando a volta."] },
+          { nome: "Tríceps corda na polia", grupo: "Tríceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Prenda a corda na polia alta.", "Mantenha cotovelos próximos ao corpo.", "Empurre a corda para baixo.", "Volte controlando."] }
         ],
         B: [
           criarExercicioPesoCorporal("Super-homem", "Lombar", "lombar", ["Deite de barriga para baixo.", "Eleve braços e pernas levemente.", "Segure por alguns segundos.", "Volte com controle."]),
@@ -2646,12 +2645,12 @@
           { nome: "Remada com elástico sentado", grupo: "Costas", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Sente no chão.", "Passe o elástico pelos pés.", "Puxe as pontas em direção ao peito.", "Volte devagar."] },
           { nome: "Remada curvada com halteres", grupo: "Costas", equipamento: "Halteres", nivel: "intermediario", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Incline o tronco com coluna firme.", "Puxe os halteres em direção ao quadril.", "Contraia as costas.", "Desça controlando."] },
           { nome: "Rosca bíceps com elástico", grupo: "Bíceps", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "nenhuma", passos: ["Pise no elástico.", "Segure as pontas.", "Flexione os cotovelos.", "Desça devagar."] },
-          { nome: "Puxada alta na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Ajuste a polia alta.", "Puxe a barra em direção ao peito.", "Mantenha o tronco firme.", "Volte controlando a carga."] },
-          { nome: "Puxada baixa na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Sente com a coluna firme.", "Puxe a pegada em direção ao abdômen.", "Contraia as costas.", "Volte devagar sem arredondar a lombar."] },
-          { nome: "Remada na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Ajuste a pegada da remada.", "Puxe os cotovelos para trás.", "Contraia as costas no final.", "Retorne com controle."] },
-          { nome: "Rosca direta na estação", grupo: "Bíceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "nenhuma", passos: ["Use a polia baixa ou barra apropriada.", "Mantenha os cotovelos próximos ao corpo.", "Flexione os braços sem balançar.", "Desça devagar."] },
-          { nome: "Rosca Scott na estação", grupo: "Bíceps", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "nenhuma", passos: ["Apoie os braços no suporte Scott.", "Segure a pegada com firmeza.", "Suba contraindo o bíceps.", "Desça sem esticar demais os cotovelos."] },
-          { nome: "Barra fixa assistida", grupo: "Costas/Bíceps", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "ombro", passos: ["Segure a barra com firmeza.", "Ative as costas antes de puxar.", "Suba até onde conseguir com controle.", "Desça devagar sem soltar o corpo."] }
+          { nome: "Puxada alta na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Segure a barra da polia alta.", "Mantenha o tronco firme.", "Puxe em direção ao peito.", "Volte controlando sem soltar o peso."] },
+          { nome: "Puxada baixa na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Use a polia baixa com pegador adequado.", "Sente ou apoie-se com coluna firme.", "Puxe em direção ao abdômen.", "Volte devagar mantendo controle."] },
+          { nome: "Remada baixa na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Segure o puxador da polia baixa.", "Mantenha peito aberto e coluna firme.", "Puxe os cotovelos para trás.", "Retorne lentamente."] },
+          { nome: "Rosca direta na polia baixa", grupo: "Bíceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "nenhuma", passos: ["Prenda a barra reta na polia baixa.", "Mantenha cotovelos próximos ao corpo.", "Flexione os braços sem balançar.", "Desça controlando."] },
+          { nome: "Rosca Scott na estação", grupo: "Bíceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "nenhuma", passos: ["Apoie os braços no suporte Scott.", "Segure a barra ou puxador da estação.", "Suba contraindo o bíceps.", "Desça devagar sem esticar totalmente com impacto."] },
+          { nome: "Face pull na polia", grupo: "Ombro posterior", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "ombro", passos: ["Use a corda na polia alta.", "Puxe em direção ao rosto.", "Abra os cotovelos com controle.", "Volte devagar."] }
         ],
         C: [
           criarExercicioPesoCorporal("Agachamento isométrico na parede", "Pernas", "joelho", ["Encoste as costas na parede.", "Desça até uma posição confortável.", "Segure sem prender a respiração.", "Suba devagar."]),
@@ -2661,14 +2660,9 @@
           { nome: "Agachamento goblet", grupo: "Pernas", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "joelho", passos: ["Segure um halter junto ao peito.", "Desça com controle.", "Mantenha coluna firme.", "Suba empurrando o chão."] },
           { nome: "Elevação de quadril com mini band", grupo: "Glúteos", equipamento: "Elástico / mini band", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Coloque a mini band acima dos joelhos.", "Deite com pés no chão.", "Suba o quadril contraindo glúteos.", "Desça controlando."] },
           { nome: "Levantamento terra com halteres", grupo: "Posterior de coxa", equipamento: "Halteres", nivel: "intermediario", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Segure os halteres à frente do corpo.", "Incline o tronco com coluna firme.", "Sinta posterior de coxa alongar.", "Suba contraindo glúteos."] },
-          { nome: "Extensão de pernas na estação", grupo: "Quadríceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "joelho", passos: ["Ajuste o apoio próximo ao tornozelo.", "Estenda os joelhos com controle.", "Contraia o quadríceps no topo.", "Desça devagar sem bater a carga."] },
-          { nome: "Flexora unilateral na estação", grupo: "Posterior de coxa", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "joelho", passos: ["Ajuste a polia ou apoio para uma perna.", "Flexione o joelho com controle.", "Contraia posterior de coxa.", "Volte devagar e troque a perna."] },
-          { nome: "Agachamento V Squat", grupo: "Quadríceps/Glúteos", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "joelho", passos: ["Ajuste a plataforma e os apoios.", "Mantenha os pés firmes.", "Desça com amplitude confortável.", "Suba sem travar os joelhos."] },
-          { nome: "Bom dia na estação", grupo: "Posterior de coxa/Lombar", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "lombar", passos: ["Use carga leve e postura firme.", "Incline o tronco mantendo a coluna neutra.", "Sinta posterior de coxa alongar.", "Volte contraindo glúteos e abdômen."] },
-          { nome: "Panturrilha em pé na estação", grupo: "Panturrilha", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "nenhuma", passos: ["Fique em pé com apoio seguro.", "Suba na ponta dos pés.", "Contraia no topo.", "Desça devagar até alongar a panturrilha."] },
-          { nome: "Avanço unilateral", grupo: "Quadríceps/Glúteos", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "joelho", passos: ["Dê um passo à frente com controle.", "Desça mantendo o tronco firme.", "Empurre o chão para voltar.", "Alterne as pernas sem pressa."] },
-          { nome: "Búlgaro na estação", grupo: "Quadríceps/Glúteos", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "joelho", passos: ["Apoie o pé de trás com segurança.", "Segure a carga ou apoio da estação se necessário.", "Desça com controle.", "Suba empurrando a perna da frente."] },
-          { nome: "Abdominal na estação", grupo: "Abdômen", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Ajuste a polia ou apoio abdominal.", "Contraia o abdômen para iniciar o movimento.", "Evite puxar com os braços.", "Volte devagar mantendo controle."] }
+          { nome: "Extensão de pernas na estação", grupo: "Quadríceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "joelho", passos: ["Ajuste o rolo na frente das pernas.", "Sente com as costas apoiadas.", "Estenda os joelhos com controle.", "Volte devagar sem deixar o peso bater."] },
+          { nome: "Flexora unilateral na estação", grupo: "Posterior de coxa", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "joelho", passos: ["Use o rolo inferior da estação.", "Flexione uma perna por vez.", "Contraia posterior de coxa.", "Volte controlando e troque a perna."] },
+          { nome: "Abdominal na polia", grupo: "Abdômen", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Prenda a corda na polia alta.", "Ajoelhe ou fique estável à frente da estação.", "Flexione o tronco contraindo o abdômen.", "Volte devagar sem puxar pelo pescoço."] }
         ],
         descanso: [
           criarExercicioPesoCorporal("Respiração e mobilidade", "Recuperação", "nenhuma", ["Respire profundamente.", "Movimente ombros, quadril e coluna.", "Evite posições dolorosas.", "Finalize leve."])
@@ -4342,47 +4336,34 @@ analisarEsforcoRecente(function(esforcoRecente) {
         renderizarDetalheDiaHistorico(diasOrdenados[0], mapaDias);
       }
 
-      const historicoGeral = [];
-      treinos.forEach(function(item) { historicoGeral.push({ tipo: "treino", criadoEm: Number(item.criadoEm || 0), dados: item }); });
-      cardios.forEach(function(item) { historicoGeral.push({ tipo: "cardio", criadoEm: Number(item.criadoEm || 0), dados: item }); });
-      historicoGeral.sort(function(a, b) { return b.criadoEm - a.criadoEm; });
-
-      const tituloResumo = document.createElement("div");
-      tituloResumo.className = "alerta";
-      tituloResumo.innerHTML = "<strong>Histórico resumido dos últimos 90 dias</strong><br><span class='small'>Mostrando somente os 3 últimos registros para manter esta aba organizada.</span>";
-      listaHistoricoCompleto.appendChild(tituloResumo);
-
-      historicoGeral.slice(0, 3).forEach(function(item) {
-        const wrapper = document.createElement("div");
-        wrapper.innerHTML = item.tipo === "treino" ? montarCardTreinoHistorico(item.dados) : montarCardCardioHistorico(item.dados);
-        listaHistoricoCompleto.appendChild(wrapper.firstChild);
-      });
-
-      if (historicoGeral.length > 3) {
-        const controleCompleto = document.createElement("div");
-        controleCompleto.className = "historico-item";
-        controleCompleto.innerHTML = "<strong>Quer ver todos os registros?</strong><br><span class='small'>Toque no botão abaixo para acompanhar o histórico completo dos últimos 90 dias, separado por treino e cardio.</span><br><button id='botaoAbrirHistoricoCompleto90' type='button' class='botao-principal' onclick='document.getElementById(\"historicoCompletoLista90\").classList.remove(\"hidden\"); this.classList.add(\"hidden\");'>Acompanhar histórico completo</button>";
-        listaHistoricoCompleto.appendChild(controleCompleto);
-      }
-
-      const listaCompleta90 = document.createElement("div");
-      listaCompleta90.id = "historicoCompletoLista90";
-      listaCompleta90.className = historicoGeral.length > 3 ? "hidden" : "";
-
-      let htmlCompleto = "<div class='alerta'><strong>Histórico completo dos últimos 90 dias</strong><br><span class='small'>Lista completa separada por treino e cardio.</span></div>";
+      const tituloTreinos = document.createElement("div");
+      tituloTreinos.className = "alerta";
+      tituloTreinos.innerHTML = "<strong>Histórico geral dos últimos 90 dias</strong><br><span class='small'>Lista completa abaixo, separada por treino e cardio.</span>";
+      listaHistoricoCompleto.appendChild(tituloTreinos);
 
       if (treinos.length > 0) {
-        htmlCompleto += "<div class='alerta'><strong>Treinos de força</strong></div>";
-        treinos.forEach(function(item) { htmlCompleto += montarCardTreinoHistorico(item); });
+        const tituloTreinosForca = document.createElement("div");
+        tituloTreinosForca.className = "alerta";
+        tituloTreinosForca.innerHTML = "<strong>Treinos de força</strong>";
+        listaHistoricoCompleto.appendChild(tituloTreinosForca);
+        treinos.forEach(function(item) {
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = montarCardTreinoHistorico(item);
+          listaHistoricoCompleto.appendChild(wrapper.firstChild);
+        });
       }
 
       if (cardios.length > 0) {
-        htmlCompleto += "<div class='alerta'><strong>Histórico de cardio</strong></div>";
-        cardios.forEach(function(item) { htmlCompleto += montarCardCardioHistorico(item); });
+        const tituloCardio = document.createElement("div");
+        tituloCardio.className = "alerta";
+        tituloCardio.innerHTML = "<strong>Histórico de cardio</strong>";
+        listaHistoricoCompleto.appendChild(tituloCardio);
+        cardios.forEach(function(item) {
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = montarCardCardioHistorico(item);
+          listaHistoricoCompleto.appendChild(wrapper.firstChild);
+        });
       }
-
-      listaCompleta90.innerHTML = htmlCompleto;
-      listaHistoricoCompleto.appendChild(listaCompleta90);
     }
 
     function limparHistorico() {
