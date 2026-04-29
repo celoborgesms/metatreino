@@ -1,0 +1,1 @@
+Substitua no GitHub: index.html, manifest.json, service-worker.js, js/app.js, js/version.js. Pode subir tudo descompactado.
