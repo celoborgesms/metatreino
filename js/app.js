@@ -1050,6 +1050,7 @@ const firebaseConfig = {
     let feedbackTreinoFinalAtual = "";
     let exerciciosConcluidos = [];
     let sugestoesCarga = {};
+    let registrosExerciciosTreino = {};
     let ultimaCardioCache = null;
     let mostrarTodosAlunosPainel = false;
     let usuariosAutorizadosCache = [];
@@ -2624,6 +2625,16 @@ analisarEsforcoRecente(function(esforcoRecente) {
           "<span class='tag'>Equipamento: " + nomeEquipamentoParaExibir(exercicio.equipamento) + "</span>" +
           (exercicio.observacao ? "<div class='alerta alerta-aviso'>" + limparTextoSeguro(exercicio.observacao) + "</div>" : "") +
           "<div class='alerta'>" + obterTextoSugestaoCarga(exercicio.nome) + "</div>" +
+          "<div class='alerta alerta-aviso'>" + limparTextoSeguro(obterDicaPersonalizadaExercicio(exercicio)) + "</div>" +
+          "<div class='registro-exercicio-inline'>" +
+          "<strong>Registrar este exercício</strong>" +
+          "<div class='registro-grid'>" +
+          "<input id='cargaExercicio" + index + "' type='number' min='0' step='0.5' placeholder='Carga kg'>" +
+          "<input id='repsExercicio" + index + "' type='number' min='0' placeholder='Reps'>" +
+          "<select id='sensacaoExercicio" + index + "'><option value='facil'>Fácil</option><option value='normal' selected>Normal</option><option value='dificil'>Difícil</option></select>" +
+          "</div>" +
+          "<input id='obsExercicio" + index + "' type='text' placeholder='Obs: dor, técnica, amplitude...'>" +
+          "</div>" +
           "<h4>Como fazer:</h4><ol>" + passosHTML + "</ol>" +
           "<div class='aviso-video'>Use o vídeo apenas como apoio. Em caso de dor, pare o exercício.</div>" +
           "<button type='button' class='botao-secundario' onclick='abrirVideoExercicio(" + JSON.stringify(exercicio.nome) + ")'>Ver execução</button>" +
@@ -2735,18 +2746,146 @@ analisarEsforcoRecente(function(esforcoRecente) {
       mostrarTreinoNaTela();
     }
 
-    function normalizarNomeExercicio(nome) { return nome.trim().toLowerCase(); }
+    function normalizarNomeExercicio(nome) { return String(nome || "").trim().toLowerCase(); }
+
+    function chaveMemoriaAluno() {
+      const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : "anonimo";
+      return "metatreino-memoria-aluno-140-" + email;
+    }
+
+    function obterMemoriaAluno() {
+      try {
+        const memoria = JSON.parse(localStorage.getItem(chaveMemoriaAluno()) || "{}");
+        if (!memoria.exercicios) memoria.exercicios = {};
+        if (!memoria.dores) memoria.dores = {};
+        if (!memoria.grupos) memoria.grupos = {};
+        if (!memoria.treinosSalvos) memoria.treinosSalvos = 0;
+        return memoria;
+      } catch (erro) {
+        return { exercicios: {}, dores: {}, grupos: {}, treinosSalvos: 0 };
+      }
+    }
+
+    function salvarMemoriaAluno(memoria) {
+      try { localStorage.setItem(chaveMemoriaAluno(), JSON.stringify(memoria)); }
+      catch (erro) { console.log("Não foi possível salvar memória inteligente:", erro); }
+    }
+
+    function calcularProximaCargaInteligente(carga, reps, sensacao) {
+      carga = Number(carga || 0);
+      reps = Number(reps || 0);
+      let proxima = carga;
+      let motivo = "Mantenha a carga e busque execução mais limpa.";
+      if (sensacao === "facil" && reps >= 8) {
+        proxima = carga === 0 ? 0 : carga + (carga >= 40 ? 2.5 : 1);
+        motivo = "Foi fácil e com boas repetições; tente uma progressão pequena.";
+      } else if (sensacao === "normal" && reps >= 12) {
+        proxima = carga === 0 ? 0 : carga + (carga >= 40 ? 2.5 : 1);
+        motivo = "Você bateu uma faixa alta de repetições; pode tentar subir pouco.";
+      } else if (sensacao === "dificil" || reps < 6) {
+        proxima = Math.max(0, carga - (carga >= 40 ? 2.5 : 1));
+        motivo = "O registro ficou pesado; reduza ou mantenha para proteger a técnica.";
+      }
+      return { carga: Number(proxima.toFixed(1)), motivo: motivo };
+    }
+
+    function atualizarMemoriaComRegistro(registro) {
+      if (!registro || !registro.nome) return;
+      const memoria = obterMemoriaAluno();
+      const chave = normalizarNomeExercicio(registro.nome);
+      if (!chave) return;
+      const anterior = memoria.exercicios[chave] || { nome: registro.nome, registros: [], melhorCarga: 0, melhorReps: 0, total: 0 };
+      const carga = Number(registro.carga || 0);
+      const reps = Number(registro.reps || 0);
+      const sensacao = registro.sensacao || "normal";
+      const proxima = calcularProximaCargaInteligente(carga, reps, sensacao);
+      anterior.nome = registro.nome;
+      anterior.grupo = registro.grupo || anterior.grupo || "";
+      anterior.ultimaCarga = carga;
+      anterior.ultimasReps = reps;
+      anterior.ultimaSensacao = sensacao;
+      anterior.ultimaData = registro.data || new Date().toLocaleString("pt-BR");
+      anterior.proximaCarga = proxima.carga;
+      anterior.motivo = proxima.motivo;
+      anterior.total = Number(anterior.total || 0) + 1;
+      anterior.melhorCarga = Math.max(Number(anterior.melhorCarga || 0), carga);
+      anterior.melhorReps = Math.max(Number(anterior.melhorReps || 0), reps);
+      anterior.registros = (anterior.registros || []).slice(-9);
+      anterior.registros.push({ data: anterior.ultimaData, carga: carga, reps: reps, sensacao: sensacao, observacao: registro.observacao || "" });
+      memoria.exercicios[chave] = anterior;
+      if (registro.grupo) memoria.grupos[registro.grupo] = Number(memoria.grupos[registro.grupo] || 0) + 1;
+      const textoObs = normalizarNomeExercicio(registro.observacao || "");
+      ["ombro", "joelho", "lombar", "coluna", "punho", "cotovelo"].forEach(function(dor) {
+        if (textoObs.includes(dor)) memoria.dores[dor] = Number(memoria.dores[dor] || 0) + 1;
+      });
+      memoria.atualizadoEm = new Date().toLocaleString("pt-BR");
+      salvarMemoriaAluno(memoria);
+    }
+
+    function atualizarMemoriaComTreino(treinoSalvo) {
+      const memoria = obterMemoriaAluno();
+      memoria.treinosSalvos = Number(memoria.treinosSalvos || 0) + 1;
+      memoria.ultimoTreino = { data: treinoSalvo.data, letra: treinoSalvo.letraTreino, concluidos: treinoSalvo.totalConcluidos, total: treinoSalvo.totalExercicios, feedback: treinoSalvo.feedbackFinalTreino };
+      salvarMemoriaAluno(memoria);
+      (treinoSalvo.registrosExercicios || []).forEach(atualizarMemoriaComRegistro);
+    }
 
     function buscarSugestoesDeCarga(treino) {
-      // O histórico agora fica somente na nuvem. Para manter a tela rápida,
-      // a sugestão de carga será evoluída em uma próxima etapa lendo os últimos registros do Firestore.
-      return {};
+      const memoria = obterMemoriaAluno();
+      const sugestoes = {};
+      (treino || []).forEach(function(exercicio) {
+        const info = memoria.exercicios[normalizarNomeExercicio(exercicio.nome)];
+        if (info) {
+          sugestoes[exercicio.nome] = {
+            ultimaCarga: info.ultimaCarga || 0,
+            ultimasReps: info.ultimasReps || 0,
+            data: info.ultimaData || "registro anterior",
+            cargaSugerida: info.proximaCarga || info.ultimaCarga || 0,
+            motivo: info.motivo || "Sugestão calculada pela memória do aluno."
+          };
+        }
+      });
+      return sugestoes;
     }
 
     function obterTextoSugestaoCarga(nomeExercicio) {
       const sugestao = sugestoesCarga[nomeExercicio];
-      if (!sugestao) return "Carga sugerida: ainda sem histórico para este exercício.";
-      return "Última carga: " + sugestao.ultimaCarga + " kg em " + sugestao.data + ". Sugestão para hoje: " + sugestao.cargaSugerida + " kg. " + sugestao.motivo;
+      if (!sugestao) return "IA de evolução: ainda sem histórico neste exercício. Registre carga, reps e sensação para o app aprender.";
+      return "IA de evolução: última vez " + sugestao.ultimaCarga + " kg x " + sugestao.ultimasReps + " reps em " + sugestao.data + ". Hoje sugere: " + sugestao.cargaSugerida + " kg. " + sugestao.motivo;
+    }
+
+    function obterDicaPersonalizadaExercicio(exercicio) {
+      const memoria = obterMemoriaAluno();
+      const info = memoria.exercicios[normalizarNomeExercicio(exercicio.nome)];
+      if (!info) return "Dica personalizada: registre este exercício para o app comparar sua evolução nas próximas sessões.";
+      if (info.ultimaSensacao === "dificil") return "Dica personalizada: na última vez este exercício ficou difícil. Priorize técnica, descanso e não force aumento hoje.";
+      if (Number(info.total || 0) >= 3 && Number(info.proximaCarga || 0) > Number(info.ultimaCarga || 0)) return "Dica personalizada: seu histórico indica boa adaptação. Tente a progressão sugerida somente se aquecer bem.";
+      if (info.ultimaSensacao === "facil") return "Dica personalizada: como ficou fácil da última vez, você pode tentar evoluir carga ou repetições com controle.";
+      return "Dica personalizada: mantenha constância e tente melhorar uma variável pequena: carga, reps ou execução.";
+    }
+
+    function coletarRegistrosExerciciosDoTreino(agoraTexto) {
+      const lista = [];
+      (treinoAtual || []).forEach(function(exercicio, index) {
+        const cargaEl = document.getElementById("cargaExercicio" + index);
+        const repsEl = document.getElementById("repsExercicio" + index);
+        const sensacaoEl = document.getElementById("sensacaoExercicio" + index);
+        const obsEl = document.getElementById("obsExercicio" + index);
+        const carga = cargaEl ? cargaEl.value : "";
+        const reps = repsEl ? repsEl.value : "";
+        if (carga === "" && reps === "") return;
+        lista.push({
+          nome: exercicio.nome,
+          grupo: exercicio.grupo || "",
+          carga: carga === "" ? 0 : Number(String(carga).replace(",", ".")),
+          reps: reps === "" ? 0 : Number(String(reps).replace(",", ".")),
+          sensacao: sensacaoEl ? sensacaoEl.value : "normal",
+          observacao: obsEl ? obsEl.value.trim() : "",
+          concluido: exerciciosConcluidos[index] === true,
+          data: agoraTexto || new Date().toLocaleString("pt-BR")
+        });
+      });
+      return lista;
     }
 
     function preencherRegistroComExercicio(index) {
@@ -2820,17 +2959,22 @@ analisarEsforcoRecente(function(esforcoRecente) {
       const sensacao = document.getElementById("sensacao").value;
       const observacao = document.getElementById("observacaoTreino").value.trim();
 
-      if (carga === "" || Number(carga) < 0 || Number(reps) <= 0) {
-        alert("Informe uma carga de 0 kg ou mais e as repetições feitas.");
+      const agora = new Date();
+      const registrosExercicios = coletarRegistrosExerciciosDoTreino(agora.toLocaleString("pt-BR"));
+      if (registrosExercicios.length === 0 && (carga === "" || Number(carga) < 0 || Number(reps) <= 0)) {
+        alert("Informe carga e repetições no registro principal ou em pelo menos um exercício do treino.");
         return;
+      }
+      if (registrosExercicios.length === 0 && exercicioRegistro) {
+        registrosExercicios.push({ nome: exercicioRegistro, grupo: "Principal", carga: Number(carga), reps: Number(reps), sensacao: sensacao, observacao: observacao, concluido: true, data: agora.toLocaleString("pt-BR") });
       }
 
       const nomesExercicios = treinoAtual.map(function(exercicio) { return exercicio.nome; });
       const totalExercicios = exerciciosConcluidos.length;
       const totalConcluidos = exerciciosConcluidos.filter(function(item) { return item === true; }).length;
-      const agora = new Date();
 
-      const treinoSalvo = { data: agora.toLocaleString("pt-BR"), criadoEm: agora.getTime(), diaSemana: nomeDoDiaDaSemana(), letraTreino: treinoAtual.letra || "Não informado", meta: perfilUsuario ? perfilUsuario.metaPrincipal : "", local: perfilUsuario ? perfilUsuario.localTreino : "", totalExercicios, totalConcluidos, nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário", exercicios: nomesExercicios, exercicioRegistro, carga, reps, sensacao, evolucao: mensagemEvolucaoAtual, feedbackFinalTreino: feedbackTreinoFinalAtual || "não informado", observacao, ultimaCardioConsiderada: ultimaCardioCache ? { data: ultimaCardioCache.data, intensidade: ultimaCardioCache.intensidade, sensacao: ultimaCardioCache.sensacao, distancia: ultimaCardioCache.distancia, tempo: ultimaCardioCache.tempo } : null };
+      const treinoSalvo = { data: agora.toLocaleString("pt-BR"), criadoEm: agora.getTime(), diaSemana: nomeDoDiaDaSemana(), letraTreino: treinoAtual.letra || "Não informado", meta: perfilUsuario ? perfilUsuario.metaPrincipal : "", local: perfilUsuario ? perfilUsuario.localTreino : "", totalExercicios, totalConcluidos, nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário", exercicios: nomesExercicios, registrosExercicios: registrosExercicios, exercicioRegistro, carga, reps, sensacao, evolucao: mensagemEvolucaoAtual, feedbackFinalTreino: feedbackTreinoFinalAtual || "não informado", observacao, ultimaCardioConsiderada: ultimaCardioCache ? { data: ultimaCardioCache.data, intensidade: ultimaCardioCache.intensidade, sensacao: ultimaCardioCache.sensacao, distancia: ultimaCardioCache.distancia, tempo: ultimaCardioCache.tempo } : null };
+      atualizarMemoriaComTreino(treinoSalvo);
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").add(treinoSalvo)
         .then(function() {
@@ -2988,6 +3132,29 @@ analisarEsforcoRecente(function(esforcoRecente) {
       "</div>";
     }
 
+    function montarPainelMemoriaAluno() {
+      const memoria = obterMemoriaAluno();
+      const exercicios = Object.keys(memoria.exercicios || {}).map(function(chave) { return memoria.exercicios[chave]; })
+        .sort(function(a, b) { return Number(b.total || 0) - Number(a.total || 0); });
+      let html = "<div class='grafico-card'><strong>🧠 Memória inteligente do aluno</strong><br>" +
+        "<span class='small'>Aprende com carga, repetições, sensação e observações salvas neste aparelho. Quanto mais registros, melhores as sugestões.</span>" +
+        "<div class='alerta'><strong>Resumo da memória:</strong><br>Treinos salvos neste aparelho: " + limparTextoSeguro(memoria.treinosSalvos || 0) + "<br>Exercícios com histórico: " + exercicios.length + "<br>Última atualização: " + limparTextoSeguro(memoria.atualizadoEm || "sem registros") + "</div>";
+      if (exercicios.length === 0) {
+        html += "<p class='small'>Ainda não há exercícios suficientes para montar progressão automática. Salve carga e repetições em alguns treinos.</p></div>";
+        return html;
+      }
+      html += "<strong>Progressões sugeridas</strong>";
+      exercicios.slice(0, 8).forEach(function(info) {
+        const detalhe = "Última: " + (info.ultimaCarga || 0) + " kg x " + (info.ultimasReps || 0) + " | Próxima: " + (info.proximaCarga || info.ultimaCarga || 0) + " kg";
+        html += montarLinhaGrafico(info.nome || "Exercício", Number(info.total || 1), Math.max(1, exercicios[0].total || 1), detalhe);
+        html += "<p class='small'>" + limparTextoSeguro(info.motivo || "") + "</p>";
+      });
+      const dores = Object.keys(memoria.dores || {}).filter(function(d) { return memoria.dores[d] > 0; });
+      if (dores.length) html += "<div class='alerta alerta-aviso'><strong>Atenção de segurança:</strong><br>Observações com dor encontradas: " + limparTextoSeguro(dores.map(function(d) { return d + " (" + memoria.dores[d] + ")"; }).join(", ")) + ". O app deve priorizar técnica, substituição e menor carga nesses casos.</div>";
+      html += "</div>";
+      return html;
+    }
+
     function montarGraficosEvolucao(treinos, cardios) {
       treinos = treinos || [];
       cardios = (cardios || []).filter(function(item) { return item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida"; });
@@ -3108,6 +3275,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
         "Registro principal: " + limparTextoSeguro(item.exercicioRegistro || "Não informado") + "<br>" +
         "Carga: " + limparTextoSeguro(item.carga !== undefined && item.carga !== "" ? item.carga : "-") + " kg | Reps: " + limparTextoSeguro(item.reps || "-") + " | Sensação: " + limparTextoSeguro(item.sensacao || "-") + "<br>" +
         "Evolução: " + limparTextoSeguro(item.evolucao || "Não calculada") + "<br>" +
+        (item.registrosExercicios && item.registrosExercicios.length ? "<strong>Histórico por exercício:</strong><br>" + item.registrosExercicios.map(function(reg) { return limparTextoSeguro(reg.nome) + ": " + limparTextoSeguro(reg.carga) + " kg x " + limparTextoSeguro(reg.reps) + " reps (" + limparTextoSeguro(reg.sensacao) + ")"; }).join("<br>") + "<br>" : "") +
         "Feedback final: " + limparTextoSeguro(item.feedbackFinalTreino || "Não informado") + "<br>" +
         "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
         (item.__id ? "<br><button type='button' class='botao-secundario' onclick='editarTreinoHistorico(" + JSON.stringify(item.__id) + ")'>Editar treino</button>" : "") +
@@ -3177,6 +3345,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       }
 
       listaHistoricoCompleto.innerHTML += montarResumoPessoal(treinos, cardios);
+      listaHistoricoCompleto.innerHTML += montarPainelMemoriaAluno();
       listaHistoricoCompleto.innerHTML += montarGraficosEvolucao(treinos, cardios);
 
       const mapaDias = agruparRegistrosPorDia(treinos, cardios);
@@ -3315,7 +3484,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       atualizarBotoesLogin(usuarioAtual);
     };
 
-const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.3.8";
+const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.4.0";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -3403,7 +3572,7 @@ const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.3.8";
   }
 
 
-/* Versão 1.3.8 - correção real da biblioteca de exercícios por categoria */
+/* Versão 1.4.0 - correção real da biblioteca de exercícios por categoria */
 function calcularIdadePorNascimento(dataISO) { if (!dataISO) return 0; const nasc = new Date(dataISO + "T00:00:00"); if (isNaN(nasc.getTime())) return 0; const hoje = new Date(); let idade = hoje.getFullYear() - nasc.getFullYear(); const mes = hoje.getMonth() - nasc.getMonth(); if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--; return Math.max(0, idade); }
 function normalizarLocalTreino(valor) { const mapa = { academia_grande: "academia_avancada", academia_pequena: "academia_basica", garagem: "academia_basica", casa_limitado: "academia_basica", halteres: "academia_basica", academia_casa: "academia_basica", academia_completa: "academia_avancada", personalizado: "academia_basica", sem_equipamento: "sem_equipamento", academia_basica: "academia_basica", academia_avancada: "academia_avancada" }; return mapa[valor] || "sem_equipamento"; }
 function traduzirLocal(valor) { const local = normalizarLocalTreino(valor); if (local === "sem_equipamento") return "Sem Equipamento — peso corporal"; if (local === "academia_basica") return "Academia básica — barras, halteres e banco"; if (local === "academia_avancada") return "Academia avançada — completa"; return "Sem Equipamento — peso corporal"; }
