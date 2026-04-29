@@ -936,32 +936,6 @@
       border: 1px solid rgba(148, 163, 184, 0.28);
     }
 
-
-    /* Correcao visual 1.3.3 - contraste das caixas de equipamentos */
-    #boxEquipamentosCasa .dias-grid label {
-      background: rgba(30, 41, 59, 0.92) !important;
-      color: #e2e8f0 !important;
-      border-color: rgba(148, 163, 184, 0.45) !important;
-      display: flex !important;
-      align-items: center !important;
-      gap: 10px !important;
-      min-height: 58px !important;
-      line-height: 1.25 !important;
-    }
-
-    #boxEquipamentosCasa .dias-grid label:has(input:checked) {
-      background: rgba(34, 197, 94, 0.14) !important;
-      border-color: rgba(34, 197, 94, 0.70) !important;
-      color: #ffffff !important;
-    }
-
-    #boxEquipamentosCasa .dias-grid input {
-      width: auto !important;
-      margin: 0 !important;
-      background: #ffffff !important;
-      accent-color: #22c55e !important;
-      flex: 0 0 auto !important;
-    }
     @media (max-width: 380px) {
       .container { padding: 14px; }
       h1 { font-size: 30px; }
@@ -1378,9 +1352,10 @@
           <ul>
             <li>Removido o botão “Não fiz cardio recentemente” da aba Cardio.</li>
             <li>Histórico resumido mantém somente os 3 últimos registros, com botão para acompanhar o histórico completo.</li>
+            <li>Adicionado botão para editar registros de treino e cardio salvos no histórico.</li>
             <li>Descanso automático por dia da semana passa a ser sugerido aos domingos, sem bloquear treino leve caso o aluno queira treinar.</li>
             <li>App agora orienta quando a mesma divisão de treino é repetida recentemente.</li>
-            <li>Biblioteca de treino e substituições ampliadas para academia, casa, espaço próprio, peso corporal e estação multifuncional 10 em 1.</li>
+            <li>Biblioteca de treino e substituições ampliadas para academia, casa, espaço próprio e peso corporal.</li>
             <li>Treinos sem equipamento passam a priorizar calistenia, funcional, core, isometria e HIIT adaptado.</li>
             <li>Adicionado formulário para informar equipamentos disponíveis em casa ou espaço próprio.</li>
             <li>Ao salvar registro de evolução, o app sobe para o próximo exercício pendente.</li>
@@ -1417,23 +1392,6 @@
           </ul>
         </div>
 
-        <div class="historico-item">
-          <strong>Versão 1.3.0</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 20:00</p>
-          <ul>
-            <li>Login ajustado para iPhone/Safari usando redirecionamento quando popup for bloqueado.</li>
-            <li>Mensagem de venda aparece somente antes do login e ficou centralizada.</li>
-            <li>Botão sair movido para o final da área de perfil.</li>
-            <li>Progresso do treino salvo no aparelho: ao sair e voltar, exercícios marcados continuam marcados.</li>
-            <li>Treino mais diferente por perfil: iniciante, sobrepeso e avançado recebem ajustes de volume/intensidade.</li>
-            <li>Substituição de exercício evita sugerir opção repetida que já está na lista.</li>
-            <li>Adicionado botão para pular exercício sem travar a conclusão do treino.</li>
-            <li>Ajustada quantidade de exercícios conforme treino rápido, normal ou longo.</li>
-            <li>Check-in de dor mais completo: pernas, braços, coluna/costas, ombro, joelho e lombar.</li>
-            <li>Painel do treinador mais organizado: mostra 3 últimos alunos e permite ver todos.</li>
-          </ul>
-        </div>
 
         
 
@@ -1615,11 +1573,9 @@
     }
 
     function alvoQuantidadeExercicios(tempo, perfil) {
-      // Versao 1.3.3 - ajuste de volume por tempo disponivel
-      // rapido: 3 a 4 exercicios | normal: 6 a 8 exercicios | longo: 8 exercicios
-      if (tempo === "rapido") return perfil && perfil.avancado ? 4 : 3;
-      if (tempo === "normal") return perfil && perfil.iniciante ? 6 : 8;
-      return 8;
+      if (tempo === "rapido") return perfil && perfil.avancado ? 5 : 4;
+      if (tempo === "normal") return perfil && perfil.iniciante ? 5 : 6;
+      return perfil && perfil.iniciante ? 6 : 8;
     }
 
     function adaptarTreinoPorPerfil(treino, tempo) {
@@ -2660,23 +2616,14 @@
           criarExercicioPesoCorporal("Pike push-up", "Ombros", "ombro", ["Eleve o quadril formando um V invertido.", "Flexione os cotovelos.", "Aproxime a cabeça do chão com cuidado.", "Suba controlando."]),
           { nome: "Supino no chão com halteres", grupo: "Peito", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Deite no chão.", "Segure os halteres alinhados ao peito.", "Desça até o braço tocar levemente o chão.", "Suba sem bater os pesos."] },
           { nome: "Elevação lateral com elástico", grupo: "Ombros", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Pise no elástico.", "Segure as pontas.", "Eleve os braços lateralmente.", "Desça devagar."] },
-          { nome: "Tríceps francês com halter", grupo: "Tríceps", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Segure um halter acima da cabeça.", "Flexione os cotovelos.", "Estenda os braços com controle.", "Evite arquear a lombar."] },
-          { nome: "Supino na estação", grupo: "Peito", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Ajuste o banco e a pegada da estação.", "Mantenha as costas apoiadas.", "Empurre as alças à frente com controle.", "Volte devagar sem bater os pesos."] },
-          { nome: "Voador na estação", grupo: "Peito", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Ajuste o assento para alinhar braços ao peitoral.", "Aproxime as alças à frente do corpo.", "Contraia o peito sem forçar os ombros.", "Abra os braços controlando a volta."] },
-          { nome: "Tríceps corda na polia", grupo: "Tríceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Prenda a corda na polia alta.", "Mantenha cotovelos próximos ao corpo.", "Empurre a corda para baixo.", "Volte controlando."] }
+          { nome: "Tríceps francês com halter", grupo: "Tríceps", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "ombro", passos: ["Segure um halter acima da cabeça.", "Flexione os cotovelos.", "Estenda os braços com controle.", "Evite arquear a lombar."] }
         ],
         B: [
           criarExercicioPesoCorporal("Super-homem", "Lombar", "lombar", ["Deite de barriga para baixo.", "Eleve braços e pernas levemente.", "Segure por alguns segundos.", "Volte com controle."]),
           criarExercicioPesoCorporal("Prancha com toque no ombro", "Abdômen", "ombro", ["Fique em posição de prancha alta.", "Toque um ombro com a mão oposta.", "Alterne os lados.", "Evite balançar o quadril."]),
           { nome: "Remada com elástico sentado", grupo: "Costas", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Sente no chão.", "Passe o elástico pelos pés.", "Puxe as pontas em direção ao peito.", "Volte devagar."] },
           { nome: "Remada curvada com halteres", grupo: "Costas", equipamento: "Halteres", nivel: "intermediario", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Incline o tronco com coluna firme.", "Puxe os halteres em direção ao quadril.", "Contraia as costas.", "Desça controlando."] },
-          { nome: "Rosca bíceps com elástico", grupo: "Bíceps", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "nenhuma", passos: ["Pise no elástico.", "Segure as pontas.", "Flexione os cotovelos.", "Desça devagar."] },
-          { nome: "Puxada alta na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "ombro", passos: ["Segure a barra da polia alta.", "Mantenha o tronco firme.", "Puxe em direção ao peito.", "Volte controlando sem soltar o peso."] },
-          { nome: "Puxada baixa na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Use a polia baixa com pegador adequado.", "Sente ou apoie-se com coluna firme.", "Puxe em direção ao abdômen.", "Volte devagar mantendo controle."] },
-          { nome: "Remada baixa na estação", grupo: "Costas", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Segure o puxador da polia baixa.", "Mantenha peito aberto e coluna firme.", "Puxe os cotovelos para trás.", "Retorne lentamente."] },
-          { nome: "Rosca direta na polia baixa", grupo: "Bíceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "nenhuma", passos: ["Prenda a barra reta na polia baixa.", "Mantenha cotovelos próximos ao corpo.", "Flexione os braços sem balançar.", "Desça controlando."] },
-          { nome: "Rosca Scott na estação", grupo: "Bíceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "nenhuma", passos: ["Apoie os braços no suporte Scott.", "Segure a barra ou puxador da estação.", "Suba contraindo o bíceps.", "Desça devagar sem esticar totalmente com impacto."] },
-          { nome: "Face pull na polia", grupo: "Ombro posterior", equipamento: "Estação / multifuncional", nivel: "intermediario", local: ["garagem"], evitar: "ombro", passos: ["Use a corda na polia alta.", "Puxe em direção ao rosto.", "Abra os cotovelos com controle.", "Volte devagar."] }
+          { nome: "Rosca bíceps com elástico", grupo: "Bíceps", equipamento: "Elástico", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "nenhuma", passos: ["Pise no elástico.", "Segure as pontas.", "Flexione os cotovelos.", "Desça devagar."] }
         ],
         C: [
           criarExercicioPesoCorporal("Agachamento isométrico na parede", "Pernas", "joelho", ["Encoste as costas na parede.", "Desça até uma posição confortável.", "Segure sem prender a respiração.", "Suba devagar."]),
@@ -2685,10 +2632,7 @@
           criarExercicioPesoCorporal("Mountain climber controlado", "Cardio/Abdômen", "lombar", ["Apoie as mãos no chão.", "Traga os joelhos alternadamente.", "Mantenha abdômen firme.", "Faça devagar se necessário."]),
           { nome: "Agachamento goblet", grupo: "Pernas", equipamento: "Halteres", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "joelho", passos: ["Segure um halter junto ao peito.", "Desça com controle.", "Mantenha coluna firme.", "Suba empurrando o chão."] },
           { nome: "Elevação de quadril com mini band", grupo: "Glúteos", equipamento: "Elástico / mini band", nivel: "iniciante", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Coloque a mini band acima dos joelhos.", "Deite com pés no chão.", "Suba o quadril contraindo glúteos.", "Desça controlando."] },
-          { nome: "Levantamento terra com halteres", grupo: "Posterior de coxa", equipamento: "Halteres", nivel: "intermediario", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Segure os halteres à frente do corpo.", "Incline o tronco com coluna firme.", "Sinta posterior de coxa alongar.", "Suba contraindo glúteos."] },
-          { nome: "Extensão de pernas na estação", grupo: "Quadríceps", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "joelho", passos: ["Ajuste o rolo na frente das pernas.", "Sente com as costas apoiadas.", "Estenda os joelhos com controle.", "Volte devagar sem deixar o peso bater."] },
-          { nome: "Flexora unilateral na estação", grupo: "Posterior de coxa", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "joelho", passos: ["Use o rolo inferior da estação.", "Flexione uma perna por vez.", "Contraia posterior de coxa.", "Volte controlando e troque a perna."] },
-          { nome: "Abdominal na polia", grupo: "Abdômen", equipamento: "Estação / multifuncional", nivel: "iniciante", local: ["garagem"], evitar: "lombar", passos: ["Prenda a corda na polia alta.", "Ajoelhe ou fique estável à frente da estação.", "Flexione o tronco contraindo o abdômen.", "Volte devagar sem puxar pelo pescoço."] }
+          { nome: "Levantamento terra com halteres", grupo: "Posterior de coxa", equipamento: "Halteres", nivel: "intermediario", local: ["casa_limitado", "garagem"], evitar: "lombar", passos: ["Segure os halteres à frente do corpo.", "Incline o tronco com coluna firme.", "Sinta posterior de coxa alongar.", "Suba contraindo glúteos."] }
         ],
         descanso: [
           criarExercicioPesoCorporal("Respiração e mobilidade", "Recuperação", "nenhuma", ["Respire profundamente.", "Movimente ombros, quadril e coluna.", "Evite posições dolorosas.", "Finalize leve."])
@@ -3359,6 +3303,7 @@
           const lista = [];
           snapshot.forEach(function(doc) {
             const item = doc.data();
+            item.__id = doc.id;
             if (!item.criadoEm || Number(item.criadoEm) >= limite90Dias) lista.push(item);
           });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
@@ -4021,6 +3966,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
           const lista = [];
           snapshot.forEach(function(doc) {
             const item = doc.data();
+            item.__id = doc.id;
             if (!item.criadoEm || Number(item.criadoEm) >= limite90Dias) lista.push(item);
           });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
@@ -4276,6 +4222,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
         "Evolução: " + limparTextoSeguro(item.evolucao || "Não calculada") + "<br>" +
         "Feedback final: " + limparTextoSeguro(item.feedbackFinalTreino || "Não informado") + "<br>" +
         "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+        (item.__id ? "<br><button type='button' class='botao-secundario' onclick='editarTreinoHistorico(" + JSON.stringify(item.__id) + ")'>Editar treino</button>" : "") +
       "</div>";
     }
 
@@ -4285,6 +4232,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
           "<strong>🏃 " + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
           "Status: não fez cardio recentemente<br>" +
           "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+          (item.__id ? "<br><button type='button' class='botao-secundario' onclick='editarCardioHistorico(" + JSON.stringify(item.__id) + ")'>Editar cardio</button>" : "") +
         "</div>";
       }
 
@@ -4301,6 +4249,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
         "Objetivo: " + limparTextoSeguro(traduzirObjetivoCardio(item.objetivoCardio || "")) + "<br>" +
         (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCardio(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
         "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+        (item.__id ? "<br><button type='button' class='botao-secundario' onclick='editarCardioHistorico(" + JSON.stringify(item.__id) + ")'>Editar cardio</button>" : "") +
       "</div>";
     }
 
@@ -4390,6 +4339,81 @@ analisarEsforcoRecente(function(esforcoRecente) {
           listaHistoricoCompleto.appendChild(wrapper.firstChild);
         });
       }
+    }
+
+    function buscarDocumentoHistorico(colecao, id, callback) {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login com um e-mail autorizado para editar o histórico.");
+        return;
+      }
+      db.collection("usuarios").doc(usuarioAtual.uid).collection(colecao).doc(id).get()
+        .then(function(doc) {
+          if (!doc.exists) { alert("Registro não encontrado. Atualize o histórico e tente novamente."); return; }
+          const dados = doc.data() || {};
+          dados.__id = doc.id;
+          callback(dados);
+        })
+        .catch(function(erro) { console.log("Erro ao buscar registro para editar:", erro); alert("Não foi possível carregar este registro agora."); });
+    }
+
+    function atualizarDocumentoHistorico(colecao, id, dados, callback) {
+      db.collection("usuarios").doc(usuarioAtual.uid).collection(colecao).doc(id).set(dados, { merge: true })
+        .then(function() { if (callback) callback(); })
+        .catch(function(erro) { console.log("Erro ao editar histórico:", erro); alert("Não foi possível salvar a edição agora. Confira a conexão e tente novamente."); });
+    }
+
+    function editarTreinoHistorico(id) {
+      buscarDocumentoHistorico("treinos", id, function(item) {
+        const novoExercicio = prompt("Editar exercício principal:", item.exercicioRegistro || "");
+        if (novoExercicio === null) return;
+        const novaCargaTexto = prompt("Editar carga usada (kg):", item.carga !== undefined && item.carga !== "" ? String(item.carga) : "");
+        if (novaCargaTexto === null) return;
+        const novasRepsTexto = prompt("Editar repetições feitas:", item.reps !== undefined && item.reps !== "" ? String(item.reps) : "");
+        if (novasRepsTexto === null) return;
+        const novaSensacao = prompt("Editar sensação (facil, normal ou dificil):", item.sensacao || "normal");
+        if (novaSensacao === null) return;
+        const novaObservacao = prompt("Editar observação do treino:", item.observacao || "");
+        if (novaObservacao === null) return;
+        const dadosAtualizados = {
+          exercicioRegistro: novoExercicio.trim() || item.exercicioRegistro || "Não informado",
+          carga: novaCargaTexto === "" ? "" : Number(novaCargaTexto.replace(",", ".")),
+          reps: novasRepsTexto === "" ? "" : Number(novasRepsTexto.replace(",", ".")),
+          sensacao: (novaSensacao || item.sensacao || "normal").trim(),
+          observacao: novaObservacao.trim() || "Nenhuma",
+          editadoEm: new Date().toLocaleString("pt-BR"),
+          editadoEmTimestamp: Date.now()
+        };
+        atualizarDocumentoHistorico("treinos", id, dadosAtualizados, function() { alert("Treino editado com sucesso."); mostrarHistorico(); mostrarHistoricoCompleto(); });
+      });
+    }
+
+    function editarCardioHistorico(id) {
+      buscarDocumentoHistorico("corridas", id, function(item) {
+        const novoTipo = prompt("Editar atividade (corrida, caminhada ou bicicleta):", item.tipoAtividade || "caminhada");
+        if (novoTipo === null) return;
+        const novaDistanciaTexto = prompt("Editar distância feita (km):", item.distancia !== undefined && item.distancia !== "" ? String(item.distancia) : "");
+        if (novaDistanciaTexto === null) return;
+        const novoTempoTexto = prompt("Editar tempo total (minutos):", item.tempo !== undefined && item.tempo !== "" ? String(item.tempo) : "");
+        if (novoTempoTexto === null) return;
+        const novaIntensidade = prompt("Editar intensidade (leve, moderada ou forte):", item.intensidade || "moderada");
+        if (novaIntensidade === null) return;
+        const novaSensacao = prompt("Editar sensação:", item.sensacao || "bem");
+        if (novaSensacao === null) return;
+        const novaObservacao = prompt("Editar observação do cardio:", item.observacao || "");
+        if (novaObservacao === null) return;
+        const dadosAtualizados = {
+          tipoAtividade: (novoTipo || item.tipoAtividade || "caminhada").trim(),
+          distancia: novaDistanciaTexto === "" ? 0 : Number(novaDistanciaTexto.replace(",", ".")),
+          tempo: novoTempoTexto === "" ? 0 : Number(novoTempoTexto.replace(",", ".")),
+          intensidade: (novaIntensidade || item.intensidade || "moderada").trim(),
+          sensacao: (novaSensacao || item.sensacao || "bem").trim(),
+          observacao: novaObservacao.trim() || "Nenhuma",
+          editadoEm: new Date().toLocaleString("pt-BR"),
+          editadoEmTimestamp: Date.now()
+        };
+        if (item.tipo === "sem_cardio" || item.tipo === "sem_corrida") dadosAtualizados.tipo = "cardio_editado";
+        atualizarDocumentoHistorico("corridas", id, dadosAtualizados, function() { alert("Cardio editado com sucesso."); carregarCardios(); mostrarHistoricoCompleto(); });
+      });
     }
 
     function limparHistorico() {
