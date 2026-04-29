@@ -1,10 +1,15 @@
-const CACHE_NAME = "metatreino-cache-v1.3.3";
+importScripts("./js/version.js");
+
+const CACHE_NAME = typeof METATREINO_CACHE_NAME !== "undefined" ? METATREINO_CACHE_NAME : "metatreino-cache-v1.3.5";
+const APP_VERSION = typeof METATREINO_VERSION !== "undefined" ? METATREINO_VERSION : "1.3.5";
 
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./index.html?v=1.3.3",
+  "./index.html?v=" + APP_VERSION,
   "./manifest.json",
+  "./js/version.js",
+  "./js/loader.js",
   "./icon-512.png.png"
 ];
 
