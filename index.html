@@ -1352,7 +1352,7 @@
           <ul>
             <li>Removido o botão “Não fiz cardio recentemente” da aba Cardio.</li>
             <li>Histórico resumido mantém somente os 3 últimos registros, com botão para acompanhar o histórico completo.</li>
-            <li>Adicionado botão para editar registros de treino e cardio salvos no histórico.</li>
+            <li>Adicionado botão para editar carga/repetições do treino, distância/tempo do cardio e deletar registros específicos no histórico.</li>
             <li>Descanso automático por dia da semana passa a ser sugerido aos domingos, sem bloquear treino leve caso o aluno queira treinar.</li>
             <li>App agora orienta quando a mesma divisão de treino é repetida recentemente.</li>
             <li>Biblioteca de treino e substituições ampliadas para academia, casa, espaço próprio e peso corporal.</li>
@@ -3339,7 +3339,9 @@
             div.innerHTML =
               "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
               "Status: não fez cardio recentemente<br>" +
-              "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
+              "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+              (item.__id ? "<br><button type='button' class='botao-secundario' onclick='editarCardioHistorico(" + JSON.stringify(item.__id) + ")'>Editar cardio</button>" : "") +
+              (item.__id ? "<button type='button' class='botao-perigo' onclick='excluirCardioHistorico(" + JSON.stringify(item.__id) + ")'>Deletar cardio</button>" : "");
           } else {
             div.innerHTML =
               "<strong>" + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
@@ -3352,7 +3354,9 @@
               "Nível: " + limparTextoSeguro(traduzirNivelCardio(item.nivelCardio || "")) + "<br>" +
               "Objetivo: " + limparTextoSeguro(traduzirObjetivoCardio(item.objetivoCardio || "")) + "<br>" +
               (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCardio(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
-              "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma");
+              "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+              (item.__id ? "<br><button type='button' class='botao-secundario' onclick='editarCardioHistorico(" + JSON.stringify(item.__id) + ")'>Editar cardio</button>" : "") +
+              (item.__id ? "<button type='button' class='botao-perigo' onclick='excluirCardioHistorico(" + JSON.stringify(item.__id) + ")'>Deletar cardio</button>" : "");
           }
           caixa.appendChild(div);
         });
@@ -4076,7 +4080,9 @@ analisarEsforcoRecente(function(esforcoRecente) {
           "Treino: " + limparTextoSeguro(nomeAmigavelTreino(item.letraTreino || "")) + "<br>" +
           "Concluídos: " + (item.totalConcluidos || 0) + " de " + (item.totalExercicios || (item.exercicios ? item.exercicios.length : 0)) + " exercícios<br>" +
           "Registro principal: " + (item.exercicioRegistro || "Não informado") +
-          "<br><button type='button' class='botao-secundario' onclick='irParaHistoricoCompleto()'>Ver detalhes</button>";
+          "<br><button type='button' class='botao-secundario' onclick='irParaHistoricoCompleto()'>Ver detalhes</button>" +
+          (item.__id ? "<button type='button' class='botao-secundario' onclick='editarTreinoHistorico(" + JSON.stringify(item.__id) + ")'>Editar treino</button>" : "") +
+          (item.__id ? "<button type='button' class='botao-perigo' onclick='excluirTreinoHistorico(" + JSON.stringify(item.__id) + ")'>Deletar treino</button>" : "");
         listaHistorico.appendChild(div);
       });
     }
@@ -4223,6 +4229,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
         "Feedback final: " + limparTextoSeguro(item.feedbackFinalTreino || "Não informado") + "<br>" +
         "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
         (item.__id ? "<br><button type='button' class='botao-secundario' onclick='editarTreinoHistorico(" + JSON.stringify(item.__id) + ")'>Editar treino</button>" : "") +
+        (item.__id ? "<button type='button' class='botao-perigo' onclick='excluirTreinoHistorico(" + JSON.stringify(item.__id) + ")'>Deletar treino</button>" : "") +
       "</div>";
     }
 
@@ -4233,6 +4240,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
           "Status: não fez cardio recentemente<br>" +
           "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
           (item.__id ? "<br><button type='button' class='botao-secundario' onclick='editarCardioHistorico(" + JSON.stringify(item.__id) + ")'>Editar cardio</button>" : "") +
+          (item.__id ? "<button type='button' class='botao-perigo' onclick='excluirCardioHistorico(" + JSON.stringify(item.__id) + ")'>Deletar cardio</button>" : "") +
         "</div>";
       }
 
@@ -4250,6 +4258,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
         (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCardio(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
         "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
         (item.__id ? "<br><button type='button' class='botao-secundario' onclick='editarCardioHistorico(" + JSON.stringify(item.__id) + ")'>Editar cardio</button>" : "") +
+        (item.__id ? "<button type='button' class='botao-perigo' onclick='excluirCardioHistorico(" + JSON.stringify(item.__id) + ")'>Deletar cardio</button>" : "") +
       "</div>";
     }
 
@@ -4334,55 +4343,72 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
     function editarTreinoHistorico(id) {
       buscarDocumentoHistorico("treinos", id, function(item) {
-        const novoExercicio = prompt("Editar exercício principal:", item.exercicioRegistro || "");
-        if (novoExercicio === null) return;
         const novaCargaTexto = prompt("Editar carga usada (kg):", item.carga !== undefined && item.carga !== "" ? String(item.carga) : "");
         if (novaCargaTexto === null) return;
         const novasRepsTexto = prompt("Editar repetições feitas:", item.reps !== undefined && item.reps !== "" ? String(item.reps) : "");
         if (novasRepsTexto === null) return;
-        const novaSensacao = prompt("Editar sensação (facil, normal ou dificil):", item.sensacao || "normal");
-        if (novaSensacao === null) return;
-        const novaObservacao = prompt("Editar observação do treino:", item.observacao || "");
-        if (novaObservacao === null) return;
         const dadosAtualizados = {
-          exercicioRegistro: novoExercicio.trim() || item.exercicioRegistro || "Não informado",
           carga: novaCargaTexto === "" ? "" : Number(novaCargaTexto.replace(",", ".")),
           reps: novasRepsTexto === "" ? "" : Number(novasRepsTexto.replace(",", ".")),
-          sensacao: (novaSensacao || item.sensacao || "normal").trim(),
-          observacao: novaObservacao.trim() || "Nenhuma",
           editadoEm: new Date().toLocaleString("pt-BR"),
           editadoEmTimestamp: Date.now()
         };
-        atualizarDocumentoHistorico("treinos", id, dadosAtualizados, function() { alert("Treino editado com sucesso."); mostrarHistorico(); mostrarHistoricoCompleto(); });
+        atualizarDocumentoHistorico("treinos", id, dadosAtualizados, function() {
+          alert("Treino editado com sucesso.");
+          mostrarHistorico();
+          mostrarHistoricoCompleto();
+        });
       });
     }
 
     function editarCardioHistorico(id) {
       buscarDocumentoHistorico("corridas", id, function(item) {
-        const novoTipo = prompt("Editar atividade (corrida, caminhada ou bicicleta):", item.tipoAtividade || "caminhada");
-        if (novoTipo === null) return;
         const novaDistanciaTexto = prompt("Editar distância feita (km):", item.distancia !== undefined && item.distancia !== "" ? String(item.distancia) : "");
         if (novaDistanciaTexto === null) return;
         const novoTempoTexto = prompt("Editar tempo total (minutos):", item.tempo !== undefined && item.tempo !== "" ? String(item.tempo) : "");
         if (novoTempoTexto === null) return;
-        const novaIntensidade = prompt("Editar intensidade (leve, moderada ou forte):", item.intensidade || "moderada");
-        if (novaIntensidade === null) return;
-        const novaSensacao = prompt("Editar sensação:", item.sensacao || "bem");
-        if (novaSensacao === null) return;
-        const novaObservacao = prompt("Editar observação do cardio:", item.observacao || "");
-        if (novaObservacao === null) return;
         const dadosAtualizados = {
-          tipoAtividade: (novoTipo || item.tipoAtividade || "caminhada").trim(),
           distancia: novaDistanciaTexto === "" ? 0 : Number(novaDistanciaTexto.replace(",", ".")),
           tempo: novoTempoTexto === "" ? 0 : Number(novoTempoTexto.replace(",", ".")),
-          intensidade: (novaIntensidade || item.intensidade || "moderada").trim(),
-          sensacao: (novaSensacao || item.sensacao || "bem").trim(),
-          observacao: novaObservacao.trim() || "Nenhuma",
           editadoEm: new Date().toLocaleString("pt-BR"),
           editadoEmTimestamp: Date.now()
         };
         if (item.tipo === "sem_cardio" || item.tipo === "sem_corrida") dadosAtualizados.tipo = "cardio_editado";
-        atualizarDocumentoHistorico("corridas", id, dadosAtualizados, function() { alert("Cardio editado com sucesso."); carregarCardios(); mostrarHistoricoCompleto(); });
+        atualizarDocumentoHistorico("corridas", id, dadosAtualizados, function() {
+          alert("Cardio editado com sucesso.");
+          carregarCardios();
+          mostrarHistoricoCompleto();
+        });
+      });
+    }
+
+    function excluirDocumentoHistorico(colecao, id, mensagemConfirmacao, callback) {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login com um e-mail autorizado para deletar este registro.");
+        return;
+      }
+      if (!confirm(mensagemConfirmacao)) return;
+      db.collection("usuarios").doc(usuarioAtual.uid).collection(colecao).doc(id).delete()
+        .then(function() { if (callback) callback(); })
+        .catch(function(erro) {
+          console.log("Erro ao deletar registro:", erro);
+          alert("Não foi possível deletar este registro agora. Confira a conexão e tente novamente.");
+        });
+    }
+
+    function excluirTreinoHistorico(id) {
+      excluirDocumentoHistorico("treinos", id, "Tem certeza que deseja deletar somente este treino?", function() {
+        alert("Treino deletado com sucesso.");
+        mostrarHistorico();
+        mostrarHistoricoCompleto();
+      });
+    }
+
+    function excluirCardioHistorico(id) {
+      excluirDocumentoHistorico("corridas", id, "Tem certeza que deseja deletar somente este cardio?", function() {
+        alert("Cardio deletado com sucesso.");
+        carregarCardios();
+        mostrarHistoricoCompleto();
       });
     }
 
