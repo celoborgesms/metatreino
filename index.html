@@ -1127,14 +1127,7 @@
         <button type="button" onclick="salvarTreinoFeito()">Salvar treino feito</button>
       </div>
 
-      <div class="card">
-        <h2>📊 Resumo do histórico</h2>
-        <p class="small">Aqui aparece um resumo dos últimos treinos salvos na nuvem.</p>
-        <button type="button" class="botao-secundario" onclick="mostrarHistorico()">Atualizar resumo</button>
-        <button type="button" onclick="irParaHistoricoCompleto()">Ver histórico completo</button>
-        <button type="button" class="botao-perigo" onclick="limparHistorico()">Limpar histórico</button>
-        <div id="listaHistorico"></div>
-      </div>
+      <div id="listaHistorico" class="hidden"></div>
     </section>
 
     <section id="paginaCheckin" class="hidden">
@@ -1289,14 +1282,7 @@
         <div id="mensagemCardio" class="alerta hidden"></div>
       </div>
 
-      <div class="card">
-        <h2>Resumo do cardio</h2>
-        <p class="small">Mostra apenas os últimos 3 registros para manter esta aba leve e organizada.</p>
-        <button type="button" class="botao-secundario" onclick="carregarCardios()">Atualizar resumo</button>
-        <button type="button" onclick="irParaHistoricoCompleto()">Ver histórico completo</button>
-        <button type="button" class="botao-perigo" onclick="limparHistoricoCardios()">Limpar histórico de cardio</button>
-        <div id="listaCardios"></div>
-      </div>
+      <div id="listaCardios" class="hidden"></div>
     </section>
 
     <section id="paginaHistoricoCompleto" class="hidden">
@@ -2667,7 +2653,7 @@
 
     function instalarExerciciosEstacaoMS8000() {
       const estacaoLocal = ["garagem", "casa_limitado"];
-      const equipamentoEstacao = "Estação multifuncional MS-8000 UPLIFT / polia";
+      const equipamentoEstacao = "Estação de musculação";
       const novos = {
         A: [
           { nome: "Supino na estação multifuncional", grupo: "Peito", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "ombro", passos: ["Ajuste o banco e as pegadas na altura do peito.", "Mantenha as costas apoiadas e pés firmes.", "Empurre à frente sem travar os cotovelos.", "Volte controlando a carga de 80 kg."] },
@@ -3808,6 +3794,15 @@ analisarEsforcoRecente(function(esforcoRecente) {
       window.open("https://www.youtube.com/results?search_query=" + busca, "_blank");
     }
 
+    function nomeEquipamentoParaExibir(equipamento) {
+      const texto = String(equipamento || "");
+      const normalizado = texto.toLowerCase();
+      if (normalizado.includes("ms-8000") || normalizado.includes("uplift") || normalizado.includes("estação multifuncional")) {
+        return "Estação de musculação";
+      }
+      return texto;
+    }
+
     function mostrarTreinoNaTela() {
       const lista = document.getElementById("listaExercicios");
       const progresso = document.getElementById("progressoExercicios");
@@ -3840,7 +3835,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
         div.innerHTML = "<strong>" + exercicio.nome + "</strong>" +
           "<span>" + exercicio.series + " | " + exercicio.reps + "</span><br>" +
           "<span class='tag'>Grupo: " + exercicio.grupo + "</span> " +
-          "<span class='tag'>Equipamento: " + exercicio.equipamento + "</span>" +
+          "<span class='tag'>Equipamento: " + nomeEquipamentoParaExibir(exercicio.equipamento) + "</span>" +
           (exercicio.observacao ? "<div class='alerta alerta-aviso'>" + limparTextoSeguro(exercicio.observacao) + "</div>" : "") +
           "<div class='alerta'>" + obterTextoSugestaoCarga(exercicio.nome) + "</div>" +
           "<h4>Como fazer:</h4><ol>" + passosHTML + "</ol>" +
