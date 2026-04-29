@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="1.3.5">
+  <meta name="app-version" content="1.3.6">
   <meta name="theme-color" content="#3b82f6">
   <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-512.png.png">
@@ -50,8 +50,8 @@
           <option value="nao_responder">Prefiro não responder</option>
         </select>
 
-        <label for="idade">Idade</label>
-        <input id="idade" type="number" placeholder="Ex: 30">
+        <label for="dataNascimento">Data de nascimento</label>
+        <input id="dataNascimento" type="date">
 
         <label for="peso">Peso atual (kg)</label>
         <input id="peso" type="number" min="1" max="700" placeholder="Ex: 80">
@@ -84,48 +84,11 @@
         </select>
 
         <label for="localTreino">Onde costuma treinar?</label>
-        <select id="localTreino" onchange="atualizarFormularioEquipamentos()">
+        <select id="localTreino">
           <option value="sem_equipamento">Sem Equipamento — treinos em casa apenas com peso corporal</option>
-          <option value="halteres">Halteres — exercícios com halteres e peso corporal</option>
-          <option value="academia_casa">Academia em Casa — barra, halteres e peso corporal</option>
-          <option value="academia_completa">Academia Completa — máquinas, barras, cabos e acessórios</option>
-          <option value="personalizado">Personalizado — escolha os equipamentos que deseja usar</option>
+          <option value="academia_basica">Academia básica — equipada com barras, halteres e estrutura simples de musculação</option>
+          <option value="academia_avancada">Academia avançada — completa, equipada com todos os equipamentos necessários</option>
         </select>
-
-        <div id="boxEquipamentosCasa" class="hidden">
-          <label>Equipamentos para treino personalizado</label>
-          <p class="small">Marque somente os equipamentos que você tem ou deseja usar. O treino será montado com exercícios compatíveis com a seleção.</p>
-          <div class="dias-grid">
-            <label><input type="checkbox" class="equipamento-casa" value="halteres"> Halteres</label>
-            <label><input type="checkbox" class="equipamento-casa" value="maquina_cabos"> Máquina de cabos / estação de musculação</label>
-            <label><input type="checkbox" class="equipamento-casa" value="barra"> Barra reta e anilhas</label>
-            <label><input type="checkbox" class="equipamento-casa" value="maquina_alavanca"> Máquina de alavanca</label>
-            <label><input type="checkbox" class="equipamento-casa" value="elastico"> Elástico de treino</label>
-            <label><input type="checkbox" class="equipamento-casa" value="kettlebell"> Kettlebell</label>
-            <label><input type="checkbox" class="equipamento-casa" value="banco"> Banco de treino</label>
-            <label><input type="checkbox" class="equipamento-casa" value="com_peso"> Peso livre / carga externa</label>
-            <label><input type="checkbox" class="equipamento-casa" value="trx"> Suspensão TRX</label>
-            <label><input type="checkbox" class="equipamento-casa" value="barra_especial"> Barra especial</label>
-            <label><input type="checkbox" class="equipamento-casa" value="smith"> Máquina Smith</label>
-            <label><input type="checkbox" class="equipamento-casa" value="rolo_espuma"> Rolo de liberação miofascial</label>
-            <label><input type="checkbox" class="equipamento-casa" value="bola_estabilidade"> Bola de estabilidade</label>
-            <label><input type="checkbox" class="equipamento-casa" value="banda_resistencia"> Banda de resistência</label>
-            <label><input type="checkbox" class="equipamento-casa" value="barra_ez"> Barra EZ</label>
-            <label><input type="checkbox" class="equipamento-casa" value="maquina_especial"> Máquina específica</label>
-            <label><input type="checkbox" class="equipamento-casa" value="landmine"> Landmine</label>
-            <label><input type="checkbox" class="equipamento-casa" value="bastao"> Bastão de mobilidade</label>
-            <label><input type="checkbox" class="equipamento-casa" value="bola_medicinal"> Bola medicinal</label>
-            <label><input type="checkbox" class="equipamento-casa" value="treno"> Trenó de treino</label>
-            <label><input type="checkbox" class="equipamento-casa" value="barra_hexagonal"> Barra hexagonal</label>
-            <label><input type="checkbox" class="equipamento-casa" value="arnes_cabeca"> Arnês de cabeça</label>
-            <label><input type="checkbox" class="equipamento-casa" value="equipamento_especial"> Equipamento funcional especial</label>
-            <label><input type="checkbox" class="equipamento-casa" value="corda"> Corda</label>
-            <label><input type="checkbox" class="equipamento-casa" value="bosu"> Bola Bosu</label>
-            <label><input type="checkbox" class="equipamento-casa" value="bola_rolamento"> Bola de rolamento / massagem</label>
-            <label><input type="checkbox" class="equipamento-casa" value="treno_potencia"> Trenó de potência</label>
-          </div>
-          <p class="small">Se nenhum equipamento for marcado no Personalizado, o app usa peso corporal como opção segura.</p>
-        </div>
 
         <button type="button" onclick="calcularPerfil()">Calcular e salvar perfil</button>
 
@@ -421,6 +384,20 @@
         
 
         <div class="historico-item">
+          <strong>Versão 1.3.6</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 29/04/2026</p>
+          <ul>
+            <li>Campo de idade substituído por <strong>data de nascimento</strong>, calculando a idade automaticamente.</li>
+            <li>Opções de local de treino simplificadas para Sem Equipamento, Academia básica e Academia avançada.</li>
+            <li>Removida a seleção personalizada de equipamentos e suas subcategorias.</li>
+            <li>Filtro de exercícios ajustado para respeitar peso corporal puro, academia básica e academia avançada.</li>
+            <li>Regras de quantidade de exercícios por tempo disponível, perfil, peso, sexo e experiência foram preservadas.</li>
+            <li>Lista de novidades mantida somente com as 3 últimas versões.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
           <strong>Versão 1.3.5</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 29/04/2026</p>
@@ -442,25 +419,6 @@
             <li>Index ficou mais leve e focado na estrutura das telas do MetaTreino.</li>
             <li>Manifest e Service Worker atualizados para a versão 1.3.4, reduzindo risco de cache antigo travar a atualização.</li>
             <li>Lista de novidades mantida somente com as 3 últimas versões, conforme regra fixa do projeto.</li>
-          </ul>
-        </div>
-
-        <div class="historico-item">
-          <strong>Versão 1.3.3</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 28/04/2026 às 22:26</p>
-          <ul>
-            <li>Removido o botão “Não fiz cardio recentemente” da aba Cardio.</li>
-            <li>Histórico resumido mantém somente os 3 últimos registros, com botão para acompanhar o histórico completo.</li>
-            <li>Adicionado botão para editar carga/repetições do treino, distância/tempo do cardio e deletar registros específicos no histórico.</li>
-            <li>Descanso automático por dia da semana passa a ser sugerido aos domingos, sem bloquear treino leve caso o aluno queira treinar.</li>
-            <li>App agora orienta quando a mesma divisão de treino é repetida recentemente.</li>
-            <li>Biblioteca de treino e substituições ampliadas para academia, casa, espaço próprio e peso corporal.</li>
-            <li>Treinos sem equipamento passam a priorizar calistenia, funcional, core, isometria e HIIT adaptado.</li>
-            <li>Adicionado formulário para informar equipamentos disponíveis em casa ou espaço próprio.</li>
-            <li>Ao salvar registro de evolução, o app sobe para o próximo exercício pendente.</li>
-            <li>Campo de exercício é preenchido automaticamente, mas carga, repetições e observação são zeradas para evitar registro antigo.</li>
-            <li>Atualização automática do app foi reforçada ao abrir, voltar para a tela e clicar em verificar atualização.</li>
           </ul>
         </div>
 
