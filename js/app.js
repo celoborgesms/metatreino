@@ -243,113 +243,6 @@ const firebaseConfig = {
       }
     }
 
-    function usuarioOfflineMinimo(user) {
-      if (!user) return null;
-      return { uid: user.uid || "offline", email: (user.email || "").toLowerCase(), displayName: user.displayName || "Usuário", offline: true };
-    }
-
-    function chaveSessaoOffline(email) { return "metatreino-sessao-offline-" + (email || "ultimo").toLowerCase(); }
-
-    function salvarSessaoOffline(user, dadosAcesso) {
-      try {
-        const dados = usuarioOfflineMinimo(user);
-        if (!dados || !dados.email) return;
-        localStorage.setItem(chaveSessaoOffline(dados.email), JSON.stringify({ user: dados, acesso: dadosAcesso || {}, salvoEm: Date.now() }));
-        localStorage.setItem("metatreino-ultimo-email-offline", dados.email);
-      } catch (erro) { console.log("Não foi possível salvar sessão offline:", erro); }
-    }
-
-    function obterSessaoOffline() {
-      try {
-        const email = localStorage.getItem("metatreino-ultimo-email-offline") || "";
-        if (!email) return null;
-        const pacote = JSON.parse(localStorage.getItem(chaveSessaoOffline(email)) || "null");
-        if (!pacote || !pacote.user || !pacote.user.email) return null;
-        return pacote;
-      } catch (erro) { return null; }
-    }
-
-    function liberarAppOffline(pacote, motivo) {
-      if (!pacote || !pacote.user) return false;
-      usuarioAtual = pacote.user;
-      acessoLiberado = true;
-      dadosAcessoAtual = pacote.acesso || { offline: true };
-      atualizarTelaLogin(usuarioAtual);
-      liberarApp(dadosAcessoAtual);
-      mostrarMensagemAcesso((motivo || "Modo offline ativado.") + " Seus registros serão salvos neste aparelho e sincronizados quando a internet voltar.", "aviso");
-      mostrarHistorico();
-      carregarUltimaCardio();
-      return true;
-    }
-
-    function tentarEntrarOffline(mensagem) {
-      const pacote = obterSessaoOffline();
-      if (pacote) return liberarAppOffline(pacote, mensagem || "Sem internet no momento.");
-      bloquearApp("Primeiro acesso precisa de internet para validar seu e-mail. Depois do primeiro login, o app poderá abrir offline neste aparelho.");
-      return false;
-    }
-
-    function chaveFilaOffline(tipo) {
-      const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : (localStorage.getItem("metatreino-ultimo-email-offline") || "anonimo");
-      return "metatreino-fila-offline-" + tipo + "-" + email;
-    }
-
-    function obterFilaOffline(tipo) {
-      try { return JSON.parse(localStorage.getItem(chaveFilaOffline(tipo)) || "[]"); }
-      catch (erro) { return []; }
-    }
-
-    function salvarFilaOffline(tipo, lista) {
-      try { localStorage.setItem(chaveFilaOffline(tipo), JSON.stringify(lista || [])); }
-      catch (erro) { console.log("Não foi possível salvar fila offline:", erro); }
-    }
-
-    function adicionarPendenteOffline(tipo, item) {
-      const lista = obterFilaOffline(tipo);
-      const copia = Object.assign({}, item, { __offlinePendente: true, __offlineId: "offline-" + Date.now() + "-" + Math.random().toString(16).slice(2) });
-      lista.unshift(copia);
-      salvarFilaOffline(tipo, lista);
-      return copia;
-    }
-
-    function mesclarPendentesOffline(tipo, listaNuvem) {
-      return obterFilaOffline(tipo).concat(listaNuvem || []).sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
-    }
-
-    function salvarTreinoPendenteOffline(treinoSalvo) {
-      const salvo = adicionarPendenteOffline("treinos", treinoSalvo);
-      salvarUltimoTreinoLocal(salvo);
-      alert("Treino salvo offline neste aparelho. Quando a internet voltar, ele será enviado para a nuvem automaticamente.");
-      mostrarHistorico();
-      rolarParaProximoExercicioPendente();
-    }
-
-    function sincronizarFila(tipo, colecao) {
-      if (!navigator.onLine || !acessoLiberado || !usuarioAtual || !usuarioAtual.uid || !db || usuarioAtual.offline) return Promise.resolve();
-      const fila = obterFilaOffline(tipo);
-      if (!fila.length) return Promise.resolve();
-      let corrente = Promise.resolve();
-      fila.slice().reverse().forEach(function(item) {
-        corrente = corrente.then(function() {
-          const envio = Object.assign({}, item);
-          delete envio.__offlinePendente;
-          delete envio.__offlineId;
-          return db.collection("usuarios").doc(usuarioAtual.uid).collection(colecao).add(envio);
-        });
-      });
-      return corrente.then(function() { salvarFilaOffline(tipo, []); }).catch(function(erro) { console.log("Sincronização pendente falhou:", erro); });
-    }
-
-    function sincronizarPendentesQuandoPossivel() {
-      if (!navigator.onLine || !usuarioAtual || usuarioAtual.offline || !db) return;
-      sincronizarFila("treinos", "treinos").then(function() { return sincronizarFila("cardios", "corridas"); }).then(function() {
-        mostrarHistorico();
-        carregarCardios();
-      });
-    }
-
-    window.addEventListener("online", sincronizarPendentesQuandoPossivel);
-
     auth.onAuthStateChanged(function(user) {
       usuarioAtual = user;
       atualizarTelaLogin(user);
@@ -360,13 +253,12 @@ const firebaseConfig = {
       } else {
         usuarioAdmin = false;
         atualizarBotaoPainelTreinador();
-        if (!navigator.onLine) tentarEntrarOffline("Sem internet no momento.");
-        else bloquearApp("Faça login com Google para verificar seu acesso.");
+        bloquearApp("Faça login com Google para verificar seu acesso.");
       }
     }, function(error) {
       usuarioAtual = null;
       atualizarTelaLogin(null);
-      tentarEntrarOffline("Não foi possível verificar o login agora.");
+      bloquearApp("Não foi possível verificar o login agora. Tente novamente em alguns instantes.");
     });
 
     let perfilUsuario = null;
@@ -446,8 +338,6 @@ const firebaseConfig = {
       if (cardDadosPessoa) cardDadosPessoa.classList.remove("hidden");
 
       mostrarMensagemAcesso(obterMensagemValidadePlano(dadosAcessoAtual), "sucesso");
-      salvarSessaoOffline(usuarioAtual, dadosAcessoAtual);
-      sincronizarPendentesQuandoPossivel();
       mostrarAvisoInicialSeNecessario();
       atualizarBotoesLogin(usuarioAtual);
     }
@@ -522,7 +412,9 @@ const firebaseConfig = {
         })
         .catch(function(erro) {
           console.log("Erro ao verificar acesso:", erro);
-          if (!tentarEntrarOffline("Não foi possível confirmar o acesso online agora.")) {
+          if (usuarioAtual) {
+            mostrarMensagemAcesso("Você está logado, mas o app não conseguiu confirmar o acesso agora. Confira a conexão e toque novamente em Perfil ou recarregue a página.", "aviso");
+          } else {
             bloquearApp("Não foi possível verificar seu acesso agora. Confira sua conexão e tente novamente.");
           }
         });
@@ -2146,7 +2038,7 @@ const firebaseConfig = {
     }
 
     function salvarCardio() {
-      if (!acessoLiberado || !usuarioAtual) {
+      if (!acessoLiberado || !usuarioAtual || !db) {
         alert("Faça login com um e-mail autorizado para salvar atividades de cardio.");
         return;
       }
@@ -2178,16 +2070,6 @@ const firebaseConfig = {
           observacao: "Usuário informou que não fez cardio recentemente."
         };
 
-        if (!navigator.onLine || !db || usuarioAtual.offline) {
-          ultimaCardioCache = adicionarPendenteOffline("cardios", registroSemCardio);
-          if (caixa) {
-            caixa.className = "alerta alerta-sucesso";
-            caixa.innerHTML = "✅ Registro salvo offline. Ele será enviado para a nuvem quando a internet voltar.";
-          }
-          carregarCardios();
-          return;
-        }
-
         db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").add(registroSemCardio)
           .then(function() {
             ultimaCardioCache = registroSemCardio;
@@ -2199,12 +2081,10 @@ const firebaseConfig = {
           })
           .catch(function(erro) {
             console.log("Erro ao salvar registro sem cardio:", erro);
-            ultimaCardioCache = adicionarPendenteOffline("cardios", registroSemCardio);
             if (caixa) {
               caixa.className = "alerta alerta-aviso";
-              caixa.innerHTML = "Sem conexão: registro salvo offline e pendente de sincronização.";
+              caixa.innerHTML = "Não foi possível salvar o registro agora. Confira sua conexão e tente novamente.";
             }
-            carregarCardios();
           });
         return;
       }
@@ -2239,17 +2119,6 @@ const firebaseConfig = {
         nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário"
       };
 
-      if (!navigator.onLine || !db || usuarioAtual.offline) {
-        ultimaCardioCache = adicionarPendenteOffline("cardios", corrida);
-        if (caixa) {
-          caixa.className = "alerta alerta-sucesso";
-          caixa.innerHTML = "✅ Cardio salvo offline. Ele será enviado para a nuvem quando a internet voltar.";
-        }
-        document.getElementById("observacaoCardio").value = "";
-        carregarCardios();
-        return;
-      }
-
       db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").add(corrida)
         .then(function() {
           ultimaCardioCache = corrida;
@@ -2262,18 +2131,15 @@ const firebaseConfig = {
         })
         .catch(function(erro) {
           console.log("Erro ao salvar cardio:", erro);
-          ultimaCardioCache = adicionarPendenteOffline("cardios", corrida);
           if (caixa) {
             caixa.className = "alerta alerta-aviso";
-            caixa.innerHTML = "Sem conexão: cardio salvo offline e pendente de sincronização.";
+            caixa.innerHTML = "Não foi possível salvar o cardio agora. Confira sua conexão e tente novamente.";
           }
-          carregarCardios();
         });
     }
 
     function obterCardiosDaNuvem(callback) {
-      if (!acessoLiberado || !usuarioAtual) { callback([]); return; }
-      if (!navigator.onLine || !db || usuarioAtual.offline) { callback(mesclarPendentesOffline("cardios", [])); return; }
+      if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
 
       const limite90Dias = new Date().getTime() - (90 * 24 * 60 * 60 * 1000);
 
@@ -2286,9 +2152,9 @@ const firebaseConfig = {
             if (!item.criadoEm || Number(item.criadoEm) >= limite90Dias) lista.push(item);
           });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
-          callback(mesclarPendentesOffline("cardios", lista));
+          callback(lista);
         })
-        .catch(function(erro) { console.log("Erro ao carregar cardios:", erro); callback(mesclarPendentesOffline("cardios", [])); });
+        .catch(function(erro) { console.log("Erro ao carregar cardios:", erro); callback([]); });
     }
 
     function carregarUltimaCardio() {
@@ -2941,8 +2807,8 @@ analisarEsforcoRecente(function(esforcoRecente) {
     }
 
     function salvarTreinoFeito() {
-      if (!acessoLiberado || !usuarioAtual) {
-        alert("Faça login com um e-mail autorizado para salvar o treino.");
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login com um e-mail autorizado para salvar o treino na nuvem.");
         return;
       }
 
@@ -2966,11 +2832,6 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
       const treinoSalvo = { data: agora.toLocaleString("pt-BR"), criadoEm: agora.getTime(), diaSemana: nomeDoDiaDaSemana(), letraTreino: treinoAtual.letra || "Não informado", meta: perfilUsuario ? perfilUsuario.metaPrincipal : "", local: perfilUsuario ? perfilUsuario.localTreino : "", totalExercicios, totalConcluidos, nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário", exercicios: nomesExercicios, exercicioRegistro, carga, reps, sensacao, evolucao: mensagemEvolucaoAtual, feedbackFinalTreino: feedbackTreinoFinalAtual || "não informado", observacao, ultimaCardioConsiderada: ultimaCardioCache ? { data: ultimaCardioCache.data, intensidade: ultimaCardioCache.intensidade, sensacao: ultimaCardioCache.sensacao, distancia: ultimaCardioCache.distancia, tempo: ultimaCardioCache.tempo } : null };
 
-      if (!navigator.onLine || !db || usuarioAtual.offline) {
-        salvarTreinoPendenteOffline(treinoSalvo);
-        return;
-      }
-
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").add(treinoSalvo)
         .then(function() {
           salvarUltimoTreinoLocal(treinoSalvo);
@@ -2978,12 +2839,11 @@ analisarEsforcoRecente(function(esforcoRecente) {
           mostrarHistorico();
           rolarParaProximoExercicioPendente();
         })
-        .catch(function(erro) { console.log("Erro ao salvar treino na nuvem:", erro); salvarTreinoPendenteOffline(treinoSalvo); });
+        .catch(function(erro) { console.log("Erro ao salvar treino na nuvem:", erro); alert("Não foi possível salvar o treino na nuvem. Confira sua conexão e tente novamente."); });
     }
 
     function obterHistoricoDaNuvem(callback) {
-      if (!acessoLiberado || !usuarioAtual) { callback([]); return; }
-      if (!navigator.onLine || !db || usuarioAtual.offline) { callback(mesclarPendentesOffline("treinos", [])); return; }
+      if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
 
       const limite90Dias = new Date().getTime() - (90 * 24 * 60 * 60 * 1000);
 
@@ -2996,9 +2856,9 @@ analisarEsforcoRecente(function(esforcoRecente) {
             if (!item.criadoEm || Number(item.criadoEm) >= limite90Dias) lista.push(item);
           });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
-          callback(mesclarPendentesOffline("treinos", lista));
+          callback(lista);
         })
-        .catch(function(erro) { console.log("Erro ao carregar histórico da nuvem:", erro); callback(mesclarPendentesOffline("treinos", [])); });
+        .catch(function(erro) { console.log("Erro ao carregar histórico da nuvem:", erro); callback([]); });
     }
 
     function mostrarHistorico() { obterHistoricoDaNuvem(function(historico) { renderResumoHistorico(historico); }); }
@@ -3102,7 +2962,6 @@ analisarEsforcoRecente(function(esforcoRecente) {
           "Treino: " + limparTextoSeguro(nomeAmigavelTreino(item.letraTreino || "")) + "<br>" +
           "Concluídos: " + (item.totalConcluidos || 0) + " de " + (item.totalExercicios || (item.exercicios ? item.exercicios.length : 0)) + " exercícios<br>" +
           "Registro principal: " + (item.exercicioRegistro || "Não informado") +
-          (item.__offlinePendente ? "<br><span class='tag'>Pendente de sincronizar</span>" : "") +
           "<br><button type='button' class='botao-secundario' onclick='irParaHistoricoCompleto()'>Ver detalhes</button>" +
           (item.__id ? "<button type='button' class='botao-secundario' onclick='editarTreinoHistorico(" + JSON.stringify(item.__id) + ")'>Editar treino</button>" : "") +
           (item.__id ? "<button type='button' class='botao-perigo' onclick='excluirTreinoHistorico(" + JSON.stringify(item.__id) + ")'>Deletar treino</button>" : "");
@@ -3456,7 +3315,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       atualizarBotoesLogin(usuarioAtual);
     };
 
-const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.3.9";
+const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.3.8";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -3544,7 +3403,7 @@ const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.3.9";
   }
 
 
-/* Versão 1.3.9 - correção real da biblioteca de exercícios por categoria */
+/* Versão 1.3.8 - correção real da biblioteca de exercícios por categoria */
 function calcularIdadePorNascimento(dataISO) { if (!dataISO) return 0; const nasc = new Date(dataISO + "T00:00:00"); if (isNaN(nasc.getTime())) return 0; const hoje = new Date(); let idade = hoje.getFullYear() - nasc.getFullYear(); const mes = hoje.getMonth() - nasc.getMonth(); if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--; return Math.max(0, idade); }
 function normalizarLocalTreino(valor) { const mapa = { academia_grande: "academia_avancada", academia_pequena: "academia_basica", garagem: "academia_basica", casa_limitado: "academia_basica", halteres: "academia_basica", academia_casa: "academia_basica", academia_completa: "academia_avancada", personalizado: "academia_basica", sem_equipamento: "sem_equipamento", academia_basica: "academia_basica", academia_avancada: "academia_avancada" }; return mapa[valor] || "sem_equipamento"; }
 function traduzirLocal(valor) { const local = normalizarLocalTreino(valor); if (local === "sem_equipamento") return "Sem Equipamento — peso corporal"; if (local === "academia_basica") return "Academia básica — barras, halteres e banco"; if (local === "academia_avancada") return "Academia avançada — completa"; return "Sem Equipamento — peso corporal"; }
