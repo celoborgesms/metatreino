@@ -4304,40 +4304,10 @@ analisarEsforcoRecente(function(esforcoRecente) {
             formatarDiaHistorico(dia) + "<br><span>💪 " + grupo.treinos.length + " | 🏃 " + grupo.cardios.length + "</span></button>";
         });
 
-        calendarioHTML += "</div><div id='detalheDiaHistorico' class='detalhe-dia-historico'></div>";
+        calendarioHTML += "</div><div id='detalheDiaHistorico' class='detalhe-dia-historico'><p class='small'>Selecione uma data acima para ver os registros daquele dia.</p></div>";
         calendarioBox.innerHTML = calendarioHTML;
         listaHistoricoCompleto.appendChild(calendarioBox);
         window.__metatreinoMapaHistorico = mapaDias;
-        renderizarDetalheDiaHistorico(diasOrdenados[0], mapaDias);
-      }
-
-      const tituloTreinos = document.createElement("div");
-      tituloTreinos.className = "alerta";
-      tituloTreinos.innerHTML = "<strong>Histórico geral dos últimos 90 dias</strong><br><span class='small'>Lista completa abaixo, separada por treino e cardio.</span>";
-      listaHistoricoCompleto.appendChild(tituloTreinos);
-
-      if (treinos.length > 0) {
-        const tituloTreinosForca = document.createElement("div");
-        tituloTreinosForca.className = "alerta";
-        tituloTreinosForca.innerHTML = "<strong>Treinos de força</strong>";
-        listaHistoricoCompleto.appendChild(tituloTreinosForca);
-        treinos.forEach(function(item) {
-          const wrapper = document.createElement("div");
-          wrapper.innerHTML = montarCardTreinoHistorico(item);
-          listaHistoricoCompleto.appendChild(wrapper.firstChild);
-        });
-      }
-
-      if (cardios.length > 0) {
-        const tituloCardio = document.createElement("div");
-        tituloCardio.className = "alerta";
-        tituloCardio.innerHTML = "<strong>Histórico de cardio</strong>";
-        listaHistoricoCompleto.appendChild(tituloCardio);
-        cardios.forEach(function(item) {
-          const wrapper = document.createElement("div");
-          wrapper.innerHTML = montarCardCardioHistorico(item);
-          listaHistoricoCompleto.appendChild(wrapper.firstChild);
-        });
       }
     }
 
