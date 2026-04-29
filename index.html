@@ -1036,25 +1036,46 @@
 
         <label for="localTreino">Onde costuma treinar?</label>
         <select id="localTreino" onchange="atualizarFormularioEquipamentos()">
-          <option value="academia_grande">Academia completa</option>
-          <option value="academia_pequena">Academia compacta / poucos equipamentos</option>
-          <option value="garagem">Espaço próprio com equipamentos</option>
-          <option value="casa_limitado">Em casa com halteres, elásticos ou poucos equipamentos</option>
-          <option value="sem_equipamento">Sem equipamentos / peso corporal</option>
+          <option value="sem_equipamento">Sem Equipamento — treinos em casa apenas com peso corporal</option>
+          <option value="halteres">Halteres — exercícios com halteres e peso corporal</option>
+          <option value="academia_casa">Academia em Casa — barra, halteres e peso corporal</option>
+          <option value="academia_completa">Academia Completa — máquinas, barras, cabos e acessórios</option>
+          <option value="personalizado">Personalizado — escolha os equipamentos que deseja usar</option>
         </select>
 
         <div id="boxEquipamentosCasa" class="hidden">
-          <label>Quais equipamentos você tem disponível?</label>
-          <p class="small">Marque apenas o que você realmente tem. O treino tentará usar somente essas opções.</p>
+          <label>Equipamentos para treino personalizado</label>
+          <p class="small">Marque somente os equipamentos que você tem ou deseja usar. O treino será montado com exercícios compatíveis com a seleção.</p>
           <div class="dias-grid">
             <label><input type="checkbox" class="equipamento-casa" value="halteres"> Halteres</label>
-            <label><input type="checkbox" class="equipamento-casa" value="elasticos"> Elásticos / mini band</label>
-            <label><input type="checkbox" class="equipamento-casa" value="banco"> Banco / cadeira firme</label>
+            <label><input type="checkbox" class="equipamento-casa" value="maquina_cabos"> Máquina de cabos / estação de musculação</label>
+            <label><input type="checkbox" class="equipamento-casa" value="barra"> Barra reta e anilhas</label>
+            <label><input type="checkbox" class="equipamento-casa" value="maquina_alavanca"> Máquina de alavanca</label>
+            <label><input type="checkbox" class="equipamento-casa" value="elastico"> Elástico de treino</label>
+            <label><input type="checkbox" class="equipamento-casa" value="kettlebell"> Kettlebell</label>
+            <label><input type="checkbox" class="equipamento-casa" value="banco"> Banco de treino</label>
+            <label><input type="checkbox" class="equipamento-casa" value="com_peso"> Peso livre / carga externa</label>
+            <label><input type="checkbox" class="equipamento-casa" value="trx"> Suspensão TRX</label>
+            <label><input type="checkbox" class="equipamento-casa" value="barra_especial"> Barra especial</label>
+            <label><input type="checkbox" class="equipamento-casa" value="smith"> Máquina Smith</label>
+            <label><input type="checkbox" class="equipamento-casa" value="rolo_espuma"> Rolo de liberação miofascial</label>
+            <label><input type="checkbox" class="equipamento-casa" value="bola_estabilidade"> Bola de estabilidade</label>
+            <label><input type="checkbox" class="equipamento-casa" value="banda_resistencia"> Banda de resistência</label>
+            <label><input type="checkbox" class="equipamento-casa" value="barra_ez"> Barra EZ</label>
+            <label><input type="checkbox" class="equipamento-casa" value="maquina_especial"> Máquina específica</label>
+            <label><input type="checkbox" class="equipamento-casa" value="landmine"> Landmine</label>
+            <label><input type="checkbox" class="equipamento-casa" value="bastao"> Bastão de mobilidade</label>
+            <label><input type="checkbox" class="equipamento-casa" value="bola_medicinal"> Bola medicinal</label>
+            <label><input type="checkbox" class="equipamento-casa" value="treno"> Trenó de treino</label>
+            <label><input type="checkbox" class="equipamento-casa" value="barra_hexagonal"> Barra hexagonal</label>
+            <label><input type="checkbox" class="equipamento-casa" value="arnes_cabeca"> Arnês de cabeça</label>
+            <label><input type="checkbox" class="equipamento-casa" value="equipamento_especial"> Equipamento funcional especial</label>
             <label><input type="checkbox" class="equipamento-casa" value="corda"> Corda</label>
-            <label><input type="checkbox" class="equipamento-casa" value="estacao"> Estação / multifuncional</label>
-            <label><input type="checkbox" class="equipamento-casa" value="barra"> Barra / anilhas</label>
+            <label><input type="checkbox" class="equipamento-casa" value="bosu"> Bola Bosu</label>
+            <label><input type="checkbox" class="equipamento-casa" value="bola_rolamento"> Bola de rolamento / massagem</label>
+            <label><input type="checkbox" class="equipamento-casa" value="treno_potencia"> Trenó de potência</label>
           </div>
-          <p class="small">Se não marcar nada, o app prioriza peso corporal e exercícios mais simples.</p>
+          <p class="small">Se nenhum equipamento for marcado no Personalizado, o app usa peso corporal como opção segura.</p>
         </div>
 
         <button type="button" onclick="calcularPerfil()">Calcular e salvar perfil</button>
@@ -2555,11 +2576,26 @@
       ]
     };
 
+    function normalizarLocalTreino(valor) {
+      const mapa = {
+        academia_grande: "academia_completa",
+        academia_pequena: "academia_completa",
+        garagem: "academia_casa",
+        casa_limitado: "halteres",
+        sem_equipamento: "sem_equipamento",
+        halteres: "halteres",
+        academia_casa: "academia_casa",
+        academia_completa: "academia_completa",
+        personalizado: "personalizado"
+      };
+      return mapa[valor] || valor || "sem_equipamento";
+    }
+
     function atualizarFormularioEquipamentos() {
-      const local = document.getElementById("localTreino") ? document.getElementById("localTreino").value : "";
+      const local = normalizarLocalTreino(document.getElementById("localTreino") ? document.getElementById("localTreino").value : "");
       const box = document.getElementById("boxEquipamentosCasa");
       if (!box) return;
-      if (local === "casa_limitado" || local === "garagem") box.classList.remove("hidden");
+      if (local === "personalizado") box.classList.remove("hidden");
       else box.classList.add("hidden");
     }
 
@@ -2568,35 +2604,87 @@
     }
 
     function restaurarEquipamentosCasa(lista) {
+      const compatibilidade = {
+        elasticos: "elastico",
+        estacao: "maquina_cabos",
+        banco: "banco",
+        halteres: "halteres",
+        barra: "barra",
+        corda: "corda"
+      };
       const mapa = {};
-      (lista || []).forEach(function(item) { mapa[item] = true; });
+      (lista || []).forEach(function(item) { mapa[compatibilidade[item] || item] = true; });
       document.querySelectorAll(".equipamento-casa").forEach(function(input) { input.checked = !!mapa[input.value]; });
     }
 
     function nomeEquipamentoSelecionado(chave) {
       const mapa = {
         halteres: "Halteres",
-        elasticos: "Elásticos / mini band",
-        banco: "Banco / cadeira firme",
+        maquina_cabos: "Máquina de cabos / estação de musculação",
+        barra: "Barra reta e anilhas",
+        maquina_alavanca: "Máquina de alavanca",
+        elastico: "Elástico de treino",
+        kettlebell: "Kettlebell",
+        banco: "Banco de treino",
+        com_peso: "Peso livre / carga externa",
+        trx: "Suspensão TRX",
+        barra_especial: "Barra especial",
+        smith: "Máquina Smith",
+        rolo_espuma: "Rolo de liberação miofascial",
+        bola_estabilidade: "Bola de estabilidade",
+        banda_resistencia: "Banda de resistência",
+        barra_ez: "Barra EZ",
+        maquina_especial: "Máquina específica",
+        landmine: "Landmine",
+        bastao: "Bastão de mobilidade",
+        bola_medicinal: "Bola medicinal",
+        treno: "Trenó de treino",
+        barra_hexagonal: "Barra hexagonal",
+        arnes_cabeca: "Arnês de cabeça",
+        equipamento_especial: "Equipamento funcional especial",
         corda: "Corda",
-        estacao: "Estação de musculação",
-        barra: "Barra / anilhas"
+        bosu: "Bola Bosu",
+        bola_rolamento: "Bola de rolamento / massagem",
+        treno_potencia: "Trenó de potência",
+        peso_corporal: "Peso corporal"
       };
       return mapa[chave] || chave;
     }
 
     function detectarEquipamentosDoExercicio(exercicio) {
       const equipamento = String(exercicio && exercicio.equipamento ? exercicio.equipamento : "").toLowerCase();
+      const nome = String(exercicio && exercicio.nome ? exercicio.nome : "").toLowerCase();
+      const texto = equipamento + " " + nome;
       const encontrados = [];
 
-      if (equipamento.includes("halter")) encontrados.push("halteres");
-      if (equipamento.includes("elástico") || equipamento.includes("elastic") || equipamento.includes("mini band")) encontrados.push("elasticos");
-      if (equipamento.includes("banco") || equipamento.includes("cadeira")) encontrados.push("banco");
-      if (equipamento.includes("corda")) encontrados.push("corda");
-      if (equipamento.includes("estação") || equipamento.includes("multifuncional") || equipamento.includes("polia")) encontrados.push("estacao");
-      if (equipamento.includes("barra") || equipamento.includes("anilha")) encontrados.push("barra");
-      if (equipamento.includes("máquina") || equipamento.includes("maquina") || equipamento.includes("cabo")) encontrados.push("academia");
-      if (equipamento.includes("peso corporal") || equipamento.includes("nenhum")) encontrados.push("peso_corporal");
+      if (texto.includes("peso corporal") || texto.includes("nenhum") || texto.includes("calistenia")) encontrados.push("peso_corporal");
+      if (texto.includes("halter")) encontrados.push("halteres");
+      if (texto.includes("elástico") || texto.includes("elastico") || texto.includes("mini band")) encontrados.push("elastico");
+      if (texto.includes("banda de resistência") || texto.includes("banda de resistencia")) encontrados.push("banda_resistencia");
+      if (texto.includes("banco") || texto.includes("cadeira")) encontrados.push("banco");
+      if (texto.includes("corda")) encontrados.push("corda");
+      if (texto.includes("estação") || texto.includes("estacao") || texto.includes("multifuncional") || texto.includes("polia") || texto.includes("cabo")) encontrados.push("maquina_cabos");
+      if (texto.includes("barra ez")) encontrados.push("barra_ez");
+      if (texto.includes("barra hexagonal")) encontrados.push("barra_hexagonal");
+      if (texto.includes("barra especial")) encontrados.push("barra_especial");
+      if (texto.includes("barra") || texto.includes("anilha")) encontrados.push("barra");
+      if (texto.includes("smith")) encontrados.push("smith");
+      if (texto.includes("máquina de alavanca") || texto.includes("maquina de alavanca") || texto.includes("alavanca")) encontrados.push("maquina_alavanca");
+      if (texto.includes("máquina específica") || texto.includes("maquina especifica") || texto.includes("leg press") || texto.includes("mesa flexora") || texto.includes("cadeira extensora")) encontrados.push("maquina_especial");
+      if (texto.includes("máquina") || texto.includes("maquina")) encontrados.push("maquina_especial");
+      if (texto.includes("kettlebell")) encontrados.push("kettlebell");
+      if (texto.includes("trx") || texto.includes("suspensão") || texto.includes("suspensao")) encontrados.push("trx");
+      if (texto.includes("rolo")) encontrados.push("rolo_espuma");
+      if (texto.includes("bola de estabilidade") || texto.includes("bola suíça") || texto.includes("bola suica")) encontrados.push("bola_estabilidade");
+      if (texto.includes("bola medicinal")) encontrados.push("bola_medicinal");
+      if (texto.includes("landmine")) encontrados.push("landmine");
+      if (texto.includes("bastão") || texto.includes("bastao")) encontrados.push("bastao");
+      if (texto.includes("trenó de potência") || texto.includes("treno de potencia")) encontrados.push("treno_potencia");
+      if (texto.includes("trenó") || texto.includes("treno")) encontrados.push("treno");
+      if (texto.includes("arnês") || texto.includes("arnes")) encontrados.push("arnes_cabeca");
+      if (texto.includes("bosu")) encontrados.push("bosu");
+      if (texto.includes("rolamento") || texto.includes("massagem")) encontrados.push("bola_rolamento");
+      if (texto.includes("peso") && !texto.includes("peso corporal")) encontrados.push("com_peso");
 
       return encontrados.filter(function(item, indice, lista) { return lista.indexOf(item) === indice; });
     }
@@ -2608,7 +2696,7 @@
 
     function ajustarEquipamentoVisualPorLocal(exercicio) {
       if (!perfilUsuario || !exercicio) return exercicio;
-      const local = perfilUsuario.localTreino || "";
+      const local = normalizarLocalTreino(perfilUsuario.localTreino || "");
       const copia = Object.assign({}, exercicio);
       const tipos = detectarEquipamentosDoExercicio(copia);
       const selecionados = perfilUsuario.equipamentosCasa || [];
@@ -2618,17 +2706,14 @@
         return copia;
       }
 
-      if ((local === "casa_limitado" || local === "garagem") && selecionados.length > 0) {
-        const nomesMarcados = selecionados
-          .filter(function(item) { return tipos.includes(item); })
-          .map(nomeEquipamentoSelecionado);
-        if (nomesMarcados.length > 0) {
-          copia.equipamento = nomesMarcados.join(" + ");
-        }
+      if (local === "halteres" && tipos.includes("halteres")) copia.equipamento = "Halteres";
+      if (local === "academia_casa") {
+        const nomesCasa = ["barra", "halteres", "banco", "peso_corporal"].filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
+        if (nomesCasa.length) copia.equipamento = nomesCasa.join(" + ");
       }
-
-      if ((local === "casa_limitado" || local === "garagem") && selecionados.length === 0 && equipamentoEhPesoCorporal(copia)) {
-        copia.equipamento = "Peso corporal";
+      if (local === "personalizado" && selecionados.length > 0) {
+        const nomesMarcados = selecionados.filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
+        if (nomesMarcados.length > 0) copia.equipamento = nomesMarcados.join(" + ");
       }
 
       return copia;
@@ -2636,35 +2721,21 @@
 
     function equipamentoCompativelComPerfil(exercicio) {
       if (!perfilUsuario) return true;
-      const local = perfilUsuario.localTreino || "academia_grande";
+      const local = normalizarLocalTreino(perfilUsuario.localTreino || "academia_completa");
       const tipos = detectarEquipamentosDoExercicio(exercicio);
 
-      if (local === "academia_grande") {
-        return true;
+      if (local === "academia_completa") return true;
+      if (local === "sem_equipamento") return equipamentoEhPesoCorporal(exercicio);
+      if (local === "halteres") return equipamentoEhPesoCorporal(exercicio) || tipos.includes("halteres");
+      if (local === "academia_casa") {
+        return equipamentoEhPesoCorporal(exercicio) || tipos.some(function(tipo) { return ["halteres", "barra", "banco", "com_peso"].includes(tipo); });
       }
-
-      if (local === "academia_pequena") {
-        return tipos.some(function(tipo) {
-          return ["academia", "halteres", "banco", "barra", "peso_corporal"].includes(tipo);
-        });
-      }
-
-      if (local === "sem_equipamento") {
-        return equipamentoEhPesoCorporal(exercicio);
-      }
-
-      if (local === "casa_limitado" || local === "garagem") {
+      if (local === "personalizado") {
         const selecionados = perfilUsuario.equipamentosCasa || [];
-
-        if (!selecionados.length) {
-          return equipamentoEhPesoCorporal(exercicio);
-        }
-
-        return tipos.some(function(tipo) {
-          return selecionados.includes(tipo);
-        });
+        if (!selecionados.length) return equipamentoEhPesoCorporal(exercicio);
+        if (equipamentoEhPesoCorporal(exercicio)) return true;
+        return tipos.some(function(tipo) { return selecionados.includes(tipo); });
       }
-
       return true;
     }
 
@@ -2706,7 +2777,7 @@
     instalarExerciciosVersao133();
 
     function instalarExerciciosEstacaoMS8000() {
-      const estacaoLocal = ["garagem", "casa_limitado"];
+      const estacaoLocal = ["academia_completa", "personalizado"];
       const equipamentoEstacao = "Estação de musculação";
       const novos = {
         A: [
@@ -2742,6 +2813,53 @@
     }
 
     instalarExerciciosEstacaoMS8000();
+
+    function instalarExerciciosPersonalizados133() {
+      const emTodos = ["academia_completa", "personalizado"];
+      const casa = ["halteres", "academia_casa", "academia_completa", "personalizado"];
+      const novos = {
+        A: [
+          { nome: "Supino com halteres", grupo: "Peito", equipamento: "Halteres + banco", nivel: "iniciante", local: casa, evitar: "ombro", passos: ["Apoie as costas no banco.", "Segure os halteres na linha do peito.", "Empurre para cima com controle.", "Desça sem forçar os ombros."] },
+          { nome: "Desenvolvimento militar com barra", grupo: "Ombros", equipamento: "Barra reta e anilhas", nivel: "intermediario", local: ["academia_casa", "academia_completa", "personalizado"], evitar: "ombro", passos: ["Segure a barra na altura dos ombros.", "Contraia o abdômen.", "Empurre a barra acima da cabeça.", "Desça controlando."] },
+          { nome: "Supino no Smith", grupo: "Peito", equipamento: "Máquina Smith", nivel: "intermediario", local: emTodos, evitar: "ombro", passos: ["Ajuste o banco no Smith.", "Desça a barra até a linha do peito.", "Empurre sem travar os cotovelos.", "Mantenha controle do movimento."] },
+          { nome: "Tríceps testa com barra EZ", grupo: "Tríceps", equipamento: "Barra EZ", nivel: "intermediario", local: emTodos, evitar: "ombro", passos: ["Deite no banco.", "Segure a barra EZ.", "Flexione os cotovelos com controle.", "Estenda sem abrir demais os braços."] },
+          { nome: "Flexão no TRX", grupo: "Peito", equipamento: "Suspensão TRX", nivel: "intermediario", local: emTodos, evitar: "ombro", passos: ["Segure as alças do TRX.", "Incline o corpo com segurança.", "Desça em flexão controlada.", "Empurre e volte à posição inicial."] },
+          { nome: "Arremesso de bola medicinal", grupo: "Peito", equipamento: "Bola medicinal", nivel: "intermediario", local: emTodos, evitar: "ombro", passos: ["Segure a bola na altura do peito.", "Empurre/arremesse de forma controlada.", "Receba a bola com segurança.", "Mantenha postura firme."] },
+          { nome: "Desenvolvimento com kettlebell", grupo: "Ombros", equipamento: "Kettlebell", nivel: "intermediario", local: emTodos, evitar: "ombro", passos: ["Segure o kettlebell próximo ao ombro.", "Mantenha abdômen firme.", "Empurre acima da cabeça.", "Desça devagar."] },
+          { nome: "Elevação lateral na máquina", grupo: "Ombros", equipamento: "Máquina específica", nivel: "iniciante", local: emTodos, evitar: "ombro", passos: ["Ajuste a máquina.", "Eleve os braços até a linha dos ombros.", "Evite impulso.", "Volte controlando."] }
+        ],
+        B: [
+          { nome: "Remada curvada com barra", grupo: "Costas", equipamento: "Barra reta e anilhas", nivel: "intermediario", local: ["academia_casa", "academia_completa", "personalizado"], evitar: "lombar", passos: ["Incline o tronco com coluna firme.", "Puxe a barra em direção ao abdômen.", "Contraia as costas.", "Desça controlando."] },
+          { nome: "Remada no TRX", grupo: "Costas", equipamento: "Suspensão TRX", nivel: "iniciante", local: emTodos, evitar: "ombro", passos: ["Segure as alças.", "Incline o corpo.", "Puxe o peito em direção às mãos.", "Volte devagar."] },
+          { nome: "Remada unilateral landmine", grupo: "Costas", equipamento: "Landmine", nivel: "intermediario", local: emTodos, evitar: "lombar", passos: ["Posicione a barra no landmine.", "Segure a ponta da barra.", "Puxe em direção ao tronco.", "Controle a volta."] },
+          { nome: "Rosca direta com barra EZ", grupo: "Bíceps", equipamento: "Barra EZ", nivel: "iniciante", local: emTodos, evitar: "nenhuma", passos: ["Segure a barra EZ.", "Mantenha cotovelos próximos ao corpo.", "Suba contraindo bíceps.", "Desça devagar."] },
+          { nome: "Rosca com barra especial", grupo: "Bíceps", equipamento: "Barra especial", nivel: "intermediario", local: emTodos, evitar: "nenhuma", passos: ["Segure a barra com pegada confortável.", "Evite balançar o tronco.", "Flexione os cotovelos.", "Desça controlando."] },
+          { nome: "Puxada alta na máquina de alavanca", grupo: "Costas", equipamento: "Máquina de alavanca", nivel: "iniciante", local: emTodos, evitar: "ombro", passos: ["Ajuste o assento.", "Segure as alças.", "Puxe em direção ao peito.", "Volte sem soltar a carga."] },
+          { nome: "Flexão de pescoço com arnês", grupo: "Pescoço", equipamento: "Arnês de cabeça", nivel: "avancado", local: emTodos, evitar: "coluna", passos: ["Use carga muito leve.", "Mantenha postura neutra.", "Movimente devagar.", "Interrompa se houver desconforto."] },
+          { nome: "Remada com barra hexagonal", grupo: "Costas", equipamento: "Barra hexagonal", nivel: "intermediario", local: emTodos, evitar: "lombar", passos: ["Segure a barra hexagonal.", "Incline pouco o tronco.", "Puxe com controle.", "Desça mantendo coluna firme."] }
+        ],
+        C: [
+          { nome: "Agachamento com barra", grupo: "Pernas", equipamento: "Barra reta e anilhas", nivel: "intermediario", local: ["academia_casa", "academia_completa", "personalizado"], evitar: "joelho", passos: ["Apoie a barra com segurança.", "Desça controlando.", "Mantenha coluna firme.", "Suba empurrando o chão."] },
+          { nome: "Levantamento terra com barra hexagonal", grupo: "Posterior de coxa", equipamento: "Barra hexagonal", nivel: "intermediario", local: emTodos, evitar: "lombar", passos: ["Entre no centro da barra.", "Segure as alças.", "Suba com coluna neutra.", "Desça controlando."] },
+          { nome: "Agachamento no Smith", grupo: "Quadríceps", equipamento: "Máquina Smith", nivel: "intermediario", local: emTodos, evitar: "joelho", passos: ["Ajuste a barra do Smith.", "Posicione os pés com segurança.", "Desça até amplitude confortável.", "Suba sem travar joelhos."] },
+          { nome: "Avanço com kettlebell", grupo: "Pernas", equipamento: "Kettlebell", nivel: "intermediario", local: emTodos, evitar: "joelho", passos: ["Segure o kettlebell.", "Dê um passo à frente.", "Desça com controle.", "Volte e alterne as pernas."] },
+          { nome: "Agachamento com bola Bosu", grupo: "Pernas", equipamento: "Bola Bosu", nivel: "intermediario", local: emTodos, evitar: "joelho", passos: ["Use a Bosu em local seguro.", "Desça devagar.", "Mantenha equilíbrio.", "Suba com controle."] },
+          { nome: "Flexora na bola de estabilidade", grupo: "Posterior de coxa", equipamento: "Bola de estabilidade", nivel: "intermediario", local: emTodos, evitar: "lombar", passos: ["Deite de barriga para cima.", "Apoie os pés na bola.", "Flexione os joelhos puxando a bola.", "Volte controlando."] },
+          { nome: "Empurrar trenó", grupo: "Pernas", equipamento: "Trenó de treino", nivel: "intermediario", local: emTodos, evitar: "joelho", passos: ["Ajuste uma carga segura.", "Incline o corpo no trenó.", "Empurre com passos curtos.", "Mantenha ritmo controlado."] },
+          { nome: "Sprint com trenó de potência", grupo: "Pernas", equipamento: "Trenó de potência", nivel: "avancado", local: emTodos, evitar: "joelho", passos: ["Use carga leve a moderada.", "Mantenha tronco firme.", "Empurre com passos potentes.", "Pare se perder a técnica."] },
+          { nome: "Mobilidade com bastão", grupo: "Mobilidade", equipamento: "Bastão de mobilidade", nivel: "iniciante", local: emTodos, evitar: "nenhuma", passos: ["Segure o bastão com pegada ampla.", "Faça movimentos lentos.", "Não force amplitude.", "Use para aquecer ou recuperar."] }
+        ],
+        descanso: [
+          { nome: "Liberação com rolo de espuma", grupo: "Recuperação", equipamento: "Rolo de liberação miofascial", nivel: "iniciante", local: emTodos, evitar: "nenhuma", passos: ["Passe o rolo devagar nos músculos tensos.", "Evite pontos de dor forte.", "Respire fundo.", "Use como recuperação leve."] },
+          { nome: "Alongamento com bola de rolamento", grupo: "Recuperação", equipamento: "Bola de rolamento / massagem", nivel: "iniciante", local: emTodos, evitar: "nenhuma", passos: ["Use a bola em regiões tensas.", "Faça pressão leve.", "Movimente devagar.", "Não aplique sobre articulações."] }
+        ]
+      };
+      Object.keys(novos).forEach(function(chave) {
+        bibliotecaExercicios[chave] = filtrarExerciciosUnicos((bibliotecaExercicios[chave] || []).concat(novos[chave]));
+      });
+    }
+
+    instalarExerciciosPersonalizados133();
 
     function ajustarTreinoPorSexoIdadePesoCheckin(treino, energia, dor, tempo) {
       if (!perfilUsuario || !treino || treino.length === 0) return treino;
@@ -2788,7 +2906,7 @@
       document.getElementById("metaPrincipal").value = perfilUsuario.metaPrincipal || "massa";
       document.getElementById("rotinaAtual").value = perfilUsuario.rotinaAtual || "nunca";
       document.getElementById("tempoExperiencia").value = perfilUsuario.tempoExperiencia || "menos_1";
-      document.getElementById("localTreino").value = perfilUsuario.localTreino || "academia_grande";
+      document.getElementById("localTreino").value = normalizarLocalTreino(perfilUsuario.localTreino || "academia_completa");
       atualizarFormularioEquipamentos();
       restaurarEquipamentosCasa(perfilUsuario.equipamentosCasa || []);
       mostrarResumoPerfilCarregado();
@@ -2815,7 +2933,7 @@
       const metaPrincipal = document.getElementById("metaPrincipal").value;
       const rotinaAtual = document.getElementById("rotinaAtual").value;
       const tempoExperiencia = document.getElementById("tempoExperiencia").value;
-      const localTreino = document.getElementById("localTreino").value;
+      const localTreino = normalizarLocalTreino(document.getElementById("localTreino").value);
       const equipamentosCasa = obterEquipamentosCasaSelecionados();
       const resultadoPerfil = document.getElementById("resultadoPerfil");
       const botaoIrTreino = document.getElementById("botaoIrTreino");
@@ -2851,7 +2969,7 @@
       mostrarMensagemMudancaPeso(perfilAntigo, peso);
 
       resultadoPerfil.classList.remove("hidden");
-      resultadoPerfil.innerHTML = "<strong>" + nome + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Classificação: " + classificacao + ".<br>" + mensagem + "<br>Meta: " + traduzirMeta(metaPrincipal) + ".<br>Rotina: " + traduzirRotina(rotinaAtual) + ".<br>Experiência: " + traduzirExperiencia(tempoExperiencia) + ".<br>Local: " + traduzirLocal(localTreino) + ".<br>Equipamentos: " + limparTextoSeguro(equipamentosCasa.length ? equipamentosCasa.map(nomeEquipamentoSelecionado).join(", ") : (localTreino === "sem_equipamento" ? "peso corporal" : "nenhum equipamento marcado")) + ".<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
+      resultadoPerfil.innerHTML = "<strong>" + nome + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Classificação: " + classificacao + ".<br>" + mensagem + "<br>Meta: " + traduzirMeta(metaPrincipal) + ".<br>Rotina: " + traduzirRotina(rotinaAtual) + ".<br>Experiência: " + traduzirExperiencia(tempoExperiencia) + ".<br>Local: " + traduzirLocal(localTreino) + ".<br>Equipamentos: " + limparTextoSeguro(equipamentosCasa.length ? equipamentosCasa.map(nomeEquipamentoSelecionado).join(", ") : (localTreino === "sem_equipamento" ? "peso corporal" : (localTreino === "personalizado" ? "peso corporal (nenhum equipamento marcado)" : "equipamentos automáticos da categoria"))) + ".<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
       botaoIrTreino.classList.remove("hidden");
     }
 
@@ -2906,7 +3024,14 @@
       return mapa[valor] || valor;
     }
     function traduzirLocal(valor) {
-      const mapa = { academia_grande: "academia completa", academia_pequena: "academia compacta", garagem: "espaço próprio com equipamentos", casa_limitado: "casa com poucos equipamentos", sem_equipamento: "sem equipamentos" };
+      valor = normalizarLocalTreino(valor);
+      const mapa = {
+        sem_equipamento: "Sem Equipamento",
+        halteres: "Halteres",
+        academia_casa: "Academia em Casa",
+        academia_completa: "Academia Completa",
+        personalizado: "Personalizado"
+      };
       return mapa[valor] || valor;
     }
 
@@ -3581,7 +3706,7 @@
         grupo: grupo,
         equipamento: "Peso corporal",
         nivel: "iniciante",
-        local: ["sem_equipamento", "casa_limitado"],
+        local: ["sem_equipamento", "halteres", "academia_casa", "academia_completa", "personalizado"],
         evitar: evitar || "nenhuma",
         passos: passos || [
           "Execute com controle e sem pressa.",
@@ -3596,7 +3721,7 @@
       if (!perfilUsuario) return treino;
       const localPerfil = perfilUsuario.localTreino || "";
       const semEquipamentosMarcados = !perfilUsuario.equipamentosCasa || perfilUsuario.equipamentosCasa.length === 0;
-      if (!(localPerfil === "sem_equipamento" || ((localPerfil === "casa_limitado" || localPerfil === "garagem") && semEquipamentosMarcados))) return treino;
+      if (!(normalizarLocalTreino(localPerfil) === "sem_equipamento" || (normalizarLocalTreino(localPerfil) === "personalizado" && semEquipamentosMarcados))) return treino;
 
       const alvo = alvoQuantidadeExercicios(tempo, determinarPerfilTreino());
       const extras = [
@@ -3727,7 +3852,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       const divisaoSelecionada = document.getElementById("divisaoTreino").value;
       const cardioNoTreino = document.getElementById("cardioNoTreino") ? document.getElementById("cardioNoTreino").value : "nao";
       let letraTreino = escolherTreinoABC(divisaoSelecionada);
-      const local = perfilUsuario ? perfilUsuario.localTreino : "academia_grande";
+      const local = perfilUsuario ? normalizarLocalTreino(perfilUsuario.localTreino) : "academia_completa";
 
       const hojeSemana = new Date().getDay();
       if (divisaoSelecionada === "semana" && hojeSemana === 0) {
@@ -3748,12 +3873,12 @@ analisarEsforcoRecente(function(esforcoRecente) {
       }
 
       let treinoFiltrado = bibliotecaExercicios[letraTreino].filter(function(exercicio) {
-        return !dorBloqueiaGrupo(exercicio) && exercicio.local.includes(local) && nivelPermitido(exercicio) && equipamentoCompativelComPerfil(exercicio);
+        return !dorBloqueiaGrupo(exercicio) && nivelPermitido(exercicio) && equipamentoCompativelComPerfil(exercicio);
       }).map(ajustarExercicioPorMeta);
 
       if (treinoFiltrado.length === 0) {
         treinoFiltrado = bibliotecaExercicios[letraTreino].filter(function(exercicio) {
-          return exercicio.evitar !== dor && exercicio.local.includes(local) && equipamentoCompativelComPerfil(exercicio);
+          return exercicio.evitar !== dor && equipamentoCompativelComPerfil(exercicio);
         }).map(ajustarExercicioPorMeta);
       }
 
@@ -3780,7 +3905,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       }
       treinoFiltrado = treinoFiltrado.slice(0, alvoExercicios);
 
-      const localComCardio = ["academia_grande", "academia_pequena", "garagem"].includes(local);
+      const localComCardio = ["academia_completa", "personalizado"].includes(normalizarLocalTreino(local));
       let mensagemCardioTreino = "";
       if (cardioNoTreino !== "nao" && localComCardio && letraTreino !== "descanso") {
         const reducaoCardio = tempo === "longo" ? 2 : (tempo === "normal" ? 1 : 0);
@@ -3905,7 +4030,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
           "</div>";
         lista.appendChild(div);
       });
-      if (perfilUsuario && perfilUsuario.localTreino === "sem_equipamento" && perfilUsuario.metaPrincipal === "perder_peso") {
+      if (perfilUsuario && normalizarLocalTreino(perfilUsuario.localTreino) === "sem_equipamento" && perfilUsuario.metaPrincipal === "perder_peso") {
         const extra = document.createElement("div");
         extra.className = "exercise";
         extra.innerHTML =
@@ -3968,7 +4093,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       const nomesAtuais = treinoAtual.map(function(exercicio, i) {
         return i === index ? "" : normalizarNomeExercicio(exercicio.nome || "");
       });
-      const local = perfilUsuario ? perfilUsuario.localTreino : "academia_grande";
+      const local = perfilUsuario ? normalizarLocalTreino(perfilUsuario.localTreino) : "academia_completa";
       const grupoAtual = exercicioAtual.grupo;
       let opcoesObjetos = [];
 
@@ -3978,7 +4103,6 @@ analisarEsforcoRecente(function(esforcoRecente) {
           if (nomesAtuais.includes(normalizarNomeExercicio(exercicio.nome))) return;
           const mesmoGrupo = exercicio.grupo === grupoAtual || (grupoAtual === "Ombros" && exercicio.grupo === "Ombro posterior") || (grupoAtual === "Abdômen" && (exercicio.grupo === "Core" || exercicio.grupo === "Cardio/Abdômen"));
           if (!mesmoGrupo) return;
-          if (!exercicio.local.includes(local)) return;
           if (!equipamentoCompativelComPerfil(exercicio)) return;
           opcoesObjetos.push(ajustarExercicioPorMeta(Object.assign({}, exercicio)));
         });
