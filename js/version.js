@@ -1,4 +1,3 @@
-// MetaTreino - controle central de versao
-// Para uma nova atualizacao, altere esta constante.
-var METATREINO_VERSION = "1.3.6";
-var METATREINO_CACHE_NAME = "metatreino-cache-v" + METATREINO_VERSION;
+window.METATREINO_VERSION = "1.3.8";
+window.METATREINO_VERSION_LABEL = "Versão 1.3.8 Beta";
+window.METATREINO_CACHE = "metatreino-cache-v1.3.8";

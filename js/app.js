@@ -1113,34 +1113,76 @@ const firebaseConfig = {
 
     function normalizarLocalTreino(valor) {
       const mapa = {
-        academia_grande: "academia_avancada",
-        academia_pequena: "academia_basica",
-        garagem: "academia_basica",
-        casa_limitado: "academia_basica",
-        halteres: "academia_basica",
-        academia_casa: "academia_basica",
-        academia_completa: "academia_avancada",
-        personalizado: "academia_basica",
+        academia_grande: "academia_completa",
+        academia_pequena: "academia_completa",
+        garagem: "academia_casa",
+        casa_limitado: "halteres",
         sem_equipamento: "sem_equipamento",
-        academia_basica: "academia_basica",
-        academia_avancada: "academia_avancada"
+        halteres: "halteres",
+        academia_casa: "academia_casa",
+        academia_completa: "academia_completa",
+        personalizado: "personalizado"
       };
       return mapa[valor] || valor || "sem_equipamento";
     }
 
     function atualizarFormularioEquipamentos() {
+      const local = normalizarLocalTreino(document.getElementById("localTreino") ? document.getElementById("localTreino").value : "");
       const box = document.getElementById("boxEquipamentosCasa");
-      if (box) box.classList.add("hidden");
+      if (!box) return;
+      if (local === "personalizado") box.classList.remove("hidden");
+      else box.classList.add("hidden");
     }
 
-    function obterEquipamentosCasaSelecionados() { return []; }
+    function obterEquipamentosCasaSelecionados() {
+      return Array.from(document.querySelectorAll(".equipamento-casa:checked")).map(function(item) { return item.value; });
+    }
 
     function restaurarEquipamentosCasa(lista) {
-      document.querySelectorAll(".equipamento-casa").forEach(function(input) { input.checked = false; });
+      const compatibilidade = {
+        elasticos: "elastico",
+        estacao: "maquina_cabos",
+        banco: "banco",
+        halteres: "halteres",
+        barra: "barra",
+        corda: "corda"
+      };
+      const mapa = {};
+      (lista || []).forEach(function(item) { mapa[compatibilidade[item] || item] = true; });
+      document.querySelectorAll(".equipamento-casa").forEach(function(input) { input.checked = !!mapa[input.value]; });
     }
 
     function nomeEquipamentoSelecionado(chave) {
-      const mapa = { sem_equipamento: "Peso corporal", academia_basica: "Academia básica", academia_avancada: "Academia avançada", peso_corporal: "Peso corporal", halteres: "Halteres", barra: "Barra e anilhas", banco: "Banco", com_peso: "Peso livre" };
+      const mapa = {
+        halteres: "Halteres",
+        maquina_cabos: "Máquina de cabos / estação de musculação",
+        barra: "Barra reta e anilhas",
+        maquina_alavanca: "Máquina de alavanca",
+        elastico: "Elástico de treino",
+        kettlebell: "Kettlebell",
+        banco: "Banco de treino",
+        com_peso: "Peso livre / carga externa",
+        trx: "Suspensão TRX",
+        barra_especial: "Barra especial",
+        smith: "Máquina Smith",
+        rolo_espuma: "Rolo de liberação miofascial",
+        bola_estabilidade: "Bola de estabilidade",
+        banda_resistencia: "Banda de resistência",
+        barra_ez: "Barra EZ",
+        maquina_especial: "Máquina específica",
+        landmine: "Landmine",
+        bastao: "Bastão de mobilidade",
+        bola_medicinal: "Bola medicinal",
+        treno: "Trenó de treino",
+        barra_hexagonal: "Barra hexagonal",
+        arnes_cabeca: "Arnês de cabeça",
+        equipamento_especial: "Equipamento funcional especial",
+        corda: "Corda",
+        bosu: "Bola Bosu",
+        bola_rolamento: "Bola de rolamento / massagem",
+        treno_potencia: "Trenó de potência",
+        peso_corporal: "Peso corporal"
+      };
       return mapa[chave] || chave;
     }
 
@@ -1149,22 +1191,51 @@ const firebaseConfig = {
       const nome = String(exercicio && exercicio.nome ? exercicio.nome : "").toLowerCase();
       const texto = equipamento + " " + nome;
       const encontrados = [];
+
       if (texto.includes("peso corporal") || texto.includes("nenhum") || texto.includes("calistenia")) encontrados.push("peso_corporal");
       if (texto.includes("halter")) encontrados.push("halteres");
-      if (texto.includes("banco")) encontrados.push("banco");
+      if (texto.includes("elástico") || texto.includes("elastico") || texto.includes("mini band")) encontrados.push("elastico");
+      if (texto.includes("banda de resistência") || texto.includes("banda de resistencia")) encontrados.push("banda_resistencia");
+      if (texto.includes("banco") || texto.includes("cadeira")) encontrados.push("banco");
+      if (texto.includes("corda")) encontrados.push("corda");
+      if (texto.includes("estação") || texto.includes("estacao") || texto.includes("multifuncional") || texto.includes("polia") || texto.includes("cabo")) encontrados.push("maquina_cabos");
+      if (texto.includes("barra ez")) encontrados.push("barra_ez");
+      if (texto.includes("barra hexagonal")) encontrados.push("barra_hexagonal");
+      if (texto.includes("barra especial")) encontrados.push("barra_especial");
       if (texto.includes("barra") || texto.includes("anilha")) encontrados.push("barra");
+      if (texto.includes("smith")) encontrados.push("smith");
+      if (texto.includes("máquina de alavanca") || texto.includes("maquina de alavanca") || texto.includes("alavanca")) encontrados.push("maquina_alavanca");
+      if (texto.includes("máquina específica") || texto.includes("maquina especifica") || texto.includes("leg press") || texto.includes("mesa flexora") || texto.includes("cadeira extensora")) encontrados.push("maquina_especial");
+      if (texto.includes("máquina") || texto.includes("maquina")) encontrados.push("maquina_especial");
+      if (texto.includes("kettlebell")) encontrados.push("kettlebell");
+      if (texto.includes("trx") || texto.includes("suspensão") || texto.includes("suspensao")) encontrados.push("trx");
+      if (texto.includes("rolo")) encontrados.push("rolo_espuma");
+      if (texto.includes("bola de estabilidade") || texto.includes("bola suíça") || texto.includes("bola suica")) encontrados.push("bola_estabilidade");
+      if (texto.includes("bola medicinal")) encontrados.push("bola_medicinal");
+      if (texto.includes("landmine")) encontrados.push("landmine");
+      if (texto.includes("bastão") || texto.includes("bastao")) encontrados.push("bastao");
+      if (texto.includes("trenó de potência") || texto.includes("treno de potencia")) encontrados.push("treno_potencia");
+      if (texto.includes("trenó") || texto.includes("treno")) encontrados.push("treno");
+      if (texto.includes("arnês") || texto.includes("arnes")) encontrados.push("arnes_cabeca");
+      if (texto.includes("bosu")) encontrados.push("bosu");
+      if (texto.includes("rolamento") || texto.includes("massagem")) encontrados.push("bola_rolamento");
       if (texto.includes("peso") && !texto.includes("peso corporal")) encontrados.push("com_peso");
-      if (texto.includes("elástico") || texto.includes("elastico") || texto.includes("mini band") || texto.includes("banda")) encontrados.push("elastico");
-      if (texto.includes("polia") || texto.includes("cabo") || texto.includes("estação") || texto.includes("estacao") || texto.includes("multifuncional")) encontrados.push("maquina_cabos");
-      if (texto.includes("máquina") || texto.includes("maquina") || texto.includes("leg press") || texto.includes("mesa flexora") || texto.includes("cadeira extensora") || texto.includes("smith")) encontrados.push("maquina_especial");
-      if (texto.includes("kettlebell") || texto.includes("trx") || texto.includes("corda") || texto.includes("bola") || texto.includes("bosu") || texto.includes("rolo") || texto.includes("landmine") || texto.includes("trenó") || texto.includes("treno") || texto.includes("arnês") || texto.includes("arnes")) encontrados.push("equipamento_especial");
+
       return encontrados.filter(function(item, indice, lista) { return lista.indexOf(item) === indice; });
     }
 
-    function equipamentosNecessariosDoExercicio(exercicio) { return detectarEquipamentosDoExercicio(exercicio).filter(function(tipo) { return tipo !== "peso_corporal"; }); }
+    function equipamentosNecessariosDoExercicio(exercicio) {
+      return detectarEquipamentosDoExercicio(exercicio).filter(function(tipo) {
+        return tipo !== "peso_corporal";
+      });
+    }
 
     function contemEquipamentoProibidoParaPesoCorporal(texto) {
-      const proibidos = ["halter", "banco", "cadeira", "barra", "anilha", "polia", "cabo", "máquina", "maquina", "estação", "estacao", "smith", "trx", "corda", "kettlebell", "elástico", "elastico", "mini band", "banda", "bola", "bosu", "rolo", "landmine", "trenó", "treno", "arnês", "arnes", "carga externa", "peso livre"];
+      const proibidos = [
+        "halter", "banco", "cadeira", "barra", "anilha", "polia", "cabo", "máquina", "maquina", "estação", "estacao",
+        "smith", "trx", "corda", "kettlebell", "elástico", "elastico", "mini band", "banda", "bola", "bosu", "rolo",
+        "landmine", "trenó", "treno", "arnês", "arnes", "carga externa", "peso livre"
+      ];
       return proibidos.some(function(palavra) { return texto.includes(palavra); });
     }
 
@@ -1172,19 +1243,36 @@ const firebaseConfig = {
       const equipamento = String(exercicio && exercicio.equipamento ? exercicio.equipamento : "").toLowerCase();
       const nome = String(exercicio && exercicio.nome ? exercicio.nome : "").toLowerCase();
       const texto = equipamento + " " + nome;
-      if (contemEquipamentoProibidoParaPesoCorporal(texto)) return false;
+
+      // Aceita quando o próprio exercício informa que pode ser feito sem equipamento.
       if (equipamento.includes("peso corporal") || equipamento.includes("nenhum") || equipamento.includes("calistenia")) return true;
-      const nomesPesoCorporal = ["flexão", "flexao", "agachamento livre", "agachamento isométrico", "agachamento isometrico", "agachamento búlgaro sem carga", "afundo alternado", "afundo sem carga", "prancha", "abdominal", "ponte de glúteo", "ponte de gluteo", "panturrilha em pé", "panturrilha em pe", "polichinelo", "mountain climber", "super-homem", "super homem", "mobilidade", "caminhada", "respiração", "respiracao", "alongamento", "pike push-up", "pike push up"];
+
+      // Bloqueia exercícios que exigem algum equipamento ou apoio externo.
+      if (contemEquipamentoProibidoParaPesoCorporal(texto)) return false;
+
+      const nomesPesoCorporal = [
+        "flexão", "flexao", "agachamento livre", "agachamento isométrico", "agachamento isometrico", "afundo alternado", "afundo sem carga",
+        "prancha", "abdominal", "ponte de glúteo", "ponte de gluteo", "panturrilha em pé", "panturrilha em pe",
+        "polichinelo", "mountain climber", "super-homem", "super homem", "mobilidade", "caminhada", "respiração", "respiracao",
+        "alongamento", "pike push-up", "pike push up"
+      ];
       return nomesPesoCorporal.some(function(item) { return texto.includes(item); });
     }
 
-    function equipamentoTemAlternativa(exercicio) { const equipamento = String(exercicio && exercicio.equipamento ? exercicio.equipamento : "").toLowerCase(); return equipamento.includes(" ou ") || equipamento.includes("/") || equipamento.includes(","); }
+    function equipamentoTemAlternativa(exercicio) {
+      const equipamento = String(exercicio && exercicio.equipamento ? exercicio.equipamento : "").toLowerCase();
+      return equipamento.includes(" ou ") || equipamento.includes("/") || equipamento.includes(",");
+    }
 
     function equipamentoCompativelComLista(exercicio, permitidos, permitirPesoCorporal) {
       if (permitirPesoCorporal && equipamentoEhPesoCorporal(exercicio)) return true;
       const necessarios = equipamentosNecessariosDoExercicio(exercicio);
       if (!necessarios.length) return false;
-      if (equipamentoTemAlternativa(exercicio)) return necessarios.some(function(tipo) { return permitidos.includes(tipo); });
+
+      if (equipamentoTemAlternativa(exercicio)) {
+        return necessarios.some(function(tipo) { return permitidos.includes(tipo); });
+      }
+
       return necessarios.every(function(tipo) { return permitidos.includes(tipo); });
     }
 
@@ -1193,37 +1281,51 @@ const firebaseConfig = {
       const local = normalizarLocalTreino(perfilUsuario.localTreino || "");
       const copia = Object.assign({}, exercicio);
       const tipos = detectarEquipamentosDoExercicio(copia);
-      if (local === "sem_equipamento" && equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
-      else if (local === "academia_basica") {
+      const selecionados = perfilUsuario.equipamentosCasa || [];
+
+      if (local === "sem_equipamento" && equipamentoEhPesoCorporal(copia)) {
+        copia.equipamento = "Peso corporal";
+        return copia;
+      }
+
+      if (local === "halteres") {
+        if (equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
+        else if (tipos.includes("halteres")) copia.equipamento = "Halteres";
+      }
+
+      if (local === "academia_casa") {
         if (equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
         else {
-          const nomesBasicos = ["halteres", "barra", "banco", "com_peso"].filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
-          if (nomesBasicos.length) copia.equipamento = nomesBasicos.join(" + ");
+          const nomesCasa = ["barra", "halteres", "com_peso"].filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
+          if (nomesCasa.length) copia.equipamento = nomesCasa.join(" + ");
         }
-      } else if (local === "academia_avancada") {
-        if (equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
       }
+
+      if (local === "personalizado" && selecionados.length > 0) {
+        if (equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
+        else {
+          const nomesMarcados = selecionados.filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
+          if (nomesMarcados.length > 0) copia.equipamento = nomesMarcados.join(" + ");
+        }
+      }
+
       return copia;
     }
 
     function equipamentoCompativelComPerfil(exercicio) {
       if (!perfilUsuario) return true;
-      const local = normalizarLocalTreino(perfilUsuario.localTreino || "academia_avancada");
-      if (local === "sem_equipamento") return equipamentoEhPesoCorporal(exercicio);
-      if (local === "academia_basica") return equipamentoCompativelComLista(exercicio, ["halteres", "barra", "banco", "com_peso"], true);
-      if (local === "academia_avancada") return true;
-      return true;
-    }
+      const local = normalizarLocalTreino(perfilUsuario.localTreino || "academia_completa");
 
-    function calcularIdadePorNascimento(dataNascimento) {
-      if (!dataNascimento) return 0;
-      const nascimento = new Date(dataNascimento + "T00:00:00");
-      if (isNaN(nascimento.getTime())) return 0;
-      const hoje = new Date();
-      let idade = hoje.getFullYear() - nascimento.getFullYear();
-      const mes = hoje.getMonth() - nascimento.getMonth();
-      if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) idade--;
-      return idade;
+      if (local === "academia_completa") return true;
+      if (local === "sem_equipamento") return equipamentoEhPesoCorporal(exercicio);
+      if (local === "halteres") return equipamentoCompativelComLista(exercicio, ["halteres"], true);
+      if (local === "academia_casa") return equipamentoCompativelComLista(exercicio, ["halteres", "barra", "com_peso"], true);
+      if (local === "personalizado") {
+        const selecionados = perfilUsuario.equipamentosCasa || [];
+        if (!selecionados.length) return equipamentoEhPesoCorporal(exercicio);
+        return equipamentoCompativelComLista(exercicio, selecionados, true);
+      }
+      return true;
     }
 
     function instalarExerciciosVersao133() {
@@ -1387,8 +1489,7 @@ const firebaseConfig = {
       perfilUsuario = JSON.parse(perfilSalvo);
       document.getElementById("nome").value = perfilUsuario.nome || "";
       document.getElementById("sexo").value = perfilUsuario.sexo || "";
-      const campoNascimento = document.getElementById("dataNascimento");
-      if (campoNascimento) campoNascimento.value = perfilUsuario.dataNascimento || "";
+      if (document.getElementById("dataNascimento")) document.getElementById("dataNascimento").value = perfilUsuario.dataNascimento || "";
       document.getElementById("peso").value = perfilUsuario.peso || "";
       document.getElementById("altura").value = perfilUsuario.alturaCm || "";
       document.getElementById("metaPrincipal").value = perfilUsuario.metaPrincipal || "massa";
@@ -1423,7 +1524,7 @@ const firebaseConfig = {
       const rotinaAtual = document.getElementById("rotinaAtual").value;
       const tempoExperiencia = document.getElementById("tempoExperiencia").value;
       const localTreino = normalizarLocalTreino(document.getElementById("localTreino").value);
-      const equipamentosCasa = [];
+      const equipamentosCasa = obterEquipamentosCasaSelecionados();
       const resultadoPerfil = document.getElementById("resultadoPerfil");
       const botaoIrTreino = document.getElementById("botaoIrTreino");
 
@@ -1434,9 +1535,9 @@ const firebaseConfig = {
         return;
       }
 
-      if (nome === "" || idade <= 0 || peso <= 0 || peso > 700 || alturaCm <= 0) {
+      if (nome === "" || !dataNascimento || idade <= 0 || peso <= 0 || peso > 700 || alturaCm <= 0) {
         resultadoPerfil.classList.remove("hidden");
-        resultadoPerfil.innerHTML = "Preencha todos os campos corretamente. Informe uma data de nascimento válida e peso entre 1 e 700 kg.";
+        resultadoPerfil.innerHTML = "Preencha todos os campos corretamente. O peso deve estar entre 1 e 700 kg.";
         botaoIrTreino.classList.add("hidden");
         return;
       }
@@ -1452,13 +1553,13 @@ const firebaseConfig = {
       else if (imc < 30) { classificacao = "acima do peso"; mensagem = "Seu foco pode ser reduzir gordura corporal e manter ou ganhar massa magra."; }
       else { classificacao = "em faixa de obesidade pelo IMC"; mensagem = "O ideal é começar com treinos seguros, progressivos e, se possível, acompanhamento profissional."; }
 
-      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, equipamentosCasa };
+      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, equipamentosCasa: [] };
       localStorage.setItem("perfilUsuario", JSON.stringify(perfilUsuario));
       registrarPeso(peso);
       mostrarMensagemMudancaPeso(perfilAntigo, peso);
 
       resultadoPerfil.classList.remove("hidden");
-      resultadoPerfil.innerHTML = "<strong>" + nome + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Classificação: " + classificacao + ".<br>" + mensagem + "<br>Idade calculada: " + idade + " anos.<br>Meta: " + traduzirMeta(metaPrincipal) + ".<br>Rotina: " + traduzirRotina(rotinaAtual) + ".<br>Experiência: " + traduzirExperiencia(tempoExperiencia) + ".<br>Local: " + traduzirLocal(localTreino) + ".<br>Categoria de treino: " + limparTextoSeguro(descricaoCategoriaTreino(localTreino)) + ".<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
+      resultadoPerfil.innerHTML = "<strong>" + nome + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Classificação: " + classificacao + ".<br>" + mensagem + "<br>Meta: " + traduzirMeta(metaPrincipal) + ".<br>Rotina: " + traduzirRotina(rotinaAtual) + ".<br>Experiência: " + traduzirExperiencia(tempoExperiencia) + ".<br>Local: " + traduzirLocal(localTreino) + ".<br>Equipamentos: " + limparTextoSeguro(equipamentosCasa.length ? equipamentosCasa.map(nomeEquipamentoSelecionado).join(", ") : (localTreino === "sem_equipamento" ? "peso corporal" : (localTreino === "personalizado" ? "peso corporal (nenhum equipamento marcado)" : "equipamentos automáticos da categoria"))) + ".<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
       botaoIrTreino.classList.remove("hidden");
     }
 
@@ -1490,8 +1591,7 @@ const firebaseConfig = {
       localStorage.removeItem("perfilUsuario");
       perfilUsuario = null;
       document.getElementById("nome").value = "";
-      const campoNascimentoLimpar = document.getElementById("dataNascimento");
-      if (campoNascimentoLimpar) campoNascimentoLimpar.value = "";
+      if (document.getElementById("dataNascimento")) document.getElementById("dataNascimento").value = "";
       document.getElementById("peso").value = "";
       document.getElementById("altura").value = "";
       restaurarEquipamentosCasa([]);
@@ -1513,17 +1613,15 @@ const firebaseConfig = {
       const mapa = { menos_1: "menos de 1 ano", "1_2": "de 1 a 2 anos", "2_4": "de 2 a 4 anos", "4_mais": "4 anos ou mais" };
       return mapa[valor] || valor;
     }
-    function descricaoCategoriaTreino(valor) {
-      valor = normalizarLocalTreino(valor);
-      if (valor === "sem_equipamento") return "somente exercícios com peso corporal, sem acessórios";
-      if (valor === "academia_basica") return "exercícios com peso corporal, barras, halteres, banco e cargas livres simples";
-      if (valor === "academia_avancada") return "academia completa com máquinas, cabos, barras, halteres e acessórios";
-      return "categoria automática";
-    }
-
     function traduzirLocal(valor) {
       valor = normalizarLocalTreino(valor);
-      const mapa = { sem_equipamento: "Sem Equipamento", academia_basica: "Academia básica", academia_avancada: "Academia avançada" };
+      const mapa = {
+        sem_equipamento: "Sem Equipamento",
+        halteres: "Halteres",
+        academia_casa: "Academia em Casa",
+        academia_completa: "Academia Completa",
+        personalizado: "Personalizado"
+      };
       return mapa[valor] || valor;
     }
 
@@ -3217,7 +3315,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       atualizarBotoesLogin(usuarioAtual);
     };
 
-const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.3.5";
+const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.3.8";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -3303,3 +3401,61 @@ const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.3.5";
         });
     });
   }
+
+
+/* Versão 1.3.8 - correção real da biblioteca de exercícios por categoria */
+function calcularIdadePorNascimento(dataISO) { if (!dataISO) return 0; const nasc = new Date(dataISO + "T00:00:00"); if (isNaN(nasc.getTime())) return 0; const hoje = new Date(); let idade = hoje.getFullYear() - nasc.getFullYear(); const mes = hoje.getMonth() - nasc.getMonth(); if (mes < 0 || (mes === 0 && hoje.getDate() < nasc.getDate())) idade--; return Math.max(0, idade); }
+function normalizarLocalTreino(valor) { const mapa = { academia_grande: "academia_avancada", academia_pequena: "academia_basica", garagem: "academia_basica", casa_limitado: "academia_basica", halteres: "academia_basica", academia_casa: "academia_basica", academia_completa: "academia_avancada", personalizado: "academia_basica", sem_equipamento: "sem_equipamento", academia_basica: "academia_basica", academia_avancada: "academia_avancada" }; return mapa[valor] || "sem_equipamento"; }
+function traduzirLocal(valor) { const local = normalizarLocalTreino(valor); if (local === "sem_equipamento") return "Sem Equipamento — peso corporal"; if (local === "academia_basica") return "Academia básica — barras, halteres e banco"; if (local === "academia_avancada") return "Academia avançada — completa"; return "Sem Equipamento — peso corporal"; }
+function atualizarFormularioEquipamentos() { return; }
+function obterEquipamentosCasaSelecionados() { return []; }
+function restaurarEquipamentosCasa() { return; }
+function criarExercicioCategoria(nome, grupo, equipamento, categoria, nivel, evitar, passos) { return { nome: nome, grupo: grupo, equipamento: equipamento, categoriaEquipamento: categoria, nivel: nivel || "iniciante", evitar: evitar || "nenhuma", passos: passos || [] }; }
+function instalarBibliotecaReal138() { const pc = "sem_equipamento", bas = "academia_basica", av = "academia_avancada";
+bibliotecaExercicios.A = [
+criarExercicioCategoria("Flexão de braço", "Peito", "Peso corporal", pc, "iniciante", "ombro", ["Apoie as mãos no chão.","Mantenha o corpo alinhado.","Desça com controle.","Suba empurrando o chão."]),
+criarExercicioCategoria("Flexão com joelhos apoiados", "Peito", "Peso corporal", pc, "iniciante", "ombro", ["Apoie joelhos e mãos no chão.","Mantenha tronco alinhado.","Desça sem relaxar o abdômen.","Suba com controle."]),
+criarExercicioCategoria("Pike push-up", "Ombros", "Peso corporal", pc, "intermediario", "ombro", ["Forme um V invertido com o corpo.","Flexione os cotovelos.","Aproxime a cabeça do chão.","Suba com controle."]),
+criarExercicioCategoria("Flexão fechada", "Tríceps", "Peso corporal", pc, "intermediario", "ombro", ["Aproxime as mãos.","Mantenha cotovelos perto do corpo.","Desça com controle.","Suba contraindo tríceps."]),
+criarExercicioCategoria("Prancha alta com toque no ombro", "Abdômen", "Peso corporal", pc, "iniciante", "ombro", ["Fique em prancha alta.","Toque um ombro com a mão oposta.","Alterne os lados.","Evite balançar o quadril."]),
+criarExercicioCategoria("Supino reto com barra", "Peito", "Barra e banco", bas, "intermediario", "ombro", ["Deite no banco com pés firmes.","Desça a barra controlando.","Empurre para cima.","Mantenha ombros estáveis."]),
+criarExercicioCategoria("Supino com halteres", "Peito", "Halteres e banco", bas, "iniciante", "ombro", ["Deite no banco.","Segure os halteres alinhados.","Desça com controle.","Suba sem bater os pesos."]),
+criarExercicioCategoria("Desenvolvimento com halteres", "Ombros", "Halteres", bas, "iniciante", "ombro", ["Segure os halteres na linha dos ombros.","Empurre para cima.","Não arqueie a lombar.","Desça devagar."]),
+criarExercicioCategoria("Elevação lateral com halteres", "Ombros", "Halteres", bas, "iniciante", "ombro", ["Segure um halter em cada mão.","Eleve até a linha dos ombros.","Evite balanço.","Desça devagar."]),
+criarExercicioCategoria("Tríceps francês com halter", "Tríceps", "Halter", bas, "iniciante", "ombro", ["Segure o halter acima da cabeça.","Flexione os cotovelos.","Estenda com controle.","Evite arquear a lombar."]),
+criarExercicioCategoria("Supino máquina", "Peito", "Máquina", av, "iniciante", "ombro", ["Ajuste o banco.","Empurre as alças à frente.","Não trave os cotovelos.","Volte controlando."]),
+criarExercicioCategoria("Crucifixo no cabo", "Peito", "Cabos/polias", av, "intermediario", "ombro", ["Ajuste os cabos.","Feche os braços contraindo o peito.","Mantenha cotovelos semiflexionados.","Volte devagar."]),
+criarExercicioCategoria("Tríceps corda", "Tríceps", "Polia com corda", av, "iniciante", "ombro", ["Mantenha cotovelos próximos.","Empurre a corda para baixo.","Estenda os braços.","Volte controlando."])
+];
+bibliotecaExercicios.B = [
+criarExercicioCategoria("Super-homem", "Costas", "Peso corporal", pc, "iniciante", "lombar", ["Deite de barriga para baixo.","Eleve braços e pernas levemente.","Segure por poucos segundos.","Volte com controle."]),
+criarExercicioCategoria("Prancha baixa", "Abdômen", "Peso corporal", pc, "iniciante", "lombar", ["Apoie antebraços e pés.","Mantenha corpo alinhado.","Contraia abdômen.","Respire sem prender o ar."]),
+criarExercicioCategoria("Anjo reverso no chão", "Ombro posterior", "Peso corporal", pc, "iniciante", "ombro", ["Deite de barriga para baixo.","Abra os braços em movimento controlado.","Contraia a parte alta das costas.","Evite dor no ombro."]),
+criarExercicioCategoria("Remada curvada com halteres", "Costas", "Halteres", bas, "intermediario", "lombar", ["Incline o tronco com coluna firme.","Puxe os halteres ao quadril.","Contraia as costas.","Desça controlando."]),
+criarExercicioCategoria("Remada unilateral com halter", "Costas", "Halter", bas, "iniciante", "lombar", ["Apoie uma mão em superfície firme.","Puxe o halter ao quadril.","Contraia costas.","Desça devagar."]),
+criarExercicioCategoria("Rosca direta com barra", "Bíceps", "Barra", bas, "iniciante", "nenhuma", ["Segure a barra com palmas para cima.","Mantenha cotovelos fixos.","Suba contraindo bíceps.","Desça devagar."]),
+criarExercicioCategoria("Rosca martelo", "Bíceps", "Halteres", bas, "iniciante", "nenhuma", ["Palmas viradas uma para a outra.","Suba sem balançar.","Contraia bíceps.","Desça controlando."]),
+criarExercicioCategoria("Puxada frente", "Costas", "Máquina/polia", av, "iniciante", "ombro", ["Segure a barra.","Puxe em direção ao peito.","Mantenha tronco firme.","Volte controlando."]),
+criarExercicioCategoria("Remada baixa", "Costas", "Máquina/cabo", av, "iniciante", "lombar", ["Sente com coluna reta.","Puxe o cabo ao abdômen.","Contraia costas.","Volte devagar."]),
+criarExercicioCategoria("Face pull", "Ombro posterior", "Polia/cabo", av, "intermediario", "ombro", ["Puxe em direção ao rosto.","Abra os cotovelos.","Contraia posterior de ombro.","Volte controlando."])
+];
+bibliotecaExercicios.C = [
+criarExercicioCategoria("Agachamento livre", "Pernas", "Peso corporal", pc, "iniciante", "joelho", ["Pés na largura dos ombros.","Desça empurrando quadril para trás.","Mantenha coluna firme.","Suba empurrando o chão."]),
+criarExercicioCategoria("Afundo alternado", "Pernas", "Peso corporal", pc, "intermediario", "joelho", ["Dê um passo à frente.","Desça controlando.","Volte à posição inicial.","Alterne as pernas."]),
+criarExercicioCategoria("Ponte de glúteo", "Glúteos", "Peso corporal", pc, "iniciante", "lombar", ["Deite de barriga para cima.","Pés apoiados no chão.","Suba o quadril contraindo glúteos.","Desça controlando."]),
+criarExercicioCategoria("Panturrilha em pé", "Panturrilha", "Peso corporal", pc, "iniciante", "nenhuma", ["Fique em pé.","Suba na ponta dos pés.","Contraia no topo.","Desça devagar."]),
+criarExercicioCategoria("Abdominal curto", "Abdômen", "Peso corporal", pc, "iniciante", "lombar", ["Deite de barriga para cima.","Contraia abdômen.","Eleve levemente o tronco.","Volte com controle."]),
+criarExercicioCategoria("Agachamento com halter", "Pernas", "Halter", bas, "iniciante", "joelho", ["Segure o halter junto ao peito.","Desça com controle.","Mantenha coluna firme.","Suba empurrando o chão."]),
+criarExercicioCategoria("Stiff com halteres", "Posterior de coxa", "Halteres", bas, "intermediario", "lombar", ["Segure os halteres à frente.","Incline o tronco com coluna firme.","Sinta posterior alongar.","Suba contraindo glúteos."]),
+criarExercicioCategoria("Afundo com halteres", "Pernas", "Halteres", bas, "intermediario", "joelho", ["Segure halteres ao lado do corpo.","Dê um passo à frente.","Desça controlando.","Volte empurrando a perna da frente."]),
+criarExercicioCategoria("Leg press", "Pernas", "Máquina", av, "iniciante", "joelho", ["Apoie costas no banco.","Pés na plataforma.","Desça com controle.","Empurre sem travar joelhos."]),
+criarExercicioCategoria("Cadeira extensora", "Pernas", "Máquina", av, "iniciante", "joelho", ["Ajuste o aparelho.","Estenda os joelhos.","Contraia quadríceps.","Volte devagar."]),
+criarExercicioCategoria("Mesa flexora", "Posterior de coxa", "Máquina", av, "iniciante", "joelho", ["Ajuste o aparelho.","Flexione os joelhos.","Contraia posterior.","Volte controlando."])
+];
+bibliotecaExercicios.descanso = [criarExercicioCategoria("Mobilidade de quadril", "Recuperação", "Peso corporal", pc, "iniciante", "nenhuma", ["Faça movimentos lentos.","Evite dor.","Respire com controle.","Use como recuperação."]), criarExercicioCategoria("Alongamento leve", "Recuperação", "Peso corporal", pc, "iniciante", "nenhuma", ["Alongue sem forçar.","Respire devagar.","Mantenha conforto.","Finalize leve."]), criarExercicioCategoria("Respiração e mobilidade", "Recuperação", "Peso corporal", pc, "iniciante", "nenhuma", ["Respire profundamente.","Movimente ombros, quadril e coluna.","Evite posições dolorosas.","Finalize leve."])];
+}
+function equipamentoCompativelComPerfil(exercicio) { const local = perfilUsuario ? normalizarLocalTreino(perfilUsuario.localTreino) : "sem_equipamento"; const categoria = exercicio && exercicio.categoriaEquipamento ? exercicio.categoriaEquipamento : "sem_equipamento"; if (local === "sem_equipamento") return categoria === "sem_equipamento"; if (local === "academia_basica") return categoria === "academia_basica"; if (local === "academia_avancada") return categoria === "academia_avancada"; return categoria === "sem_equipamento"; }
+function equipamentoEhPesoCorporal(exercicio) { return !!exercicio && exercicio.categoriaEquipamento === "sem_equipamento"; }
+function ajustarEquipamentoVisualPorLocal(exercicio) { const copia = Object.assign({}, exercicio); if (copia.categoriaEquipamento === "sem_equipamento") copia.equipamento = "Peso corporal"; return copia; }
+function completarTreinoSemEquipamento(lista, letraTreino, dor, tempo) { const alvo = alvoQuantidadeExercicios(tempo, determinarPerfilTreino()); const base = (bibliotecaExercicios[letraTreino] || []).filter(function(exercicio) { return equipamentoCompativelComPerfil(exercicio) && exercicio.evitar !== dor; }); const nomes = {}; (lista || []).forEach(function(exercicio) { nomes[normalizarNomeExercicio(exercicio.nome || "")] = true; }); base.forEach(function(exercicio) { if (lista.length >= alvo) return; const chave = normalizarNomeExercicio(exercicio.nome || ""); if (!nomes[chave]) { lista.push(Object.assign({}, exercicio)); nomes[chave] = true; } }); return lista; }
+instalarBibliotecaReal138();
