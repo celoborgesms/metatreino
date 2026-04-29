@@ -1113,76 +1113,34 @@ const firebaseConfig = {
 
     function normalizarLocalTreino(valor) {
       const mapa = {
-        academia_grande: "academia_completa",
-        academia_pequena: "academia_completa",
-        garagem: "academia_casa",
-        casa_limitado: "halteres",
+        academia_grande: "academia_avancada",
+        academia_pequena: "academia_basica",
+        garagem: "academia_basica",
+        casa_limitado: "academia_basica",
+        halteres: "academia_basica",
+        academia_casa: "academia_basica",
+        academia_completa: "academia_avancada",
+        personalizado: "academia_basica",
         sem_equipamento: "sem_equipamento",
-        halteres: "halteres",
-        academia_casa: "academia_casa",
-        academia_completa: "academia_completa",
-        personalizado: "personalizado"
+        academia_basica: "academia_basica",
+        academia_avancada: "academia_avancada"
       };
       return mapa[valor] || valor || "sem_equipamento";
     }
 
     function atualizarFormularioEquipamentos() {
-      const local = normalizarLocalTreino(document.getElementById("localTreino") ? document.getElementById("localTreino").value : "");
       const box = document.getElementById("boxEquipamentosCasa");
-      if (!box) return;
-      if (local === "personalizado") box.classList.remove("hidden");
-      else box.classList.add("hidden");
+      if (box) box.classList.add("hidden");
     }
 
-    function obterEquipamentosCasaSelecionados() {
-      return Array.from(document.querySelectorAll(".equipamento-casa:checked")).map(function(item) { return item.value; });
-    }
+    function obterEquipamentosCasaSelecionados() { return []; }
 
     function restaurarEquipamentosCasa(lista) {
-      const compatibilidade = {
-        elasticos: "elastico",
-        estacao: "maquina_cabos",
-        banco: "banco",
-        halteres: "halteres",
-        barra: "barra",
-        corda: "corda"
-      };
-      const mapa = {};
-      (lista || []).forEach(function(item) { mapa[compatibilidade[item] || item] = true; });
-      document.querySelectorAll(".equipamento-casa").forEach(function(input) { input.checked = !!mapa[input.value]; });
+      document.querySelectorAll(".equipamento-casa").forEach(function(input) { input.checked = false; });
     }
 
     function nomeEquipamentoSelecionado(chave) {
-      const mapa = {
-        halteres: "Halteres",
-        maquina_cabos: "Máquina de cabos / estação de musculação",
-        barra: "Barra reta e anilhas",
-        maquina_alavanca: "Máquina de alavanca",
-        elastico: "Elástico de treino",
-        kettlebell: "Kettlebell",
-        banco: "Banco de treino",
-        com_peso: "Peso livre / carga externa",
-        trx: "Suspensão TRX",
-        barra_especial: "Barra especial",
-        smith: "Máquina Smith",
-        rolo_espuma: "Rolo de liberação miofascial",
-        bola_estabilidade: "Bola de estabilidade",
-        banda_resistencia: "Banda de resistência",
-        barra_ez: "Barra EZ",
-        maquina_especial: "Máquina específica",
-        landmine: "Landmine",
-        bastao: "Bastão de mobilidade",
-        bola_medicinal: "Bola medicinal",
-        treno: "Trenó de treino",
-        barra_hexagonal: "Barra hexagonal",
-        arnes_cabeca: "Arnês de cabeça",
-        equipamento_especial: "Equipamento funcional especial",
-        corda: "Corda",
-        bosu: "Bola Bosu",
-        bola_rolamento: "Bola de rolamento / massagem",
-        treno_potencia: "Trenó de potência",
-        peso_corporal: "Peso corporal"
-      };
+      const mapa = { sem_equipamento: "Peso corporal", academia_basica: "Academia básica", academia_avancada: "Academia avançada", peso_corporal: "Peso corporal", halteres: "Halteres", barra: "Barra e anilhas", banco: "Banco", com_peso: "Peso livre" };
       return mapa[chave] || chave;
     }
 
@@ -1191,51 +1149,22 @@ const firebaseConfig = {
       const nome = String(exercicio && exercicio.nome ? exercicio.nome : "").toLowerCase();
       const texto = equipamento + " " + nome;
       const encontrados = [];
-
       if (texto.includes("peso corporal") || texto.includes("nenhum") || texto.includes("calistenia")) encontrados.push("peso_corporal");
       if (texto.includes("halter")) encontrados.push("halteres");
-      if (texto.includes("elástico") || texto.includes("elastico") || texto.includes("mini band")) encontrados.push("elastico");
-      if (texto.includes("banda de resistência") || texto.includes("banda de resistencia")) encontrados.push("banda_resistencia");
-      if (texto.includes("banco") || texto.includes("cadeira")) encontrados.push("banco");
-      if (texto.includes("corda")) encontrados.push("corda");
-      if (texto.includes("estação") || texto.includes("estacao") || texto.includes("multifuncional") || texto.includes("polia") || texto.includes("cabo")) encontrados.push("maquina_cabos");
-      if (texto.includes("barra ez")) encontrados.push("barra_ez");
-      if (texto.includes("barra hexagonal")) encontrados.push("barra_hexagonal");
-      if (texto.includes("barra especial")) encontrados.push("barra_especial");
+      if (texto.includes("banco")) encontrados.push("banco");
       if (texto.includes("barra") || texto.includes("anilha")) encontrados.push("barra");
-      if (texto.includes("smith")) encontrados.push("smith");
-      if (texto.includes("máquina de alavanca") || texto.includes("maquina de alavanca") || texto.includes("alavanca")) encontrados.push("maquina_alavanca");
-      if (texto.includes("máquina específica") || texto.includes("maquina especifica") || texto.includes("leg press") || texto.includes("mesa flexora") || texto.includes("cadeira extensora")) encontrados.push("maquina_especial");
-      if (texto.includes("máquina") || texto.includes("maquina")) encontrados.push("maquina_especial");
-      if (texto.includes("kettlebell")) encontrados.push("kettlebell");
-      if (texto.includes("trx") || texto.includes("suspensão") || texto.includes("suspensao")) encontrados.push("trx");
-      if (texto.includes("rolo")) encontrados.push("rolo_espuma");
-      if (texto.includes("bola de estabilidade") || texto.includes("bola suíça") || texto.includes("bola suica")) encontrados.push("bola_estabilidade");
-      if (texto.includes("bola medicinal")) encontrados.push("bola_medicinal");
-      if (texto.includes("landmine")) encontrados.push("landmine");
-      if (texto.includes("bastão") || texto.includes("bastao")) encontrados.push("bastao");
-      if (texto.includes("trenó de potência") || texto.includes("treno de potencia")) encontrados.push("treno_potencia");
-      if (texto.includes("trenó") || texto.includes("treno")) encontrados.push("treno");
-      if (texto.includes("arnês") || texto.includes("arnes")) encontrados.push("arnes_cabeca");
-      if (texto.includes("bosu")) encontrados.push("bosu");
-      if (texto.includes("rolamento") || texto.includes("massagem")) encontrados.push("bola_rolamento");
       if (texto.includes("peso") && !texto.includes("peso corporal")) encontrados.push("com_peso");
-
+      if (texto.includes("elástico") || texto.includes("elastico") || texto.includes("mini band") || texto.includes("banda")) encontrados.push("elastico");
+      if (texto.includes("polia") || texto.includes("cabo") || texto.includes("estação") || texto.includes("estacao") || texto.includes("multifuncional")) encontrados.push("maquina_cabos");
+      if (texto.includes("máquina") || texto.includes("maquina") || texto.includes("leg press") || texto.includes("mesa flexora") || texto.includes("cadeira extensora") || texto.includes("smith")) encontrados.push("maquina_especial");
+      if (texto.includes("kettlebell") || texto.includes("trx") || texto.includes("corda") || texto.includes("bola") || texto.includes("bosu") || texto.includes("rolo") || texto.includes("landmine") || texto.includes("trenó") || texto.includes("treno") || texto.includes("arnês") || texto.includes("arnes")) encontrados.push("equipamento_especial");
       return encontrados.filter(function(item, indice, lista) { return lista.indexOf(item) === indice; });
     }
 
-    function equipamentosNecessariosDoExercicio(exercicio) {
-      return detectarEquipamentosDoExercicio(exercicio).filter(function(tipo) {
-        return tipo !== "peso_corporal";
-      });
-    }
+    function equipamentosNecessariosDoExercicio(exercicio) { return detectarEquipamentosDoExercicio(exercicio).filter(function(tipo) { return tipo !== "peso_corporal"; }); }
 
     function contemEquipamentoProibidoParaPesoCorporal(texto) {
-      const proibidos = [
-        "halter", "banco", "cadeira", "barra", "anilha", "polia", "cabo", "máquina", "maquina", "estação", "estacao",
-        "smith", "trx", "corda", "kettlebell", "elástico", "elastico", "mini band", "banda", "bola", "bosu", "rolo",
-        "landmine", "trenó", "treno", "arnês", "arnes", "carga externa", "peso livre"
-      ];
+      const proibidos = ["halter", "banco", "cadeira", "barra", "anilha", "polia", "cabo", "máquina", "maquina", "estação", "estacao", "smith", "trx", "corda", "kettlebell", "elástico", "elastico", "mini band", "banda", "bola", "bosu", "rolo", "landmine", "trenó", "treno", "arnês", "arnes", "carga externa", "peso livre"];
       return proibidos.some(function(palavra) { return texto.includes(palavra); });
     }
 
@@ -1243,36 +1172,19 @@ const firebaseConfig = {
       const equipamento = String(exercicio && exercicio.equipamento ? exercicio.equipamento : "").toLowerCase();
       const nome = String(exercicio && exercicio.nome ? exercicio.nome : "").toLowerCase();
       const texto = equipamento + " " + nome;
-
-      // Aceita quando o próprio exercício informa que pode ser feito sem equipamento.
-      if (equipamento.includes("peso corporal") || equipamento.includes("nenhum") || equipamento.includes("calistenia")) return true;
-
-      // Bloqueia exercícios que exigem algum equipamento ou apoio externo.
       if (contemEquipamentoProibidoParaPesoCorporal(texto)) return false;
-
-      const nomesPesoCorporal = [
-        "flexão", "flexao", "agachamento livre", "agachamento isométrico", "agachamento isometrico", "afundo alternado", "afundo sem carga",
-        "prancha", "abdominal", "ponte de glúteo", "ponte de gluteo", "panturrilha em pé", "panturrilha em pe",
-        "polichinelo", "mountain climber", "super-homem", "super homem", "mobilidade", "caminhada", "respiração", "respiracao",
-        "alongamento", "pike push-up", "pike push up"
-      ];
+      if (equipamento.includes("peso corporal") || equipamento.includes("nenhum") || equipamento.includes("calistenia")) return true;
+      const nomesPesoCorporal = ["flexão", "flexao", "agachamento livre", "agachamento isométrico", "agachamento isometrico", "agachamento búlgaro sem carga", "afundo alternado", "afundo sem carga", "prancha", "abdominal", "ponte de glúteo", "ponte de gluteo", "panturrilha em pé", "panturrilha em pe", "polichinelo", "mountain climber", "super-homem", "super homem", "mobilidade", "caminhada", "respiração", "respiracao", "alongamento", "pike push-up", "pike push up"];
       return nomesPesoCorporal.some(function(item) { return texto.includes(item); });
     }
 
-    function equipamentoTemAlternativa(exercicio) {
-      const equipamento = String(exercicio && exercicio.equipamento ? exercicio.equipamento : "").toLowerCase();
-      return equipamento.includes(" ou ") || equipamento.includes("/") || equipamento.includes(",");
-    }
+    function equipamentoTemAlternativa(exercicio) { const equipamento = String(exercicio && exercicio.equipamento ? exercicio.equipamento : "").toLowerCase(); return equipamento.includes(" ou ") || equipamento.includes("/") || equipamento.includes(","); }
 
     function equipamentoCompativelComLista(exercicio, permitidos, permitirPesoCorporal) {
       if (permitirPesoCorporal && equipamentoEhPesoCorporal(exercicio)) return true;
       const necessarios = equipamentosNecessariosDoExercicio(exercicio);
       if (!necessarios.length) return false;
-
-      if (equipamentoTemAlternativa(exercicio)) {
-        return necessarios.some(function(tipo) { return permitidos.includes(tipo); });
-      }
-
+      if (equipamentoTemAlternativa(exercicio)) return necessarios.some(function(tipo) { return permitidos.includes(tipo); });
       return necessarios.every(function(tipo) { return permitidos.includes(tipo); });
     }
 
@@ -1281,51 +1193,37 @@ const firebaseConfig = {
       const local = normalizarLocalTreino(perfilUsuario.localTreino || "");
       const copia = Object.assign({}, exercicio);
       const tipos = detectarEquipamentosDoExercicio(copia);
-      const selecionados = perfilUsuario.equipamentosCasa || [];
-
-      if (local === "sem_equipamento" && equipamentoEhPesoCorporal(copia)) {
-        copia.equipamento = "Peso corporal";
-        return copia;
-      }
-
-      if (local === "halteres") {
-        if (equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
-        else if (tipos.includes("halteres")) copia.equipamento = "Halteres";
-      }
-
-      if (local === "academia_casa") {
+      if (local === "sem_equipamento" && equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
+      else if (local === "academia_basica") {
         if (equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
         else {
-          const nomesCasa = ["barra", "halteres", "com_peso"].filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
-          if (nomesCasa.length) copia.equipamento = nomesCasa.join(" + ");
+          const nomesBasicos = ["halteres", "barra", "banco", "com_peso"].filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
+          if (nomesBasicos.length) copia.equipamento = nomesBasicos.join(" + ");
         }
-      }
-
-      if (local === "personalizado" && selecionados.length > 0) {
+      } else if (local === "academia_avancada") {
         if (equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
-        else {
-          const nomesMarcados = selecionados.filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
-          if (nomesMarcados.length > 0) copia.equipamento = nomesMarcados.join(" + ");
-        }
       }
-
       return copia;
     }
 
     function equipamentoCompativelComPerfil(exercicio) {
       if (!perfilUsuario) return true;
-      const local = normalizarLocalTreino(perfilUsuario.localTreino || "academia_completa");
-
-      if (local === "academia_completa") return true;
+      const local = normalizarLocalTreino(perfilUsuario.localTreino || "academia_avancada");
       if (local === "sem_equipamento") return equipamentoEhPesoCorporal(exercicio);
-      if (local === "halteres") return equipamentoCompativelComLista(exercicio, ["halteres"], true);
-      if (local === "academia_casa") return equipamentoCompativelComLista(exercicio, ["halteres", "barra", "com_peso"], true);
-      if (local === "personalizado") {
-        const selecionados = perfilUsuario.equipamentosCasa || [];
-        if (!selecionados.length) return equipamentoEhPesoCorporal(exercicio);
-        return equipamentoCompativelComLista(exercicio, selecionados, true);
-      }
+      if (local === "academia_basica") return equipamentoCompativelComLista(exercicio, ["halteres", "barra", "banco", "com_peso"], true);
+      if (local === "academia_avancada") return true;
       return true;
+    }
+
+    function calcularIdadePorNascimento(dataNascimento) {
+      if (!dataNascimento) return 0;
+      const nascimento = new Date(dataNascimento + "T00:00:00");
+      if (isNaN(nascimento.getTime())) return 0;
+      const hoje = new Date();
+      let idade = hoje.getFullYear() - nascimento.getFullYear();
+      const mes = hoje.getMonth() - nascimento.getMonth();
+      if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) idade--;
+      return idade;
     }
 
     function instalarExerciciosVersao133() {
@@ -1489,7 +1387,8 @@ const firebaseConfig = {
       perfilUsuario = JSON.parse(perfilSalvo);
       document.getElementById("nome").value = perfilUsuario.nome || "";
       document.getElementById("sexo").value = perfilUsuario.sexo || "";
-      document.getElementById("idade").value = perfilUsuario.idade || "";
+      const campoNascimento = document.getElementById("dataNascimento");
+      if (campoNascimento) campoNascimento.value = perfilUsuario.dataNascimento || "";
       document.getElementById("peso").value = perfilUsuario.peso || "";
       document.getElementById("altura").value = perfilUsuario.alturaCm || "";
       document.getElementById("metaPrincipal").value = perfilUsuario.metaPrincipal || "massa";
@@ -1516,14 +1415,15 @@ const firebaseConfig = {
 
       const nome = document.getElementById("nome").value.trim();
       const sexo = document.getElementById("sexo").value;
-      const idade = Number(document.getElementById("idade").value);
+      const dataNascimento = document.getElementById("dataNascimento") ? document.getElementById("dataNascimento").value : "";
+      const idade = calcularIdadePorNascimento(dataNascimento);
       const peso = Number(document.getElementById("peso").value);
       const alturaCm = Number(document.getElementById("altura").value);
       const metaPrincipal = document.getElementById("metaPrincipal").value;
       const rotinaAtual = document.getElementById("rotinaAtual").value;
       const tempoExperiencia = document.getElementById("tempoExperiencia").value;
       const localTreino = normalizarLocalTreino(document.getElementById("localTreino").value);
-      const equipamentosCasa = obterEquipamentosCasaSelecionados();
+      const equipamentosCasa = [];
       const resultadoPerfil = document.getElementById("resultadoPerfil");
       const botaoIrTreino = document.getElementById("botaoIrTreino");
 
@@ -1536,7 +1436,7 @@ const firebaseConfig = {
 
       if (nome === "" || idade <= 0 || peso <= 0 || peso > 700 || alturaCm <= 0) {
         resultadoPerfil.classList.remove("hidden");
-        resultadoPerfil.innerHTML = "Preencha todos os campos corretamente. O peso deve estar entre 1 e 700 kg.";
+        resultadoPerfil.innerHTML = "Preencha todos os campos corretamente. Informe uma data de nascimento válida e peso entre 1 e 700 kg.";
         botaoIrTreino.classList.add("hidden");
         return;
       }
@@ -1552,13 +1452,13 @@ const firebaseConfig = {
       else if (imc < 30) { classificacao = "acima do peso"; mensagem = "Seu foco pode ser reduzir gordura corporal e manter ou ganhar massa magra."; }
       else { classificacao = "em faixa de obesidade pelo IMC"; mensagem = "O ideal é começar com treinos seguros, progressivos e, se possível, acompanhamento profissional."; }
 
-      perfilUsuario = { nome, sexo, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, equipamentosCasa };
+      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, equipamentosCasa };
       localStorage.setItem("perfilUsuario", JSON.stringify(perfilUsuario));
       registrarPeso(peso);
       mostrarMensagemMudancaPeso(perfilAntigo, peso);
 
       resultadoPerfil.classList.remove("hidden");
-      resultadoPerfil.innerHTML = "<strong>" + nome + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Classificação: " + classificacao + ".<br>" + mensagem + "<br>Meta: " + traduzirMeta(metaPrincipal) + ".<br>Rotina: " + traduzirRotina(rotinaAtual) + ".<br>Experiência: " + traduzirExperiencia(tempoExperiencia) + ".<br>Local: " + traduzirLocal(localTreino) + ".<br>Equipamentos: " + limparTextoSeguro(equipamentosCasa.length ? equipamentosCasa.map(nomeEquipamentoSelecionado).join(", ") : (localTreino === "sem_equipamento" ? "peso corporal" : (localTreino === "personalizado" ? "peso corporal (nenhum equipamento marcado)" : "equipamentos automáticos da categoria"))) + ".<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
+      resultadoPerfil.innerHTML = "<strong>" + nome + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Classificação: " + classificacao + ".<br>" + mensagem + "<br>Idade calculada: " + idade + " anos.<br>Meta: " + traduzirMeta(metaPrincipal) + ".<br>Rotina: " + traduzirRotina(rotinaAtual) + ".<br>Experiência: " + traduzirExperiencia(tempoExperiencia) + ".<br>Local: " + traduzirLocal(localTreino) + ".<br>Categoria de treino: " + limparTextoSeguro(descricaoCategoriaTreino(localTreino)) + ".<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
       botaoIrTreino.classList.remove("hidden");
     }
 
@@ -1590,7 +1490,8 @@ const firebaseConfig = {
       localStorage.removeItem("perfilUsuario");
       perfilUsuario = null;
       document.getElementById("nome").value = "";
-      document.getElementById("idade").value = "";
+      const campoNascimentoLimpar = document.getElementById("dataNascimento");
+      if (campoNascimentoLimpar) campoNascimentoLimpar.value = "";
       document.getElementById("peso").value = "";
       document.getElementById("altura").value = "";
       restaurarEquipamentosCasa([]);
@@ -1612,15 +1513,17 @@ const firebaseConfig = {
       const mapa = { menos_1: "menos de 1 ano", "1_2": "de 1 a 2 anos", "2_4": "de 2 a 4 anos", "4_mais": "4 anos ou mais" };
       return mapa[valor] || valor;
     }
+    function descricaoCategoriaTreino(valor) {
+      valor = normalizarLocalTreino(valor);
+      if (valor === "sem_equipamento") return "somente exercícios com peso corporal, sem acessórios";
+      if (valor === "academia_basica") return "exercícios com peso corporal, barras, halteres, banco e cargas livres simples";
+      if (valor === "academia_avancada") return "academia completa com máquinas, cabos, barras, halteres e acessórios";
+      return "categoria automática";
+    }
+
     function traduzirLocal(valor) {
       valor = normalizarLocalTreino(valor);
-      const mapa = {
-        sem_equipamento: "Sem Equipamento",
-        halteres: "Halteres",
-        academia_casa: "Academia em Casa",
-        academia_completa: "Academia Completa",
-        personalizado: "Personalizado"
-      };
+      const mapa = { sem_equipamento: "Sem Equipamento", academia_basica: "Academia básica", academia_avancada: "Academia avançada" };
       return mapa[valor] || valor;
     }
 
