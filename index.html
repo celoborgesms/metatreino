@@ -2689,26 +2689,56 @@
       return encontrados.filter(function(item, indice, lista) { return lista.indexOf(item) === indice; });
     }
 
+    function equipamentosNecessariosDoExercicio(exercicio) {
+      return detectarEquipamentosDoExercicio(exercicio).filter(function(tipo) {
+        return tipo !== "peso_corporal";
+      });
+    }
+
+    function contemEquipamentoProibidoParaPesoCorporal(texto) {
+      const proibidos = [
+        "halter", "banco", "cadeira", "barra", "anilha", "polia", "cabo", "máquina", "maquina", "estação", "estacao",
+        "smith", "trx", "corda", "kettlebell", "elástico", "elastico", "mini band", "banda", "bola", "bosu", "rolo",
+        "landmine", "trenó", "treno", "arnês", "arnes", "carga externa", "peso livre"
+      ];
+      return proibidos.some(function(palavra) { return texto.includes(palavra); });
+    }
+
     function equipamentoEhPesoCorporal(exercicio) {
       const equipamento = String(exercicio && exercicio.equipamento ? exercicio.equipamento : "").toLowerCase();
       const nome = String(exercicio && exercicio.nome ? exercicio.nome : "").toLowerCase();
       const texto = equipamento + " " + nome;
-      const tipos = detectarEquipamentosDoExercicio(exercicio);
 
-      // Sem Equipamento: somente exercÃ­cios que podem ser feitos com o peso do corpo.
-      // NÃ£o permite banco, cadeira, barra, cabo, mÃ¡quina, polia, halteres ou acessÃ³rios.
-      if (texto.includes("banco") || texto.includes("cadeira") || texto.includes("barra baixa") || texto.includes("barra fixa") || texto.includes("polia") || texto.includes("cabo") || texto.includes("mÃ¡quina") || texto.includes("maquina") || texto.includes("estaÃ§Ã£o") || texto.includes("estacao") || texto.includes("smith") || texto.includes("trx") || texto.includes("corda") || texto.includes("kettlebell") || texto.includes("elÃ¡stico") || texto.includes("elastico") || texto.includes("mini band") || texto.includes("bola") || texto.includes("bosu") || texto.includes("rolo") || texto.includes("landmine") || texto.includes("trenÃ³") || texto.includes("treno")) {
-        return false;
-      }
-
+      // Aceita quando o próprio exercício informa que pode ser feito sem equipamento.
       if (equipamento.includes("peso corporal") || equipamento.includes("nenhum") || equipamento.includes("calistenia")) return true;
 
+      // Bloqueia exercícios que exigem algum equipamento ou apoio externo.
+      if (contemEquipamentoProibidoParaPesoCorporal(texto)) return false;
+
       const nomesPesoCorporal = [
-        "flexÃ£o", "flexao", "agachamento", "afundo", "prancha", "abdominal", "ponte de glÃºteo", "ponte de gluteo",
-        "panturrilha em pÃ©", "panturrilha em pe", "polichinelo", "mountain climber", "super-homem", "super homem",
-        "mobilidade", "caminhada", "respiraÃ§Ã£o", "respiracao", "alongamento", "pike push-up"
+        "flexão", "flexao", "agachamento livre", "agachamento isométrico", "agachamento isometrico", "afundo alternado", "afundo sem carga",
+        "prancha", "abdominal", "ponte de glúteo", "ponte de gluteo", "panturrilha em pé", "panturrilha em pe",
+        "polichinelo", "mountain climber", "super-homem", "super homem", "mobilidade", "caminhada", "respiração", "respiracao",
+        "alongamento", "pike push-up", "pike push up"
       ];
-      return tipos.length === 0 || nomesPesoCorporal.some(function(item) { return texto.includes(item); });
+      return nomesPesoCorporal.some(function(item) { return texto.includes(item); });
+    }
+
+    function equipamentoTemAlternativa(exercicio) {
+      const equipamento = String(exercicio && exercicio.equipamento ? exercicio.equipamento : "").toLowerCase();
+      return equipamento.includes(" ou ") || equipamento.includes("/") || equipamento.includes(",");
+    }
+
+    function equipamentoCompativelComLista(exercicio, permitidos, permitirPesoCorporal) {
+      if (permitirPesoCorporal && equipamentoEhPesoCorporal(exercicio)) return true;
+      const necessarios = equipamentosNecessariosDoExercicio(exercicio);
+      if (!necessarios.length) return false;
+
+      if (equipamentoTemAlternativa(exercicio)) {
+        return necessarios.some(function(tipo) { return permitidos.includes(tipo); });
+      }
+
+      return necessarios.every(function(tipo) { return permitidos.includes(tipo); });
     }
 
     function ajustarEquipamentoVisualPorLocal(exercicio) {
@@ -2723,14 +2753,25 @@
         return copia;
       }
 
-      if (local === "halteres" && tipos.includes("halteres")) copia.equipamento = "Halteres";
-      if (local === "academia_casa") {
-        const nomesCasa = ["barra", "halteres", "banco", "peso_corporal"].filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
-        if (nomesCasa.length) copia.equipamento = nomesCasa.join(" + ");
+      if (local === "halteres") {
+        if (equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
+        else if (tipos.includes("halteres")) copia.equipamento = "Halteres";
       }
+
+      if (local === "academia_casa") {
+        if (equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
+        else {
+          const nomesCasa = ["barra", "halteres", "com_peso"].filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
+          if (nomesCasa.length) copia.equipamento = nomesCasa.join(" + ");
+        }
+      }
+
       if (local === "personalizado" && selecionados.length > 0) {
-        const nomesMarcados = selecionados.filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
-        if (nomesMarcados.length > 0) copia.equipamento = nomesMarcados.join(" + ");
+        if (equipamentoEhPesoCorporal(copia)) copia.equipamento = "Peso corporal";
+        else {
+          const nomesMarcados = selecionados.filter(function(item) { return tipos.includes(item); }).map(nomeEquipamentoSelecionado);
+          if (nomesMarcados.length > 0) copia.equipamento = nomesMarcados.join(" + ");
+        }
       }
 
       return copia;
@@ -2739,19 +2780,15 @@
     function equipamentoCompativelComPerfil(exercicio) {
       if (!perfilUsuario) return true;
       const local = normalizarLocalTreino(perfilUsuario.localTreino || "academia_completa");
-      const tipos = detectarEquipamentosDoExercicio(exercicio);
 
       if (local === "academia_completa") return true;
       if (local === "sem_equipamento") return equipamentoEhPesoCorporal(exercicio);
-      if (local === "halteres") return equipamentoEhPesoCorporal(exercicio) || tipos.includes("halteres");
-      if (local === "academia_casa") {
-        return equipamentoEhPesoCorporal(exercicio) || tipos.some(function(tipo) { return ["halteres", "barra", "banco", "com_peso"].includes(tipo); });
-      }
+      if (local === "halteres") return equipamentoCompativelComLista(exercicio, ["halteres"], true);
+      if (local === "academia_casa") return equipamentoCompativelComLista(exercicio, ["halteres", "barra", "com_peso"], true);
       if (local === "personalizado") {
         const selecionados = perfilUsuario.equipamentosCasa || [];
         if (!selecionados.length) return equipamentoEhPesoCorporal(exercicio);
-        if (equipamentoEhPesoCorporal(exercicio)) return true;
-        return tipos.some(function(tipo) { return selecionados.includes(tipo); });
+        return equipamentoCompativelComLista(exercicio, selecionados, true);
       }
       return true;
     }
@@ -3909,6 +3946,9 @@ analisarEsforcoRecente(function(esforcoRecente) {
       treinoFiltrado = ajustarTreinoPorSexoIdadePesoCheckin(treinoFiltrado, energia, dor, tempo);
       treinoFiltrado = aplicarProgressaoSemanalAoTreino(treinoFiltrado, progressaoSemanal, tempo, letraTreino);
 
+      // Trava final: garante que o treino continue respeitando a categoria escolhida após todos os ajustes inteligentes.
+      treinoFiltrado = treinoFiltrado.filter(equipamentoCompativelComPerfil);
+
       const perfilTreino = determinarPerfilTreino();
       const alvoExercicios = letraTreino === "descanso" ? Math.max(4, alvoQuantidadeExercicios(tempo, perfilTreino)) : alvoQuantidadeExercicios(tempo, perfilTreino);
       if (letraTreino === "descanso" && treinoFiltrado.length < alvoExercicios) {
@@ -3920,12 +3960,16 @@ analisarEsforcoRecente(function(esforcoRecente) {
           nomesDescanso.push(normalizarNomeExercicio(exercicio.nome || ""));
         });
       }
+      // Trava final por categoria antes de exibir.
+      treinoFiltrado = treinoFiltrado.filter(equipamentoCompativelComPerfil);
       if (normalizarLocalTreino(local) === "sem_equipamento") {
         treinoFiltrado = treinoFiltrado.filter(equipamentoEhPesoCorporal).map(function(exercicio) {
           const copia = Object.assign({}, exercicio);
           copia.equipamento = "Peso corporal";
           return copia;
         });
+      } else {
+        treinoFiltrado = treinoFiltrado.map(ajustarEquipamentoVisualPorLocal);
       }
       treinoFiltrado = treinoFiltrado.slice(0, alvoExercicios);
 
