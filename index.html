@@ -2690,8 +2690,25 @@
     }
 
     function equipamentoEhPesoCorporal(exercicio) {
+      const equipamento = String(exercicio && exercicio.equipamento ? exercicio.equipamento : "").toLowerCase();
+      const nome = String(exercicio && exercicio.nome ? exercicio.nome : "").toLowerCase();
+      const texto = equipamento + " " + nome;
       const tipos = detectarEquipamentosDoExercicio(exercicio);
-      return tipos.includes("peso_corporal") || tipos.length === 0;
+
+      // Sem Equipamento: somente exercÃ­cios que podem ser feitos com o peso do corpo.
+      // NÃ£o permite banco, cadeira, barra, cabo, mÃ¡quina, polia, halteres ou acessÃ³rios.
+      if (texto.includes("banco") || texto.includes("cadeira") || texto.includes("barra baixa") || texto.includes("barra fixa") || texto.includes("polia") || texto.includes("cabo") || texto.includes("mÃ¡quina") || texto.includes("maquina") || texto.includes("estaÃ§Ã£o") || texto.includes("estacao") || texto.includes("smith") || texto.includes("trx") || texto.includes("corda") || texto.includes("kettlebell") || texto.includes("elÃ¡stico") || texto.includes("elastico") || texto.includes("mini band") || texto.includes("bola") || texto.includes("bosu") || texto.includes("rolo") || texto.includes("landmine") || texto.includes("trenÃ³") || texto.includes("treno")) {
+        return false;
+      }
+
+      if (equipamento.includes("peso corporal") || equipamento.includes("nenhum") || equipamento.includes("calistenia")) return true;
+
+      const nomesPesoCorporal = [
+        "flexÃ£o", "flexao", "agachamento", "afundo", "prancha", "abdominal", "ponte de glÃºteo", "ponte de gluteo",
+        "panturrilha em pÃ©", "panturrilha em pe", "polichinelo", "mountain climber", "super-homem", "super homem",
+        "mobilidade", "caminhada", "respiraÃ§Ã£o", "respiracao", "alongamento", "pike push-up"
+      ];
+      return tipos.length === 0 || nomesPesoCorporal.some(function(item) { return texto.includes(item); });
     }
 
     function ajustarEquipamentoVisualPorLocal(exercicio) {
@@ -3901,6 +3918,13 @@ analisarEsforcoRecente(function(esforcoRecente) {
           if (nomesDescanso.includes(normalizarNomeExercicio(exercicio.nome || ""))) return;
           treinoFiltrado.push(ajustarExercicioPorMeta(Object.assign({}, exercicio)));
           nomesDescanso.push(normalizarNomeExercicio(exercicio.nome || ""));
+        });
+      }
+      if (normalizarLocalTreino(local) === "sem_equipamento") {
+        treinoFiltrado = treinoFiltrado.filter(equipamentoEhPesoCorporal).map(function(exercicio) {
+          const copia = Object.assign({}, exercicio);
+          copia.equipamento = "Peso corporal";
+          return copia;
         });
       }
       treinoFiltrado = treinoFiltrado.slice(0, alvoExercicios);
