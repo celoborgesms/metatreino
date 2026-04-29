@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="1.3.6">
+  <meta name="app-version" content="1.3.8">
   <meta name="theme-color" content="#3b82f6">
   <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-512.png.png">
@@ -86,8 +86,8 @@
         <label for="localTreino">Onde costuma treinar?</label>
         <select id="localTreino">
           <option value="sem_equipamento">Sem Equipamento — treinos em casa apenas com peso corporal</option>
-          <option value="academia_basica">Academia básica — equipada com barras, halteres e estrutura simples de musculação</option>
-          <option value="academia_avancada">Academia avançada — completa, equipada com todos os equipamentos necessários</option>
+          <option value="academia_basica">Academia básica — equipamentos simples como barras, halteres e banco</option>
+          <option value="academia_avancada">Academia avançada — academia completa com máquinas, cabos, polias, barras e halteres</option>
         </select>
 
         <button type="button" onclick="calcularPerfil()">Calcular e salvar perfil</button>
@@ -384,43 +384,31 @@
         
 
         <div class="historico-item">
-          <strong>Versão 1.3.6</strong><br>
+          <strong>Versão 1.3.8</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 29/04/2026</p>
           <ul>
-            <li>Campo de idade substituído por <strong>data de nascimento</strong>, calculando a idade automaticamente.</li>
-            <li>Opções de local de treino simplificadas para Sem Equipamento, Academia básica e Academia avançada.</li>
-            <li>Removida a seleção personalizada de equipamentos e suas subcategorias.</li>
-            <li>Filtro de exercícios ajustado para respeitar peso corporal puro, academia básica e academia avançada.</li>
-            <li>Regras de quantidade de exercícios por tempo disponível, perfil, peso, sexo e experiência foram preservadas.</li>
-            <li>Lista de novidades mantida somente com as 3 últimas versões.</li>
+            <li>Biblioteca de exercícios reconstruída por categoria real de treino.</li>
+            <li>Sem Equipamento agora bloqueia acessórios, banco, cadeira, halter, elástico, barra e máquina.</li>
+            <li>Academia básica e avançada passam a usar listas separadas.</li>
+            <li>Campo Idade foi substituído por Data de nascimento.</li>
           </ul>
+        </div>
+
+        <div class="historico-item">
+          <strong>Versão 1.3.7</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 29/04/2026</p>
+          <ul><li>Ajustes de estrutura após separação dos arquivos.</li><li>Correções no fluxo de categorias simplificadas.</li></ul>
         </div>
 
         <div class="historico-item">
           <strong>Versão 1.3.5</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 29/04/2026</p>
-          <ul>
-            <li>Adicionado controle central de versão em <strong>js/version.js</strong>.</li>
-            <li>CSS e JavaScript principal agora são carregados automaticamente com a versão atual.</li>
-            <li>Service Worker passou a usar a mesma versão central para criar o nome do cache.</li>
-            <li>Processo de atualização ficou mais simples, reduzindo a necessidade de editar vários arquivos a cada versão.</li>
-            <li>Lista de novidades continua limitada às 3 últimas versões.</li>
-          </ul>
+          <ul><li>Controle central de versão adicionado.</li><li>Separação do app em arquivos CSS e JavaScript.</li><li>Lista de novidades limitada às 3 últimas versões.</li></ul>
         </div>
 
-        <div class="historico-item">
-          <strong>Versão 1.3.4</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 29/04/2026</p>
-          <ul>
-            <li>Projeto organizado em arquivos separados: CSS em <strong>css/style.css</strong> e JavaScript em <strong>js/app.js</strong>.</li>
-            <li>Index ficou mais leve e focado na estrutura das telas do MetaTreino.</li>
-            <li>Manifest e Service Worker atualizados para a versão 1.3.4, reduzindo risco de cache antigo travar a atualização.</li>
-            <li>Lista de novidades mantida somente com as 3 últimas versões, conforme regra fixa do projeto.</li>
-          </ul>
-        </div>
 
         <div class="historico-item">
           <strong>🔄 Atualização do app</strong><br>
