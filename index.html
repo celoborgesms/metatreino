@@ -1592,9 +1592,10 @@
     }
 
     function alvoQuantidadeExercicios(tempo, perfil) {
-      if (tempo === "rapido") return perfil && perfil.avancado ? 5 : 4;
-      if (tempo === "normal") return perfil && perfil.iniciante ? 5 : 6;
-      return perfil && perfil.iniciante ? 6 : 8;
+      // 1.3.3 - regra fixa solicitada: 30 min = 3 a 4, 1h = 6 a 8, acima de 1h = 8.
+      if (tempo === "rapido") return perfil && perfil.iniciante ? 3 : 4;
+      if (tempo === "normal") return perfil && perfil.iniciante ? 6 : 8;
+      return 8;
     }
 
     function adaptarTreinoPorPerfil(treino, tempo) {
@@ -2664,6 +2665,76 @@
 
     instalarExerciciosVersao133();
 
+    function instalarExerciciosEstacaoMS8000() {
+      const estacaoLocal = ["garagem", "casa_limitado"];
+      const equipamentoEstacao = "Estação multifuncional MS-8000 UPLIFT / polia";
+      const novos = {
+        A: [
+          { nome: "Supino na estação multifuncional", grupo: "Peito", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "ombro", passos: ["Ajuste o banco e as pegadas na altura do peito.", "Mantenha as costas apoiadas e pés firmes.", "Empurre à frente sem travar os cotovelos.", "Volte controlando a carga de 80 kg."] },
+          { nome: "Voador na estação", grupo: "Peito", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "ombro", passos: ["Ajuste os braços do voador na linha do peito.", "Mantenha cotovelos levemente flexionados.", "Feche os braços contraindo o peito.", "Abra devagar sem forçar o ombro."] },
+          { nome: "Crucifixo no cabo da estação", grupo: "Peito", equipamento: equipamentoEstacao, nivel: "intermediario", local: estacaoLocal, evitar: "ombro", passos: ["Use as polias/cabos na posição adequada se a estação permitir.", "Incline levemente o tronco e mantenha postura firme.", "Traga as mãos à frente do peito.", "Volte controlando sem abrir demais os ombros."] },
+          { nome: "Tríceps corda na estação", grupo: "Tríceps", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "ombro", passos: ["Prenda a corda na polia alta.", "Mantenha cotovelos próximos ao corpo.", "Empurre a corda para baixo até estender os braços.", "Volte devagar sem balançar o tronco."] },
+          { nome: "Tríceps barra na polia", grupo: "Tríceps", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "ombro", passos: ["Use a barra curta na polia alta.", "Mantenha cotovelos fixos ao lado do corpo.", "Estenda os braços para baixo.", "Volte controlando a carga."] }
+        ],
+        B: [
+          { nome: "Puxada alta frente na estação", grupo: "Costas", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "ombro", passos: ["Sente com a coluna firme.", "Segure a barra da polia alta.", "Puxe em direção ao peito sem jogar o corpo para trás.", "Volte controlando até alongar as costas."] },
+          { nome: "Puxada baixa na estação", grupo: "Costas", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "lombar", passos: ["Sente com postura firme.", "Segure o puxador da polia baixa.", "Puxe em direção ao abdômen.", "Volte devagar mantendo o tronco estável."] },
+          { nome: "Remada baixa na estação", grupo: "Costas", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "lombar", passos: ["Use a polia baixa com pegada confortável.", "Puxe os cotovelos para trás.", "Contraia as costas sem curvar a lombar.", "Retorne lentamente."] },
+          { nome: "Rosca direta na polia baixa", grupo: "Bíceps", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "nenhuma", passos: ["Prenda a barra curta na polia baixa.", "Mantenha cotovelos próximos ao corpo.", "Flexione os cotovelos contraindo o bíceps.", "Desça devagar sem roubar."] },
+          { nome: "Rosca Scott na estação", grupo: "Bíceps", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "nenhuma", passos: ["Use o apoio Scott se a estação estiver montada com esse suporte.", "Apoie os braços e segure a barra/cabo.", "Suba contraindo o bíceps.", "Desça controlando sem esticar demais o cotovelo."] }
+        ],
+        C: [
+          { nome: "Extensão de pernas na estação", grupo: "Quadríceps", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "joelho", passos: ["Sente e ajuste o rolo próximo aos tornozelos.", "Estenda os joelhos com controle.", "Contraia o quadríceps no alto.", "Volte devagar sem bater as placas."] },
+          { nome: "Flexora unilateral na estação", grupo: "Posterior de coxa", equipamento: equipamentoEstacao, nivel: "iniciante", local: estacaoLocal, evitar: "joelho", passos: ["Ajuste o apoio para uma perna por vez.", "Flexione o joelho levando o calcanhar para trás.", "Controle o movimento sem girar o quadril.", "Volte devagar e troque a perna."] },
+          { nome: "Coice de glúteo na polia", grupo: "Glúteos", equipamento: equipamentoEstacao, nivel: "intermediario", local: estacaoLocal, evitar: "lombar", passos: ["Use a tornozeleira na polia baixa se disponível.", "Mantenha tronco estável e abdômen firme.", "Leve a perna para trás contraindo o glúteo.", "Volte devagar sem arquear a lombar."] },
+          { nome: "Abdominal no cabo ajoelhado", grupo: "Abdômen", equipamento: equipamentoEstacao, nivel: "intermediario", local: estacaoLocal, evitar: "lombar", passos: ["Use a corda na polia alta.", "Ajoelhe com postura firme.", "Flexione o tronco contraindo o abdômen.", "Retorne controlando sem puxar com os braços."] }
+        ],
+        descanso: [
+          criarExercicioPesoCorporal("Alongamento de peitoral e costas", "Recuperação", "nenhuma", ["Mantenha respiração calma.", "Alongue peito e costas sem dor.", "Segure cada posição por alguns segundos.", "Use como recuperação ativa."]),
+          criarExercicioPesoCorporal("Mobilidade de quadril e tornozelo", "Recuperação", "nenhuma", ["Faça movimentos lentos de quadril.", "Mobilize tornozelos com controle.", "Evite amplitude dolorosa.", "Finalize leve."]),
+          criarExercicioPesoCorporal("Caminhada técnica leve", "Recuperação", "nenhuma", ["Caminhe em ritmo confortável.", "Mantenha postura alta.", "Respire pelo nariz quando possível.", "Não transforme em treino intenso."]),
+          criarExercicioPesoCorporal("Prancha curta de ativação", "Abdômen", "lombar", ["Apoie joelhos se necessário.", "Contraia o abdômen por poucos segundos.", "Não force a lombar.", "Use apenas como ativação leve."])
+        ]
+      };
+      Object.keys(novos).forEach(function(chave) {
+        bibliotecaExercicios[chave] = filtrarExerciciosUnicos((bibliotecaExercicios[chave] || []).concat(novos[chave]));
+      });
+    }
+
+    instalarExerciciosEstacaoMS8000();
+
+    function ajustarTreinoPorSexoIdadePesoCheckin(treino, energia, dor, tempo) {
+      if (!perfilUsuario || !treino || treino.length === 0) return treino;
+      const idade = Number(perfilUsuario.idade || 0);
+      const peso = Number(perfilUsuario.peso || 0);
+      const sexo = perfilUsuario.sexo || "";
+      const imc = Number(perfilUsuario.imc || 0);
+      return treino.map(function(exercicio) {
+        const copia = Object.assign({}, exercicio);
+        const grupo = copia.grupo || "";
+        if (idade >= 55 || imc >= 30 || energia === "mal") {
+          if (copia.series && !copia.series.includes("2")) copia.series = "2 a 3 séries";
+          if (copia.reps && (copia.reps.includes("15") || copia.reps.includes("12"))) copia.reps = "8 a 12 reps";
+        }
+        if (peso >= 100 && ["Pernas", "Quadríceps", "Cardio", "Cardio/Abdômen"].includes(grupo)) {
+          copia.reps = copia.reps || "8 a 12 reps";
+          copia.observacao = "Priorize baixo impacto e controle da execução.";
+        }
+        if (sexo === "feminino" && ["Glúteos", "Posterior de coxa", "Quadríceps"].includes(grupo) && perfilUsuario.metaPrincipal !== "forca") {
+          copia.series = copia.series || "3 séries";
+          copia.reps = copia.reps || "10 a 15 reps";
+        }
+        if (sexo === "masculino" && perfilUsuario.metaPrincipal === "massa" && ["Peito", "Costas", "Ombros", "Bíceps", "Tríceps"].includes(grupo) && idade < 55 && energia === "bem") {
+          copia.series = "3 a 4 séries";
+          copia.reps = "8 a 12 reps";
+        }
+        if (dor !== "nenhuma") {
+          copia.observacao = (copia.observacao ? copia.observacao + " " : "") + "Faça sem dor e reduza carga se sentir desconforto.";
+        }
+        return copia;
+      });
+    }
+
 
     function carregarPerfilAutomaticamente() {
       const perfilSalvo = localStorage.getItem("perfilUsuario");
@@ -2932,10 +3003,10 @@
 
     function escolherTreinoPorDiaDaSemana() {
       const hoje = new Date().getDay();
+      if (hoje === 0) return "descanso";
       if (hoje === 1 || hoje === 4) return "A";
       if (hoje === 2 || hoje === 5) return "B";
       if (hoje === 3 || hoje === 6) return "C";
-      if (hoje === 0) return "A";
       return "A";
     }
 
@@ -3484,7 +3555,7 @@
     function completarTreinoSemEquipamento(treino, letraTreino, dor, tempo) {
       if (!perfilUsuario || perfilUsuario.localTreino !== "sem_equipamento") return treino;
 
-      const alvo = tempo === "rapido" ? 4 : (tempo === "normal" ? 6 : 8);
+      const alvo = alvoQuantidadeExercicios(tempo, determinarPerfilTreino());
       const extras = [
         criarExercicioPesoCorporal("Agachamento livre", "Pernas", "joelho", ["Pés na largura dos ombros.", "Desça com controle.", "Mantenha coluna firme.", "Suba empurrando o chão."]),
         criarExercicioPesoCorporal("Flexão de braço", "Peito", "ombro", ["Apoie as mãos no chão.", "Mantenha corpo alinhado.", "Desça com controle.", "Suba empurrando o chão."]),
@@ -3582,8 +3653,9 @@
         });
     }
 
-    function aplicarProgressaoSemanalAoTreino(treino, progressaoSemanal, tempo) {
+    function aplicarProgressaoSemanalAoTreino(treino, progressaoSemanal, tempo, letraTreino) {
       if (!progressaoSemanal || !treino || treino.length === 0) return treino;
+      if (letraTreino === "descanso") return treino;
 
       if (progressaoSemanal.reduzirVolume && treino.length > 4) {
         return treino.slice(0, Math.max(4, treino.length - 1));
@@ -3649,10 +3721,20 @@ analisarEsforcoRecente(function(esforcoRecente) {
       treinoFiltrado = filtrarExerciciosUnicos(treinoFiltrado);
       treinoFiltrado = treinoFiltrado.map(ajustarEquipamentoVisualPorLocal);
       treinoFiltrado = adaptarTreinoPorPerfil(treinoFiltrado, tempo);
-      treinoFiltrado = aplicarProgressaoSemanalAoTreino(treinoFiltrado, progressaoSemanal, tempo);
+      treinoFiltrado = ajustarTreinoPorSexoIdadePesoCheckin(treinoFiltrado, energia, dor, tempo);
+      treinoFiltrado = aplicarProgressaoSemanalAoTreino(treinoFiltrado, progressaoSemanal, tempo, letraTreino);
 
       const perfilTreino = determinarPerfilTreino();
-      const alvoExercicios = alvoQuantidadeExercicios(tempo, perfilTreino);
+      const alvoExercicios = letraTreino === "descanso" ? Math.max(4, alvoQuantidadeExercicios(tempo, perfilTreino)) : alvoQuantidadeExercicios(tempo, perfilTreino);
+      if (letraTreino === "descanso" && treinoFiltrado.length < alvoExercicios) {
+        const nomesDescanso = treinoFiltrado.map(function(exercicio) { return normalizarNomeExercicio(exercicio.nome || ""); });
+        (bibliotecaExercicios.descanso || []).forEach(function(exercicio) {
+          if (treinoFiltrado.length >= alvoExercicios) return;
+          if (nomesDescanso.includes(normalizarNomeExercicio(exercicio.nome || ""))) return;
+          treinoFiltrado.push(ajustarExercicioPorMeta(Object.assign({}, exercicio)));
+          nomesDescanso.push(normalizarNomeExercicio(exercicio.nome || ""));
+        });
+      }
       treinoFiltrado = treinoFiltrado.slice(0, alvoExercicios);
 
       const localComCardio = ["academia_grande", "academia_pequena", "garagem"].includes(local);
@@ -3669,7 +3751,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       }
 
       const ajusteCardio = analisarImpactoUltimaCardio(letraTreino);
-      if (ajusteCardio.reduzirVolume && treinoFiltrado.length > 4) {
+      if (letraTreino !== "descanso" && ajusteCardio.reduzirVolume && treinoFiltrado.length > 4) {
         treinoFiltrado = treinoFiltrado.slice(0, Math.max(4, treinoFiltrado.length - 1));
       }
       if (ajusteCardio.sugerirDescanso && letraTreino === "C") {
@@ -3759,6 +3841,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
           "<span>" + exercicio.series + " | " + exercicio.reps + "</span><br>" +
           "<span class='tag'>Grupo: " + exercicio.grupo + "</span> " +
           "<span class='tag'>Equipamento: " + exercicio.equipamento + "</span>" +
+          (exercicio.observacao ? "<div class='alerta alerta-aviso'>" + limparTextoSeguro(exercicio.observacao) + "</div>" : "") +
           "<div class='alerta'>" + obterTextoSugestaoCarga(exercicio.nome) + "</div>" +
           "<h4>Como fazer:</h4><ol>" + passosHTML + "</ol>" +
           "<div class='aviso-video'>Use o vídeo apenas como apoio. Em caso de dor, pare o exercício.</div>" +
