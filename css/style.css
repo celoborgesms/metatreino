@@ -970,3 +970,34 @@
 @media (max-width: 520px) {
   .registro-grid { grid-template-columns: 1fr; }
 }
+
+
+/* Check-in de dor com caixas de seleção */
+.dor-checkboxes {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dor-opcao {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.45);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.dor-opcao input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  accent-color: #22c55e;
+}
+
+.dor-opcao span {
+  color: inherit;
+}
