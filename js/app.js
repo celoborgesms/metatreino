@@ -1741,13 +1741,35 @@ const firebaseConfig = {
       const campo = document.getElementById("dor");
       if (!campo) return ["nenhuma"];
       let valores = [];
-      if (campo.multiple && campo.options) {
+      const checks = campo.querySelectorAll ? campo.querySelectorAll('input[name="dorCheck"]:checked') : [];
+      if (checks && checks.length) {
+        valores = Array.prototype.slice.call(checks).map(function(opcao) { return opcao.value; });
+      } else if (campo.multiple && campo.options) {
         valores = Array.prototype.slice.call(campo.options).filter(function(opcao) { return opcao.selected; }).map(function(opcao) { return opcao.value; });
-      } else {
+      } else if (campo.value) {
         valores = [campo.value || "nenhuma"];
       }
       valores = valores.filter(function(valor) { return valor && valor !== "nenhuma"; });
       return valores.length ? valores : ["nenhuma"];
+    }
+
+    function configurarCheckboxesDeDor() {
+      const campo = document.getElementById("dor");
+      if (!campo || !campo.querySelectorAll) return;
+      const checks = Array.prototype.slice.call(campo.querySelectorAll('input[name="dorCheck"]'));
+      checks.forEach(function(check) {
+        check.addEventListener("change", function() {
+          const nenhuma = campo.querySelector('input[name="dorCheck"][value="nenhuma"]');
+          if (!nenhuma) return;
+          if (check.value === "nenhuma" && check.checked) {
+            checks.forEach(function(outro) { if (outro.value !== "nenhuma") outro.checked = false; });
+          } else if (check.value !== "nenhuma" && check.checked) {
+            nenhuma.checked = false;
+          }
+          const algumaMarcada = checks.some(function(item) { return item.checked; });
+          if (!algumaMarcada) nenhuma.checked = true;
+        });
+      });
     }
 
     function temDorSelecionada(dores, valor) {
@@ -2574,8 +2596,19 @@ analisarEsforcoRecente(function(esforcoRecente) {
         treinoFiltrado = treinoFiltrado.slice(0, Math.max(4, treinoFiltrado.length - 1));
       }
       if (ajusteCardio.sugerirDescanso && letraTreino === "C") {
+        letraTreino = "descanso";
         treinoFiltrado = bibliotecaExercicios.descanso.map(ajustarExercicioPorMeta);
       }
+
+      // Blindagem final absoluta: antes de salvar/exibir, o treino precisa bater com o tipo do dia.
+      // Se o dia seria inferior, mas há dor em pernas/joelho/lombar e sobram poucos exercícios seguros,
+      // o app muda para recuperação leve em vez de preencher com exercícios superiores.
+      treinoFiltrado = aplicarTravaGrupoTreino((treinoFiltrado || []).filter(equipamentoCompativelComPerfil), letraTreino);
+      if (letraTreino === "C" && (temDorSelecionada(doresSelecionadas, "pernas") || temDorSelecionada(doresSelecionadas, "joelho") || temDorSelecionada(doresSelecionadas, "lombar")) && treinoFiltrado.length < 3) {
+        letraTreino = "descanso";
+        treinoFiltrado = aplicarTravaGrupoTreino((bibliotecaExercicios.descanso || []).map(ajustarExercicioPorMeta), "descanso");
+      }
+      treinoFiltrado = aplicarTravaGrupoTreino(treinoFiltrado, letraTreino);
 
       treinoAtual = treinoFiltrado;
       treinoAtual.letra = letraTreino === "descanso" ? "Descanso" : letraTreino;
@@ -2637,6 +2670,17 @@ analisarEsforcoRecente(function(esforcoRecente) {
     }
 
     function mostrarTreinoNaTela() {
+      const letraRender = treinoAtual && treinoAtual.letra === "Descanso" ? "descanso" : (treinoAtual && treinoAtual.letra ? treinoAtual.letra : "A");
+      treinoAtual = aplicarTravaGrupoTreino(treinoAtual || [], letraRender);
+      treinoAtual.letra = letraRender === "descanso" ? "Descanso" : letraRender;
+      if (!treinoAtual.length && letraRender !== "descanso") {
+        treinoAtual = aplicarTravaGrupoTreino((bibliotecaExercicios.descanso || []).map(ajustarExercicioPorMeta), "descanso");
+        treinoAtual.letra = "Descanso";
+        const resumoDia = document.getElementById("resumoDiaTreino");
+        if (resumoDia) resumoDia.innerHTML = montarResumoDoDia("descanso", document.getElementById("tempo").value, document.getElementById("cardioNoTreino") ? document.getElementById("cardioNoTreino").value : "nao", document.getElementById("energia").value, null);
+        const resumoTreino = document.getElementById("resumoTreino");
+        if (resumoTreino) resumoTreino.innerText = "Por segurança, o app mudou para treino leve/recuperação porque a categoria do dia não tinha exercícios seguros suficientes para as dores informadas.";
+      }
       const lista = document.getElementById("listaExercicios");
       const progresso = document.getElementById("progressoExercicios");
       const feedbackBox = document.getElementById("feedbackTreinoFinal");
@@ -3726,8 +3770,13 @@ function ajustarGrupoOficial140(exercicio) {
 }
 
 function grupoCompativelComTreino(letraTreino, exercicio) {
-  const tipo = tipoOficialDoExercicio140(exercicio);
+  if (!exercicio) return false;
   if (letraTreino === "Descanso") letraTreino = "descanso";
+  const tipo = tipoOficialDoExercicio140(exercicio);
+  if (letraTreino === "C") {
+    const texto = textoNormalizadoCategoria140((exercicio.nome || "") + " " + (exercicio.grupo || "") + " " + (exercicio.equipamento || ""));
+    if (/puxada|remada|face pull|rosca|biceps|costas|ombro posterior|crucifixo inverso|pullover|barra fixa/.test(texto)) return false;
+  }
   return tipo === letraTreino;
 }
 
@@ -3767,3 +3816,6 @@ function blindarBibliotecaExercicios140() {
 }
 
 blindarBibliotecaExercicios140();
+
+
+    document.addEventListener("DOMContentLoaded", configurarCheckboxesDeDor);
