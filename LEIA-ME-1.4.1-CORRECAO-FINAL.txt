@@ -1,0 +1,7 @@
+Correção 1.4.1 final
+- Gerador final único por divisão.
+- Puxar não recebe exercícios de empurrar.
+- Empurrar não recebe exercícios de puxar.
+- Inferiores/abdômen não recebe superiores.
+- Registro por exercício removido dos cards; fica somente registro central no final.
+- Ao marcar exercício concluído, o app continua levando para o registro central.
