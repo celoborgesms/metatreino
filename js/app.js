@@ -1476,7 +1476,8 @@ const firebaseConfig = {
           copia.series = "3 a 4 séries";
           copia.reps = "8 a 12 reps";
         }
-        if (dor !== "nenhuma") {
+        const doresAjuste = Array.isArray(dor) ? dor : [dor || "nenhuma"];
+        if (doresAjuste.some(function(itemDor) { return itemDor !== "nenhuma"; })) {
           copia.observacao = (copia.observacao ? copia.observacao + " " : "") + "Faça sem dor e reduza carga se sentir desconforto.";
         }
         return copia;
@@ -1733,6 +1734,47 @@ const firebaseConfig = {
         "✔ " + limparTextoSeguro(nomeAmigavelTreino(letraTreino)) + " (" + intensidade + ")<br>" +
         "✔ Cardio: " + limparTextoSeguro(cardioTexto) + "<br>" +
         "✔ Duração estimada: aproximadamente " + duracao + " min";
+    }
+
+
+    function obterDoresSelecionadas() {
+      const campo = document.getElementById("dor");
+      if (!campo) return ["nenhuma"];
+      let valores = [];
+      if (campo.multiple && campo.options) {
+        valores = Array.prototype.slice.call(campo.options).filter(function(opcao) { return opcao.selected; }).map(function(opcao) { return opcao.value; });
+      } else {
+        valores = [campo.value || "nenhuma"];
+      }
+      valores = valores.filter(function(valor) { return valor && valor !== "nenhuma"; });
+      return valores.length ? valores : ["nenhuma"];
+    }
+
+    function temDorSelecionada(dores, valor) {
+      const lista = Array.isArray(dores) ? dores : [dores || "nenhuma"];
+      return lista.indexOf(valor) !== -1;
+    }
+
+    function textoDoresSelecionadas(dores) {
+      const lista = Array.isArray(dores) ? dores : [dores || "nenhuma"];
+      const nomes = { pernas: "pernas", bracos: "braços", coluna: "coluna/costas", ombro: "ombro", joelho: "joelho", lombar: "lombar" };
+      const filtrada = lista.filter(function(valor) { return valor && valor !== "nenhuma"; });
+      if (!filtrada.length) return "nenhuma dor";
+      return filtrada.map(function(valor) { return nomes[valor] || valor; }).join(", ");
+    }
+
+    function grupoCompativelComTreino(letraTreino, exercicio) {
+      if (!exercicio) return false;
+      const grupo = exercicio.grupo || "";
+      if (letraTreino === "descanso" || letraTreino === "Descanso") return grupo === "Recuperação";
+      if (letraTreino === "A") return ["Peito", "Ombros", "Tríceps"].indexOf(grupo) !== -1;
+      if (letraTreino === "B") return ["Costas", "Bíceps", "Ombro posterior"].indexOf(grupo) !== -1;
+      if (letraTreino === "C") return ["Pernas", "Quadríceps", "Glúteos", "Panturrilha", "Posterior de coxa", "Abdômen", "Cardio/Abdômen"].indexOf(grupo) !== -1;
+      return true;
+    }
+
+    function aplicarTravaGrupoTreino(lista, letraTreino) {
+      return (lista || []).filter(function(exercicio) { return grupoCompativelComTreino(letraTreino, exercicio); });
     }
 
     function obterMensagemInteligente(energia, letraTreino, progressaoSemanal) {
@@ -2438,7 +2480,8 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
     function gerarTreinoComEsforco(esforcoRecente, progressaoSemanal) {
       const energia = document.getElementById("energia").value;
-      const dor = document.getElementById("dor").value;
+      const doresSelecionadas = obterDoresSelecionadas();
+      const dor = doresSelecionadas[0] || "nenhuma";
       const tempo = document.getElementById("tempo").value;
       const divisaoSelecionada = document.getElementById("divisaoTreino").value;
       const cardioNoTreino = document.getElementById("cardioNoTreino") ? document.getElementById("cardioNoTreino").value : "nao";
@@ -2451,10 +2494,13 @@ analisarEsforcoRecente(function(esforcoRecente) {
       }
 
       const dorBloqueiaGrupo = function(exercicio) {
-        if (dor === "pernas" && ["Pernas", "Glúteos", "Panturrilha", "Posterior de coxa"].includes(exercicio.grupo)) return true;
-        if (dor === "bracos" && ["Bíceps", "Tríceps", "Peito", "Ombros"].includes(exercicio.grupo)) return true;
-        if (dor === "coluna" && (exercicio.evitar === "lombar" || exercicio.grupo === "Costas" || exercicio.grupo === "Abdômen")) return true;
-        return exercicio.evitar === dor;
+        if (temDorSelecionada(doresSelecionadas, "pernas") && ["Pernas", "Quadríceps", "Glúteos", "Panturrilha", "Posterior de coxa"].includes(exercicio.grupo)) return true;
+        if (temDorSelecionada(doresSelecionadas, "bracos") && ["Bíceps", "Tríceps", "Peito", "Ombros", "Ombro posterior"].includes(exercicio.grupo)) return true;
+        if (temDorSelecionada(doresSelecionadas, "coluna") && (exercicio.evitar === "lombar" || exercicio.grupo === "Costas" || exercicio.grupo === "Abdômen" || exercicio.grupo === "Cardio/Abdômen")) return true;
+        if (temDorSelecionada(doresSelecionadas, "ombro") && (exercicio.evitar === "ombro" || ["Peito", "Ombros", "Ombro posterior", "Costas"].includes(exercicio.grupo))) return true;
+        if (temDorSelecionada(doresSelecionadas, "joelho") && (exercicio.evitar === "joelho" || ["Pernas", "Quadríceps", "Glúteos", "Panturrilha", "Posterior de coxa"].includes(exercicio.grupo))) return true;
+        if (temDorSelecionada(doresSelecionadas, "lombar") && (exercicio.evitar === "lombar" || ["Costas", "Abdômen", "Cardio/Abdômen", "Posterior de coxa"].includes(exercicio.grupo))) return true;
+        return doresSelecionadas.some(function(itemDor) { return itemDor !== "nenhuma" && exercicio.evitar === itemDor; });
       };
 
       const treinoOntem = obterUltimoTreinoLocal();
@@ -2474,17 +2520,17 @@ analisarEsforcoRecente(function(esforcoRecente) {
       }
 
       if (letraTreino !== "descanso") {
-        treinoFiltrado = completarTreinoSemEquipamento(treinoFiltrado, letraTreino, dor, tempo);
+        treinoFiltrado = completarTreinoSemEquipamento(treinoFiltrado, letraTreino, doresSelecionadas, tempo);
       }
 
-      treinoFiltrado = filtrarExerciciosUnicos(treinoFiltrado);
+      treinoFiltrado = aplicarTravaGrupoTreino(filtrarExerciciosUnicos(treinoFiltrado), letraTreino);
       treinoFiltrado = treinoFiltrado.map(ajustarEquipamentoVisualPorLocal);
-      treinoFiltrado = adaptarTreinoPorPerfil(treinoFiltrado, tempo);
-      treinoFiltrado = ajustarTreinoPorSexoIdadePesoCheckin(treinoFiltrado, energia, dor, tempo);
-      treinoFiltrado = aplicarProgressaoSemanalAoTreino(treinoFiltrado, progressaoSemanal, tempo, letraTreino);
+      treinoFiltrado = aplicarTravaGrupoTreino(adaptarTreinoPorPerfil(treinoFiltrado, tempo), letraTreino);
+      treinoFiltrado = aplicarTravaGrupoTreino(ajustarTreinoPorSexoIdadePesoCheckin(treinoFiltrado, energia, doresSelecionadas, tempo), letraTreino);
+      treinoFiltrado = aplicarTravaGrupoTreino(aplicarProgressaoSemanalAoTreino(treinoFiltrado, progressaoSemanal, tempo, letraTreino), letraTreino);
 
       // Trava final: garante que o treino continue respeitando a categoria escolhida após todos os ajustes inteligentes.
-      treinoFiltrado = treinoFiltrado.filter(equipamentoCompativelComPerfil);
+      treinoFiltrado = aplicarTravaGrupoTreino(treinoFiltrado.filter(equipamentoCompativelComPerfil), letraTreino);
 
       const perfilTreino = determinarPerfilTreino();
       const alvoExercicios = letraTreino === "descanso" ? Math.max(4, alvoQuantidadeExercicios(tempo, perfilTreino)) : alvoQuantidadeExercicios(tempo, perfilTreino);
@@ -2498,7 +2544,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
         });
       }
       // Trava final por categoria antes de exibir.
-      treinoFiltrado = treinoFiltrado.filter(equipamentoCompativelComPerfil);
+      treinoFiltrado = aplicarTravaGrupoTreino(treinoFiltrado.filter(equipamentoCompativelComPerfil), letraTreino);
       if (normalizarLocalTreino(local) === "sem_equipamento") {
         treinoFiltrado = treinoFiltrado.filter(equipamentoEhPesoCorporal).map(function(exercicio) {
           const copia = Object.assign({}, exercicio);
@@ -2552,7 +2598,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       if (tempo === "rapido") ajuste += " Treino rápido: pensado para aproximadamente 30 minutos.";
       else if (tempo === "normal") ajuste += " Treino normal: pensado para aproximadamente 1 hora.";
       else ajuste += " Treino longo: pensado para mais de 1 hora, com maior volume de exercícios.";
-      if (dor !== "nenhuma" && letraTreino !== "descanso") ajuste += " Exercícios que podem incomodar sua dor foram removidos.";
+      if (doresSelecionadas.some(function(itemDor) { return itemDor !== "nenhuma"; }) && letraTreino !== "descanso") ajuste += " Exercícios que podem incomodar sua dor (" + textoDoresSelecionadas(doresSelecionadas) + ") foram removidos.";
       if (ajusteCardio.mensagem) ajuste += " " + ajusteCardio.mensagem;
       if (esforcoRecente.mensagem) ajuste += " " + esforcoRecente.mensagem;
       if (progressaoSemanal && progressaoSemanal.mensagem) ajuste += " " + progressaoSemanal.mensagem;
@@ -3626,5 +3672,98 @@ bibliotecaExercicios.descanso = [criarExercicioCategoria("Mobilidade de quadril"
 function equipamentoCompativelComPerfil(exercicio) { const local = perfilUsuario ? normalizarLocalTreino(perfilUsuario.localTreino) : "sem_equipamento"; const categoria = exercicio && exercicio.categoriaEquipamento ? exercicio.categoriaEquipamento : "sem_equipamento"; if (local === "sem_equipamento") return categoria === "sem_equipamento"; if (local === "academia_basica") return categoria === "academia_basica"; if (local === "academia_avancada") return categoria === "academia_avancada"; return categoria === "sem_equipamento"; }
 function equipamentoEhPesoCorporal(exercicio) { return !!exercicio && exercicio.categoriaEquipamento === "sem_equipamento"; }
 function ajustarEquipamentoVisualPorLocal(exercicio) { const copia = Object.assign({}, exercicio); if (copia.categoriaEquipamento === "sem_equipamento") copia.equipamento = "Peso corporal"; return copia; }
-function completarTreinoSemEquipamento(lista, letraTreino, dor, tempo) { const alvo = alvoQuantidadeExercicios(tempo, determinarPerfilTreino()); const base = (bibliotecaExercicios[letraTreino] || []).filter(function(exercicio) { return equipamentoCompativelComPerfil(exercicio) && exercicio.evitar !== dor; }); const nomes = {}; (lista || []).forEach(function(exercicio) { nomes[normalizarNomeExercicio(exercicio.nome || "")] = true; }); base.forEach(function(exercicio) { if (lista.length >= alvo) return; const chave = normalizarNomeExercicio(exercicio.nome || ""); if (!nomes[chave]) { lista.push(Object.assign({}, exercicio)); nomes[chave] = true; } }); return lista; }
+function completarTreinoSemEquipamento(lista, letraTreino, dor, tempo) { const dores = Array.isArray(dor) ? dor : [dor || "nenhuma"]; const alvo = alvoQuantidadeExercicios(tempo, determinarPerfilTreino()); const base = (bibliotecaExercicios[letraTreino] || []).filter(function(exercicio) { return equipamentoCompativelComPerfil(exercicio) && grupoCompativelComTreino(letraTreino, exercicio) && !dores.some(function(itemDor) { return itemDor !== "nenhuma" && exercicio.evitar === itemDor; }); }); const nomes = {}; (lista || []).forEach(function(exercicio) { nomes[normalizarNomeExercicio(exercicio.nome || "")] = true; }); base.forEach(function(exercicio) { if (lista.length >= alvo) return; const chave = normalizarNomeExercicio(exercicio.nome || ""); if (!nomes[chave]) { lista.push(Object.assign({}, exercicio)); nomes[chave] = true; } }); return aplicarTravaGrupoTreino(lista, letraTreino); }
 instalarBibliotecaReal138();
+
+/* Versao 1.4.0 - blindagem profissional das categorias de treino */
+const GRUPOS_OFICIAIS_TREINO_140 = {
+  A: ["Peito", "Ombros", "Tríceps"],
+  B: ["Costas", "Bíceps", "Ombro posterior", "Lombar"],
+  C: ["Pernas", "Quadríceps", "Glúteos", "Panturrilha", "Posterior de coxa", "Abdômen", "Cardio/Abdômen"],
+  descanso: ["Recuperação", "Mobilidade", "Alongamento"]
+};
+
+function textoNormalizadoCategoria140(valor) {
+  return String(valor || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function tipoOficialDoExercicio140(exercicio) {
+  const nome = textoNormalizadoCategoria140(exercicio && exercicio.nome);
+  const grupo = textoNormalizadoCategoria140(exercicio && exercicio.grupo);
+  const equipamento = textoNormalizadoCategoria140(exercicio && exercicio.equipamento);
+  const texto = nome + " " + grupo + " " + equipamento;
+  if (/recuperacao|mobilidade|alongamento|respiracao|caminhada leve/.test(texto)) return "descanso";
+  if (/agach|leg press|afundo|bulgar|passada|stiff|terra|cadeira extensora|extensora|mesa flexora|flexora|panturrilha|gluteo|quadriceps|posterior de coxa|perna|pernas|abdom|prancha|core|mountain climber|dead bug|infra|ponte de gluteo/.test(texto)) return "C";
+  if (/puxada|remada|face pull|rosca|biceps|costas|ombro posterior|crucifixo inverso|anjo reverso|super-homem|super homem|pullover|barra fixa/.test(texto)) return "B";
+  if (/supino|flexao|peito|triceps|desenvolvimento|elevacao lateral|elevacao frontal|ombros|pike push|crucifixo no cabo|voador/.test(texto)) return "A";
+  return "A";
+}
+
+function ajustarGrupoOficial140(exercicio) {
+  const copia = Object.assign({}, exercicio);
+  const tipo = tipoOficialDoExercicio140(copia);
+  copia.tipoTreinoOficial = tipo;
+  if (tipo === "A" && GRUPOS_OFICIAIS_TREINO_140.A.indexOf(copia.grupo) === -1) {
+    if (/triceps/i.test(copia.nome || copia.grupo || "")) copia.grupo = "Tríceps";
+    else if (/ombro|desenvolvimento|elevacao/i.test(copia.nome || copia.grupo || "")) copia.grupo = "Ombros";
+    else copia.grupo = "Peito";
+  }
+  if (tipo === "B" && GRUPOS_OFICIAIS_TREINO_140.B.indexOf(copia.grupo) === -1) {
+    if (/rosca|biceps/i.test(copia.nome || copia.grupo || "")) copia.grupo = "Bíceps";
+    else if (/face pull|posterior|anjo reverso/i.test(copia.nome || copia.grupo || "")) copia.grupo = "Ombro posterior";
+    else if (/super|lombar/i.test(copia.nome || copia.grupo || "")) copia.grupo = "Lombar";
+    else copia.grupo = "Costas";
+  }
+  if (tipo === "C" && GRUPOS_OFICIAIS_TREINO_140.C.indexOf(copia.grupo) === -1) {
+    if (/abdom|prancha|core|mountain|dead bug|infra/i.test(copia.nome || copia.grupo || "")) copia.grupo = "Abdômen";
+    else if (/gluteo|ponte/i.test(copia.nome || copia.grupo || "")) copia.grupo = "Glúteos";
+    else if (/panturrilha/i.test(copia.nome || copia.grupo || "")) copia.grupo = "Panturrilha";
+    else if (/stiff|flexora|posterior/i.test(copia.nome || copia.grupo || "")) copia.grupo = "Posterior de coxa";
+    else copia.grupo = "Pernas";
+  }
+  if (tipo === "descanso") copia.grupo = "Recuperação";
+  return copia;
+}
+
+function grupoCompativelComTreino(letraTreino, exercicio) {
+  const tipo = tipoOficialDoExercicio140(exercicio);
+  if (letraTreino === "Descanso") letraTreino = "descanso";
+  return tipo === letraTreino;
+}
+
+function aplicarTravaGrupoTreino(lista, letraTreino) {
+  return (lista || []).map(ajustarGrupoOficial140).filter(function(exercicio) {
+    return grupoCompativelComTreino(letraTreino, exercicio);
+  });
+}
+
+function equipamentoCompativelComPerfil(exercicio) {
+  const local = perfilUsuario ? normalizarLocalTreino(perfilUsuario.localTreino) : "academia_avancada";
+  const categoria = exercicio && exercicio.categoriaEquipamento ? exercicio.categoriaEquipamento : "sem_equipamento";
+  if (local === "sem_equipamento") return categoria === "sem_equipamento";
+  if (local === "academia_basica") return categoria === "sem_equipamento" || categoria === "academia_basica";
+  if (local === "academia_avancada") return categoria === "sem_equipamento" || categoria === "academia_basica" || categoria === "academia_avancada";
+  return categoria === "sem_equipamento";
+}
+
+function blindarBibliotecaExercicios140() {
+  const reorganizada = { A: [], B: [], C: [], descanso: [] };
+  const vistos = {};
+  Object.keys(bibliotecaExercicios || {}).forEach(function(origem) {
+    (bibliotecaExercicios[origem] || []).forEach(function(exercicio) {
+      const ajustado = ajustarGrupoOficial140(exercicio);
+      const destino = tipoOficialDoExercicio140(ajustado);
+      const chave = destino + "::" + normalizarNomeExercicio(ajustado.nome || "");
+      if (!vistos[chave] && reorganizada[destino]) {
+        reorganizada[destino].push(ajustado);
+        vistos[chave] = true;
+      }
+    });
+  });
+  bibliotecaExercicios.A = reorganizada.A;
+  bibliotecaExercicios.B = reorganizada.B;
+  bibliotecaExercicios.C = reorganizada.C;
+  bibliotecaExercicios.descanso = reorganizada.descanso;
+}
+
+blindarBibliotecaExercicios140();
