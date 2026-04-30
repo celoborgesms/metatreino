@@ -3819,3 +3819,132 @@ blindarBibliotecaExercicios140();
 
 
     document.addEventListener("DOMContentLoaded", configurarCheckboxesDeDor);
+
+/* Correcao definitiva 1.4.0: categoria do treino e dor exclusiva */
+const MT_GRUPOS_140_FIX = {
+  A: ["Peito", "Ombros", "Tríceps"],
+  B: ["Costas", "Bíceps", "Ombro posterior", "Lombar"],
+  C: ["Pernas", "Quadríceps", "Glúteos", "Panturrilha", "Posterior de coxa", "Abdômen", "Cardio/Abdômen"],
+  descanso: ["Recuperação", "Mobilidade", "Alongamento"]
+};
+
+function mtNorm140Fix(valor) {
+  return String(valor || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+function mtTextoExercicio140Fix(exercicio) {
+  return mtNorm140Fix((exercicio && exercicio.nome || "") + " " + (exercicio && exercicio.grupo || "") + " " + (exercicio && exercicio.equipamento || ""));
+}
+function tipoOficialDoExercicio140(exercicio) {
+  const texto = mtTextoExercicio140Fix(exercicio);
+  if (/recuperacao|mobilidade|alongamento|respiracao|caminhada leve|soltura|relaxamento/.test(texto)) return "descanso";
+  if (/face\s*pull|puxada|pulldown|remada|row\b|rosca|biceps|costas|dorsal|lat\b|pullover|barra fixa|crucifixo inverso|voador inverso|ombro posterior|posterior de ombro|trapezio/.test(texto)) return "B";
+  if (/supino|flexao|peito|triceps|desenvolvimento|shoulder press|elevacao lateral|elevacao frontal|ombro\b|ombros|pike|crucifixo|voador/.test(texto)) return "A";
+  if (/agach|leg press|afundo|passada|avanco|bulgar|stiff|terra|cadeira extensora|extensora|mesa flexora|flexora|panturrilha|gluteo|quadriceps|posterior de coxa|perna|pernas|adutor|abdutor|abdom|abdomen|prancha|core|mountain climber|dead bug|infra|ponte de gluteo|elevacao pelvica/.test(texto)) return "C";
+  return "A";
+}
+function ajustarGrupoOficial140(exercicio) {
+  const copia = Object.assign({}, exercicio || {});
+  const tipo = tipoOficialDoExercicio140(copia);
+  const texto = mtTextoExercicio140Fix(copia);
+  copia.tipoTreinoOficial = tipo;
+  if (tipo === "A") {
+    if (/triceps/.test(texto)) copia.grupo = "Tríceps";
+    else if (/ombro|desenvolvimento|elevacao|pike/.test(texto)) copia.grupo = "Ombros";
+    else copia.grupo = "Peito";
+  } else if (tipo === "B") {
+    if (/rosca|biceps/.test(texto)) copia.grupo = "Bíceps";
+    else if (/face\s*pull|posterior de ombro|ombro posterior|crucifixo inverso|voador inverso/.test(texto)) copia.grupo = "Ombro posterior";
+    else if (/lombar|super\s*homem|super-homem/.test(texto)) copia.grupo = "Lombar";
+    else copia.grupo = "Costas";
+  } else if (tipo === "C") {
+    if (/abdom|abdomen|prancha|core|mountain climber|dead bug|infra/.test(texto)) copia.grupo = "Abdômen";
+    else if (/gluteo|ponte|elevacao pelvica/.test(texto)) copia.grupo = "Glúteos";
+    else if (/panturrilha/.test(texto)) copia.grupo = "Panturrilha";
+    else if (/stiff|flexora|posterior de coxa/.test(texto)) copia.grupo = "Posterior de coxa";
+    else copia.grupo = "Pernas";
+  } else {
+    copia.grupo = "Recuperação";
+  }
+  return copia;
+}
+function grupoCompativelComTreino(letraTreino, exercicio) {
+  if (!exercicio) return false;
+  const tipoTreino = letraTreino === "Descanso" ? "descanso" : letraTreino;
+  const tipoExercicio = tipoOficialDoExercicio140(exercicio);
+  const texto = mtTextoExercicio140Fix(exercicio);
+  if (tipoTreino === "C" && /face\s*pull|puxada|pulldown|remada|row\b|rosca|biceps|costas|dorsal|pullover|barra fixa|crucifixo inverso|voador inverso|ombro posterior|posterior de ombro/.test(texto)) return false;
+  if (tipoTreino === "A" && /puxada|remada|face\s*pull|rosca|biceps|costas/.test(texto)) return false;
+  if (tipoTreino === "B" && /agach|leg press|afundo|panturrilha|perna|abdom|abdomen|prancha/.test(texto)) return false;
+  return tipoExercicio === tipoTreino;
+}
+function aplicarTravaGrupoTreino(lista, letraTreino) {
+  const tipoTreino = letraTreino === "Descanso" ? "descanso" : letraTreino;
+  return (lista || []).map(ajustarGrupoOficial140).filter(function(exercicio) {
+    return grupoCompativelComTreino(tipoTreino, exercicio);
+  });
+}
+function mtBlindarListaFinal140(lista, letraTreino) {
+  return aplicarTravaGrupoTreino(lista || [], letraTreino).filter(function(exercicio) {
+    return grupoCompativelComTreino(letraTreino === "Descanso" ? "descanso" : letraTreino, exercicio);
+  });
+}
+(function mtReorganizarBiblioteca140Fix() {
+  if (typeof bibliotecaExercicios === "undefined" || !bibliotecaExercicios) return;
+  const nova = { A: [], B: [], C: [], descanso: [] };
+  const vistos = {};
+  Object.keys(bibliotecaExercicios).forEach(function(chave) {
+    (bibliotecaExercicios[chave] || []).forEach(function(exercicio) {
+      const ajustado = ajustarGrupoOficial140(exercicio);
+      const destino = tipoOficialDoExercicio140(ajustado);
+      if (!nova[destino]) return;
+      const id = destino + "::" + normalizarNomeExercicio(ajustado.nome || "");
+      if (!vistos[id]) {
+        nova[destino].push(ajustado);
+        vistos[id] = true;
+      }
+    });
+  });
+  bibliotecaExercicios.A = nova.A;
+  bibliotecaExercicios.B = nova.B;
+  bibliotecaExercicios.C = nova.C;
+  bibliotecaExercicios.descanso = nova.descanso;
+})();
+(function mtProtegerRenderTreino140Fix() {
+  if (typeof mostrarTreinoNaTela !== "function") return;
+  const mostrarOriginal = mostrarTreinoNaTela;
+  mostrarTreinoNaTela = function() {
+    const letra = treinoAtual && treinoAtual.letra === "Descanso" ? "descanso" : (treinoAtual && treinoAtual.letra ? treinoAtual.letra : "A");
+    treinoAtual = mtBlindarListaFinal140(treinoAtual || [], letra);
+    treinoAtual.letra = letra === "descanso" ? "Descanso" : letra;
+    if (!treinoAtual.length && letra !== "descanso") {
+      treinoAtual = mtBlindarListaFinal140((bibliotecaExercicios.descanso || []), "descanso");
+      treinoAtual.letra = "Descanso";
+      const resumoTreino = document.getElementById("resumoTreino");
+      if (resumoTreino) resumoTreino.innerText = "Por segurança, o app mudou para treino leve/recuperação porque a categoria do dia não tinha exercícios seguros suficientes.";
+    }
+    return mostrarOriginal.apply(this, arguments);
+  };
+})();
+function configurarCheckboxesDeDor() {
+  const campo = document.getElementById("dor");
+  if (!campo) return;
+  const checks = Array.prototype.slice.call(campo.querySelectorAll('input[name="dorCheck"]'));
+  const nenhuma = campo.querySelector('input[name="dorCheck"][value="nenhuma"]');
+  if (!checks.length || !nenhuma) return;
+  function atualizarExclusividadeDor(alvo) {
+    const dores = checks.filter(function(item) { return item.value !== "nenhuma"; });
+    if (alvo && alvo.value === "nenhuma" && alvo.checked) dores.forEach(function(item) { item.checked = false; });
+    if (alvo && alvo.value !== "nenhuma" && alvo.checked) nenhuma.checked = false;
+    const temDor = dores.some(function(item) { return item.checked; });
+    if (temDor) nenhuma.checked = false;
+    if (!temDor && !nenhuma.checked) nenhuma.checked = true;
+  }
+  if (!campo.dataset.dorExclusiva140) {
+    campo.addEventListener("change", function(evento) {
+      if (evento.target && evento.target.name === "dorCheck") atualizarExclusividadeDor(evento.target);
+    });
+    campo.dataset.dorExclusiva140 = "1";
+  }
+  atualizarExclusividadeDor(null);
+}
+document.addEventListener("DOMContentLoaded", configurarCheckboxesDeDor);
