@@ -1,16 +1,40 @@
-<script>
+<!DOCTYPE html><html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>MetaTreino</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, select, button { display:block; margin:10px 0; padding:8px; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body><h2>Perfil</h2>
+<input id="nome" placeholder="Nome">
+<input id="idade" type="number" placeholder="Idade">
+<input id="peso" type="number" placeholder="Peso (kg)">
+<input id="altura" type="number" placeholder="Altura (m)">
+<select id="objetivo">
+  <option value="hipertrofia">Hipertrofia</option>
+  <option value="emagrecimento">Emagrecimento</option>
+  <option value="condicionamento">Condicionamento</option>
+</select>
+<button onclick="salvarPerfil()">Calcular e Salvar</button><p id="resultado"></p><hr><h2>Check-in</h2>
+<select id="energia">
+  <option value="alta">Alta</option>
+  <option value="media">Média</option>
+  <option value="baixa">Baixa</option>
+</select><select id="dor">
+  <option value="nenhuma">Nenhuma dor</option>
+  <option value="perna">Dor na perna</option>
+  <option value="braco">Dor no braço</option>
+</select><button onclick="salvarCheckin()">Salvar Check-in</button>
+
+<hr><h2>Treino</h2>
+<button onclick="gerarTreino()">Gerar treino</button>
+<ul id="treino"></ul><script>
 function salvarPerfil(){
-  let nome = document.getElementById("nome").value;
-  let idade = document.getElementById("idade").value;
-  let peso = parseFloat(document.getElementById("peso").value);
-  let altura = parseFloat(document.getElementById("altura").value);
-  let objetivo = document.getElementById("objetivo").value;
-
-  if(!peso || !altura){
-    alert("Preencha peso e altura");
-    return;
-  }
-
+  let peso = parseFloat(pesoInput.value);
+  let altura = parseFloat(alturaInput.value);
   let imc = peso/(altura*altura);
 
   let classificacao = imc < 18.5 ? "Abaixo do peso" :
@@ -18,19 +42,23 @@ function salvarPerfil(){
                       imc < 30 ? "Sobrepeso" : "Obesidade";
 
   localStorage.setItem("perfil", JSON.stringify({
-    nome, idade, peso, altura, objetivo, imc, classificacao
+    nome: nome.value,
+    idade: idade.value,
+    peso,
+    altura,
+    objetivo: objetivo.value,
+    imc,
+    classificacao
   }));
 
-  document.getElementById("resultado").innerText =
-    "IMC: " + imc.toFixed(2) + " - " + classificacao;
+  resultado.innerText = "IMC: " + imc.toFixed(2) + " - " + classificacao;
 }
 
 function salvarCheckin(){
-  let energia = document.getElementById("energia").value;
-  let dor = document.getElementById("dor").value;
-
-  localStorage.setItem("checkin", JSON.stringify({ energia, dor }));
-  alert("Check-in salvo!");
+  localStorage.setItem("checkin", JSON.stringify({
+    energia: energia.value,
+    dor: dor.value
+  }));
 }
 
 function gerarTreino(){
@@ -62,13 +90,12 @@ function gerarTreino(){
     treino = treino.filter(e => e !== "Supino");
   }
 
-  let lista = document.getElementById("treino");
-  lista.innerHTML = "";
-
+  treinoLista.innerHTML = "";
   treino.forEach(e => {
     let li = document.createElement("li");
     li.innerText = e;
-    lista.appendChild(li);
+    treinoLista.appendChild(li);
   });
 }
-</script>
+</script></body>
+</html>
