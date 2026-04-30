@@ -1,7 +1,7 @@
 importScripts("./js/version.js");
 
-const CACHE_NAME = typeof METATREINO_CACHE_NAME !== "undefined" ? METATREINO_CACHE_NAME : "metatreino-cache-v1.4.0";
-const APP_VERSION = typeof METATREINO_VERSION !== "undefined" ? METATREINO_VERSION : "1.4.0";
+const CACHE_NAME = typeof METATREINO_CACHE_NAME !== "undefined" ? METATREINO_CACHE_NAME : "metatreino-cache-v1.4.1-nucleo-unico-categorias";
+const APP_VERSION = typeof METATREINO_VERSION !== "undefined" ? METATREINO_VERSION : "1.4.1";
 
 const APP_SHELL = [
   "./",
@@ -110,4 +110,4 @@ self.addEventListener("fetch", function(event) {
       })
   );
 });
-// build: 1.4.0-correcao-definitiva-categorias-dor
+// build: 1.4.1-correcao-definitiva-categorias-dor
