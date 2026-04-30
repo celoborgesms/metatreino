@@ -1,9 +1,0 @@
-MetaTreino - Versão 1.4.3 Beta
-
-Correções aplicadas sobre a base 1.4.2:
-- Perfil salva equipamentos selecionados, idade, IMC, classificação, meta, rotina, experiência e local.
-- Check-in entra junto com o perfil na geração do treino.
-- Treino travado por categoria oficial.
-- Cardio bloqueado dentro do treino comum de força.
-- Substituição limitada à mesma categoria.
-- Aba Novidades limpa, mantendo somente a versão atual e o botão de atualização.
