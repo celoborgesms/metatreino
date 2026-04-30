@@ -1,0 +1,13 @@
+MetaTreino - Versão 1.4.2 Beta
+
+Correção principal:
+- Núcleo único e permanente de geração de treino por divisão.
+- Classificação oficial por nome do exercício antes do grupo antigo cadastrado.
+- Correção para impedir exercícios de empurrar dentro de puxar, puxar dentro de empurrar e superiores dentro de inferiores.
+- Resumo da aba Treino simplificado sem textos técnicos desnecessários.
+- Substituição de exercício limitada à mesma divisão.
+- Testes automáticos em tests/metatreino-tests.js.
+
+Validações executadas:
+- node --check js/app.js
+- node tests/metatreino-tests.js
