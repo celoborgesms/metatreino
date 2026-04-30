@@ -179,17 +179,17 @@
           <option value="mal">Estou mal</option>
         </select>
 
-        <label for="dor">Tem alguma dor? <span class="small">(pode marcar mais de uma)</span></label>
-        <select id="dor" multiple size="7">
-          <option value="nenhuma" selected>Nenhuma dor</option>
-          <option value="pernas">Pernas cansadas/doloridas</option>
-          <option value="bracos">Braços cansados/doloridos</option>
-          <option value="coluna">Coluna/costas</option>
-          <option value="ombro">Ombro</option>
-          <option value="joelho">Joelho</option>
-          <option value="lombar">Lombar</option>
-        </select>
-        <p class="small">No celular, toque nas opções que se aplicam. Se marcar alguma dor, deixe Nenhuma dor desmarcada.</p>
+        <label>Tem alguma dor? <span class="small">(pode marcar mais de uma)</span></label>
+        <div id="dor" class="dor-checkboxes" role="group" aria-label="Selecione uma ou mais dores">
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="nenhuma" checked> <span>Nenhuma dor</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="pernas"> <span>Pernas cansadas/doloridas</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="bracos"> <span>Braços cansados/doloridos</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="coluna"> <span>Coluna/costas</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="ombro"> <span>Ombro</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="joelho"> <span>Joelho</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="lombar"> <span>Lombar</span></label>
+        </div>
+        <p class="small">Marque todas as opções que se aplicam. Ao marcar alguma dor, o app desconsidera automaticamente “Nenhuma dor”.</p>
 
         <label for="tempo">Tempo disponível</label>
         <select id="tempo">
