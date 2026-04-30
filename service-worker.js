@@ -1,7 +1,7 @@
 importScripts("./js/version.js");
 
-const CACHE_NAME = typeof METATREINO_CACHE_NAME !== "undefined" ? METATREINO_CACHE_NAME : "metatreino-cache-v1.4.2-nucleo-permanente-divisoes";
-const APP_VERSION = typeof METATREINO_VERSION !== "undefined" ? METATREINO_VERSION : "1.4.2";
+const CACHE_NAME = typeof METATREINO_CACHE_NAME !== "undefined" ? METATREINO_CACHE_NAME : "metatreino-cache-v1.4.3-recuperacao-controlada";
+const APP_VERSION = typeof METATREINO_VERSION !== "undefined" ? METATREINO_VERSION : "1.4.3";
 
 const APP_SHELL = [
   "./",
@@ -110,4 +110,4 @@ self.addEventListener("fetch", function(event) {
       })
   );
 });
-// build: 1.4.2-nucleo-permanente-divisoes
+// build: 1.4.3-recuperacao-controlada
