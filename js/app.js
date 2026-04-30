@@ -4176,3 +4176,28 @@ document.addEventListener("DOMContentLoaded", configurarCheckboxesDeDor);
   document.addEventListener("DOMContentLoaded", window.configurarCheckboxesDeDor);
   if (document.readyState !== "loading") window.configurarCheckboxesDeDor();
 })();
+
+/* Correção 1.4.0: simplificar divisão e corrigir Recomendação inteligente */
+(function metatreinoRecomendacaoInteligente140(){
+  function ultimoCiclo140(){
+    try {
+      const ultimo = typeof obterUltimoTreinoLocal === "function" ? obterUltimoTreinoLocal() : null;
+      const letra = ultimo && (ultimo.letra === "Descanso" ? "descanso" : ultimo.letra);
+      if (letra === "A") return "B";
+      if (letra === "B") return "C";
+      if (letra === "C") return "A";
+    } catch(e) {}
+    return "A";
+  }
+  escolherTreinoABC = function(divisaoSelecionada) {
+    if (divisaoSelecionada === "A" || divisaoSelecionada === "B" || divisaoSelecionada === "C" || divisaoSelecionada === "descanso") return divisaoSelecionada;
+    return ultimoCiclo140();
+  };
+  const gerarSeguro140 = gerarTreinoComEsforco;
+  gerarTreinoComEsforco = function(esforcoRecente, progressaoSemanal) {
+    const divisao = document.getElementById("divisaoTreino");
+    if (divisao && (divisao.value === "semana" || divisao.value === "automatico")) divisao.value = "inteligente";
+    return gerarSeguro140.call(this, esforcoRecente, progressaoSemanal);
+  };
+  try { window.gerarTreinoComEsforco = gerarTreinoComEsforco; } catch(e) {}
+})();
