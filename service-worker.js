@@ -110,3 +110,4 @@ self.addEventListener("fetch", function(event) {
       })
   );
 });
+// build: 1.4.0-correcao-definitiva-categorias-dor
