@@ -1,5 +1,5 @@
 (function() {
-  var versao = window.METATREINO_BUILD || window.METATREINO_VERSION || "1.4.2";
+  var versao = window.METATREINO_BUILD || window.METATREINO_VERSION || "1.4.3";
 
   function adicionarCss(caminho) {
     var link = document.createElement("link");

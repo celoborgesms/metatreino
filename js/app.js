@@ -1555,7 +1555,7 @@ const firebaseConfig = {
       else if (imc < 30) { classificacao = "acima do peso"; mensagem = "Seu foco pode ser reduzir gordura corporal e manter ou ganhar massa magra."; }
       else { classificacao = "em faixa de obesidade pelo IMC"; mensagem = "O ideal é começar com treinos seguros, progressivos e, se possível, acompanhamento profissional."; }
 
-      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, equipamentosCasa: [] };
+      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, equipamentosCasa: equipamentosCasa };
       localStorage.setItem("perfilUsuario", JSON.stringify(perfilUsuario));
       registrarPeso(peso);
       mostrarMensagemMudancaPeso(perfilAntigo, peso);
@@ -3574,7 +3574,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       atualizarBotoesLogin(usuarioAtual);
     };
 
-const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.4.2";
+const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.4.3";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -3666,7 +3666,7 @@ const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.4.2";
 /* Versão 1.4.2 Beta - núcleo permanente de treino por divisão
    Corrige a causa do bug: a classificação oficial usa o NOME do exercício antes do grupo antigo cadastrado. */
 (function metatreino142NucleoPermanente(){
-  const BUILD = "1.4.2-nucleo-permanente-divisoes";
+  const BUILD = "1.4.3-recuperacao-controlada";
   window.METATREINO_BUILD_ATIVO = BUILD;
 
   const DIVISOES = {
@@ -3740,7 +3740,16 @@ const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.4.2";
     return c;
   }
 
-  function permitido(tipo, ex){ return tipoOficial(ex) === tipo; }
+  function ehCardioDoTreinoComum(ex){
+    const n = nome(ex);
+    const g = grupo(ex);
+    return contem(g, ["cardio", "aerobico", "aeróbico"]) || contem(n, ["polichinelo", "mountain climber", "corrida", "esteira", "bicicleta", "bike", "burpee", "hiit"]);
+  }
+
+  function permitido(tipo, ex){
+    if (tipo !== "descanso" && ehCardioDoTreinoComum(ex)) return false;
+    return tipoOficial(ex) === tipo;
+  }
 
   function obterDores(){
     const campo = document.getElementById("dor");
@@ -3848,7 +3857,7 @@ const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.4.2";
     const resumoTreino = document.getElementById("resumoTreino");
     const mensagem = document.getElementById("mensagemInteligenteTreino");
     const info = DIVISOES[tipo] || DIVISOES.descanso;
-    const cardioTexto = cardio && cardio !== "nao" ? cardio : "opcional / não incluído";
+    const cardioTexto = cardio && cardio !== "nao" ? (cardio + " separado, sem misturar nos exercícios de força") : "não incluído no treino de força";
     const duracao = tempo === "rapido" ? "aproximadamente 30 min" : (tempo === "longo" ? "acima de 1 hora" : "cerca de 1 hora");
     if (resumoDia) {
       resumoDia.classList.remove("hidden");
