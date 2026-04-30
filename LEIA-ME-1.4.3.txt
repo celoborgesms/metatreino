@@ -1,8 +1,0 @@
-Versão 1.4.3 Beta
-
-Correções:
-- Dor específica por região influencia a escolha do treino.
-- Pernas/joelho evitam inferiores.
-- Braços/ombro evitam superiores.
-- Lombar/coluna evitam puxar e inferiores.
-- Caminhada, corrida e bicicleta ficam na aba Cardio, não como exercício de carga/reps.
