@@ -179,9 +179,9 @@
           <option value="mal">Estou mal</option>
         </select>
 
-        <label for="dor">Tem alguma dor?</label>
-        <select id="dor">
-          <option value="nenhuma">Nenhuma dor</option>
+        <label for="dor">Tem alguma dor? <span class="small">(pode marcar mais de uma)</span></label>
+        <select id="dor" multiple size="7">
+          <option value="nenhuma" selected>Nenhuma dor</option>
           <option value="pernas">Pernas cansadas/doloridas</option>
           <option value="bracos">Braços cansados/doloridos</option>
           <option value="coluna">Coluna/costas</option>
@@ -189,6 +189,7 @@
           <option value="joelho">Joelho</option>
           <option value="lombar">Lombar</option>
         </select>
+        <p class="small">No celular, toque nas opções que se aplicam. Se marcar alguma dor, deixe Nenhuma dor desmarcada.</p>
 
         <label for="tempo">Tempo disponível</label>
         <select id="tempo">
@@ -393,6 +394,7 @@
             <li>Progressão automática sugerindo próxima carga com base na resposta do aluno.</li>
             <li>Dicas personalizadas por exercício conforme histórico, dificuldade e adaptação.</li>
             <li>Painel de evolução com resumo da memória inteligente e progressões sugeridas.</li>
+            <li>Blindagem profissional das categorias: empurrar, puxar, inferiores/abdômen e recuperação agora são validados antes de exibir o treino.</li>
           </ul>
         </div>
 
