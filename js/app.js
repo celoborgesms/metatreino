@@ -3948,3 +3948,231 @@ function configurarCheckboxesDeDor() {
   atualizarExclusividadeDor(null);
 }
 document.addEventListener("DOMContentLoaded", configurarCheckboxesDeDor);
+
+/* Correção final 1.4.0: gerador coerente entre título, dor e exercícios */
+(function(){
+  const BUILD_FIX = "1.4.0-correcao-final-treino-dor-coerente";
+  try { window.METATREINO_BUILD = BUILD_FIX; window.METATREINO_CACHE = "metatreino-cache-" + BUILD_FIX; window.METATREINO_CACHE_NAME = "metatreino-cache-" + BUILD_FIX; } catch(e) {}
+
+  const GRUPOS = {
+    A: ["Peito", "Ombros", "Tríceps"],
+    B: ["Costas", "Bíceps", "Ombro posterior", "Lombar"],
+    C: ["Pernas", "Quadríceps", "Glúteos", "Panturrilha", "Posterior de coxa", "Abdômen", "Cardio/Abdômen"],
+    descanso: ["Recuperação", "Mobilidade", "Alongamento"]
+  };
+
+  function norm(txt){ return String(txt || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+  function textoEx(ex){ return norm((ex && ex.nome || "") + " " + (ex && ex.grupo || "") + " " + (ex && ex.equipamento || "")); }
+  function tipoExercicio(ex){
+    const t = textoEx(ex);
+    if (/recuperacao|mobilidade|alongamento|respiracao|caminhada leve|soltura|relaxamento/.test(t)) return "descanso";
+    if (/face\s*pull|puxada|pulldown|remada|row\b|rosca|biceps|costas|dorsal|lat\b|pullover|barra fixa|crucifixo inverso|voador inverso|ombro posterior|posterior de ombro|trapezio/.test(t)) return "B";
+    if (/supino|flexao|peito|triceps|desenvolvimento|shoulder press|elevacao lateral|elevacao frontal|ombro\b|ombros|pike|crucifixo|voador/.test(t)) return "A";
+    if (/agach|leg press|afundo|passada|avanco|bulgar|stiff|terra|cadeira extensora|extensora|mesa flexora|flexora|panturrilha|gluteo|quadriceps|posterior de coxa|perna|pernas|adutor|abdutor|abdom|abdomen|prancha|core|mountain climber|dead bug|infra|ponte de gluteo|elevacao pelvica/.test(t)) return "C";
+    const grupo = ex && ex.grupo;
+    if (GRUPOS.A.indexOf(grupo) >= 0) return "A";
+    if (GRUPOS.B.indexOf(grupo) >= 0) return "B";
+    if (GRUPOS.C.indexOf(grupo) >= 0) return "C";
+    return "descanso";
+  }
+  function ajustarGrupo(ex){
+    const c = Object.assign({}, ex || {});
+    const tipo = tipoExercicio(c);
+    const t = textoEx(c);
+    c.tipoTreinoOficial = tipo;
+    if (tipo === "A") {
+      if (/triceps/.test(t)) c.grupo = "Tríceps";
+      else if (/ombro|desenvolvimento|elevacao|pike/.test(t)) c.grupo = "Ombros";
+      else c.grupo = "Peito";
+    } else if (tipo === "B") {
+      if (/rosca|biceps/.test(t)) c.grupo = "Bíceps";
+      else if (/face\s*pull|posterior de ombro|ombro posterior|crucifixo inverso|voador inverso/.test(t)) c.grupo = "Ombro posterior";
+      else if (/lombar|super\s*homem|super-homem/.test(t)) c.grupo = "Lombar";
+      else c.grupo = "Costas";
+    } else if (tipo === "C") {
+      if (/abdom|abdomen|prancha|core|mountain climber|dead bug|infra/.test(t)) c.grupo = "Abdômen";
+      else if (/gluteo|ponte|elevacao pelvica/.test(t)) c.grupo = "Glúteos";
+      else if (/panturrilha/.test(t)) c.grupo = "Panturrilha";
+      else if (/stiff|flexora|posterior de coxa/.test(t)) c.grupo = "Posterior de coxa";
+      else c.grupo = "Pernas";
+    } else {
+      c.grupo = "Recuperação";
+    }
+    if (!c.passos || !c.passos.length) c.passos = ["Execute com controle.", "Respire sem prender o ar.", "Mantenha técnica segura.", "Pare se sentir dor."];
+    return c;
+  }
+
+  window.grupoCompativelComTreino = function(letraTreino, exercicio) {
+    const letra = letraTreino === "Descanso" ? "descanso" : letraTreino;
+    if (!exercicio || !GRUPOS[letra]) return false;
+    const tipo = tipoExercicio(exercicio);
+    const t = textoEx(exercicio);
+    if (letra === "C" && /face\s*pull|puxada|pulldown|remada|row\b|rosca|biceps|costas|dorsal|pullover|barra fixa|crucifixo inverso|voador inverso|ombro posterior|posterior de ombro|trapezio|supino|peito|triceps|desenvolvimento/.test(t)) return false;
+    if (letra === "A" && /puxada|remada|face\s*pull|rosca|biceps|costas|leg press|agach|afundo|panturrilha/.test(t)) return false;
+    if (letra === "B" && /agach|leg press|afundo|panturrilha|perna|pernas|abdom|abdomen|prancha|supino|triceps|peito/.test(t)) return false;
+    return tipo === letra;
+  };
+
+  window.aplicarTravaGrupoTreino = function(lista, letraTreino) {
+    const letra = letraTreino === "Descanso" ? "descanso" : letraTreino;
+    return (lista || []).map(ajustarGrupo).filter(function(ex){ return window.grupoCompativelComTreino(letra, ex); });
+  };
+
+  function reorganizarBiblioteca(){
+    if (typeof bibliotecaExercicios === "undefined" || !bibliotecaExercicios) return;
+    const nova = { A: [], B: [], C: [], descanso: [] };
+    const vistos = {};
+    Object.keys(bibliotecaExercicios).forEach(function(origem){
+      (bibliotecaExercicios[origem] || []).forEach(function(ex){
+        const ajustado = ajustarGrupo(ex);
+        const destino = tipoExercicio(ajustado);
+        const id = destino + "::" + (typeof normalizarNomeExercicio === "function" ? normalizarNomeExercicio(ajustado.nome || "") : norm(ajustado.nome));
+        if (nova[destino] && !vistos[id]) { nova[destino].push(ajustado); vistos[id] = true; }
+      });
+    });
+    bibliotecaExercicios.A = nova.A;
+    bibliotecaExercicios.B = nova.B;
+    bibliotecaExercicios.C = nova.C;
+    bibliotecaExercicios.descanso = nova.descanso;
+  }
+
+  function doresSelecionadasFix(){
+    const campo = document.getElementById("dor");
+    if (!campo) return ["nenhuma"];
+    const checks = Array.prototype.slice.call(campo.querySelectorAll ? campo.querySelectorAll('input[name="dorCheck"]:checked') : []);
+    const vals = checks.map(function(c){ return c.value; }).filter(function(v){ return v && v !== "nenhuma"; });
+    return vals.length ? vals : ["nenhuma"];
+  }
+  window.obterDoresSelecionadas = doresSelecionadasFix;
+
+  function temDor(dores, val){ return (Array.isArray(dores) ? dores : [dores || "nenhuma"]).indexOf(val) >= 0; }
+  window.temDorSelecionada = temDor;
+
+  function dorBloqueia(ex, dores){
+    const grupo = ajustarGrupo(ex).grupo;
+    if (temDor(dores, "pernas") && ["Pernas", "Quadríceps", "Glúteos", "Panturrilha", "Posterior de coxa"].indexOf(grupo) >= 0) return true;
+    if (temDor(dores, "bracos") && ["Bíceps", "Tríceps", "Peito", "Ombros", "Ombro posterior"].indexOf(grupo) >= 0) return true;
+    if (temDor(dores, "coluna") && (ex.evitar === "lombar" || ["Costas", "Lombar", "Abdômen", "Cardio/Abdômen", "Posterior de coxa"].indexOf(grupo) >= 0)) return true;
+    if (temDor(dores, "ombro") && (ex.evitar === "ombro" || ["Peito", "Ombros", "Ombro posterior", "Costas"].indexOf(grupo) >= 0)) return true;
+    if (temDor(dores, "joelho") && (ex.evitar === "joelho" || ["Pernas", "Quadríceps", "Glúteos", "Panturrilha", "Posterior de coxa"].indexOf(grupo) >= 0)) return true;
+    if (temDor(dores, "lombar") && (ex.evitar === "lombar" || ["Costas", "Lombar", "Abdômen", "Cardio/Abdômen", "Posterior de coxa"].indexOf(grupo) >= 0)) return true;
+    return dores.some(function(d){ return d !== "nenhuma" && ex.evitar === d; });
+  }
+
+  function escolherTreinoSeguro(base, energia, dores){
+    let letra = base === "Descanso" ? "descanso" : base;
+    const temDorReal = dores.some(function(d){ return d !== "nenhuma"; });
+    if (energia === "mal" && temDorReal) return "descanso";
+    if (letra === "C" && (temDor(dores, "pernas") || temDor(dores, "joelho") || temDor(dores, "lombar") || temDor(dores, "coluna"))) return "descanso";
+    if (!bibliotecaExercicios[letra]) return "descanso";
+    return letra;
+  }
+
+  function montarListaSegura(letra, dores, tempo, progressaoSemanal){
+    const perfil = typeof determinarPerfilTreino === "function" ? determinarPerfilTreino() : {};
+    const alvo = letra === "descanso" ? Math.max(3, alvoQuantidadeExercicios(tempo, perfil)) : alvoQuantidadeExercicios(tempo, perfil);
+    let lista = (bibliotecaExercicios[letra] || [])
+      .map(ajustarGrupo)
+      .filter(function(ex){ return window.grupoCompativelComTreino(letra, ex); })
+      .filter(function(ex){ return !dorBloqueia(ex, dores); })
+      .filter(function(ex){ return typeof nivelPermitido !== "function" || nivelPermitido(ex); })
+      .filter(function(ex){ return typeof equipamentoCompativelComPerfil !== "function" || equipamentoCompativelComPerfil(ex); })
+      .map(function(ex){ return typeof ajustarExercicioPorMeta === "function" ? ajustarExercicioPorMeta(ex) : ex; });
+    if (typeof filtrarExerciciosUnicos === "function") lista = filtrarExerciciosUnicos(lista);
+    lista = window.aplicarTravaGrupoTreino(lista, letra);
+    if (typeof adaptarTreinoPorPerfil === "function") lista = window.aplicarTravaGrupoTreino(adaptarTreinoPorPerfil(lista, tempo), letra);
+    if (typeof aplicarProgressaoSemanalAoTreino === "function") lista = window.aplicarTravaGrupoTreino(aplicarProgressaoSemanalAoTreino(lista, progressaoSemanal, tempo, letra), letra);
+    lista = window.aplicarTravaGrupoTreino(lista, letra).slice(0, alvo);
+    return lista;
+  }
+
+  window.gerarTreinoComEsforco = function(esforcoRecente, progressaoSemanal) {
+    reorganizarBiblioteca();
+    const energia = document.getElementById("energia").value;
+    const dores = doresSelecionadasFix();
+    const tempo = document.getElementById("tempo").value;
+    const divisao = document.getElementById("divisaoTreino").value;
+    const cardioNoTreino = document.getElementById("cardioNoTreino") ? document.getElementById("cardioNoTreino").value : "nao";
+    let letraBase = escolherTreinoABC(divisao);
+    if (divisao === "semana" && new Date().getDay() === 0) letraBase = "descanso";
+    let letraFinal = escolherTreinoSeguro(letraBase, energia, dores);
+    let lista = montarListaSegura(letraFinal, dores, tempo, progressaoSemanal || {});
+    if (letraFinal !== "descanso" && lista.length < 3) {
+      letraFinal = "descanso";
+      lista = montarListaSegura("descanso", ["nenhuma"], tempo, progressaoSemanal || {});
+    }
+    lista = window.aplicarTravaGrupoTreino(lista, letraFinal);
+    treinoAtual = lista;
+    treinoAtual.letra = letraFinal === "descanso" ? "Descanso" : letraFinal;
+    exerciciosConcluidos = new Array(treinoAtual.length).fill(false);
+    feedbackTreinoFinalAtual = "";
+
+    const nomeFinal = nomeAmigavelTreino(letraFinal);
+    let ajuste = "";
+    if (letraFinal === "descanso") {
+      if (letraBase !== "descanso") ajuste = "IA de treino: por segurança, o app mudou para treino leve/recuperação porque seu check-in indicou dor, mal-estar ou falta de exercícios seguros para a categoria do dia.";
+      else ajuste = "Hoje o app sugeriu treino leve/recuperação. Priorize mobilidade, técnica e baixa intensidade.";
+    } else {
+      ajuste = nomeFinal + " selecionado de forma coerente com seu check-in. ";
+      if (energia === "bem") ajuste += "Hoje você pode treinar normalmente e tentar evoluir carga se a execução estiver boa.";
+      else if (energia === "cansado") ajuste += "Hoje reduza um pouco o volume. Faça uma série a menos em cada exercício.";
+      else ajuste += "Hoje faça um treino leve. Priorize técnica, mobilidade e não force carga.";
+    }
+    if (divisao === "semana") ajuste = "Hoje é " + nomeDoDiaDaSemana() + ". " + ajuste;
+    else if (divisao === "automatico") ajuste = ajuste + " A escolha considerou a alternância A/B/C pelo histórico.";
+    ajuste += " Personalizado para meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + ", local: " + traduzirLocal(perfilUsuario.localTreino) + ".";
+    if (dores.some(function(d){ return d !== "nenhuma"; }) && letraFinal !== "descanso") ajuste += " Exercícios que poderiam incomodar sua dor (" + textoDoresSelecionadas(dores) + ") foram removidos.";
+    if (esforcoRecente && esforcoRecente.mensagem) ajuste += " " + esforcoRecente.mensagem;
+    if (progressaoSemanal && progressaoSemanal.mensagem) ajuste += " " + progressaoSemanal.mensagem;
+    ajuste += " Lembrete: hidrate-se, respeite seus limites e evite treinar forte em jejum, com dor ou mal-estar.";
+
+    document.getElementById("resultadoTreino").classList.remove("hidden");
+    document.getElementById("registroEvolucao").classList.remove("hidden");
+    const resumoDia = document.getElementById("resumoDiaTreino");
+    if (resumoDia) { resumoDia.classList.remove("hidden"); resumoDia.innerHTML = montarResumoDoDia(letraFinal, tempo, cardioNoTreino, energia, progressaoSemanal || {}); }
+    const mensagem = document.getElementById("mensagemInteligenteTreino");
+    if (mensagem) { mensagem.classList.remove("hidden"); mensagem.innerHTML = obterMensagemInteligente(energia, letraFinal, progressaoSemanal || {}); }
+    document.getElementById("resumoTreino").innerText = ajuste;
+    mostrarTreinoNaTela();
+  };
+
+  const mostrarBase = window.mostrarTreinoNaTela;
+  if (typeof mostrarBase === "function") {
+    window.mostrarTreinoNaTela = function(){
+      const letra = treinoAtual && treinoAtual.letra === "Descanso" ? "descanso" : (treinoAtual && treinoAtual.letra ? treinoAtual.letra : "A");
+      treinoAtual = window.aplicarTravaGrupoTreino(treinoAtual || [], letra);
+      if (!treinoAtual.length && letra !== "descanso") {
+        treinoAtual = montarListaSegura("descanso", ["nenhuma"], document.getElementById("tempo") ? document.getElementById("tempo").value : "rapido", {});
+        treinoAtual.letra = "Descanso";
+        const resumoDia = document.getElementById("resumoDiaTreino");
+        if (resumoDia) resumoDia.innerHTML = montarResumoDoDia("descanso", document.getElementById("tempo") ? document.getElementById("tempo").value : "rapido", document.getElementById("cardioNoTreino") ? document.getElementById("cardioNoTreino").value : "nao", document.getElementById("energia") ? document.getElementById("energia").value : "mal", {});
+      } else {
+        treinoAtual.letra = letra === "descanso" ? "Descanso" : letra;
+      }
+      return mostrarBase.apply(this, arguments);
+    };
+  }
+
+  window.configurarCheckboxesDeDor = function(){
+    const campo = document.getElementById("dor");
+    if (!campo || !campo.querySelectorAll) return;
+    const checks = Array.prototype.slice.call(campo.querySelectorAll('input[name="dorCheck"]'));
+    const nenhuma = campo.querySelector('input[name="dorCheck"][value="nenhuma"]');
+    if (!checks.length || !nenhuma) return;
+    const dores = checks.filter(function(c){ return c.value !== "nenhuma"; });
+    function sync(alvo){
+      if (alvo && alvo.value === "nenhuma" && alvo.checked) dores.forEach(function(c){ c.checked = false; });
+      if (alvo && alvo.value !== "nenhuma" && alvo.checked) nenhuma.checked = false;
+      if (dores.some(function(c){ return c.checked; })) nenhuma.checked = false;
+      if (!dores.some(function(c){ return c.checked; }) && !nenhuma.checked) nenhuma.checked = true;
+    }
+    if (!campo.dataset.dorExclusivaFinal140) {
+      campo.addEventListener("change", function(ev){ if (ev.target && ev.target.name === "dorCheck") sync(ev.target); }, true);
+      campo.addEventListener("click", function(ev){ if (ev.target && ev.target.name === "dorCheck") setTimeout(function(){ sync(ev.target); }, 0); }, true);
+      campo.dataset.dorExclusivaFinal140 = "1";
+    }
+    sync(null);
+  };
+  document.addEventListener("DOMContentLoaded", window.configurarCheckboxesDeDor);
+  if (document.readyState !== "loading") window.configurarCheckboxesDeDor();
+})();
