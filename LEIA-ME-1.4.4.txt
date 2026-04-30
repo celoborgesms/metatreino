@@ -1,7 +1,0 @@
-Versao 1.4.4 Beta
-
-Correcoes principais:
-- Local de treino academia basica/avancada agora e normalizado corretamente.
-- Perfil salvo mostra sexo, idade, peso, altura, rotina, experiencia, local e equipamentos.
-- Equipamentos selecionados deixam de ser salvos vazios.
-- Treino final reaplica ajustes por sexo, idade, peso, IMC, energia, dor e tempo disponivel.
