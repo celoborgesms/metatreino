@@ -1116,8 +1116,6 @@ const firebaseConfig = {
       const mapa = {
         academia_grande: "academia_completa",
         academia_pequena: "academia_completa",
-        academia_basica: "academia_casa",
-        academia_avancada: "academia_completa",
         garagem: "academia_casa",
         casa_limitado: "halteres",
         sem_equipamento: "sem_equipamento",
@@ -1509,18 +1507,7 @@ const firebaseConfig = {
     function mostrarResumoPerfilCarregado() {
       const resultadoPerfil = document.getElementById("resultadoPerfil");
       resultadoPerfil.classList.remove("hidden");
-      resultadoPerfil.innerHTML = "<strong>Perfil carregado automaticamente</strong><br>" +
-        limparTextoSeguro(perfilUsuario.nome || "Usuário") + ", seu IMC salvo é " + limparTextoSeguro(perfilUsuario.imc || "-") + ".<br>" +
-        "Classificação: " + limparTextoSeguro(perfilUsuario.classificacao || "-") + ".<br>" +
-        "Sexo: " + limparTextoSeguro(traduzirSexo(perfilUsuario.sexo)) + ".<br>" +
-        "Idade: " + limparTextoSeguro(perfilUsuario.idade || "-") + " anos.<br>" +
-        "Peso: " + limparTextoSeguro(perfilUsuario.peso || "-") + " kg.<br>" +
-        "Altura: " + limparTextoSeguro(perfilUsuario.alturaCm || "-") + " cm.<br>" +
-        "Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + ".<br>" +
-        "Rotina: " + traduzirRotina(perfilUsuario.rotinaAtual) + ".<br>" +
-        "Experiência: " + traduzirExperiencia(perfilUsuario.tempoExperiencia) + ".<br>" +
-        "Local de treino: " + traduzirLocal(perfilUsuario.localTreino) + ".<br>" +
-        "Equipamentos: " + limparTextoSeguro((perfilUsuario.equipamentosCasa || []).length ? perfilUsuario.equipamentosCasa.map(nomeEquipamentoSelecionado).join(", ") : (normalizarLocalTreino(perfilUsuario.localTreino) === "sem_equipamento" ? "peso corporal" : "equipamentos automáticos da categoria")) + ".<br><br><span class='small'>Se quiser alterar seus dados, edite os campos e clique em Calcular e salvar perfil.</span>";
+      resultadoPerfil.innerHTML = "<strong>Perfil carregado automaticamente</strong><br>" + perfilUsuario.nome + ", seu IMC salvo é " + perfilUsuario.imc + ".<br>Classificação: " + perfilUsuario.classificacao + ".<br>Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + ".<br>Local de treino: " + traduzirLocal(perfilUsuario.localTreino) + ".<br><br><span class='small'>Se quiser alterar seus dados, edite os campos e clique em Calcular e salvar perfil.</span>";
     }
 
     function calcularPerfil() {
@@ -1568,7 +1555,7 @@ const firebaseConfig = {
       else if (imc < 30) { classificacao = "acima do peso"; mensagem = "Seu foco pode ser reduzir gordura corporal e manter ou ganhar massa magra."; }
       else { classificacao = "em faixa de obesidade pelo IMC"; mensagem = "O ideal é começar com treinos seguros, progressivos e, se possível, acompanhamento profissional."; }
 
-      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, equipamentosCasa: equipamentosCasa };
+      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, equipamentosCasa: [] };
       localStorage.setItem("perfilUsuario", JSON.stringify(perfilUsuario));
       registrarPeso(peso);
       mostrarMensagemMudancaPeso(perfilAntigo, peso);
@@ -1628,20 +1615,13 @@ const firebaseConfig = {
       const mapa = { menos_1: "menos de 1 ano", "1_2": "de 1 a 2 anos", "2_4": "de 2 a 4 anos", "4_mais": "4 anos ou mais" };
       return mapa[valor] || valor;
     }
-
-
-    function traduzirSexo(valor) {
-      const mapa = { masculino: "Masculino", feminino: "Feminino", outro: "Outro" };
-      return mapa[valor] || "Não informado";
-    }
-
     function traduzirLocal(valor) {
       valor = normalizarLocalTreino(valor);
       const mapa = {
         sem_equipamento: "Sem Equipamento",
         halteres: "Halteres",
-        academia_casa: "Academia básica",
-        academia_completa: "Academia avançada",
+        academia_casa: "Academia em Casa",
+        academia_completa: "Academia Completa",
         personalizado: "Personalizado"
       };
       return mapa[valor] || valor;
@@ -1658,7 +1638,7 @@ const firebaseConfig = {
       ocultarPaginasDoApp();
       document.getElementById("paginaTreino").classList.remove("hidden");
       document.getElementById("tituloTreino").innerText = "💪 Treino de " + perfilUsuario.nome;
-      document.getElementById("resumoPerfilTreino").innerText = "Sexo: " + traduzirSexo(perfilUsuario.sexo) + " | Idade: " + (perfilUsuario.idade || "-") + " | Peso: " + (perfilUsuario.peso || "-") + " kg | Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + " | Experiência: " + traduzirExperiencia(perfilUsuario.tempoExperiencia) + " | Local: " + traduzirLocal(perfilUsuario.localTreino) + " | IMC: " + perfilUsuario.imc;
+      document.getElementById("resumoPerfilTreino").innerText = "Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + " | Experiência: " + traduzirExperiencia(perfilUsuario.tempoExperiencia) + " | Local: " + traduzirLocal(perfilUsuario.localTreino) + " | IMC: " + perfilUsuario.imc;
       mostrarHistorico();
       carregarUltimaCardio();
       carregarTreinoAtualLocal();
@@ -3594,7 +3574,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       atualizarBotoesLogin(usuarioAtual);
     };
 
-const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.4.4";
+const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.4.2";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -4000,39 +3980,4 @@ const METATREINO_APP_VERSION = window.METATREINO_VERSION || "1.4.4";
 
   document.addEventListener("DOMContentLoaded", configurarDorExclusiva);
   if (document.readyState !== "loading") configurarDorExclusiva();
-})();
-
-/* Versao 1.4.4 Beta - perfil completo conectado ao treino */
-(function metatreino143DorEspecifica(){
-  const BUILD="1.4.4-perfil-conectado"; window.METATREINO_BUILD_ATIVO=BUILD;
-  const DIVS={A:"Treino de membros superiores — empurrar",B:"Treino de membros superiores — puxar",C:"Treino de membros inferiores e abdômen",descanso:"Treino leve / recuperação"};
-  const REC=[
-    {nome:"Respiração e mobilidade leve",grupo:"Recuperação",equipamento:"Nenhum",nivel:"iniciante",series:"5 a 10 min",reps:"leve",evitar:"nenhuma",passos:["Respire de forma controlada.","Movimente ombros, quadril e coluna sem dor.","Mantenha amplitude confortável.","Use como recuperação ativa, não como treino pesado."]},
-    {nome:"Mobilidade geral",grupo:"Recuperação",equipamento:"Nenhum",nivel:"iniciante",series:"5 a 10 min",reps:"leve",evitar:"nenhuma",passos:["Faça movimentos lentos e controlados.","Evite qualquer posição dolorosa.","Priorize postura e respiração.","Finalize se sentir desconforto."]},
-    {nome:"Alongamento leve de corpo todo",grupo:"Recuperação",equipamento:"Nenhum",nivel:"iniciante",series:"5 a 8 min",reps:"leve",evitar:"nenhuma",passos:["Alongue sem forçar.","Segure pouco tempo.","Respire normalmente.","Não use alongamento para mascarar dor forte."]}
-  ];
-  function n(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();}
-  function tem(txt,arr){txt=n(txt);return arr.some(t=>txt.indexOf(n(t))>=0);}
-  function tipoNome(ex){const x=n(ex&&ex.nome); if(!x)return null; if(tem(x,["caminhada","corrida","bicicleta","esteira"]))return"cardio"; if(tem(x,["respiracao","mobilidade","alongamento","recuperacao","liberacao","soltura"]))return"descanso"; if(tem(x,["supino","flexao","peito","peitoral","crucifixo","voador","triceps","frances","testa","mergulho","coice","desenvolvimento","shoulder","elevacao lateral","elevacao frontal","pike push"]))return"A"; if(tem(x,["face pull","puxada","pulldown","remada","barra fixa","pull up","chin up","serrote","pullover","crucifixo inverso","voador inverso","rosca","biceps","martelo","costas","dorsal","ombro posterior","posterior de ombro","trapezio"]))return"B"; if(tem(x,["agach","leg press","afundo","passada","avanco","bulgar","stiff","terra","extensora","flexora","panturrilha","gemeos","gluteo","quadriceps","posterior de coxa","perna","adutor","abdutor","abdominal","abdomen","prancha","core","mountain climber","dead bug","elevacao pelvica","ponte","hip thrust"]))return"C"; return null;}
-  function tipoGrupo(ex){const g=n(ex&&ex.grupo); if(tem(g,["recuperacao","mobilidade","alongamento"]))return"descanso"; if(tem(g,["cardio"]))return"cardio"; if(tem(g,["peito","ombros","triceps"]))return"A"; if(tem(g,["costas","biceps","ombro posterior"]))return"B"; if(tem(g,["pernas","quadriceps","gluteos","panturrilha","posterior de coxa","abdomen","adutor","abdutor"]))return"C"; return"descanso";}
-  function tipo(ex){return tipoNome(ex)||tipoGrupo(ex);}
-  function grupo(ex){const t=tipo(ex),x=n(ex&&ex.nome); if(t==="A"){if(tem(x,["triceps","frances","testa","mergulho","coice"]))return"Tríceps";if(tem(x,["desenvolvimento","shoulder","elevacao","ombro","pike"]))return"Ombros";return"Peito";} if(t==="B"){if(tem(x,["rosca","biceps","martelo"]))return"Bíceps";if(tem(x,["face pull","posterior","crucifixo inverso","voador inverso"]))return"Ombro posterior";return"Costas";} if(t==="C"){if(tem(x,["abdom","prancha","core","dead bug","mountain"]))return"Abdômen";if(tem(x,["glute","ponte","pelvica","hip thrust"]))return"Glúteos";if(tem(x,["panturrilha","gemeos"]))return"Panturrilha";if(tem(x,["stiff","flexora","posterior","terra"]))return"Posterior de coxa";return"Pernas";} if(t==="cardio")return"Cardio"; return"Recuperação";}
-  function normEx(ex){const c=Object.assign({},ex||{}); c.tipoTreinoOficial=tipo(c); c.grupo=grupo(c); if(!c.series)c.series=c.tipoTreinoOficial==="descanso"?"5 a 10 min":"2 a 3 séries"; if(!c.reps)c.reps=c.tipoTreinoOficial==="descanso"?"leve":"8 a 12 reps"; if(!c.passos||!c.passos.length)c.passos=["Execute com controle.","Respire sem prender o ar.","Mantenha técnica segura.","Pare se sentir dor."]; return c;}
-  function dores(){const campo=document.getElementById("dor"); if(!campo)return["nenhuma"]; if(campo.querySelectorAll){const vals=Array.prototype.slice.call(campo.querySelectorAll('input[name="dorCheck"]:checked')).map(c=>c.value); const reais=vals.filter(v=>v&&v!=="nenhuma"); return reais.length?reais:["nenhuma"];} return campo.value&&campo.value!=="nenhuma"?[campo.value]:["nenhuma"];}
-  function dlist(ds){return(ds||["nenhuma"]).filter(d=>d&&d!=="nenhuma").map(n);}
-  function tipoBloqueado(t,ds){const d=dlist(ds); if(!d.length)return false; if(t==="C"&&d.some(x=>["pernas","joelho","lombar","coluna"].includes(x)))return true; if(t==="A"&&d.some(x=>["bracos","ombro"].includes(x)))return true; if(t==="B"&&d.some(x=>["bracos","ombro","lombar","coluna"].includes(x)))return true; return false;}
-  function exBloqueado(ex,ds){const d=dlist(ds),t=tipo(ex),ev=n(ex&&ex.evitar); if(!d.length)return false; if(tipoBloqueado(t,d))return true; return d.some(x=>x===ev);}
-  function configDor(){const campo=document.getElementById("dor"); if(!campo||!campo.querySelectorAll)return; const checks=Array.from(campo.querySelectorAll('input[name="dorCheck"]')); const nenhuma=campo.querySelector('input[name="dorCheck"][value="nenhuma"]'); if(!checks.length||!nenhuma)return; const reais=checks.filter(c=>c.value!=="nenhuma"); function sync(alvo){if(alvo&&alvo.value==="nenhuma"&&alvo.checked)reais.forEach(c=>c.checked=false); if(alvo&&alvo.value!=="nenhuma"&&alvo.checked)nenhuma.checked=false; if(reais.some(c=>c.checked))nenhuma.checked=false; if(!reais.some(c=>c.checked)&&!nenhuma.checked)nenhuma.checked=true;} if(!campo.dataset.metatreinoDor143){campo.addEventListener("change",ev=>{if(ev.target&&ev.target.name==="dorCheck")sync(ev.target);},true); campo.dataset.metatreinoDor143="1";} sync(null);}
-  function todos(){const fonte=(typeof bibliotecaExercicios!=="undefined"?bibliotecaExercicios:window.bibliotecaExercicios)||{}; const vistos={},lista=[]; Object.keys(fonte).forEach(k=>(fonte[k]||[]).forEach(ex=>{const c=normEx(ex); if(c.tipoTreinoOficial==="cardio")return; const id=n(c.nome)+"::"+c.tipoTreinoOficial; if(!vistos[id]){vistos[id]=1;lista.push(c);}})); return lista;}
-  function alvo(tempo,energia){let v=tempo==="rapido"?4:(tempo==="longo"?7:5); if(energia==="cansado")v=Math.max(3,v-1); if(energia==="mal")v=Math.max(2,v-2); return v;}
-  function seguras(ds){return["A","B","C"].filter(t=>!tipoBloqueado(t,ds));}
-  function escolher(divisao,energia,ds){const safe=seguras(ds),real=dlist(ds); const manual=["A","B","C","descanso"].includes(divisao)?divisao:null; if(manual==="descanso")return"descanso"; if(manual&&!tipoBloqueado(manual,ds))return manual; if(manual&&tipoBloqueado(manual,ds))return safe[0]||"descanso"; if(energia==="mal"&&real.length>=2)return"descanso"; if(real.some(x=>["pernas","joelho","lombar","coluna"].includes(x)))return safe.includes("A")?"A":(safe[0]||"descanso"); if(real.some(x=>["ombro","bracos"].includes(x)))return safe.includes("C")?"C":(safe[0]||"descanso"); if(energia==="mal")return"descanso"; try{const u=typeof obterUltimoTreinoLocal==="function"?obterUltimoTreinoLocal():null; const l=u&&(u.letra==="Descanso"?"descanso":u.letra); const ord=l==="A"?["B","C","A"]:(l==="B"?["C","A","B"]:["A","B","C"]); return ord.filter(t=>safe.includes(t))[0]||"A";}catch(e){return safe[0]||"descanso";}}
-  function montar(t,ds,tempo,energia){if(t==="descanso")return REC.map(normEx).slice(0,alvo(tempo,energia)); const vistos={},max=alvo(tempo,energia); let lista=todos().filter(ex=>tipo(ex)===t&&!exBloqueado(ex,ds)).filter(ex=>typeof nivelPermitido!=="function"||nivelPermitido(ex)).filter(ex=>typeof equipamentoCompativelComPerfil!=="function"||equipamentoCompativelComPerfil(ex)).map(ex=>typeof ajustarExercicioPorMeta==="function"?ajustarExercicioPorMeta(ex):ex).map(normEx).filter(ex=>tipo(ex)===t&&!exBloqueado(ex,ds)); if(typeof ajustarTreinoPorSexoIdadePesoCheckin==="function")lista=ajustarTreinoPorSexoIdadePesoCheckin(lista,energia,ds,tempo).map(normEx).filter(ex=>tipo(ex)===t&&!exBloqueado(ex,ds)); lista=lista.filter(ex=>{const id=n(ex.nome); if(vistos[id])return false; vistos[id]=1; return true;}).slice(0,max); return lista.length<2?REC.map(normEx).slice(0,Math.max(2,Math.min(3,max))):lista;}
-  function esc(v){return typeof limparTextoSeguro==="function"?limparTextoSeguro(v):String(v||"").replace(/[&<>'\"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'\"':"&quot;"}[ch]));}
-  function resumo(t,tempo,cardio,ds,energia){const r=document.getElementById("resumoDiaTreino"), p=document.getElementById("resumoTreino"), m=document.getElementById("mensagemInteligenteTreino"); const card=cardio&&cardio!=="nao"?cardio:"opcional / não incluído"; const dur=tempo==="rapido"?"aproximadamente 30 min":(tempo==="longo"?"acima de 1 hora":"cerca de 1 hora"); if(r){r.classList.remove("hidden"); r.innerHTML="<strong>Hoje você vai fazer:</strong><br>✔ "+esc(DIVS[t]||DIVS.descanso)+"<br>✔ Cardio: "+esc(card)+"<br>✔ Duração estimada: "+esc(dur);} if(p)p.innerText=""; if(m){m.classList.remove("hidden"); const real=dlist(ds); m.innerHTML=t==="descanso"?"Hoje o app priorizou recuperação leve. Caminhada, corrida ou bicicleta devem ser registradas na aba Cardio.":(real.length?"Treino ajustado para evitar a região marcada com dor. Faça apenas sem desconforto.":(energia==="cansado"?"Treino com volume reduzido por cansaço.":""));}}
-  window.gerarTreino=function gerarTreino144(){if(typeof marcarCheckinRespondido==="function")marcarCheckinRespondido(); configDor(); try{if(typeof limparTreinoAtualLocal==="function")limparTreinoAtualLocal();}catch(e){} const energia=document.getElementById("energia")?document.getElementById("energia").value:"bem"; const tempo=document.getElementById("tempo")?document.getElementById("tempo").value:"normal"; const divisao=document.getElementById("divisaoTreino")?document.getElementById("divisaoTreino").value:"inteligente"; const cardio=document.getElementById("cardioNoTreino")?document.getElementById("cardioNoTreino").value:"nao"; const ds=dores(); let t=escolher(divisao,energia,ds); let lista=montar(t,ds,tempo,energia); if(!lista.length||lista[0].tipoTreinoOficial==="descanso")t="descanso"; treinoAtual=(t==="descanso"?REC.map(normEx).slice(0,alvo(tempo,energia)):lista).map(normEx).filter(ex=>t==="descanso"?ex.tipoTreinoOficial==="descanso":tipo(ex)===t); treinoAtual.letra=t==="descanso"?"Descanso":t; exerciciosConcluidos=new Array(treinoAtual.length).fill(false); feedbackTreinoFinalAtual=""; const res=document.getElementById("resultadoTreino"),reg=document.getElementById("registroEvolucao"); if(res)res.classList.remove("hidden"); if(reg)reg.classList.remove("hidden"); resumo(t,tempo,cardio,ds,energia); window.mostrarTreinoNaTela();};
-  window.mostrarTreinoNaTela=function mostrarTreinoNaTela144(){let t=treinoAtual&&treinoAtual.letra==="Descanso"?"descanso":(treinoAtual&&treinoAtual.letra?treinoAtual.letra:"descanso"); if(!["A","B","C","descanso"].includes(t))t="descanso"; treinoAtual=(treinoAtual||[]).map(normEx).filter(ex=>t==="descanso"?ex.tipoTreinoOficial==="descanso":tipo(ex)===t); if(!treinoAtual.length){t="descanso";treinoAtual=REC.map(normEx);} treinoAtual.letra=t==="descanso"?"Descanso":t; if(!exerciciosConcluidos||exerciciosConcluidos.length!==treinoAtual.length)exerciciosConcluidos=new Array(treinoAtual.length).fill(false); const lista=document.getElementById("listaExercicios"),prog=document.getElementById("progressoExercicios"); if(!lista)return; const fb=document.getElementById("feedbackTreinoFinal"),mf=document.getElementById("mensagemFeedbackTreino"); if(fb)fb.classList.add("hidden"); if(mf)mf.classList.add("hidden"); lista.innerHTML=""; try{sugestoesCarga=typeof buscarSugestoesDeCarga==="function"?buscarSugestoesDeCarga(treinoAtual):{};}catch(e){sugestoesCarga={};} treinoAtual.forEach(function(exercicio,index){const div=document.createElement("div"); div.className="exercise"; div.id="cardExercicio"+index; if(exerciciosConcluidos[index])div.classList.add("concluido"); const passos=(exercicio.passos||[]).map(p=>"<li>"+esc(p)+"</li>").join(""); const marcado=exerciciosConcluidos[index]?"checked":""; const rec=exercicio.tipoTreinoOficial==="descanso"; div.innerHTML="<strong>"+esc(exercicio.nome)+"</strong><span>"+esc(exercicio.series)+" | "+esc(exercicio.reps)+"</span><br><span class='tag'>Grupo: "+esc(exercicio.grupo)+"</span> <span class='tag'>Equipamento: "+esc(typeof nomeEquipamentoParaExibir==="function"?nomeEquipamentoParaExibir(exercicio.equipamento):exercicio.equipamento)+"</span>"+(exercicio.observacao?"<div class='alerta alerta-aviso'>"+esc(exercicio.observacao)+"</div>":"")+(rec?"<div class='alerta'>Recuperação leve: não precisa registrar carga/reps. Para caminhada, corrida ou bicicleta, use a aba Cardio.</div>":"<div class='alerta'>"+esc(typeof obterTextoSugestaoCarga==="function"?obterTextoSugestaoCarga(exercicio.nome):"Registre este exercício no campo final para o app aprender.")+"</div><div class='alerta alerta-aviso'>"+esc(typeof obterDicaPersonalizadaExercicio==="function"?obterDicaPersonalizadaExercicio(exercicio):"Dica: mantenha técnica e controle.")+"</div>")+"<h4>Como fazer:</h4><ol>"+passos+"</ol><div class='aviso-video'>Use o vídeo apenas como apoio. Em caso de dor, pare o exercício.</div><button type='button' class='botao-secundario' onclick='abrirVideoExercicio("+JSON.stringify(exercicio.nome)+")'>Ver execução</button><label class='check-exercicio'><input type='checkbox' "+marcado+" onchange='marcarExercicioConcluido("+index+", this.checked)'>Exercício concluído</label><div class='acoes-exercicio-grid'><button type='button' class='botao-secundario' onclick='substituirExercicio("+index+")'>Não tenho esse equipamento / substituir</button><button type='button' class='botao-pular' onclick='pularExercicio("+index+")'>Pular este exercício</button></div>"; lista.appendChild(div);}); const lem=document.createElement("div"); lem.className="alerta"; lem.innerHTML="<strong>Lembrete de segurança:</strong> beba água, respeite seus limites e evite treinar forte em jejum, com dor, tontura ou mal-estar."; lista.appendChild(lem); if(prog)prog.classList.remove("hidden"); if(typeof atualizarProgressoExercicios==="function")atualizarProgressoExercicios();};
-  window.substituirExercicio=function substituirExercicio144(index){const atual=treinoAtual&&treinoAtual[index]; if(!atual)return; const t=treinoAtual.letra==="Descanso"?"descanso":treinoAtual.letra; const ds=dores(); const atuais=(treinoAtual||[]).map((e,i)=>i===index?"":n(e&&e.nome)); const op=(t==="descanso"?REC.map(normEx):todos()).filter(ex=>t==="descanso"?ex.tipoTreinoOficial==="descanso":tipo(ex)===t).filter(ex=>n(ex.nome)!==n(atual.nome)).filter(ex=>atuais.indexOf(n(ex.nome))<0).filter(ex=>!exBloqueado(ex,ds)).filter(ex=>typeof equipamentoCompativelComPerfil!=="function"||equipamentoCompativelComPerfil(ex)).slice(0,8); if(!op.length){alert("Ainda não há substituições compatíveis com esta divisão e com as dores marcadas. Você pode pular este exercício.");return;} let txt="Escolha uma substituição para "+atual.nome+":\n\n"; op.forEach((o,i)=>{txt+=(i+1)+" - "+o.nome+" ("+(o.equipamento||"equipamento compatível")+")\n";}); const num=Number(prompt(txt+"\nDigite o número da opção:")); if(num<1||num>op.length){alert("Opção inválida.");return;} treinoAtual[index]=normEx(op[num-1]); exerciciosConcluidos[index]=false; try{if(typeof salvarTreinoAtualLocal==="function")salvarTreinoAtualLocal();}catch(e){} window.mostrarTreinoNaTela();};
-  const carregarAnt=window.carregarTreinoAtualLocal; window.carregarTreinoAtualLocal=function carregarTreinoAtualLocal144(){const ok=typeof carregarAnt==="function"?carregarAnt():false; if(!ok||!treinoAtual||!treinoAtual.length)return ok; let t=treinoAtual.letra==="Descanso"?"descanso":treinoAtual.letra; if(!["A","B","C","descanso"].includes(t))t=tipo(treinoAtual[0])||"descanso"; treinoAtual=treinoAtual.map(normEx).filter(ex=>t==="descanso"?ex.tipoTreinoOficial==="descanso":tipo(ex)===t); if(!treinoAtual.length){treinoAtual=REC.map(normEx);t="descanso";} treinoAtual.letra=t==="descanso"?"Descanso":t; resumo(t,document.getElementById("tempo")?document.getElementById("tempo").value:"normal",document.getElementById("cardioNoTreino")?document.getElementById("cardioNoTreino").value:"nao",dores(),document.getElementById("energia")?document.getElementById("energia").value:"bem"); window.mostrarTreinoNaTela(); return true;};
-  window.configurarCheckboxesDeDor=configDor; window.obterDoresSelecionadas=dores; window.__metatreino144={build:BUILD,tipoOficial:tipo,grupoOficial:grupo,tipoBloqueadoPorDor:tipoBloqueado,escolherTipo:escolher,montarLista:montar,exercicioBloqueadoPorDor:exBloqueado}; document.addEventListener("DOMContentLoaded",configDor); if(document.readyState!=="loading")configDor();
 })();
