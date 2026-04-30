@@ -1,74 +1,445 @@
-<script>
-function salvarPerfil(){
-  let nome = document.getElementById("nome").value;
-  let idade = document.getElementById("idade").value;
-  let peso = parseFloat(document.getElementById("peso").value);
-  let altura = parseFloat(document.getElementById("altura").value);
-  let objetivo = document.getElementById("objetivo").value;
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaTreino</title>
+  <meta name="app-version" content="1.4.2">
+  <meta name="theme-color" content="#3b82f6">
+  <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-512.png.png">
+<link rel="apple-touch-icon" href="icon-512.png.png">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-  if(!peso || !altura){
-    alert("Preencha peso e altura");
-    return;
-  }
+</head>
+<body>
 
-  let imc = peso/(altura*altura);
+  <div class="container">
+    <div class="app-hero">
+      <div>
+        <span class="app-badge">MetaTreino App</span>
+        <h1><span style="color:#22c55e;">Meta</span>Treino</h1>
+        <p>Treinos inteligentes, acompanhamento real e evolução constante. Tudo no seu celular.</p>
+      </div>
+    </div>
 
-  let classificacao = imc < 18.5 ? "Abaixo do peso" :
-                      imc < 25 ? "Normal" :
-                      imc < 30 ? "Sobrepeso" : "Obesidade";
+    <section id="paginaPerfil">
+      <div class="card">
+        <h2>🔐 Login</h2>
+        <p class="small">Entre com sua conta Google. O app será liberado apenas para e-mails autorizados pelo treinador.</p>
+        <button id="botaoLoginGoogle" type="button" class="btn-login-google" onclick="loginGoogle()">Entrar com Google</button>
+        <div id="usuarioLogado" class="alerta">Verificando login...</div>
+        <div id="mensagemAcesso" class="alerta hidden"></div>
+        <div id="linkVendaLogin" class="link-venda-login">Dúvidas ou para adquirir o plano:<br><strong>celoborgesms@gmail.com</strong></div>
+      </div>
 
-  localStorage.setItem("perfil", JSON.stringify({
-    nome, idade, peso, altura, objetivo, imc, classificacao
-  }));
+      <div id="cardDadosPessoa" class="card hidden">
+        <h2>⚙️ Dados da pessoa</h2>
+        <p class="small">Preencha seus dados para personalizar o treino.</p>
 
-  document.getElementById("resultado").innerText =
-    "IMC: " + imc.toFixed(2) + " - " + classificacao;
-}
+        <label for="nome">Nome</label>
+        <input id="nome" type="text" placeholder="Ex: Usuário">
 
-function salvarCheckin(){
-  let energia = document.getElementById("energia").value;
-  let dor = document.getElementById("dor").value;
+        <label for="sexo">Sexo</label>
+        <select id="sexo">
+          <option value="">Escolher</option>
+          <option value="masculino">Masculino</option>
+          <option value="feminino">Feminino</option>
+          <option value="nao_responder">Prefiro não responder</option>
+        </select>
 
-  localStorage.setItem("checkin", JSON.stringify({ energia, dor }));
-  alert("Check-in salvo!");
-}
+        <label for="dataNascimento">Data de nascimento</label>
+        <input id="dataNascimento" type="date">
 
-function gerarTreino(){
-  let perfil = JSON.parse(localStorage.getItem("perfil"));
-  let check = JSON.parse(localStorage.getItem("checkin"));
+        <label for="peso">Peso atual (kg)</label>
+        <input id="peso" type="number" min="1" max="700" placeholder="Ex: 80">
 
-  if(!perfil || !check){
-    alert("Preencha perfil e check-in");
-    return;
-  }
+        <label for="altura">Altura atual (cm)</label>
+        <input id="altura" type="number" placeholder="Ex: 175">
 
-  let treinoBase = {
-    hipertrofia: ["Supino", "Agachamento", "Remada"],
-    emagrecimento: ["Burpee", "Corrida", "Polichinelo"],
-    condicionamento: ["Cordas", "Bike", "Flexão"]
-  };
+        <label for="metaPrincipal">Principal meta</label>
+        <select id="metaPrincipal">
+          <option value="massa">Ganhar massa muscular</option>
+          <option value="perder_peso">Perder peso</option>
+          <option value="definicao">Ficar mais magro e definido</option>
+          <option value="forca">Levantar mais peso / ganhar força</option>
+        </select>
 
-  let treino = [...treinoBase[perfil.objetivo]];
+        <label for="rotinaAtual">Rotina atual de treino</label>
+        <select id="rotinaAtual">
+          <option value="nunca">Nunca treinei</option>
+          <option value="dificuldade">Já treinei, mas tive dificuldades para manter</option>
+          <option value="voltando">Estou voltando a treinar</option>
+          <option value="regular">Já treino regularmente</option>
+        </select>
 
-  if(check.energia === "baixa"){
-    treino = treino.slice(0,2);
-  }
+        <label for="tempoExperiencia">Tempo de experiência</label>
+        <select id="tempoExperiencia">
+          <option value="menos_1">Menos de 1 ano</option>
+          <option value="1_2">De 1 a 2 anos</option>
+          <option value="2_4">De 2 a 4 anos</option>
+          <option value="4_mais">4 anos ou mais</option>
+        </select>
 
-  if(check.dor === "perna"){
-    treino = treino.filter(e => e !== "Agachamento");
-  }
+        <label for="localTreino">Onde costuma treinar?</label>
+        <select id="localTreino">
+          <option value="sem_equipamento">Sem Equipamento — treinos em casa apenas com peso corporal</option>
+          <option value="academia_basica">Academia básica — equipamentos simples como barras, halteres e banco</option>
+          <option value="academia_avancada">Academia avançada — academia completa com máquinas, cabos, polias, barras e halteres</option>
+        </select>
 
-  if(check.dor === "braco"){
-    treino = treino.filter(e => e !== "Supino");
-  }
+        <button type="button" onclick="calcularPerfil()">Calcular e salvar perfil</button>
 
-  let lista = document.getElementById("treino");
-  lista.innerHTML = "";
+        <div id="resultadoPerfil" class="alerta hidden"></div>
+        <div id="mensagemPeso" class="alerta hidden"></div>
 
-  treino.forEach(e => {
-    let li = document.createElement("li");
-    li.innerText = e;
-    lista.appendChild(li);
-  });
-}
-</script>
+        <button id="botaoIrTreino" type="button" class="hidden botao-principal" onclick="irParaCheckin()">➡️ Continuar para check-in</button>
+        <button type="button" class="botao-secundario" onclick="apagarPerfilSalvo()">Apagar perfil salvo</button>
+      </div>
+
+      <div id="cardSairConta" class="card logout-final hidden">
+        <h2>🚪 Conta</h2>
+        <p class="small">Use esta opção apenas se quiser sair da sua conta neste aparelho.</p>
+        <button id="botaoLogoutGoogle" type="button" class="botao-secundario btn-logout hidden" onclick="logout()">Sair da conta</button>
+      </div>
+    </section>
+
+    <section id="paginaTreino" class="hidden">
+      <div class="card">
+        <h2 id="tituloTreino">💪 Treino do dia</h2>
+        <p id="resumoPerfilTreino" class="small"></p>
+        <button type="button" class="botao-secundario" onclick="voltarParaPerfil()">Voltar para dados da pessoa</button>
+      </div>
+
+      <div class="card">
+        <h2>💪 Treino inteligente</h2>
+        <p class="small">O treino do dia será calculado com base no seu perfil e no check-in diário. Se hoje você não quiser treinar força, pode pular direto para o cardio.</p>
+        <button type="button" class="botao-principal" onclick="irParaCheckin()">✅ Fazer check-in / recalcular treino</button>
+        <button type="button" class="botao-secundario" onclick="pularTreinoEIrParaCardio()">⏭️ Pular treino e ir para Cardio</button>
+      </div>
+
+      <div id="resultadoTreino" class="card hidden">
+        <h2>💪 Treino recomendado</h2>
+        <div id="resumoDiaTreino" class="resumo-dia-box hidden"></div>
+        <div id="mensagemInteligenteTreino" class="mensagem-inteligente hidden"></div>
+        <p id="resumoTreino" class="small"></p>
+        <div id="listaExercicios"></div>
+        <div id="progressoExercicios" class="progresso-box hidden"></div>
+        <div id="feedbackTreinoFinal" class="feedback-treino hidden">
+          <strong>Como foi o treino?</strong>
+          <p class="small">Esse feedback ajuda o app a ajustar melhor sua evolução nas próximas versões.</p>
+          <div class="feedback-grid">
+            <button type="button" class="botao-secundario" onclick="salvarFeedbackTreinoFinal('facil')">Fácil</button>
+            <button type="button" class="botao-secundario" onclick="salvarFeedbackTreinoFinal('medio')">Médio</button>
+            <button type="button" class="botao-secundario" onclick="salvarFeedbackTreinoFinal('dificil')">Difícil</button>
+          </div>
+          <div id="mensagemFeedbackTreino" class="alerta hidden"></div>
+        </div>
+      </div>
+
+      <div id="registroEvolucao" class="card hidden">
+        <h2>📈 Registrar evolução</h2>
+        <label for="exercicioRegistro">Exercício principal</label>
+        <input id="exercicioRegistro" type="text" placeholder="Ex: Supino reto">
+        <label for="carga">Carga usada (kg)</label>
+        <input id="carga" type="number" min="0" placeholder="Ex: 0 ou 40">
+        <label for="reps">Repetições feitas</label>
+        <input id="reps" type="number" placeholder="Ex: 10">
+        <label for="sensacao">Como foi?</label>
+        <select id="sensacao">
+          <option value="facil">Fácil</option>
+          <option value="normal">Normal</option>
+          <option value="dificil">Difícil</option>
+        </select>
+        <label for="observacaoTreino">Observação do treino</label>
+        <textarea id="observacaoTreino" placeholder="Ex: Treino bom, senti ombro leve, fiz menos descanso..."></textarea>
+        <button type="button" onclick="calcularEvolucao()">Calcular próxima carga</button>
+        <p id="resultadoEvolucao"></p>
+        <button type="button" onclick="salvarTreinoFeito()">Salvar treino feito</button>
+      </div>
+
+      <div id="listaHistorico" class="hidden"></div>
+    </section>
+
+    <section id="paginaCheckin" class="hidden">
+      <div class="card">
+        <h2>✅ Check-in diário</h2>
+        <p class="small">Responda como você está hoje. O app usa essas respostas junto com ao último cardio registrado para adaptar o treino do dia.</p>
+      </div>
+
+      <div class="card">
+        <h2>✅ Como você está hoje?</h2>
+
+        <label for="energia">Energia do dia</label>
+        <select id="energia">
+          <option value="bem">Estou bem</option>
+          <option value="cansado">Estou cansado</option>
+          <option value="mal">Estou mal</option>
+        </select>
+
+        <label>Tem alguma dor? <span class="small">(pode marcar mais de uma)</span></label>
+        <div id="dor" class="dor-checkboxes" role="group" aria-label="Selecione uma ou mais dores">
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="nenhuma" checked> <span>Nenhuma dor</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="pernas"> <span>Pernas cansadas/doloridas</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="bracos"> <span>Braços cansados/doloridos</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="coluna"> <span>Coluna/costas</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="ombro"> <span>Ombro</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="joelho"> <span>Joelho</span></label>
+          <label class="dor-opcao"><input type="checkbox" name="dorCheck" value="lombar"> <span>Lombar</span></label>
+        </div>
+        <p class="small">Marque todas as opções que se aplicam. Ao marcar alguma dor, o app desconsidera automaticamente “Nenhuma dor”.</p>
+
+        <label for="tempo">Tempo disponível</label>
+        <select id="tempo">
+          <option value="rapido">Treino rápido — até 30 minutos</option>
+          <option value="normal">Treino normal — cerca de 1 hora</option>
+          <option value="longo">Treino longo — acima de 1 hora</option>
+        </select>
+
+        <label for="cardioNoTreino">Deseja incluir cardio no treino de hoje?</label>
+        <select id="cardioNoTreino">
+          <option value="nao">Não incluir cardio</option>
+          <option value="esteira">Esteira</option>
+          <option value="bicicleta">Bicicleta</option>
+        </select>
+        <p class="small">Se escolher Esteira ou Bicicleta em treino normal/longo e seu local tiver estrutura, o app reduz alguns exercícios para encaixar o cardio sem deixar o treino pesado.</p>
+
+        <label for="divisaoTreino">Divisão do treino</label>
+        <select id="divisaoTreino">
+          <option value="inteligente">Recomendação inteligente</option>
+          <option value="A">Empurrar</option>
+          <option value="B">Puxar</option>
+          <option value="C">Inferiores e abdômen</option>
+          <option value="descanso">Recuperação leve</option>
+        </select>
+
+        <button type="button" class="botao-principal" onclick="gerarTreino()">💪 Gerar / atualizar treino do dia</button>
+        <button type="button" class="botao-secundario" onclick="irParaTreino()">Voltar para o treino</button>
+      </div>
+
+    </section>
+
+    <section id="paginaCardio" class="hidden">
+      <div id="avisoCardioSemCheckin" class="alerta alerta-aviso hidden">
+        ⚠️ Para uma sugestão mais inteligente, responda o check-in antes. Mesmo assim, você pode usar o Cardio normalmente.
+      </div>
+
+      <div class="card">
+        <h2>🏃 Cardio inteligente</h2>
+        <p class="small">Use esta área para montar uma sugestão de corrida, caminhada ou bicicleta conforme seu nível, objetivo e evolução. O app também usa essas informações para adaptar melhor o treino de força.</p>
+
+        <label for="tipoAtividadeCardio">Tipo de atividade</label>
+        <select id="tipoAtividadeCardio" onchange="atualizarTextoTipoCardio()">
+          <option value="corrida">Corrida</option>
+          <option value="caminhada">Caminhada</option>
+          <option value="bicicleta">Bicicleta</option>
+        </select>
+
+        <label for="nivelCardio">Seu nível no cardio</label>
+        <select id="nivelCardio">
+          <option value="iniciante">Estou começando agora</option>
+          <option value="voltando">Estou voltando a correr</option>
+          <option value="regular">Já corro regularmente</option>
+          <option value="avancado">Tenho experiência / já participei de provas</option>
+        </select>
+
+        <label for="objetivoCardio">Objetivo no cardio</label>
+        <select id="objetivoCardio">
+          <option value="comecar">Começar com segurança</option>
+          <option value="3k">Completar 3 km</option>
+          <option value="5k">Completar 5 km</option>
+          <option value="10k">Correr 10 km</option>
+          <option value="meia">Evoluir para meia maratona</option>
+          <option value="pace">Melhorar ritmo / pace</option>
+        </select>
+
+        <label for="condicaoCardio">Condição atual</label>
+        <select id="condicaoCardio">
+          <option value="caminho">Consigo caminhar bem, mas ainda corro pouco</option>
+          <option value="intercalo">Consigo intercalar caminhada e trote/corrida</option>
+          <option value="corro_pouco">Consigo correr poucos km</option>
+          <option value="corro_bem">Já corro alguns km com segurança</option>
+        </select>
+
+        <label class="check-exercicio">
+          <input id="temDesafioCardio" type="checkbox" onchange="alternarDesafioCardio()">
+          Tenho um desafio/prova marcada
+        </label>
+
+        <label for="distanciaDesafioCardio">Distância do desafio</label>
+        <select id="distanciaDesafioCardio" disabled>
+          <option value="3k">3 km</option>
+          <option value="5k">5 km</option>
+          <option value="10k">10 km</option>
+          <option value="meia">Meia maratona</option>
+          <option value="outro">Outro objetivo</option>
+        </select>
+
+        <label for="dataDesafioCardio">Data do desafio</label>
+        <input id="dataDesafioCardio" type="date" disabled>
+
+        <button type="button" onclick="gerarTreinoCardio()">Gerar sugestão de cardio</button>
+        <div id="sugestaoCardio" class="alerta hidden"></div>
+      </div>
+
+      <div class="card">
+        <h2>📈 Registrar evolução do cardio</h2>
+        <p class="small">Depois da atividade, registre como foi. Isso ajuda o app a entender sua evolução e adaptar melhor os próximos treinos.</p>
+
+        <label for="distanciaCardio">Distância feita (km)</label>
+        <input id="distanciaCardio" type="number" min="0" step="0.1" placeholder="Ex: 5">
+
+        <label for="tempoCardio">Tempo total (minutos)</label>
+        <input id="tempoCardio" type="number" min="0" step="1" placeholder="Ex: 35">
+
+        <label for="intensidadeCardio">Intensidade</label>
+        <select id="intensidadeCardio">
+          <option value="leve">Leve</option>
+          <option value="moderada">Moderada</option>
+          <option value="forte">Forte</option>
+        </select>
+
+        <label for="sensacaoCardio">Como você terminou?</label>
+        <select id="sensacaoCardio">
+          <option value="bem">Bem</option>
+          <option value="cansado">Cansado</option>
+          <option value="pesado">Muito pesado</option>
+        </select>
+
+        <label for="observacaoCardio">Observação</label>
+        <textarea id="observacaoCardio" placeholder="Ex: caminhada forte, corrida leve, subi ladeira, senti panturrilha..."></textarea>
+
+        <button type="button" onclick="salvarCardio()">Salvar evolução do cardio</button>
+        <div id="mensagemCardio" class="alerta hidden"></div>
+      </div>
+
+      <div id="listaCardios" class="hidden"></div>
+    </section>
+
+    <section id="paginaHistoricoCompleto" class="hidden">
+      <div class="card">
+        <h2>📊 Histórico completo</h2>
+        <p class="small">Veja treinos e cardios dos últimos 90 dias. Use as datas abaixo como um calendário rápido para abrir o que foi feito em cada dia.</p>
+        <button type="button" class="botao-secundario" onclick="irParaTreino()">Voltar para o treino</button>
+        <button type="button" class="botao-secundario" onclick="mostrarHistoricoCompleto()">Atualizar histórico completo</button>
+        <div id="listaHistoricoCompleto"></div>
+      </div>
+    </section>
+
+
+    <section id="paginaPainelTreinador" class="hidden">
+      <div class="card">
+        <h2>🧑‍🏫 Painel do Treinador</h2>
+        <p class="small">Use esta área para liberar, bloquear ou excluir alunos pelo e-mail cadastrado no Firebase.</p>
+
+        <label for="emailAlunoPainel">E-mail do aluno</label>
+        <input id="emailAlunoPainel" type="email" placeholder="Ex: aluno@gmail.com">
+
+        <label for="nomeAlunoPainel">Nome do aluno</label>
+        <input id="nomeAlunoPainel" type="text" placeholder="Ex: João Silva">
+
+        <label for="planoAlunoPainel">Plano</label>
+        <select id="planoAlunoPainel" onchange="ajustarValorPlanoPainel()">
+          <option value="mensal">Mensal</option>
+          <option value="trimestral">Trimestral</option>
+          <option value="semestral">Semestral</option>
+          <option value="anual">Anual</option>
+          <option value="vitalicio">Vitalício / VIP</option>
+          <option value="teste">Teste grátis 24h</option>
+        </select>
+
+        <label for="valorAlunoPainel">Valor mensal (R$)</label>
+        <input id="valorAlunoPainel" type="number" min="0" step="0.01" placeholder="Ex: 29.90">
+        <p class="small">Para teste grátis, deixe 0. Use este valor para acompanhar o faturamento mensal estimado no painel.</p>
+
+        <button type="button" onclick="liberarAlunoPainel()">Liberar acesso</button>
+        <button type="button" class="botao-secundario" onclick="liberarTestePainel()">Liberar teste grátis 24h</button>
+        <button type="button" class="botao-secundario" onclick="bloquearAlunoPainel()">Bloquear acesso</button>
+        <button type="button" class="botao-secundario" onclick="carregarUsuariosAutorizados()">Atualizar lista</button>
+        <div id="mensagemPainelTreinador" class="alerta hidden"></div>
+        <div id="dashboardTreinador" class="dashboard-grid"></div>
+        <div id="painelSaasTreinador" class="grafico-card"></div>
+        <div id="rankingAlunosTreinador" class="grafico-card"></div>
+      </div>
+
+      <div class="card">
+        <h2>👥 Usuários autorizados</h2>
+        <p class="small">Lista carregada da coleção <strong>usuariosAutorizados</strong>.</p>
+        <div id="listaUsuariosAutorizados"></div>
+      </div>
+    </section>
+
+    <section id="paginaNovidades" class="hidden">
+      <div class="card">
+        <h2>✨ Novidades</h2>
+        <p class="small">Acompanhe aqui as atualizações feitas no aplicativo.</p>
+        <div class="alerta">
+          <strong>Dúvidas ou sugestões?</strong><br>
+          Entre em contato pelo e-mail <strong>celoborgesms@gmail.com</strong>.
+        </div>
+
+
+        
+
+        <div class="historico-item">
+          <strong>Versão 1.4.2 Beta</strong><br>
+          <span class="tag">Beta</span>
+          <p class="small"><strong>Atualizada em:</strong> 29/04/2026</p>
+          <ul>
+            <li>Núcleo único e permanente de geração de treino por divisão.</li>
+            <li>Classificação oficial por nome do exercício antes do grupo antigo cadastrado.</li>
+            <li>Correção definitiva para evitar empurrar dentro de puxar, puxar dentro de empurrar e superiores dentro de inferiores.</li>
+            <li>Resumo da aba Treino simplificado, sem textos técnicos desnecessários.</li>
+            <li>Substituição de exercício limitada à mesma divisão do treino.</li>
+            <li>Testes automáticos adicionados para validar categorias críticas.</li>
+          </ul>
+        </div>
+
+        <div class="historico-item">
+          <strong>🔄 Atualização do app</strong><br>
+          <p class="small">Use este botão quando quiser verificar se existe uma versão mais recente do MetaTreino.</p>
+          <button type="button" class="botao-principal" onclick="verificarAtualizacaoManual()">Verificar se há nova atualização</button>
+          <div id="statusAtualizacaoManual" class="alerta hidden"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <nav class="bottom-nav">
+      <button type="button" onclick="voltarParaPerfil()">🏠 Início</button>
+      <button type="button" onclick="irParaCheckin()">✅ Check-in</button>
+      <button type="button" onclick="irParaTreino()">💪 Treino</button>
+      <button type="button" onclick="irParaCardio()">🏃 Cardio</button>
+      <button type="button" onclick="irParaHistorico()">📊 Histórico</button>
+      <button id="botaoPainelTreinador" type="button" class="hidden" onclick="irParaPainelTreinador()">🧑‍🏫 Painel</button>
+      <button type="button" onclick="irParaNovidades()">✨ Novidades</button>
+    </nav>
+  </div>
+
+
+  <div id="modalAvisoInicial" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Aviso importante</h2>
+      <p>Este aplicativo oferece sugestões de treino com base nas informações preenchidas pelo usuário. Ele não substitui avaliação médica, acompanhamento de profissional de Educação Física ou orientação individualizada.</p>
+      <p>Treine com consciência, respeite seus limites e interrompa o exercício em caso de dor, tontura, mal-estar ou desconforto incomum. Em caso de dúvidas, condições de saúde, lesões ou uso de medicamentos, procure um médico ou profissional qualificado antes de iniciar ou continuar os treinos.</p>
+      <p><strong>Termos de Uso:</strong> o uso do aplicativo é de responsabilidade do usuário. As informações inseridas devem ser verdadeiras e usadas apenas como apoio para organização dos treinos. Ao continuar, você declara estar ciente dessas condições.</p>
+
+      <label class="check-termos">
+        <input id="aceiteTermosAviso" type="checkbox" onchange="atualizarBotaoAceiteAviso()">
+        <span>Li e concordo com o Aviso Importante e com os Termos de Uso.</span>
+      </label>
+
+      <button id="botaoAceitarAvisoInicial" type="button" class="botao-secundario" onclick="aceitarAvisoInicial()" disabled>Entendi e concordo</button>
+    </div>
+  </div>
+
+
+  
+
+
+  <script src="js/version.js"></script>
+  <script src="js/loader.js"></script>
+</body>
+</html>
