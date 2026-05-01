@@ -3171,6 +3171,7 @@
           const lista = [];
           snapshot.forEach(function(doc) {
             const item = doc.data();
+            item._id = doc.id;
             if (!item.criadoEm || Number(item.criadoEm) >= limite90Dias) lista.push(item);
           });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
@@ -3920,6 +3921,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
           const lista = [];
           snapshot.forEach(function(doc) {
             const item = doc.data();
+            item._id = doc.id;
             if (!item.criadoEm || Number(item.criadoEm) >= limite90Dias) lista.push(item);
           });
           lista.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
@@ -4156,6 +4158,124 @@ analisarEsforcoRecente(function(esforcoRecente) {
       return mapa;
     }
 
+    function editarRegistroTreino(id, cargaAtual, repsAtual) {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login para editar o histórico.");
+        return;
+      }
+      if (!id) {
+        alert("Não foi possível identificar este registro de treino.");
+        return;
+      }
+
+      const novaCargaTexto = prompt("Editar carga usada (kg):", cargaAtual !== undefined && cargaAtual !== null && cargaAtual !== "" ? cargaAtual : "0");
+      if (novaCargaTexto === null) return;
+      const novaRepsTexto = prompt("Editar repetições:", repsAtual !== undefined && repsAtual !== null && repsAtual !== "" ? repsAtual : "1");
+      if (novaRepsTexto === null) return;
+
+      const novaCarga = Number(String(novaCargaTexto).replace(",", "."));
+      const novasReps = Number(String(novaRepsTexto).replace(",", "."));
+      if (isNaN(novaCarga) || novaCarga < 0 || isNaN(novasReps) || novasReps <= 0) {
+        alert("Informe carga com 0 kg ou mais e repetições maiores que zero.");
+        return;
+      }
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").doc(id).update({
+        carga: novaCarga,
+        reps: novasReps,
+        editadoEm: new Date().getTime()
+      }).then(function() {
+        alert("Registro de treino atualizado.");
+        mostrarHistoricoCompleto();
+        mostrarHistorico();
+      }).catch(function(erro) {
+        console.log("Erro ao editar treino:", erro);
+        alert("Não foi possível editar este treino agora.");
+      });
+    }
+
+    function deletarRegistroTreino(id) {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login para deletar o histórico.");
+        return;
+      }
+      if (!id) {
+        alert("Não foi possível identificar este registro de treino.");
+        return;
+      }
+      if (!confirm("Tem certeza que deseja deletar este registro de treino?")) return;
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").doc(id).delete()
+        .then(function() {
+          alert("Registro de treino deletado.");
+          mostrarHistoricoCompleto();
+          mostrarHistorico();
+        })
+        .catch(function(erro) {
+          console.log("Erro ao deletar treino:", erro);
+          alert("Não foi possível deletar este treino agora.");
+        });
+    }
+
+    function editarRegistroCardio(id, distanciaAtual, tempoAtual) {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login para editar o histórico.");
+        return;
+      }
+      if (!id) {
+        alert("Não foi possível identificar este registro de cardio.");
+        return;
+      }
+
+      const novaDistanciaTexto = prompt("Editar distância (km):", distanciaAtual !== undefined && distanciaAtual !== null && distanciaAtual !== "" ? distanciaAtual : "0");
+      if (novaDistanciaTexto === null) return;
+      const novoTempoTexto = prompt("Editar tempo (min):", tempoAtual !== undefined && tempoAtual !== null && tempoAtual !== "" ? tempoAtual : "1");
+      if (novoTempoTexto === null) return;
+
+      const novaDistancia = Number(String(novaDistanciaTexto).replace(",", "."));
+      const novoTempo = Number(String(novoTempoTexto).replace(",", "."));
+      if (isNaN(novaDistancia) || novaDistancia < 0 || isNaN(novoTempo) || novoTempo <= 0) {
+        alert("Informe distância com 0 km ou mais e tempo maior que zero.");
+        return;
+      }
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").doc(id).update({
+        distancia: novaDistancia,
+        tempo: novoTempo,
+        editadoEm: new Date().getTime()
+      }).then(function() {
+        alert("Registro de cardio atualizado.");
+        mostrarHistoricoCompleto();
+        carregarCardios();
+      }).catch(function(erro) {
+        console.log("Erro ao editar cardio:", erro);
+        alert("Não foi possível editar este cardio agora.");
+      });
+    }
+
+    function deletarRegistroCardio(id) {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login para deletar o histórico.");
+        return;
+      }
+      if (!id) {
+        alert("Não foi possível identificar este registro de cardio.");
+        return;
+      }
+      if (!confirm("Tem certeza que deseja deletar este registro de cardio?")) return;
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").doc(id).delete()
+        .then(function() {
+          alert("Registro de cardio deletado.");
+          mostrarHistoricoCompleto();
+          carregarCardios();
+        })
+        .catch(function(erro) {
+          console.log("Erro ao deletar cardio:", erro);
+          alert("Não foi possível deletar este cardio agora.");
+        });
+    }
+
     function montarCardTreinoHistorico(item) {
       return "<div class='historico-item'>" +
         "<strong>💪 " + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
@@ -4171,6 +4291,8 @@ analisarEsforcoRecente(function(esforcoRecente) {
         "Evolução: " + limparTextoSeguro(item.evolucao || "Não calculada") + "<br>" +
         "Feedback final: " + limparTextoSeguro(item.feedbackFinalTreino || "Não informado") + "<br>" +
         "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+        (item._id ? "<br><br><button type='button' class='botao-secundario' onclick='editarRegistroTreino(" + JSON.stringify(item._id) + ", " + JSON.stringify(item.carga || 0) + ", " + JSON.stringify(item.reps || 0) + ")'>Editar</button> " +
+        "<button type='button' class='botao-secundario' onclick='deletarRegistroTreino(" + JSON.stringify(item._id) + ")'>Deletar</button>" : "") +
       "</div>";
     }
 
@@ -4180,6 +4302,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
           "<strong>🏃 " + limparTextoSeguro(item.data || "Sem data") + "</strong><br>" +
           "Status: não fez cardio recentemente<br>" +
           "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+          (item._id ? "<br><br><button type='button' class='botao-secundario' onclick='deletarRegistroCardio(" + JSON.stringify(item._id) + ")'>Deletar</button>" : "") +
         "</div>";
       }
 
@@ -4196,6 +4319,8 @@ analisarEsforcoRecente(function(esforcoRecente) {
         "Objetivo: " + limparTextoSeguro(traduzirObjetivoCardio(item.objetivoCardio || "")) + "<br>" +
         (item.temDesafio ? "Desafio: " + limparTextoSeguro(traduzirObjetivoCardio(item.distanciaDesafio || "")) + " em " + limparTextoSeguro(formatarDataBrasileira(item.dataDesafio || "")) + "<br>" : "") +
         "Observação: " + limparTextoSeguro(item.observacao || "Nenhuma") +
+        (item._id ? "<br><br><button type='button' class='botao-secundario' onclick='editarRegistroCardio(" + JSON.stringify(item._id) + ", " + JSON.stringify(item.distancia || 0) + ", " + JSON.stringify(item.tempo || 0) + ")'>Editar</button> " +
+        "<button type='button' class='botao-secundario' onclick='deletarRegistroCardio(" + JSON.stringify(item._id) + ")'>Deletar</button>" : "") +
       "</div>";
     }
 
