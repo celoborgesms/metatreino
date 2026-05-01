@@ -1444,6 +1444,8 @@
         localStorage.setItem(chaveTreinoAtual(), JSON.stringify({
           treino: treinoAtual,
           letra: treinoAtual.letra || "",
+          categoria: treinoAtual.categoria || treinoAtual.letra || "",
+          versaoGeracao: "0.0.3-filtro-categoria",
           concluidos: exerciciosConcluidos || [],
           feedback: feedbackTreinoFinalAtual || "",
           salvoEm: Date.now()
@@ -1459,8 +1461,16 @@
         if (!bruto) return false;
         const dados = JSON.parse(bruto);
         if (!dados || !dados.treino || !dados.treino.length) return false;
+        const categoriaSalva = normalizarCategoriaTreino(dados.categoria || dados.letra || "");
+        const expirado = dados.salvoEm && (Date.now() - Number(dados.salvoEm)) > (2 * 24 * 60 * 60 * 1000);
+        const temCategoriaIncompativel = gruposPermitidosPorCategoria(categoriaSalva) && dados.treino.some(function(exercicio) { return !exercicioPertenceCategoria(exercicio, categoriaSalva); });
+        if (expirado || temCategoriaIncompativel) {
+          limparTreinoAtualLocal();
+          return false;
+        }
         treinoAtual = dados.treino;
         treinoAtual.letra = dados.letra || "";
+        treinoAtual.categoria = categoriaSalva || dados.letra || "";
         exerciciosConcluidos = dados.concluidos || treinoAtual.map(function() { return false; });
         feedbackTreinoFinalAtual = dados.feedback || "";
         const resultadoTreino = document.getElementById("resultadoTreino");
@@ -3613,6 +3623,67 @@
       return grupos.includes(exercicio.grupo);
     }
 
+    function categoriaDoGrupoExercicio(grupo) {
+      const mapa = {
+        Peito: "superior", Costas: "superior", Ombros: "superior", "Ombro posterior": "superior", "Tríceps": "superior", "Bíceps": "superior",
+        Pernas: "inferior", "Quadríceps": "inferior", "Posterior de coxa": "inferior", "Glúteos": "inferior", Panturrilha: "inferior",
+        Abdômen: "core_abdomen", Core: "core_abdomen", Lombar: "core_abdomen", "Cardio/Abdômen": "core_abdomen",
+        Recuperação: "descanso", "Recuperação ativa": "descanso", "Pernas leves": "descanso", "Peito leve": "descanso", "Costas leves": "descanso", "Core leve": "descanso", Mobilidade: "descanso", Alongamento: "descanso", "Cardio leve": "descanso", "Liberação miofascial": "descanso", Yoga: "descanso"
+      };
+      return mapa[grupo] || "";
+    }
+
+    function ordenarTreinoPorVariedade(lista) {
+      const vistosGrupo = {};
+      const principal = [];
+      const extras = [];
+      (lista || []).forEach(function(exercicio) {
+        const grupo = exercicio.grupo || "";
+        if (!vistosGrupo[grupo]) {
+          vistosGrupo[grupo] = true;
+          principal.push(exercicio);
+        } else {
+          extras.push(exercicio);
+        }
+      });
+      return principal.concat(extras);
+    }
+
+    function garantirTreinoDaCategoriaSelecionada(treino, categoria, local, dor, alvo) {
+      const cat = normalizarCategoriaTreino(categoria);
+      if (!gruposPermitidosPorCategoria(cat)) return treino || [];
+
+      const jaVistos = {};
+      let correto = (treino || []).filter(function(exercicio) {
+        const chave = normalizarNomeExercicio(exercicio.nome || "");
+        if (!chave || jaVistos[chave]) return false;
+        if (!exercicioPertenceCategoria(exercicio, cat)) return false;
+        jaVistos[chave] = true;
+        return true;
+      });
+
+      if (correto.length < alvo) {
+        const base = obterBaseTreinoPorCategoria(cat).filter(function(exercicio) {
+          if (!exercicioPertenceCategoria(exercicio, cat)) return false;
+          if (exercicio.local && !exercicio.local.includes(local)) return false;
+          if (dor && dor !== "nenhuma" && exercicio.evitar === dor) return false;
+          if (!nivelPermitido(exercicio)) return false;
+          return true;
+        }).map(ajustarExercicioPorMeta);
+
+        base.forEach(function(exercicio) {
+          if (correto.length >= alvo) return;
+          const chave = normalizarNomeExercicio(exercicio.nome || "");
+          if (!jaVistos[chave]) {
+            jaVistos[chave] = true;
+            correto.push(exercicio);
+          }
+        });
+      }
+
+      return ordenarTreinoPorVariedade(correto).slice(0, alvo);
+    }
+
     function criarExercicioCategoria(nome, grupo, equipamento, locais, evitar, nivel, passos, registravel) {
       const ex = criarExercicioSimples(nome, grupo, equipamento, locais, evitar || "nenhuma", nivel || "iniciante");
       if (passos && passos.length) ex.passos = passos;
@@ -3668,7 +3739,9 @@
     }
 
     function gerarTreino() {
-      
+      limparTreinoAtualLocal();
+      treinoAtual = [];
+      exerciciosConcluidos = [];
       marcarCheckinRespondido();
       analisarEsforcoRecente(function(esforcoRecente) {
         analisarProgressaoSemanal(function(progressaoSemanal) {
@@ -3754,12 +3827,11 @@
         }).map(ajustarExercicioPorMeta);
       }
 
-      if (gruposPermitidosPorCategoria(letraTreino)) {
-        treinoFiltrado = treinoFiltrado.filter(function(exercicio) { return exercicioPertenceCategoria(exercicio, letraTreino); });
-      }
+      treinoFiltrado = garantirTreinoDaCategoriaSelecionada(treinoFiltrado, letraTreino, local, dor, alvoExercicios);
 
       treinoAtual = treinoFiltrado;
       treinoAtual.letra = letraTreino === "descanso" ? "Descanso" : letraTreino;
+      treinoAtual.categoria = normalizarCategoriaTreino(letraTreino);
       feedbackTreinoFinalAtual = "";
       exerciciosConcluidos = new Array(treinoAtual.length).fill(false);
 
@@ -3923,27 +3995,53 @@
       progresso.innerText = texto;
     }
 
-    function substituirExercicio(index) {
+    function obterSubstituicoesCompativeis(index) {
       const exercicioAtual = treinoAtual[index];
+      const categoriaAtual = normalizarCategoriaTreino(treinoAtual.categoria || treinoAtual.letra || categoriaDoGrupoExercicio(exercicioAtual.grupo));
+      const localOriginal = perfilUsuario ? perfilUsuario.localTreino : "academia_grande";
+      const local = localOriginal === "academia_basica" ? "academia_pequena" : localOriginal;
       const nomesAtuais = treinoAtual.map(function(exercicio, i) {
         return i === index ? "" : normalizarNomeExercicio(exercicio.nome || "");
       });
-      let opcoes = substituicoes[exercicioAtual.nome] || [];
-      opcoes = opcoes.filter(function(opcao) {
-        return !nomesAtuais.includes(normalizarNomeExercicio(opcao));
+      const candidatos = obterBaseTreinoPorCategoria(categoriaAtual).filter(function(exercicio) {
+        if (!exercicioPertenceCategoria(exercicio, categoriaAtual)) return false;
+        if (exercicio.grupo !== exercicioAtual.grupo) return false;
+        if (exercicio.local && !exercicio.local.includes(local)) return false;
+        if (nomesAtuais.includes(normalizarNomeExercicio(exercicio.nome || ""))) return false;
+        if (normalizarNomeExercicio(exercicio.nome || "") === normalizarNomeExercicio(exercicioAtual.nome || "")) return false;
+        return true;
       });
 
+      if (candidatos.length > 0) return filtrarExerciciosUnicos(candidatos).slice(0, 6);
+
+      return obterBaseTreinoPorCategoria(categoriaAtual).filter(function(exercicio) {
+        if (!exercicioPertenceCategoria(exercicio, categoriaAtual)) return false;
+        if (exercicio.local && !exercicio.local.includes(local)) return false;
+        if (nomesAtuais.includes(normalizarNomeExercicio(exercicio.nome || ""))) return false;
+        if (normalizarNomeExercicio(exercicio.nome || "") === normalizarNomeExercicio(exercicioAtual.nome || "")) return false;
+        return true;
+      }).slice(0, 6);
+    }
+
+    function substituirExercicio(index) {
+      const exercicioAtual = treinoAtual[index];
+      if (!exercicioAtual) return;
+
+      const opcoes = obterSubstituicoesCompativeis(index);
       if (!opcoes || opcoes.length === 0) {
-        alert("Ainda não há substituições disponíveis sem repetir exercícios da lista. Você pode pular este exercício e seguir o treino.");
+        alert("Ainda não há substituições compatíveis sem repetir exercícios da lista. Você pode pular este exercício e seguir o treino.");
         return;
       }
 
-      let textoOpcoes = "Escolha uma substituição:\n\n";
-      opcoes.forEach(function(opcao, i) { textoOpcoes += (i + 1) + " - " + opcao + "\n"; });
+      let textoOpcoes = "Escolha uma substituição compatível:\n\n";
+      opcoes.forEach(function(opcao, i) { textoOpcoes += (i + 1) + " - " + opcao.nome + " (" + opcao.grupo + ")\n"; });
       const numero = Number(prompt(textoOpcoes + "\nDigite o número da opção:"));
       if (numero < 1 || numero > opcoes.length) { alert("Opção inválida."); return; }
-      const novoNome = opcoes[numero - 1];
-      treinoAtual[index] = { nome: novoNome, grupo: exercicioAtual.grupo, equipamento: "Alternativo", series: exercicioAtual.series, reps: exercicioAtual.reps, evitar: exercicioAtual.evitar, passos: ["Execute o movimento com controle e sem dor.", "Mantenha a postura firme durante todo o exercício.", "Use uma carga ou dificuldade que permita boa execução.", "Se sentir dor articular, pare e escolha outra variação."] };
+
+      const escolhido = Object.assign({}, opcoes[numero - 1]);
+      escolhido.series = exercicioAtual.series || escolhido.series;
+      escolhido.reps = exercicioAtual.reps || escolhido.reps;
+      treinoAtual[index] = escolhido;
       exerciciosConcluidos[index] = false;
       salvarTreinoAtualLocal();
       mostrarTreinoNaTela();
