@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.0.1">
+  <meta name="app-version" content="0.0.2">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.0.1">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.1">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.1">
+  <link rel="manifest" href="manifest.json?v=0.0.2">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.2">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.2">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1314,16 +1314,18 @@
         
 
         <div class="historico-item">
-          <strong>Versão 0.0.1 Beta</strong><br>
+          <strong>Versão 0.0.2 Beta</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 30/04/2026</p>
           <ul>
-            <li>Recomeço limpo da numeração da versão.</li>
-            <li>Correção da geração de treino por categoria: a seleção manual agora só puxa exercícios do grupo escolhido.</li>
-            <li>Divisões mantidas: Treino inteligente, Treino A - Superiores, Treino B - Inferiores, Treino C - Abdômen / core e Treino leve / recuperação.</li>
-            <li>Treino inteligente ajustado para considerar perfil, objetivo, sexo, energia, dor, tempo disponível, local de treino e histórico.</li>
+            <li>Treino inteligente agora usa melhor a memória do aluno para adaptar sugestões.</li>
+            <li>Adicionado sistema anti-repetição para reduzir exercícios repetidos nos próximos treinos.</li>
+            <li>Adicionada progressão inteligente de carga com base no histórico salvo.</li>
+            <li>Novidades e controle interno de versão atualizados para a versão atual do app.</li>
+            <li>Preservadas as telas e regras já aprovadas da versão 0.0.1: Início, check-in, categorias de treino, recuperação, histórico e cardio.</li>
           </ul>
         </div>
+
 
         
 
@@ -4548,7 +4550,7 @@
 
 
 <script>
-  const METATREINO_APP_VERSION = "0.0.1";
+  const METATREINO_APP_VERSION = "0.0.2";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
