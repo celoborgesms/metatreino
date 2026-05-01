@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.0.2">
+  <meta name="app-version" content="0.0.1">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.0.2">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.2">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.2">
+  <link rel="manifest" href="manifest.json?v=0.0.1">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.1">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.1">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1138,12 +1138,10 @@
 
         <label for="divisaoTreino">Divisão do treino</label>
         <select id="divisaoTreino">
-          <option value="automatico" selected>Treino inteligente sugerido pelo app</option>
+          <option value="automatico" selected>Treino inteligente</option>
           <option value="superior">Treino A - Superiores</option>
           <option value="inferior">Treino B - Inferiores</option>
-          <option value="gluteos_posterior">Treino C - Glúteos e posterior</option>
-          <option value="core_abdomen">Treino D - Abdômen / core</option>
-          <option value="completo">Treino E - Corpo inteiro</option>
+          <option value="core_abdomen">Treino C - Abdômen / core</option>
           <option value="descanso">Treino leve / recuperação</option>
         </select>
 
@@ -1316,37 +1314,14 @@
         
 
         <div class="historico-item">
-          <strong>Versão 0.0.2 Beta</strong><br>
+          <strong>Versão 0.0.1 Beta</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 30/04/2026</p>
           <ul>
-            <li>Recomeço limpo usando a versão estável 1.3.2 como base.</li>
-            <li>Correção da divisão manual: treino de inferiores não mistura mais exercícios de superiores para completar volume.</li>
-            <li>Categorias renomeadas em formato profissional: Treino A/B/C/D/E.</li>
-            <li>Campo Idade trocado por Data de nascimento, com idade calculada automaticamente.</li>
-            <li>Locais de treino simplificados: peso corporal, academia básica e academia completa.</li>
-            <li>Check-in ajustado para uma dor por vez, com Nenhuma dor marcada por padrão.</li>
-            <li>Treino inteligente sugerido pelo app e categorias manuais de foco.</li>
-            <li>Resumo do histórico removido das abas Treino e Cardio; o histórico fica centralizado na aba Histórico.</li>
-            <li>Memória inteligente do aluno adicionada no histórico completo.</li>
-          </ul>
-        </div>
-
-        <div class="historico-item">
-          <strong>Versão 1.3.0</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 27/04/2026 às 20:00</p>
-          <ul>
-            <li>Login ajustado para iPhone/Safari usando redirecionamento quando popup for bloqueado.</li>
-            <li>Mensagem de venda aparece somente antes do login e ficou centralizada.</li>
-            <li>Botão sair movido para o final da área de perfil.</li>
-            <li>Progresso do treino salvo no aparelho: ao sair e voltar, exercícios marcados continuam marcados.</li>
-            <li>Treino mais diferente por perfil: iniciante, sobrepeso e avançado recebem ajustes de volume/intensidade.</li>
-            <li>Substituição de exercício evita sugerir opção repetida que já está na lista.</li>
-            <li>Adicionado botão para pular exercício sem travar a conclusão do treino.</li>
-            <li>Ajustada quantidade de exercícios conforme treino rápido, normal ou longo.</li>
-            <li>Check-in de dor mais completo: pernas, braços, coluna/costas, ombro, joelho e lombar.</li>
-            <li>Painel do treinador mais organizado: mostra 3 últimos alunos e permite ver todos.</li>
+            <li>Recomeço limpo da numeração da versão.</li>
+            <li>Correção da geração de treino por categoria: a seleção manual agora só puxa exercícios do grupo escolhido.</li>
+            <li>Divisões mantidas: Treino inteligente, Treino A - Superiores, Treino B - Inferiores, Treino C - Abdômen / core e Treino leve / recuperação.</li>
+            <li>Treino inteligente ajustado para considerar perfil, objetivo, sexo, energia, dor, tempo disponível, local de treino e histórico.</li>
           </ul>
         </div>
 
@@ -2723,24 +2698,15 @@
 
 
     function nomeAmigavelTreino(letra) {
-      const mapa = {
-        A: "Treino de membros superiores — empurrar",
-        B: "Treino de membros superiores — puxar",
-        C: "Treino de membros inferiores e abdômen",
-        automatico: "Treino inteligente sugerido pelo app",
+      const chave = normalizarCategoriaTreino(letra);
+      const nomes = {
+        automatico: "Treino inteligente",
         superior: "Treino A - Superiores",
         inferior: "Treino B - Inferiores",
-        gluteos_posterior: "Treino C - Glúteos e posterior",
-        core_abdomen: "Treino D - Abdômen / core",
-        bracos_peito: "Treino A - Superiores",
-        pernas_fortes: "Treino B - Inferiores",
-        gluteos_definidos: "Treino C - Glúteos e posterior",
-        barriga_chapada: "Treino D - Abdômen / core",
-        completo: "Treino E - Corpo inteiro",
-        descanso: "Treino leve / recuperação",
-        Descanso: "Treino leve / recuperação"
+        core_abdomen: "Treino C - Abdômen / core",
+        descanso: "Treino leve / recuperação"
       };
-      return mapa[letra] || (letra ? "Treino " + letra : "Treino do dia");
+      return nomes[chave] || nomes[letra] || "Treino inteligente";
     }
 
     function estimarDuracaoTreino(tempo, cardioNoTreino) {
@@ -2803,16 +2769,28 @@
     }
 
     function escolherTreinoABC(divisaoSelecionada) {
-      if (divisaoSelecionada === "semana") return escolherTreinoPorDiaDaSemana();
       if (divisaoSelecionada === "descanso") return "descanso";
-      if (["superior", "inferior", "gluteos_posterior", "core_abdomen", "completo", "bracos_peito", "pernas_fortes", "gluteos_definidos", "barriga_chapada"].includes(divisaoSelecionada)) return divisaoSelecionada;
-      if (divisaoSelecionada !== "automatico") return divisaoSelecionada;
+      if (["superior", "inferior", "core_abdomen"].includes(divisaoSelecionada)) return divisaoSelecionada;
+      if (divisaoSelecionada !== "automatico" && divisaoSelecionada) return normalizarCategoriaTreino(divisaoSelecionada);
+
+      const dorAtual = document.getElementById("dor") ? document.getElementById("dor").value : "nenhuma";
+      const energiaAtual = document.getElementById("energia") ? document.getElementById("energia").value : "bem";
+      if (energiaAtual === "mal") return "descanso";
+      if (dorAtual === "pernas" || dorAtual === "joelho") return "superior";
+      if (dorAtual === "bracos" || dorAtual === "ombro") return "inferior";
+      if (dorAtual === "coluna" || dorAtual === "lombar") return "descanso";
+
       if (perfilUsuario) {
-        if (perfilUsuario.metaPrincipal === "perder_peso" || perfilUsuario.metaPrincipal === "definicao") return "completo";
-        if (perfilUsuario.sexo === "feminino" && (perfilUsuario.metaPrincipal === "massa" || perfilUsuario.metaPrincipal === "definicao")) return "gluteos_posterior";
-        if (perfilUsuario.metaPrincipal === "forca") return escolherTreinoPorDiaDaSemana();
+        if (perfilUsuario.metaPrincipal === "perder_peso" || perfilUsuario.metaPrincipal === "definicao") return "inferior";
+        if (perfilUsuario.sexo === "feminino" && (perfilUsuario.metaPrincipal === "massa" || perfilUsuario.metaPrincipal === "definicao")) return "inferior";
+        if (perfilUsuario.metaPrincipal === "forca") return "superior";
       }
-      return escolherTreinoPorDiaDaSemana();
+
+      const hoje = new Date().getDay();
+      if (hoje === 1 || hoje === 4) return "superior";
+      if (hoje === 2 || hoje === 5) return "inferior";
+      if (hoje === 3 || hoje === 6) return "core_abdomen";
+      return "descanso";
     }
 
     function nivelPermitido(exercicio) {
@@ -3496,10 +3474,16 @@
 
     function normalizarCategoriaTreino(categoria) {
       const aliases = {
+        A: "superior",
+        B: "inferior",
+        C: "core_abdomen",
+        semana: "automatico",
         bracos_peito: "superior",
         pernas_fortes: "inferior",
-        gluteos_definidos: "gluteos_posterior",
-        barriga_chapada: "core_abdomen"
+        gluteos_definidos: "inferior",
+        barriga_chapada: "core_abdomen",
+        gluteos_posterior: "inferior",
+        completo: "superior"
       };
       return aliases[categoria] || categoria;
     }
@@ -3508,10 +3492,9 @@
       const cat = normalizarCategoriaTreino(categoria);
       const mapa = {
         superior: ["Peito", "Costas", "Ombros", "Ombro posterior", "Tríceps", "Bíceps"],
-        inferior: ["Pernas", "Panturrilha", "Posterior de coxa"],
-        gluteos_posterior: ["Glúteos", "Posterior de coxa"],
-        core_abdomen: ["Abdômen", "Cardio/Abdômen"],
-        completo: ["Peito", "Costas", "Ombros", "Ombro posterior", "Tríceps", "Bíceps", "Pernas", "Glúteos", "Panturrilha", "Abdômen", "Funcional", "Posterior de coxa", "Cardio/Abdômen", "Cardio"]
+        inferior: ["Pernas", "Quadríceps", "Posterior de coxa", "Glúteos", "Panturrilha"],
+        core_abdomen: ["Abdômen", "Core", "Lombar", "Cardio/Abdômen"],
+        descanso: ["Recuperação", "Mobilidade", "Cardio leve", "Alongamento"]
       };
       return mapa[cat] || null;
     }
@@ -3522,13 +3505,47 @@
       return grupos.includes(exercicio.grupo);
     }
 
-    function obterBaseTreinoPorCategoria(categoria) {
+    function criarExercicioCategoria(nome, grupo, equipamento, locais, evitar, nivel, passos, registravel) {
+      const ex = criarExercicioSimples(nome, grupo, equipamento, locais, evitar || "nenhuma", nivel || "iniciante");
+      if (passos && passos.length) ex.passos = passos;
+      if (registravel === false) {
+        ex.registravel = false;
+        ex.series = "Sugestão";
+        ex.reps = "sem carga/repetições";
+      }
+      return ex;
+    }
+
+    function bibliotecaProfissionalPorCategoria(categoria) {
       garantirBibliotecaExpandida();
       const cat = normalizarCategoriaTreino(categoria);
-      const todos = [].concat(bibliotecaExercicios.A, bibliotecaExercicios.B, bibliotecaExercicios.C);
-      const grupos = gruposPermitidosPorCategoria(cat);
-      if (!grupos) return bibliotecaExercicios[cat] || bibliotecaExercicios.A;
-      return todos.filter(function(ex) { return grupos.includes(ex.grupo); });
+      const todosLocais = ["sem_equipamento", "casa_limitado", "academia_basica", "academia_grande", "academia_pequena", "garagem"];
+      const peso = ["sem_equipamento", "casa_limitado", "academia_basica", "academia_grande", "academia_pequena", "garagem"];
+      const basica = ["academia_basica", "academia_grande", "academia_pequena", "garagem", "casa_limitado"];
+      const completa = ["academia_grande", "academia_pequena"];
+      const passosPadrao = ["Execute com controle e boa postura.", "Use carga ou dificuldade compatível com sua técnica.", "Respire de forma constante.", "Pare se sentir dor articular ou mal-estar."];
+      const leve = ["Mantenha intensidade leve e confortável.", "Não transforme em treino pesado.", "Respire de forma controlada.", "Finalize se houver dor, tontura ou mal-estar."];
+      const superior = [
+        criarExercicioCategoria("Supino reto", "Peito", "Barra ou halteres", basica, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Supino inclinado", "Peito", "Barra, halteres ou máquina", basica, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Flexão tradicional", "Peito", "Peso corporal", peso, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Flexão inclinada", "Peito", "Peso corporal", peso, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Crucifixo", "Peito", "Halteres, cabo ou máquina", basica, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Remada baixa", "Costas", "Cabo, máquina ou elástico", basica, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Puxada na frente", "Costas", "Polia ou elástico", basica, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Remada curvada", "Costas", "Barra ou halteres", basica, "lombar", "intermediario", passosPadrao), criarExercicioCategoria("Remada unilateral", "Costas", "Halter ou mochila", basica, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Superman", "Costas", "Peso corporal", peso, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Desenvolvimento", "Ombros", "Halteres, barra ou máquina", basica, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Elevação lateral", "Ombros", "Halteres, cabo ou elástico", basica, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Face pull", "Ombro posterior", "Cabo ou elástico", basica, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Rosca direta", "Bíceps", "Barra, halteres ou elástico", basica, "nenhuma", "iniciante", passosPadrao), criarExercicioCategoria("Rosca alternada", "Bíceps", "Halteres", basica, "nenhuma", "iniciante", passosPadrao), criarExercicioCategoria("Rosca martelo", "Bíceps", "Halteres", basica, "nenhuma", "iniciante", passosPadrao), criarExercicioCategoria("Tríceps corda", "Tríceps", "Polia", completa, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Tríceps testa", "Tríceps", "Barra ou halteres", basica, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Tríceps banco", "Tríceps", "Banco/cadeira ou peso corporal", peso, "ombro", "iniciante", passosPadrao), criarExercicioCategoria("Flexão diamante", "Tríceps", "Peso corporal", peso, "ombro", "intermediario", passosPadrao)
+      ];
+      const inferior = [
+        criarExercicioCategoria("Agachamento livre", "Pernas", "Peso corporal, barra ou halteres", peso, "joelho", "iniciante", passosPadrao), criarExercicioCategoria("Agachamento sumô", "Pernas", "Peso corporal, barra ou halteres", peso, "joelho", "iniciante", passosPadrao), criarExercicioCategoria("Agachamento búlgaro", "Pernas", "Banco e halteres/opcional", basica, "joelho", "intermediario", passosPadrao), criarExercicioCategoria("Leg press", "Quadríceps", "Máquina", completa, "joelho", "iniciante", passosPadrao), criarExercicioCategoria("Cadeira extensora", "Quadríceps", "Máquina", completa, "joelho", "iniciante", passosPadrao), criarExercicioCategoria("Afundo", "Pernas", "Peso corporal ou halteres", peso, "joelho", "iniciante", passosPadrao), criarExercicioCategoria("Passada", "Pernas", "Peso corporal ou halteres", peso, "joelho", "iniciante", passosPadrao), criarExercicioCategoria("Stiff", "Posterior de coxa", "Barra ou halteres", basica, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Mesa flexora", "Posterior de coxa", "Máquina", completa, "joelho", "iniciante", passosPadrao), criarExercicioCategoria("Elevação pélvica / Hip thrust", "Glúteos", "Banco, barra, halter ou máquina", basica, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Ponte de glúteo", "Glúteos", "Peso corporal ou peso", peso, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Coice no cabo ou elástico", "Glúteos", "Cabo ou elástico", basica, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Abdução de quadril", "Glúteos", "Máquina ou elástico", basica, "nenhuma", "iniciante", passosPadrao), criarExercicioCategoria("Panturrilha em pé", "Panturrilha", "Peso corporal, halteres ou máquina", peso, "nenhuma", "iniciante", passosPadrao), criarExercicioCategoria("Panturrilha sentado", "Panturrilha", "Máquina ou halter", basica, "nenhuma", "iniciante", passosPadrao), criarExercicioCategoria("Pistol squat assistido", "Pernas", "Peso corporal", peso, "joelho", "avancado", passosPadrao)
+      ];
+      const core = [
+        criarExercicioCategoria("Prancha", "Core", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Prancha lateral", "Core", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Abdominal tradicional / crunch", "Abdômen", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Abdominal infra / elevação de pernas", "Abdômen", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Bicicleta no ar", "Abdômen", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Russian twist", "Abdômen", "Peso corporal, halter ou anilha", basica, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Dead bug", "Core", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Hollow body hold", "Core", "Peso corporal", todosLocais, "lombar", "intermediario", passosPadrao), criarExercicioCategoria("Mountain climber", "Cardio/Abdômen", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Abdominal na polia", "Abdômen", "Cabo", completa, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Hiperextensão lombar", "Lombar", "Banco ou peso corporal", basica, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Superman", "Lombar", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao)
+      ];
+      const descanso = [
+        criarExercicioCategoria("Caminhada leve", "Cardio leve", "Livre", todosLocais, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Bike leve", "Cardio leve", "Bicicleta", ["academia_grande", "academia_pequena", "academia_basica", "garagem"], "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Natação leve", "Cardio leve", "Piscina", ["academia_grande"], "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Mobilidade articular", "Mobilidade", "Peso corporal", todosLocais, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Alongamento leve", "Alongamento", "Livre", todosLocais, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Liberação miofascial", "Mobilidade", "Rolo ou bola", basica, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Core leve / estabilização", "Core", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Treino técnico leve", "Recuperação", "Carga baixa", basica, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Yoga / relaxamento", "Alongamento", "Livre", todosLocais, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Treino regenerativo", "Recuperação", "Livre", todosLocais, "nenhuma", "iniciante", leve, false)
+      ];
+      if (cat === "superior") return superior;
+      if (cat === "inferior") return inferior;
+      if (cat === "core_abdomen") return core;
+      if (cat === "descanso") return descanso;
+      return superior;
+    }
+
+    function obterBaseTreinoPorCategoria(categoria) {
+      return bibliotecaProfissionalPorCategoria(categoria);
     }
 
     function gerarTreino() {
@@ -3555,7 +3572,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       const local = localOriginal === "academia_basica" ? "academia_pequena" : localOriginal;
       garantirBibliotecaExpandida();
 
-      if (divisaoSelecionada === "semana" && esforcoRecente.sugerirDescanso) {
+      if (divisaoSelecionada === "automatico" && esforcoRecente.sugerirDescanso) {
         letraTreino = "descanso";
       }
 
@@ -3607,8 +3624,15 @@ analisarEsforcoRecente(function(esforcoRecente) {
       if (ajusteCardio.reduzirVolume && treinoFiltrado.length > 4) {
         treinoFiltrado = treinoFiltrado.slice(0, Math.max(4, treinoFiltrado.length - 1));
       }
-      if (ajusteCardio.sugerirDescanso && letraTreino === "C") {
-        treinoFiltrado = bibliotecaExercicios.descanso.map(ajustarExercicioPorMeta);
+      if (ajusteCardio.sugerirDescanso && letraTreino === "core_abdomen") {
+        letraTreino = "descanso";
+        treinoFiltrado = obterBaseTreinoPorCategoria("descanso").filter(function(exercicio) {
+          return exercicio.local.includes(local) || exercicio.local.includes(localOriginal);
+        }).map(ajustarExercicioPorMeta);
+      }
+
+      if (gruposPermitidosPorCategoria(letraTreino)) {
+        treinoFiltrado = treinoFiltrado.filter(function(exercicio) { return exercicioPertenceCategoria(exercicio, letraTreino); });
       }
 
       treinoAtual = treinoFiltrado;
@@ -3689,17 +3713,22 @@ analisarEsforcoRecente(function(esforcoRecente) {
         let passosHTML = "";
         exercicio.passos.forEach(function(passo) { passosHTML += "<li>" + passo + "</li>"; });
         const marcado = exerciciosConcluidos[index] ? "checked" : "";
+        const blocoSeries = exercicio.registravel === false ?
+          "<span>Sugestão de recuperação — sem carga/repetições para registrar</span><br>" :
+          "<span>" + exercicio.series + " | " + exercicio.reps + "</span><br>";
+        const sugestaoCargaHtml = exercicio.registravel === false ? "" : "<div class='alerta'>" + obterTextoSugestaoCarga(exercicio.nome) + "</div>";
+        const botaoRegistrarHtml = exercicio.registravel === false ? "" : "<button type='button' class='botao-secundario' onclick='preencherRegistroComExercicio(" + index + ")'>Registrar este exercício</button>";
         div.innerHTML = "<strong>" + exercicio.nome + "</strong>" +
-          "<span>" + exercicio.series + " | " + exercicio.reps + "</span><br>" +
+          blocoSeries +
           "<span class='tag'>Grupo: " + exercicio.grupo + "</span> " +
           "<span class='tag'>Equipamento: " + exercicio.equipamento + "</span>" +
-          "<div class='alerta'>" + obterTextoSugestaoCarga(exercicio.nome) + "</div>" +
+          sugestaoCargaHtml +
           "<h4>Como fazer:</h4><ol>" + passosHTML + "</ol>" +
           "<div class='aviso-video'>Use o vídeo apenas como apoio. Em caso de dor, pare o exercício.</div>" +
           "<button type='button' class='botao-secundario' onclick='abrirVideoExercicio(" + JSON.stringify(exercicio.nome) + ")'>Ver execução</button>" +
           "<label class='check-exercicio'><input type='checkbox' " + marcado + " onchange='marcarExercicioConcluido(" + index + ", this.checked)'>Exercício concluído</label>" +
           "<div class='acoes-exercicio-grid'>" +
-          "<button type='button' class='botao-secundario' onclick='preencherRegistroComExercicio(" + index + ")'>Registrar este exercício</button>" +
+          botaoRegistrarHtml +
           "<button type='button' class='botao-secundario' onclick='substituirExercicio(" + index + ")'>Não tenho esse equipamento / substituir</button>" +
           "<button type='button' class='botao-pular' onclick='pularExercicio(" + index + ")'>Pular este exercício</button>" +
           "</div>";
@@ -4276,7 +4305,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
 
 <script>
-  const METATREINO_APP_VERSION = "0.0.2";
+  const METATREINO_APP_VERSION = "0.0.1";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
