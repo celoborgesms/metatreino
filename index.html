@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.0.1">
+  <meta name="app-version" content="0.0.2">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.0.1">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.1">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.1">
+  <link rel="manifest" href="manifest.json?v=0.0.2">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.2">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.2">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1139,11 +1139,11 @@
         <label for="divisaoTreino">Divisão do treino</label>
         <select id="divisaoTreino">
           <option value="automatico" selected>Treino inteligente sugerido pelo app</option>
-          <option value="bracos_peito">💪 Braços e peito</option>
-          <option value="pernas_fortes">🦵 Pernas fortes</option>
-          <option value="gluteos_definidos">🍑 Glúteos definidos</option>
-          <option value="barriga_chapada">🧱 Barriga chapada</option>
-          <option value="completo">🔥 Treino completo</option>
+          <option value="superior">Treino A - Superiores</option>
+          <option value="inferior">Treino B - Inferiores</option>
+          <option value="gluteos_posterior">Treino C - Glúteos e posterior</option>
+          <option value="core_abdomen">Treino D - Abdômen / core</option>
+          <option value="completo">Treino E - Corpo inteiro</option>
           <option value="descanso">Treino leve / recuperação</option>
         </select>
 
@@ -1316,12 +1316,13 @@
         
 
         <div class="historico-item">
-          <strong>Versão 0.0.1 Beta</strong><br>
+          <strong>Versão 0.0.2 Beta</strong><br>
           <span class="tag">Beta</span>
           <p class="small"><strong>Atualizada em:</strong> 30/04/2026</p>
           <ul>
             <li>Recomeço limpo usando a versão estável 1.3.2 como base.</li>
-            <li>Numeração reiniciada para Versão 0.0.1 Beta.</li>
+            <li>Correção da divisão manual: treino de inferiores não mistura mais exercícios de superiores para completar volume.</li>
+            <li>Categorias renomeadas em formato profissional: Treino A/B/C/D/E.</li>
             <li>Campo Idade trocado por Data de nascimento, com idade calculada automaticamente.</li>
             <li>Locais de treino simplificados: peso corporal, academia básica e academia completa.</li>
             <li>Check-in ajustado para uma dor por vez, com Nenhuma dor marcada por padrão.</li>
@@ -2727,11 +2728,15 @@
         B: "Treino de membros superiores — puxar",
         C: "Treino de membros inferiores e abdômen",
         automatico: "Treino inteligente sugerido pelo app",
-        bracos_peito: "Braços e peito",
-        pernas_fortes: "Pernas fortes",
-        gluteos_definidos: "Glúteos definidos",
-        barriga_chapada: "Barriga chapada",
-        completo: "Treino completo",
+        superior: "Treino A - Superiores",
+        inferior: "Treino B - Inferiores",
+        gluteos_posterior: "Treino C - Glúteos e posterior",
+        core_abdomen: "Treino D - Abdômen / core",
+        bracos_peito: "Treino A - Superiores",
+        pernas_fortes: "Treino B - Inferiores",
+        gluteos_definidos: "Treino C - Glúteos e posterior",
+        barriga_chapada: "Treino D - Abdômen / core",
+        completo: "Treino E - Corpo inteiro",
         descanso: "Treino leve / recuperação",
         Descanso: "Treino leve / recuperação"
       };
@@ -2800,11 +2805,11 @@
     function escolherTreinoABC(divisaoSelecionada) {
       if (divisaoSelecionada === "semana") return escolherTreinoPorDiaDaSemana();
       if (divisaoSelecionada === "descanso") return "descanso";
-      if (["bracos_peito", "pernas_fortes", "gluteos_definidos", "barriga_chapada", "completo"].includes(divisaoSelecionada)) return divisaoSelecionada;
+      if (["superior", "inferior", "gluteos_posterior", "core_abdomen", "completo", "bracos_peito", "pernas_fortes", "gluteos_definidos", "barriga_chapada"].includes(divisaoSelecionada)) return divisaoSelecionada;
       if (divisaoSelecionada !== "automatico") return divisaoSelecionada;
       if (perfilUsuario) {
         if (perfilUsuario.metaPrincipal === "perder_peso" || perfilUsuario.metaPrincipal === "definicao") return "completo";
-        if (perfilUsuario.sexo === "feminino" && (perfilUsuario.metaPrincipal === "massa" || perfilUsuario.metaPrincipal === "definicao")) return "gluteos_definidos";
+        if (perfilUsuario.sexo === "feminino" && (perfilUsuario.metaPrincipal === "massa" || perfilUsuario.metaPrincipal === "definicao")) return "gluteos_posterior";
         if (perfilUsuario.metaPrincipal === "forca") return escolherTreinoPorDiaDaSemana();
       }
       return escolherTreinoPorDiaDaSemana();
@@ -3348,12 +3353,17 @@
       const alvo = tempo === "rapido" ? 4 : (tempo === "normal" ? 6 : 8);
       const extras = [
         criarExercicioPesoCorporal("Agachamento livre", "Pernas", "joelho", ["Pés na largura dos ombros.", "Desça com controle.", "Mantenha coluna firme.", "Suba empurrando o chão."]),
-        criarExercicioPesoCorporal("Flexão de braço", "Peito", "ombro", ["Apoie as mãos no chão.", "Mantenha corpo alinhado.", "Desça com controle.", "Suba empurrando o chão."]),
-        criarExercicioPesoCorporal("Prancha", "Abdômen", "lombar", ["Apoie cotovelos e pés.", "Contraia o abdômen.", "Mantenha o corpo alinhado.", "Pare se sentir dor lombar."]),
-        criarExercicioPesoCorporal("Ponte de glúteo", "Glúteos", "lombar", ["Deite de barriga para cima.", "Pés firmes no chão.", "Suba o quadril contraindo glúteos.", "Desça com controle."]),
         criarExercicioPesoCorporal("Afundo alternado", "Pernas", "joelho", ["Dê um passo à frente.", "Desça com controle.", "Mantenha tronco firme.", "Alterne as pernas."]),
+        criarExercicioPesoCorporal("Agachamento sumô", "Pernas", "joelho", ["Abra um pouco mais a base dos pés.", "Desça com controle.", "Mantenha joelhos alinhados.", "Suba contraindo pernas e glúteos."]),
+        criarExercicioPesoCorporal("Elevação de panturrilha", "Panturrilha", "joelho", ["Fique em pé com apoio se precisar.", "Suba nas pontas dos pés.", "Contraia a panturrilha.", "Desça devagar."]),
+        criarExercicioPesoCorporal("Ponte de glúteo", "Glúteos", "lombar", ["Deite de barriga para cima.", "Pés firmes no chão.", "Suba o quadril contraindo glúteos.", "Desça com controle."]),
+        criarExercicioPesoCorporal("Ponte unilateral", "Glúteos", "lombar", ["Deite de barriga para cima.", "Mantenha uma perna apoiada.", "Suba o quadril com controle.", "Troque o lado."]),
+        criarExercicioPesoCorporal("Flexão de braço", "Peito", "ombro", ["Apoie as mãos no chão.", "Mantenha corpo alinhado.", "Desça com controle.", "Suba empurrando o chão."]),
+        criarExercicioPesoCorporal("Flexão inclinada", "Peito", "ombro", ["Apoie as mãos em superfície firme.", "Mantenha corpo alinhado.", "Desça controlando.", "Suba empurrando a superfície."]),
+        criarExercicioPesoCorporal("Superman", "Costas", "lombar", ["Deite de barriga para baixo.", "Eleve braços e pernas com controle.", "Contraia costas e glúteos.", "Desça devagar."]),
+        criarExercicioPesoCorporal("Prancha", "Abdômen", "lombar", ["Apoie cotovelos e pés.", "Contraia o abdômen.", "Mantenha o corpo alinhado.", "Pare se sentir dor lombar."]),
+        criarExercicioPesoCorporal("Prancha lateral", "Abdômen", "lombar", ["Apoie cotovelo e lateral dos pés.", "Mantenha o quadril elevado.", "Contraia o abdômen.", "Troque o lado."]),
         criarExercicioPesoCorporal("Abdominal curto", "Abdômen", "lombar", ["Deite com joelhos flexionados.", "Suba o tronco parcialmente.", "Contraia abdômen.", "Volte devagar."]),
-        criarExercicioPesoCorporal("Polichinelo", "Cardio", "joelho", ["Abra e feche pernas e braços.", "Mantenha ritmo confortável.", "Faça sem impacto se necessário.", "Pare se sentir dor."]),
         criarExercicioPesoCorporal("Mountain climber", "Cardio/Abdômen", "lombar", ["Apoie as mãos no chão.", "Traga os joelhos alternadamente.", "Mantenha abdômen firme.", "Faça devagar se precisar."])
       ];
 
@@ -3361,13 +3371,14 @@
       extras.forEach(function(exercicio) {
         if (treino.length >= alvo) return;
         if (exercicio.evitar === dor) return;
+        if (!exercicioPertenceCategoria(exercicio, letraTreino)) return;
         if (!nomes.includes(normalizarNomeExercicio(exercicio.nome))) {
           treino.push(exercicio);
           nomes.push(normalizarNomeExercicio(exercicio.nome));
         }
       });
 
-      return treino;
+      return treino.filter(function(exercicio) { return exercicioPertenceCategoria(exercicio, letraTreino); });
     }
 
     function abrirAulaCardio(tipo) {
@@ -3483,18 +3494,41 @@
       bibliotecaExercicios._expandida001 = true;
     }
 
+    function normalizarCategoriaTreino(categoria) {
+      const aliases = {
+        bracos_peito: "superior",
+        pernas_fortes: "inferior",
+        gluteos_definidos: "gluteos_posterior",
+        barriga_chapada: "core_abdomen"
+      };
+      return aliases[categoria] || categoria;
+    }
+
+    function gruposPermitidosPorCategoria(categoria) {
+      const cat = normalizarCategoriaTreino(categoria);
+      const mapa = {
+        superior: ["Peito", "Costas", "Ombros", "Ombro posterior", "Tríceps", "Bíceps"],
+        inferior: ["Pernas", "Panturrilha", "Posterior de coxa"],
+        gluteos_posterior: ["Glúteos", "Posterior de coxa"],
+        core_abdomen: ["Abdômen", "Cardio/Abdômen"],
+        completo: ["Peito", "Costas", "Ombros", "Ombro posterior", "Tríceps", "Bíceps", "Pernas", "Glúteos", "Panturrilha", "Abdômen", "Funcional", "Posterior de coxa", "Cardio/Abdômen", "Cardio"]
+      };
+      return mapa[cat] || null;
+    }
+
+    function exercicioPertenceCategoria(exercicio, categoria) {
+      const grupos = gruposPermitidosPorCategoria(categoria);
+      if (!grupos) return true;
+      return grupos.includes(exercicio.grupo);
+    }
+
     function obterBaseTreinoPorCategoria(categoria) {
       garantirBibliotecaExpandida();
+      const cat = normalizarCategoriaTreino(categoria);
       const todos = [].concat(bibliotecaExercicios.A, bibliotecaExercicios.B, bibliotecaExercicios.C);
-      const mapa = {
-        bracos_peito: ["Peito", "Bíceps", "Tríceps", "Ombros"],
-        pernas_fortes: ["Pernas", "Panturrilha", "Posterior de coxa"],
-        gluteos_definidos: ["Glúteos", "Posterior de coxa", "Pernas"],
-        barriga_chapada: ["Abdômen", "Funcional", "Cardio/Abdômen"],
-        completo: ["Peito", "Costas", "Ombros", "Tríceps", "Bíceps", "Pernas", "Glúteos", "Panturrilha", "Abdômen", "Funcional", "Posterior de coxa"]
-      };
-      if (!mapa[categoria]) return bibliotecaExercicios[categoria] || bibliotecaExercicios.A;
-      return todos.filter(function(ex) { return mapa[categoria].includes(ex.grupo); });
+      const grupos = gruposPermitidosPorCategoria(cat);
+      if (!grupos) return bibliotecaExercicios[cat] || bibliotecaExercicios.A;
+      return todos.filter(function(ex) { return grupos.includes(ex.grupo); });
     }
 
     function gerarTreino() {
@@ -3547,6 +3581,9 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
       treinoFiltrado = filtrarExerciciosUnicos(treinoFiltrado);
       treinoFiltrado = adaptarTreinoPorPerfil(treinoFiltrado, tempo);
+      if (gruposPermitidosPorCategoria(letraTreino)) {
+        treinoFiltrado = treinoFiltrado.filter(function(exercicio) { return exercicioPertenceCategoria(exercicio, letraTreino); });
+      }
       treinoFiltrado = aplicarProgressaoSemanalAoTreino(treinoFiltrado, progressaoSemanal, tempo);
 
       const perfilTreino = determinarPerfilTreino();
@@ -4239,7 +4276,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
 
 <script>
-  const METATREINO_APP_VERSION = "0.0.1";
+  const METATREINO_APP_VERSION = "0.0.2";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
