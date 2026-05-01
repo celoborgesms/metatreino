@@ -1,7 +1,7 @@
 {
   "name": "MetaTreino",
   "short_name": "MetaTreino",
-  "start_url": "./index.html?v=0.0.2",
+  "start_url": "./index.html?v=0.0.3",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -14,5 +14,5 @@
       "purpose": "any"
     }
   ],
-  "version": "0.0.2"
+  "version": "0.0.3"
 }

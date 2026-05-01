@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.0.2">
+  <meta name="app-version" content="0.0.3">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.0.2">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.2">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.2">
+  <link rel="manifest" href="manifest.json?v=0.0.3">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.3">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.3">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1313,16 +1313,16 @@
 
         
 
-        <div class="historico-item">
-          <strong>Versão 0.0.2 Beta</strong><br>
-          <span class="tag">Beta</span>
-          <p class="small"><strong>Atualizada em:</strong> 30/04/2026</p>
+        <div class="card-versao">
+          <strong>Versão 0.0.3 Beta</strong><br>
+          <span class="tag beta">Beta</span>
+          <p><strong>Atualizada em:</strong> 30/04/2026</p>
           <ul>
-            <li>Treino inteligente agora usa melhor a memória do aluno para adaptar sugestões.</li>
-            <li>Adicionado sistema anti-repetição para reduzir exercícios repetidos nos próximos treinos.</li>
-            <li>Adicionada progressão inteligente de carga com base no histórico salvo.</li>
-            <li>Novidades e controle interno de versão atualizados para a versão atual do app.</li>
-            <li>Preservadas as telas e regras já aprovadas da versão 0.0.1: Início, check-in, categorias de treino, recuperação, histórico e cardio.</li>
+            <li>Correção dos gráficos reais de evolução: registros agora são contados como Treino A - Superiores, Treino B - Inferiores, Treino C - Abdômen / core ou Treino leve / recuperação.</li>
+            <li>Treino inteligente ajustado para sugerir recuperação no domingo e em cenários de cansaço/esforço recente, sem impedir o aluno de escolher outro treino manualmente.</li>
+            <li>Ao concluir o último exercício, a tela desce automaticamente para a mensagem de conclusão.</li>
+            <li>Após salvar treino, os campos de carga, repetições, sensação, observação e resultado da evolução são limpos para o próximo registro.</li>
+            <li>Preservadas as telas e regras aprovadas da 0.0.1/0.0.2: Início, check-in, categorias, exercícios, recuperação, histórico, cardio e perfis.</li>
           </ul>
         </div>
 
@@ -2778,7 +2778,7 @@
 
       const dorAtual = document.getElementById("dor") ? document.getElementById("dor").value : "nenhuma";
       const energiaAtual = document.getElementById("energia") ? document.getElementById("energia").value : "bem";
-      if (energiaAtual === "mal") return "descanso";
+      if (energiaAtual === "mal" || energiaAtual === "cansado") return "descanso";
       if (dorAtual === "pernas" || dorAtual === "joelho") return "superior";
       if (dorAtual === "bracos" || dorAtual === "ombro") return "inferior";
       if (dorAtual === "coluna" || dorAtual === "lombar") return "descanso";
@@ -3297,10 +3297,17 @@
             return item.sensacao === "dificil" || Number(item.totalConcluidos || 0) >= 6;
           });
 
-          if (totalEsforcos >= 3 || (cardioForte && treinoPesado)) {
+          const treinoPesadoRecente = treinosRecentes.some(function(item) {
+            const horas = (agora - Number(item.criadoEm || 0)) / (1000 * 60 * 60);
+            return horas <= 36 && (item.sensacao === "dificil" || item.feedbackFinalTreino === "dificil" || Number(item.totalConcluidos || 0) >= 6);
+          });
+
+          if (treinoPesadoRecente || totalEsforcos >= 3 || (cardioForte && treinoPesado)) {
             callback({
               sugerirDescanso: true,
-              mensagem: "Descanso inteligente: o app identificou esforço recente acumulado em treinos/cardio e sugeriu recuperação ativa para reduzir risco de excesso."
+              mensagem: treinoPesadoRecente
+                ? "Descanso inteligente: o app identificou treino pesado recente e sugeriu recuperação ativa para preservar evolução e reduzir risco de excesso."
+                : "Descanso inteligente: o app identificou esforço recente acumulado em treinos/cardio e sugeriu recuperação ativa para reduzir risco de excesso."
             });
           } else {
             callback({ sugerirDescanso: false, mensagem: "" });
@@ -3884,8 +3891,9 @@
       atualizarProgressoExercicios();
       if (concluido) {
         setTimeout(function() {
-          const registro = document.getElementById("registroEvolucao");
-          if (registro) registro.scrollIntoView({ behavior: "smooth", block: "start" });
+          const todosConcluidos = exerciciosConcluidos.length > 0 && exerciciosConcluidos.every(function(item) { return item === true; });
+          const alvo = todosConcluidos ? document.getElementById("progressoExercicios") : document.getElementById("registroEvolucao");
+          if (alvo) alvo.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 120);
       }
     }
@@ -4012,6 +4020,13 @@
         .then(function() {
           alert("Treino salvo na nuvem.");
           mostrarHistorico();
+          document.getElementById("carga").value = "";
+          document.getElementById("reps").value = "";
+          document.getElementById("sensacao").value = "normal";
+          document.getElementById("observacaoTreino").value = "";
+          const resultadoEvolucao = document.getElementById("resultadoEvolucao");
+          if (resultadoEvolucao) resultadoEvolucao.innerText = "";
+          mensagemEvolucaoAtual = "";
           const proximoIndex = exerciciosConcluidos.findIndex(function(item) { return item !== true; });
           const alvo = proximoIndex >= 0 ? document.getElementById("cardExercicio" + proximoIndex) : document.getElementById("resultadoTreino");
           if (alvo) alvo.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -4159,17 +4174,30 @@
       "</div>";
     }
 
+    function categoriaHistoricoTreino(item) {
+      const bruto = item ? (item.letraTreino || item.divisaoTreino || item.categoriaTreino || "") : "";
+      let cat = normalizarCategoriaTreino(String(bruto));
+      if (["superior", "inferior", "core_abdomen", "descanso"].includes(cat)) return cat;
+
+      const exercicios = (item && Array.isArray(item.exercicios)) ? item.exercicios.join(" ").toLowerCase() : "";
+      const registro = String(item && item.exercicioRegistro ? item.exercicioRegistro : "").toLowerCase();
+      const texto = exercicios + " " + registro;
+      if (/agach|leg press|extensora|flexora|stiff|afundo|panturrilha|glute|p[eé]lvica|cadeira extensora|perna|inferior/.test(texto)) return "inferior";
+      if (/prancha|abdom|core|dead bug|bird dog|lombar|russian|eleva[cç][aã]o de pernas/.test(texto)) return "core_abdomen";
+      if (/supino|flex[aã]o|remada|puxada|rosca|tr[ií]ceps|b[ií]ceps|ombro|peito|costas|superior/.test(texto)) return "superior";
+      if (/recupera|descanso|mobilidade|alongamento|caminhada leve|yoga|libera[cç][aã]o/.test(texto)) return "descanso";
+      return "descanso";
+    }
+
     function montarGraficosEvolucao(treinos, cardios) {
       treinos = treinos || [];
       cardios = (cardios || []).filter(function(item) { return item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida"; });
 
-      const mapaTreinos = { A: 0, B: 0, C: 0, Descanso: 0 };
+      const mapaTreinos = { superior: 0, inferior: 0, core_abdomen: 0, descanso: 0 };
       treinos.forEach(function(item) {
-        const letra = String(item.letraTreino || "").toUpperCase();
-        if (letra === "A") mapaTreinos.A++;
-        else if (letra === "B") mapaTreinos.B++;
-        else if (letra === "C") mapaTreinos.C++;
-        else mapaTreinos.Descanso++;
+        const categoria = categoriaHistoricoTreino(item);
+        if (mapaTreinos[categoria] !== undefined) mapaTreinos[categoria]++;
+        else mapaTreinos.descanso++;
       });
 
       const mapaCardio = { Corrida: 0, Caminhada: 0, Bicicleta: 0 };
@@ -4202,7 +4230,7 @@
       cardios.forEach(function(item) { const d = dataRegistroParaDia(item); if (d) diasAtivos[d] = true; });
       const frequencia = Object.keys(diasAtivos).length;
 
-      const maxTreino = Math.max(1, mapaTreinos.A, mapaTreinos.B, mapaTreinos.C, mapaTreinos.Descanso);
+      const maxTreino = Math.max(1, mapaTreinos.superior, mapaTreinos.inferior, mapaTreinos.core_abdomen, mapaTreinos.descanso);
       const maxCardio = Math.max(1, mapaCardio.Corrida, mapaCardio.Caminhada, mapaCardio.Bicicleta);
       const paceTexto = melhorPace ? (Math.floor(melhorPace) + ":" + String(Math.round((melhorPace - Math.floor(melhorPace)) * 60)).padStart(2, "0") + " min/km") : "Sem pace ainda";
 
@@ -4216,10 +4244,10 @@
         "Treinos salvos: " + treinos.length + " | Cardios salvos: " + cardios.length + "</div>" +
         montarLinhaGrafico("Frequência nos últimos 90 dias", frequencia, 90, frequencia + " dia(s)") +
         "<br><strong>💪 Partes treinadas</strong>" +
-        montarLinhaGrafico("Treino de membros superiores", mapaTreinos.A, maxTreino, mapaTreinos.A + " registro(s)") +
-        montarLinhaGrafico("Treino de costas e bíceps", mapaTreinos.B, maxTreino, mapaTreinos.B + " registro(s)") +
-        montarLinhaGrafico("Treino de pernas e core", mapaTreinos.C, maxTreino, mapaTreinos.C + " registro(s)") +
-        montarLinhaGrafico("Recuperação / descanso", mapaTreinos.Descanso, maxTreino, mapaTreinos.Descanso + " registro(s)") +
+        montarLinhaGrafico("Treino A - Superiores", mapaTreinos.superior, maxTreino, mapaTreinos.superior + " registro(s)") +
+        montarLinhaGrafico("Treino B - Inferiores", mapaTreinos.inferior, maxTreino, mapaTreinos.inferior + " registro(s)") +
+        montarLinhaGrafico("Treino C - Abdômen / core", mapaTreinos.core_abdomen, maxTreino, mapaTreinos.core_abdomen + " registro(s)") +
+        montarLinhaGrafico("Treino leve / recuperação", mapaTreinos.descanso, maxTreino, mapaTreinos.descanso + " registro(s)") +
         "<br><strong>🏃 Cardio</strong>" +
         montarLinhaGrafico("Corrida", mapaCardio.Corrida, maxCardio, mapaCardio.Corrida + " registro(s)") +
         montarLinhaGrafico("Caminhada", mapaCardio.Caminhada, maxCardio, mapaCardio.Caminhada + " registro(s)") +
@@ -4550,7 +4578,7 @@
 
 
 <script>
-  const METATREINO_APP_VERSION = "0.0.2";
+  const METATREINO_APP_VERSION = "0.0.3";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
