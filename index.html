@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.0.6">
+  <meta name="app-version" content="0.0.7">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.0.6">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.6">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.6">
+  <link rel="manifest" href="manifest.json?v=0.0.7">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.7">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.7">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1340,13 +1340,13 @@
         
 
         <div class="card-versao">
-          <strong>Versão 0.0.6 Beta</strong><br>
+          <strong>Versão 0.0.7 Beta</strong><br>
           <span class="tag beta">Beta</span>
           <p><strong>Atualizada em:</strong> 01/05/2026</p>
           <ul>
-            <li>Aba Conquistas adicionada com últimas conquistas desbloqueadas, conquistas bloqueadas e botão para ver todas.</li>
-            <li>Conquistas bloqueadas aparecem com visual escurecido/transparente até serem desbloqueadas.</li>
-            <li>Preservadas as telas aprovadas da base 0.0.3: Início, Check-in, Treino, registro de carga/repetições, Cardio e Histórico.</li>
+            <li>Treino inteligente refinado: recuperação automática somente em domingo, cansaço/mal-estar ou dor informada no check-in.</li>
+            <li>Anti-repetição melhorada: o app evita repetir exercícios recentes quando houver alternativa compatível para o mesmo tipo de treino.</li>
+            <li>Substituição mais segura: mantém categoria, grupo muscular, local disponível e evita duplicar exercícios já presentes no treino.</li>
           </ul>
         </div>
 
@@ -1470,7 +1470,7 @@
           treino: treinoAtual,
           letra: treinoAtual.letra || "",
           categoria: treinoAtual.categoria || treinoAtual.letra || "",
-          versaoGeracao: "0.0.6-conquistas",
+          versaoGeracao: "0.0.7-inteligencia-real",
           concluidos: exerciciosConcluidos || [],
           feedback: feedbackTreinoFinalAtual || "",
           salvoEm: Date.now()
@@ -2868,17 +2868,25 @@
       return "A";
     }
 
+    function existeDorCheckin(valor) {
+      return valor && valor !== "nenhuma";
+    }
+
+    function deveUsarRecuperacaoInteligente(divisaoSelecionada) {
+      const energiaAtual = document.getElementById("energia") ? document.getElementById("energia").value : "bem";
+      const dorAtual = document.getElementById("dor") ? document.getElementById("dor").value : "nenhuma";
+      const domingo = new Date().getDay() === 0;
+      if (divisaoSelecionada === "descanso") return true;
+      if (divisaoSelecionada !== "automatico") return false;
+      return domingo || energiaAtual === "cansado" || energiaAtual === "mal" || existeDorCheckin(dorAtual);
+    }
+
     function escolherTreinoABC(divisaoSelecionada) {
       if (divisaoSelecionada === "descanso") return "descanso";
       if (["superior", "inferior", "core_abdomen"].includes(divisaoSelecionada)) return divisaoSelecionada;
       if (divisaoSelecionada !== "automatico" && divisaoSelecionada) return normalizarCategoriaTreino(divisaoSelecionada);
 
-      const dorAtual = document.getElementById("dor") ? document.getElementById("dor").value : "nenhuma";
-      const energiaAtual = document.getElementById("energia") ? document.getElementById("energia").value : "bem";
-      if (energiaAtual === "mal" || energiaAtual === "cansado") return "descanso";
-      if (dorAtual === "pernas" || dorAtual === "joelho") return "superior";
-      if (dorAtual === "bracos" || dorAtual === "ombro") return "inferior";
-      if (dorAtual === "coluna" || dorAtual === "lombar") return "descanso";
+      if (deveUsarRecuperacaoInteligente(divisaoSelecionada)) return "descanso";
 
       if (perfilUsuario) {
         if (perfilUsuario.metaPrincipal === "perder_peso" || perfilUsuario.metaPrincipal === "definicao") return "inferior";
@@ -3622,19 +3630,42 @@
 
     function aplicarAntiRepeticaoInteligente(treino, categoria, alvo) {
       const lista = filtrarExerciciosUnicos(treino || []);
-      if (!memoriaTreinoCache || !memoriaTreinoCache.ultimosNomes || lista.length <= alvo) return lista;
+      if (!lista.length) return lista;
+      alvo = alvo || lista.length;
+      if (!memoriaTreinoCache || !memoriaTreinoCache.ultimosNomes) return lista;
+
       const recentes = memoriaTreinoCache.ultimosNomes;
-      const preferidos = [];
-      const repetidos = [];
+      const agora = Date.now();
+      const limiteMuitoRecente = 7 * 24 * 60 * 60 * 1000;
+      const limiteRecente = 21 * 24 * 60 * 60 * 1000;
+      const novos = [];
+      const recentesLeves = [];
+      const muitoRecentes = [];
+
       lista.forEach(function(exercicio) {
         const chave = normalizarNomeExercicio(exercicio.nome || "");
-        if (recentes[chave] && recentes[chave].recente) repetidos.push(exercicio);
-        else preferidos.push(exercicio);
+        const registro = recentes[chave];
+        const idade = registro && registro.criadoEm ? (agora - Number(registro.criadoEm || 0)) : Infinity;
+        if (idade <= limiteMuitoRecente) muitoRecentes.push(exercicio);
+        else if (idade <= limiteRecente) recentesLeves.push(exercicio);
+        else novos.push(exercicio);
       });
-      if (preferidos.length >= Math.max(3, Math.min(alvo, lista.length))) {
-        return preferidos.concat(repetidos);
-      }
-      return lista;
+
+      const ordenado = novos.concat(recentesLeves).concat(muitoRecentes);
+      const escolhidos = [];
+      const usados = {};
+      ordenado.forEach(function(exercicio) {
+        if (escolhidos.length >= alvo) return;
+        const chave = normalizarNomeExercicio(exercicio.nome || "");
+        if (usados[chave]) return;
+        usados[chave] = true;
+        escolhidos.push(exercicio);
+      });
+
+      return escolhidos.length ? escolhidos.concat(ordenado.filter(function(exercicio) {
+        const chave = normalizarNomeExercicio(exercicio.nome || "");
+        return !usados[chave];
+      })) : ordenado;
     }
 
     function aplicarProgressaoDeCargaNosExercicios(treino) {
@@ -3853,7 +3884,7 @@
       const local = localOriginal === "academia_basica" ? "academia_pequena" : localOriginal;
       garantirBibliotecaExpandida();
 
-      if (divisaoSelecionada === "automatico" && esforcoRecente.sugerirDescanso) {
+      if (deveUsarRecuperacaoInteligente(divisaoSelecionada)) {
         letraTreino = "descanso";
       }
 
@@ -3924,7 +3955,8 @@
 
       let ajuste = "";
       if (letraTreino === "descanso") {
-        ajuste = "Treino leve / recuperação selecionado: o app montou uma sessão leve com exercícios registráveis e sugestões complementares sem carga/repetições.";
+        const motivoRecuperacao = new Date().getDay() === 0 ? "domingo" : (energia !== "bem" ? "energia baixa/cansaço" : (dor !== "nenhuma" ? "dor informada no check-in" : "recuperação manual"));
+        ajuste = "Recuperação inteligente ativada por " + motivoRecuperacao + ": o app montou uma sessão leve com sugestões de recuperação e exercícios leves. Itens não registráveis aparecem sem carga/repetições.";
       } else {
         if (energia === "bem") ajuste = "Hoje você pode treinar normalmente e tentar evoluir carga se a execução estiver boa.";
         else if (energia === "cansado") ajuste = "Hoje reduza um pouco o volume. Faça uma série a menos em cada exercício.";
@@ -3940,7 +3972,7 @@
       else ajuste += " Treino longo: pensado para mais de 1 hora, com maior volume de exercícios.";
       if (dor !== "nenhuma" && letraTreino !== "descanso") ajuste += " Exercícios que podem incomodar sua dor foram removidos.";
       if (ajusteCardio.mensagem) ajuste += " " + ajusteCardio.mensagem;
-      if (esforcoRecente.mensagem) ajuste += " " + esforcoRecente.mensagem;
+      if (esforcoRecente.mensagem && letraTreino === "descanso") ajuste += " " + esforcoRecente.mensagem;
       if (progressaoSemanal && progressaoSemanal.mensagem) ajuste += " " + progressaoSemanal.mensagem;
       if (memoriaTreinoCache && memoriaTreinoCache.historico && memoriaTreinoCache.historico.length > 0 && letraTreino !== "descanso") ajuste += " Memória inteligente ativa: o app priorizou variações menos repetidas recentemente e usou seus registros anteriores para sugerir carga quando houver histórico do exercício.";
       if (mensagemCardioTreino) ajuste += mensagemCardioTreino;
@@ -4763,7 +4795,7 @@
 
 
 <script>
-  const METATREINO_APP_VERSION = "0.0.6";
+  const METATREINO_APP_VERSION = "0.0.7";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
