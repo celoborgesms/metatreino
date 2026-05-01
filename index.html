@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.0.3">
+  <meta name="app-version" content="0.0.4">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.0.3">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.3">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.3">
+  <link rel="manifest" href="manifest.json?v=0.0.4">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.4">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.4">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -479,6 +479,16 @@
       border: 1px solid #bbf7d0;
     }
 
+
+
+    /* Versao 0.0.4 Beta - Conquistas e recuperacao informativa */
+    .conquistas-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 14px; }
+    .conquista-card { display: flex; gap: 12px; align-items: flex-start; padding: 15px; border-radius: 22px; background: linear-gradient(135deg, rgba(250, 204, 21, 0.18), rgba(59, 130, 246, 0.12)); border: 1px solid rgba(250, 204, 21, 0.34); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10); animation: subir 0.3s ease; }
+    .conquista-card.bloqueada { opacity: 0.58; filter: grayscale(60%); background: rgba(148, 163, 184, 0.12); border-color: rgba(148, 163, 184, 0.24); }
+    .conquista-trofeu { width: 46px; height: 46px; min-width: 46px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 25px; background: radial-gradient(circle at 35% 20%, #fef3c7, #f59e0b); box-shadow: 0 10px 20px rgba(245, 158, 11, 0.22); }
+    .conquista-card strong { display: block; font-size: 16px; color: #0f172a; margin-bottom: 4px; }
+    .conquistas-resumo { margin-top: 12px; padding: 14px; border-radius: 20px; background: linear-gradient(135deg, #ecfdf5, #eff6ff); border: 1px solid rgba(34, 197, 94, 0.26); font-weight: 900; }
+
     .tag {
       display: inline-block;
       padding: 7px 10px;
@@ -680,7 +690,9 @@
     .alerta,
     .resumo-dia-box,
     .mensagem-inteligente,
-    .progresso-box {
+    .progresso-box,
+    .conquistas-resumo,
+    .conquista-card {
       background: rgba(59, 130, 246, 0.14) !important;
       color: #ffffff !important;
       border-color: rgba(59, 130, 246, 0.55) !important;
@@ -1142,7 +1154,6 @@
           <option value="superior">Treino A - Superiores</option>
           <option value="inferior">Treino B - Inferiores</option>
           <option value="core_abdomen">Treino C - Abdômen / core</option>
-          <option value="descanso">Treino leve / recuperação</option>
         </select>
 
         <button type="button" class="botao-principal" onclick="gerarTreino()">💪 Gerar / atualizar treino do dia</button>
@@ -1258,6 +1269,17 @@
       </div>
     </section>
 
+    <section id="paginaConquistas" class="hidden">
+      <div class="card">
+        <h2>🏆 Conquistas</h2>
+        <p class="small">Acompanhe seus troféus de treino, cardio, progresso e consistência. As últimas 3 conquistas desbloqueadas aparecem primeiro.</p>
+        <div id="resumoConquistas" class="conquistas-resumo">Carregando conquistas...</div>
+        <div id="ultimasConquistas" class="conquistas-grid"></div>
+        <button type="button" id="botaoVerTodasConquistas" class="botao-secundario" onclick="alternarTodasConquistas()">Ver todas as conquistas</button>
+        <div id="todasConquistas" class="conquistas-grid hidden"></div>
+      </div>
+    </section>
+
 
     <section id="paginaPainelTreinador" class="hidden">
       <div class="card">
@@ -1314,6 +1336,20 @@
         
 
         <div class="card-versao">
+          <strong>Versão 0.0.4 Beta</strong><br>
+          <span class="tag beta">Beta</span>
+          <p><strong>Atualizada em:</strong> 01/05/2026</p>
+          <ul>
+            <li>Nova aba 🏆 Conquistas com troféu visual, últimas 3 conquistas e botão para ver todas.</li>
+            <li>Conquistas de treino, cardio, progresso e engajamento calculadas pelo histórico salvo.</li>
+            <li>Recuperação agora é automática para domingo, cansaço, mal-estar, dor importante ou esforço recente.</li>
+            <li>Yoga, caminhada, mobilidade e recuperação viraram sugestões informativas, sem registro de carga/repetições.</li>
+            <li>Substituição inteligente protegida contra troca de recuperação por exercício registrável.</li>
+            <li>Cache e manifest atualizados para evitar o app ficar preso na versão antiga.</li>
+          </ul>
+        </div>
+
+        <div class="card-versao">
           <strong>Versão 0.0.3 Beta</strong><br>
           <span class="tag beta">Beta</span>
           <p><strong>Atualizada em:</strong> 30/04/2026</p>
@@ -1346,6 +1382,7 @@
       <button type="button" onclick="irParaTreino()">💪 Treino</button>
       <button type="button" onclick="irParaCardio()">🏃 Cardio</button>
       <button type="button" onclick="irParaHistorico()">📊 Histórico</button>
+      <button type="button" onclick="irParaConquistas()">🏆 Conquistas</button>
       <button id="botaoPainelTreinador" type="button" class="hidden" onclick="irParaPainelTreinador()">🧑‍🏫 Painel</button>
       <button type="button" onclick="irParaNovidades()">✨ Novidades</button>
     </nav>
@@ -1445,7 +1482,7 @@
           treino: treinoAtual,
           letra: treinoAtual.letra || "",
           categoria: treinoAtual.categoria || treinoAtual.letra || "",
-          versaoGeracao: "0.0.3-filtro-categoria",
+          versaoGeracao: "0.0.4-conquistas-recuperacao",
           concluidos: exerciciosConcluidos || [],
           feedback: feedbackTreinoFinalAtual || "",
           salvoEm: Date.now()
@@ -1850,7 +1887,7 @@
     }
 
     function ocultarPaginasDoApp() {
-      const ids = ["paginaPerfil", "paginaTreino", "paginaCheckin", "paginaCardio", "paginaHistoricoCompleto", "paginaPainelTreinador", "paginaNovidades"];
+      const ids = ["paginaPerfil", "paginaTreino", "paginaCheckin", "paginaCardio", "paginaHistoricoCompleto", "paginaConquistas", "paginaPainelTreinador", "paginaNovidades"];
       ids.forEach(function(id) {
         const el = document.getElementById(id);
         if (el) el.classList.add("hidden");
@@ -2682,6 +2719,19 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
+
+
+    function irParaConquistas() {
+      if (!acessoLiberado) {
+        bloquearApp("Faça login com um e-mail autorizado para ver suas conquistas.");
+        return;
+      }
+      ocultarPaginasDoApp();
+      document.getElementById("paginaConquistas").classList.remove("hidden");
+      carregarConquistas();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
     function irParaNovidades() {
       if (!acessoLiberado) {
         bloquearApp("Faça login com um e-mail autorizado para ver as novidades do app.");
@@ -2782,12 +2832,12 @@
     }
 
     function escolherTreinoABC(divisaoSelecionada) {
-      if (divisaoSelecionada === "descanso") return "descanso";
       if (["superior", "inferior", "core_abdomen"].includes(divisaoSelecionada)) return divisaoSelecionada;
       if (divisaoSelecionada !== "automatico" && divisaoSelecionada) return normalizarCategoriaTreino(divisaoSelecionada);
 
       const dorAtual = document.getElementById("dor") ? document.getElementById("dor").value : "nenhuma";
       const energiaAtual = document.getElementById("energia") ? document.getElementById("energia").value : "bem";
+      if (new Date().getDay() === 0) return "descanso";
       if (energiaAtual === "mal" || energiaAtual === "cansado") return "descanso";
       if (dorAtual === "pernas" || dorAtual === "joelho") return "superior";
       if (dorAtual === "bracos" || dorAtual === "ombro") return "inferior";
@@ -3735,7 +3785,17 @@
     }
 
     function obterBaseTreinoPorCategoria(categoria) {
-      return bibliotecaProfissionalPorCategoria(categoria);
+      const lista = bibliotecaProfissionalPorCategoria(categoria);
+      if (normalizarCategoriaTreino(categoria) === "descanso") {
+        return lista.map(function(exercicio) {
+          const copia = Object.assign({}, exercicio);
+          copia.registravel = false;
+          copia.series = "10 a 25 minutos";
+          copia.reps = "ritmo leve";
+          return copia;
+        });
+      }
+      return lista;
     }
 
     function gerarTreino() {
@@ -3837,7 +3897,7 @@
 
       let ajuste = "";
       if (letraTreino === "descanso") {
-        ajuste = "Treino leve / recuperação selecionado: o app montou uma sessão leve com exercícios registráveis e sugestões complementares sem carga/repetições.";
+        ajuste = "Recuperação inteligente ativada: hoje o app mostra apenas sugestões leves e informativas. Não é necessário registrar carga ou repetições.";
       } else {
         if (energia === "bem") ajuste = "Hoje você pode treinar normalmente e tentar evoluir carga se a execução estiver boa.";
         else if (energia === "cansado") ajuste = "Hoje reduza um pouco o volume. Faça uma série a menos em cada exercício.";
@@ -3860,7 +3920,8 @@
       ajuste += " Lembrete: hidrate-se, respeite seus limites e evite treinar forte em jejum, com dor ou mal-estar.";
 
       document.getElementById("resultadoTreino").classList.remove("hidden");
-      document.getElementById("registroEvolucao").classList.remove("hidden");
+      if (letraTreino === "descanso") document.getElementById("registroEvolucao").classList.add("hidden");
+      else document.getElementById("registroEvolucao").classList.remove("hidden");
       const resumoDia = document.getElementById("resumoDiaTreino");
       if (resumoDia) {
         resumoDia.classList.remove("hidden");
@@ -3914,6 +3975,7 @@
           "<span>" + exercicio.series + " | " + exercicio.reps + "</span><br>";
         const sugestaoCargaHtml = exercicio.registravel === false ? "" : "<div class='alerta'>" + obterTextoSugestaoCarga(exercicio.nome) + "</div>";
         const botaoRegistrarHtml = exercicio.registravel === false ? "" : "<button type='button' class='botao-secundario' onclick='preencherRegistroComExercicio(" + index + ")'>Registrar este exercício</button>";
+        const botaoSubstituirHtml = exercicio.registravel === false ? "" : "<button type='button' class='botao-secundario' onclick='substituirExercicio(" + index + ")'>Não tenho esse equipamento / substituir</button>";
         div.innerHTML = "<strong>" + exercicio.nome + "</strong>" +
           blocoSeries +
           "<span class='tag'>Grupo: " + exercicio.grupo + "</span> " +
@@ -3925,7 +3987,7 @@
           "<label class='check-exercicio'><input type='checkbox' " + marcado + " onchange='marcarExercicioConcluido(" + index + ", this.checked)'>Exercício concluído</label>" +
           "<div class='acoes-exercicio-grid'>" +
           botaoRegistrarHtml +
-          "<button type='button' class='botao-secundario' onclick='substituirExercicio(" + index + ")'>Não tenho esse equipamento / substituir</button>" +
+          botaoSubstituirHtml +
           "<button type='button' class='botao-pular' onclick='pularExercicio(" + index + ")'>Pular este exercício</button>" +
           "</div>";
         lista.appendChild(div);
@@ -4026,6 +4088,10 @@
     function substituirExercicio(index) {
       const exercicioAtual = treinoAtual[index];
       if (!exercicioAtual) return;
+      if (treinoAtual.categoria === "descanso" || exercicioAtual.registravel === false) {
+        alert("Recuperação é apenas uma sugestão informativa, sem troca por exercício de carga/repetições.");
+        return;
+      }
 
       const opcoes = obterSubstituicoesCompativeis(index);
       if (!opcoes || opcoes.length === 0) {
@@ -4131,6 +4197,48 @@
         })
         .catch(function(erro) { console.log("Erro ao salvar treino na nuvem:", erro); alert("Não foi possível salvar o treino na nuvem. Confira sua conexão e tente novamente."); });
     }
+
+
+
+    function inicioDoDia(ts) { const d = new Date(Number(ts || 0)); d.setHours(0,0,0,0); return d.getTime(); }
+    function contarSequenciaDias(itens) { const dias = Array.from(new Set((itens||[]).filter(i=>i&&i.criadoEm).map(i=>inicioDoDia(i.criadoEm)))).sort((a,b)=>b-a); if(!dias.length) return 0; let seq=1; for(let i=1;i<dias.length;i++){ const diff=Math.round((dias[i-1]-dias[i])/86400000); if(diff===1) seq++; else if(diff>1) break; } return seq; }
+    function contarDiasAtivosNoMes(itens) { const h=new Date(); return new Set((itens||[]).filter(i=>{ if(!i||!i.criadoEm) return false; const d=new Date(Number(i.criadoEm)); return d.getMonth()===h.getMonth()&&d.getFullYear()===h.getFullYear(); }).map(i=>inicioDoDia(i.criadoEm))).size; }
+    function obterPesoInicialAtual() { try { const pesos=JSON.parse(localStorage.getItem("historicoPeso")||"[]"); if(Array.isArray(pesos)&&pesos.length>=2) return {inicial:Number(pesos[0].peso||0), atual:Number(pesos[pesos.length-1].peso||0)}; } catch(e){} return {inicial:perfilUsuario?Number(perfilUsuario.peso||0):0, atual:perfilUsuario?Number(perfilUsuario.peso||0):0}; }
+    function montarConquistas(treinos, cardios) {
+      treinos=treinos||[]; cardios=(cardios||[]).filter(c=>!(c.tipo==="sem_cardio"||c.tipo==="sem_corrida"));
+      const exerciciosUnicos=new Set(); treinos.forEach(t=>(t.exercicios||[]).forEach(e=>{ if(e) exerciciosUnicos.add(normalizarNomeExercicio(e)); }));
+      const distanciaTotal=cardios.reduce((s,c)=>s+Number(c.distancia||0),0); const tempoTotal=cardios.reduce((s,c)=>s+Number(c.tempo||0),0);
+      const cargaInicial={}, cargaMax={}; treinos.slice().sort((a,b)=>Number(a.criadoEm||0)-Number(b.criadoEm||0)).forEach(t=>{ const nome=normalizarNomeExercicio(t.exercicioRegistro||""); const carga=Number(t.carga||0); if(!nome) return; if(cargaInicial[nome]===undefined) cargaInicial[nome]=carga; cargaMax[nome]=Math.max(cargaMax[nome]||0,carga); });
+      const evolucaoCarga=Object.keys(cargaMax).some(n=>(cargaMax[n]-(cargaInicial[n]||0))>=10); const primeiraEvolucao=Object.keys(cargaMax).some(n=>cargaMax[n]>(cargaInicial[n]||0));
+      const peso=obterPesoInicialAtual(); const perdaPeso=(peso.inicial>0&&peso.atual>0)?peso.inicial-peso.atual:0;
+      const treinosPerfeitos=treinos.filter(t=>Number(t.totalExercicios||0)>0&&Number(t.totalConcluidos||0)>=Number(t.totalExercicios||0)).length;
+      const semanaAtualTreinos=treinos.filter(t=>t.criadoEm&&(Date.now()-Number(t.criadoEm))<=7*86400000).length;
+      const treinouCansado=treinos.some(t=>String(t.observacao||"").toLowerCase().includes("cans")||String(t.feedbackFinalTreino||"").toLowerCase().includes("dificil"));
+      const diasAtivos=new Set(treinos.concat(cardios).map(i=>i.criadoEm?inicioDoDia(i.criadoEm):0).filter(Boolean)).size;
+      return [
+        {cat:"🏋️ Treino", nome:"Primeiro treino concluído", desc:"Você registrou seu primeiro treino no app.", ok:treinos.length>=1},
+        {cat:"🏋️ Treino", nome:"7 dias seguidos treinando", desc:"Sequência forte de consistência nos treinos.", ok:contarSequenciaDias(treinos)>=7},
+        {cat:"🏋️ Treino", nome:"100 treinos realizados", desc:"Marca de atleta consistente: 100 treinos salvos.", ok:treinos.length>=100},
+        {cat:"🏋️ Treino", nome:"Explorador de exercícios", desc:"10 exercícios diferentes feitos no histórico.", ok:exerciciosUnicos.size>=10},
+        {cat:"🏋️ Treino", nome:"Evolução de carga", desc:"Você aumentou pelo menos 10 kg em algum exercício.", ok:evolucaoCarga},
+        {cat:"🏋️ Treino", nome:"Treino perfeito", desc:"Todos os exercícios do treino foram concluídos.", ok:treinosPerfeitos>=1},
+        {cat:"❤️ Cardio", nome:"Primeiro cardio registrado", desc:"Primeiro registro de caminhada, corrida ou bicicleta.", ok:cardios.length>=1},
+        {cat:"❤️ Cardio", nome:"3 dias seguidos de cardio", desc:"Três dias consecutivos cuidando do coração.", ok:contarSequenciaDias(cardios)>=3},
+        {cat:"❤️ Cardio", nome:"20 dias ativos no mês", desc:"Vinte dias com cardio registrado no mês atual.", ok:contarDiasAtivosNoMes(cardios)>=20},
+        {cat:"❤️ Cardio", nome:"10 km acumulados", desc:"Somou 10 km em cardio no histórico.", ok:distanciaTotal>=10},
+        {cat:"❤️ Cardio", nome:"1 hora total de cardio", desc:"Acumulou 60 minutos de cardio.", ok:tempoTotal>=60},
+        {cat:"🎯 Progresso", nome:"-5 kg alcançados", desc:"Redução de 5 kg em relação ao primeiro peso salvo.", ok:perdaPeso>=5},
+        {cat:"🎯 Progresso", nome:"Primeira perda de peso", desc:"O peso atual ficou menor que o primeiro peso salvo.", ok:perdaPeso>0},
+        {cat:"🎯 Progresso", nome:"Primeira evolução de carga", desc:"Você já registrou carga maior que a primeira em algum exercício.", ok:primeiraEvolucao},
+        {cat:"🎯 Progresso", nome:"Consistência por 30 dias", desc:"Treinos ou cardios em 30 dias diferentes.", ok:diasAtivos>=30},
+        {cat:"🧠 Especiais", nome:"Voltou após pausa", desc:"Você voltou a registrar depois de alguns dias parado.", ok:treinos.length>=2 && contarSequenciaDias(treinos)<2},
+        {cat:"🧠 Especiais", nome:"Treinou mesmo cansado", desc:"Você manteve o compromisso em um dia difícil.", ok:treinouCansado},
+        {cat:"🧠 Especiais", nome:"Meta semanal cumprida", desc:"Pelo menos 3 treinos registrados nos últimos 7 dias.", ok:semanaAtualTreinos>=3}
+      ];
+    }
+    function renderizarCardConquista(c) { return "<div class='conquista-card "+(c.ok?"":"bloqueada")+"'><div class='conquista-trofeu'>"+(c.ok?"🏆":"🔒")+"</div><div><strong>"+limparTextoSeguro(c.nome)+"</strong><span class='tag'>"+limparTextoSeguro(c.cat)+"</span><p class='small'>"+limparTextoSeguro(c.desc)+"</p></div></div>"; }
+    function carregarConquistas() { const resumo=document.getElementById("resumoConquistas"), ultimas=document.getElementById("ultimasConquistas"), todas=document.getElementById("todasConquistas"); if(resumo) resumo.innerHTML="Carregando conquistas..."; obterHistoricoDaNuvem(function(treinos){ obterCardiosDaNuvem(function(cardios){ const conquistas=montarConquistas(treinos,cardios); const desbloqueadas=conquistas.filter(c=>c.ok); if(resumo) resumo.innerHTML="🏆 "+desbloqueadas.length+" de "+conquistas.length+" conquistas desbloqueadas."; if(ultimas) ultimas.innerHTML=(desbloqueadas.length?desbloqueadas.slice(-3).reverse():conquistas.slice(0,3)).map(renderizarCardConquista).join(""); if(todas) todas.innerHTML=conquistas.map(renderizarCardConquista).join(""); }); }); }
+    function alternarTodasConquistas() { const todas=document.getElementById("todasConquistas"), botao=document.getElementById("botaoVerTodasConquistas"); if(!todas) return; const abrir=todas.classList.contains("hidden"); todas.classList.toggle("hidden", !abrir); if(botao) botao.innerText=abrir?"Ocultar conquistas":"Ver todas as conquistas"; }
 
     function obterHistoricoDaNuvem(callback) {
       if (!acessoLiberado || !usuarioAtual || !db) { callback([]); return; }
@@ -4676,7 +4784,7 @@
 
 
 <script>
-  const METATREINO_APP_VERSION = "0.0.3";
+  const METATREINO_APP_VERSION = "0.0.4";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
