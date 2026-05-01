@@ -1,4 +1,4 @@
-const CACHE_NAME = "metatreino-cache-v0.0.1";
+const CACHE_NAME = "metatreino-cache-v0.0.2";
 
 const APP_SHELL = [
   "./",

@@ -2420,6 +2420,7 @@
     let feedbackTreinoFinalAtual = "";
     let exerciciosConcluidos = [];
     let sugestoesCarga = {};
+    let memoriaTreinoCache = { historico: [], ultimosNomes: {}, sugestoes: {}, geracao: 0 };
     let ultimaCardioCache = null;
     let mostrarTodosAlunosPainel = false;
     let usuariosAutorizadosCache = [];
@@ -3444,6 +3445,102 @@
       return treino;
     }
 
+    function carregarMemoriaInteligenteTreino(callback) {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        memoriaTreinoCache = { historico: [], ultimosNomes: {}, sugestoes: {}, geracao: Date.now() };
+        callback(memoriaTreinoCache);
+        return;
+      }
+
+      db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").get()
+        .then(function(snapshot) {
+          const historico = [];
+          snapshot.forEach(function(doc) {
+            const item = doc.data() || {};
+            item._id = doc.id;
+            historico.push(item);
+          });
+          historico.sort(function(a, b) { return Number(b.criadoEm || 0) - Number(a.criadoEm || 0); });
+
+          const ultimosNomes = {};
+          const sugestoes = {};
+          const limiteRecente = Date.now() - (21 * 24 * 60 * 60 * 1000);
+
+          historico.forEach(function(item) {
+            const nomes = Array.isArray(item.exercicios) ? item.exercicios : [];
+            nomes.forEach(function(nome) {
+              const chaveNome = normalizarNomeExercicio(nome || "");
+              if (!chaveNome) return;
+              if (!ultimosNomes[chaveNome]) {
+                ultimosNomes[chaveNome] = { data: item.data || "registro recente", criadoEm: Number(item.criadoEm || 0), recente: Number(item.criadoEm || 0) >= limiteRecente };
+              }
+            });
+
+            const principal = normalizarNomeExercicio(item.exercicioRegistro || "");
+            if (principal && !sugestoes[principal]) {
+              const carga = Number(item.carga || 0);
+              const reps = Number(item.reps || 0);
+              const sensacao = item.sensacao || "normal";
+              let cargaSugerida = carga;
+              let motivo = "Mantenha a carga e tente melhorar a técnica.";
+              if (sensacao === "facil") {
+                cargaSugerida = carga + 2;
+                motivo = "Último registro ficou fácil, então a sugestão é subir levemente a carga.";
+              } else if (sensacao === "dificil") {
+                cargaSugerida = Math.max(carga - 2, 0);
+                motivo = "Último registro ficou difícil, então a sugestão é reduzir um pouco e priorizar técnica.";
+              } else if (reps >= 12 && carga > 0) {
+                cargaSugerida = carga + 1;
+                motivo = "Você já registrou boas repetições; aumente pouco se a execução estiver segura.";
+              }
+              sugestoes[principal] = {
+                ultimaCarga: carga,
+                reps: reps,
+                sensacao: sensacao,
+                data: item.data || "registro recente",
+                cargaSugerida: cargaSugerida,
+                motivo: motivo
+              };
+            }
+          });
+
+          memoriaTreinoCache = { historico: historico, ultimosNomes: ultimosNomes, sugestoes: sugestoes, geracao: Date.now() };
+          callback(memoriaTreinoCache);
+        })
+        .catch(function(erro) {
+          console.log("Erro ao carregar memória inteligente do treino:", erro);
+          memoriaTreinoCache = { historico: [], ultimosNomes: {}, sugestoes: {}, geracao: Date.now() };
+          callback(memoriaTreinoCache);
+        });
+    }
+
+    function aplicarAntiRepeticaoInteligente(treino, categoria, alvo) {
+      const lista = filtrarExerciciosUnicos(treino || []);
+      if (!memoriaTreinoCache || !memoriaTreinoCache.ultimosNomes || lista.length <= alvo) return lista;
+      const recentes = memoriaTreinoCache.ultimosNomes;
+      const preferidos = [];
+      const repetidos = [];
+      lista.forEach(function(exercicio) {
+        const chave = normalizarNomeExercicio(exercicio.nome || "");
+        if (recentes[chave] && recentes[chave].recente) repetidos.push(exercicio);
+        else preferidos.push(exercicio);
+      });
+      if (preferidos.length >= Math.max(3, Math.min(alvo, lista.length))) {
+        return preferidos.concat(repetidos);
+      }
+      return lista;
+    }
+
+    function aplicarProgressaoDeCargaNosExercicios(treino) {
+      if (!treino || !memoriaTreinoCache || !memoriaTreinoCache.sugestoes) return treino;
+      return treino.map(function(exercicio) {
+        const copia = Object.assign({}, exercicio);
+        const sugestao = memoriaTreinoCache.sugestoes[normalizarNomeExercicio(copia.nome || "")];
+        if (sugestao && copia.registravel !== false) copia.sugestaoCarga = sugestao;
+        return copia;
+      });
+    }
+
 
     function criarExercicioSimples(nome, grupo, equipamento, locais, evitar, nivel) {
       return {
@@ -3564,12 +3661,14 @@
     function gerarTreino() {
       
       marcarCheckinRespondido();
-analisarEsforcoRecente(function(esforcoRecente) {
+      analisarEsforcoRecente(function(esforcoRecente) {
         analisarProgressaoSemanal(function(progressaoSemanal) {
-          gerarTreinoComEsforco(
-            esforcoRecente || { sugerirDescanso: false, mensagem: "" },
-            progressaoSemanal || { fase: "neutra", reduzirVolume: false, mensagem: "" }
-          );
+          carregarMemoriaInteligenteTreino(function() {
+            gerarTreinoComEsforco(
+              esforcoRecente || { sugerirDescanso: false, mensagem: "" },
+              progressaoSemanal || { fase: "neutra", reduzirVolume: false, mensagem: "" }
+            );
+          });
         });
       });
     }
@@ -3618,6 +3717,8 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
       const perfilTreino = determinarPerfilTreino();
       const alvoExercicios = alvoQuantidadeExercicios(tempo, perfilTreino);
+      treinoFiltrado = aplicarAntiRepeticaoInteligente(treinoFiltrado, letraTreino, alvoExercicios);
+      treinoFiltrado = aplicarProgressaoDeCargaNosExercicios(treinoFiltrado);
       treinoFiltrado = treinoFiltrado.slice(0, alvoExercicios);
 
       const localComCardio = ["academia_grande", "academia_pequena", "academia_basica", "garagem"].includes(localOriginal);
@@ -3673,6 +3774,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
       if (ajusteCardio.mensagem) ajuste += " " + ajusteCardio.mensagem;
       if (esforcoRecente.mensagem) ajuste += " " + esforcoRecente.mensagem;
       if (progressaoSemanal && progressaoSemanal.mensagem) ajuste += " " + progressaoSemanal.mensagem;
+      if (memoriaTreinoCache && memoriaTreinoCache.historico && memoriaTreinoCache.historico.length > 0 && letraTreino !== "descanso") ajuste += " Memória inteligente ativa: o app priorizou variações menos repetidas recentemente e usou seus registros anteriores para sugerir carga quando houver histórico do exercício.";
       if (mensagemCardioTreino) ajuste += mensagemCardioTreino;
       ajuste += " Lembrete: hidrate-se, respeite seus limites e evite treinar forte em jejum, com dor ou mal-estar.";
 
@@ -3840,15 +3942,19 @@ analisarEsforcoRecente(function(esforcoRecente) {
     function normalizarNomeExercicio(nome) { return nome.trim().toLowerCase(); }
 
     function buscarSugestoesDeCarga(treino) {
-      // O histórico agora fica somente na nuvem. Para manter a tela rápida,
-      // a sugestão de carga será evoluída em uma próxima etapa lendo os últimos registros do Firestore.
-      return {};
+      const mapa = {};
+      if (!treino || !memoriaTreinoCache || !memoriaTreinoCache.sugestoes) return mapa;
+      treino.forEach(function(exercicio) {
+        const sugestao = memoriaTreinoCache.sugestoes[normalizarNomeExercicio(exercicio.nome || "")];
+        if (sugestao) mapa[exercicio.nome] = sugestao;
+      });
+      return mapa;
     }
 
     function obterTextoSugestaoCarga(nomeExercicio) {
       const sugestao = sugestoesCarga[nomeExercicio];
       if (!sugestao) return "Carga sugerida: ainda sem histórico para este exercício.";
-      return "Última carga: " + sugestao.ultimaCarga + " kg em " + sugestao.data + ". Sugestão para hoje: " + sugestao.cargaSugerida + " kg. " + sugestao.motivo;
+      return "Última carga: " + sugestao.ultimaCarga + " kg" + (sugestao.reps ? " x " + sugestao.reps + " reps" : "") + " em " + sugestao.data + ". Sugestão para hoje: " + sugestao.cargaSugerida + " kg. " + sugestao.motivo;
     }
 
     function preencherRegistroComExercicio(index) {
