@@ -1279,9 +1279,13 @@
         <div id="contadorConquistas" class="conquista-contador">Carregando conquistas...</div>
         <h3 class="conquistas-titulo-bloco">🏅 Últimas conquistas desbloqueadas</h3>
         <div id="ultimasConquistas" class="conquistas-resumo"></div>
+        <button id="botaoVerTodasConquistas" type="button" class="botao-secundario" onclick="alternarTodasConquistas()">Ver todas as conquistas</button>
+        <div id="todasConquistas" class="conquistas-resumo hidden"></div>
         <h3 class="conquistas-titulo-bloco">🔒 Próximas conquistas para buscar</h3>
         <p class="small">Mostramos 3 conquistas bloqueadas aleatórias para motivar o próximo objetivo.</p>
         <div id="conquistasBloqueadas" class="conquistas-resumo"></div>
+        <button id="botaoVerBloqueadas" type="button" class="botao-secundario" onclick="alternarConquistasBloqueadas()">Ver todas as conquistas bloqueadas</button>
+        <div id="todasConquistasBloqueadas" class="conquistas-resumo hidden"></div>
       </div>
     </section>
 
@@ -2779,8 +2783,26 @@
     function atualizarDatasConquistas(lista) { let mapa={}; try{mapa=JSON.parse(localStorage.getItem('metatreinoConquistasDatas')||'{}');}catch(e){} const agora=Date.now(); lista.forEach(function(c){ if(c.desbloqueada && !mapa[c.id]) mapa[c.id]=agora; }); localStorage.setItem('metatreinoConquistasDatas', JSON.stringify(mapa)); return lista.map(function(c,i){ c.desbloqueadaEm = mapa[c.id] || (c.desbloqueada ? (agora-i) : 0); return c; }); }
     function htmlConquista(c,bloqueada){ return "<div class='conquista-card "+(bloqueada?'bloqueada':'')+"'><div class='conquista-icone'>"+(bloqueada?'🔒':c.icone)+"</div><div><h3>"+limparTextoSeguro(c.nome)+"</h3><span class='conquista-tag'>"+limparTextoSeguro(c.categoria)+"</span><p>"+limparTextoSeguro(c.desc)+"</p></div></div>"; }
     function renderizarConquistas(){ const contador=document.getElementById('contadorConquistas'); if(contador) contador.innerHTML='Carregando conquistas...'; obterHistoricoDaNuvem(function(treinos){ obterCardiosDaNuvem(function(cardios){ let lista=atualizarDatasConquistas(analisarConquistas(treinos,cardios)); const desbloqueadas=lista.filter(function(c){return c.desbloqueada;}).sort(function(a,b){return Number(b.desbloqueadaEm||0)-Number(a.desbloqueadaEm||0);}); const bloqueadas=lista.filter(function(c){return !c.desbloqueada;}); if(contador) contador.innerHTML='🏆 '+desbloqueadas.length+' de '+lista.length+' conquistas desbloqueadas.'; const ultimas=document.getElementById('ultimasConquistas'); if(ultimas) ultimas.innerHTML=desbloqueadas.length?desbloqueadas.slice(0,3).map(function(c){return htmlConquista(c,false);}).join(''):"<p class='small'>Nenhuma conquista desbloqueada ainda. Salve seu primeiro treino ou cardio para começar.</p>"; const todas=document.getElementById('todasConquistas'); if(todas) todas.innerHTML=desbloqueadas.length?desbloqueadas.map(function(c){return htmlConquista(c,false);}).join(''):"<p class='small'>Nenhuma conquista desbloqueada ainda.</p>"; const aleatorias=bloqueadas.slice().sort(function(){return Math.random()-.5;}).slice(0,3); const bdiv=document.getElementById('conquistasBloqueadas'); if(bdiv) bdiv.innerHTML=aleatorias.length?aleatorias.map(function(c){return htmlConquista(c,true);}).join(''):"<p class='small'>Parabéns! Você desbloqueou todas as conquistas disponíveis.</p>"; const tb=document.getElementById('todasConquistasBloqueadas'); if(tb) tb.innerHTML=bloqueadas.length?bloqueadas.map(function(c){return htmlConquista(c,true);}).join(''):"<p class='small'>Nenhuma conquista bloqueada restante.</p>"; }); }); }
-    function alternarTodasConquistas(){ const el=document.getElementById('todasConquistas'), btn=document.getElementById('botaoVerTodasConquistas'); if(!el)return; el.classList.toggle('hidden'); if(btn) btn.innerText=el.classList.contains('hidden')?'Ver todas as conquistas':'Ocultar conquistas'; }
-    function alternarConquistasBloqueadas(){ const el=document.getElementById('todasConquistasBloqueadas'), btn=document.getElementById('botaoVerBloqueadas'); if(!el)return; el.classList.toggle('hidden'); if(btn) btn.innerText=el.classList.contains('hidden')?'Ver todas as conquistas bloqueadas':'Ocultar conquistas bloqueadas'; }
+    function alternarTodasConquistas(){
+      const resumo=document.getElementById('ultimasConquistas');
+      const completa=document.getElementById('todasConquistas');
+      const btn=document.getElementById('botaoVerTodasConquistas');
+      if(!completa)return;
+      const vaiAbrir=completa.classList.contains('hidden');
+      completa.classList.toggle('hidden', !vaiAbrir);
+      if(resumo) resumo.classList.toggle('hidden', vaiAbrir);
+      if(btn) btn.innerText=vaiAbrir?'Mostrar apenas as 3 últimas':'Ver todas as conquistas';
+    }
+    function alternarConquistasBloqueadas(){
+      const resumo=document.getElementById('conquistasBloqueadas');
+      const completa=document.getElementById('todasConquistasBloqueadas');
+      const btn=document.getElementById('botaoVerBloqueadas');
+      if(!completa)return;
+      const vaiAbrir=completa.classList.contains('hidden');
+      completa.classList.toggle('hidden', !vaiAbrir);
+      if(resumo) resumo.classList.toggle('hidden', vaiAbrir);
+      if(btn) btn.innerText=vaiAbrir?'Mostrar apenas 3 bloqueadas':'Ver todas as conquistas bloqueadas';
+    }
     function irParaConquistas(){ if(!acessoLiberado){ bloquearApp('Faça login com um e-mail autorizado para ver suas conquistas.'); return; } ocultarPaginasDoApp(); document.getElementById('paginaConquistas').classList.remove('hidden'); renderizarConquistas(); window.scrollTo({top:0,behavior:'smooth'}); }
 
     function irParaHistorico() {
