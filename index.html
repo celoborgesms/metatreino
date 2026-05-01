@@ -3327,6 +3327,7 @@
 
     function completarTreinoSemEquipamento(treino, letraTreino, dor, tempo) {
       if (!perfilUsuario || perfilUsuario.localTreino !== "sem_equipamento") return treino;
+      if (normalizarCategoriaTreino(letraTreino) === "descanso") return treino;
 
       const alvo = tempo === "rapido" ? 4 : (tempo === "normal" ? 6 : 8);
       const extras = [
@@ -3494,7 +3495,7 @@
         superior: ["Peito", "Costas", "Ombros", "Ombro posterior", "Tríceps", "Bíceps"],
         inferior: ["Pernas", "Quadríceps", "Posterior de coxa", "Glúteos", "Panturrilha"],
         core_abdomen: ["Abdômen", "Core", "Lombar", "Cardio/Abdômen"],
-        descanso: ["Recuperação", "Mobilidade", "Cardio leve", "Alongamento"]
+        descanso: ["Recuperação", "Recuperação ativa", "Pernas leves", "Peito leve", "Costas leves", "Core leve", "Mobilidade", "Alongamento", "Cardio leve", "Liberação miofascial", "Yoga"]
       };
       return mapa[cat] || null;
     }
@@ -3535,7 +3536,18 @@
         criarExercicioCategoria("Prancha", "Core", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Prancha lateral", "Core", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Abdominal tradicional / crunch", "Abdômen", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Abdominal infra / elevação de pernas", "Abdômen", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Bicicleta no ar", "Abdômen", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Russian twist", "Abdômen", "Peso corporal, halter ou anilha", basica, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Dead bug", "Core", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Hollow body hold", "Core", "Peso corporal", todosLocais, "lombar", "intermediario", passosPadrao), criarExercicioCategoria("Mountain climber", "Cardio/Abdômen", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Abdominal na polia", "Abdômen", "Cabo", completa, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Hiperextensão lombar", "Lombar", "Banco ou peso corporal", basica, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Superman", "Lombar", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao)
       ];
       const descanso = [
-        criarExercicioCategoria("Caminhada leve", "Cardio leve", "Livre", todosLocais, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Bike leve", "Cardio leve", "Bicicleta", ["academia_grande", "academia_pequena", "academia_basica", "garagem"], "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Natação leve", "Cardio leve", "Piscina", ["academia_grande"], "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Mobilidade articular", "Mobilidade", "Peso corporal", todosLocais, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Alongamento leve", "Alongamento", "Livre", todosLocais, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Liberação miofascial", "Mobilidade", "Rolo ou bola", basica, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Core leve / estabilização", "Core", "Peso corporal", todosLocais, "lombar", "iniciante", passosPadrao), criarExercicioCategoria("Treino técnico leve", "Recuperação", "Carga baixa", basica, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Yoga / relaxamento", "Alongamento", "Livre", todosLocais, "nenhuma", "iniciante", leve, false), criarExercicioCategoria("Treino regenerativo", "Recuperação", "Livre", todosLocais, "nenhuma", "iniciante", leve, false)
+        criarExercicioCategoria("Agachamento leve", "Pernas leves", "Peso corporal ou carga baixa", todosLocais, "joelho", "iniciante", ["Faça com amplitude confortável.", "Use baixa carga ou apenas peso corporal.", "Mantenha o movimento controlado.", "Pare se houver dor no joelho ou mal-estar."], true),
+        criarExercicioCategoria("Supino leve ou flexão inclinada", "Peito leve", "Halteres leves, máquina ou apoio elevado", todosLocais, "ombro", "iniciante", ["Use carga baixa ou apoio alto para facilitar.", "Desça com controle.", "Empurre sem travar o corpo com força excessiva.", "Mantenha ritmo leve e técnico."], true),
+        criarExercicioCategoria("Remada leve", "Costas leves", "Elástico, halter leve, máquina ou mochila leve", todosLocais, "lombar", "iniciante", ["Mantenha a coluna firme.", "Puxe com controle, sem trancos.", "Use carga leve.", "Priorize postura e execução."], true),
+        criarExercicioCategoria("Prancha leve", "Core leve", "Peso corporal", todosLocais, "lombar", "iniciante", ["Apoie joelhos se precisar.", "Contraia o abdômen sem prender a respiração.", "Mantenha pouco tempo e boa postura.", "Pare se sentir a lombar incomodar."], true),
+        criarExercicioCategoria("Dead bug", "Core leve", "Peso corporal", todosLocais, "lombar", "iniciante", ["Deite de barriga para cima.", "Movimente braço e perna opostos com controle.", "Mantenha lombar estável.", "Faça devagar e sem pressa."], true),
+        criarExercicioCategoria("Bird dog", "Core leve", "Peso corporal", todosLocais, "lombar", "iniciante", ["Fique em quatro apoios.", "Estenda braço e perna opostos.", "Segure um instante com controle.", "Volte devagar e troque o lado."], true),
+        criarExercicioCategoria("Mobilidade articular", "Mobilidade", "Peso corporal", todosLocais, "nenhuma", "iniciante", ["Faça rotações leves de ombro.", "Inclua mobilidade de quadril.", "Movimente tornozelos com calma.", "Não force amplitude dolorida."], false),
+        criarExercicioCategoria("Alongamento leve", "Alongamento", "Livre", todosLocais, "nenhuma", "iniciante", ["Segure posições confortáveis.", "Respire fundo e mantenha o corpo relaxado.", "Evite forçar dor.", "Use como complemento do treino leve."], false),
+        criarExercicioCategoria("Liberação miofascial", "Liberação miofascial", "Rolo ou bola", basica, "nenhuma", "iniciante", ["Use rolo ou bola de massagem.", "Passe devagar nas regiões tensionadas.", "Evite pressão excessiva.", "Use como recuperação, não como exercício de carga."], false),
+        criarExercicioCategoria("Cardio leve zona 1-2", "Cardio leve", "Caminhada, bike ou elíptico", todosLocais, "nenhuma", "iniciante", ["Mantenha intensidade leve.", "Consiga conversar durante a atividade.", "Não transforme em treino forte.", "Finalize se sentir cansaço excessivo."], false),
+        criarExercicioCategoria("Yoga / relaxamento", "Yoga", "Livre", todosLocais, "nenhuma", "iniciante", ["Faça movimentos lentos.", "Priorize respiração e relaxamento.", "Evite posições desconfortáveis.", "Use como complemento regenerativo."], false),
+        criarExercicioCategoria("Treino técnico leve", "Recuperação ativa", "Carga baixa", basica, "nenhuma", "iniciante", ["Escolha movimentos simples.", "Use carga bem baixa.", "Foque em postura perfeita.", "Não busque falha muscular."], true)
       ];
       if (cat === "superior") return superior;
       if (cat === "inferior") return inferior;
@@ -3642,7 +3654,7 @@ analisarEsforcoRecente(function(esforcoRecente) {
 
       let ajuste = "";
       if (letraTreino === "descanso") {
-        ajuste = "O app sugeriu descanso ativo/mobilidade para recuperação.";
+        ajuste = "Treino leve / recuperação selecionado: o app montou uma sessão leve com exercícios registráveis e sugestões complementares sem carga/repetições.";
       } else {
         if (energia === "bem") ajuste = "Hoje você pode treinar normalmente e tentar evoluir carga se a execução estiver boa.";
         else if (energia === "cansado") ajuste = "Hoje reduza um pouco o volume. Faça uma série a menos em cada exercício.";
