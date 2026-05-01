@@ -1,10 +1,12 @@
-const CACHE_NAME = "metatreino-cache-v0.0.4-conquistas-recuperacao";
+const CACHE_NAME = "metatreino-cache-v0.0.5-conquistas-plus-index-dividido";
 
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./icon-512.png.png"
+  "./icon-512.png.png",
+  "./css/styles.css",
+  "./js/app.js"
 ];
 
 // INSTALAÇÃO
