@@ -4,6 +4,23 @@ Regra fixa de atualizações a partir da v0.0.9:
 - O histórico completo de mudanças fica neste arquivo CHANGELOG que acompanha o pacote.
 - Em atualizações futuras, manter esta regra: app limpo com versão atual; histórico completo somente no arquivo.
 
+
+v0.1.0 beta - Compartilhamento e divulgação orgânica
+Data: 02/05/2026
+
+Principais mudanças:
+- Adicionada geração de card visual em PNG para treino concluído.
+- Adicionada geração de card visual para cardio registrado, incluindo atividade, distância, tempo, pace estimado, intensidade e informações de desafio/prova quando preenchidas.
+- Adicionado card de resumo da semana com plano concluído, treinos, cardios, sequência e distância acumulada.
+- Conquistas desbloqueadas agora podem ser compartilhadas em card próprio.
+- Aba Hoje ganhou botão para compartilhar resumo da semana.
+- Aba Progresso ganhou área Compartilhar evolução com resumo semanal e última atividade.
+- Após salvar treino ou cardio, o app mostra um botão para gerar o card da atividade salva.
+- O compartilhamento usa a API nativa do celular quando disponível e oferece download de PNG como alternativa.
+- Os cards foram desenhados para não expor peso, IMC, dores, limitações, e-mail ou cargas por padrão.
+- Manifest e service worker atualizados para cache v0.1.0.
+- Regra fixa mantida: dentro do app aparece somente a versão atual; histórico completo apenas neste CHANGELOG.
+
 v0.0.9 beta - Jornada Hoje, Plano, Treino, Progresso e Perfil
 Data: 02/05/2026
 

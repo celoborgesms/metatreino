@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.0.9">
+  <meta name="app-version" content="0.1.0">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.0.9">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.9">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.9">
+  <link rel="manifest" href="manifest.json?v=0.1.0">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.1.0">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.1.0">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -351,7 +351,7 @@
 
 
 
-    /* Versao 0.0.9 Beta - jornada Hoje, Plano, Treino, Progresso e Perfil */
+    /* Versao 0.1.0 Beta - compartilhamento e divulgacao organica */
     .plano-semanal-box { margin-top: 14px; padding: 14px; border-radius: 22px; background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92)); border: 1px solid rgba(59, 130, 246, 0.50); color: #f8fafc; line-height: 1.5; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
     .plano-semanal-dia { padding: 12px; border-radius: 18px; background: rgba(15, 23, 42, 0.82); border: 1px solid rgba(148, 163, 184, 0.32); margin-top: 10px; color: #f8fafc; }
     .plano-semanal-dia strong { color: #ffffff; }
@@ -360,6 +360,59 @@
     .politica-bloco ul { padding-left: 18px; }
     .modal-opcoes-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
     .modal-opcoes-grid button { text-align: left; background: linear-gradient(135deg, #e2e8f0, #ffffff); color: #0f172a; border: 1px solid #dbe3ef; box-shadow: none; min-height: 48px; }
+
+
+    /* Compartilhamento social - v0.1.0 */
+    .compartilhar-inline {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(34, 197, 94, 0.10);
+      border: 1px solid rgba(34, 197, 94, 0.38);
+      color: #e2e8f0;
+    }
+
+    .compartilhar-inline strong { color: #ffffff; }
+
+    .compartilhar-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .compartilhar-preview-wrap {
+      margin: 14px auto 0;
+      max-width: 330px;
+      width: 100%;
+      padding: 10px;
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.32);
+    }
+
+    #canvasCompartilhamento {
+      width: 100%;
+      display: block;
+      border-radius: 18px;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
+      background: #0f172a;
+    }
+
+    .modal-card.compartilhamento-modal {
+      max-width: 430px;
+    }
+
+    .share-privacy-note {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.32);
+      color: #dbeafe !important;
+      font-size: 12px;
+      line-height: 1.4;
+    }
 
     .grafico-card {
       background: #ffffff;
@@ -969,7 +1022,7 @@
     .conquistas-titulo-bloco { margin-top: 22px; margin-bottom: 8px; color: #fff; }
 
 
-    /* Versao 0.0.9 Beta - jornada Hoje, Plano, Treino, Progresso e Perfil */
+    /* Versao 0.1.0 Beta - compartilhamento e divulgacao organica */
     .checkbox-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1129,7 +1182,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino App - Beta 0.0.9</span>
+        <span class="app-badge">MetaTreino App - Beta 0.1.0</span>
         <h1><span style="color:#22c55e;">Meta</span>Treino</h1>
         <p>Treinos inteligentes, acompanhamento real e evolução constante. Tudo no seu celular.</p>
       </div>
@@ -1288,17 +1341,16 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino 0.0.9 Beta</strong><br>
+          <strong>MetaTreino 0.1.0 Beta</strong><br>
           <span class="tag beta">Beta</span>
           <p><strong>Atualizada em:</strong> 02/05/2026</p>
           <ul class="versao-atual-lista">
-            <li>Nova navegação: Hoje, Plano, Treino, Progresso e Perfil.</li>
-            <li>Plano da Semana ganhou aba própria, status por dia e ações rápidas.</li>
-            <li>Progresso reúne histórico, conquistas, nível, sequência e gráficos.</li>
-            <li>Perfil ganhou frequência semanal, dias disponíveis, equipamentos, preferências e exercícios bloqueados.</li>
-            <li>Cardio ficou mais integrado ao plano, ao Hoje e aos treinos de prova/desafio.</li>
-            <li>Plano pode ser reagendado e sincronizado na nuvem quando o Firebase estiver disponível.</li>
-            <li>Novidades virou regra fixa: app mostra só a versão atual; histórico completo fica no CHANGELOG.</li>
+            <li>Nova camada de compartilhamento orgânico com cards visuais do treino concluído.</li>
+            <li>Card de cardio com atividade, distância, tempo, pace estimado, intensidade e desafio/prova quando informado.</li>
+            <li>Card de resumo semanal para postar consistência da semana sem expor dados sensíveis.</li>
+            <li>Conquistas desbloqueadas agora podem gerar card próprio para compartilhamento.</li>
+            <li>Fallback inteligente: usa compartilhamento nativo do celular quando disponível e download de PNG quando não estiver disponível.</li>
+            <li>Regra mantida: dentro do app aparece somente a versão atual; histórico completo fica no CHANGELOG.</li>
           </ul>
         </div>
         <button type="button" class="botao-principal" onclick="verificarAtualizacaoManual()">Verificar se há nova atualização</button>
@@ -1321,6 +1373,7 @@
         <div id="progressoSemanaHoje" class="resumo-grid"></div>
         <div id="insightHojeApp" class="mensagem-inteligente">Quanto mais você salva treinos e cardios, melhor o app entende sua rotina.</div>
         <button type="button" class="botao-secundario" onclick="irParaPlano()">Ver plano completo</button>
+        <button type="button" class="botao-secundario" onclick="compartilharResumoSemana()">Compartilhar resumo da semana</button>
       </div>
 
       <div class="card">
@@ -1391,6 +1444,11 @@
         <button type="button" onclick="calcularEvolucao()">Calcular próxima carga</button>
         <p id="resultadoEvolucao"></p>
         <button type="button" onclick="salvarTreinoFeito()">Salvar treino feito</button>
+        <div id="compartilharUltimoTreinoBox" class="compartilhar-inline hidden">
+          <strong>✅ Treino salvo</strong><br>
+          <span class="small">Gere um card bonito do treino para compartilhar sem mostrar peso, IMC, dores ou cargas.</span>
+          <button type="button" class="botao-secundario" onclick="compartilharUltimoTreinoSalvo()">Compartilhar treino salvo</button>
+        </div>
       </div>
 
     </section>
@@ -1556,6 +1614,11 @@
 
         <button type="button" onclick="salvarCardio()">Salvar evolução do cardio</button>
         <div id="mensagemCardio" class="alerta hidden"></div>
+        <div id="compartilharUltimoCardioBox" class="compartilhar-inline hidden">
+          <strong>✅ Cardio salvo</strong><br>
+          <span class="small">Gere um card do cardio para compartilhar seu registro do dia com a marca do MetaTreino.</span>
+          <button type="button" class="botao-secundario" onclick="compartilharUltimoCardioSalvo()">Compartilhar cardio salvo</button>
+        </div>
       </div>
 
       <div class="card">
@@ -1572,6 +1635,15 @@
         <p class="small">Histórico, conquistas, nível e evolução em uma tela só.</p>
         <div id="resumoProgressoBox" class="resumo-grid"></div>
         <div id="nivelAlunoProgresso" class="proxima-conquista-box"></div>
+      </div>
+
+      <div class="card">
+        <h2>📤 Compartilhar evolução</h2>
+        <p class="small">Crie um card visual do resumo da semana, treino, cardio ou conquistas. O card não mostra peso, IMC, dores, limitações nem cargas por padrão.</p>
+        <div class="compartilhar-grid">
+          <button type="button" class="botao-secundario" onclick="compartilharResumoSemana()">Resumo da semana</button>
+          <button type="button" class="botao-secundario" onclick="compartilharUltimaAtividade()">Última atividade</button>
+        </div>
       </div>
 
       <div class="card">
@@ -1677,6 +1749,23 @@
     </div>
   </div>
 
+  <div id="modalCompartilhamento" class="modal-overlay hidden">
+    <div class="modal-card compartilhamento-modal">
+      <h2>📤 Compartilhar no MetaTreino</h2>
+      <p id="textoModalCompartilhamento">Card pronto para compartilhar.</p>
+      <div class="compartilhar-preview-wrap">
+        <canvas id="canvasCompartilhamento" width="1080" height="1350"></canvas>
+      </div>
+      <p class="share-privacy-note">Privacidade: o card não mostra peso, IMC, dores, limitações, e-mail nem cargas usadas. Ele mostra apenas resumo público da atividade.</p>
+      <div class="compartilhar-grid">
+        <button type="button" class="botao-principal" onclick="compartilharCardAtual()">Compartilhar</button>
+        <button type="button" class="botao-secundario" onclick="baixarCardCompartilhamento()">Baixar PNG</button>
+      </div>
+      <button type="button" class="botao-secundario" onclick="fecharModalCompartilhamento()">Fechar</button>
+      <div id="mensagemCompartilhamento" class="alerta hidden"></div>
+    </div>
+  </div>
+
 
   <script>
     const firebaseConfig = {
@@ -1755,7 +1844,7 @@
           treino: treinoAtual,
           letra: treinoAtual.letra || "",
           categoria: treinoAtual.categoria || treinoAtual.letra || "",
-          versaoGeracao: "0.0.9-jornada-plano-progresso",
+          versaoGeracao: "0.1.0-compartilhamento-organico",
           concluidos: exerciciosConcluidos || [],
           feedback: feedbackTreinoFinalAtual || "",
           salvoEm: Date.now()
@@ -2179,7 +2268,7 @@
     function exportarMeusDados() {
       const dadosBase = {
         app: "MetaTreino",
-        versao: "0.0.9",
+        versao: "0.1.0",
         exportadoEm: new Date().toISOString(),
         usuario: usuarioAtual ? { uid: usuarioAtual.uid, email: usuarioAtual.email || "", nome: usuarioAtual.displayName || "" } : null,
         dadosLocais: coletarDadosLocaisPrivacidade(),
@@ -2941,6 +3030,9 @@
     let opcoesSubstituicaoAtual = [];
     let mostrarTodosAlunosPainel = false;
     let usuariosAutorizadosCache = [];
+    let compartilhamentoAtual = null;
+    let ultimoTreinoSalvoCompartilhavel = null;
+    let ultimoCardioSalvoCompartilhavel = null;
 
     const substituicoes = {
       "Supino reto": ["Flexão de braço", "Supino com halteres", "Crucifixo no chão"],
@@ -3344,7 +3436,8 @@
       const alvo = Number(c.alvo || 1);
       const pct = Math.max(0, Math.min(100, Math.round((atual / alvo) * 100)));
       const barra = bloqueada ? "<span class='conquista-meta'>" + limparTextoSeguro(Math.min(atual, alvo)) + "/" + limparTextoSeguro(alvo) + " concluído</span><div class='barra-progresso-fina'><div style='width:" + pct + "%'></div></div>" : "<span class='conquista-meta'>Desbloqueada</span>";
-      return "<div class='conquista-card "+(bloqueada?'bloqueada':'')+"'><div class='conquista-icone'>"+(bloqueada?'🔒':c.icone)+"</div><div><h3>"+limparTextoSeguro(c.nome)+"</h3><span class='conquista-tag'>"+limparTextoSeguro(c.categoria)+"</span><p>"+limparTextoSeguro(c.desc)+"</p>"+barra+"</div></div>";
+      const botao = bloqueada ? "" : "<button type='button' class='botao-secundario' onclick='compartilharConquistaPorId(" + JSON.stringify(c.id) + ")'>Compartilhar conquista</button>";
+      return "<div class='conquista-card "+(bloqueada?'bloqueada':'')+"'><div class='conquista-icone'>"+(bloqueada?'🔒':c.icone)+"</div><div><h3>"+limparTextoSeguro(c.nome)+"</h3><span class='conquista-tag'>"+limparTextoSeguro(c.categoria)+"</span><p>"+limparTextoSeguro(c.desc)+"</p>"+barra+botao+"</div></div>";
     }
     function renderizarConquistas(){
       const contador=document.getElementById('contadorConquistas');
@@ -3488,7 +3581,7 @@
 
     function chavePlanoSemanalAtual() {
       const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : "anonimo";
-      return "metatreino-plano-semanal-0.0.9-" + email + "-" + inicioSemanaAtualISO();
+      return "metatreino-plano-semanal-0.1.0-" + email + "-" + inicioSemanaAtualISO();
     }
 
     function lerPlanoSemanalLocal() {
@@ -3590,7 +3683,7 @@
       });
 
       const plano = {
-        versao: "0.0.9",
+        versao: "0.1.0",
         inicioSemana: inicioSemanaAtualISO(),
         criadoEm: Date.now(),
         metaSemanal: metaDias,
@@ -3847,6 +3940,387 @@
         else insight.innerHTML = "Boa rota: siga o foco de hoje e registre o treino/cardio para o app aprender melhor.";
       }
       obterHistoricoDaNuvem(function(treinos) { obterCardiosDaNuvem(function(cardios) { atualizarProximaConquistaHoje(treinos, cardios); }); });
+    }
+
+
+    function textoCurtoCompartilhamento(texto, max) {
+      texto = String(texto || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      if (!max || texto.length <= max) return texto;
+      return texto.slice(0, Math.max(0, max - 1)).trim() + "…";
+    }
+
+    function primeiraLetraMaiuscula(texto) {
+      texto = String(texto || "").trim();
+      return texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : "";
+    }
+
+    function obterSemanaCompartilhamento() {
+      const stats = estatisticasSemanaAtualPorPlano();
+      const pct = stats.planejadas ? Math.min(100, Math.round((stats.concluidas / stats.planejadas) * 100)) : 0;
+      return { concluidas: stats.concluidas, planejadas: stats.planejadas, pendentes: stats.pendentes, puladas: stats.puladas, percentual: pct };
+    }
+
+    function montarDadosCompartilhamentoTreino(treino) {
+      treino = treino || {};
+      const categoria = treino.categoriaTreino || treino.letraTreino || treino.letra || "";
+      const total = Number(treino.totalExercicios || (treino.exercicios ? treino.exercicios.length : 0) || 0);
+      const concluidos = Number(treino.totalConcluidos || 0);
+      const semana = obterSemanaCompartilhamento();
+      const exercicios = Array.isArray(treino.exercicios) ? treino.exercicios.slice(0, 5).map(function(nome){ return textoCurtoCompartilhamento(nome, 30); }) : [];
+      return {
+        tipo: "treino",
+        titulo: "Treino concluído",
+        subtitulo: nomeAmigavelTreino(categoria || "full_body"),
+        destaque: "Treinei hoje com MetaTreino",
+        linhas: [
+          { rotulo: "Exercícios", valor: total ? String(total) : "Salvo" },
+          { rotulo: "Concluídos", valor: total ? (concluidos + "/" + total) : "Registrado" },
+          { rotulo: "Sensação", valor: primeiraLetraMaiuscula(treino.feedbackFinalTreino || treino.sensacao || "registrada") },
+          { rotulo: "Semana", valor: semana.concluidas + "/" + semana.planejadas + " atividades" }
+        ],
+        listaTitulo: "Exercícios do treino",
+        lista: exercicios,
+        rodape: "MetaTreino • seu treino inteligente do dia",
+        textoShare: "Treino concluído com MetaTreino: " + nomeAmigavelTreino(categoria || "full_body") + "."
+      };
+    }
+
+    function montarDadosCompartilhamentoCardio(cardio) {
+      cardio = cardio || {};
+      const distancia = Number(cardio.distancia || 0);
+      const tempo = Number(cardio.tempo || 0);
+      const pace = calcularPaceMedio(cardio);
+      const semana = obterSemanaCompartilhamento();
+      const tipo = traduzirTipoAtividadeCardio(cardio.tipoAtividade || "corrida");
+      const lista = [];
+      if (cardio.temDesafio && cardio.distanciaDesafio) lista.push("Objetivo: " + traduzirObjetivoCardio(cardio.distanciaDesafio));
+      if (cardio.tipoSessaoCardio) lista.push("Sessão: " + traduzirTipoSessaoCardio(cardio.tipoSessaoCardio));
+      if (cardio.dataDesafio) lista.push("Desafio em: " + formatarDataBrasileira(cardio.dataDesafio));
+      return {
+        tipo: "cardio",
+        titulo: "Cardio concluído",
+        subtitulo: tipo,
+        destaque: "Cardio registrado com MetaTreino",
+        linhas: [
+          { rotulo: "Distância", valor: distancia.toFixed(1) + " km" },
+          { rotulo: "Tempo", valor: tempo + " min" },
+          { rotulo: "Pace", valor: pace || "--" },
+          { rotulo: "Semana", valor: semana.concluidas + "/" + semana.planejadas + " atividades" }
+        ],
+        listaTitulo: lista.length ? "Cardio e desafio" : "Resumo do cardio",
+        lista: lista.length ? lista : ["Intensidade: " + primeiraLetraMaiuscula(cardio.intensidade || "registrada"), "Sensação: " + primeiraLetraMaiuscula(cardio.sensacao || "registrada")],
+        rodape: "MetaTreino • treino, cardio e constância",
+        textoShare: "Cardio concluído com MetaTreino: " + tipo + " - " + distancia.toFixed(1) + " km em " + tempo + " min."
+      };
+    }
+
+    function montarDadosCompartilhamentoResumo(treinos, cardios) {
+      treinos = treinos || [];
+      cardios = (cardios || []).filter(function(c){ return c.tipo !== "sem_cardio" && c.tipo !== "sem_corrida"; });
+      const inicio = inicioSemanaAtualISO();
+      const fimDate = new Date(inicio + "T12:00:00");
+      fimDate.setDate(fimDate.getDate() + 6);
+      const fim = fimDate.getFullYear() + "-" + String(fimDate.getMonth() + 1).padStart(2, "0") + "-" + String(fimDate.getDate()).padStart(2, "0");
+      const treinosSemana = treinos.filter(function(t){ const d = dataRegistroParaDia(t); return d && d >= inicio && d <= fim; });
+      const cardiosSemana = cardios.filter(function(c){ const d = dataRegistroParaDia(c); return d && d >= inicio && d <= fim; });
+      const semana = obterSemanaCompartilhamento();
+      const streak = calcularStreakAtividades(treinos, cardios);
+      const distancia = cardiosSemana.reduce(function(s,c){ return s + (Number(c.distancia || 0) || 0); }, 0);
+      return {
+        tipo: "resumo",
+        titulo: "Resumo da semana",
+        subtitulo: "Consistência registrada",
+        destaque: "Minha semana com MetaTreino",
+        linhas: [
+          { rotulo: "Plano", valor: semana.concluidas + "/" + semana.planejadas },
+          { rotulo: "Treinos", valor: String(treinosSemana.length) },
+          { rotulo: "Cardios", valor: String(cardiosSemana.length) },
+          { rotulo: "Sequência", valor: streak + " dia(s)" }
+        ],
+        listaTitulo: "Semana ativa",
+        lista: ["Progresso semanal: " + semana.percentual + "%", "Distância de cardio: " + distancia.toFixed(1) + " km", "Pendentes: " + semana.pendentes + " • Puladas: " + semana.puladas],
+        rodape: "MetaTreino • consistência antes de perfeição",
+        textoShare: "Meu resumo da semana no MetaTreino: " + semana.concluidas + "/" + semana.planejadas + " atividades concluídas."
+      };
+    }
+
+    function montarDadosCompartilhamentoConquista(conquista) {
+      conquista = conquista || {};
+      return {
+        tipo: "conquista",
+        titulo: "Nova conquista",
+        subtitulo: conquista.nome || "Conquista desbloqueada",
+        destaque: "Conquista desbloqueada no MetaTreino",
+        linhas: [
+          { rotulo: "Categoria", valor: conquista.categoria || "Progresso" },
+          { rotulo: "Meta", valor: Math.min(Number(conquista.progresso || conquista.alvo || 1), Number(conquista.alvo || 1)) + "/" + Number(conquista.alvo || 1) },
+          { rotulo: "Status", valor: "Desbloqueada" },
+          { rotulo: "Jornada", valor: "Em evolução" }
+        ],
+        listaTitulo: "O que isso significa",
+        lista: [textoCurtoCompartilhamento(conquista.desc || "Mais um passo de consistência.", 70), "Constância registrada com segurança"],
+        rodape: "MetaTreino • evolução diária",
+        textoShare: "Desbloqueei a conquista " + (conquista.nome || "do MetaTreino") + " no MetaTreino."
+      };
+    }
+
+    function desenharTextoQuebrado(ctx, texto, x, y, maxWidth, lineHeight, maxLinhas) {
+      texto = String(texto || "");
+      const palavras = texto.split(" ");
+      let linha = "";
+      let linhas = 0;
+      for (let i = 0; i < palavras.length; i++) {
+        const teste = linha ? linha + " " + palavras[i] : palavras[i];
+        if (ctx.measureText(teste).width > maxWidth && linha) {
+          ctx.fillText(linha, x, y);
+          y += lineHeight;
+          linhas++;
+          linha = palavras[i];
+          if (maxLinhas && linhas >= maxLinhas - 1) break;
+        } else {
+          linha = teste;
+        }
+      }
+      if (linha && (!maxLinhas || linhas < maxLinhas)) ctx.fillText(linha, x, y);
+      return y + lineHeight;
+    }
+
+    function desenharRetanguloArredondado(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function desenharCardCompartilhamento(dados) {
+      const canvas = document.getElementById("canvasCompartilhamento");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const W = canvas.width;
+      const H = canvas.height;
+      const grad = ctx.createLinearGradient(0, 0, W, H);
+      grad.addColorStop(0, "#0f172a");
+      grad.addColorStop(0.48, "#1e3a8a");
+      grad.addColorStop(1, "#16a34a");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(915, 170, 180, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(120, 1120, 230, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+
+      desenharRetanguloArredondado(ctx, 70, 70, W - 140, H - 140, 58);
+      ctx.fillStyle = "rgba(15, 23, 42, 0.76)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(226, 232, 240, 0.28)";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = "#22c55e";
+      ctx.font = "900 42px Arial, sans-serif";
+      ctx.fillText("Meta", 115, 150);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText("Treino", 224, 150);
+      ctx.font = "700 26px Arial, sans-serif";
+      ctx.fillStyle = "#bfdbfe";
+      ctx.fillText("treino inteligente do dia", 115, 188);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 70px Arial, sans-serif";
+      desenharTextoQuebrado(ctx, dados.titulo || "Atividade concluída", 115, 300, 850, 78, 2);
+      ctx.fillStyle = "#dbeafe";
+      ctx.font = "800 38px Arial, sans-serif";
+      desenharTextoQuebrado(ctx, dados.subtitulo || "MetaTreino", 115, 392, 850, 46, 2);
+
+      const linhas = dados.linhas || [];
+      const boxW = 405;
+      const boxH = 145;
+      linhas.slice(0, 4).forEach(function(item, i) {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const x = 115 + col * 435;
+        const y = 480 + row * 170;
+        desenharRetanguloArredondado(ctx, x, y, boxW, boxH, 28);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(219, 234, 254, 0.28)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "800 25px Arial, sans-serif";
+        ctx.fillText(String(item.rotulo || ""), x + 28, y + 45);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "900 42px Arial, sans-serif";
+        desenharTextoQuebrado(ctx, String(item.valor || ""), x + 28, y + 98, boxW - 56, 46, 1);
+      });
+
+      desenharRetanguloArredondado(ctx, 115, 850, 850, 250, 32);
+      ctx.fillStyle = "rgba(15, 23, 42, 0.58)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(34, 197, 94, 0.35)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "#bbf7d0";
+      ctx.font = "900 30px Arial, sans-serif";
+      ctx.fillText(dados.listaTitulo || "Resumo", 145, 905);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "700 28px Arial, sans-serif";
+      let yLista = 955;
+      (dados.lista && dados.lista.length ? dados.lista : ["Atividade registrada com sucesso"]).slice(0, 5).forEach(function(item) {
+        yLista = desenharTextoQuebrado(ctx, "• " + item, 145, yLista, 790, 36, 1);
+      });
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 34px Arial, sans-serif";
+      desenharTextoQuebrado(ctx, dados.destaque || "Treinei hoje com MetaTreino", 115, 1170, 850, 42, 2);
+      ctx.fillStyle = "#dbeafe";
+      ctx.font = "700 24px Arial, sans-serif";
+      ctx.fillText(dados.rodape || "MetaTreino", 115, 1248);
+      ctx.fillStyle = "#93c5fd";
+      ctx.font = "700 22px Arial, sans-serif";
+      ctx.fillText("MetaTreino App", 115, 1284);
+    }
+
+    function abrirModalCompartilhamento(dados) {
+      compartilhamentoAtual = dados || null;
+      if (!compartilhamentoAtual) return;
+      const modal = document.getElementById("modalCompartilhamento");
+      const texto = document.getElementById("textoModalCompartilhamento");
+      const msg = document.getElementById("mensagemCompartilhamento");
+      if (texto) texto.innerHTML = "Card gerado para <strong>" + limparTextoSeguro(compartilhamentoAtual.titulo || "compartilhar") + "</strong>. Use Compartilhar no celular ou Baixar PNG.";
+      if (msg) msg.classList.add("hidden");
+      desenharCardCompartilhamento(compartilhamentoAtual);
+      if (modal) modal.classList.remove("hidden");
+    }
+
+    function fecharModalCompartilhamento() {
+      const modal = document.getElementById("modalCompartilhamento");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    function nomeArquivoCompartilhamento() {
+      const tipo = compartilhamentoAtual && compartilhamentoAtual.tipo ? compartilhamentoAtual.tipo : "card";
+      const data = new Date().toISOString().slice(0, 10);
+      return "metatreino-" + tipo + "-" + data + ".png";
+    }
+
+    function baixarCardCompartilhamento() {
+      const canvas = document.getElementById("canvasCompartilhamento");
+      if (!canvas) return;
+      const link = document.createElement("a");
+      link.download = nomeArquivoCompartilhamento();
+      link.href = canvas.toDataURL("image/png");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function mostrarMensagemCompartilhamento(texto, sucesso) {
+      const msg = document.getElementById("mensagemCompartilhamento");
+      if (!msg) return;
+      msg.className = sucesso ? "alerta alerta-sucesso" : "alerta alerta-aviso";
+      msg.innerHTML = texto;
+    }
+
+    function compartilharCardAtual() {
+      const canvas = document.getElementById("canvasCompartilhamento");
+      if (!canvas || !compartilhamentoAtual) return;
+      if (!canvas.toBlob) {
+        baixarCardCompartilhamento();
+        mostrarMensagemCompartilhamento("Seu navegador não suporta compartilhamento direto de imagem. A imagem foi baixada para você postar manualmente.", false);
+        return;
+      }
+      canvas.toBlob(function(blob) {
+        if (!blob) {
+          mostrarMensagemCompartilhamento("Não foi possível gerar a imagem agora. Use Baixar PNG.", false);
+          return;
+        }
+        let arquivo = null;
+        try { arquivo = new File([blob], nomeArquivoCompartilhamento(), { type: "image/png" }); } catch (erroArquivo) {}
+        const texto = compartilhamentoAtual.textoShare || "Atividade registrada com MetaTreino.";
+        let podeCompartilharArquivo = false;
+        try { podeCompartilharArquivo = !!(arquivo && navigator.share && navigator.canShare && navigator.canShare({ files: [arquivo] })); } catch (erroShare) { podeCompartilharArquivo = false; }
+        if (podeCompartilharArquivo) {
+          navigator.share({ title: "MetaTreino", text: texto, files: [arquivo] })
+            .then(function(){ mostrarMensagemCompartilhamento("✅ Card enviado para o compartilhamento do celular.", true); })
+            .catch(function(erro){ if (erro && erro.name !== "AbortError") mostrarMensagemCompartilhamento("O compartilhamento nativo não abriu. Use Baixar PNG e poste manualmente.", false); });
+          return;
+        }
+        if (navigator.share) {
+          navigator.share({ title: "MetaTreino", text: texto })
+            .then(function(){ mostrarMensagemCompartilhamento("✅ Texto compartilhado. Para postar a imagem, use Baixar PNG.", true); })
+            .catch(function(){ mostrarMensagemCompartilhamento("Neste navegador, use Baixar PNG e poste manualmente.", false); });
+          return;
+        }
+        baixarCardCompartilhamento();
+        mostrarMensagemCompartilhamento("Seu navegador não abriu compartilhamento nativo. A imagem foi baixada para você postar manualmente.", false);
+      }, "image/png", 0.95);
+    }
+
+    function compartilharUltimoTreinoSalvo() {
+      if (!ultimoTreinoSalvoCompartilhavel) {
+        alert("Salve um treino primeiro para gerar o card.");
+        return;
+      }
+      abrirModalCompartilhamento(montarDadosCompartilhamentoTreino(ultimoTreinoSalvoCompartilhavel));
+    }
+
+    function compartilharUltimoCardioSalvo() {
+      if (!ultimoCardioSalvoCompartilhavel) {
+        alert("Salve um cardio primeiro para gerar o card.");
+        return;
+      }
+      abrirModalCompartilhamento(montarDadosCompartilhamentoCardio(ultimoCardioSalvoCompartilhavel));
+    }
+
+    function compartilharResumoSemana() {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login com um e-mail autorizado para compartilhar o resumo da semana.");
+        return;
+      }
+      obterHistoricoDaNuvem(function(treinos) {
+        obterCardiosDaNuvem(function(cardios) {
+          abrirModalCompartilhamento(montarDadosCompartilhamentoResumo(treinos || [], cardios || []));
+        });
+      });
+    }
+
+    function compartilharUltimaAtividade() {
+      if (!acessoLiberado || !usuarioAtual || !db) {
+        alert("Faça login para compartilhar a última atividade.");
+        return;
+      }
+      obterHistoricoDaNuvem(function(treinos) {
+        obterCardiosDaNuvem(function(cardios) {
+          const atividades = [];
+          (treinos || []).forEach(function(t){ atividades.push({ tipo: "treino", criadoEm: Number(t.criadoEm || 0), dados: t }); });
+          (cardios || []).filter(function(c){ return c.tipo !== "sem_cardio" && c.tipo !== "sem_corrida"; }).forEach(function(c){ atividades.push({ tipo: "cardio", criadoEm: Number(c.criadoEm || 0), dados: c }); });
+          atividades.sort(function(a,b){ return b.criadoEm - a.criadoEm; });
+          if (!atividades.length) { alert("Ainda não existe treino ou cardio salvo para compartilhar."); return; }
+          const item = atividades[0];
+          abrirModalCompartilhamento(item.tipo === "cardio" ? montarDadosCompartilhamentoCardio(item.dados) : montarDadosCompartilhamentoTreino(item.dados));
+        });
+      });
+    }
+
+    function compartilharConquistaPorId(id) {
+      obterHistoricoDaNuvem(function(treinos) {
+        obterCardiosDaNuvem(function(cardios) {
+          const lista = atualizarDatasConquistas(analisarConquistas(treinos || [], cardios || []));
+          const conquista = lista.find(function(c){ return c.id === id && c.desbloqueada; });
+          if (!conquista) { alert("Essa conquista ainda não está desbloqueada para compartilhar."); return; }
+          abrirModalCompartilhamento(montarDadosCompartilhamentoConquista(conquista));
+        });
+      });
     }
 
     function renderizarProgressoGeral() {
@@ -4448,11 +4922,14 @@
       db.collection("usuarios").doc(usuarioAtual.uid).collection("corridas").add(corrida)
         .then(function() {
           ultimaCardioCache = corrida;
+          ultimoCardioSalvoCompartilhavel = corrida;
           marcarPlanoHojeConcluido("cardio");
           if (caixa) {
             caixa.className = "alerta alerta-sucesso";
             caixa.innerHTML = "✅ Cardio salvo. O plano de hoje foi atualizado e o próximo treino poderá considerar esse registro.";
           }
+          const boxCompartilharCardio = document.getElementById("compartilharUltimoCardioBox");
+          if (boxCompartilharCardio) boxCompartilharCardio.classList.remove("hidden");
           document.getElementById("observacaoCardio").value = "";
           carregarCardios();
         })
@@ -5763,8 +6240,11 @@
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").add(treinoSalvo)
         .then(function() {
+          ultimoTreinoSalvoCompartilhavel = treinoSalvo;
           marcarPlanoHojeConcluido("treino");
-          alert("Treino salvo na nuvem. O plano de hoje foi marcado como concluído.");
+          alert("Treino salvo na nuvem. O plano de hoje foi marcado como concluído. Você já pode gerar o card para compartilhar.");
+          const boxCompartilharTreino = document.getElementById("compartilharUltimoTreinoBox");
+          if (boxCompartilharTreino) boxCompartilharTreino.classList.remove("hidden");
           mostrarHistorico();
           document.getElementById("carga").value = "";
           document.getElementById("reps").value = "";
@@ -6325,7 +6805,7 @@
 
 
 <script>
-  const METATREINO_APP_VERSION = "0.0.9";
+  const METATREINO_APP_VERSION = "0.1.0";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
