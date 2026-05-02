@@ -1,10 +1,10 @@
-const CACHE_NAME = "metatreino-cache-v0.0.8-balanceamento-real";
+const CACHE_NAME = "metatreino-cache-v0.0.9-jornada-plano-progresso";
 
 const APP_SHELL = [
   "./",
-  "./index.html",
-  "./manifest.json",
-  "./icon-512.png.png"
+  "./index.html?v=0.0.9",
+  "./manifest.json?v=0.0.9",
+  "./icon-512.png.png?v=0.0.9"
 ];
 
 // INSTALACAO
@@ -18,7 +18,7 @@ self.addEventListener("install", function(event) {
   );
 });
 
-// ATIVACAO (REMOVE CACHE ANTIGO)
+// ATIVACAO - REMOVE CACHES ANTIGOS
 self.addEventListener("activate", function(event) {
   event.waitUntil(
     caches.keys().then(function(keys) {
@@ -35,68 +35,57 @@ self.addEventListener("activate", function(event) {
   );
 });
 
-// PERMITIR ATUALIZAÇÃO IMEDIATA
+// PERMITIR ATUALIZACAO IMEDIATA
 self.addEventListener("message", function(event) {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
 });
 
-// FETCH (ESTRATEGIA INTELIGENTE)
+// FETCH - HTML SEMPRE TENTA REDE PRIMEIRO; APP SHELL TEM FALLBACK OFFLINE
 self.addEventListener("fetch", function(event) {
-  if (event.request.method !== "GET") {
-    return;
-  }
+  if (event.request.method !== "GET") return;
 
   const requestUrl = new URL(event.request.url);
 
-  // Navegação (index.html)
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request)
         .then(function(response) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(function(cache) {
-            cache.put("./index.html", copy);
+            cache.put("./index.html?v=0.0.9", copy);
+            cache.put("./index.html", response.clone());
           });
           return response;
         })
         .catch(function() {
-          return caches.match("./index.html");
+          return caches.match("./index.html?v=0.0.9").then(function(cached) {
+            return cached || caches.match("./index.html");
+          });
         })
     );
     return;
   }
 
-  // Firebase / Google APIs (sempre online)
   if (
     requestUrl.hostname.includes("firebase") ||
     requestUrl.hostname.includes("googleapis") ||
     requestUrl.hostname.includes("gstatic") ||
     requestUrl.hostname.includes("google.com")
   ) {
-    event.respondWith(
-      fetch(event.request).catch(function() {
-        return caches.match(event.request);
-      })
-    );
+    event.respondWith(fetch(event.request));
     return;
   }
 
-  // Demais arquivos
   event.respondWith(
     fetch(event.request)
       .then(function(response) {
-        if (!response || response.status !== 200) {
-          return response;
-        }
-
+        if (!response || response.status !== 200) return response;
         const responseCopy = response.clone();
-
         caches.open(CACHE_NAME).then(function(cache) {
           cache.put(event.request, responseCopy);
         });
-
         return response;
       })
       .catch(function() {

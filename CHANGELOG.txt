@@ -1,0 +1,42 @@
+MetaTreino - CHANGELOG
+Regra fixa de atualizações a partir da v0.0.9:
+- Dentro do app aparece somente a versão atual, em Perfil > Versão atual.
+- O histórico completo de mudanças fica neste arquivo CHANGELOG que acompanha o pacote.
+- Em atualizações futuras, manter esta regra: app limpo com versão atual; histórico completo somente no arquivo.
+
+v0.0.9 beta - Jornada Hoje, Plano, Treino, Progresso e Perfil
+Data: 02/05/2026
+
+Principais mudanças:
+- Nova navegação principal: Hoje, Plano, Treino, Progresso e Perfil.
+- Check-in deixou de ser aba principal e passou a ser chamado pela tela Hoje ou Treino.
+- Plano da Semana virou aba própria, com progresso semanal, status por dia e ações rápidas.
+- Plano semanal agora considera dias disponíveis, frequência semanal, meta, histórico recente e integração com cardio.
+- Plano semanal é salvo localmente e sincronizado em segundo plano na coleção planosSemanais do usuário quando o Firebase estiver disponível.
+- Adicionada ação de reagendar uma atividade para o próximo dia livre da semana.
+- Tela Hoje criada como painel principal: foco do dia, botão Começar agora, resumo da semana, insight e próxima conquista.
+- Aba Treino ficou mais focada na execução do treino gerado, registro de carga, repetições e feedback final.
+- Histórico e Conquistas foram reunidos na aba Progresso.
+- Progresso agora mostra treinos salvos, cardios salvos, sequência, distância acumulada, nível do aluno, conquistas e histórico completo.
+- Conquistas ganharam progresso visual nas próximas metas.
+- Conquistas de peso aparecem apenas para metas compatíveis com perda de peso/definição.
+- Nomes de conquistas foram ajustados para incentivar constância segura, sem premiar excesso ou ignorar dor.
+- Perfil ganhou frequência semanal, dias disponíveis, equipamentos disponíveis, exercícios preferidos, exercícios bloqueados e limitações.
+- Substituição de exercícios ficou mais alinhada ao uso real de academia cheia/equipamento ocupado.
+- Cardio foi melhor integrado ao plano, ao Hoje, ao histórico e a objetivos de desafio/prova.
+- Área Novidades foi removida como aba/tela separada; a regra agora é mostrar somente a versão atual dentro do Perfil.
+- Painel do treinador saiu da barra inferior e fica dentro do Perfil apenas para contas admin.
+- Exportação de dados agora inclui planos semanais locais e, quando possível, planos semanais da nuvem.
+- Manifest e service worker atualizados para cache v0.0.9.
+- Arquivo firestore.rules.example atualizado para refletir uso de admins por e-mail e planosSemanais.
+
+v0.0.8 beta - Correções de inteligência, segurança e usabilidade
+- Treinos superiores e inferiores ficaram mais equilibrados por grupo muscular.
+- Adicionado Treino Full Body.
+- Dor/limitação deixou de mandar automaticamente para descanso geral em todos os casos.
+- Adicionado campo de limitações no perfil.
+- Corrigida lógica de cardio recente para categorias novas de treino.
+- Adicionado Plano da Semana como recurso inicial dentro da área de treino.
+- Substituição de exercício deixou de depender de prompt simples e passou a usar modal.
+- Adicionadas opções de privacidade, exportação e exclusão de dados locais/histórico.
+- Atualizados manifest e service worker para cache v0.0.8.

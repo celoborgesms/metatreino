@@ -1,18 +1,18 @@
 {
   "name": "MetaTreino",
   "short_name": "MetaTreino",
-  "start_url": "./index.html?v=0.0.8",
+  "start_url": "./index.html?v=0.0.9",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#3b82f6",
   "icons": [
     {
-      "src": "icon-512.png.png",
+      "src": "icon-512.png.png?v=0.0.9",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     }
   ],
-  "version": "0.0.8"
+  "version": "0.0.9"
 }

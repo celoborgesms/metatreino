@@ -5,19 +5,41 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function userEmail() {
+      return signedIn() && request.auth.token.email != null
+        ? request.auth.token.email
+        : "";
+    }
+
     function isOwner(userId) {
       return signedIn() && request.auth.uid == userId;
     }
 
-    // Crie manualmente um documento em /admins/{uidDoTreinador}
-    // para liberar escrita administrativa no painel do treinador.
+    // Regra fixa do app:
+    // - documentos de /admins usam o e-mail do treinador como ID, em minúsculas.
+    // - o código do app consulta /admins/{emailDoTreinador}.
+    // - crie esse documento manualmente pelo console do Firebase com ativo: true.
     function isAdmin() {
       return signedIn()
-        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+        && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/admins/$(userEmail()))
+        && get(/databases/$(database)/documents/admins/$(userEmail())).data.ativo == true;
     }
 
     match /usuarios/{userId} {
       allow read, create, update, delete: if isOwner(userId) || isAdmin();
+
+      match /treinos/{docId} {
+        allow read, create, update, delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /corridas/{docId} {
+        allow read, create, update, delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /planosSemanais/{docId} {
+        allow read, create, update, delete: if isOwner(userId) || isAdmin();
+      }
 
       match /{subdocumentos=**} {
         allow read, create, update, delete: if isOwner(userId) || isAdmin();
@@ -25,19 +47,21 @@ service cloud.firestore {
     }
 
     // O app consulta usuariosAutorizados pelo e-mail em minúsculas.
-    // Se você usa e-mails sempre em minúsculas como ID do documento,
-    // o próprio aluno consegue ler apenas o documento do e-mail dele.
+    // Use o e-mail do aluno como ID do documento.
     match /usuariosAutorizados/{emailDoc} {
       allow read: if signedIn()
         && request.auth.token.email != null
         && request.auth.token.email_verified == true
-        && request.auth.token.email == emailDoc;
+        && userEmail() == emailDoc;
       allow create, update, delete: if isAdmin();
     }
 
     // Documento administrativo criado fora do app, pelo console do Firebase.
-    match /admins/{adminUid} {
-      allow read: if signedIn() && request.auth.uid == adminUid;
+    // ID recomendado: e-mail do treinador em minúsculas.
+    match /admins/{emailDoc} {
+      allow read: if signedIn()
+        && request.auth.token.email != null
+        && userEmail() == emailDoc;
       allow create, update, delete: if false;
     }
 
