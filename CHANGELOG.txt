@@ -4,6 +4,18 @@ Regra fixa de atualizações a partir da v0.0.9:
 - O histórico completo de mudanças fica neste arquivo CHANGELOG que acompanha o pacote.
 - Em atualizações futuras, manter esta regra: app limpo com versão atual; histórico completo somente no arquivo.
 
+v0.1.1 beta - Ajustes de compartilhamento e fluxo de registro
+Data: 02/05/2026
+
+Principais mudanças:
+- Removido o botão duplicado de compartilhamento do resumo da semana da tela Hoje; o compartilhamento geral ficou concentrado em Progresso.
+- Cards visuais de compartilhamento ajustados para manter lista de exercícios, rodapé e assinatura dentro do quadro.
+- Texto do card agora é encurtado com reticências quando necessário, evitando estouro visual em exercícios ou informações longas.
+- Corrigido fluxo do último exercício: ao marcar o último exercício como concluído, o app leva o aluno primeiro para Registrar evolução.
+- Feedback final e mensagem de parabéns passam a aparecer depois do registro/evolução do exercício, deixando a sequência mais correta: concluir exercício -> registrar evolução -> avaliar treino -> salvar.
+- Manifest e service worker atualizados para cache v0.1.1.
+- Regra fixa mantida: dentro do app aparece somente a versão atual; histórico completo apenas neste CHANGELOG.
+
 
 v0.1.0 beta - Compartilhamento e divulgação orgânica
 Data: 02/05/2026

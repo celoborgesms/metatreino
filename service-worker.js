@@ -1,10 +1,10 @@
-const CACHE_NAME = "metatreino-cache-v0.1.0-compartilhamento-organico";
+const CACHE_NAME = "metatreino-cache-v0.1.1-ajustes-compartilhamento-fluxo-registro";
 
 const APP_SHELL = [
   "./",
-  "./index.html?v=0.1.0",
-  "./manifest.json?v=0.1.0",
-  "./icon-512.png.png?v=0.1.0"
+  "./index.html?v=0.1.1",
+  "./manifest.json?v=0.1.1",
+  "./icon-512.png.png?v=0.1.1"
 ];
 
 // INSTALACAO
@@ -54,13 +54,13 @@ self.addEventListener("fetch", function(event) {
         .then(function(response) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(function(cache) {
-            cache.put("./index.html?v=0.1.0", copy);
+            cache.put("./index.html?v=0.1.1", copy);
             cache.put("./index.html", response.clone());
           });
           return response;
         })
         .catch(function() {
-          return caches.match("./index.html?v=0.1.0").then(function(cached) {
+          return caches.match("./index.html?v=0.1.1").then(function(cached) {
             return cached || caches.match("./index.html");
           });
         })
