@@ -4114,8 +4114,13 @@
       progresso.innerText = texto;
     }
 
+    function exercicioEhRegistravel(exercicio) {
+      return !exercicio || exercicio.registravel !== false;
+    }
+
     function obterSubstituicoesCompativeis(index) {
       const exercicioAtual = treinoAtual[index];
+      const deveManterRegistravel = exercicioEhRegistravel(exercicioAtual);
       const categoriaAtual = normalizarCategoriaTreino(treinoAtual.categoria || treinoAtual.letra || categoriaDoGrupoExercicio(exercicioAtual.grupo));
       const localOriginal = perfilUsuario ? perfilUsuario.localTreino : "academia_grande";
       const local = localOriginal === "academia_basica" ? "academia_pequena" : localOriginal;
@@ -4123,6 +4128,7 @@
         return i === index ? "" : normalizarNomeExercicio(exercicio.nome || "");
       });
       const candidatos = obterBaseTreinoPorCategoria(categoriaAtual).filter(function(exercicio) {
+        if (deveManterRegistravel && !exercicioEhRegistravel(exercicio)) return false;
         if (!exercicioPertenceCategoria(exercicio, categoriaAtual)) return false;
         if (exercicio.grupo !== exercicioAtual.grupo) return false;
         if (exercicio.local && !exercicio.local.includes(local)) return false;
@@ -4134,6 +4140,7 @@
       if (candidatos.length > 0) return filtrarExerciciosUnicos(candidatos).slice(0, 6);
 
       return obterBaseTreinoPorCategoria(categoriaAtual).filter(function(exercicio) {
+        if (deveManterRegistravel && !exercicioEhRegistravel(exercicio)) return false;
         if (!exercicioPertenceCategoria(exercicio, categoriaAtual)) return false;
         if (exercicio.local && !exercicio.local.includes(local)) return false;
         if (nomesAtuais.includes(normalizarNomeExercicio(exercicio.nome || ""))) return false;
@@ -4158,8 +4165,10 @@
       if (numero < 1 || numero > opcoes.length) { alert("Opção inválida."); return; }
 
       const escolhido = Object.assign({}, opcoes[numero - 1]);
-      escolhido.series = exercicioAtual.series || escolhido.series;
-      escolhido.reps = exercicioAtual.reps || escolhido.reps;
+      if (exercicioEhRegistravel(escolhido)) {
+        escolhido.series = exercicioAtual.series || escolhido.series;
+        escolhido.reps = exercicioAtual.reps || escolhido.reps;
+      }
       treinoAtual[index] = escolhido;
       exerciciosConcluidos[index] = false;
       salvarTreinoAtualLocal();
