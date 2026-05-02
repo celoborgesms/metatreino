@@ -1,4 +1,4 @@
-const CACHE_NAME = "metatreino-cache-v0.0.7-inteligencia-real";
+const CACHE_NAME = "metatreino-cache-v0.0.8-balanceamento-real";
 
 const APP_SHELL = [
   "./",
@@ -7,7 +7,7 @@ const APP_SHELL = [
   "./icon-512.png.png"
 ];
 
-// INSTALAÇÃO
+// INSTALACAO
 self.addEventListener("install", function(event) {
   self.skipWaiting();
 
@@ -18,7 +18,7 @@ self.addEventListener("install", function(event) {
   );
 });
 
-// ATIVAÇÃO (REMOVE CACHE ANTIGO)
+// ATIVACAO (REMOVE CACHE ANTIGO)
 self.addEventListener("activate", function(event) {
   event.waitUntil(
     caches.keys().then(function(keys) {
@@ -42,7 +42,7 @@ self.addEventListener("message", function(event) {
   }
 });
 
-// FETCH (ESTRATÉGIA INTELIGENTE)
+// FETCH (ESTRATEGIA INTELIGENTE)
 self.addEventListener("fetch", function(event) {
   if (event.request.method !== "GET") {
     return;

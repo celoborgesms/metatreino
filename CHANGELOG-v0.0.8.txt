@@ -1,0 +1,28 @@
+MetaTreino v0.0.8 beta - correções de inteligência, segurança e usabilidade
+
+Principais melhorias:
+- Treinos agora são selecionados por equilíbrio de grupos musculares, evitando superiores só com peito ou inferiores sem posterior/glúteo/panturrilha.
+- Ajustada a distribuição de superiores para incluir peito, costas, ombros, bíceps e tríceps quando o volume permitir.
+- Adicionado Treino Full Body ao check-in, à rotação semanal e à geração automática.
+- Biblioteca principal mantida com 60 entradas diretas: 20 superiores, 16 inferiores, 12 core/abdômen e 12 recuperação; o Full Body combina exercícios das categorias de força.
+- Treino automático ficou menos conservador: dor não manda sempre para descanso; o app tenta redirecionar para uma categoria mais segura.
+- Cardio recente agora usa as categorias novas. Cardio forte/moderado recente reduz volume ou troca treino de pernas por recuperação quando necessário.
+- Adicionado campo de limitações/dor recorrente no perfil.
+- Adicionado plano semanal simples para reduzir repetição excessiva de grupos musculares.
+- Substituição de exercício trocada de prompt simples para modal com opções compatíveis.
+- Histórico de treino agora salva categoria e grupos treinados.
+- Corrigido erro que poderia impedir salvar treino por variável de grupos não definida.
+- Adicionada área de Privacidade e dados com resumo, exportação JSON e exclusão de dados locais/histórico de treino/cardio.
+- Corrigida duplicidade de carregarDaNuvem e limpeza do perfil salvo.
+- Atualizados manifest e service worker para cache v0.0.8.
+
+Arquivos adicionados:
+- firestore.rules.example: modelo inicial de regras do Firestore para proteger dados por usuário e separar permissões de administrador.
+
+Testes feitos nesta entrega:
+- Validação de sintaxe JavaScript com Node.
+- Testes locais simulados do motor de treino para equilíbrio de superiores, dor no ombro, limitação de joelho e salvamento de treino.
+
+Observações:
+- A validação final ainda deve ser feita no navegador/celular com Firebase real, login Google e regras do Firestore publicadas.
+- O app segue como beta e não substitui avaliação médica, nutricional ou profissional de Educação Física.

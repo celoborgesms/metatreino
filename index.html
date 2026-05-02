@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.0.7">
+  <meta name="app-version" content="0.0.8">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.0.7">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.7">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.7">
+  <link rel="manifest" href="manifest.json?v=0.0.8">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.0.8">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.0.8">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -348,6 +348,17 @@
     }
 
 
+
+
+
+    /* Versao 0.0.8 Beta - plano semanal, privacidade e substituicoes sem prompt */
+    .plano-semanal-box { margin-top: 14px; padding: 14px; border-radius: 22px; background: #f8fafc; border: 1px solid #dbe3ef; color: #0f172a; line-height: 1.5; }
+    .plano-semanal-dia { padding: 12px; border-radius: 18px; background: #ffffff; border: 1px solid #e2e8f0; margin-top: 10px; }
+    .plano-semanal-dia strong { color: #0f172a; }
+    .politica-bloco { margin-top: 14px; padding: 14px; border-radius: 20px; background: #f8fafc; border: 1px solid #dbe3ef; color: #0f172a; line-height: 1.55; }
+    .politica-bloco ul { padding-left: 18px; }
+    .modal-opcoes-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+    .modal-opcoes-grid button { text-align: left; background: linear-gradient(135deg, #e2e8f0, #ffffff); color: #0f172a; border: 1px solid #dbe3ef; box-shadow: none; min-height: 48px; }
 
     .grafico-card {
       background: #ffffff;
@@ -964,7 +975,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino App</span>
+        <span class="app-badge">MetaTreino App - Beta 0.0.8</span>
         <h1><span style="color:#22c55e;">Meta</span>Treino</h1>
         <p>Treinos inteligentes, acompanhamento real e evolução constante. Tudo no seu celular.</p>
       </div>
@@ -1036,6 +1047,10 @@
           <option value="academia_grande">Academia completa</option>
         </select>
 
+        <label for="limitacoesUsuario">Limitações, dores recorrentes ou observações importantes</label>
+        <textarea id="limitacoesUsuario" placeholder="Ex: dor no joelho, ombro sensível, lombar, sem agachamento profundo... Deixe em branco se não houver."></textarea>
+        <p class="small">Esse campo não faz diagnóstico. Ele apenas ajuda o app a evitar exercícios mais sensíveis.</p>
+
         <button type="button" onclick="calcularPerfil()">Calcular e salvar perfil</button>
 
         <div id="resultadoPerfil" class="alerta hidden"></div>
@@ -1049,6 +1064,23 @@
         <h2>🚪 Conta</h2>
         <p class="small">Use esta opção apenas se quiser sair da sua conta neste aparelho.</p>
         <button id="botaoLogoutGoogle" type="button" class="botao-secundario btn-logout hidden" onclick="logout()">Sair da conta</button>
+
+        <h2 style="margin-top:18px;">🔒 Privacidade e dados</h2>
+        <p class="small">O MetaTreino usa dados de perfil, treino, cardio e evolução para personalizar sugestões e histórico dentro do app.</p>
+        <button type="button" class="botao-secundario" onclick="alternarPoliticaPrivacidade()">Ver política de privacidade</button>
+        <button type="button" class="botao-secundario" onclick="exportarDadosUsuario()">Exportar meus dados</button>
+        <button type="button" class="botao-perigo" onclick="excluirMeusDados()">Excluir meus dados locais e histórico de treino/cardio</button>
+        <div id="mensagemPrivacidade" class="alerta hidden"></div>
+        <div id="politicaPrivacidadeDados" class="politica-bloco hidden">
+          <strong>Política de Privacidade - resumo</strong>
+          <ul>
+            <li>O app usa dados como perfil, objetivo, check-in, treinos, cargas, cardio e observações para personalizar sugestões.</li>
+            <li>Esses dados ficam associados à sua conta Google no Firebase do app.</li>
+            <li>O app não substitui médico, nutricionista ou profissional de Educação Física.</li>
+            <li>Você pode exportar e excluir dados de treino/cardio pelo próprio app.</li>
+            <li>Para exclusão completa de acesso/login, fale com o responsável pelo app.</li>
+          </ul>
+        </div>
       </div>
     </section>
 
@@ -1064,6 +1096,15 @@
         <p class="small">O treino do dia será calculado com base no seu perfil e no check-in diário. Se hoje você não quiser treinar força, pode pular direto para o cardio.</p>
         <button type="button" class="botao-principal" onclick="irParaCheckin()">✅ Fazer check-in / recalcular treino</button>
         <button type="button" class="botao-secundario" onclick="pularTreinoEIrParaCardio()">⏭️ Pular treino e ir para Cardio</button>
+      </div>
+
+
+
+      <div class="card">
+        <h2>🗓️ Plano da semana</h2>
+        <p class="small">Monte uma visão simples da semana para evitar repetir sempre os mesmos grupos musculares e encaixar cardio/recuperação.</p>
+        <button type="button" class="botao-secundario" onclick="gerarPlanoSemanalInteligente()">Montar plano da semana</button>
+        <div id="planoSemanalBox" class="plano-semanal-box hidden"></div>
       </div>
 
       <div id="resultadoTreino" class="card hidden">
@@ -1155,6 +1196,7 @@
           <option value="superior">Treino A - Superiores</option>
           <option value="inferior">Treino B - Inferiores</option>
           <option value="core_abdomen">Treino C - Abdômen / core</option>
+          <option value="full_body">Treino Full Body</option>
           <option value="descanso">Treino leve / recuperação</option>
         </select>
 
@@ -1335,6 +1377,21 @@
           <strong>Dúvidas ou sugestões?</strong><br>
           Entre em contato pelo e-mail <strong>celoborgesms@gmail.com</strong>.
         </div>
+        <div class="card-versao">
+          <strong>Versão 0.0.8 Beta</strong><br>
+          <span class="tag beta">Beta</span>
+          <p><strong>Atualizada em:</strong> 02/05/2026</p>
+          <ul>
+            <li>Balanceamento real dos treinos por grupo muscular: superiores, inferiores e core distribuem melhor o volume.</li>
+            <li>Check-in menos conservador: dor em um grupo direciona para outra categoria segura quando possível.</li>
+            <li>Cardio recente agora impacta corretamente treino de pernas/inferiores.</li>
+            <li>Novo plano semanal simples para organizar treino, cardio e recuperação.</li>
+            <li>Privacidade reforçada: botões de política, exportação e exclusão de dados de treino/cardio.</li>
+          </ul>
+        </div>
+
+
+
 
 
         
@@ -1384,13 +1441,26 @@
       <p>Este aplicativo oferece sugestões de treino com base nas informações preenchidas pelo usuário. Ele não substitui avaliação médica, acompanhamento de profissional de Educação Física ou orientação individualizada.</p>
       <p>Treine com consciência, respeite seus limites e interrompa o exercício em caso de dor, tontura, mal-estar ou desconforto incomum. Em caso de dúvidas, condições de saúde, lesões ou uso de medicamentos, procure um médico ou profissional qualificado antes de iniciar ou continuar os treinos.</p>
       <p><strong>Termos de Uso:</strong> o uso do aplicativo é de responsabilidade do usuário. As informações inseridas devem ser verdadeiras e usadas apenas como apoio para organização dos treinos. Ao continuar, você declara estar ciente dessas condições.</p>
+      <p><strong>Privacidade:</strong> dados de perfil, treino, cardio, evolução e observações podem ser salvos localmente e/ou no Firebase para funcionamento do app. Você pode exportar ou apagar seus dados de treino/cardio na área Privacidade e dados.</p>
 
       <label class="check-termos">
         <input id="aceiteTermosAviso" type="checkbox" onchange="atualizarBotaoAceiteAviso()">
-        <span>Li e concordo com o Aviso Importante e com os Termos de Uso.</span>
+        <span>Li e concordo com o Aviso Importante, Termos de Uso e uso dos meus dados para personalizacao dos treinos.</span>
       </label>
 
       <button id="botaoAceitarAvisoInicial" type="button" class="botao-secundario" onclick="aceitarAvisoInicial()" disabled>Entendi e concordo</button>
+    </div>
+  </div>
+
+
+
+
+  <div id="modalSubstituicao" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>Substituir exercício</h2>
+      <p id="textoModalSubstituicao">Escolha uma opção compatível para manter o equilíbrio do treino.</p>
+      <div id="opcoesModalSubstituicao" class="modal-opcoes-grid"></div>
+      <button type="button" class="botao-secundario" onclick="fecharModalSubstituicao()">Cancelar</button>
     </div>
   </div>
 
@@ -1470,7 +1540,7 @@
           treino: treinoAtual,
           letra: treinoAtual.letra || "",
           categoria: treinoAtual.categoria || treinoAtual.letra || "",
-          versaoGeracao: "0.0.7-inteligencia-real",
+          versaoGeracao: "0.0.8-balanceamento-real",
           concluidos: exerciciosConcluidos || [],
           feedback: feedbackTreinoFinalAtual || "",
           salvoEm: Date.now()
@@ -1644,7 +1714,7 @@
       }
 
       if (user) {
-        campo.innerHTML = "<strong>Logado como:</strong><br>" + (user.displayName || "Usuário") + "<br>" + (user.email || "");
+        campo.innerHTML = "<strong>Logado como:</strong><br>" + limparTextoSeguro(user.displayName || "Usuário") + "<br>" + limparTextoSeguro(user.email || "");
       } else {
         campo.innerHTML = "Você ainda não está logado.";
       }
@@ -1787,6 +1857,171 @@
       if (modal) modal.classList.add("hidden");
     }
 
+    function mostrarMensagemPrivacidade(mensagem, tipo) {
+      const caixa = document.getElementById("mensagemPrivacidade");
+      if (!caixa) return;
+      caixa.className = "alerta";
+      if (tipo === "sucesso") caixa.classList.add("alerta-sucesso");
+      if (tipo === "aviso") caixa.classList.add("alerta-aviso");
+      caixa.innerHTML = limparTextoSeguro(mensagem);
+      caixa.classList.remove("hidden");
+    }
+
+    function alternarPoliticaPrivacidade() {
+      const bloco = document.getElementById("politicaPrivacidadeDados");
+      if (!bloco) return;
+      bloco.classList.toggle("hidden");
+    }
+
+    function carregarColecaoUsuario(caminho) {
+      if (!usuarioAtual || !db) return Promise.resolve([]);
+      return db.collection("usuarios").doc(usuarioAtual.uid).collection(caminho).get()
+        .then(function(snapshot) {
+          const lista = [];
+          snapshot.forEach(function(doc) {
+            const item = doc.data() || {};
+            item._id = doc.id;
+            lista.push(item);
+          });
+          return lista;
+        });
+    }
+
+    function baixarArquivoJSON(nomeArquivo, dados) {
+      const blob = new Blob([JSON.stringify(dados, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = nomeArquivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    }
+
+    function coletarDadosLocaisPrivacidade() {
+      let treinoAtualLocal = null;
+      try { treinoAtualLocal = usuarioAtual ? JSON.parse(localStorage.getItem(chaveTreinoAtual()) || "null") : null; } catch (erro) { treinoAtualLocal = null; }
+      return {
+        perfilUsuario: perfilUsuario || JSON.parse(localStorage.getItem("perfilUsuario") || "null"),
+        historicoPeso: JSON.parse(localStorage.getItem("historicoPeso") || "[]"),
+        conquistasDatas: JSON.parse(localStorage.getItem("metatreinoConquistasDatas") || "{}"),
+        treinoAtualLocal: treinoAtualLocal
+      };
+    }
+
+    function limparCamposPerfilNaTela() {
+      ["nome", "sexo", "dataNascimento", "peso", "altura", "limitacoesUsuario"].forEach(function(id) {
+        const campo = document.getElementById(id);
+        if (campo) campo.value = "";
+      });
+      const resultadoPerfil = document.getElementById("resultadoPerfil");
+      if (resultadoPerfil) resultadoPerfil.classList.add("hidden");
+      const mensagemPeso = document.getElementById("mensagemPeso");
+      if (mensagemPeso) mensagemPeso.classList.add("hidden");
+      const botaoIrTreino = document.getElementById("botaoIrTreino");
+      if (botaoIrTreino) botaoIrTreino.classList.add("hidden");
+    }
+
+    function limparDadosLocaisPrivacidade() {
+      try {
+        localStorage.removeItem("perfilUsuario");
+        localStorage.removeItem("historicoPeso");
+        localStorage.removeItem("metatreinoConquistasDatas");
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const chave = localStorage.key(i);
+          if (chave && chave.indexOf("metatreino-") === 0) localStorage.removeItem(chave);
+        }
+      } catch (erro) {
+        console.log("Erro ao limpar dados locais:", erro);
+      }
+      limparCamposPerfilNaTela();
+    }
+
+    function exportarMeusDados() {
+      const dadosBase = {
+        app: "MetaTreino",
+        versao: "0.0.8",
+        exportadoEm: new Date().toISOString(),
+        usuario: usuarioAtual ? { uid: usuarioAtual.uid, email: usuarioAtual.email || "", nome: usuarioAtual.displayName || "" } : null,
+        dadosLocais: coletarDadosLocaisPrivacidade(),
+        dadosNuvem: { treinos: [], cardios: [] }
+      };
+
+      if (!usuarioAtual || !db) {
+        baixarArquivoJSON("metatreino-dados-locais.json", dadosBase);
+        mostrarMensagemPrivacidade("✅ Exportação local criada. O arquivo JSON foi baixado no seu aparelho.", "sucesso");
+        return;
+      }
+
+      mostrarMensagemPrivacidade("Preparando exportação dos seus dados...", "");
+      Promise.all([carregarColecaoUsuario("treinos"), carregarColecaoUsuario("corridas")])
+        .then(function(resultados) {
+          dadosBase.dadosNuvem.treinos = resultados[0] || [];
+          dadosBase.dadosNuvem.cardios = resultados[1] || [];
+          const emailLimpo = String(usuarioAtual.email || "usuario").replace(/[^a-z0-9._-]/gi, "_");
+          baixarArquivoJSON("metatreino-exportacao-" + emailLimpo + ".json", dadosBase);
+          mostrarMensagemPrivacidade("✅ Exportação concluída. O arquivo JSON foi baixado no seu aparelho.", "sucesso");
+        })
+        .catch(function(erro) {
+          console.log("Erro ao exportar dados:", erro);
+          baixarArquivoJSON("metatreino-dados-locais.json", dadosBase);
+          mostrarMensagemPrivacidade("⚠️ Não foi possível exportar a nuvem agora. Baixei apenas os dados locais deste aparelho.", "aviso");
+        });
+    }
+
+    function exportarDadosUsuario() {
+      exportarMeusDados();
+    }
+
+    function apagarColecaoUsuario(caminho) {
+      if (!usuarioAtual || !db) return Promise.resolve();
+      return db.collection("usuarios").doc(usuarioAtual.uid).collection(caminho).get()
+        .then(function(snapshot) {
+          const batch = db.batch();
+          snapshot.forEach(function(doc) { batch.delete(doc.ref); });
+          return batch.commit();
+        });
+    }
+
+    function excluirMeusDadosNuvem() {
+      const confirmar = confirm("Tem certeza que deseja apagar seus dados locais deste aparelho e o histórico de treinos/cardio da nuvem? Essa ação não remove sua conta Google nem a liberação de acesso no painel do treinador.");
+      if (!confirmar) return;
+
+      const finalizarLocal = function() {
+        limparDadosLocaisPrivacidade();
+        perfilUsuario = null;
+        treinoAtual = [];
+        exerciciosConcluidos = [];
+        ultimaCardioCache = null;
+        memoriaTreinoCache = { historico: [], ultimosNomes: {}, sugestoes: {}, geracao: Date.now() };
+        sugestoesCarga = {};
+      };
+
+      if (!usuarioAtual || !db) {
+        finalizarLocal();
+        mostrarMensagemPrivacidade("✅ Dados locais apagados neste aparelho.", "sucesso");
+        return;
+      }
+
+      mostrarMensagemPrivacidade("Apagando dados...", "");
+      Promise.all([apagarColecaoUsuario("treinos"), apagarColecaoUsuario("corridas")])
+        .then(function() {
+          finalizarLocal();
+          mostrarMensagemPrivacidade("✅ Histórico de treino/cardio apagado da nuvem e dados locais removidos deste aparelho.", "sucesso");
+          if (typeof mostrarHistorico === "function") mostrarHistorico();
+          if (typeof mostrarHistoricoCompleto === "function") mostrarHistoricoCompleto();
+        })
+        .catch(function(erro) {
+          console.log("Erro ao excluir dados:", erro);
+          mostrarMensagemPrivacidade("⚠️ Não foi possível apagar tudo agora. Confira sua conexão e as permissões do Firestore.", "aviso");
+        });
+    }
+
+    function excluirMeusDados() {
+      excluirMeusDadosNuvem();
+    }
+
     function verificarAcessoUsuario(user) {
       if (!user || !db) {
         bloquearApp("Não foi possível verificar seu acesso. Tente novamente em alguns instantes.");
@@ -1872,6 +2107,14 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    }
+
+    function normalizarTextoBusca(texto) {
+      return String(texto || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
     }
 
     function ocultarPaginasDoApp() {
@@ -2432,24 +2675,15 @@
         .then(function(snapshot) {
           const lista = [];
           snapshot.forEach(function(doc) {
-            lista.push(doc.data());
+            const item = doc.data() || {};
+            item._id = doc.id;
+            lista.push(item);
           });
           callback(lista);
         })
         .catch(function(erro) {
           console.log("Erro ao carregar da nuvem:", erro);
           callback([]);
-        });
-    }
-
-    function carregarDaNuvem(caminho, callback) {
-      if (!usuarioAtual || !firebase.firestore) return;
-      const firestore = firebase.firestore();
-      firestore.collection("usuarios").doc(usuarioAtual.uid).collection(caminho).get()
-        .then(snapshot => {
-          const lista = [];
-          snapshot.forEach(doc => lista.push(doc.data()));
-          callback(lista);
         });
     }
     let treinoAtual = [];
@@ -2459,6 +2693,8 @@
     let sugestoesCarga = {};
     let memoriaTreinoCache = { historico: [], ultimosNomes: {}, sugestoes: {}, geracao: 0 };
     let ultimaCardioCache = null;
+    let indiceSubstituicaoAtual = null;
+    let opcoesSubstituicaoAtual = [];
     let mostrarTodosAlunosPainel = false;
     let usuariosAutorizadosCache = [];
 
@@ -2533,6 +2769,8 @@
       document.getElementById("rotinaAtual").value = perfilUsuario.rotinaAtual || "nunca";
       document.getElementById("tempoExperiencia").value = perfilUsuario.tempoExperiencia || "menos_1";
       document.getElementById("localTreino").value = perfilUsuario.localTreino || "academia_grande";
+      const campoLimitacoes = document.getElementById("limitacoesUsuario");
+      if (campoLimitacoes) campoLimitacoes.value = perfilUsuario.limitacoesUsuario || "";
       mostrarResumoPerfilCarregado();
       document.getElementById("botaoIrTreino").classList.remove("hidden");
     }
@@ -2540,7 +2778,8 @@
     function mostrarResumoPerfilCarregado() {
       const resultadoPerfil = document.getElementById("resultadoPerfil");
       resultadoPerfil.classList.remove("hidden");
-      resultadoPerfil.innerHTML = "<strong>Perfil carregado automaticamente</strong><br>" + perfilUsuario.nome + ", seu IMC salvo é " + perfilUsuario.imc + ".<br>Classificação: " + perfilUsuario.classificacao + ".<br>Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + ".<br>Local de treino: " + traduzirLocal(perfilUsuario.localTreino) + ".<br><br><span class='small'>Se quiser alterar seus dados, edite os campos e clique em Calcular e salvar perfil.</span>";
+      const limitacoesTexto = perfilUsuario.limitacoesUsuario ? "<br>Limitações informadas: " + limparTextoSeguro(perfilUsuario.limitacoesUsuario) + "." : "";
+      resultadoPerfil.innerHTML = "<strong>Perfil carregado automaticamente</strong><br>" + limparTextoSeguro(perfilUsuario.nome) + ", seu IMC salvo é " + limparTextoSeguro(perfilUsuario.imc) + ".<br>Classificação: " + limparTextoSeguro(perfilUsuario.classificacao) + ".<br>Meta: " + limparTextoSeguro(traduzirMeta(perfilUsuario.metaPrincipal)) + ".<br>Local de treino: " + limparTextoSeguro(traduzirLocal(perfilUsuario.localTreino)) + "." + limitacoesTexto + "<br><br><span class='small'>Se quiser alterar seus dados, edite os campos e clique em Calcular e salvar perfil.</span>";
     }
 
     function calcularIdadePorNascimento(dataISO) {
@@ -2570,6 +2809,7 @@
       const rotinaAtual = document.getElementById("rotinaAtual").value;
       const tempoExperiencia = document.getElementById("tempoExperiencia").value;
       const localTreino = document.getElementById("localTreino").value;
+      const limitacoesUsuario = (document.getElementById("limitacoesUsuario") ? document.getElementById("limitacoesUsuario").value.trim() : "").slice(0, 500);
       const resultadoPerfil = document.getElementById("resultadoPerfil");
       const botaoIrTreino = document.getElementById("botaoIrTreino");
 
@@ -2598,13 +2838,14 @@
       else if (imc < 30) { classificacao = "acima do peso"; mensagem = "Seu foco pode ser reduzir gordura corporal e manter ou ganhar massa magra."; }
       else { classificacao = "em faixa de obesidade pelo IMC"; mensagem = "O ideal é começar com treinos seguros, progressivos e, se possível, acompanhamento profissional."; }
 
-      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino };
+      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, limitacoesUsuario };
       localStorage.setItem("perfilUsuario", JSON.stringify(perfilUsuario));
       registrarPeso(peso);
       mostrarMensagemMudancaPeso(perfilAntigo, peso);
 
       resultadoPerfil.classList.remove("hidden");
-      resultadoPerfil.innerHTML = "<strong>" + nome + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Idade: " + idade + " anos.<br>Classificação: " + classificacao + ".<br>" + mensagem + "<br>Meta: " + traduzirMeta(metaPrincipal) + ".<br>Rotina: " + traduzirRotina(rotinaAtual) + ".<br>Experiência: " + traduzirExperiencia(tempoExperiencia) + ".<br>Local: " + traduzirLocal(localTreino) + ".<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
+      const resumoLimitacoes = limitacoesUsuario ? "<br>Limitações/observações: " + limparTextoSeguro(limitacoesUsuario) + "." : "";
+      resultadoPerfil.innerHTML = "<strong>" + limparTextoSeguro(nome) + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Idade: " + idade + " anos.<br>Classificação: " + limparTextoSeguro(classificacao) + ".<br>" + limparTextoSeguro(mensagem) + "<br>Meta: " + limparTextoSeguro(traduzirMeta(metaPrincipal)) + ".<br>Rotina: " + limparTextoSeguro(traduzirRotina(rotinaAtual)) + ".<br>Experiência: " + limparTextoSeguro(traduzirExperiencia(tempoExperiencia)) + ".<br>Local: " + limparTextoSeguro(traduzirLocal(localTreino)) + "." + resumoLimitacoes + "<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
       botaoIrTreino.classList.remove("hidden");
     }
 
@@ -2632,13 +2873,17 @@
     }
 
     function apagarPerfilSalvo() {
-      if (!confirm("Tem certeza que deseja apagar o perfil salvo?")) return;
+      if (!confirm("Tem certeza que deseja apagar o perfil salvo neste aparelho?")) return;
       localStorage.removeItem("perfilUsuario");
       perfilUsuario = null;
       document.getElementById("nome").value = "";
-      document.getElementById("idade").value = "";
+      document.getElementById("sexo").value = "";
+      const campoDataNascimento = document.getElementById("dataNascimento");
+      if (campoDataNascimento) campoDataNascimento.value = "";
       document.getElementById("peso").value = "";
       document.getElementById("altura").value = "";
+      const campoLimitacoes = document.getElementById("limitacoesUsuario");
+      if (campoLimitacoes) campoLimitacoes.value = "";
       document.getElementById("resultadoPerfil").classList.add("hidden");
       document.getElementById("mensagemPeso").classList.add("hidden");
       document.getElementById("botaoIrTreino").classList.add("hidden");
@@ -2673,6 +2918,7 @@
       document.getElementById("paginaTreino").classList.remove("hidden");
       document.getElementById("tituloTreino").innerText = "💪 Treino de " + perfilUsuario.nome;
       document.getElementById("resumoPerfilTreino").innerText = "Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + " | Experiência: " + traduzirExperiencia(perfilUsuario.tempoExperiencia) + " | Local: " + traduzirLocal(perfilUsuario.localTreino) + " | IMC: " + perfilUsuario.imc;
+      renderizarPlanoSemanal();
       carregarUltimaCardio();
       carregarTreinoAtualLocal();
     }
@@ -2804,6 +3050,7 @@
         superior: "Treino A - Superiores",
         inferior: "Treino B - Inferiores",
         core_abdomen: "Treino C - Abdômen / core",
+        full_body: "Treino Full Body",
         descanso: "Treino leve / recuperação"
       };
       return nomes[chave] || nomes[letra] || "Treino inteligente";
@@ -2840,6 +3087,91 @@
       return "Boa escolha! Consistência é o que traz resultado.";
     }
 
+    function descricaoPlanoCategoria(categoria, indiceDia) {
+      const cat = normalizarCategoriaTreino(categoria);
+      const cardioEmagrecimento = perfilUsuario && (perfilUsuario.metaPrincipal === "perder_peso" || perfilUsuario.metaPrincipal === "definicao");
+      if (cat === "descanso") return "Recuperação ativa, mobilidade leve ou caminhada confortável.";
+      if (cat === "superior") return "Peito, costas, ombros e braços com volume equilibrado.";
+      if (cat === "inferior") return "Quadríceps/pernas, posterior, glúteos e panturrilha sem repetir demais o mesmo grupo.";
+      if (cat === "core_abdomen") return "Core, abdômen e lombar com foco em controle e estabilidade.";
+      if (cat === "full_body") return cardioEmagrecimento ? "Corpo inteiro + cardio leve/moderado conforme energia." : "Corpo inteiro com volume moderado e grupos alternados.";
+      return indiceDia % 2 === 0 ? "Treino moderado e técnico." : "Treino leve e progressivo.";
+    }
+
+    function contarCategoriasRecentesPlano() {
+      const mapa = { superior: 0, inferior: 0, core_abdomen: 0, full_body: 0, descanso: 0 };
+      const historico = memoriaTreinoCache && memoriaTreinoCache.historico ? memoriaTreinoCache.historico : [];
+      const limite = Date.now() - (7 * 24 * 60 * 60 * 1000);
+      historico.forEach(function(item) {
+        if (Number(item.criadoEm || 0) < limite) return;
+        const cat = categoriaHistoricoTreino(item);
+        if (mapa[cat] !== undefined) mapa[cat]++;
+      });
+      return mapa;
+    }
+
+    function ajustarCategoriaPlanoSemanal(categoria, recentes, indiceDia) {
+      const cat = normalizarCategoriaTreino(categoria);
+      if (cat === "descanso") return cat;
+      if (!recentes) return cat;
+
+      const candidatas = ["superior", "inferior", "core_abdomen", "full_body"];
+      const limite = cat === "full_body" ? 1 : 2;
+      if ((recentes[cat] || 0) < limite) return cat;
+
+      let melhor = cat;
+      let menor = Infinity;
+      candidatas.forEach(function(opcao) {
+        if (opcao === cat && candidatas.length > 1) return;
+        const valor = recentes[opcao] || 0;
+        if (valor < menor) {
+          menor = valor;
+          melhor = opcao;
+        }
+      });
+      return melhor || cat;
+    }
+
+    function montarHTMLPlanoSemanal() {
+      if (!perfilUsuario) return "<p class='small'>Preencha e salve o perfil para montar o plano da semana.</p>";
+      const dias = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+      const hoje = new Date().getDay();
+      const rotacao = rotacaoSemanalPorMeta(perfilUsuario.metaPrincipal, perfilUsuario.sexo);
+      const recentes = contarCategoriasRecentesPlano();
+      let html = "<strong>Plano sugerido da semana</strong><br>" +
+        "<span class='small'>Baseado na meta " + limparTextoSeguro(traduzirMeta(perfilUsuario.metaPrincipal)) + ", experiência e equilíbrio semanal. Ajuste se houver dor ou orientação profissional.</span>";
+      html += "<div class='alerta'>Resumo dos últimos 7 dias: superiores " + recentes.superior + ", inferiores " + recentes.inferior + ", core " + recentes.core_abdomen + ", full body " + recentes.full_body + ", recuperação " + recentes.descanso + ".</div>";
+      dias.forEach(function(nomeDia, i) {
+        let categoria = normalizarCategoriaTreino(rotacao[i] || "descanso");
+        categoria = ajustarCategoriaPlanoSemanal(categoria, recentes, i);
+        const hojeTexto = i === hoje ? " Hoje" : "";
+        html += "<div class='plano-semanal-dia'><strong>" + limparTextoSeguro(nomeDia) + hojeTexto + "</strong><br>" +
+          limparTextoSeguro(nomeAmigavelTreino(categoria)) + "<br><span class='small'>" + limparTextoSeguro(descricaoPlanoCategoria(categoria, i)) + "</span></div>";
+      });
+      return html;
+    }
+
+    function renderizarPlanoSemanal() {
+      const box = document.getElementById("planoSemanalBox");
+      if (!box) return;
+      box.innerHTML = montarHTMLPlanoSemanal();
+      box.classList.remove("hidden");
+    }
+
+    function gerarPlanoSemanalInteligente() {
+      if (!acessoLiberado) {
+        bloquearApp("Faça login com um e-mail autorizado para montar o plano semanal.");
+        return;
+      }
+      if (perfilUsuario === null) calcularPerfil();
+      if (perfilUsuario === null) return;
+      carregarMemoriaInteligenteTreino(function() {
+        renderizarPlanoSemanal();
+        const box = document.getElementById("planoSemanalBox");
+        if (box) box.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+
     function salvarFeedbackTreinoFinal(nivel) {
       feedbackTreinoFinalAtual = nivel;
       const caixa = document.getElementById("mensagemFeedbackTreino");
@@ -2872,33 +3204,123 @@
       return valor && valor !== "nenhuma";
     }
 
+    function textoRestricoesPerfil() {
+      return normalizarTextoBusca(perfilUsuario && perfilUsuario.limitacoesUsuario ? perfilUsuario.limitacoesUsuario : "");
+    }
+
+    function perfilIndicaRestricao(termos) {
+      const texto = textoRestricoesPerfil();
+      if (!texto) return false;
+      const lista = Array.isArray(termos) ? termos : [termos];
+      return lista.some(function(termo) { return texto.indexOf(normalizarTextoBusca(termo)) !== -1; });
+    }
+
+    function exercicioBloqueadoPorRestricoesPerfil(exercicio) {
+      if (!exercicio) return false;
+      const grupo = exercicio.grupo || "";
+      const gruposInferiores = ["Pernas", "Quadríceps", "Glúteos", "Panturrilha", "Posterior de coxa"];
+      const gruposOmbro = ["Peito", "Ombros", "Ombro posterior", "Tríceps"];
+      const gruposColuna = ["Costas", "Lombar", "Abdômen", "Core", "Cardio/Abdômen"];
+
+      if (perfilIndicaRestricao(["joelho", "patela", "menisco"]) && (exercicio.evitar === "joelho" || gruposInferiores.includes(grupo))) return true;
+      if (perfilIndicaRestricao(["ombro", "manguito"]) && (exercicio.evitar === "ombro" || gruposOmbro.includes(grupo))) return true;
+      if (perfilIndicaRestricao(["lombar", "coluna", "ciatico", "ciática"]) && (exercicio.evitar === "lombar" || gruposColuna.includes(grupo))) return true;
+      return false;
+    }
+
+    function exercicioBloqueadoPorDor(exercicio, dor) {
+      if (!exercicio) return false;
+      const d = dor || "nenhuma";
+      const grupo = exercicio.grupo || "";
+      if (exercicioBloqueadoPorRestricoesPerfil(exercicio)) return true;
+      if (d === "nenhuma") return false;
+
+      const gruposInferiores = ["Pernas", "Quadríceps", "Glúteos", "Panturrilha", "Posterior de coxa"];
+      const gruposBracosOmbro = ["Bíceps", "Tríceps", "Peito", "Ombros", "Ombro posterior"];
+      const gruposOmbro = ["Peito", "Ombros", "Ombro posterior", "Tríceps"];
+      const gruposColuna = ["Costas", "Lombar", "Abdômen", "Core", "Cardio/Abdômen"];
+
+      if (d === "pernas" && gruposInferiores.includes(grupo)) return true;
+      if (d === "joelho" && (exercicio.evitar === "joelho" || gruposInferiores.includes(grupo))) return true;
+      if (d === "bracos" && gruposBracosOmbro.includes(grupo)) return true;
+      if (d === "ombro" && (exercicio.evitar === "ombro" || gruposOmbro.includes(grupo))) return true;
+      if ((d === "coluna" || d === "lombar") && (exercicio.evitar === "lombar" || gruposColuna.includes(grupo))) return true;
+      return exercicio.evitar === d;
+    }
+
+    function categoriaPermitidaPelaDor(categoria, dor) {
+      const cat = normalizarCategoriaTreino(categoria);
+      const d = dor || "nenhuma";
+      if (d === "nenhuma") {
+        if ((perfilIndicaRestricao(["joelho", "patela", "menisco"]) || perfilIndicaRestricao(["ombro", "manguito"])) && cat === "full_body") return false;
+        if (perfilIndicaRestricao(["joelho", "patela", "menisco"]) && cat === "inferior") return false;
+        if (perfilIndicaRestricao(["ombro", "manguito"]) && cat === "superior") return false;
+        if (perfilIndicaRestricao(["lombar", "coluna", "ciatico", "ciática"]) && (cat === "inferior" || cat === "core_abdomen" || cat === "full_body")) return false;
+        return true;
+      }
+      if (d === "pernas" || d === "joelho") return cat !== "inferior" && cat !== "full_body";
+      if (d === "bracos" || d === "ombro") return cat !== "superior" && cat !== "full_body";
+      if (d === "coluna" || d === "lombar") return cat === "superior" || cat === "descanso";
+      return true;
+    }
+
+    function primeiraCategoriaSegura(preferencias, dor) {
+      const vistos = {};
+      for (let i = 0; i < preferencias.length; i++) {
+        const cat = normalizarCategoriaTreino(preferencias[i]);
+        if (!cat || vistos[cat]) continue;
+        vistos[cat] = true;
+        if (cat !== "descanso" && categoriaPermitidaPelaDor(cat, dor)) return cat;
+      }
+      return "descanso";
+    }
+
+    function rotacaoSemanalPorMeta(meta, sexo) {
+      const emagrecimento = ["descanso", "full_body", "inferior", "superior", "core_abdomen", "full_body", "inferior"];
+      const massa = sexo === "feminino"
+        ? ["descanso", "inferior", "superior", "core_abdomen", "inferior", "superior", "full_body"]
+        : ["descanso", "superior", "inferior", "core_abdomen", "superior", "inferior", "full_body"];
+      const forca = ["descanso", "superior", "inferior", "descanso", "superior", "inferior", "core_abdomen"];
+      if (meta === "perder_peso" || meta === "definicao") return emagrecimento;
+      if (meta === "forca") return forca;
+      return massa;
+    }
+
     function deveUsarRecuperacaoInteligente(divisaoSelecionada) {
       const energiaAtual = document.getElementById("energia") ? document.getElementById("energia").value : "bem";
-      const dorAtual = document.getElementById("dor") ? document.getElementById("dor").value : "nenhuma";
       const domingo = new Date().getDay() === 0;
       if (divisaoSelecionada === "descanso") return true;
       if (divisaoSelecionada !== "automatico") return false;
-      return domingo || energiaAtual === "cansado" || energiaAtual === "mal" || existeDorCheckin(dorAtual);
+      return domingo || energiaAtual === "mal";
     }
 
     function escolherTreinoABC(divisaoSelecionada) {
       if (divisaoSelecionada === "descanso") return "descanso";
-      if (["superior", "inferior", "core_abdomen"].includes(divisaoSelecionada)) return divisaoSelecionada;
+      if (["superior", "inferior", "core_abdomen", "full_body"].includes(divisaoSelecionada)) return divisaoSelecionada;
       if (divisaoSelecionada !== "automatico" && divisaoSelecionada) return normalizarCategoriaTreino(divisaoSelecionada);
 
+      const dorAtual = document.getElementById("dor") ? document.getElementById("dor").value : "nenhuma";
       if (deveUsarRecuperacaoInteligente(divisaoSelecionada)) return "descanso";
 
-      if (perfilUsuario) {
-        if (perfilUsuario.metaPrincipal === "perder_peso" || perfilUsuario.metaPrincipal === "definicao") return "inferior";
-        if (perfilUsuario.sexo === "feminino" && (perfilUsuario.metaPrincipal === "massa" || perfilUsuario.metaPrincipal === "definicao")) return "inferior";
-        if (perfilUsuario.metaPrincipal === "forca") return "superior";
+      const hoje = new Date().getDay();
+      const meta = perfilUsuario ? perfilUsuario.metaPrincipal : "massa";
+      const sexo = perfilUsuario ? perfilUsuario.sexo : "";
+      const rotacao = rotacaoSemanalPorMeta(meta, sexo);
+      const preferidaHoje = rotacao[hoje] || "full_body";
+      if (preferidaHoje === "descanso") return "descanso";
+
+      let preferencias = [preferidaHoje];
+      if (meta === "perder_peso" || meta === "definicao") {
+        preferencias = preferencias.concat(["full_body", "inferior", "superior", "core_abdomen"]);
+      } else if (meta === "forca") {
+        preferencias = preferencias.concat(["superior", "inferior", "core_abdomen"]);
+      } else if (sexo === "feminino") {
+        preferencias = preferencias.concat(["inferior", "superior", "full_body", "core_abdomen"]);
+      } else {
+        preferencias = preferencias.concat(["superior", "inferior", "full_body", "core_abdomen"]);
       }
 
-      const hoje = new Date().getDay();
-      if (hoje === 1 || hoje === 4) return "superior";
-      if (hoje === 2 || hoje === 5) return "inferior";
-      if (hoje === 3 || hoje === 6) return "core_abdomen";
-      return "descanso";
+      return primeiraCategoriaSegura(preferencias, dorAtual);
     }
 
     function nivelPermitido(exercicio) {
@@ -2941,21 +3363,27 @@
         return resposta;
       }
 
+      const categoria = normalizarCategoriaTreino(letraTreino);
+      const tipoAtividade = ultimaCardioCache.tipoAtividade || ultimaCardioCache.tipo || "cardio";
       const intensidade = ultimaCardioCache.intensidade || "leve";
       const sensacao = ultimaCardioCache.sensacao || "bem";
       const foiForte = intensidade === "forte" || sensacao === "pesado";
       const foiModerada = intensidade === "moderada" || sensacao === "cansado";
+      const impactaPernas = ["corrida", "caminhada", "bicicleta", "cardio"].includes(tipoAtividade);
+      const treinoUsaPernas = categoria === "inferior" || categoria === "full_body";
 
       if (foiForte) {
         resposta.reduzirVolume = true;
         resposta.mensagem = "Como seu último cardio foi forte ou muito pesado, o app reduziu um pouco o volume do treino de hoje.";
-        if (letraTreino === "C") {
+        if (impactaPernas && categoria === "inferior") {
           resposta.sugerirDescanso = true;
-          resposta.mensagem = "Como seu último cardio foi forte ou muito pesado e hoje seria treino de pernas, o app sugeriu recuperação/mobilidade para proteger sua recuperação.";
+          resposta.mensagem = "Como seu último cardio foi forte/pesado e hoje cairia treino de pernas, o app trocou para recuperação ativa para proteger sua recuperação.";
+        } else if (impactaPernas && categoria === "full_body") {
+          resposta.mensagem = "Como seu último cardio foi forte/pesado, o treino full body foi mantido com menos volume e menor foco em pernas.";
         }
-      } else if (foiModerada && letraTreino === "C") {
+      } else if (foiModerada && impactaPernas && treinoUsaPernas) {
         resposta.reduzirVolume = true;
-        resposta.mensagem = "Como você correu recentemente em intensidade moderada, o treino de pernas foi ajustado com menos volume.";
+        resposta.mensagem = "Como houve cardio moderado recente, o app reduziu o volume de pernas para preservar recuperação.";
       } else {
         resposta.mensagem = "Último cardio registrado considerado leve; treino mantido normalmente.";
       }
@@ -3628,6 +4056,29 @@
         });
     }
 
+    function categoriaTreinadaRecentemente(categoria, horas) {
+      const cat = normalizarCategoriaTreino(categoria);
+      if (!memoriaTreinoCache || !Array.isArray(memoriaTreinoCache.historico)) return false;
+      const limite = Date.now() - ((horas || 36) * 60 * 60 * 1000);
+      return memoriaTreinoCache.historico.some(function(item) {
+        if (Number(item.criadoEm || 0) < limite) return false;
+        const catItem = categoriaHistoricoTreino(item);
+        if (cat === "full_body") return catItem !== "descanso";
+        if (catItem === "full_body") return cat !== "core_abdomen";
+        return catItem === cat;
+      });
+    }
+
+    function escolherCategoriaAlternativaRecuperacao(categoriaAtual, dor) {
+      const ordem = ["superior", "inferior", "core_abdomen", "full_body"];
+      const filtrada = ordem.filter(function(cat) {
+        return cat !== normalizarCategoriaTreino(categoriaAtual) && categoriaPermitidaPelaDor(cat, dor) && !categoriaTreinadaRecentemente(cat, 30);
+      });
+      if (filtrada.length) return filtrada[0];
+      const qualquerSegura = ordem.filter(function(cat) { return cat !== normalizarCategoriaTreino(categoriaAtual) && categoriaPermitidaPelaDor(cat, dor); });
+      return qualquerSegura[0] || "descanso";
+    }
+
     function aplicarAntiRepeticaoInteligente(treino, categoria, alvo) {
       const lista = filtrarExerciciosUnicos(treino || []);
       if (!lista.length) return lista;
@@ -3709,27 +4160,39 @@
     }
 
     function normalizarCategoriaTreino(categoria) {
+      const chaveOriginal = String(categoria || "").trim();
+      const chave = chaveOriginal.toLowerCase();
       const aliases = {
-        A: "superior",
-        B: "inferior",
-        C: "core_abdomen",
+        a: "superior",
+        b: "inferior",
+        c: "core_abdomen",
         semana: "automatico",
+        automatico: "automatico",
+        superior: "superior",
+        inferior: "inferior",
+        core_abdomen: "core_abdomen",
+        descanso: "descanso",
         bracos_peito: "superior",
         pernas_fortes: "inferior",
         gluteos_definidos: "inferior",
         barriga_chapada: "core_abdomen",
         gluteos_posterior: "inferior",
-        completo: "superior"
+        completo: "full_body",
+        corpo_inteiro: "full_body",
+        fullbody: "full_body",
+        full_body: "full_body"
       };
-      return aliases[categoria] || categoria;
+      return aliases[chave] || chaveOriginal;
     }
 
     function gruposPermitidosPorCategoria(categoria) {
       const cat = normalizarCategoriaTreino(categoria);
+      const gruposForca = ["Peito", "Costas", "Ombros", "Ombro posterior", "Tríceps", "Bíceps", "Pernas", "Quadríceps", "Posterior de coxa", "Glúteos", "Panturrilha", "Abdômen", "Core", "Lombar", "Cardio/Abdômen"];
       const mapa = {
         superior: ["Peito", "Costas", "Ombros", "Ombro posterior", "Tríceps", "Bíceps"],
         inferior: ["Pernas", "Quadríceps", "Posterior de coxa", "Glúteos", "Panturrilha"],
         core_abdomen: ["Abdômen", "Core", "Lombar", "Cardio/Abdômen"],
+        full_body: gruposForca,
         descanso: ["Recuperação", "Recuperação ativa", "Pernas leves", "Peito leve", "Costas leves", "Core leve", "Mobilidade", "Alongamento", "Cardio leve", "Liberação miofascial", "Yoga"]
       };
       return mapa[cat] || null;
@@ -3751,6 +4214,90 @@
       return mapa[grupo] || "";
     }
 
+    function grupoCombinaComAlvo(grupo, alvo) {
+      if (grupo === alvo) return true;
+      const equivalencias = {
+        Quadríceps: ["Pernas", "Quadríceps"],
+        Pernas: ["Pernas", "Quadríceps"],
+        Ombros: ["Ombros", "Ombro posterior"],
+        Core: ["Core", "Abdômen"],
+        Abdômen: ["Abdômen", "Core"],
+        Lombar: ["Lombar", "Core"],
+        Recuperação: ["Recuperação", "Recuperação ativa"],
+        Mobilidade: ["Mobilidade", "Alongamento", "Yoga"],
+        Alongamento: ["Alongamento", "Mobilidade", "Yoga"]
+      };
+      return equivalencias[alvo] ? equivalencias[alvo].includes(grupo) : false;
+    }
+
+    function modeloDistribuicaoTreino(categoria, alvo) {
+      const cat = normalizarCategoriaTreino(categoria);
+      const modelos = {
+        superior: ["Peito", "Costas", "Ombros", "Bíceps", "Tríceps", "Costas", "Peito", "Ombro posterior"],
+        inferior: ["Quadríceps", "Posterior de coxa", "Glúteos", "Panturrilha", "Pernas", "Glúteos", "Posterior de coxa", "Quadríceps"],
+        core_abdomen: ["Core", "Abdômen", "Core", "Lombar", "Cardio/Abdômen", "Abdômen", "Core", "Lombar"],
+        full_body: ["Pernas", "Peito", "Costas", "Glúteos", "Core", "Ombros", "Posterior de coxa", "Bíceps", "Tríceps"],
+        descanso: ["Mobilidade", "Recuperação", "Core leve", "Alongamento", "Cardio leve", "Recuperação ativa"]
+      };
+      const base = modelos[cat] || [];
+      const resultado = [];
+      if (!base.length) return resultado;
+      for (let i = 0; resultado.length < alvo; i++) {
+        resultado.push(base[i % base.length]);
+      }
+      return resultado;
+    }
+
+    function selecionarTreinoEquilibradoPorGrupo(lista, categoria, alvo) {
+      const unicos = filtrarExerciciosUnicos(lista || []);
+      if (!unicos.length) return unicos;
+      const modelo = modeloDistribuicaoTreino(categoria, alvo || unicos.length);
+      if (!modelo.length) return ordenarTreinoPorVariedade(unicos).slice(0, alvo);
+
+      const escolhidos = [];
+      const usados = {};
+      const contagemGrupo = {};
+
+      function adicionar(exercicio) {
+        const chave = normalizarNomeExercicio(exercicio.nome || "");
+        if (!chave || usados[chave]) return false;
+        usados[chave] = true;
+        escolhidos.push(exercicio);
+        contagemGrupo[exercicio.grupo || ""] = (contagemGrupo[exercicio.grupo || ""] || 0) + 1;
+        return true;
+      }
+
+      modelo.forEach(function(grupoAlvo) {
+        if (escolhidos.length >= alvo) return;
+        let candidato = unicos.find(function(exercicio) {
+          const chave = normalizarNomeExercicio(exercicio.nome || "");
+          return !usados[chave] && (exercicio.grupo || "") === grupoAlvo;
+        });
+        if (!candidato) {
+          candidato = unicos.find(function(exercicio) {
+            const chave = normalizarNomeExercicio(exercicio.nome || "");
+            return !usados[chave] && grupoCombinaComAlvo(exercicio.grupo || "", grupoAlvo);
+          });
+        }
+        if (candidato) adicionar(candidato);
+      });
+
+      unicos.forEach(function(exercicio) {
+        if (escolhidos.length >= alvo) return;
+        const grupo = exercicio.grupo || "";
+        const limiteGrupo = normalizarCategoriaTreino(categoria) === "superior" || normalizarCategoriaTreino(categoria) === "inferior" ? 2 : 3;
+        if ((contagemGrupo[grupo] || 0) >= limiteGrupo && escolhidos.length < Math.min(alvo, modelo.length)) return;
+        adicionar(exercicio);
+      });
+
+      unicos.forEach(function(exercicio) {
+        if (escolhidos.length >= alvo) return;
+        adicionar(exercicio);
+      });
+
+      return escolhidos.slice(0, alvo);
+    }
+
     function ordenarTreinoPorVariedade(lista) {
       const vistosGrupo = {};
       const principal = [];
@@ -3770,27 +4317,28 @@
     function garantirTreinoDaCategoriaSelecionada(treino, categoria, local, dor, alvo) {
       const cat = normalizarCategoriaTreino(categoria);
       if (!gruposPermitidosPorCategoria(cat)) return treino || [];
+      const quantidadeAlvo = Math.max(1, Number(alvo || ((treino || []).length)) || 1);
 
       const jaVistos = {};
       let correto = (treino || []).filter(function(exercicio) {
         const chave = normalizarNomeExercicio(exercicio.nome || "");
         if (!chave || jaVistos[chave]) return false;
         if (!exercicioPertenceCategoria(exercicio, cat)) return false;
+        if (exercicioBloqueadoPorDor(exercicio, dor)) return false;
         jaVistos[chave] = true;
         return true;
       });
 
-      if (correto.length < alvo) {
+      if (correto.length < quantidadeAlvo) {
         const base = obterBaseTreinoPorCategoria(cat).filter(function(exercicio) {
           if (!exercicioPertenceCategoria(exercicio, cat)) return false;
           if (exercicio.local && !exercicio.local.includes(local)) return false;
-          if (dor && dor !== "nenhuma" && exercicio.evitar === dor) return false;
+          if (exercicioBloqueadoPorDor(exercicio, dor)) return false;
           if (!nivelPermitido(exercicio)) return false;
           return true;
         }).map(ajustarExercicioPorMeta);
 
         base.forEach(function(exercicio) {
-          if (correto.length >= alvo) return;
           const chave = normalizarNomeExercicio(exercicio.nome || "");
           if (!jaVistos[chave]) {
             jaVistos[chave] = true;
@@ -3799,7 +4347,8 @@
         });
       }
 
-      return ordenarTreinoPorVariedade(correto).slice(0, alvo);
+      const equilibrado = selecionarTreinoEquilibradoPorGrupo(correto, cat, quantidadeAlvo);
+      return equilibrado.length ? equilibrado : ordenarTreinoPorVariedade(correto).slice(0, quantidadeAlvo);
     }
 
     function criarExercicioCategoria(nome, grupo, equipamento, locais, evitar, nivel, passos, registravel) {
@@ -3848,12 +4397,86 @@
       if (cat === "superior") return superior;
       if (cat === "inferior") return inferior;
       if (cat === "core_abdomen") return core;
+      if (cat === "full_body") return superior.concat(inferior).concat(core);
       if (cat === "descanso") return descanso;
       return superior;
     }
 
+    function bibliotecaExtraProfissional(categoria) {
+      const cat = normalizarCategoriaTreino(categoria);
+      const todosLocais = ["sem_equipamento", "casa_limitado", "academia_pequena", "academia_basica", "academia_grande", "garagem"];
+      const peso = ["sem_equipamento", "casa_limitado", "garagem"];
+      const basica = ["academia_pequena", "academia_basica", "academia_grande", "garagem"];
+      const completa = ["academia_grande"];
+      const passosBase = ["Execute com controle e sem pressa.", "Mantenha a postura firme durante todo o movimento.", "Use uma carga que permita boa tecnica.", "Pare se sentir dor articular ou mal-estar."];
+
+      const superior = [
+        criarExercicioCategoria("Supino com halteres no banco", "Peito", "Halteres e banco", basica, "ombro", "iniciante", passosBase, true),
+        criarExercicioCategoria("Flexao com joelhos apoiados", "Peito", "Peso corporal", peso, "ombro", "iniciante", passosBase, true),
+        criarExercicioCategoria("Flexao pike adaptada", "Ombros", "Peso corporal", todosLocais, "ombro", "iniciante", ["Comece em posicao de flexao com quadril alto.", "Flexione os cotovelos com controle.", "Empurre o chao sem jogar o peso todo no pescoco.", "Use amplitude curta se for iniciante."], true),
+        criarExercicioCategoria("Elevacao Y-T-W no chao", "Ombro posterior", "Peso corporal", todosLocais, "ombro", "iniciante", ["Deite de barriga para baixo.", "Eleve os bracos em formato Y, T e W com controle.", "Contraia as escapulas sem forcar o pescoco.", "Use movimento curto e tecnico."], true),
+        criarExercicioCategoria("Remada isometrica com toalha", "Costas", "Toalha ou apoio firme", todosLocais, "lombar", "iniciante", ["Sente ou fique em pe com postura firme.", "Segure a toalha e puxe como se fosse uma remada.", "Mantenha contracao por alguns segundos.", "Nao force a lombar nem prenda a respiracao."], true),
+        criarExercicioCategoria("Rosca isometrica com toalha", "Bíceps", "Toalha", todosLocais, "nenhuma", "iniciante", ["Pise no meio da toalha com cuidado.", "Segure as pontas e tente flexionar os cotovelos.", "Crie resistencia com o proprio pe.", "Mantenha controle, sem trancos."], true),
+        criarExercicioCategoria("Triceps na parede", "Tríceps", "Parede", todosLocais, "ombro", "iniciante", ["Apoie as maos na parede em posicao fechada.", "Dobre os cotovelos mantendo o corpo alinhado.", "Empurre a parede para voltar.", "Afaste mais os pes apenas se a tecnica estiver boa."], true),
+        criarExercicioCategoria("Puxada frente na polia", "Costas", "Polia", completa, "lombar", "iniciante", passosBase, true),
+        criarExercicioCategoria("Remada baixa no cabo", "Costas", "Cabo", completa, "lombar", "iniciante", passosBase, true),
+        criarExercicioCategoria("Remada unilateral apoiada", "Costas", "Halter e banco", basica, "lombar", "iniciante", passosBase, true),
+        criarExercicioCategoria("Elevacao lateral sentado", "Ombros", "Halteres", basica, "ombro", "iniciante", passosBase, true),
+        criarExercicioCategoria("Face pull", "Ombro posterior", "Cabo ou elastico", basica, "ombro", "iniciante", passosBase, true),
+        criarExercicioCategoria("Rosca martelo", "Bíceps", "Halteres", basica, "nenhuma", "iniciante", passosBase, true),
+        criarExercicioCategoria("Rosca direta com barra", "Bíceps", "Barra ou halteres", basica, "nenhuma", "iniciante", passosBase, true),
+        criarExercicioCategoria("Triceps testa", "Tríceps", "Barra, halter ou cabo", basica, "ombro", "intermediario", passosBase, true),
+        criarExercicioCategoria("Triceps pulley barra", "Tríceps", "Cabo", completa, "ombro", "iniciante", passosBase, true),
+        criarExercicioCategoria("Flexao fechada inclinada", "Tríceps", "Peso corporal e apoio", todosLocais, "ombro", "iniciante", passosBase, true)
+      ];
+
+      const inferior = [
+        criarExercicioCategoria("Agachamento goblet", "Quadríceps", "Halter, kettlebell ou mochila", basica, "joelho", "iniciante", passosBase, true),
+        criarExercicioCategoria("Agachamento no banco", "Quadríceps", "Peso corporal e banco", todosLocais, "joelho", "iniciante", passosBase, true),
+        criarExercicioCategoria("Isometria na parede", "Quadríceps", "Parede", todosLocais, "joelho", "iniciante", ["Apoie as costas na parede.", "Desca ate uma posicao confortavel.", "Segure sem dor no joelho.", "Suba devagar e respire normalmente."], true),
+        criarExercicioCategoria("Bom dia sem carga", "Posterior de coxa", "Peso corporal", todosLocais, "lombar", "iniciante", ["Fique em pe com joelhos levemente flexionados.", "Leve o quadril para tras mantendo a coluna neutra.", "Sinta alongar posterior de coxa sem forcar a lombar.", "Volte contraindo gluteos."], true),
+        criarExercicioCategoria("Caminhada de posterior", "Posterior de coxa", "Peso corporal", todosLocais, "lombar", "intermediario", ["Deite de barriga para cima com quadril elevado.", "Caminhe com os calcanhares para frente devagar.", "Mantenha o quadril controlado.", "Volte se perder postura ou sentir lombar."], true),
+        criarExercicioCategoria("Passada reversa", "Pernas", "Peso corporal ou halteres", todosLocais, "joelho", "iniciante", passosBase, true),
+        criarExercicioCategoria("Step-up no banco", "Pernas", "Banco ou caixa firme", basica, "joelho", "intermediario", passosBase, true),
+        criarExercicioCategoria("Levantamento terra romeno leve", "Posterior de coxa", "Halteres ou barra", basica, "lombar", "iniciante", passosBase, true),
+        criarExercicioCategoria("Flexao nordica assistida", "Posterior de coxa", "Apoio firme", basica, "joelho", "avancado", passosBase, true),
+        criarExercicioCategoria("Mesa flexora", "Posterior de coxa", "Maquina", completa, "joelho", "iniciante", passosBase, true),
+        criarExercicioCategoria("Glute bridge", "Glúteos", "Peso corporal, halter ou barra", todosLocais, "lombar", "iniciante", passosBase, true),
+        criarExercicioCategoria("Coice no cabo", "Glúteos", "Cabo", completa, "lombar", "iniciante", passosBase, true),
+        criarExercicioCategoria("Abducao lateral deitado", "Glúteos", "Peso corporal ou elastico", todosLocais, "nenhuma", "iniciante", passosBase, true),
+        criarExercicioCategoria("Panturrilha no leg press", "Panturrilha", "Leg press", completa, "joelho", "iniciante", passosBase, true),
+        criarExercicioCategoria("Panturrilha sentada", "Panturrilha", "Maquina, halteres ou anilha", basica, "nenhuma", "iniciante", passosBase, true)
+      ];
+
+      const core = [
+        criarExercicioCategoria("Prancha com toque no ombro", "Core", "Peso corporal", todosLocais, "ombro", "intermediario", passosBase, true),
+        criarExercicioCategoria("Prancha lateral com joelho apoiado", "Core", "Peso corporal", todosLocais, "lombar", "iniciante", passosBase, true),
+        criarExercicioCategoria("Crunch curto controlado", "Abdômen", "Peso corporal", todosLocais, "lombar", "iniciante", passosBase, true),
+        criarExercicioCategoria("Reverse crunch", "Abdômen", "Peso corporal", todosLocais, "lombar", "iniciante", passosBase, true),
+        criarExercicioCategoria("Pallof press", "Core", "Cabo ou elastico", basica, "lombar", "iniciante", passosBase, true),
+        criarExercicioCategoria("Farmer walk", "Core", "Halteres ou kettlebells", basica, "lombar", "intermediario", passosBase, true),
+        criarExercicioCategoria("Extensao lombar no banco", "Lombar", "Banco romano", completa, "lombar", "intermediario", passosBase, true),
+        criarExercicioCategoria("Respiracao abdominal e bracing", "Core", "Livre", todosLocais, "nenhuma", "iniciante", ["Deite ou sente confortavelmente.", "Inspire pelo nariz e expanda o abdomen.", "Contraia o abdome como se fosse receber um impacto leve.", "Use como preparacao para os exercicios."], false)
+      ];
+
+      const descanso = [
+        criarExercicioCategoria("Caminhada regenerativa", "Cardio leve", "Livre, esteira ou rua", todosLocais, "nenhuma", "iniciante", passosBase, false),
+        criarExercicioCategoria("Mobilidade de tornozelo e quadril", "Mobilidade", "Peso corporal", todosLocais, "joelho", "iniciante", passosBase, false),
+        criarExercicioCategoria("Mobilidade toracica", "Mobilidade", "Peso corporal", todosLocais, "lombar", "iniciante", passosBase, false),
+        criarExercicioCategoria("Alongamento de peitoral e costas", "Alongamento", "Parede ou apoio", todosLocais, "ombro", "iniciante", passosBase, false),
+        criarExercicioCategoria("Pedalada leve regenerativa", "Cardio leve", "Bicicleta", basica, "joelho", "iniciante", passosBase, false)
+      ];
+
+      if (cat === "superior") return superior;
+      if (cat === "inferior") return inferior;
+      if (cat === "core_abdomen") return core;
+      if (cat === "full_body") return superior.concat(inferior).concat(core);
+      if (cat === "descanso") return descanso;
+      return [];
+    }
+
     function obterBaseTreinoPorCategoria(categoria) {
-      return bibliotecaProfissionalPorCategoria(categoria);
+      return filtrarExerciciosUnicos(bibliotecaProfissionalPorCategoria(categoria).concat(bibliotecaExtraProfissional(categoria)));
     }
 
     function gerarTreino() {
@@ -3884,24 +4507,41 @@
       const local = localOriginal === "academia_basica" ? "academia_pequena" : localOriginal;
       garantirBibliotecaExpandida();
 
-      if (deveUsarRecuperacaoInteligente(divisaoSelecionada)) {
+      if ((esforcoRecente && esforcoRecente.sugerirDescanso && divisaoSelecionada === "automatico") || deveUsarRecuperacaoInteligente(divisaoSelecionada)) {
         letraTreino = "descanso";
       }
 
+      let mensagemCategoriaRecente = "";
+      if (divisaoSelecionada === "automatico" && letraTreino !== "descanso" && categoriaTreinadaRecentemente(letraTreino, 36)) {
+        const alternativa = escolherCategoriaAlternativaRecuperacao(letraTreino, dor);
+        if (alternativa && alternativa !== letraTreino) {
+          mensagemCategoriaRecente = " O app detectou categoria semelhante treinada nas últimas 36 horas e trocou para " + nomeAmigavelTreino(alternativa) + " para melhorar a recuperação.";
+          letraTreino = alternativa;
+        }
+      }
+
       const dorBloqueiaGrupo = function(exercicio) {
-        if (dor === "pernas" && ["Pernas", "Glúteos", "Panturrilha", "Posterior de coxa"].includes(exercicio.grupo)) return true;
-        if (dor === "bracos" && ["Bíceps", "Tríceps", "Peito", "Ombros"].includes(exercicio.grupo)) return true;
-        if (dor === "coluna" && (exercicio.evitar === "lombar" || exercicio.grupo === "Costas" || exercicio.grupo === "Abdômen")) return true;
-        return exercicio.evitar === dor;
+        return exercicioBloqueadoPorDor(exercicio, dor);
       };
 
-      const baseTreinoCategoria = obterBaseTreinoPorCategoria(letraTreino);
-      let treinoFiltrado = baseTreinoCategoria.filter(function(exercicio) {
-        return !dorBloqueiaGrupo(exercicio) && exercicio.local.includes(local) && nivelPermitido(exercicio);
-      }).map(ajustarExercicioPorMeta);
+      function montarBaseFiltrada(categoriaAtual) {
+        return obterBaseTreinoPorCategoria(categoriaAtual).filter(function(exercicio) {
+          return !dorBloqueiaGrupo(exercicio) && (exercicio.local.includes(local) || exercicio.local.includes(localOriginal)) && nivelPermitido(exercicio);
+        }).map(ajustarExercicioPorMeta);
+      }
+
+      let treinoFiltrado = montarBaseFiltrada(letraTreino);
+
+      if (treinoFiltrado.length === 0 && divisaoSelecionada === "automatico" && (dor !== "nenhuma" || textoRestricoesPerfil())) {
+        letraTreino = primeiraCategoriaSegura(["superior", "inferior", "core_abdomen", "full_body", "descanso"], dor);
+        treinoFiltrado = montarBaseFiltrada(letraTreino);
+      }
 
       if (treinoFiltrado.length === 0) {
-        treinoFiltrado = baseTreinoCategoria.filter(function(exercicio) { return exercicio.evitar !== dor; }).map(ajustarExercicioPorMeta);
+        letraTreino = "descanso";
+        treinoFiltrado = obterBaseTreinoPorCategoria("descanso").filter(function(exercicio) {
+          return exercicio.local.includes(local) || exercicio.local.includes(localOriginal);
+        }).map(ajustarExercicioPorMeta);
       }
 
       if (local === "sem_equipamento" && letraTreino !== "descanso") {
@@ -3916,18 +4556,18 @@
       treinoFiltrado = aplicarProgressaoSemanalAoTreino(treinoFiltrado, progressaoSemanal, tempo);
 
       const perfilTreino = determinarPerfilTreino();
-      const alvoExercicios = alvoQuantidadeExercicios(tempo, perfilTreino);
-      treinoFiltrado = aplicarAntiRepeticaoInteligente(treinoFiltrado, letraTreino, alvoExercicios);
-      treinoFiltrado = aplicarProgressaoDeCargaNosExercicios(treinoFiltrado);
-      treinoFiltrado = treinoFiltrado.slice(0, alvoExercicios);
+      let alvoExercicios = alvoQuantidadeExercicios(tempo, perfilTreino);
+      if (letraTreino === "descanso") alvoExercicios = tempo === "rapido" ? 4 : 5;
+      if (energia === "cansado" && letraTreino !== "descanso") alvoExercicios = Math.max(4, alvoExercicios - 1);
+      if (progressaoSemanal && progressaoSemanal.reduzirVolume && letraTreino !== "descanso") alvoExercicios = Math.max(4, alvoExercicios - 1);
+
+      treinoFiltrado = aplicarAntiRepeticaoInteligente(treinoFiltrado, letraTreino, Math.max(alvoExercicios * 2, alvoExercicios + 4));
 
       const localComCardio = ["academia_grande", "academia_pequena", "academia_basica", "garagem"].includes(localOriginal);
       let mensagemCardioTreino = "";
       if (cardioNoTreino !== "nao" && localComCardio && letraTreino !== "descanso") {
         const reducaoCardio = tempo === "longo" ? 2 : (tempo === "normal" ? 1 : 0);
-        if (reducaoCardio > 0 && treinoFiltrado.length > 4) {
-          treinoFiltrado = treinoFiltrado.slice(0, Math.max(4, treinoFiltrado.length - reducaoCardio));
-        }
+        if (reducaoCardio > 0) alvoExercicios = Math.max(4, alvoExercicios - reducaoCardio);
         const nomeCardio = cardioNoTreino === "esteira" ? "esteira" : "bicicleta";
         mensagemCardioTreino = " Cardio incluído hoje: " + nomeCardio + ". O app reduziu o volume de exercícios para encaixar o cardio sem deixar o treino pesado.";
       } else if (cardioNoTreino !== "nao" && !localComCardio) {
@@ -3935,17 +4575,19 @@
       }
 
       const ajusteCardio = analisarImpactoUltimaCardio(letraTreino);
-      if (ajusteCardio.reduzirVolume && treinoFiltrado.length > 4) {
-        treinoFiltrado = treinoFiltrado.slice(0, Math.max(4, treinoFiltrado.length - 1));
+      if (ajusteCardio.reduzirVolume && letraTreino !== "descanso") {
+        alvoExercicios = Math.max(4, alvoExercicios - 1);
       }
-      if (ajusteCardio.sugerirDescanso && letraTreino === "core_abdomen") {
+      if (ajusteCardio.sugerirDescanso) {
         letraTreino = "descanso";
+        alvoExercicios = tempo === "rapido" ? 4 : 5;
         treinoFiltrado = obterBaseTreinoPorCategoria("descanso").filter(function(exercicio) {
           return exercicio.local.includes(local) || exercicio.local.includes(localOriginal);
         }).map(ajustarExercicioPorMeta);
       }
 
       treinoFiltrado = garantirTreinoDaCategoriaSelecionada(treinoFiltrado, letraTreino, local, dor, alvoExercicios);
+      treinoFiltrado = aplicarProgressaoDeCargaNosExercicios(treinoFiltrado);
 
       treinoAtual = treinoFiltrado;
       treinoAtual.letra = letraTreino === "descanso" ? "Descanso" : letraTreino;
@@ -3955,14 +4597,14 @@
 
       let ajuste = "";
       if (letraTreino === "descanso") {
-        const motivoRecuperacao = new Date().getDay() === 0 ? "domingo" : (energia !== "bem" ? "energia baixa/cansaço" : (dor !== "nenhuma" ? "dor informada no check-in" : "recuperação manual"));
-        ajuste = "Recuperação inteligente ativada por " + motivoRecuperacao + ": o app montou uma sessão leve com sugestões de recuperação e exercícios leves. Itens não registráveis aparecem sem carga/repetições.";
+        const motivoRecuperacao = ajusteCardio.sugerirDescanso ? "cardio forte recente" : (new Date().getDay() === 0 ? "domingo" : (energia === "mal" ? "energia muito baixa/mal-estar" : (esforcoRecente && esforcoRecente.sugerirDescanso ? "esforço acumulado recente" : "recuperação manual")));
+        ajuste = "Recuperação inteligente ativada por " + motivoRecuperacao + ": o app montou uma sessão leve com sugestões de recuperação, mobilidade e técnica.";
       } else {
         if (energia === "bem") ajuste = "Hoje você pode treinar normalmente e tentar evoluir carga se a execução estiver boa.";
-        else if (energia === "cansado") ajuste = "Hoje reduza um pouco o volume. Faça uma série a menos em cada exercício.";
+        else if (energia === "cansado") ajuste = "Hoje o treino foi reduzido para manter constância sem exagero.";
         else ajuste = "Hoje faça um treino leve. Priorize técnica, mobilidade e não force carga.";
         if (divisaoSelecionada === "semana") ajuste = "Hoje é " + nomeDoDiaDaSemana() + ". " + nomeAmigavelTreino(letraTreino) + " selecionado pelo dia da semana com descanso inteligente. " + ajuste;
-        else if (divisaoSelecionada === "automatico") ajuste = nomeAmigavelTreino(letraTreino) + " escolhido pelo treino inteligente conforme perfil, meta, sexo, energia e histórico. " + ajuste;
+        else if (divisaoSelecionada === "automatico") ajuste = nomeAmigavelTreino(letraTreino) + " escolhido pelo treino inteligente conforme perfil, meta, energia, dor, cardio e histórico. " + ajuste;
         else ajuste = nomeAmigavelTreino(letraTreino) + " selecionado manualmente. " + ajuste;
       }
 
@@ -3970,11 +4612,12 @@
       if (tempo === "rapido") ajuste += " Treino rápido: pensado para aproximadamente 30 minutos.";
       else if (tempo === "normal") ajuste += " Treino normal: pensado para aproximadamente 1 hora.";
       else ajuste += " Treino longo: pensado para mais de 1 hora, com maior volume de exercícios.";
-      if (dor !== "nenhuma" && letraTreino !== "descanso") ajuste += " Exercícios que podem incomodar sua dor foram removidos.";
+      if (dor !== "nenhuma" && letraTreino !== "descanso") ajuste += " Exercícios e grupos que poderiam agravar a dor informada foram evitados; se a dor persistir, interrompa e procure orientação profissional.";
       if (ajusteCardio.mensagem) ajuste += " " + ajusteCardio.mensagem;
       if (esforcoRecente.mensagem && letraTreino === "descanso") ajuste += " " + esforcoRecente.mensagem;
       if (progressaoSemanal && progressaoSemanal.mensagem) ajuste += " " + progressaoSemanal.mensagem;
       if (memoriaTreinoCache && memoriaTreinoCache.historico && memoriaTreinoCache.historico.length > 0 && letraTreino !== "descanso") ajuste += " Memória inteligente ativa: o app priorizou variações menos repetidas recentemente e usou seus registros anteriores para sugerir carga quando houver histórico do exercício.";
+      if (mensagemCategoriaRecente) ajuste += mensagemCategoriaRecente;
       if (mensagemCardioTreino) ajuste += mensagemCardioTreino;
       ajuste += " Lembrete: hidrate-se, respeite seus limites e evite treinar forte em jejum, com dor ou mal-estar.";
 
@@ -3991,6 +4634,7 @@
         mensagemInteligente.innerHTML = obterMensagemInteligente(energia, letraTreino, progressaoSemanal);
       }
       document.getElementById("resumoTreino").innerText = ajuste;
+      renderizarPlanoSemanal();
       mostrarTreinoNaTela();
     }
 
@@ -4120,33 +4764,66 @@
 
     function obterSubstituicoesCompativeis(index) {
       const exercicioAtual = treinoAtual[index];
+      if (!exercicioAtual) return [];
       const deveManterRegistravel = exercicioEhRegistravel(exercicioAtual);
       const categoriaAtual = normalizarCategoriaTreino(treinoAtual.categoria || treinoAtual.letra || categoriaDoGrupoExercicio(exercicioAtual.grupo));
       const localOriginal = perfilUsuario ? perfilUsuario.localTreino : "academia_grande";
       const local = localOriginal === "academia_basica" ? "academia_pequena" : localOriginal;
+      const dorAtual = document.getElementById("dor") ? document.getElementById("dor").value : "nenhuma";
       const nomesAtuais = treinoAtual.map(function(exercicio, i) {
         return i === index ? "" : normalizarNomeExercicio(exercicio.nome || "");
       });
-      const candidatos = obterBaseTreinoPorCategoria(categoriaAtual).filter(function(exercicio) {
+
+      function candidatoValido(exercicio, exigirMesmoGrupo) {
         if (deveManterRegistravel && !exercicioEhRegistravel(exercicio)) return false;
         if (!exercicioPertenceCategoria(exercicio, categoriaAtual)) return false;
-        if (exercicio.grupo !== exercicioAtual.grupo) return false;
-        if (exercicio.local && !exercicio.local.includes(local)) return false;
+        if (exigirMesmoGrupo && exercicio.grupo !== exercicioAtual.grupo) return false;
+        if (exercicioBloqueadoPorDor(exercicio, dorAtual)) return false;
+        if (exercicio.local && !exercicio.local.includes(local) && !exercicio.local.includes(localOriginal)) return false;
         if (nomesAtuais.includes(normalizarNomeExercicio(exercicio.nome || ""))) return false;
         if (normalizarNomeExercicio(exercicio.nome || "") === normalizarNomeExercicio(exercicioAtual.nome || "")) return false;
         return true;
+      }
+
+      const base = obterBaseTreinoPorCategoria(categoriaAtual);
+      const candidatosGrupo = filtrarExerciciosUnicos(base.filter(function(exercicio) {
+        return candidatoValido(exercicio, true);
+      })).slice(0, 6);
+      if (candidatosGrupo.length > 0) return candidatosGrupo;
+
+      return filtrarExerciciosUnicos(base.filter(function(exercicio) {
+        return candidatoValido(exercicio, false);
+      })).slice(0, 6);
+    }
+
+    function fecharModalSubstituicao() {
+      ["modalSubstituicao", "modalSubstituirExercicio"].forEach(function(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.add("hidden");
       });
+      indiceSubstituicaoAtual = null;
+      opcoesSubstituicaoAtual = [];
+    }
 
-      if (candidatos.length > 0) return filtrarExerciciosUnicos(candidatos).slice(0, 6);
+    function confirmarSubstituicaoExercicio(indiceOpcao) {
+      const index = indiceSubstituicaoAtual;
+      const exercicioAtual = treinoAtual[index];
+      const escolhidoBase = opcoesSubstituicaoAtual[indiceOpcao];
+      if (index === null || index === undefined || !exercicioAtual || !escolhidoBase) {
+        fecharModalSubstituicao();
+        return;
+      }
 
-      return obterBaseTreinoPorCategoria(categoriaAtual).filter(function(exercicio) {
-        if (deveManterRegistravel && !exercicioEhRegistravel(exercicio)) return false;
-        if (!exercicioPertenceCategoria(exercicio, categoriaAtual)) return false;
-        if (exercicio.local && !exercicio.local.includes(local)) return false;
-        if (nomesAtuais.includes(normalizarNomeExercicio(exercicio.nome || ""))) return false;
-        if (normalizarNomeExercicio(exercicio.nome || "") === normalizarNomeExercicio(exercicioAtual.nome || "")) return false;
-        return true;
-      }).slice(0, 6);
+      const escolhido = Object.assign({}, escolhidoBase);
+      if (exercicioEhRegistravel(escolhido)) {
+        escolhido.series = exercicioAtual.series || escolhido.series;
+        escolhido.reps = exercicioAtual.reps || escolhido.reps;
+      }
+      treinoAtual[index] = escolhido;
+      exerciciosConcluidos[index] = false;
+      salvarTreinoAtualLocal();
+      fecharModalSubstituicao();
+      mostrarTreinoNaTela();
     }
 
     function substituirExercicio(index) {
@@ -4159,23 +4836,27 @@
         return;
       }
 
-      let textoOpcoes = "Escolha uma substituição compatível:\n\n";
-      opcoes.forEach(function(opcao, i) { textoOpcoes += (i + 1) + " - " + opcao.nome + " (" + opcao.grupo + ")\n"; });
-      const numero = Number(prompt(textoOpcoes + "\nDigite o número da opção:"));
-      if (numero < 1 || numero > opcoes.length) { alert("Opção inválida."); return; }
+      indiceSubstituicaoAtual = index;
+      opcoesSubstituicaoAtual = opcoes;
+      const modal = document.getElementById("modalSubstituicao") || document.getElementById("modalSubstituirExercicio");
+      const texto = document.getElementById("textoModalSubstituicao") || document.getElementById("textoSubstituirExercicio");
+      const caixaOpcoes = document.getElementById("opcoesModalSubstituicao") || document.getElementById("opcoesSubstituirExercicio");
+      if (!modal || !texto || !caixaOpcoes) return;
 
-      const escolhido = Object.assign({}, opcoes[numero - 1]);
-      if (exercicioEhRegistravel(escolhido)) {
-        escolhido.series = exercicioAtual.series || escolhido.series;
-        escolhido.reps = exercicioAtual.reps || escolhido.reps;
-      }
-      treinoAtual[index] = escolhido;
-      exerciciosConcluidos[index] = false;
-      salvarTreinoAtualLocal();
-      mostrarTreinoNaTela();
+      texto.innerHTML = "Substituindo: <strong>" + limparTextoSeguro(exercicioAtual.nome || "exercício") + "</strong>. Escolha uma opção compatível com o mesmo grupo muscular, seu local de treino e a dor informada no check-in.";
+      caixaOpcoes.innerHTML = "";
+      opcoes.forEach(function(opcao, i) {
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "botao-secundario";
+        botao.innerHTML = "<strong>" + limparTextoSeguro(opcao.nome || "Opção") + "</strong><br><span class='small'>Grupo: " + limparTextoSeguro(opcao.grupo || "") + " | Equipamento: " + limparTextoSeguro(opcao.equipamento || "") + "</span>";
+        botao.onclick = function() { confirmarSubstituicaoExercicio(i); };
+        caixaOpcoes.appendChild(botao);
+      });
+      modal.classList.remove("hidden");
     }
 
-    function normalizarNomeExercicio(nome) { return nome.trim().toLowerCase(); }
+    function normalizarNomeExercicio(nome) { return String(nome || "").trim().toLowerCase(); }
 
     function buscarSugestoesDeCarga(treino) {
       const mapa = {};
@@ -4201,17 +4882,48 @@
       document.getElementById("exercicioRegistro").scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
+    function calcularIncrementoCarga(carga) {
+      if (carga <= 0) return 0;
+      if (carga < 10) return 0.5;
+      if (carga < 30) return 1;
+      if (carga < 80) return 2;
+      return Math.max(2.5, Math.round(carga * 0.03));
+    }
+
     function calcularEvolucao() {
       const carga = Number(document.getElementById("carga").value);
       const reps = Number(document.getElementById("reps").value);
       const sensacao = document.getElementById("sensacao").value;
+      const nomeExercicio = document.getElementById("exercicioRegistro").value.trim();
       const resultadoEvolucao = document.getElementById("resultadoEvolucao");
       if (document.getElementById("carga").value === "" || carga < 0 || reps <= 0) { resultadoEvolucao.innerText = "Preencha carga com 0 kg ou mais e repetições corretamente."; return; }
+
+      const incremento = calcularIncrementoCarga(carga);
       let proximaCarga = carga;
       let mensagem = "";
-      if (sensacao === "facil") { proximaCarga = carga + 2; mensagem = "No próximo treino, aumente para " + proximaCarga + " kg."; }
-      else if (sensacao === "normal") mensagem = "Mantenha " + carga + " kg no próximo treino e tente melhorar a execução ou as repetições.";
-      else { proximaCarga = Math.max(carga - 2, 0); mensagem = "Reduza para " + proximaCarga + " kg no próximo treino e foque na técnica."; }
+      const hist = nomeExercicio ? sugestoesCarga[nomeExercicio] : null;
+
+      if (carga === 0) {
+        mensagem = "Mantenha o peso corporal e evolua primeiro melhorando controle, amplitude e repetições antes de adicionar carga externa.";
+      } else if (sensacao === "facil" && reps >= 10) {
+        proximaCarga = Number((carga + incremento).toFixed(1));
+        mensagem = "No próximo treino, suba levemente para " + proximaCarga + " kg se a execução continuar boa. Aumento sugerido: cerca de " + incremento + " kg.";
+      } else if (sensacao === "facil") {
+        mensagem = "A carga pareceu fácil, mas as repetições ainda não estão altas. Mantenha " + carga + " kg e tente fazer mais repetições com técnica limpa.";
+      } else if (sensacao === "normal" && reps >= 12) {
+        proximaCarga = Number((carga + incremento).toFixed(1));
+        mensagem = "Você completou boas repetições com sensação normal. Pode testar " + proximaCarga + " kg no próximo treino, sem sacrificar a execução.";
+      } else if (sensacao === "normal") {
+        mensagem = "Mantenha " + carga + " kg no próximo treino e tente melhorar execução, amplitude ou repetições.";
+      } else {
+        proximaCarga = Number(Math.max(carga - incremento, 0).toFixed(1));
+        mensagem = "Reduza para cerca de " + proximaCarga + " kg no próximo treino e foque na técnica. Dor articular ou perda de postura é sinal para parar.";
+      }
+
+      if (hist && hist.ultimaCarga !== undefined) {
+        mensagem += " Histórico: último registro deste exercício foi " + hist.ultimaCarga + " kg" + (hist.reps ? " x " + hist.reps + " reps" : "") + ".";
+      }
+
       mensagemEvolucaoAtual = mensagem;
       resultadoEvolucao.innerText = mensagem;
     }
@@ -4236,11 +4948,41 @@
       }
 
       const nomesExercicios = treinoAtual.map(function(exercicio) { return exercicio.nome; });
+      const gruposTreinados = Array.from(new Set(treinoAtual.map(function(exercicio) { return exercicio.grupo || ""; }).filter(Boolean)));
       const totalExercicios = exerciciosConcluidos.length;
       const totalConcluidos = exerciciosConcluidos.filter(function(item) { return item === true; }).length;
       const agora = new Date();
 
-      const treinoSalvo = { data: agora.toLocaleString("pt-BR"), criadoEm: agora.getTime(), diaSemana: nomeDoDiaDaSemana(), letraTreino: treinoAtual.letra || "Não informado", meta: perfilUsuario ? perfilUsuario.metaPrincipal : "", local: perfilUsuario ? perfilUsuario.localTreino : "", totalExercicios, totalConcluidos, nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário", exercicios: nomesExercicios, exercicioRegistro, carga, reps, sensacao, evolucao: mensagemEvolucaoAtual, feedbackFinalTreino: feedbackTreinoFinalAtual || "não informado", observacao, ultimaCardioConsiderada: ultimaCardioCache ? { data: ultimaCardioCache.data, intensidade: ultimaCardioCache.intensidade, sensacao: ultimaCardioCache.sensacao, distancia: ultimaCardioCache.distancia, tempo: ultimaCardioCache.tempo } : null };
+      const treinoSalvo = {
+        data: agora.toLocaleString("pt-BR"),
+        criadoEm: agora.getTime(),
+        diaSemana: nomeDoDiaDaSemana(),
+        letraTreino: treinoAtual.letra || "Não informado",
+        categoriaTreino: treinoAtual.categoria || normalizarCategoriaTreino(treinoAtual.letra || ""),
+        meta: perfilUsuario ? perfilUsuario.metaPrincipal : "",
+        local: perfilUsuario ? perfilUsuario.localTreino : "",
+        totalExercicios,
+        totalConcluidos,
+        gruposTreinados,
+        gruposExercicios: gruposTreinados,
+        nomeUsuario: perfilUsuario ? perfilUsuario.nome : "Usuário",
+        exercicios: nomesExercicios,
+        exercicioRegistro,
+        carga,
+        reps,
+        sensacao,
+        evolucao: mensagemEvolucaoAtual,
+        feedbackFinalTreino: feedbackTreinoFinalAtual || "não informado",
+        observacao,
+        ultimaCardioConsiderada: ultimaCardioCache ? {
+          data: ultimaCardioCache.data,
+          tipoAtividade: ultimaCardioCache.tipoAtividade || "",
+          intensidade: ultimaCardioCache.intensidade,
+          sensacao: ultimaCardioCache.sensacao,
+          distancia: ultimaCardioCache.distancia,
+          tempo: ultimaCardioCache.tempo
+        } : null
+      };
 
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").add(treinoSalvo)
         .then(function() {
@@ -4401,9 +5143,9 @@
     }
 
     function categoriaHistoricoTreino(item) {
-      const bruto = item ? (item.letraTreino || item.divisaoTreino || item.categoriaTreino || "") : "";
+      const bruto = item ? (item.categoriaTreino || item.letraTreino || item.divisaoTreino || "") : "";
       let cat = normalizarCategoriaTreino(String(bruto));
-      if (["superior", "inferior", "core_abdomen", "descanso"].includes(cat)) return cat;
+      if (["superior", "inferior", "core_abdomen", "full_body", "descanso"].includes(cat)) return cat;
 
       const exercicios = (item && Array.isArray(item.exercicios)) ? item.exercicios.join(" ").toLowerCase() : "";
       const registro = String(item && item.exercicioRegistro ? item.exercicioRegistro : "").toLowerCase();
@@ -4419,7 +5161,7 @@
       treinos = treinos || [];
       cardios = (cardios || []).filter(function(item) { return item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida"; });
 
-      const mapaTreinos = { superior: 0, inferior: 0, core_abdomen: 0, descanso: 0 };
+      const mapaTreinos = { superior: 0, inferior: 0, core_abdomen: 0, full_body: 0, descanso: 0 };
       treinos.forEach(function(item) {
         const categoria = categoriaHistoricoTreino(item);
         if (mapaTreinos[categoria] !== undefined) mapaTreinos[categoria]++;
@@ -4804,7 +5546,7 @@
 
 
 <script>
-  const METATREINO_APP_VERSION = "0.0.7";
+  const METATREINO_APP_VERSION = "0.0.8";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");

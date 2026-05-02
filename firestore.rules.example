@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    // Crie manualmente um documento em /admins/{uidDoTreinador}
+    // para liberar escrita administrativa no painel do treinador.
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /usuarios/{userId} {
+      allow read, create, update, delete: if isOwner(userId) || isAdmin();
+
+      match /{subdocumentos=**} {
+        allow read, create, update, delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // O app consulta usuariosAutorizados pelo e-mail em minúsculas.
+    // Se você usa e-mails sempre em minúsculas como ID do documento,
+    // o próprio aluno consegue ler apenas o documento do e-mail dele.
+    match /usuariosAutorizados/{emailDoc} {
+      allow read: if signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == emailDoc;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Documento administrativo criado fora do app, pelo console do Firebase.
+    match /admins/{adminUid} {
+      allow read: if signedIn() && request.auth.uid == adminUid;
+      allow create, update, delete: if false;
+    }
+
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}
