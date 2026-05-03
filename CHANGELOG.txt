@@ -4,6 +4,21 @@ Regra fixa de atualizações a partir da v0.0.9:
 - O histórico completo de mudanças fica neste arquivo CHANGELOG que acompanha o pacote.
 - Em atualizações futuras, manter esta regra: app limpo com versão atual; histórico completo somente no arquivo.
 
+v0.1.2 beta - Correções de segurança, plano semanal e data
+Data: 03/05/2026
+
+Principais mudanças:
+- Adicionado bloqueio para evitar novo treino depois que o aluno já salvou treino/cardio no mesmo dia; o app orienta recuperação, hidratação, sono e descanso.
+- Check-in com energia “Estou mal” agora força recuperação mesmo quando o treino veio pré-selecionado pelo Plano ou pelo botão Começar agora.
+- Corrigido cálculo visual de datas do plano para usar data local em vez de UTC, reduzindo risco de mostrar segunda quando ainda é domingo no aparelho.
+- Cards do Plano agora mostram dia da semana + data em número, deixando mais claro qual dia está sendo exibido.
+- Plano semanal com frequência de 3 dias passa a distribuir Treino A, Treino B e Treino C nos dias disponíveis escolhidos.
+- Planos locais antigos da semana atual são migrados para v0.1.2 e reorganizados com a nova lógica preservando status por data quando possível.
+- Aba Treino ficou mais focada em exercícios de força/mobilidade registrável; removido complemento opcional de cardio e filtrados exercícios aeróbicos indevidos em treinos de força.
+- Ao salvar treino, o treino local em andamento é limpo para não aparecer como retomável depois de já ter sido registrado.
+- Manifest e service worker atualizados para cache v0.1.2.
+- Regra fixa mantida: dentro do app aparece somente a versão atual; histórico completo apenas neste CHANGELOG.
+
 v0.1.1 beta - Ajustes de compartilhamento e fluxo de registro
 Data: 02/05/2026
 
