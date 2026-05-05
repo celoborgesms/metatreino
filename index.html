@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.1.1">
+  <meta name="app-version" content="0.1.2">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.1.1">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.1.1">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.1.1">
+  <link rel="manifest" href="manifest.json?v=0.1.2">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.1.2">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.1.2">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -351,7 +351,7 @@
 
 
 
-    /* Versao 0.1.1 Beta - ajustes de compartilhamento e fluxo de registro */
+    /* Versao 0.1.2 Beta - ajustes de plano, recuperacao e treino */
     .plano-semanal-box { margin-top: 14px; padding: 14px; border-radius: 22px; background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92)); border: 1px solid rgba(59, 130, 246, 0.50); color: #f8fafc; line-height: 1.5; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
     .plano-semanal-dia { padding: 12px; border-radius: 18px; background: rgba(15, 23, 42, 0.82); border: 1px solid rgba(148, 163, 184, 0.32); margin-top: 10px; color: #f8fafc; }
     .plano-semanal-dia strong { color: #ffffff; }
@@ -362,7 +362,7 @@
     .modal-opcoes-grid button { text-align: left; background: linear-gradient(135deg, #e2e8f0, #ffffff); color: #0f172a; border: 1px solid #dbe3ef; box-shadow: none; min-height: 48px; }
 
 
-    /* Compartilhamento social - v0.1.1 */
+    /* Compartilhamento social - v0.1.2 */
     .compartilhar-inline {
       margin-top: 14px;
       padding: 14px;
@@ -1022,7 +1022,7 @@
     .conquistas-titulo-bloco { margin-top: 22px; margin-bottom: 8px; color: #fff; }
 
 
-    /* Versao 0.1.1 Beta - ajustes de compartilhamento e fluxo de registro */
+    /* Versao 0.1.2 Beta - ajustes de plano, recuperacao e treino */
     .checkbox-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1182,7 +1182,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino App - Beta 0.1.1</span>
+        <span class="app-badge">MetaTreino App - Beta 0.1.2</span>
         <h1><span style="color:#22c55e;">Meta</span>Treino</h1>
         <p>Treinos inteligentes, acompanhamento real e evolução constante. Tudo no seu celular.</p>
       </div>
@@ -1341,14 +1341,15 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino 0.1.1 Beta</strong><br>
+          <strong>MetaTreino 0.1.2 Beta</strong><br>
           <span class="tag beta">Beta</span>
-          <p><strong>Atualizada em:</strong> 02/05/2026</p>
+          <p><strong>Atualizada em:</strong> 03/05/2026</p>
           <ul class="versao-atual-lista">
-            <li>Removido o botão duplicado de resumo semanal da tela Hoje; o compartilhamento geral agora fica concentrado em Progresso.</li>
-            <li>Cards de compartilhamento ajustados para evitar texto saindo do quadro, principalmente lista de exercícios e assinatura MetaTreino App.</li>
-            <li>Fluxo do último exercício corrigido: ao marcar o último exercício como concluído, o app leva primeiro para Registrar evolução.</li>
-            <li>Mensagem de parabéns e feedback final aparecem depois do registro/evolução do exercício, deixando a ordem mais natural para o aluno.</li>
+            <li>Bloqueio diário adicionado: depois que o aluno salva treino ou cardio, o app orienta recuperação, hidratação, sono e descanso em vez de liberar novo treino no mesmo dia.</li>
+            <li>Check-in com energia “Estou mal” agora força recuperação mesmo quando o treino veio do Plano ou do botão Começar agora.</li>
+            <li>Plano semanal usa datas locais, mostra dia da semana + data e atualiza o card do dia quando o aluno executa um treino diferente do planejado.</li>
+            <li>Frequência de 3 dias distribui Treino A, Treino B e Treino C nos dias disponíveis escolhidos, com reorganização segura dos planos antigos da semana atual.</li>
+            <li>Aba Treino filtrada para não exibir cardio leve/aeróbicos nem exercícios sem registro de carga/repetições.</li>
             <li>Regra mantida: dentro do app aparece somente a versão atual; histórico completo fica no CHANGELOG.</li>
           </ul>
         </div>
@@ -1782,6 +1783,7 @@
     let acessoLiberado = false;
     let usuarioAdmin = false;
     let dadosAcessoAtual = null;
+    var METATREINO_APP_VERSION = "0.1.2";
 
 
     function chaveFluxoApp(sufixo) {
@@ -1791,13 +1793,13 @@
 
     function marcarCheckinRespondido() {
       try {
-        localStorage.setItem(chaveFluxoApp("checkin"), new Date().toISOString().slice(0, 10));
+        localStorage.setItem(chaveFluxoApp("checkin"), hojeISO());
       } catch (erro) {}
     }
 
     function checkinRespondidoHoje() {
       try {
-        return localStorage.getItem(chaveFluxoApp("checkin")) === new Date().toISOString().slice(0, 10);
+        return localStorage.getItem(chaveFluxoApp("checkin")) === hojeISO();
       } catch (erro) {
         return false;
       }
@@ -1842,7 +1844,7 @@
           treino: treinoAtual,
           letra: treinoAtual.letra || "",
           categoria: treinoAtual.categoria || treinoAtual.letra || "",
-          versaoGeracao: "0.1.1-ajustes-compartilhamento-fluxo-registro",
+          versaoGeracao: "0.1.2-ajustes-plano-recuperacao",
           concluidos: exerciciosConcluidos || [],
           feedback: feedbackTreinoFinalAtual || "",
           salvoEm: Date.now()
@@ -1865,10 +1867,12 @@
           limparTreinoAtualLocal();
           return false;
         }
-        treinoAtual = dados.treino;
+        treinoAtual = (dados.treino || []).filter(exercicioPermitidoNaAbaTreino);
         treinoAtual.letra = dados.letra || "";
         treinoAtual.categoria = categoriaSalva || dados.letra || "";
-        exerciciosConcluidos = dados.concluidos || treinoAtual.map(function() { return false; });
+        exerciciosConcluidos = (dados.concluidos || []).filter(function(_, i) { return exercicioPermitidoNaAbaTreino((dados.treino || [])[i]); });
+        if (exerciciosConcluidos.length !== treinoAtual.length) exerciciosConcluidos = treinoAtual.map(function() { return false; });
+        if (!treinoAtual.length) { limparTreinoAtualLocal(); return false; }
         feedbackTreinoFinalAtual = dados.feedback || "";
         const resultadoTreino = document.getElementById("resultadoTreino");
         const registroEvolucao = document.getElementById("registroEvolucao");
@@ -2266,7 +2270,7 @@
     function exportarMeusDados() {
       const dadosBase = {
         app: "MetaTreino",
-        versao: "0.1.1",
+        versao: "0.1.2",
         exportadoEm: new Date().toISOString(),
         usuario: usuarioAtual ? { uid: usuarioAtual.uid, email: usuarioAtual.email || "", nome: usuarioAtual.displayName || "" } : null,
         dadosLocais: coletarDadosLocaisPrivacidade(),
@@ -2514,7 +2518,7 @@
         const diasPlano = diasPorPlano[planoAluno] || 30;
         const expira = new Date();
         expira.setDate(agora.getDate() + diasPlano);
-        dadosLiberacao.expiraEm = expira.toISOString().slice(0, 10);
+        dadosLiberacao.expiraEm = dataISO(expira);
       }
 
       db.collection("usuariosAutorizados").doc(emailAluno).set(dadosLiberacao, { merge: true })
@@ -2667,7 +2671,7 @@
 
 
     function dataHojeISO() {
-      return new Date().toISOString().slice(0, 10);
+      return hojeISO();
     }
 
     function planoEstaVencido(dados) {
@@ -2909,7 +2913,7 @@
       const hoje = new Date();
       const novaData = new Date();
       novaData.setDate(hoje.getDate() + dias);
-      const dataExpiracao = novaData.toISOString().slice(0, 10);
+      const dataExpiracao = dataISO(novaData);
 
       const campoValorAluno = document.getElementById("valorAlunoPainel");
       const valorAluno = Math.max(Number(campoValorAluno ? campoValorAluno.value : 0) || 0, 0);
@@ -3408,12 +3412,12 @@
       { id: "semana_mista", categoria: "Especiais", icone: "🔄", nome: "Semana completa", desc: "Faça pelo menos 2 treinos e 2 cardios nos últimos 7 dias.", tipo: "semanaMista", alvo: 1 }
     ];
 
-    function dataCurtaConquista(item) { const t = Number(item && item.criadoEm ? item.criadoEm : 0); if (t) return new Date(t).toISOString().slice(0,10); const m = String(item && item.data ? item.data : '').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? (m[3]+'-'+m[2]+'-'+m[1]) : ''; }
+    function dataCurtaConquista(item) { const t = Number(item && item.criadoEm ? item.criadoEm : 0); if (t) return dataISO(new Date(t)); const m = String(item && item.data ? item.data : '').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? (m[3]+'-'+m[2]+'-'+m[1]) : ''; }
     function calcularSequenciaDiasConquistas(datas) { const unicas = Array.from(new Set((datas || []).filter(Boolean))).sort().reverse(); if (!unicas.length) return 0; let seq = 1; let ant = new Date(unicas[0]+'T12:00:00'); for (let i=1;i<unicas.length;i++){ const atual = new Date(unicas[i]+'T12:00:00'); const diff = Math.round((ant-atual)/86400000); if (diff === 1) { seq++; ant = atual; } else if (diff > 1) break; } return seq; }
     function analisarConquistas(treinos, cardios) {
       treinos = treinos || []; cardios = (cardios || []).filter(function(i){ return i.tipo !== 'sem_cardio' && i.tipo !== 'sem_corrida'; });
       const dt = treinos.map(dataCurtaConquista).filter(Boolean), dc = cardios.map(dataCurtaConquista).filter(Boolean), dg = dt.concat(dc);
-      const mes = new Date().toISOString().slice(0,7), limite7 = Date.now() - 7*86400000;
+      const mes = hojeISO().slice(0,7), limite7 = Date.now() - 7*86400000;
       const exercicios = {}; treinos.forEach(function(t){ (t.exercicios||[]).forEach(function(n){ if(n) exercicios[String(n).toLowerCase()] = true; }); if(t.exercicioRegistro) exercicios[String(t.exercicioRegistro).toLowerCase()] = true; });
       const perfeitos = treinos.filter(function(t){ return Number(t.totalExercicios||0)>0 && Number(t.totalConcluidos||0) >= Number(t.totalExercicios||0); }).length;
       const cargaPorEx = {}; treinos.forEach(function(t){ const n=String(t.exercicioRegistro||'').toLowerCase(); const c=Number(t.carga||0); if(!n || isNaN(c)) return; (cargaPorEx[n]||(cargaPorEx[n]=[])).push({c:c,t:Number(t.criadoEm||0)}); });
@@ -3511,7 +3515,7 @@
       if (cat === "superior") return "Peito, costas, ombros e braços com volume equilibrado.";
       if (cat === "inferior") return "Quadríceps/pernas, posterior, glúteos e panturrilha sem repetir demais o mesmo grupo.";
       if (cat === "core_abdomen") return "Core, abdômen e lombar com foco em controle e estabilidade.";
-      if (cat === "full_body") return cardioEmagrecimento ? "Corpo inteiro + cardio leve/moderado conforme energia." : "Corpo inteiro com volume moderado e grupos alternados.";
+      if (cat === "full_body") return cardioEmagrecimento ? "Corpo inteiro com volume moderado, sem cardio dentro da aba Treino." : "Corpo inteiro com volume moderado e grupos alternados.";
       return indiceDia % 2 === 0 ? "Treino moderado e técnico." : "Treino leve e progressivo.";
     }
 
@@ -3551,11 +3555,19 @@
 
 
     function hojeISO() {
-      return new Date().toISOString().slice(0, 10);
+      return dataISO(new Date());
     }
 
     function dataISO(date) {
-      return date.toISOString().slice(0, 10);
+      if (!(date instanceof Date) || isNaN(date.getTime())) return "";
+      return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+    }
+
+    function formatarDataPlanoCurta(dataISOTexto) {
+      if (!dataISOTexto) return "";
+      const partes = String(dataISOTexto).split("-");
+      if (partes.length === 3) return partes[2] + "/" + partes[1];
+      return dataISOTexto;
     }
 
     function inicioSemanaAtualISO() {
@@ -3577,19 +3589,51 @@
       return ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][indice] || "Dia";
     }
 
-    function chavePlanoSemanalAtual() {
+    function chavePlanoSemanalPorVersao(versao) {
       const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : "anonimo";
-      return "metatreino-plano-semanal-0.1.1-" + email + "-" + inicioSemanaAtualISO();
+      return "metatreino-plano-semanal-" + versao + "-" + email + "-" + inicioSemanaAtualISO();
     }
 
-    function lerPlanoSemanalLocal() {
+    function chavePlanoSemanalAtual() {
+      return chavePlanoSemanalPorVersao(METATREINO_APP_VERSION || "0.1.2");
+    }
+
+    function lerPlanoSemanalPorChave(chave) {
       try {
-        const bruto = localStorage.getItem(chavePlanoSemanalAtual());
+        const bruto = localStorage.getItem(chave);
         if (!bruto) return null;
         const plano = JSON.parse(bruto);
         if (!plano || !Array.isArray(plano.dias)) return null;
         return plano;
       } catch (erro) { return null; }
+    }
+
+    function encontrarPlanoSemanalAntigoSemanaAtual() {
+      try {
+        const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : "anonimo";
+        const inicio = inicioSemanaAtualISO();
+        const chaveAtual = chavePlanoSemanalAtual();
+        const candidatos = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const chave = localStorage.key(i) || "";
+          if (chave === chaveAtual) continue;
+          if (chave.indexOf("metatreino-plano-semanal-") !== 0) continue;
+          if (chave.indexOf("-" + email + "-") === -1) continue;
+          if (!chave.endsWith("-" + inicio)) continue;
+          const plano = lerPlanoSemanalPorChave(chave);
+          if (plano) candidatos.push({ chave: chave, plano: plano, atualizado: Number(plano.atualizadoEm || plano.criadoEm || 0) });
+        }
+        candidatos.sort(function(a, b) { return b.atualizado - a.atualizado; });
+        return candidatos.length ? candidatos[0].plano : null;
+      } catch (erro) { return null; }
+    }
+
+    function lerPlanoSemanalLocal() {
+      const atual = lerPlanoSemanalPorChave(chavePlanoSemanalAtual());
+      if (atual) return atual;
+      const antigo = encontrarPlanoSemanalAntigoSemanaAtual();
+      if (antigo && perfilUsuario) return criarPlanoSemanalInteligente(true, antigo);
+      return null;
     }
 
     function salvarPlanoSemanalLocal(plano) {
@@ -3618,7 +3662,8 @@
           if (doc.exists) {
             const plano = doc.data();
             if (plano && Array.isArray(plano.dias)) {
-              try { localStorage.setItem(chavePlanoSemanalAtual(), JSON.stringify(plano)); } catch (erro) {}
+              const planoAtualizado = plano.versao === "0.1.2" ? plano : criarPlanoSemanalInteligente(true, plano);
+              try { localStorage.setItem(chavePlanoSemanalAtual(), JSON.stringify(planoAtualizado)); } catch (erro) {}
             }
           }
           callback && callback();
@@ -3640,6 +3685,31 @@
       return dias;
     }
 
+    function numeroSemanaPlanoAtual() {
+      const inicio = new Date(inicioSemanaAtualISO() + "T00:00:00");
+      return Math.floor(inicio.getTime() / (7 * 24 * 60 * 60 * 1000));
+    }
+
+    function montarSequenciaCategoriasPlano(metaDias) {
+      const total = Math.max(2, Math.min(6, Number(metaDias || 3)));
+      if (total === 2) return ["superior", "inferior"];
+      if (total === 3) return ["superior", "inferior", "core_abdomen"];
+      if (total === 4) return ["superior", "inferior", "core_abdomen", "full_body"];
+      if (total === 5) return ["superior", "inferior", "core_abdomen", "superior", "inferior"];
+      return ["superior", "inferior", "core_abdomen", "full_body", "superior", "inferior"];
+    }
+
+    function ajustarSequenciaPlanoPorSemana(sequencia) {
+      const copia = (sequencia || []).slice();
+      const semana = numeroSemanaPlanoAtual();
+      if (copia.length >= 4 && semana % 2 === 1) {
+        const ultimo = copia[copia.length - 1];
+        copia[copia.length - 1] = copia[0];
+        copia[0] = ultimo;
+      }
+      return copia;
+    }
+
     function escolherCategoriaParaPlano(diaSemana, ordemAtiva, recentes, categoriaAnterior) {
       const rotacao = rotacaoSemanalPorMeta(perfilUsuario.metaPrincipal, perfilUsuario.sexo);
       let categoria = normalizarCategoriaTreino(rotacao[diaSemana] || "full_body");
@@ -3656,32 +3726,50 @@
       return categoria;
     }
 
-    function criarPlanoSemanalInteligente(preservarStatus) {
-      const antigo = preservarStatus ? lerPlanoSemanalLocal() : null;
-      const statusAntigo = {};
-      if (antigo && Array.isArray(antigo.dias)) antigo.dias.forEach(function(dia) { statusAntigo[dia.dataISO] = dia.status || "pendente"; });
+    function criarPlanoSemanalInteligente(preservarStatus, planoBase) {
+      const antigo = planoBase || (preservarStatus ? lerPlanoSemanalPorChave(chavePlanoSemanalAtual()) : null);
+      const dadosAntigos = {};
+      if (antigo && Array.isArray(antigo.dias)) {
+        antigo.dias.forEach(function(dia) { dadosAntigos[dia.dataISO] = Object.assign({}, dia); });
+      }
 
       const dias = gerarDiasPlanoSemanalBase();
       const diasDisponiveis = (perfilUsuario.diasDisponiveis || valoresPadraoDiasDisponiveis()).map(String);
       const metaDias = Math.max(2, Math.min(6, Number(perfilUsuario.diasTreinoSemana || 3)));
       const recentes = contarCategoriasRecentesPlano();
+      const sequenciaPlano = ajustarSequenciaPlanoPorSemana(montarSequenciaCategoriasPlano(metaDias));
       let ordemAtiva = 0;
       let categoriaAnterior = "";
 
       dias.forEach(function(dia) {
         const disponivel = diasDisponiveis.indexOf(String(dia.indiceSemana)) !== -1;
+        const antigoDia = dadosAntigos[dia.dataISO] || null;
         if (!disponivel || ordemAtiva >= metaDias) {
           dia.categoria = "descanso";
         } else {
-          dia.categoria = escolherCategoriaParaPlano(dia.indiceSemana, ordemAtiva, recentes, categoriaAnterior);
+          const categoriaSequencia = sequenciaPlano[ordemAtiva];
+          dia.categoria = categoriaSequencia || escolherCategoriaParaPlano(dia.indiceSemana, ordemAtiva, recentes, categoriaAnterior);
+          if (metaDias !== 3 && dia.categoria !== "cardio") dia.categoria = ajustarCategoriaPlanoSemanal(dia.categoria, recentes, dia.indiceSemana);
+          if (metaDias !== 3 && categoriaAnterior && categoriaAnterior === dia.categoria && dia.categoria !== "descanso" && dia.categoria !== "cardio") {
+            dia.categoria = escolherCategoriaParaPlano(dia.indiceSemana, ordemAtiva, recentes, categoriaAnterior);
+          }
           categoriaAnterior = dia.categoria;
           ordemAtiva++;
         }
-        dia.status = statusAntigo[dia.dataISO] || "pendente";
+        if (antigoDia) {
+          dia.status = antigoDia.status || "pendente";
+          if (dia.status === "concluido") {
+            const categoriaFeita = normalizarCategoriaTreino(antigoDia.categoria || antigoDia.concluidoComo || "");
+            if (["superior", "inferior", "core_abdomen", "full_body", "cardio", "descanso"].includes(categoriaFeita)) dia.categoria = categoriaFeita;
+            if (antigoDia.categoriaPlanejadaOriginal) dia.categoriaPlanejadaOriginal = antigoDia.categoriaPlanejadaOriginal;
+            if (antigoDia.concluidoComo) dia.concluidoComo = antigoDia.concluidoComo;
+            if (antigoDia.adaptadoAposExecucao) dia.adaptadoAposExecucao = true;
+          }
+        }
       });
 
       const plano = {
-        versao: "0.1.1",
+        versao: "0.1.2",
         inicioSemana: inicioSemanaAtualISO(),
         criadoEm: Date.now(),
         metaSemanal: metaDias,
@@ -3730,10 +3818,16 @@
         const tituloHoje = ehHoje ? " Hoje" : "";
         const statusClass = classeStatusPlano(dia.status, ehHoje);
         const nome = dia.categoria === "cardio" ? "Cardio progressivo" : nomeAmigavelTreino(dia.categoria);
+        const dataTitulo = formatarDataPlanoCurta(dia.dataISO);
+        const tituloDia = dia.nomeDia + (dataTitulo ? " - " + dataTitulo : "") + tituloHoje;
+        const categoriaOriginal = normalizarCategoriaTreino(dia.categoriaPlanejadaOriginal || "");
+        const categoriaAtual = normalizarCategoriaTreino(dia.categoria || "");
+        const detalheExecucao = dia.status === "concluido" && categoriaOriginal && categoriaOriginal !== categoriaAtual ?
+          "<br><span class='small'>Feito como " + limparTextoSeguro(nomeAmigavelTreino(categoriaAtual)) + "; previsto: " + limparTextoSeguro(nomeAmigavelTreino(categoriaOriginal)) + ".</span>" : "";
         const botaoComecar = dia.categoria === "descanso" ? "Adaptar" : "Começar";
-        html += "<div class='plano-semanal-dia'><strong>" + limparTextoSeguro(dia.nomeDia) + tituloHoje + "</strong><br>" +
+        html += "<div class='plano-semanal-dia'><strong>" + limparTextoSeguro(tituloDia) + "</strong><br>" +
           "<span>" + limparTextoSeguro(nome) + "</span><br>" +
-          "<span class='small'>" + limparTextoSeguro(descricaoPlanoCategoria(dia.categoria, dia.indiceSemana)) + "</span><br>" +
+          "<span class='small'>" + limparTextoSeguro(descricaoPlanoCategoria(dia.categoria, dia.indiceSemana)) + "</span>" + detalheExecucao + "<br>" +
           "<span class='" + statusClass + "'>" + textoStatusPlano(dia.status) + "</span>" +
           "<div class='plano-acoes-dia'>" +
           "<button type='button' class='botao-secundario' onclick='comecarItemPlano(" + i + ")'>" + botaoComecar + "</button>" +
@@ -3818,17 +3912,24 @@
       renderizarHoje();
     }
 
-    function marcarPlanoHojeConcluido(tipo) {
+    function marcarPlanoHojeConcluido(tipo, categoriaReal) {
       const plano = obterOuCriarPlanoSemanal(false);
       const hoje = hojeISO();
       const item = plano.dias.find(function(dia) { return dia.dataISO === hoje; });
       if (item) {
-        if (item.categoria === "descanso" && tipo) {
-          item.categoria = tipo === "cardio" ? "cardio" : "full_body";
-          item.adaptadoDeDescanso = true;
+        const categoriaExecutada = tipo === "cardio" ? "cardio" : normalizarCategoriaTreino(categoriaReal || item.categoria || "full_body");
+        const categoriaAnterior = normalizarCategoriaTreino(item.categoria || "descanso");
+        if (["superior", "inferior", "core_abdomen", "full_body", "cardio", "descanso"].includes(categoriaExecutada)) {
+          if (categoriaAnterior !== categoriaExecutada) {
+            if (!item.categoriaPlanejadaOriginal) item.categoriaPlanejadaOriginal = categoriaAnterior;
+            item.categoria = categoriaExecutada;
+            item.adaptadoAposExecucao = true;
+          }
+          if (categoriaAnterior === "descanso" && categoriaExecutada !== "descanso") item.adaptadoDeDescanso = true;
         }
         item.status = "concluido";
-        item.concluidoComo = tipo || item.categoria;
+        item.concluidoComo = categoriaExecutada || tipo || item.categoria;
+        item.concluidoEm = Date.now();
         salvarPlanoSemanalLocal(plano);
       }
     }
@@ -3844,14 +3945,81 @@
     }
 
 
+    function chaveAtividadeConcluidaHoje() {
+      return chaveFluxoApp("atividade-concluida-" + hojeISO());
+    }
+
+    function marcarAtividadeConcluidaHoje(tipo, categoria) {
+      try {
+        localStorage.setItem(chaveAtividadeConcluidaHoje(), JSON.stringify({ tipo: tipo || "atividade", categoria: categoria || "", dataISO: hojeISO(), salvoEm: Date.now() }));
+      } catch (erro) {}
+    }
+
+    function lerAtividadeConcluidaHojeLocal() {
+      try {
+        const bruto = localStorage.getItem(chaveAtividadeConcluidaHoje());
+        if (!bruto) return null;
+        const dados = JSON.parse(bruto);
+        return dados && dados.dataISO === hojeISO() ? dados : null;
+      } catch (erro) { return null; }
+    }
+
+    function verificarAtividadeSalvaHoje(callback) {
+      const local = lerAtividadeConcluidaHojeLocal();
+      if (local) { callback({ temAtividade: true, tipo: local.tipo || "atividade", categoria: local.categoria || "", origem: "local" }); return; }
+      obterHistoricoDaNuvem(function(treinos) {
+        const hoje = hojeISO();
+        const treinoHoje = (treinos || []).find(function(item) { return dataRegistroParaDia(item) === hoje; });
+        if (treinoHoje) {
+          const categoriaTreinoHoje = treinoHoje.categoriaTreino || treinoHoje.letraTreino || "";
+          marcarAtividadeConcluidaHoje("treino", categoriaTreinoHoje);
+          callback({ temAtividade: true, tipo: "treino", categoria: categoriaTreinoHoje, origem: "nuvem" });
+          return;
+        }
+        obterCardiosDaNuvem(function(cardios) {
+          const cardioHoje = (cardios || []).find(function(item) { return item && item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida" && dataRegistroParaDia(item) === hoje; });
+          if (cardioHoje) marcarAtividadeConcluidaHoje("cardio", "cardio");
+          callback(cardioHoje ? { temAtividade: true, tipo: "cardio", categoria: "cardio", origem: "nuvem" } : { temAtividade: false });
+        });
+      });
+    }
+
+    function mensagemRecuperacaoDiaConcluido(info) {
+      const tipo = info && info.tipo === "cardio" ? "cardio" : (info && info.tipo === "treino" ? "treino" : "atividade");
+      return "✅ Você já registrou " + tipo + " hoje. Para evitar excesso, o app bloqueou novo treino/cardio no mesmo dia. Priorize recuperação: beba água, alimente-se bem, durma melhor, faça mobilidade leve se estiver confortável e descanse.";
+    }
+
+    function orientarRecuperacaoDiaConcluido(origem, info) {
+      const mensagem = mensagemRecuperacaoDiaConcluido(info || {});
+      const resumoTreino = document.getElementById("resumoTreino");
+      const resultadoTreino = document.getElementById("resultadoTreino");
+      const insightHoje = document.getElementById("insightHojeApp");
+      const sugestaoCardio = document.getElementById("sugestaoCardio");
+      if (resultadoTreino && resumoTreino && (origem === "treino" || origem === "hoje")) {
+        resultadoTreino.classList.remove("hidden");
+        resumoTreino.innerText = mensagem;
+      }
+      if (sugestaoCardio && origem === "cardio") {
+        sugestaoCardio.className = "alerta alerta-aviso";
+        sugestaoCardio.innerHTML = limparTextoSeguro(mensagem);
+      }
+      if (insightHoje) insightHoje.innerHTML = limparTextoSeguro(mensagem);
+      alert(mensagem);
+      renderizarHoje();
+    }
+
+
     function lerResumoTreinoAtualLocal() {
       try {
         const bruto = localStorage.getItem(chaveTreinoAtual());
         if (!bruto) return null;
         const dados = JSON.parse(bruto);
         if (!dados || !dados.treino || !dados.treino.length) return null;
+        const treinoPermitido = (dados.treino || []).filter(exercicioPermitidoNaAbaTreino);
+        if (!treinoPermitido.length) { limparTreinoAtualLocal(); return null; }
         const expirado = dados.salvoEm && (Date.now() - Number(dados.salvoEm)) > (2 * 24 * 60 * 60 * 1000);
         if (expirado) return null;
+        dados.treino = treinoPermitido;
         return dados;
       } catch (erro) { return null; }
     }
@@ -3865,13 +4033,19 @@
     function acaoPrincipalHoje() {
       const treinoLocal = lerResumoTreinoAtualLocal();
       if (treinoLocal) { irParaTreino(); return; }
-      const itemHoje = obterItemPlanoHoje();
-      if (itemHoje && itemHoje.categoria === "cardio") { irParaCardio(); return; }
-      if (itemHoje && itemHoje.categoria && itemHoje.categoria !== "descanso") {
-        const select = document.getElementById("divisaoTreino");
-        if (select) select.value = itemHoje.categoria;
-      }
-      irParaCheckin();
+      verificarAtividadeSalvaHoje(function(info) {
+        if (info && info.temAtividade) {
+          orientarRecuperacaoDiaConcluido("hoje", info);
+          return;
+        }
+        const itemHoje = obterItemPlanoHoje();
+        if (itemHoje && itemHoje.categoria === "cardio") { irParaCardio(); return; }
+        if (itemHoje && itemHoje.categoria && itemHoje.categoria !== "descanso") {
+          const select = document.getElementById("divisaoTreino");
+          if (select) select.value = itemHoje.categoria;
+        }
+        irParaCheckin();
+      });
     }
 
     function estatisticasSemanaAtualPorPlano() {
@@ -3933,7 +4107,9 @@
       }
       const insight = document.getElementById("insightHojeApp");
       if (insight) {
-        if (stats.concluidas >= stats.planejadas && stats.planejadas > 0) insight.innerHTML = "Semana muito boa: você concluiu o que estava planejado. Agora mantenha recuperação e técnica.";
+        const atividadeHojeLocal = lerAtividadeConcluidaHojeLocal();
+        if (atividadeHojeLocal) insight.innerHTML = limparTextoSeguro(mensagemRecuperacaoDiaConcluido(atividadeHojeLocal));
+        else if (stats.concluidas >= stats.planejadas && stats.planejadas > 0) insight.innerHTML = "Semana muito boa: você concluiu o que estava planejado. Agora mantenha recuperação e técnica.";
         else if (stats.puladas > 0) insight.innerHTML = "Você pulou uma atividade. O ideal é reorganizar com calma, sem tentar compensar tudo no mesmo dia.";
         else insight.innerHTML = "Boa rota: siga o foco de hoje e registre o treino/cardio para o app aprender melhor.";
       }
@@ -4237,7 +4413,7 @@
 
     function nomeArquivoCompartilhamento() {
       const tipo = compartilhamentoAtual && compartilhamentoAtual.tipo ? compartilhamentoAtual.tipo : "card";
-      const data = new Date().toISOString().slice(0, 10);
+      const data = hojeISO();
       return "metatreino-" + tipo + "-" + data + ".png";
     }
 
@@ -4537,9 +4713,10 @@
     function deveUsarRecuperacaoInteligente(divisaoSelecionada) {
       const energiaAtual = document.getElementById("energia") ? document.getElementById("energia").value : "bem";
       const domingo = new Date().getDay() === 0;
+      if (energiaAtual === "mal") return true;
       if (divisaoSelecionada === "descanso") return true;
       if (divisaoSelecionada !== "automatico") return false;
-      return domingo || energiaAtual === "mal";
+      return domingo;
     }
 
     function escolherTreinoABC(divisaoSelecionada) {
@@ -4586,6 +4763,40 @@
       if (perfilUsuario.metaPrincipal === "definicao") { copia.series = "3 séries"; copia.reps = "10 a 15 reps"; }
       if (perfilUsuario.metaPrincipal === "perder_peso") { copia.series = "3 séries"; copia.reps = "12 a 15 reps"; }
       return copia;
+    }
+
+    function exercicioPermitidoNaAbaTreino(exercicio) {
+      if (!exercicio) return false;
+      if (exercicio.registravel === false) return false;
+      const texto = normalizarTextoBusca([(exercicio.nome || ""), (exercicio.grupo || ""), (exercicio.equipamento || "")].join(" "));
+      if (/cardio|caminhada|corrida|bike|bicicleta|esteira|eliptico|elíptico|aerob|aerób|zona 1|zona 2|zumba|hiit/.test(texto)) return false;
+      return true;
+    }
+
+    function filtrarExerciciosRegistraveisTreino(lista, categoria, local, dor, alvo) {
+      const cat = normalizarCategoriaTreino(categoria);
+      const vistos = {};
+      let resultado = (lista || []).filter(function(exercicio) {
+        const chave = normalizarNomeExercicio(exercicio && exercicio.nome);
+        if (!chave || vistos[chave]) return false;
+        if (!exercicioPermitidoNaAbaTreino(exercicio)) return false;
+        vistos[chave] = true;
+        return true;
+      });
+      const alvoSeguro = Math.max(1, Number(alvo || resultado.length || 1));
+      if (resultado.length < alvoSeguro) {
+        obterBaseTreinoPorCategoria(cat).forEach(function(exercicio) {
+          const chave = normalizarNomeExercicio(exercicio && exercicio.nome);
+          if (!chave || vistos[chave]) return;
+          if (!exercicioPermitidoNaAbaTreino(exercicio)) return;
+          if (exercicio.local && local && !exercicio.local.includes(local)) return;
+          if (exercicioBloqueadoPorDor(exercicio, dor)) return;
+          if (!nivelPermitido(exercicio)) return;
+          vistos[chave] = true;
+          resultado.push(ajustarExercicioPorMeta(exercicio));
+        });
+      }
+      return selecionarTreinoEquilibradoPorGrupo(resultado, cat, alvoSeguro).slice(0, alvoSeguro);
     }
 
     function diasDesdeTimestamp(timestamp) {
@@ -4848,8 +5059,14 @@
     function gerarTreinoCardio() {
       const caixa = document.getElementById("sugestaoCardio");
       if (!caixa) return;
-      caixa.className = "alerta alerta-sucesso";
-      caixa.innerHTML = gerarTextoSugestaoCardio();
+      verificarAtividadeSalvaHoje(function(info) {
+        if (info && info.temAtividade) {
+          orientarRecuperacaoDiaConcluido("cardio", info);
+          return;
+        }
+        caixa.className = "alerta alerta-sucesso";
+        caixa.innerHTML = gerarTextoSugestaoCardio();
+      });
     }
 
     function alternarCamposCardio() {
@@ -4862,8 +5079,24 @@
     }
 
     function salvarCardio() {
+      verificarAtividadeSalvaHoje(function(info) {
+        if (info && info.temAtividade) {
+          orientarRecuperacaoDiaConcluido("cardio", info);
+          return;
+        }
+        salvarCardioConfirmado();
+      });
+    }
+
+    function salvarCardioConfirmado() {
       if (!acessoLiberado || !usuarioAtual || !db) {
         alert("Faça login com um e-mail autorizado para salvar atividades de cardio.");
+        return;
+      }
+
+      const bloqueioLocalHoje = lerAtividadeConcluidaHojeLocal();
+      if (bloqueioLocalHoje) {
+        orientarRecuperacaoDiaConcluido("cardio", { temAtividade: true, tipo: bloqueioLocalHoje.tipo || "atividade", categoria: bloqueioLocalHoje.categoria || "" });
         return;
       }
 
@@ -4951,7 +5184,8 @@
         .then(function() {
           ultimaCardioCache = corrida;
           ultimoCardioSalvoCompartilhavel = corrida;
-          marcarPlanoHojeConcluido("cardio");
+          marcarAtividadeConcluidaHoje("cardio", "cardio");
+          marcarPlanoHojeConcluido("cardio", "cardio");
           if (caixa) {
             caixa.className = "alerta alerta-sucesso";
             caixa.innerHTML = "✅ Cardio salvo. O plano de hoje foi atualizado e o próximo treino poderá considerar esse registro.";
@@ -4960,6 +5194,8 @@
           if (boxCompartilharCardio) boxCompartilharCardio.classList.remove("hidden");
           document.getElementById("observacaoCardio").value = "";
           carregarCardios();
+          renderizarPlanoSemanal();
+          renderizarHoje();
         })
         .catch(function(erro) {
           console.log("Erro ao salvar cardio:", erro);
@@ -5668,7 +5904,6 @@
         criarExercicioCategoria("Mobilidade articular", "Mobilidade", "Peso corporal", todosLocais, "nenhuma", "iniciante", ["Faça rotações leves de ombro.", "Inclua mobilidade de quadril.", "Movimente tornozelos com calma.", "Não force amplitude dolorida."], false),
         criarExercicioCategoria("Alongamento leve", "Alongamento", "Livre", todosLocais, "nenhuma", "iniciante", ["Segure posições confortáveis.", "Respire fundo e mantenha o corpo relaxado.", "Evite forçar dor.", "Use como complemento do treino leve."], false),
         criarExercicioCategoria("Liberação miofascial", "Liberação miofascial", "Rolo ou bola", basica, "nenhuma", "iniciante", ["Use rolo ou bola de massagem.", "Passe devagar nas regiões tensionadas.", "Evite pressão excessiva.", "Use como recuperação, não como exercício de carga."], false),
-        criarExercicioCategoria("Cardio leve zona 1-2", "Cardio leve", "Caminhada, bike ou elíptico", todosLocais, "nenhuma", "iniciante", ["Mantenha intensidade leve.", "Consiga conversar durante a atividade.", "Não transforme em treino forte.", "Finalize se sentir cansaço excessivo."], false),
         criarExercicioCategoria("Yoga / relaxamento", "Yoga", "Livre", todosLocais, "nenhuma", "iniciante", ["Faça movimentos lentos.", "Priorize respiração e relaxamento.", "Evite posições desconfortáveis.", "Use como complemento regenerativo."], false),
         criarExercicioCategoria("Treino técnico leve", "Recuperação ativa", "Carga baixa", basica, "nenhuma", "iniciante", ["Escolha movimentos simples.", "Use carga bem baixa.", "Foque em postura perfeita.", "Não busque falha muscular."], true)
       ];
@@ -5758,17 +5993,23 @@
     }
 
     function gerarTreino() {
-      limparTreinoAtualLocal();
-      treinoAtual = [];
-      exerciciosConcluidos = [];
-      marcarCheckinRespondido();
-      analisarEsforcoRecente(function(esforcoRecente) {
-        analisarProgressaoSemanal(function(progressaoSemanal) {
-          carregarMemoriaInteligenteTreino(function() {
-            gerarTreinoComEsforco(
-              esforcoRecente || { sugerirDescanso: false, mensagem: "" },
-              progressaoSemanal || { fase: "neutra", reduzirVolume: false, mensagem: "" }
-            );
+      verificarAtividadeSalvaHoje(function(info) {
+        if (info && info.temAtividade) {
+          orientarRecuperacaoDiaConcluido("treino", info);
+          return;
+        }
+        limparTreinoAtualLocal();
+        treinoAtual = [];
+        exerciciosConcluidos = [];
+        marcarCheckinRespondido();
+        analisarEsforcoRecente(function(esforcoRecente) {
+          analisarProgressaoSemanal(function(progressaoSemanal) {
+            carregarMemoriaInteligenteTreino(function() {
+              gerarTreinoComEsforco(
+                esforcoRecente || { sugerirDescanso: false, mensagem: "" },
+                progressaoSemanal || { fase: "neutra", reduzirVolume: false, mensagem: "" }
+              );
+            });
           });
         });
       });
@@ -5870,6 +6111,7 @@
 
       treinoFiltrado = garantirTreinoDaCategoriaSelecionada(treinoFiltrado, letraTreino, local, dor, alvoExercicios);
       treinoFiltrado = aplicarProgressaoDeCargaNosExercicios(treinoFiltrado);
+      treinoFiltrado = filtrarExerciciosRegistraveisTreino(treinoFiltrado, letraTreino, local, dor, alvoExercicios);
 
       treinoAtual = treinoFiltrado;
       treinoAtual.letra = letraTreino === "descanso" ? "Descanso" : letraTreino;
@@ -5975,18 +6217,6 @@
           "</div>";
         lista.appendChild(div);
       });
-      if (perfilUsuario && perfilUsuario.localTreino === "sem_equipamento" && perfilUsuario.metaPrincipal === "perder_peso") {
-        const extra = document.createElement("div");
-        extra.className = "exercise";
-        extra.innerHTML =
-          "<strong>Complemento opcional para queima de calorias</strong>" +
-          "<p class='small'>Se estiver bem e sem dor, você pode complementar com uma aula curta em casa. Escolha uma opção e respeite seus limites.</p>" +
-          "<button type='button' class='botao-secundario' onclick='abrirAulaCardio(" + JSON.stringify("zumba") + ")'>Ver aula de dança / zumba</button>" +
-          "<button type='button' class='botao-secundario' onclick='abrirAulaCardio(" + JSON.stringify("hiit baixo impacto") + ")'>Ver cardio HIIT baixo impacto</button>" +
-          "<button type='button' class='botao-secundario' onclick='abrirAulaCardio(" + JSON.stringify("aerohit iniciante") + ")'>Ver aula aeróbica em casa</button>";
-        lista.appendChild(extra);
-      }
-
       const lembreteSaude = document.createElement("div");
       lembreteSaude.className = "alerta";
       lembreteSaude.innerHTML = "<strong>Lembrete de segurança:</strong> beba água, respeite seus limites e evite treinar forte em jejum, com dor, tontura ou mal-estar.";
@@ -6230,12 +6460,33 @@
     }
 
     function salvarTreinoFeito() {
+      verificarAtividadeSalvaHoje(function(info) {
+        if (info && info.temAtividade) {
+          orientarRecuperacaoDiaConcluido("treino", info);
+          return;
+        }
+        salvarTreinoFeitoConfirmado();
+      });
+    }
+
+    function salvarTreinoFeitoConfirmado() {
       if (!acessoLiberado || !usuarioAtual || !db) {
         alert("Faça login com um e-mail autorizado para salvar o treino na nuvem.");
         return;
       }
 
       if (treinoAtual.length === 0) { alert("Gere um treino antes de salvar."); return; }
+      const bloqueioLocalHoje = lerAtividadeConcluidaHojeLocal();
+      if (bloqueioLocalHoje) {
+        orientarRecuperacaoDiaConcluido("treino", { temAtividade: true, tipo: bloqueioLocalHoje.tipo || "atividade", categoria: bloqueioLocalHoje.categoria || "" });
+        return;
+      }
+      const totalExerciciosPendencia = exerciciosConcluidos.length;
+      const totalConcluidosPendencia = exerciciosConcluidos.filter(function(item) { return item === true; }).length;
+      if (totalExerciciosPendencia > 0 && totalConcluidosPendencia < totalExerciciosPendencia) {
+        alert("Conclua todos os exercícios do treino antes de salvar. Depois de salvar, o app bloqueia novo treino/cardio no mesmo dia e orienta recuperação.");
+        return;
+      }
 
       const exercicioRegistro = document.getElementById("exercicioRegistro").value.trim();
       const carga = document.getElementById("carga").value;
@@ -6288,11 +6539,17 @@
       db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").add(treinoSalvo)
         .then(function() {
           ultimoTreinoSalvoCompartilhavel = treinoSalvo;
-          marcarPlanoHojeConcluido("treino");
-          alert("Treino salvo na nuvem. O plano de hoje foi marcado como concluído. Você já pode gerar o card para compartilhar.");
+          marcarAtividadeConcluidaHoje("treino", treinoSalvo.categoriaTreino);
+          marcarPlanoHojeConcluido("treino", treinoSalvo.categoriaTreino);
+          limparTreinoAtualLocal();
+          treinoAtual = [];
+          exerciciosConcluidos = [];
+          alert("Treino salvo na nuvem. O plano de hoje foi atualizado com o treino realmente executado. Agora o app orienta recuperação para evitar novo treino/cardio no mesmo dia.");
           const boxCompartilharTreino = document.getElementById("compartilharUltimoTreinoBox");
           if (boxCompartilharTreino) boxCompartilharTreino.classList.remove("hidden");
           mostrarHistorico();
+          renderizarPlanoSemanal();
+          renderizarHoje();
           document.getElementById("carga").value = "";
           document.getElementById("reps").value = "";
           document.getElementById("sensacao").value = "normal";
@@ -6852,7 +7109,7 @@
 
 
 <script>
-  const METATREINO_APP_VERSION = "0.1.1";
+  var METATREINO_APP_VERSION = window.METATREINO_APP_VERSION || "0.1.2";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
