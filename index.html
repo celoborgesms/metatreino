@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.1.2">
+  <meta name="app-version" content="0.1.3">
   <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.1.2">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.1.2">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.1.2">
+  <link rel="manifest" href="manifest.json?v=0.1.3">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.1.3">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.1.3">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1182,7 +1182,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino App - Beta 0.1.2</span>
+        <span class="app-badge">MetaTreino App - Beta 0.1.3</span>
         <h1><span style="color:#22c55e;">Meta</span>Treino</h1>
         <p>Treinos inteligentes, acompanhamento real e evolução constante. Tudo no seu celular.</p>
       </div>
@@ -1341,11 +1341,12 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino 0.1.2 Beta</strong><br>
+          <strong>MetaTreino 0.1.3 Beta</strong><br>
           <span class="tag beta">Beta</span>
-          <p><strong>Atualizada em:</strong> 03/05/2026</p>
+          <p><strong>Atualizada em:</strong> 04/05/2026</p>
           <ul class="versao-atual-lista">
-            <li>Bloqueio diário adicionado: depois que o aluno salva treino ou cardio, o app orienta recuperação, hidratação, sono e descanso em vez de liberar novo treino no mesmo dia.</li>
+            <li>Bloqueio diário corrigido: treino e cardio agora são controles separados; cardio salvo não bloqueia treino, e treino salvo não bloqueia cardio.</li>
+            <li>Novo treino só é bloqueado depois que o treino completo foi salvo, com todos os exercícios sugeridos concluídos.</li>
             <li>Check-in com energia “Estou mal” agora força recuperação mesmo quando o treino veio do Plano ou do botão Começar agora.</li>
             <li>Plano semanal usa datas locais, mostra dia da semana + data e atualiza o card do dia quando o aluno executa um treino diferente do planejado.</li>
             <li>Frequência de 3 dias distribui Treino A, Treino B e Treino C nos dias disponíveis escolhidos, com reorganização segura dos planos antigos da semana atual.</li>
@@ -1783,7 +1784,7 @@
     let acessoLiberado = false;
     let usuarioAdmin = false;
     let dadosAcessoAtual = null;
-    var METATREINO_APP_VERSION = "0.1.2";
+    var METATREINO_APP_VERSION = "0.1.3";
 
 
     function chaveFluxoApp(sufixo) {
@@ -1844,7 +1845,7 @@
           treino: treinoAtual,
           letra: treinoAtual.letra || "",
           categoria: treinoAtual.categoria || treinoAtual.letra || "",
-          versaoGeracao: "0.1.2-ajustes-plano-recuperacao",
+          versaoGeracao: "0.1.3-bloqueio-separado-treino-cardio",
           concluidos: exerciciosConcluidos || [],
           feedback: feedbackTreinoFinalAtual || "",
           salvoEm: Date.now()
@@ -2270,7 +2271,7 @@
     function exportarMeusDados() {
       const dadosBase = {
         app: "MetaTreino",
-        versao: "0.1.2",
+        versao: "0.1.3",
         exportadoEm: new Date().toISOString(),
         usuario: usuarioAtual ? { uid: usuarioAtual.uid, email: usuarioAtual.email || "", nome: usuarioAtual.displayName || "" } : null,
         dadosLocais: coletarDadosLocaisPrivacidade(),
@@ -3595,7 +3596,7 @@
     }
 
     function chavePlanoSemanalAtual() {
-      return chavePlanoSemanalPorVersao(METATREINO_APP_VERSION || "0.1.2");
+      return chavePlanoSemanalPorVersao(METATREINO_APP_VERSION || "0.1.3");
     }
 
     function lerPlanoSemanalPorChave(chave) {
@@ -3662,7 +3663,7 @@
           if (doc.exists) {
             const plano = doc.data();
             if (plano && Array.isArray(plano.dias)) {
-              const planoAtualizado = plano.versao === "0.1.2" ? plano : criarPlanoSemanalInteligente(true, plano);
+              const planoAtualizado = plano.versao === "0.1.3" ? plano : criarPlanoSemanalInteligente(true, plano);
               try { localStorage.setItem(chavePlanoSemanalAtual(), JSON.stringify(planoAtualizado)); } catch (erro) {}
             }
           }
@@ -3769,7 +3770,7 @@
       });
 
       const plano = {
-        versao: "0.1.2",
+        versao: "0.1.3",
         inicioSemana: inicioSemanaAtualISO(),
         criadoEm: Date.now(),
         metaSemanal: metaDias,
@@ -3964,29 +3965,69 @@
       } catch (erro) { return null; }
     }
 
-    function verificarAtividadeSalvaHoje(callback) {
+    function treinoSalvoEstaCompleto(item) {
+      if (!item) return false;
+      const totalExercicios = Number(item.totalExercicios || ((item.exercicios && item.exercicios.length) ? item.exercicios.length : 0));
+      const totalConcluidos = Number(item.totalConcluidos || 0);
+      return totalExercicios > 0 && totalConcluidos >= totalExercicios;
+    }
+
+    function lerBloqueioTipoConcluidoHojeLocal(tipo) {
       const local = lerAtividadeConcluidaHojeLocal();
-      if (local) { callback({ temAtividade: true, tipo: local.tipo || "atividade", categoria: local.categoria || "", origem: "local" }); return; }
+      if (!local || local.tipo !== tipo) return null;
+      return local;
+    }
+
+    function verificarTreinoCompletoSalvoHoje(callback) {
+      const local = lerBloqueioTipoConcluidoHojeLocal("treino");
+      if (local) {
+        callback({ temAtividade: true, tipo: "treino", categoria: local.categoria || "", origem: "local" });
+        return;
+      }
       obterHistoricoDaNuvem(function(treinos) {
         const hoje = hojeISO();
-        const treinoHoje = (treinos || []).find(function(item) { return dataRegistroParaDia(item) === hoje; });
+        const treinoHoje = (treinos || []).find(function(item) {
+          return dataRegistroParaDia(item) === hoje && treinoSalvoEstaCompleto(item);
+        });
         if (treinoHoje) {
           const categoriaTreinoHoje = treinoHoje.categoriaTreino || treinoHoje.letraTreino || "";
           marcarAtividadeConcluidaHoje("treino", categoriaTreinoHoje);
           callback({ temAtividade: true, tipo: "treino", categoria: categoriaTreinoHoje, origem: "nuvem" });
           return;
         }
-        obterCardiosDaNuvem(function(cardios) {
-          const cardioHoje = (cardios || []).find(function(item) { return item && item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida" && dataRegistroParaDia(item) === hoje; });
-          if (cardioHoje) marcarAtividadeConcluidaHoje("cardio", "cardio");
-          callback(cardioHoje ? { temAtividade: true, tipo: "cardio", categoria: "cardio", origem: "nuvem" } : { temAtividade: false });
+        callback({ temAtividade: false });
+      });
+    }
+
+    function verificarCardioSalvoHoje(callback) {
+      const local = lerBloqueioTipoConcluidoHojeLocal("cardio");
+      if (local) {
+        callback({ temAtividade: true, tipo: "cardio", categoria: "cardio", origem: "local" });
+        return;
+      }
+      obterCardiosDaNuvem(function(cardios) {
+        const hoje = hojeISO();
+        const cardioHoje = (cardios || []).find(function(item) {
+          return item && item.tipo !== "sem_cardio" && item.tipo !== "sem_corrida" && dataRegistroParaDia(item) === hoje;
+        });
+        if (cardioHoje) marcarAtividadeConcluidaHoje("cardio", "cardio");
+        callback(cardioHoje ? { temAtividade: true, tipo: "cardio", categoria: "cardio", origem: "nuvem" } : { temAtividade: false });
+      });
+    }
+
+    function verificarAtividadeSalvaHoje(callback) {
+      verificarTreinoCompletoSalvoHoje(function(infoTreino) {
+        if (infoTreino && infoTreino.temAtividade) { callback(infoTreino); return; }
+        verificarCardioSalvoHoje(function(infoCardio) {
+          callback(infoCardio && infoCardio.temAtividade ? infoCardio : { temAtividade: false });
         });
       });
     }
 
     function mensagemRecuperacaoDiaConcluido(info) {
       const tipo = info && info.tipo === "cardio" ? "cardio" : (info && info.tipo === "treino" ? "treino" : "atividade");
-      return "✅ Você já registrou " + tipo + " hoje. Para evitar excesso, o app bloqueou novo treino/cardio no mesmo dia. Priorize recuperação: beba água, alimente-se bem, durma melhor, faça mobilidade leve se estiver confortável e descanse.";
+      const alvo = tipo === "cardio" ? "novo cardio" : (tipo === "treino" ? "novo treino" : "nova atividade do mesmo tipo");
+      return "✅ Você já registrou " + tipo + " hoje. Para evitar excesso, o app bloqueou " + alvo + " no mesmo dia. Treino e cardio são controles separados. Priorize recuperação: beba água, alimente-se bem, durma melhor, faça mobilidade leve se estiver confortável e descanse.";
     }
 
     function orientarRecuperacaoDiaConcluido(origem, info) {
@@ -4033,13 +4074,19 @@
     function acaoPrincipalHoje() {
       const treinoLocal = lerResumoTreinoAtualLocal();
       if (treinoLocal) { irParaTreino(); return; }
-      verificarAtividadeSalvaHoje(function(info) {
-        if (info && info.temAtividade) {
-          orientarRecuperacaoDiaConcluido("hoje", info);
+      const itemHoje = obterItemPlanoHoje();
+      if (itemHoje && itemHoje.categoria === "cardio") {
+        verificarCardioSalvoHoje(function(infoCardio) {
+          if (infoCardio && infoCardio.temAtividade) { orientarRecuperacaoDiaConcluido("hoje", infoCardio); return; }
+          irParaCardio();
+        });
+        return;
+      }
+      verificarTreinoCompletoSalvoHoje(function(infoTreino) {
+        if (infoTreino && infoTreino.temAtividade) {
+          orientarRecuperacaoDiaConcluido("hoje", infoTreino);
           return;
         }
-        const itemHoje = obterItemPlanoHoje();
-        if (itemHoje && itemHoje.categoria === "cardio") { irParaCardio(); return; }
         if (itemHoje && itemHoje.categoria && itemHoje.categoria !== "descanso") {
           const select = document.getElementById("divisaoTreino");
           if (select) select.value = itemHoje.categoria;
@@ -5059,7 +5106,7 @@
     function gerarTreinoCardio() {
       const caixa = document.getElementById("sugestaoCardio");
       if (!caixa) return;
-      verificarAtividadeSalvaHoje(function(info) {
+      verificarCardioSalvoHoje(function(info) {
         if (info && info.temAtividade) {
           orientarRecuperacaoDiaConcluido("cardio", info);
           return;
@@ -5079,7 +5126,7 @@
     }
 
     function salvarCardio() {
-      verificarAtividadeSalvaHoje(function(info) {
+      verificarCardioSalvoHoje(function(info) {
         if (info && info.temAtividade) {
           orientarRecuperacaoDiaConcluido("cardio", info);
           return;
@@ -5094,9 +5141,9 @@
         return;
       }
 
-      const bloqueioLocalHoje = lerAtividadeConcluidaHojeLocal();
+      const bloqueioLocalHoje = lerBloqueioTipoConcluidoHojeLocal("cardio");
       if (bloqueioLocalHoje) {
-        orientarRecuperacaoDiaConcluido("cardio", { temAtividade: true, tipo: bloqueioLocalHoje.tipo || "atividade", categoria: bloqueioLocalHoje.categoria || "" });
+        orientarRecuperacaoDiaConcluido("cardio", { temAtividade: true, tipo: "cardio", categoria: "cardio" });
         return;
       }
 
@@ -5993,7 +6040,7 @@
     }
 
     function gerarTreino() {
-      verificarAtividadeSalvaHoje(function(info) {
+      verificarTreinoCompletoSalvoHoje(function(info) {
         if (info && info.temAtividade) {
           orientarRecuperacaoDiaConcluido("treino", info);
           return;
@@ -6460,7 +6507,7 @@
     }
 
     function salvarTreinoFeito() {
-      verificarAtividadeSalvaHoje(function(info) {
+      verificarTreinoCompletoSalvoHoje(function(info) {
         if (info && info.temAtividade) {
           orientarRecuperacaoDiaConcluido("treino", info);
           return;
@@ -6476,15 +6523,15 @@
       }
 
       if (treinoAtual.length === 0) { alert("Gere um treino antes de salvar."); return; }
-      const bloqueioLocalHoje = lerAtividadeConcluidaHojeLocal();
+      const bloqueioLocalHoje = lerBloqueioTipoConcluidoHojeLocal("treino");
       if (bloqueioLocalHoje) {
-        orientarRecuperacaoDiaConcluido("treino", { temAtividade: true, tipo: bloqueioLocalHoje.tipo || "atividade", categoria: bloqueioLocalHoje.categoria || "" });
+        orientarRecuperacaoDiaConcluido("treino", { temAtividade: true, tipo: "treino", categoria: bloqueioLocalHoje.categoria || "" });
         return;
       }
       const totalExerciciosPendencia = exerciciosConcluidos.length;
       const totalConcluidosPendencia = exerciciosConcluidos.filter(function(item) { return item === true; }).length;
       if (totalExerciciosPendencia > 0 && totalConcluidosPendencia < totalExerciciosPendencia) {
-        alert("Conclua todos os exercícios do treino antes de salvar. Depois de salvar, o app bloqueia novo treino/cardio no mesmo dia e orienta recuperação.");
+        alert("Conclua todos os exercícios sugeridos do treino antes de salvar. Depois de salvar, o app bloqueia apenas novo treino no mesmo dia; cardio continua separado.");
         return;
       }
 
@@ -6544,7 +6591,7 @@
           limparTreinoAtualLocal();
           treinoAtual = [];
           exerciciosConcluidos = [];
-          alert("Treino salvo na nuvem. O plano de hoje foi atualizado com o treino realmente executado. Agora o app orienta recuperação para evitar novo treino/cardio no mesmo dia.");
+          alert("Treino salvo na nuvem. O plano de hoje foi atualizado com o treino realmente executado. Agora o app bloqueia apenas novo treino no mesmo dia; cardio continua separado.");
           const boxCompartilharTreino = document.getElementById("compartilharUltimoTreinoBox");
           if (boxCompartilharTreino) boxCompartilharTreino.classList.remove("hidden");
           mostrarHistorico();
@@ -7109,7 +7156,7 @@
 
 
 <script>
-  var METATREINO_APP_VERSION = window.METATREINO_APP_VERSION || "0.1.2";
+  var METATREINO_APP_VERSION = window.METATREINO_APP_VERSION || "0.1.3";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");

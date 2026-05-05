@@ -4,6 +4,18 @@ Regra fixa de atualizações a partir da v0.0.9:
 - O histórico completo de mudanças fica neste arquivo CHANGELOG que acompanha o pacote.
 - Em atualizações futuras, manter esta regra: app limpo com versão atual; histórico completo somente no arquivo.
 
+
+v0.1.3 beta - Correção do bloqueio separado de treino e cardio
+Data: 04/05/2026
+
+Principais mudanças:
+- Corrigido bloqueio diário para tratar treino e cardio como controles separados. Cardio salvo no dia não bloqueia novo treino, e treino salvo no dia não bloqueia novo cardio.
+- Treino só passa a bloquear novo treino no mesmo dia quando o treino salvo estiver completo, com todos os exercícios sugeridos concluídos.
+- Registros antigos/parciais de treino no histórico não devem mais travar a aba Treino como se o treino completo já tivesse sido feito.
+- Mensagens de recuperação ajustadas para dizer exatamente o que foi bloqueado: novo treino ou novo cardio.
+- Manifest e service worker atualizados para cache v0.1.3.
+- Regra fixa mantida: dentro do app aparece somente a versão atual; histórico completo apenas neste CHANGELOG.
+
 v0.1.2 beta - Ajustes de plano, recuperação e aba Treino
 Data: 03/05/2026
 

@@ -1,10 +1,10 @@
-const CACHE_NAME = "metatreino-cache-v0.1.2-ajustes-plano-recuperacao";
+const CACHE_NAME = "metatreino-cache-v0.1.3-bloqueio-separado";
 
 const APP_SHELL = [
   "./",
-  "./index.html?v=0.1.2",
-  "./manifest.json?v=0.1.2",
-  "./icon-512.png.png?v=0.1.2"
+  "./index.html?v=0.1.3",
+  "./manifest.json?v=0.1.3",
+  "./icon-512.png.png?v=0.1.3"
 ];
 
 // INSTALACAO
@@ -54,13 +54,13 @@ self.addEventListener("fetch", function(event) {
         .then(function(response) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(function(cache) {
-            cache.put("./index.html?v=0.1.2", copy);
+            cache.put("./index.html?v=0.1.3", copy);
             cache.put("./index.html", response.clone());
           });
           return response;
         })
         .catch(function() {
-          return caches.match("./index.html?v=0.1.2").then(function(cached) {
+          return caches.match("./index.html?v=0.1.3").then(function(cached) {
             return cached || caches.match("./index.html");
           });
         })
