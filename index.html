@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetaTreino</title>
-  <meta name="app-version" content="0.1.1">
-  <meta name="theme-color" content="#3b82f6">
-  <link rel="manifest" href="manifest.json?v=0.1.1">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.1.1">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.1.1">
+  <title>MetaTreino Hybrid</title>
+  <meta name="app-version" content="0.2.0">
+  <meta name="theme-color" content="#111827">
+  <link rel="manifest" href="manifest.json?v=0.2.0">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.2.0">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.2.0">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1175,6 +1175,233 @@
     }
 
 
+    /* MetaTreino Hybrid 0.2.0 - visual premium atlético */
+    :root {
+      --bg: #050816;
+      --bg-2: #0b1020;
+      --card: rgba(12, 18, 32, 0.82);
+      --card-strong: rgba(17, 24, 39, 0.94);
+      --primary: #bef264;
+      --primary-dark: #84cc16;
+      --secondary: #38bdf8;
+      --accent: #a78bfa;
+      --danger: #fb7185;
+      --text: #f8fafc;
+      --muted: #a7b0c0;
+      --line: rgba(148, 163, 184, 0.24);
+      --glass: rgba(255, 255, 255, 0.08);
+      --success-bg: rgba(22, 163, 74, 0.16);
+      --warning-bg: rgba(249, 115, 22, 0.14);
+      --info-bg: rgba(56, 189, 248, 0.13);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 10% 0%, rgba(190, 242, 100, 0.20), transparent 30%),
+        radial-gradient(circle at 90% 8%, rgba(56, 189, 248, 0.20), transparent 32%),
+        radial-gradient(circle at 50% 100%, rgba(167, 139, 250, 0.16), transparent 40%),
+        linear-gradient(180deg, #050816 0%, #0b1020 48%, #020617 100%) !important;
+      color: var(--text);
+    }
+
+    .container { max-width: 520px; padding: 18px; }
+
+    .app-hero {
+      padding: 26px 4px 18px;
+      position: relative;
+    }
+
+    .app-hero::after {
+      content: "FORÇA × CORRIDA";
+      display: inline-flex;
+      margin-top: 14px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: 1.2px;
+    }
+
+    .app-badge {
+      background: rgba(190, 242, 100, 0.12) !important;
+      color: #ecfccb !important;
+      border-color: rgba(190, 242, 100, 0.32) !important;
+      box-shadow: 0 0 30px rgba(190, 242, 100, 0.08);
+    }
+
+    h1 {
+      font-size: clamp(36px, 10vw, 54px);
+      line-height: .92;
+      letter-spacing: -2.4px;
+      margin-top: 14px;
+      text-wrap: balance;
+    }
+
+    .hero-hybrid-word {
+      display: block;
+      color: #f8fafc;
+      text-shadow: 0 0 26px rgba(56, 189, 248, 0.28);
+    }
+
+    .app-hero p {
+      max-width: 440px;
+      color: #b6c2d3;
+      font-size: 15px;
+    }
+
+    .card,
+    .modal-card {
+      background: linear-gradient(180deg, rgba(17, 24, 39, 0.94), rgba(10, 15, 29, 0.88)) !important;
+      color: #f8fafc !important;
+      border: 1px solid rgba(148, 163, 184, 0.22) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .card::before {
+      height: 5px;
+      width: 78px;
+      background: linear-gradient(90deg, #bef264, #38bdf8, #a78bfa) !important;
+      box-shadow: 0 0 24px rgba(190, 242, 100, 0.16);
+    }
+
+    h2, h3, .modal-card h2 { color: #ffffff !important; }
+    .small, .modal-card p { color: #a7b0c0 !important; }
+    label { color: #e5e7eb !important; }
+
+    input, select, textarea {
+      background: rgba(2, 6, 23, 0.64) !important;
+      color: #f8fafc !important;
+      border: 1px solid rgba(148, 163, 184, 0.28) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    }
+
+    input::placeholder, textarea::placeholder { color: #64748b; }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(190, 242, 100, 0.72) !important;
+      box-shadow: 0 0 0 4px rgba(190, 242, 100, 0.12) !important;
+      background: rgba(15, 23, 42, 0.95) !important;
+    }
+
+    button, .botao-principal {
+      background: linear-gradient(135deg, #bef264, #22c55e 50%, #38bdf8) !important;
+      color: #031313 !important;
+      box-shadow: 0 16px 32px rgba(34, 197, 94, 0.22) !important;
+      border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    }
+
+    .botao-secundario,
+    .modal-opcoes-grid button {
+      background: rgba(15, 23, 42, 0.72) !important;
+      color: #f8fafc !important;
+      border: 1px solid rgba(148, 163, 184, 0.28) !important;
+      box-shadow: none !important;
+    }
+
+    .botao-perigo {
+      background: linear-gradient(135deg, #fb7185, #ef4444) !important;
+      color: #ffffff !important;
+    }
+
+    .alerta,
+    .resumo-dia-box,
+    .mensagem-inteligente,
+    .proxima-conquista-box,
+    .politica-bloco,
+    .feedback-treino,
+    .grafico-card,
+    .historico-item,
+    .exercise,
+    .check-exercicio,
+    .plano-topo,
+    .compartilhar-inline,
+    .dashboard-box {
+      background: rgba(15, 23, 42, 0.72) !important;
+      color: #f8fafc !important;
+      border-color: rgba(148, 163, 184, 0.25) !important;
+    }
+
+    .alerta-sucesso { border-left-color: #bef264 !important; }
+    .alerta-aviso { border-left-color: #fb923c !important; }
+    .mensagem-inteligente { border-color: rgba(190, 242, 100, 0.28) !important; color: #ecfccb !important; }
+
+    .hoje-hero {
+      background:
+        linear-gradient(135deg, rgba(190, 242, 100, 0.13), rgba(56, 189, 248, 0.12)),
+        rgba(15, 23, 42, 0.78) !important;
+      border: 1px solid rgba(190, 242, 100, 0.25) !important;
+      color: #f8fafc;
+    }
+
+    .resumo-kpi {
+      background: rgba(2, 6, 23, 0.50) !important;
+      border: 1px solid rgba(148, 163, 184, 0.25) !important;
+    }
+
+    .resumo-kpi strong { color: #bef264 !important; }
+    .resumo-kpi span { color: #cbd5e1 !important; }
+
+    .plano-semanal-box {
+      background: rgba(2, 6, 23, 0.38) !important;
+      border-color: rgba(190, 242, 100, 0.22) !important;
+    }
+
+    .plano-semanal-dia {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.72)) !important;
+      border-color: rgba(148, 163, 184, 0.22) !important;
+    }
+
+    .status-pill { background: rgba(255, 255, 255, 0.06) !important; }
+    .status-hoje { color: #d9f99d !important; border-color: rgba(190, 242, 100, .42) !important; }
+    .status-concluido { color: #bbf7d0 !important; }
+    .status-pulado { color: #fed7aa !important; }
+
+    .exercise strong { color: #ffffff !important; }
+    .exercise span, .exercise li, .exercise .aviso-video { color: #cbd5e1 !important; }
+    .tag { background: rgba(56, 189, 248, 0.15) !important; color: #bae6fd !important; border: 1px solid rgba(56, 189, 248, 0.28); }
+    .tag.beta { background: rgba(190, 242, 100, 0.14) !important; color: #ecfccb !important; }
+
+    .bottom-nav {
+      width: min(500px, calc(100% - 18px));
+      bottom: 10px;
+      padding: 8px;
+      border-radius: 26px;
+      background: rgba(2, 6, 23, 0.78) !important;
+      border-color: rgba(255, 255, 255, 0.14) !important;
+    }
+
+    .bottom-nav button {
+      font-size: 10px;
+      padding: 10px 2px;
+      border-radius: 16px;
+      color: #cbd5e1 !important;
+    }
+
+    .bottom-nav button:hover,
+    .bottom-nav button:active {
+      background: rgba(190, 242, 100, 0.13) !important;
+      color: #ffffff !important;
+    }
+
+    .barra-progresso-fina > div,
+    .grafico-barra {
+      background: linear-gradient(90deg, #bef264, #38bdf8, #a78bfa) !important;
+    }
+
+    .checkbox-grid label {
+      background: rgba(2, 6, 23, 0.48) !important;
+      border-color: rgba(148, 163, 184, 0.24) !important;
+    }
+
+    @media (max-width: 380px) {
+      .bottom-nav button { font-size: 9px; padding-left: 1px; padding-right: 1px; }
+      .container { padding: 14px; }
+    }
+
+
   </style>
 </head>
 <body>
@@ -1182,9 +1409,9 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino App - Beta 0.1.1</span>
-        <h1><span style="color:#22c55e;">Meta</span>Treino</h1>
-        <p>Treinos inteligentes, acompanhamento real e evolução constante. Tudo no seu celular.</p>
+        <span class="app-badge">MetaTreino Hybrid • Beta 0.2.0</span>
+        <h1><span style="color:#bef264;">Meta</span>Treino <span class="hero-hybrid-word">Hybrid</span></h1>
+        <p>Musculação e corrida no mesmo plano: força, shape, fôlego e recuperação sem bagunçar sua semana.</p>
       </div>
     </div>
 
@@ -1199,8 +1426,8 @@
       </div>
 
       <div id="cardDadosPessoa" class="card hidden">
-        <h2>⚙️ Dados da pessoa</h2>
-        <p class="small">Preencha seus dados para personalizar o treino.</p>
+        <h2>⚙️ Perfil híbrido</h2>
+        <p class="small">Preencha seus dados para o app equilibrar musculação, corrida e recuperação conforme seu nível.</p>
 
         <label for="nome">Nome</label>
         <input id="nome" type="text" placeholder="Ex: Usuário">
@@ -1223,12 +1450,16 @@
         <label for="altura">Altura atual (cm)</label>
         <input id="altura" type="number" placeholder="Ex: 175">
 
-        <label for="metaPrincipal">Principal meta</label>
+        <label for="metaPrincipal">Principal meta híbrida</label>
         <select id="metaPrincipal">
-          <option value="massa">Ganhar massa muscular</option>
-          <option value="perder_peso">Perder peso</option>
-          <option value="definicao">Ficar mais magro e definido</option>
-          <option value="forca">Levantar mais peso / ganhar força</option>
+          <option value="hibrido_shape" selected>Shape + fôlego</option>
+          <option value="hibrido_performance">Performance híbrida geral</option>
+          <option value="massa">Ganhar massa sem abandonar corrida</option>
+          <option value="perder_peso">Emagrecimento híbrido</option>
+          <option value="definicao">Definição + condicionamento</option>
+          <option value="forca">Força com condicionamento</option>
+          <option value="corrida_5k">Correr 5 km mantendo força</option>
+          <option value="corrida_10k">Correr 10 km mantendo massa</option>
         </select>
 
         <label for="rotinaAtual">Rotina atual de treino</label>
@@ -1254,14 +1485,54 @@
           <option value="academia_grande">Academia completa</option>
         </select>
 
-        <label for="diasTreinoSemana">Meta de frequência semanal</label>
+        <label for="diasTreinoSemana">Meta de dias ativos na semana</label>
         <select id="diasTreinoSemana">
           <option value="2">2 dias por semana</option>
-          <option value="3" selected>3 dias por semana</option>
-          <option value="4">4 dias por semana</option>
+          <option value="3">3 dias por semana</option>
+          <option value="4" selected>4 dias por semana</option>
           <option value="5">5 dias por semana</option>
           <option value="6">6 dias por semana</option>
         </select>
+        <p class="small">Conta musculação, corrida e recuperação ativa planejada.</p>
+
+        <label for="diasCorridaSemana">Quantos dias de corrida/cardio por semana?</label>
+        <select id="diasCorridaSemana">
+          <option value="1">1 dia de corrida/cardio</option>
+          <option value="2" selected>2 dias de corrida/cardio</option>
+          <option value="3">3 dias de corrida/cardio</option>
+          <option value="4">4 dias de corrida/cardio</option>
+        </select>
+
+        <label for="prioridadeHibrida">Prioridade do plano</label>
+        <select id="prioridadeHibrida">
+          <option value="equilibrado" selected>Equilibrado: força + corrida</option>
+          <option value="forca_shape">Mais força/shape, corrida como complemento</option>
+          <option value="corrida_performance">Mais corrida/performance, força como suporte</option>
+        </select>
+
+        <label for="nivelCorridaPerfil">Nível atual na corrida</label>
+        <select id="nivelCorridaPerfil">
+          <option value="iniciante">Estou começando agora</option>
+          <option value="voltando">Estou voltando a correr</option>
+          <option value="regular">Já corro regularmente</option>
+          <option value="avancado">Tenho experiência/provas</option>
+        </select>
+
+        <label for="objetivoCorridaPerfil">Objetivo de corrida</label>
+        <select id="objetivoCorridaPerfil">
+          <option value="comecar">Começar com segurança</option>
+          <option value="3k">Completar 3 km</option>
+          <option value="5k" selected>Completar 5 km</option>
+          <option value="10k">Correr 10 km</option>
+          <option value="meia">Evoluir para meia maratona</option>
+          <option value="pace">Melhorar ritmo / pace</option>
+        </select>
+
+        <label for="distanciaCorridaConfortavel">Maior distância confortável hoje (km)</label>
+        <input id="distanciaCorridaConfortavel" type="number" min="0" step="0.1" placeholder="Ex: 3, 5 ou 10">
+
+        <label for="paceCorridaMedio">Pace médio aproximado, se souber</label>
+        <input id="paceCorridaMedio" type="text" placeholder="Ex: 6:30/km ou deixe em branco">
 
         <label>Dias que você costuma conseguir treinar</label>
         <div class="checkbox-grid" id="diasDisponiveisGrid">
@@ -1314,7 +1585,7 @@
         <button id="botaoLogoutGoogle" type="button" class="botao-secundario btn-logout hidden" onclick="logout()">Sair da conta</button>
 
         <h2 style="margin-top:18px;">🔒 Privacidade e dados</h2>
-        <p class="small">O MetaTreino usa dados de perfil, treino, cardio, plano semanal e evolução para personalizar sugestões e histórico dentro do app.</p>
+        <p class="small">O MetaTreino usa dados de perfil, força, corrida/cardio, plano semanal e evolução para personalizar sugestões e histórico dentro do app.</p>
         <button type="button" class="botao-secundario" onclick="alternarPoliticaPrivacidade()">Ver política de privacidade</button>
         <button type="button" class="botao-secundario" onclick="exportarDadosUsuario()">Exportar meus dados</button>
         <button type="button" class="botao-perigo" onclick="excluirMeusDados()">Excluir meus dados locais e histórico de treino/cardio</button>
@@ -1341,15 +1612,15 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino 0.1.1 Beta</strong><br>
-          <span class="tag beta">Beta</span>
-          <p><strong>Atualizada em:</strong> 02/05/2026</p>
+          <strong>MetaTreino Hybrid 0.2.0 Beta</strong><br>
+          <span class="tag beta">Hybrid</span>
+          <p><strong>Atualizada em:</strong> 08/05/2026</p>
           <ul class="versao-atual-lista">
-            <li>Removido o botão duplicado de resumo semanal da tela Hoje; o compartilhamento geral agora fica concentrado em Progresso.</li>
-            <li>Cards de compartilhamento ajustados para evitar texto saindo do quadro, principalmente lista de exercícios e assinatura MetaTreino App.</li>
-            <li>Fluxo do último exercício corrigido: ao marcar o último exercício como concluído, o app leva primeiro para Registrar evolução.</li>
-            <li>Mensagem de parabéns e feedback final aparecem depois do registro/evolução do exercício, deixando a ordem mais natural para o aluno.</li>
-            <li>Regra mantida: dentro do app aparece somente a versão atual; histórico completo fica no CHANGELOG.</li>
+            <li>App reposicionado para treino híbrido: musculação + corrida/cardio no mesmo plano semanal.</li>
+            <li>Perfil ganhou nível de corrida, objetivo de corrida, dias de corrida, distância confortável, pace e prioridade híbrida.</li>
+            <li>Plano semanal agora separa força, corrida leve, intervalado, longão e recuperação, evitando conflitos com treino pesado de pernas.</li>
+            <li>Tela Hoje, Plano, Treino, Corrida e Progresso ganharam textos e métricas com foco híbrido.</li>
+            <li>Aparência redesenhada com visual mais premium, escuro, atlético e moderno.</li>
           </ul>
         </div>
         <button type="button" class="botao-principal" onclick="verificarAtualizacaoManual()">Verificar se há nova atualização</button>
@@ -1360,11 +1631,11 @@
     <section id="paginaHoje" class="hidden">
       <div class="card">
         <h2>🔥 Hoje</h2>
-        <p class="small">Abra o app, veja o foco do dia e comece sem perder tempo decidindo o que fazer.</p>
+        <p class="small">Abra o app e veja o foco híbrido do dia: força, corrida ou recuperação.</p>
         <div id="resumoHojeApp" class="hoje-hero">Carregando recomendação de hoje...</div>
         <button type="button" class="botao-principal" onclick="acaoPrincipalHoje()">Começar agora</button>
         <button type="button" class="botao-secundario" onclick="irParaCheckin()">Adaptar check-in / recalcular</button>
-        <button type="button" class="botao-secundario" onclick="irParaCardio()">Fazer cardio hoje</button>
+        <button type="button" class="botao-secundario" onclick="irParaCardio()">Fazer corrida/cardio hoje</button>
       </div>
 
       <div class="card">
@@ -1382,8 +1653,8 @@
 
     <section id="paginaPlano" class="hidden">
       <div class="card">
-        <h2>🗓️ Plano da Semana</h2>
-        <p class="small">Organize a semana, acompanhe o que foi feito e ajuste sem perder o equilíbrio entre treino, cardio e recuperação.</p>
+        <h2>🗓️ Plano híbrido da semana</h2>
+        <p class="small">Organize musculação, corrida e recuperação na mesma semana, evitando conflito entre perna pesada, tiros e longão.</p>
         <button type="button" class="botao-principal" onclick="gerarPlanoSemanalInteligente(true)">Montar / atualizar plano da semana</button>
         <button type="button" class="botao-secundario" onclick="reorganizarPlanoSemana()">Reorganizar plano</button>
         <div id="planoSemanalBox" class="plano-semanal-box hidden"></div>
@@ -1392,20 +1663,20 @@
 
     <section id="paginaTreino" class="hidden">
       <div class="card">
-        <h2 id="tituloTreino">💪 Treino do dia</h2>
+        <h2 id="tituloTreino">💪 Força do dia</h2>
         <p id="resumoPerfilTreino" class="small"></p>
         <button type="button" class="botao-secundario" onclick="irParaHoje()">Voltar para Hoje</button>
       </div>
 
       <div class="card">
-        <h2>💪 Modo treino</h2>
-        <p class="small">Aqui fica a execução do treino gerado. Para adaptar energia, dor, tempo ou cardio, volte ao check-in.</p>
+        <h2>💪 Modo força</h2>
+        <p class="small">Aqui fica a execução da musculação. Para adaptar energia, dor, tempo ou corrida, volte ao check-in.</p>
         <button type="button" class="botao-principal" onclick="irParaCheckin()">✅ Fazer check-in / recalcular treino</button>
-        <button type="button" class="botao-secundario" onclick="pularTreinoEIrParaCardio()">⏭️ Pular treino e ir para Cardio</button>
+        <button type="button" class="botao-secundario" onclick="pularTreinoEIrParaCardio()">⏭️ Pular força e ir para Corrida</button>
       </div>
 
       <div id="resultadoTreino" class="card hidden">
-        <h2>💪 Treino recomendado</h2>
+        <h2>💪 Treino de força recomendado</h2>
         <div id="resumoDiaTreino" class="resumo-dia-box hidden"></div>
         <div id="mensagemInteligenteTreino" class="mensagem-inteligente hidden"></div>
         <p id="resumoTreino" class="small"></p>
@@ -1413,7 +1684,7 @@
         <div id="progressoExercicios" class="progresso-box hidden"></div>
         <div id="feedbackTreinoFinal" class="feedback-treino hidden">
           <strong>Como foi o treino?</strong>
-          <p class="small">Esse feedback ajuda o app a ajustar melhor sua evolução nas próximas versões.</p>
+          <p class="small">Esse feedback ajuda o app a ajustar volume de força, corrida e recuperação nas próximas semanas.</p>
           <div class="feedback-grid">
             <button type="button" class="botao-secundario" onclick="salvarFeedbackTreinoFinal('facil')">Fácil</button>
             <button type="button" class="botao-secundario" onclick="salvarFeedbackTreinoFinal('medio')">Médio</button>
@@ -1454,7 +1725,7 @@
     <section id="paginaCheckin" class="hidden">
       <div class="card">
         <h2>✅ Check-in diário</h2>
-        <p class="small">Responda como você está hoje. O app usa essas respostas junto com ao último cardio registrado para adaptar o treino do dia.</p>
+        <p class="small">Responda como você está hoje. O app cruza energia, dores e última corrida/cardio para adaptar a sessão do dia.</p>
       </div>
 
       <div class="card">
@@ -1484,13 +1755,14 @@
           <option value="longo">Treino longo — acima de 1 hora</option>
         </select>
 
-        <label for="cardioNoTreino">Deseja incluir cardio no treino de hoje?</label>
+        <label for="cardioNoTreino">Deseja incluir corrida/cardio junto da força hoje?</label>
         <select id="cardioNoTreino">
-          <option value="nao">Não incluir cardio</option>
-          <option value="esteira">Esteira</option>
+          <option value="nao">Não incluir corrida/cardio</option>
+          <option value="corrida">Corrida leve na esteira/rua</option>
+          <option value="esteira">Esteira leve</option>
           <option value="bicicleta">Bicicleta</option>
         </select>
-        <p class="small">Se escolher Esteira ou Bicicleta em treino normal/longo e seu local tiver estrutura, o app reduz alguns exercícios para encaixar o cardio sem deixar o treino pesado.</p>
+        <p class="small">Se incluir corrida/cardio junto da força, o app reduz o volume de exercícios para preservar recuperação.</p>
 
         <label for="divisaoTreino">Divisão do treino</label>
         <select id="divisaoTreino">
@@ -1514,8 +1786,8 @@
       </div>
 
       <div class="card">
-        <h2>🏃 Cardio inteligente</h2>
-        <p class="small">Use esta área para montar uma sugestão de corrida, caminhada ou bicicleta conforme seu nível, objetivo e evolução. O app também usa essas informações para adaptar melhor o treino de força.</p>
+        <h2>🏃 Corrida inteligente</h2>
+        <p class="small">Monte corrida leve, ritmo, intervalado ou longão conforme seu nível. O app usa esses dados para proteger pernas e recuperação na musculação.</p>
 
         <label for="tipoAtividadeCardio">Tipo de atividade</label>
         <select id="tipoAtividadeCardio" onchange="atualizarTextoTipoCardio()">
@@ -1584,8 +1856,8 @@
       </div>
 
       <div class="card">
-        <h2>📈 Registrar evolução do cardio</h2>
-        <p class="small">Depois da atividade, registre como foi. Isso ajuda o app a entender sua evolução e adaptar melhor os próximos treinos.</p>
+        <h2>📈 Registrar evolução da corrida/cardio</h2>
+        <p class="small">Depois da corrida/cardio, registre como foi. Isso ajuda o app a ajustar os próximos treinos de força e corrida.</p>
 
         <label for="distanciaCardio">Distância feita (km)</label>
         <input id="distanciaCardio" type="number" min="0" step="0.1" placeholder="Ex: 5">
@@ -1620,8 +1892,8 @@
       </div>
 
       <div class="card">
-        <h2>🧠 Últimos cardios</h2>
-        <p class="small">Esses registros ajudam o app a evitar sobrecarga nas pernas e a sugerir melhor recuperação.</p>
+        <h2>🧠 Últimas corridas/cardios</h2>
+        <p class="small">Esses registros ajudam o app a evitar perna pesada perto de tiro, longão ou treino inferior.</p>
         <div id="listaCardios"></div>
       </div>
 
@@ -1630,7 +1902,7 @@
     <section id="paginaProgresso" class="hidden">
       <div class="card">
         <h2>📊 Progresso</h2>
-        <p class="small">Histórico, conquistas, nível e evolução em uma tela só.</p>
+        <p class="small">Histórico híbrido, conquistas, força, corrida e evolução em uma tela só.</p>
         <div id="resumoProgressoBox" class="resumo-grid"></div>
         <div id="nivelAlunoProgresso" class="proxima-conquista-box"></div>
       </div>
@@ -1646,7 +1918,7 @@
 
       <div class="card">
         <h2>🏆 Conquistas</h2>
-        <p class="small">Conquistas focadas em consistência, evolução, cardio e retorno depois de pausa.</p>
+        <p class="small">Conquistas focadas em consistência, força, corrida, recuperação e retorno depois de pausa.</p>
         <div id="contadorConquistas" class="conquista-contador">Carregando conquistas...</div>
         <h3 class="conquistas-titulo-bloco">Conquistas desbloqueadas</h3>
         <div id="ultimasConquistas" class="conquistas-resumo"></div>
@@ -1710,8 +1982,9 @@
     <nav id="navegacaoPrincipal" class="bottom-nav hidden">
       <button type="button" onclick="irParaHoje()">🔥 Hoje</button>
       <button type="button" onclick="irParaPlano()">🗓️ Plano</button>
-      <button type="button" onclick="irParaTreino()">💪 Treino</button>
-      <button type="button" onclick="irParaProgresso()">📊 Progresso</button>
+      <button type="button" onclick="irParaTreino()">💪 Força</button>
+      <button type="button" onclick="irParaCardio()">🏃 Corrida</button>
+      <button type="button" onclick="irParaProgresso()">📊 Evolução</button>
       <button type="button" onclick="voltarParaPerfil()">👤 Perfil</button>
     </nav>
   </div>
@@ -1842,7 +2115,7 @@
           treino: treinoAtual,
           letra: treinoAtual.letra || "",
           categoria: treinoAtual.categoria || treinoAtual.letra || "",
-          versaoGeracao: "0.1.1-ajustes-compartilhamento-fluxo-registro",
+          versaoGeracao: "0.2.0-hybrid",
           concluidos: exerciciosConcluidos || [],
           feedback: feedbackTreinoFinalAtual || "",
           salvoEm: Date.now()
@@ -2236,7 +2509,7 @@
     }
 
     function limparCamposPerfilNaTela() {
-      ["nome", "sexo", "dataNascimento", "peso", "altura", "limitacoesUsuario"].forEach(function(id) {
+      ["nome", "sexo", "dataNascimento", "peso", "altura", "limitacoesUsuario", "distanciaCorridaConfortavel", "paceCorridaMedio"].forEach(function(id) {
         const campo = document.getElementById(id);
         if (campo) campo.value = "";
       });
@@ -2266,7 +2539,7 @@
     function exportarMeusDados() {
       const dadosBase = {
         app: "MetaTreino",
-        versao: "0.1.1",
+        versao: "0.2.0-hybrid",
         exportadoEm: new Date().toISOString(),
         usuario: usuarioAtual ? { uid: usuarioAtual.uid, email: usuarioAtual.email || "", nome: usuarioAtual.displayName || "" } : null,
         dadosLocais: coletarDadosLocaisPrivacidade(),
@@ -3129,7 +3402,19 @@
       document.getElementById("tempoExperiencia").value = perfilUsuario.tempoExperiencia || "menos_1";
       document.getElementById("localTreino").value = perfilUsuario.localTreino || "academia_grande";
       const campoDiasTreino = document.getElementById("diasTreinoSemana");
-      if (campoDiasTreino) campoDiasTreino.value = String(perfilUsuario.diasTreinoSemana || "3");
+      if (campoDiasTreino) campoDiasTreino.value = String(perfilUsuario.diasTreinoSemana || "4");
+      const campoDiasCorrida = document.getElementById("diasCorridaSemana");
+      if (campoDiasCorrida) campoDiasCorrida.value = String(perfilUsuario.diasCorridaSemana || "2");
+      const campoPrioridade = document.getElementById("prioridadeHibrida");
+      if (campoPrioridade) campoPrioridade.value = perfilUsuario.prioridadeHibrida || "equilibrado";
+      const campoNivelCorrida = document.getElementById("nivelCorridaPerfil");
+      if (campoNivelCorrida) campoNivelCorrida.value = perfilUsuario.nivelCorridaPerfil || perfilUsuario.nivelCardio || "iniciante";
+      const campoObjetivoCorrida = document.getElementById("objetivoCorridaPerfil");
+      if (campoObjetivoCorrida) campoObjetivoCorrida.value = perfilUsuario.objetivoCorridaPerfil || perfilUsuario.objetivoCardio || "5k";
+      const campoDistanciaCorrida = document.getElementById("distanciaCorridaConfortavel");
+      if (campoDistanciaCorrida) campoDistanciaCorrida.value = perfilUsuario.distanciaCorridaConfortavel || "";
+      const campoPaceCorrida = document.getElementById("paceCorridaMedio");
+      if (campoPaceCorrida) campoPaceCorrida.value = perfilUsuario.paceCorridaMedio || "";
       aplicarValoresCheckbox("diasDisponiveis", perfilUsuario.diasDisponiveis || valoresPadraoDiasDisponiveis());
       aplicarValoresCheckbox("equipamentosDisponiveis", perfilUsuario.equipamentosDisponiveis || valoresPadraoEquipamentos(perfilUsuario.localTreino || "academia_grande"));
       const campoPreferidos = document.getElementById("exerciciosPreferidos");
@@ -3146,7 +3431,7 @@
       const resultadoPerfil = document.getElementById("resultadoPerfil");
       resultadoPerfil.classList.remove("hidden");
       const limitacoesTexto = perfilUsuario.limitacoesUsuario ? "<br>Limitações informadas: " + limparTextoSeguro(perfilUsuario.limitacoesUsuario) + "." : "";
-      resultadoPerfil.innerHTML = "<strong>Perfil carregado automaticamente</strong><br>" + limparTextoSeguro(perfilUsuario.nome) + ", seu IMC salvo é " + limparTextoSeguro(perfilUsuario.imc) + ".<br>Classificação: " + limparTextoSeguro(perfilUsuario.classificacao) + ".<br>Meta: " + limparTextoSeguro(traduzirMeta(perfilUsuario.metaPrincipal)) + ".<br>Local de treino: " + limparTextoSeguro(traduzirLocal(perfilUsuario.localTreino)) + "." + limitacoesTexto + "<br><br><span class='small'>Se quiser alterar seus dados, edite os campos e clique em Calcular e salvar perfil.</span>";
+      resultadoPerfil.innerHTML = "<strong>Perfil híbrido carregado automaticamente</strong><br>" + limparTextoSeguro(perfilUsuario.nome) + ", seu IMC salvo é " + limparTextoSeguro(perfilUsuario.imc) + ".<br>Classificação: " + limparTextoSeguro(perfilUsuario.classificacao) + ".<br>Meta: " + limparTextoSeguro(traduzirMeta(perfilUsuario.metaPrincipal)) + ".<br>Corrida: " + limparTextoSeguro(traduzirNivelCorrida(perfilUsuario.nivelCorridaPerfil || "iniciante")) + " • " + limparTextoSeguro(traduzirObjetivoCorrida(perfilUsuario.objetivoCorridaPerfil || "5k")) + ".<br>Semana: " + limparTextoSeguro(perfilUsuario.diasTreinoSemana || 4) + " dia(s) ativos, com " + limparTextoSeguro(perfilUsuario.diasCorridaSemana || 2) + " de corrida/cardio.<br>Local de treino: " + limparTextoSeguro(traduzirLocal(perfilUsuario.localTreino)) + "." + limitacoesTexto + "<br><br><span class='small'>Se quiser alterar seus dados, edite os campos e clique em Calcular e salvar perfil.</span>";
     }
 
     function calcularIdadePorNascimento(dataISO) {
@@ -3176,7 +3461,14 @@
       const rotinaAtual = document.getElementById("rotinaAtual").value;
       const tempoExperiencia = document.getElementById("tempoExperiencia").value;
       const localTreino = document.getElementById("localTreino").value;
-      const diasTreinoSemana = Number(document.getElementById("diasTreinoSemana") ? document.getElementById("diasTreinoSemana").value : 3) || 3;
+      const diasTreinoSemana = Number(document.getElementById("diasTreinoSemana") ? document.getElementById("diasTreinoSemana").value : 4) || 4;
+      const diasCorridaSemanaBruto = Number(document.getElementById("diasCorridaSemana") ? document.getElementById("diasCorridaSemana").value : 2) || 2;
+      const diasCorridaSemana = Math.max(1, Math.min(4, diasCorridaSemanaBruto));
+      const prioridadeHibrida = document.getElementById("prioridadeHibrida") ? document.getElementById("prioridadeHibrida").value : "equilibrado";
+      const nivelCorridaPerfil = document.getElementById("nivelCorridaPerfil") ? document.getElementById("nivelCorridaPerfil").value : "iniciante";
+      const objetivoCorridaPerfil = document.getElementById("objetivoCorridaPerfil") ? document.getElementById("objetivoCorridaPerfil").value : "5k";
+      const distanciaCorridaConfortavel = document.getElementById("distanciaCorridaConfortavel") ? Number(document.getElementById("distanciaCorridaConfortavel").value || 0) : 0;
+      const paceCorridaMedio = (document.getElementById("paceCorridaMedio") ? document.getElementById("paceCorridaMedio").value.trim() : "").slice(0, 20);
       let diasDisponiveis = obterValoresCheckbox("diasDisponiveis");
       if (!diasDisponiveis.length) diasDisponiveis = valoresPadraoDiasDisponiveis();
       let equipamentosDisponiveis = obterValoresCheckbox("equipamentosDisponiveis");
@@ -3212,7 +3504,7 @@
       else if (imc < 30) { classificacao = "acima do peso"; mensagem = "Seu foco pode ser reduzir gordura corporal e manter ou ganhar massa magra."; }
       else { classificacao = "em faixa de obesidade pelo IMC"; mensagem = "O ideal é começar com treinos seguros, progressivos e, se possível, acompanhamento profissional."; }
 
-      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, diasTreinoSemana, diasDisponiveis, equipamentosDisponiveis, exerciciosPreferidos, exerciciosBloqueados, limitacoesUsuario };
+      perfilUsuario = { nome, sexo, dataNascimento, idade, peso, alturaCm, imc: imc.toFixed(1), classificacao, mensagem, metaPrincipal, rotinaAtual, tempoExperiencia, localTreino, diasTreinoSemana, diasCorridaSemana, prioridadeHibrida, nivelCorridaPerfil, objetivoCorridaPerfil, distanciaCorridaConfortavel, paceCorridaMedio, diasDisponiveis, equipamentosDisponiveis, exerciciosPreferidos, exerciciosBloqueados, limitacoesUsuario };
       localStorage.setItem("perfilUsuario", JSON.stringify(perfilUsuario));
       registrarPeso(peso);
       mostrarMensagemMudancaPeso(perfilAntigo, peso);
@@ -3220,7 +3512,7 @@
       resultadoPerfil.classList.remove("hidden");
       const resumoLimitacoes = limitacoesUsuario ? "<br>Limitações/observações: " + limparTextoSeguro(limitacoesUsuario) + "." : "";
       const resumoBloqueados = exerciciosBloqueados ? "<br>Exercícios bloqueados: " + limparTextoSeguro(exerciciosBloqueados) + "." : "";
-      resultadoPerfil.innerHTML = "<strong>" + limparTextoSeguro(nome) + ", seu IMC é " + imc.toFixed(1) + "</strong><br>Idade: " + idade + " anos.<br>Classificação: " + limparTextoSeguro(classificacao) + ".<br>" + limparTextoSeguro(mensagem) + "<br>Meta: " + limparTextoSeguro(traduzirMeta(metaPrincipal)) + ".<br>Rotina: " + limparTextoSeguro(traduzirRotina(rotinaAtual)) + ".<br>Experiência: " + limparTextoSeguro(traduzirExperiencia(tempoExperiencia)) + ".<br>Local: " + limparTextoSeguro(traduzirLocal(localTreino)) + ".<br>Frequência desejada: " + diasTreinoSemana + " dia(s)/semana." + resumoLimitacoes + resumoBloqueados + "<br><br><span class='small'>Observação: IMC é uma estimativa simples. Ele não diferencia massa muscular de gordura.</span>";
+      resultadoPerfil.innerHTML = "<strong>" + limparTextoSeguro(nome) + ", seu perfil híbrido está pronto</strong><br>IMC: " + imc.toFixed(1) + " • Idade: " + idade + " anos.<br>Classificação: " + limparTextoSeguro(classificacao) + ".<br>" + limparTextoSeguro(mensagem) + "<br>Meta: " + limparTextoSeguro(traduzirMeta(metaPrincipal)) + ".<br>Prioridade: " + limparTextoSeguro(traduzirPrioridadeHibrida(prioridadeHibrida)) + ".<br>Corrida: " + limparTextoSeguro(traduzirNivelCorrida(nivelCorridaPerfil)) + " • " + limparTextoSeguro(traduzirObjetivoCorrida(objetivoCorridaPerfil)) + ".<br>Semana: " + diasTreinoSemana + " dia(s) ativos, com " + Math.min(diasCorridaSemana, Math.max(1, diasTreinoSemana - 1)) + " de corrida/cardio planejado(s).<br>Experiência de força: " + limparTextoSeguro(traduzirExperiencia(tempoExperiencia)) + ".<br>Local: " + limparTextoSeguro(traduzirLocal(localTreino)) + "." + resumoLimitacoes + resumoBloqueados + "<br><br><span class='small'>Observação: IMC é uma estimativa simples. O plano híbrido usa também sua experiência, disponibilidade, corrida e recuperação.</span>";
       botaoIrTreino.classList.remove("hidden");
     }
 
@@ -3258,7 +3550,19 @@
       document.getElementById("peso").value = "";
       document.getElementById("altura").value = "";
       const campoDiasTreino = document.getElementById("diasTreinoSemana");
-      if (campoDiasTreino) campoDiasTreino.value = "3";
+      if (campoDiasTreino) campoDiasTreino.value = "4";
+      const campoDiasCorrida = document.getElementById("diasCorridaSemana");
+      if (campoDiasCorrida) campoDiasCorrida.value = "2";
+      const campoPrioridade = document.getElementById("prioridadeHibrida");
+      if (campoPrioridade) campoPrioridade.value = "equilibrado";
+      const campoNivelCorrida = document.getElementById("nivelCorridaPerfil");
+      if (campoNivelCorrida) campoNivelCorrida.value = "iniciante";
+      const campoObjetivoCorrida = document.getElementById("objetivoCorridaPerfil");
+      if (campoObjetivoCorrida) campoObjetivoCorrida.value = "5k";
+      const campoDistanciaCorrida = document.getElementById("distanciaCorridaConfortavel");
+      if (campoDistanciaCorrida) campoDistanciaCorrida.value = "";
+      const campoPaceCorrida = document.getElementById("paceCorridaMedio");
+      if (campoPaceCorrida) campoPaceCorrida.value = "";
       aplicarValoresCheckbox("diasDisponiveis", valoresPadraoDiasDisponiveis());
       aplicarValoresCheckbox("equipamentosDisponiveis", valoresPadraoEquipamentos("academia_grande"));
       const campoPreferidos = document.getElementById("exerciciosPreferidos");
@@ -3273,8 +3577,20 @@
     }
 
     function traduzirMeta(valor) {
-      const mapa = { massa: "ganhar massa muscular", perder_peso: "perder peso", definicao: "ficar mais magro e definido", forca: "levantar mais peso / ganhar força" };
+      const mapa = { massa: "ganhar massa sem abandonar corrida", perder_peso: "emagrecimento híbrido", definicao: "definição + condicionamento", forca: "força com condicionamento", hibrido_shape: "shape + fôlego", hibrido_performance: "performance híbrida geral", corrida_5k: "correr 5 km mantendo força", corrida_10k: "correr 10 km mantendo massa" };
       return mapa[valor] || valor;
+    }
+    function traduzirPrioridadeHibrida(valor) {
+      const mapa = { equilibrado: "equilíbrio entre força e corrida", forca_shape: "mais força/shape", corrida_performance: "mais corrida/performance" };
+      return mapa[valor] || valor || "equilíbrio entre força e corrida";
+    }
+    function traduzirNivelCorrida(valor) {
+      const mapa = { iniciante: "começando agora", voltando: "voltando a correr", regular: "corre regularmente", avancado: "experiente/provas" };
+      return mapa[valor] || valor || "começando agora";
+    }
+    function traduzirObjetivoCorrida(valor) {
+      const mapa = { comecar: "começar com segurança", "3k": "completar 3 km", "5k": "completar 5 km", "10k": "correr 10 km", meia: "evoluir para meia maratona", pace: "melhorar ritmo / pace" };
+      return mapa[valor] || valor || "completar 5 km";
     }
     function traduzirRotina(valor) {
       const mapa = { nunca: "nunca treinou", dificuldade: "já treinou, mas teve dificuldades", voltando: "voltando a treinar", regular: "treina regularmente" };
@@ -3324,8 +3640,8 @@
       if (!garantirPerfilParaNavegar("Faça login com um e-mail autorizado para acessar os treinos.")) return;
       ocultarPaginasDoApp();
       document.getElementById("paginaTreino").classList.remove("hidden");
-      document.getElementById("tituloTreino").innerText = "💪 Treino de " + perfilUsuario.nome;
-      document.getElementById("resumoPerfilTreino").innerText = "Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + " | Experiência: " + traduzirExperiencia(perfilUsuario.tempoExperiencia) + " | Local: " + traduzirLocal(perfilUsuario.localTreino) + " | IMC: " + perfilUsuario.imc;
+      document.getElementById("tituloTreino").innerText = "💪 Força de " + perfilUsuario.nome;
+      document.getElementById("resumoPerfilTreino").innerText = "Meta: " + traduzirMeta(perfilUsuario.metaPrincipal) + " | Corrida: " + traduzirObjetivoCorrida(perfilUsuario.objetivoCorridaPerfil || "5k") + " | Experiência de força: " + traduzirExperiencia(perfilUsuario.tempoExperiencia) + " | Local: " + traduzirLocal(perfilUsuario.localTreino);
       carregarUltimaCardio();
       carregarTreinoAtualLocal();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3349,6 +3665,7 @@
       if (!garantirPerfilParaNavegar("Faça login com um e-mail autorizado para registrar atividades de cardio.")) return;
       ocultarPaginasDoApp();
       document.getElementById("paginaCardio").classList.remove("hidden");
+      preencherCorridaPorPerfil();
       atualizarAvisoCardioSemCheckin();
       carregarCardios();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3486,7 +3803,7 @@
     }
 
     function montarResumoDoDia(letraTreino, tempo, cardioNoTreino, energia, progressaoSemanal) {
-      const cardioTexto = cardioNoTreino && cardioNoTreino !== "nao" ? (cardioNoTreino === "esteira" ? "Esteira" : "Bicicleta") : "opcional / não incluído";
+      const cardioTexto = cardioNoTreino && cardioNoTreino !== "nao" ? (cardioNoTreino === "corrida" ? "Corrida leve" : (cardioNoTreino === "esteira" ? "Esteira" : "Bicicleta")) : "opcional / não incluído";
       const duracao = estimarDuracaoTreino(tempo, cardioNoTreino);
       const intensidade = intensidadeTreinoTexto(energia, progressaoSemanal, letraTreino);
       return "<strong>Hoje você vai fazer:</strong><br>" +
@@ -3513,6 +3830,118 @@
       if (cat === "core_abdomen") return "Core, abdômen e lombar com foco em controle e estabilidade.";
       if (cat === "full_body") return cardioEmagrecimento ? "Corpo inteiro + cardio leve/moderado conforme energia." : "Corpo inteiro com volume moderado e grupos alternados.";
       return indiceDia % 2 === 0 ? "Treino moderado e técnico." : "Treino leve e progressivo.";
+    }
+
+
+    function metaHibridaValor(meta) {
+      return ["hibrido_shape", "hibrido_performance", "corrida_5k", "corrida_10k", "perder_peso", "definicao", "massa", "forca"].includes(String(meta || ""));
+    }
+
+    function metaCorridaPerformance(meta) {
+      return ["corrida_5k", "corrida_10k", "hibrido_performance"].includes(String(meta || ""));
+    }
+
+    function calcularDistribuicaoHibrida() {
+      const total = Math.max(2, Math.min(6, Number(perfilUsuario && perfilUsuario.diasTreinoSemana ? perfilUsuario.diasTreinoSemana : 4)));
+      const meta = perfilUsuario ? perfilUsuario.metaPrincipal : "hibrido_shape";
+      const prioridade = perfilUsuario ? (perfilUsuario.prioridadeHibrida || "equilibrado") : "equilibrado";
+      let corrida = Math.max(1, Math.min(4, Number(perfilUsuario && perfilUsuario.diasCorridaSemana ? perfilUsuario.diasCorridaSemana : 2)));
+
+      if (prioridade === "forca_shape") corrida = Math.min(corrida, total <= 3 ? 1 : 2);
+      if (prioridade === "corrida_performance") corrida = Math.max(corrida, total >= 5 ? 3 : 2);
+      if (metaCorridaPerformance(meta)) corrida = Math.max(corrida, total >= 5 ? 3 : 2);
+      if (meta === "massa" || meta === "forca") corrida = Math.min(corrida, total >= 5 ? 2 : 1);
+      corrida = Math.max(1, Math.min(corrida, Math.max(1, total - 1)));
+      const forca = Math.max(1, total - corrida);
+      return { total: total, corrida: corrida, forca: forca, prioridade: prioridade, meta: meta };
+    }
+
+    function escolherSubtipoCorrida(ordemCorrida, totalCorrida) {
+      const objetivo = perfilUsuario ? (perfilUsuario.objetivoCorridaPerfil || "5k") : "5k";
+      const nivel = perfilUsuario ? (perfilUsuario.nivelCorridaPerfil || "iniciante") : "iniciante";
+      if (nivel === "iniciante" || objetivo === "comecar") return ordemCorrida === totalCorrida - 1 && totalCorrida >= 2 ? "corrida_progressiva" : "corrida_leve";
+      if (totalCorrida <= 1) return "corrida_leve";
+      if (ordemCorrida === totalCorrida - 1 && ["10k", "meia"].includes(objetivo)) return "corrida_longo";
+      if (ordemCorrida === 1 || objetivo === "pace") return "corrida_intervalado";
+      if (ordemCorrida === totalCorrida - 1) return "corrida_ritmo";
+      return "corrida_leve";
+    }
+
+    function textoSubtipoCorrida(subtipo) {
+      const mapa = {
+        corrida_leve: "Corrida leve / zona 2",
+        corrida_progressiva: "Corrida progressiva",
+        corrida_intervalado: "Intervalado controlado",
+        corrida_ritmo: "Ritmo constante",
+        corrida_longo: "Longão confortável"
+      };
+      return mapa[subtipo] || "Corrida inteligente";
+    }
+
+    function tipoSessaoPorSubtipoCorrida(subtipo) {
+      const mapa = {
+        corrida_leve: "leve",
+        corrida_progressiva: "leve",
+        corrida_intervalado: "intervalado",
+        corrida_ritmo: "ritmo",
+        corrida_longo: "longo"
+      };
+      return mapa[subtipo] || "automatico";
+    }
+
+    function descricaoCorridaSubtipo(subtipo) {
+      const objetivo = perfilUsuario ? traduzirObjetivoCorrida(perfilUsuario.objetivoCorridaPerfil || "5k") : "corrida";
+      const mapa = {
+        corrida_leve: "Base aeróbica leve para ganhar fôlego sem atrapalhar força.",
+        corrida_progressiva: "Caminhada + trotes ou corrida leve crescente, ideal para construir base.",
+        corrida_intervalado: "Tiros controlados para melhorar ritmo, evitando colocar perto de perna pesada.",
+        corrida_ritmo: "Ritmo constante e sustentável, sem buscar teste máximo.",
+        corrida_longo: "Sessão mais longa e confortável para evoluir distância com segurança."
+      };
+      return (mapa[subtipo] || "Corrida ajustada ao seu nível.") + " Objetivo: " + objetivo + ".";
+    }
+
+    function nomeItemPlanoHibrido(dia) {
+      if (!dia) return "Atividade";
+      if (dia.categoria === "cardio") return textoSubtipoCorrida(dia.subtipoCorrida || "corrida_leve");
+      if (dia.categoria === "descanso") return "Recuperação inteligente";
+      return nomeAmigavelTreino(dia.categoria);
+    }
+
+    function descricaoPlanoItemHibrido(dia, indiceDia) {
+      if (!dia) return "";
+      if (dia.categoria === "cardio") return descricaoCorridaSubtipo(dia.subtipoCorrida || "corrida_leve");
+      if (dia.categoria === "inferior" && dia.protegidoPorCorrida) return "Pernas ajustadas porque há corrida forte/longão próximo. Foque técnica e evite falha.";
+      return descricaoPlanoCategoria(dia.categoria, indiceDia);
+    }
+
+    function atividadeForcaPlano(categoria) {
+      return categoria && categoria !== "descanso" && categoria !== "cardio";
+    }
+
+    function aplicarItemCardioAoFormulario(item) {
+      const tipo = document.getElementById("tipoAtividadeCardio");
+      if (tipo) tipo.value = "corrida";
+      const nivel = document.getElementById("nivelCardio");
+      if (nivel && perfilUsuario) nivel.value = perfilUsuario.nivelCorridaPerfil || nivel.value || "iniciante";
+      const objetivo = document.getElementById("objetivoCardio");
+      if (objetivo && perfilUsuario) objetivo.value = perfilUsuario.objetivoCorridaPerfil || objetivo.value || "5k";
+      const sessao = document.getElementById("tipoSessaoCardio");
+      if (sessao && item && item.subtipoCorrida) sessao.value = tipoSessaoPorSubtipoCorrida(item.subtipoCorrida);
+      atualizarTextoTipoCardio();
+    }
+
+    function preencherCorridaPorPerfil() {
+      if (!perfilUsuario) return;
+      const tipo = document.getElementById("tipoAtividadeCardio");
+      if (tipo && !tipo.dataset.usuarioAlterou) tipo.value = "corrida";
+      const nivel = document.getElementById("nivelCardio");
+      if (nivel) nivel.value = perfilUsuario.nivelCorridaPerfil || nivel.value || "iniciante";
+      const objetivo = document.getElementById("objetivoCardio");
+      if (objetivo) objetivo.value = perfilUsuario.objetivoCorridaPerfil || objetivo.value || "5k";
+      const distancia = document.getElementById("distanciaCardio");
+      if (distancia && !distancia.value && Number(perfilUsuario.distanciaCorridaConfortavel || 0) > 0) distancia.placeholder = "Ex: " + perfilUsuario.distanciaCorridaConfortavel;
+      atualizarTextoTipoCardio();
     }
 
     function contarCategoriasRecentesPlano() {
@@ -3579,7 +4008,7 @@
 
     function chavePlanoSemanalAtual() {
       const email = usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : "anonimo";
-      return "metatreino-plano-semanal-0.1.1-" + email + "-" + inicioSemanaAtualISO();
+      return "metatreino-plano-semanal-0.2.0-hybrid-" + email + "-" + inicioSemanaAtualISO();
     }
 
     function lerPlanoSemanalLocal() {
@@ -3663,29 +4092,69 @@
 
       const dias = gerarDiasPlanoSemanalBase();
       const diasDisponiveis = (perfilUsuario.diasDisponiveis || valoresPadraoDiasDisponiveis()).map(String);
-      const metaDias = Math.max(2, Math.min(6, Number(perfilUsuario.diasTreinoSemana || 3)));
+      const dist = calcularDistribuicaoHibrida();
       const recentes = contarCategoriasRecentesPlano();
-      let ordemAtiva = 0;
+      const indicesAtivos = [];
+
+      dias.forEach(function(dia, indice) {
+        if (diasDisponiveis.indexOf(String(dia.indiceSemana)) !== -1 && indicesAtivos.length < dist.total) {
+          indicesAtivos.push(indice);
+        }
+      });
+
+      let corridaSlots = [];
+      if (indicesAtivos.length) {
+        if (dist.corrida >= 1) corridaSlots.push(indicesAtivos[Math.max(0, indicesAtivos.length - 1)]);
+        if (dist.corrida >= 2) corridaSlots.push(indicesAtivos[Math.min(1, indicesAtivos.length - 1)]);
+        if (dist.corrida >= 3) corridaSlots.push(indicesAtivos[Math.floor(indicesAtivos.length / 2)]);
+        if (dist.corrida >= 4) corridaSlots.push(indicesAtivos[Math.max(0, indicesAtivos.length - 2)]);
+      }
+      corridaSlots = Array.from(new Set(corridaSlots)).slice(0, dist.corrida).sort(function(a,b){ return a-b; });
+
+      let ordemForca = 0;
+      let ordemCorrida = 0;
       let categoriaAnterior = "";
 
-      dias.forEach(function(dia) {
-        const disponivel = diasDisponiveis.indexOf(String(dia.indiceSemana)) !== -1;
-        if (!disponivel || ordemAtiva >= metaDias) {
+      dias.forEach(function(dia, indiceDia) {
+        if (indicesAtivos.indexOf(indiceDia) === -1) {
           dia.categoria = "descanso";
+          dia.focoHibrido = "recuperacao";
+        } else if (corridaSlots.indexOf(indiceDia) !== -1) {
+          dia.categoria = "cardio";
+          dia.focoHibrido = "corrida";
+          dia.subtipoCorrida = escolherSubtipoCorrida(ordemCorrida, corridaSlots.length);
+          ordemCorrida++;
+          categoriaAnterior = "cardio";
         } else {
-          dia.categoria = escolherCategoriaParaPlano(dia.indiceSemana, ordemAtiva, recentes, categoriaAnterior);
-          categoriaAnterior = dia.categoria;
-          ordemAtiva++;
+          let categoria = escolherCategoriaParaPlano(dia.indiceSemana, ordemForca, recentes, categoriaAnterior);
+          const proximoDia = dias[indiceDia + 1];
+          const anteriorDia = dias[indiceDia - 1];
+          const corridaForteProxima = proximoDia && corridaSlots.indexOf(indiceDia + 1) !== -1;
+          const corridaForteAnterior = anteriorDia && corridaSlots.indexOf(indiceDia - 1) !== -1;
+          const subtipoProximo = corridaForteProxima ? escolherSubtipoCorrida(corridaSlots.indexOf(indiceDia + 1), corridaSlots.length) : "";
+          const subtipoAnterior = corridaForteAnterior ? escolherSubtipoCorrida(corridaSlots.indexOf(indiceDia - 1), corridaSlots.length) : "";
+          if (categoria === "inferior" && (["corrida_intervalado", "corrida_longo"].includes(subtipoProximo) || ["corrida_intervalado", "corrida_longo"].includes(subtipoAnterior))) {
+            categoria = ordemForca % 2 === 0 ? "superior" : "full_body";
+            dia.protegidoPorCorrida = true;
+          }
+          if (dist.prioridade === "forca_shape" && categoria === "cardio") categoria = "superior";
+          dia.categoria = categoria;
+          dia.focoHibrido = "forca";
+          ordemForca++;
+          categoriaAnterior = categoria;
         }
         dia.status = statusAntigo[dia.dataISO] || "pendente";
       });
 
       const plano = {
-        versao: "0.1.1",
+        versao: "0.2.0-hybrid",
         inicioSemana: inicioSemanaAtualISO(),
         criadoEm: Date.now(),
-        metaSemanal: metaDias,
-        metaCardio: (perfilUsuario.metaPrincipal === "perder_peso" || perfilUsuario.metaPrincipal === "definicao") ? 2 : 1,
+        metaSemanal: dist.total,
+        metaForca: dist.forca,
+        metaCardio: dist.corrida,
+        prioridadeHibrida: dist.prioridade,
+        objetivoCorrida: perfilUsuario.objetivoCorridaPerfil || "5k",
         dias: dias
       };
       salvarPlanoSemanalLocal(plano);
@@ -3721,19 +4190,19 @@
       const pct = atividades ? Math.min(100, Math.round((concluidos / atividades) * 100)) : 0;
       const dataFim = adicionarDiasISO(plano.inicioSemana, 6);
       let html = "<div class='plano-topo'><strong>Semana de " + limparTextoSeguro(formatarDataPlano(plano.inicioSemana)) + " a " + limparTextoSeguro(formatarDataPlano(dataFim)) + "</strong><br>" +
-        "Meta: " + atividades + " atividade(s) planejada(s) | Concluídas: " + concluidos + " | Puladas: " + pulados +
+        "Meta híbrida: " + atividades + " atividade(s) | Força: " + (plano.metaForca || plano.dias.filter(function(d){return atividadeForcaPlano(d.categoria);}).length) + " | Corrida: " + (plano.metaCardio || plano.dias.filter(function(d){return d.categoria === "cardio";}).length) + " | Concluídas: " + concluidos + " | Puladas: " + pulados +
         "<div class='barra-progresso-fina'><div style='width:" + pct + "%'></div></div>" +
-        "<span class='small'>O plano usa seus dias disponíveis, meta, histórico recente e cardio para equilibrar a semana.</span></div>";
+        "<span class='small'>O plano usa seus dias disponíveis, prioridade híbrida, objetivo de corrida e histórico recente para equilibrar força, corrida e recuperação.</span></div>";
 
       plano.dias.forEach(function(dia, i) {
         const ehHoje = dia.dataISO === hoje;
         const tituloHoje = ehHoje ? " Hoje" : "";
         const statusClass = classeStatusPlano(dia.status, ehHoje);
-        const nome = dia.categoria === "cardio" ? "Cardio progressivo" : nomeAmigavelTreino(dia.categoria);
+        const nome = nomeItemPlanoHibrido(dia);
         const botaoComecar = dia.categoria === "descanso" ? "Adaptar" : "Começar";
         html += "<div class='plano-semanal-dia'><strong>" + limparTextoSeguro(dia.nomeDia) + tituloHoje + "</strong><br>" +
           "<span>" + limparTextoSeguro(nome) + "</span><br>" +
-          "<span class='small'>" + limparTextoSeguro(descricaoPlanoCategoria(dia.categoria, dia.indiceSemana)) + "</span><br>" +
+          "<span class='small'>" + limparTextoSeguro(descricaoPlanoItemHibrido(dia, dia.indiceSemana)) + "</span><br>" +
           "<span class='" + statusClass + "'>" + textoStatusPlano(dia.status) + "</span>" +
           "<div class='plano-acoes-dia'>" +
           "<button type='button' class='botao-secundario' onclick='comecarItemPlano(" + i + ")'>" + botaoComecar + "</button>" +
@@ -3808,9 +4277,14 @@
       }
       const categoriaOriginal = origem.categoria;
       plano.dias[destinoIndex].categoria = categoriaOriginal;
+      plano.dias[destinoIndex].subtipoCorrida = origem.subtipoCorrida || "";
+      plano.dias[destinoIndex].focoHibrido = origem.focoHibrido || "";
+      plano.dias[destinoIndex].protegidoPorCorrida = origem.protegidoPorCorrida || false;
       plano.dias[destinoIndex].status = "pendente";
       plano.dias[destinoIndex].reagendadoDe = origem.dataISO;
       origem.categoria = "descanso";
+      origem.subtipoCorrida = "";
+      origem.focoHibrido = "recuperacao";
       origem.status = "reagendado";
       origem.reagendadoPara = plano.dias[destinoIndex].dataISO;
       salvarPlanoSemanalLocal(plano);
@@ -3837,7 +4311,7 @@
       const plano = obterOuCriarPlanoSemanal(false);
       const item = plano.dias[indice];
       if (!item) return;
-      if (item.categoria === "cardio") { irParaCardio(); return; }
+      if (item.categoria === "cardio") { aplicarItemCardioAoFormulario(item); irParaCardio(); return; }
       const select = document.getElementById("divisaoTreino");
       if (select) select.value = item.categoria === "descanso" ? "descanso" : normalizarCategoriaTreino(item.categoria);
       irParaCheckin();
@@ -3866,7 +4340,7 @@
       const treinoLocal = lerResumoTreinoAtualLocal();
       if (treinoLocal) { irParaTreino(); return; }
       const itemHoje = obterItemPlanoHoje();
-      if (itemHoje && itemHoje.categoria === "cardio") { irParaCardio(); return; }
+      if (itemHoje && itemHoje.categoria === "cardio") { aplicarItemCardioAoFormulario(itemHoje); irParaCardio(); return; }
       if (itemHoje && itemHoje.categoria && itemHoje.categoria !== "descanso") {
         const select = document.getElementById("divisaoTreino");
         if (select) select.value = itemHoje.categoria;
@@ -3880,7 +4354,11 @@
       const concluidas = plano.dias.filter(function(dia){ return dia.status === "concluido" && dia.categoria !== "descanso"; }).length;
       const pendentes = plano.dias.filter(function(dia){ return dia.categoria !== "descanso" && dia.status !== "concluido" && dia.status !== "pulado"; }).length;
       const puladas = plano.dias.filter(function(dia){ return dia.status === "pulado" && dia.categoria !== "descanso"; }).length;
-      return { planejadas: planejadas, concluidas: concluidas, pendentes: pendentes, puladas: puladas, plano: plano };
+      const forcaPlanejada = plano.dias.filter(function(dia){ return atividadeForcaPlano(dia.categoria); }).length;
+      const corridaPlanejada = plano.dias.filter(function(dia){ return dia.categoria === "cardio"; }).length;
+      const forcaConcluida = plano.dias.filter(function(dia){ return dia.status === "concluido" && atividadeForcaPlano(dia.categoria); }).length;
+      const corridaConcluida = plano.dias.filter(function(dia){ return dia.status === "concluido" && dia.categoria === "cardio"; }).length;
+      return { planejadas: planejadas, concluidas: concluidas, pendentes: pendentes, puladas: puladas, forcaPlanejada: forcaPlanejada, corridaPlanejada: corridaPlanejada, forcaConcluida: forcaConcluida, corridaConcluida: corridaConcluida, plano: plano };
     }
 
     function montarResumoHojeBase() {
@@ -3893,11 +4371,11 @@
         return "<strong>Treino em andamento</strong><br>" + limparTextoSeguro(nomeAmigavelTreino(categoria)) + "<br>Progresso: " + concluidos + " de " + total + " exercício(s) concluído(s).<br><span class='small'>Toque em Começar agora para continuar a execução.</span>";
       }
       if (itemHoje) {
-        const nome = itemHoje.categoria === "cardio" ? "Cardio progressivo" : nomeAmigavelTreino(itemHoje.categoria);
+        const nome = nomeItemPlanoHibrido(itemHoje);
         let motivo = "Escolhido pelo plano semanal para manter equilíbrio entre treino, cardio e recuperação.";
         if (itemHoje.categoria === "descanso") motivo = "Hoje está marcado como recuperação. Você pode adaptar se estiver bem, mas descanso também faz parte do progresso.";
         if (itemHoje.status === "concluido") motivo = "Atividade de hoje já está marcada como concluída. Excelente consistência.";
-        return "<strong>Hoje o foco é:</strong><br>" + limparTextoSeguro(nome) + "<br><span class='small'>" + limparTextoSeguro(descricaoPlanoCategoria(itemHoje.categoria, itemHoje.indiceSemana)) + "</span><br><br><strong>Por que esse foco?</strong><br>" + limparTextoSeguro(motivo);
+        return "<strong>Hoje o foco é:</strong><br>" + limparTextoSeguro(nome) + "<br><span class='small'>" + limparTextoSeguro(descricaoPlanoItemHibrido(itemHoje, itemHoje.indiceSemana)) + "</span><br><br><strong>Por que esse foco?</strong><br>" + limparTextoSeguro(motivo);
       }
       return "<strong>Comece pelo check-in</strong><br>Responda energia, dor e tempo disponível para o app montar seu treino do dia.";
     }
@@ -3926,16 +4404,16 @@
       const progresso = document.getElementById("progressoSemanaHoje");
       if (progresso) {
         progresso.innerHTML =
-          "<div class='resumo-kpi'><strong>" + stats.concluidas + "/" + stats.planejadas + "</strong><span>Atividades concluídas</span></div>" +
-          "<div class='resumo-kpi'><strong>" + pct + "%</strong><span>Progresso da semana</span></div>" +
-          "<div class='resumo-kpi'><strong>" + stats.pendentes + "</strong><span>Pendentes</span></div>" +
-          "<div class='resumo-kpi'><strong>" + stats.puladas + "</strong><span>Puladas</span></div>";
+          "<div class='resumo-kpi'><strong>" + stats.forcaConcluida + "/" + stats.forcaPlanejada + "</strong><span>Força concluída</span></div>" +
+          "<div class='resumo-kpi'><strong>" + stats.corridaConcluida + "/" + stats.corridaPlanejada + "</strong><span>Corrida/cardio</span></div>" +
+          "<div class='resumo-kpi'><strong>" + pct + "%</strong><span>Progresso híbrido</span></div>" +
+          "<div class='resumo-kpi'><strong>" + stats.pendentes + "</strong><span>Pendentes</span></div>";
       }
       const insight = document.getElementById("insightHojeApp");
       if (insight) {
         if (stats.concluidas >= stats.planejadas && stats.planejadas > 0) insight.innerHTML = "Semana muito boa: você concluiu o que estava planejado. Agora mantenha recuperação e técnica.";
         else if (stats.puladas > 0) insight.innerHTML = "Você pulou uma atividade. O ideal é reorganizar com calma, sem tentar compensar tudo no mesmo dia.";
-        else insight.innerHTML = "Boa rota: siga o foco de hoje e registre o treino/cardio para o app aprender melhor.";
+        else insight.innerHTML = "Boa rota híbrida: siga o foco de hoje e registre força/corrida para o app equilibrar a próxima sessão.";
       }
       obterHistoricoDaNuvem(function(treinos) { obterCardiosDaNuvem(function(cardios) { atualizarProximaConquistaHoje(treinos, cardios); }); });
     }
@@ -5850,8 +6328,8 @@
       if (cardioNoTreino !== "nao" && localComCardio && letraTreino !== "descanso") {
         const reducaoCardio = tempo === "longo" ? 2 : (tempo === "normal" ? 1 : 0);
         if (reducaoCardio > 0) alvoExercicios = Math.max(4, alvoExercicios - reducaoCardio);
-        const nomeCardio = cardioNoTreino === "esteira" ? "esteira" : "bicicleta";
-        mensagemCardioTreino = " Cardio incluído hoje: " + nomeCardio + ". O app reduziu o volume de exercícios para encaixar o cardio sem deixar o treino pesado.";
+        const nomeCardio = cardioNoTreino === "corrida" ? "corrida leve" : (cardioNoTreino === "esteira" ? "esteira" : "bicicleta");
+        mensagemCardioTreino = " Corrida/cardio incluído hoje: " + nomeCardio + ". O app reduziu o volume de exercícios para encaixar o estímulo sem deixar o treino pesado.";
       } else if (cardioNoTreino !== "nao" && !localComCardio) {
         mensagemCardioTreino = " Você marcou cardio no treino, mas seu local cadastrado não indica estrutura de academia. Faça apenas se tiver equipamento disponível e com segurança.";
       }
@@ -6852,7 +7330,7 @@
 
 
 <script>
-  const METATREINO_APP_VERSION = "0.1.1";
+  const METATREINO_APP_VERSION = "0.2.0";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");

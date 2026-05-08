@@ -4,6 +4,21 @@ Regra fixa de atualizações a partir da v0.0.9:
 - O histórico completo de mudanças fica neste arquivo CHANGELOG que acompanha o pacote.
 - Em atualizações futuras, manter esta regra: app limpo com versão atual; histórico completo somente no arquivo.
 
+v0.2.0 beta - MetaTreino Hybrid: musculação + corrida
+Data: 08/05/2026
+
+Principais mudanças:
+- Reposicionado o app para treino híbrido, unindo musculação, corrida/cardio e recuperação no mesmo plano semanal.
+- Perfil do aluno ganhou campos de nível de corrida, objetivo de corrida, dias de corrida por semana, prioridade híbrida, maior distância confortável e pace aproximado.
+- Plano semanal agora distribui força, corrida leve, corrida progressiva, intervalado, longão e recuperação, evitando colocar perna pesada perto de tiros ou longão.
+- Tela Hoje passou a mostrar progresso híbrido separado entre força e corrida/cardio.
+- Aba Corrida adicionada à navegação inferior para acesso direto às sugestões e registros de corrida/cardio.
+- Check-in e treino de força adaptados para considerar corrida/cardio junto da sessão quando o aluno quiser.
+- Textos principais atualizados para refletir a proposta: shape, força, fôlego e recuperação.
+- Aparência redesenhada com identidade escura, premium e atlética, usando visual Hybrid Athlete.
+- Manifest e service worker atualizados para cache v0.2.0.
+- Regra fixa mantida: dentro do app aparece somente a versão atual; histórico completo apenas neste CHANGELOG.
+
 v0.1.1 beta - Ajustes de compartilhamento e fluxo de registro
 Data: 02/05/2026
 
