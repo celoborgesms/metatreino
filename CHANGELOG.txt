@@ -1,3 +1,17 @@
+v0.4.1 beta - Correções de fluxo, visual preto/vermelho e treino híbrido real
+
+- Visual atualizado para preto/grafite com vermelho de destaque.
+- Imagens de corrida e força foram embutidas diretamente no index.html como data URI; não dependem de arquivos separados.
+- Aba Corrida removeu a repetição de últimos registros; histórico fica centralizado em Evolução.
+- Perfil ao calcular/salvar não joga mais o usuário automaticamente para Plano; botão Ver plano sugerido permanece disponível.
+- Compartilhar foi removido das abas Força e Corrida e centralizado na Evolução/calendário do dia.
+- Calendário de treinos agora permite compartilhar o registro completo do dia com força + corrida juntos.
+- Recuperação saiu da navegação principal, mas continua como tipo de sessão no Plano/Check-in.
+- Check-in foi simplificado: aplicar recomendação começa a sessão correta; manter plano original também começa a sessão correta.
+- Aba Corrida ganhou desafio persistente até a data marcada e sugestões mais contextuais.
+- Conquistas ampliadas com foco em força, corrida, zona leve, desafio, dias híbridos, consistência e recuperação.
+- Treino de força do dia agora tenta abrir/gerar automaticamente ao entrar pela sessão planejada.
+
 v0.3.0 beta - Estrutura híbrida real: Força + Corrida + Recuperação
 Data: 08/05/2026
 
