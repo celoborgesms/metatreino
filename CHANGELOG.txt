@@ -1,3 +1,20 @@
+v0.4.4 beta - Imagens embutidas no index e pacote final alinhado
+
+- As duas imagens da nova identidade visual agora estão embutidas diretamente no index.html como data URI.
+- O app não depende mais de arquivos separados para os heróis de Corrida e Força.
+- Mantida a paleta grafite + azul/ciano premium.
+- Mantida a lógica corrigida da aba Hoje, com foco principal vindo do Plano e pendência antiga mostrada de forma mais discreta.
+- Manifest e service worker atualizados para cache v0.4.4.
+
+v0.4.3 beta - Ajuste de pendência e nova identidade visual fria
+
+- Aba Hoje continua usando o Plano do dia como foco principal.
+- Treino antigo de força só aparece na tela Hoje se já tiver sido realmente iniciado; se estiver em 0 exercício(s), ele deixa de poluir o foco do dia.
+- Card de pendência antiga ficou mais discreto e com texto mais claro.
+- Identidade visual trocada do vermelho/verde para grafite com ciano e azul.
+- Imagens de força e corrida foram substituídas por novas artes coerentes com a nova paleta e referenciadas no index.
+- Manifest e service worker atualizados para cache v0.4.3.
+
 v0.4.2 beta - Correção de coerência visual e lógica híbrida
 
 - Aba Hoje agora usa o Plano do dia como fonte principal da verdade.
