@@ -1,38 +1,35 @@
-MetaTreino Hybrid — Melhorias UX/Conteúdo (pós v0.4.5-fixed)
-=============================================================
+MetaTreino Hybrid — v0.4.6 Beta
+=================================
 
-1. ONBOARDING EM 3 PASSOS (wizard)
-   - Formulário de 22 campos dividido em 3 etapas com indicador de progresso visual.
-   - Passo 1: Dados básicos (nome, sexo, idade, peso, altura, local de treino).
-   - Passo 2: Objetivos e rotina (meta, experiência, dias disponíveis, prioridade).
-   - Passo 3: Corrida + seção de detalhes opcionais recolhível (equipamentos, exercícios, limitações).
-   - Validação entre passos: nome obrigatório no passo 1.
+Atualizada em: 11/05/2026
 
-2. PALETA UNIFICADA
-   - Gradientes vermelhos fortes removidos do fundo do body.
-   - Fundo neutro escuro (#050506 → #0d0d10) sem competir com os badges coloridos de sessão.
-   - Badges de Força (azul), Corrida (verde) e Recuperação (roxo) agora se destacam corretamente.
-   - Acento vermelho mantido nos botões, bordas de card e indicadores de progresso.
+1. FLUXO DA ABA HOJE SIMPLIFICADO
+   - O botão "Começar agora" não abre mais o check-in rápido em popup.
+   - Agora ele tenta iniciar diretamente a sessão planejada do dia: força, corrida/cardio, recuperação ou descanso.
+   - O botão "Adaptar check-in / recalcular" permanece como único caminho claro para quem quer ajustar energia, dor, tempo ou foco do dia.
 
-3. CHECK-IN RÁPIDO (modal popup)
-   - Botão "Começar agora" na aba Hoje agora abre um modal de 2 perguntas (energia + dor).
-   - Interface com cards selecionáveis (visual tátil, fácil no celular).
-   - Se energia = "mal", redireciona para check-in completo.
-   - Se bem/cansado, aplica ajuste e vai direto para o treino.
-   - Check-in completo continua disponível pelo botão "Adaptar check-in".
+2. CHECK-IN COMPLETO MAIS LIMPO
+   - Removidos botões redundantes que levavam para fluxos parecidos.
+   - Depois de gerar a recomendação, aparecem apenas duas ações principais: "Aplicar e começar" ou "Cancelar e voltar".
+   - A recomendação continua ajustando apenas o treino do dia; mudanças na semana inteira continuam na aba Plano.
 
-4. LINGUAGEM SIMPLES NA CORRIDA
-   - "Zona 1–2" substituído por "Ritmo confortável (consegue falar frases inteiras)".
-   - Dica para iniciante adicionada na sugestão: método de intercalar caminhada e corrida.
-   - Labels dos selects atualizados para linguagem acessível.
+3. BIBLIOTECA DE FORÇA MAIS HÍBRIDA
+   - Adicionados exercícios úteis para corredores:
+     • Step-down unilateral controlado
+     • Copenhagen plank adaptado
+     • Clamshell com elástico
+     • Panturrilha em pé com pausa no alongamento
+     • Nordic curl assistido
+     • Marcha A técnica
+   - Pernas — Força preserva estímulos mais fortes de membros inferiores.
+   - Pernas — Moderado evita exercícios mais agressivos e prioriza controle, estabilidade e menor fadiga para corrida.
 
-5. ORIENTAÇÃO COLAPSÁVEL NA CORRIDA
-   - Texto de orientação da sessão de corrida agora fica recolhido por padrão.
-   - Usuário expande com "▶ Ver orientação da sessão" — libera espaço no celular.
-   - Detalhes opcionais do perfil também recolhíveis no onboarding.
+4. MELHORIAS DE PERFORMANCE
+   - Cache curto para histórico de treinos e cardios, reduzindo leituras repetidas na aba Evolução/Progresso durante a mesma renderização.
 
-6. GRÁFICOS DE EVOLUÇÃO
-   - Nova seção "Evolução de carga" na aba Progresso com gráfico SVG de linha.
-   - Selecione qualquer exercício registrado para ver a progressão de carga ao longo do tempo.
-   - Nova seção "Evolução na corrida" com volume mensal (km acumulados) ou por sessão.
-   - Gráficos sem dependência de bibliotecas externas (SVG nativo, sem Chart.js).
+5. MELHORIAS VISUAIS
+   - Pequeno refinamento visual nas áreas Hoje, Plano, Check-in e Progresso para reforçar a identidade híbrida sem poluir a tela.
+
+6. TRANSPARÊNCIA DE VERSÃO
+   - A aba Versão atual foi atualizada para v0.4.6 Beta com a lista real das mudanças desta entrega.
+   - Manifest e service worker também foram atualizados para forçar cache novo no PWA.
