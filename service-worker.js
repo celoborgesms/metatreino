@@ -1,10 +1,10 @@
-const CACHE_NAME = "metatreino-cache-v0.5.4-nav-checkin-hotfix";
+const CACHE_NAME = "metatreino-cache-v0.5.5-forca-checkin-simple-hotfix";
 
 const APP_SHELL = [
   "./",
-  "./index.html?v=0.5.4",
-  "./manifest.json?v=0.5.4",
-  "./icon-512.png?v=0.5.4"
+  "./index.html?v=0.5.5",
+  "./manifest.json?v=0.5.5",
+  "./icon-512.png?v=0.5.5"
 ];
 
 // INSTALACAO
@@ -56,13 +56,13 @@ self.addEventListener("fetch", function(event) {
           var cloneParaCache1 = response.clone();
           var cloneParaCache2 = response.clone();
           caches.open(CACHE_NAME).then(function(cache) {
-            cache.put("./index.html?v=0.5.4", cloneParaCache1);
+            cache.put("./index.html?v=0.5.5", cloneParaCache1);
             cache.put("./index.html", cloneParaCache2);
           });
           return response;
         })
         .catch(function() {
-          return caches.match("./index.html?v=0.5.4").then(function(cached) {
+          return caches.match("./index.html?v=0.5.5").then(function(cached) {
             return cached || caches.match("./index.html");
           });
         })

@@ -1,3 +1,10 @@
+MetaTreino Hybrid 0.5.5 - Hotfix Força/Check-in simples
+
+- A aba Força agora abre como tela livre e não tenta gerar treino automaticamente ao tocar na navegação inferior.
+- O check-in foi simplificado: o botão principal gera diretamente a sessão escolhida.
+- A etapa com vários botões de recomendação foi removida do fluxo principal.
+- Escolhas manuais de força no check-in passam a prevalecer sobre corrida programada no plano do dia.
+
 MetaTreino Hybrid — v0.5.3 Beta (revisão de correções)
 Data: 12/05/2026
 
@@ -109,7 +116,7 @@ MetaTreino Hybrid — v0.4.6 Beta
 
 
 ============================================================
-MetaTreino Hybrid 0.5.4 Beta - hotfix navegacao/check-in
+MetaTreino Hybrid 0.5.5 Beta - hotfix navegacao/check-in
 ============================================================
 - Corrigido: toque nas abas inferiores agora usa uma camada segura de navegacao, com fallback se alguma rotina antiga quebrar.
 - Corrigido: o check-in passa a respeitar a escolha manual de treino de forca mesmo quando o plano do dia recomenda corrida/cardio.

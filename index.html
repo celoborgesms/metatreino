@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino Hybrid</title>
-  <meta name="app-version" content="0.5.4">
+  <meta name="app-version" content="0.5.5">
   <meta name="theme-color" content="#020617">
-  <link rel="manifest" href="manifest.json?v=0.5.4">
-<link rel="icon" type="image/png" href="icon-512.png?v=0.5.4">
-<link rel="apple-touch-icon" href="icon-512.png?v=0.5.4">
+  <link rel="manifest" href="manifest.json?v=0.5.5">
+<link rel="icon" type="image/png" href="icon-512.png?v=0.5.5">
+<link rel="apple-touch-icon" href="icon-512.png?v=0.5.5">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1620,7 +1620,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino Hybrid • Beta 0.5.4</span>
+        <span class="app-badge">MetaTreino Hybrid • Beta 0.5.5</span>
         <h1><span class="hero-meta-word">Meta</span>Treino <span class="hero-hybrid-word">Hybrid</span></h1>
         <p>Musculação e corrida no mesmo plano: força, shape, fôlego e recuperação sem bagunçar sua semana.</p>
       </div>
@@ -1864,10 +1864,13 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino Hybrid 0.5.4 Beta</strong><br>
+          <strong>MetaTreino Hybrid 0.5.5 Beta</strong><br>
           <span class="tag beta">Hybrid</span>
           <p><strong>Atualizada em:</strong> 12/05/2026</p>
           <ul class="versao-atual-lista">
+            <li>A aba <strong>Força</strong> agora abre como tela normal, sem tentar gerar treino automaticamente e sem depender de treino programado no plano.</li>
+            <li>O check-in foi simplificado: o botão principal agora gera a sessão escolhida e direciona direto para força, corrida/cardio ou recuperação.</li>
+            <li>A caixa antiga de múltiplas recomendações/sugestões no check-in foi removida do fluxo principal para reduzir confusão.</li>
             <li>O check-in voltou a perguntar se haverá <strong>cardio junto com a força</strong>, com opções para não fazer, corrida leve, esteira ou bicicleta.</li>
             <li>O resumo do treino de força agora mostra <strong>Cardio junto</strong> com clareza, em vez de exibir "opcional / não incluído" sem contexto.</li>
             <li>Os cards de força voltaram a mostrar <strong>séries, repetições, descanso e esforço/RPE</strong>.</li>
@@ -2529,7 +2532,7 @@
           treino: treinoAtual,
           letra: treinoAtual.letra || "",
           categoria: treinoAtual.categoria || treinoAtual.letra || "",
-          versaoGeracao: "0.5.4",
+          versaoGeracao: "0.5.5",
           concluidos: exerciciosConcluidos || [],
           feedback: feedbackTreinoFinalAtual || "",
           salvoEm: Date.now()
@@ -2953,7 +2956,7 @@
     function exportarMeusDados() {
       const dadosBase = {
         app: "MetaTreino",
-        versao: "0.5.4",
+        versao: "0.5.5",
         exportadoEm: new Date().toISOString(),
         usuario: usuarioAtual ? { uid: usuarioAtual.uid, email: usuarioAtual.email || "", nome: usuarioAtual.displayName || "" } : null,
         dadosLocais: coletarDadosLocaisPrivacidade(),
@@ -4580,7 +4583,7 @@
       });
 
       const plano = {
-        versao: "0.5.4",
+        versao: "0.5.5",
         inicioSemana: inicioSemanaAtualISO(),
         criadoEm: Date.now(),
         metaSemanal: dist.total,
@@ -7766,7 +7769,7 @@
 <script>
 (function() {
   const MT03 = {
-    versaoPlano: "0.5.4",
+    versaoPlano: "0.5.5",
     forca: ["superior", "inferior_forca", "inferior_moderado", "full_body", "core_estabilidade", "funcional"],
     corrida: ["corrida_leve", "corrida_regenerativa", "intervalado", "ritmo", "longo", "progressiva", "teste", "caminhada_leve"],
     recuperacao: ["caminhada_leve", "mobilidade", "alongamento", "recuperacao_pernas", "soltura_muscular", "relaxamento", "descanso_total"]
@@ -8556,7 +8559,7 @@
 </script>
 
 <script>
-  const METATREINO_APP_VERSION = "0.4.7";
+  const METATREINO_APP_VERSION = "0.5.5";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -11673,7 +11676,7 @@
 <script id="metatreino-midia-local-v052">
 (function(){
   "use strict";
-  var VERSAO_MIDIA_LOCAL = "0.5.4";
+  var VERSAO_MIDIA_LOCAL = "0.5.5";
 
   function normalizarMidiaMT(valor) {
     return String(valor || "")
@@ -12029,7 +12032,7 @@
 <script id="metatreino-midia-local-v053-hotfix">
 (function(){
   "use strict";
-  var VERSION_MIDIA_FIX = "0.5.4";
+  var VERSION_MIDIA_FIX = "0.5.5";
 
   // ── Utilitários ────────────────────────────────────────────────────────────
 
@@ -12341,7 +12344,7 @@
 <script id="mt-v054-nav-checkin-choice-fix">
 (function(){
   "use strict";
-  var VERSION_FIX = "0.5.4";
+  var VERSION_FIX = "0.5.5";
 
   function byId(id){ return document.getElementById(id); }
   function esc(valor){
@@ -12724,6 +12727,352 @@
   });
   setTimeout(instalarBottomNav, 300);
   setTimeout(instalarBottomNav, 1000);
+})();
+</script>
+
+
+<script id="mt-v055-forca-checkin-simple-hotfix">
+(function(){
+  "use strict";
+  var VERSION_V055 = "0.5.5";
+  var oldIrParaTreinoV055 = window.irParaTreino;
+  var oldGerarRecomendacaoV055 = window.gerarRecomendacaoCheckin;
+  var oldAplicarRecomendacaoV055 = window.aplicarRecomendacaoCheckin;
+
+  function byId(id){ return document.getElementById(id); }
+  function norm(valor){
+    try { if (typeof window.normalizarCategoriaTreino === "function") return window.normalizarCategoriaTreino(valor || ""); } catch(e) {}
+    return String(valor || "").trim().toLowerCase();
+  }
+  function esc(valor){
+    if (typeof window.limparTextoSeguro === "function") {
+      try { return window.limparTextoSeguro(valor); } catch(e) {}
+    }
+    return String(valor == null ? "" : valor).replace(/[&<>\"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function ehForca(categoria){
+    var c = norm(categoria);
+    return ["superior","inferior","inferior_forca","inferior_moderado","full_body","core_abdomen","core_estabilidade","funcional"].indexOf(c) !== -1;
+  }
+  function hojeISO(){
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var dia = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + dia;
+  }
+  function contextoDataISO(){
+    var ctx = window.__mtCheckinContextoV048 || null;
+    if (ctx && ctx.dataISO) return ctx.dataISO;
+    try {
+      ctx = JSON.parse(localStorage.getItem("metatreinoCheckinContextoV048") || "null");
+      if (ctx && ctx.dataISO) return ctx.dataISO;
+    } catch(e) {}
+    return hojeISO();
+  }
+  function obterPlano(){
+    try { if (typeof window.obterOuCriarPlanoSemanal === "function") return window.obterOuCriarPlanoSemanal(false); } catch(e) {}
+    return null;
+  }
+  function salvarPlano(plano){
+    try { if (plano && typeof window.salvarPlanoSemanalLocal === "function") window.salvarPlanoSemanalLocal(plano); } catch(e) {}
+  }
+  function itemPorData(dataISO){
+    var plano = obterPlano();
+    var dias = plano && Array.isArray(plano.dias) ? plano.dias : [];
+    for (var i = 0; i < dias.length; i++) {
+      if (dias[i] && dias[i].dataISO === dataISO) return { plano: plano, item: dias[i] };
+    }
+    return { plano: plano, item: null };
+  }
+  function categoriaPlanoAtual(){
+    var achado = itemPorData(contextoDataISO());
+    var item = achado.item;
+    if (!item) {
+      try { item = typeof window.obterItemPlanoHoje === "function" ? window.obterItemPlanoHoje() : null; } catch(e) { item = null; }
+    }
+    return item ? norm(item.categoria || item.tipo || "") : "";
+  }
+  function nomeForca(cat){
+    try { if (typeof window.nomeAmigavelTreino === "function") return window.nomeAmigavelTreino(cat); } catch(e) {}
+    var c = norm(cat);
+    var mapa = {
+      superior: "Superiores",
+      inferior: "Pernas - Forca",
+      inferior_forca: "Pernas - Forca",
+      inferior_moderado: "Pernas - Moderado",
+      full_body: "Corpo Todo",
+      core_abdomen: "Core e Estabilidade",
+      core_estabilidade: "Core e Estabilidade",
+      funcional: "Forca Funcional"
+    };
+    return mapa[c] || "Treino de forca";
+  }
+  function verificarPerfil(msg){
+    try { if (typeof window.garantirPerfilParaNavegar === "function") return !!window.garantirPerfilParaNavegar(msg || "Faca login com um e-mail autorizado para navegar no app."); } catch(e) {}
+    return true;
+  }
+  function limparFluxosPendentes(){
+    try { localStorage.removeItem("metatreinoFluxoPendente"); } catch(e) {}
+    try { localStorage.removeItem("metatreinoFluxoPendenteV048"); } catch(e) {}
+    window.__mtFluxoPendente = null;
+  }
+  function esconderPaginas(){
+    ["paginaPerfil","paginaHoje","paginaPlano","paginaTreino","paginaCheckin","paginaCardio","paginaRecuperacao","paginaProgresso","paginaPainelTreinador"].forEach(function(id){
+      var el = byId(id); if (el) el.classList.add("hidden");
+    });
+  }
+  function mostrarPagina(kind){
+    var mapa = { hoje:"paginaHoje", plano:"paginaPlano", treino:"paginaTreino", checkin:"paginaCheckin", cardio:"paginaCardio", progresso:"paginaProgresso", perfil:"paginaPerfil", recuperacao:"paginaRecuperacao" };
+    esconderPaginas();
+    var el = byId(mapa[kind] || mapa.hoje);
+    if (el) el.classList.remove("hidden");
+    var nav = byId("navegacaoPrincipal");
+    if (nav) nav.classList.remove("hidden");
+    destacarAba(kind);
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch(e) { try { window.scrollTo(0,0); } catch(x) {} }
+  }
+  function destacarAba(kind){
+    var nav = byId("navegacaoPrincipal");
+    if (!nav) return;
+    var mapaTexto = { hoje:/Hoje/i, plano:/Plano/i, treino:/For/i, cardio:/Corrida/i, progresso:/Evolu/i, perfil:/Perfil/i };
+    Array.prototype.forEach.call(nav.querySelectorAll("button"), function(btn){
+      var ativo = mapaTexto[kind] && mapaTexto[kind].test(btn.textContent || "");
+      btn.classList.toggle("tab-ativa-v054", !!ativo);
+      btn.classList.toggle("tab-ativa-v055", !!ativo);
+    });
+  }
+  function toast(msg){
+    try {
+      if (typeof window.toastInline === "function") { window.toastInline(msg, "info"); return; }
+      var t = document.createElement("div");
+      t.textContent = msg;
+      t.style.cssText = "position:fixed;bottom:92px;left:50%;transform:translateX(-50%);background:#0f172a;color:#f8fafc;padding:10px 14px;border-radius:12px;z-index:99999;box-shadow:0 8px 28px rgba(0,0,0,.35);max-width:92vw;font-size:13px";
+      document.body.appendChild(t);
+      setTimeout(function(){ try { t.remove(); } catch(e) {} }, 2600);
+    } catch(e) {}
+  }
+  function atualizarCabecalhoForca(){
+    var titulo = byId("tituloTreino");
+    var resumo = byId("resumoPerfilTreino");
+    if (titulo) {
+      var nome = (window.perfilUsuario && window.perfilUsuario.nome) ? window.perfilUsuario.nome : "hoje";
+      titulo.innerText = "💪 Força" + (nome && nome !== "hoje" ? " de " + nome : " do dia");
+    }
+    if (resumo) {
+      var partes = [];
+      try { if (window.perfilUsuario && typeof window.traduzirMeta === "function") partes.push("Meta: " + window.traduzirMeta(window.perfilUsuario.metaPrincipal)); } catch(e) {}
+      try { if (window.perfilUsuario && typeof window.traduzirLocal === "function") partes.push("Local: " + window.traduzirLocal(window.perfilUsuario.localTreino)); } catch(e) {}
+      resumo.innerText = partes.length ? partes.join(" | ") : "Escolha ou gere um treino de força. A aba não depende de haver força programada no plano.";
+    }
+  }
+  function instalarAtalhoForca(){
+    var pagina = byId("paginaTreino");
+    if (!pagina || byId("forcaAtalhoV055")) return;
+    var cards = pagina.querySelectorAll(".card");
+    var cardModo = null;
+    Array.prototype.forEach.call(cards, function(card){
+      if (!cardModo && /Modo força/i.test(card.textContent || "")) cardModo = card;
+    });
+    if (!cardModo) return;
+    var box = document.createElement("div");
+    box.id = "forcaAtalhoV055";
+    box.className = "tipo-registro-info";
+    box.innerHTML = "<strong>Aba livre:</strong> você pode abrir Força mesmo quando o plano do dia for corrida, recuperação ou quando não houver treino programado. <button type='button' class='botao-principal' style='margin-top:10px;' onclick='gerarTreinoForcaDiretoV055()'>✅ Gerar treino de força</button>";
+    cardModo.appendChild(box);
+  }
+  function abrirForcaSeguro(){
+    if (!verificarPerfil("Faça login com um e-mail autorizado para acessar os treinos.")) return;
+    limparFluxosPendentes();
+    mostrarPagina("treino");
+    atualizarCabecalhoForca();
+    instalarAtalhoForca();
+  }
+  function atualizarPlanoComoForca(cat){
+    var achado = itemPorData(contextoDataISO());
+    if (!achado.item) return null;
+    achado.item.categoria = cat || "full_body";
+    achado.item.focoHibrido = "forca";
+    achado.item.ajustadoPeloCheckin = true;
+    achado.item.ajusteManualCheckin = true;
+    delete achado.item.subtipoCorrida;
+    delete achado.item.tipoRecuperacao;
+    salvarPlano(achado.plano);
+    return achado.item;
+  }
+  function atualizarPlanoComoCardio(item, subtipo){
+    if (!item) return null;
+    item.categoria = "cardio";
+    item.focoHibrido = "corrida";
+    item.subtipoCorrida = subtipo || item.subtipoCorrida || "corrida_leve";
+    item.ajustadoPeloCheckin = true;
+    return item;
+  }
+  function abrirCardioDoCheckin(subtipo, manual){
+    if (!verificarPerfil("Faça login com um e-mail autorizado para registrar cardio.")) return;
+    var achado = itemPorData(contextoDataISO());
+    var item = achado.item;
+    if (manual && item) { atualizarPlanoComoCardio(item, subtipo); salvarPlano(achado.plano); }
+    try { if (item && typeof window.aplicarItemCardioAoFormulario === "function") window.aplicarItemCardioAoFormulario(item); } catch(e) {}
+    try { if (typeof window.irParaCardio === "function") window.irParaCardio(); else mostrarPagina("cardio"); } catch(e) { mostrarPagina("cardio"); }
+    setTimeout(function(){ try { if (typeof window.gerarTreinoCardio === "function") window.gerarTreinoCardio(); } catch(e) {} }, 100);
+  }
+  function abrirRecuperacaoDoCheckin(manual){
+    if (!verificarPerfil("Faça login com um e-mail autorizado para registrar recuperação.")) return;
+    var achado = itemPorData(contextoDataISO());
+    var item = achado.item;
+    if (manual && item) {
+      item.categoria = "recuperacao";
+      item.focoHibrido = "recuperacao";
+      item.tipoRecuperacao = item.tipoRecuperacao || "caminhada_leve";
+      item.ajustadoPeloCheckin = true;
+      item.ajusteManualCheckin = true;
+      delete item.subtipoCorrida;
+      salvarPlano(achado.plano);
+    }
+    window.__mt03RecuperacaoPlano = item || { categoria:"recuperacao", tipoRecuperacao:"caminhada_leve", dataISO:contextoDataISO() };
+    try { if (typeof window.irParaRecuperacao === "function") window.irParaRecuperacao(); else mostrarPagina("recuperacao"); } catch(e) { mostrarPagina("recuperacao"); }
+  }
+  function gerarTreinoForca(cat){
+    if (!verificarPerfil("Faça login com um e-mail autorizado para gerar treino.")) return;
+    cat = norm(cat || "");
+    if (!ehForca(cat)) {
+      var sel = byId("divisaoTreino");
+      var valor = sel ? norm(sel.value) : "";
+      if (ehForca(valor)) cat = valor;
+    }
+    if (!ehForca(cat)) {
+      var catPlano = categoriaPlanoAtual();
+      cat = ehForca(catPlano) ? catPlano : "full_body";
+    }
+    var sel2 = byId("divisaoTreino");
+    if (sel2) sel2.value = cat;
+    atualizarPlanoComoForca(cat);
+    abrirForcaSeguro();
+    var status = byId("forcaAtalhoV055");
+    if (status) status.innerHTML = "<strong>Gerando " + esc(nomeForca(cat)) + "...</strong><br><span class='small'>Aguarde o app montar a lista de exercícios.</span>";
+    setTimeout(function(){
+      try {
+        if (typeof window.gerarTreino === "function") window.gerarTreino();
+      } catch(e) {
+        console.error("Falha ao gerar treino de força:", e);
+        var resultado = byId("resultadoTreino");
+        if (resultado) {
+          resultado.classList.remove("hidden");
+          resultado.innerHTML = "<h2>Não consegui gerar o treino agora</h2><p class='small'>A navegação foi mantida. Tente trocar a divisão de força no check-in ou gerar novamente.</p>";
+        }
+        toast("Não consegui gerar o treino agora, mas a aba Força continua navegável.");
+      }
+    }, 80);
+  }
+  function gerarSessaoCheckin(){
+    try { if (typeof window.marcarCheckinRespondido === "function") window.marcarCheckinRespondido(); } catch(e) {}
+    var box = byId("recomendacaoCheckinBox");
+    if (box) { box.classList.add("hidden"); box.innerHTML = ""; }
+    var sel = byId("divisaoTreino");
+    var escolha = sel ? norm(sel.value) : "automatico";
+
+    if (ehForca(escolha)) { gerarTreinoForca(escolha); return; }
+    if (escolha === "recuperacao" || escolha === "descanso") { abrirRecuperacaoDoCheckin(true); return; }
+
+    var achado = itemPorData(contextoDataISO());
+    var item = achado.item;
+    var cat = item ? norm(item.categoria || item.tipo || "") : "";
+    if (cat === "cardio" || cat === "corrida") {
+      abrirCardioDoCheckin(item && (item.subtipoCorrida || item.tipoSessaoCardio || item.subtipo), false);
+      return;
+    }
+    if (cat === "recuperacao" || cat === "descanso") { abrirRecuperacaoDoCheckin(false); return; }
+    gerarTreinoForca(ehForca(cat) ? cat : "full_body");
+  }
+  function navegar(kind){
+    if (kind === "treino") { abrirForcaSeguro(); return; }
+    if (kind !== "perfil" && !verificarPerfil("Faca login com um e-mail autorizado para navegar no app.")) return;
+    limparFluxosPendentes();
+    try {
+      if (kind === "hoje" && typeof window.irParaHoje === "function") window.irParaHoje();
+      else if (kind === "plano" && typeof window.irParaPlano === "function") window.irParaPlano();
+      else if (kind === "cardio" && typeof window.irParaCardio === "function") window.irParaCardio();
+      else if (kind === "progresso" && typeof window.irParaProgresso === "function") window.irParaProgresso();
+      else if (kind === "perfil" && typeof window.voltarParaPerfil === "function") window.voltarParaPerfil();
+      else if (kind === "recuperacao" && typeof window.irParaRecuperacao === "function") window.irParaRecuperacao();
+      else mostrarPagina(kind);
+    } catch(e) {
+      console.error("Falha ao navegar para " + kind + ":", e);
+      mostrarPagina(kind);
+    }
+    setTimeout(function(){ destacarAba(kind); var nav = byId("navegacaoPrincipal"); if (nav) nav.classList.remove("hidden"); }, 50);
+  }
+  function kindDoBotao(btn){
+    var texto = btn ? (btn.textContent || "") : "";
+    if (/Hoje/i.test(texto)) return "hoje";
+    if (/Plano/i.test(texto)) return "plano";
+    if (/For/i.test(texto)) return "treino";
+    if (/Corrida/i.test(texto)) return "cardio";
+    if (/Evolu/i.test(texto)) return "progresso";
+    if (/Perfil/i.test(texto)) return "perfil";
+    return "";
+  }
+  function instalarNav(){
+    var nav = byId("navegacaoPrincipal");
+    if (!nav || nav.__mtNavV055) return;
+    Array.prototype.forEach.call(nav.querySelectorAll("button"), function(btn){
+      btn.removeAttribute("onclick");
+      btn.onclick = null;
+    });
+    nav.addEventListener("click", function(ev){
+      var alvo = ev.target;
+      var btn = alvo && alvo.closest ? alvo.closest("button") : null;
+      if (!btn || !nav.contains(btn)) return;
+      var kind = kindDoBotao(btn);
+      if (!kind) return;
+      if (ev.preventDefault) ev.preventDefault();
+      if (ev.stopPropagation) ev.stopPropagation();
+      if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+      navegar(kind);
+      return false;
+    }, true);
+    nav.__mtNavV055 = true;
+  }
+  function simplificarCheckinUI(){
+    var btns = Array.prototype.slice.call(document.querySelectorAll("#paginaCheckin button"));
+    btns.forEach(function(btn){
+      if (/Gerar recomenda/i.test(btn.textContent || "") || /Gerar sugest/i.test(btn.textContent || "")) {
+        btn.textContent = "✅ Gerar treino";
+        btn.onclick = gerarSessaoCheckin;
+      }
+    });
+    var label = document.querySelector('label[for="divisaoTreino"]');
+    if (label) label.textContent = "O que você quer treinar hoje?";
+    var cardIntro = document.querySelector("#paginaCheckin .card p.small");
+    if (cardIntro) cardIntro.textContent = "Responda energia, dor e tempo. Depois escolha a sessão e toque em Gerar treino. O app abre direto o treino escolhido, sem uma etapa extra de recomendações.";
+    var box = byId("recomendacaoCheckinBox");
+    if (box) { box.classList.add("hidden"); box.innerHTML = ""; }
+  }
+  function aplicarVersao(){
+    var badge = document.querySelector(".app-badge");
+    if (badge) badge.textContent = "MetaTreino Hybrid • Beta " + VERSION_V055;
+    var meta = document.querySelector('meta[name="app-version"]');
+    if (meta) meta.setAttribute("content", VERSION_V055);
+  }
+
+  window.irParaTreinoAnteriorV055 = oldIrParaTreinoV055;
+  window.irParaTreino = abrirForcaSeguro;
+  window.gerarTreinoForcaDiretoV055 = gerarTreinoForca;
+  window.gerarSessaoCheckinV055 = gerarSessaoCheckin;
+  window.gerarRecomendacaoCheckin = gerarSessaoCheckin;
+  window.aplicarRecomendacaoCheckin = gerarSessaoCheckin;
+  window.navegarAbaMetaTreinoV055 = navegar;
+
+  document.addEventListener("DOMContentLoaded", function(){
+    instalarNav();
+    simplificarCheckinUI();
+    aplicarVersao();
+    instalarAtalhoForca();
+  });
+  setTimeout(function(){ instalarNav(); simplificarCheckinUI(); aplicarVersao(); instalarAtalhoForca(); }, 250);
+  setTimeout(function(){ instalarNav(); simplificarCheckinUI(); aplicarVersao(); instalarAtalhoForca(); }, 1000);
 })();
 </script>
 
