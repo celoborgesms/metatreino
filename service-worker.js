@@ -1,10 +1,10 @@
-const CACHE_NAME = "metatreino-cache-v0.4.6-ux-runner-hybrid";
+const CACHE_NAME = "metatreino-cache-v0.4.7-descartar-pendencia";
 
 const APP_SHELL = [
   "./",
-  "./index.html?v=0.4.6",
-  "./manifest.json?v=0.4.6",
-  "./icon-512.png.png?v=0.4.6"
+  "./index.html?v=0.4.7",
+  "./manifest.json?v=0.4.7",
+  "./icon-512.png.png?v=0.4.7"
 ];
 
 // INSTALACAO
@@ -54,13 +54,13 @@ self.addEventListener("fetch", function(event) {
         .then(function(response) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(function(cache) {
-            cache.put("./index.html?v=0.4.6", copy);
+            cache.put("./index.html?v=0.4.7", copy);
             cache.put("./index.html", response.clone());
           });
           return response;
         })
         .catch(function() {
-          return caches.match("./index.html?v=0.4.6").then(function(cached) {
+          return caches.match("./index.html?v=0.4.7").then(function(cached) {
             return cached || caches.match("./index.html");
           });
         })

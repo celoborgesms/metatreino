@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino Hybrid</title>
-  <meta name="app-version" content="0.4.6">
+  <meta name="app-version" content="0.4.7">
   <meta name="theme-color" content="#020617">
-  <link rel="manifest" href="manifest.json?v=0.4.6">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.4.6">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.4.6">
+  <link rel="manifest" href="manifest.json?v=0.4.7">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.4.7">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.4.7">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1506,7 +1506,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino Hybrid • Beta 0.4.6</span>
+        <span class="app-badge">MetaTreino Hybrid • Beta 0.4.7</span>
         <h1><span class="hero-meta-word">Meta</span>Treino <span class="hero-hybrid-word">Hybrid</span></h1>
         <p>Musculação e corrida no mesmo plano: força, shape, fôlego e recuperação sem bagunçar sua semana.</p>
       </div>
@@ -1750,10 +1750,11 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino Hybrid 0.4.6 Beta</strong><br>
+          <strong>MetaTreino Hybrid 0.4.7 Beta</strong><br>
           <span class="tag beta">Hybrid</span>
-          <p><strong>Atualizada em:</strong> 11/05/2026</p>
+          <p><strong>Atualizada em:</strong> 12/05/2026</p>
           <ul class="versao-atual-lista">
+            <li>Corrigido o botão <strong>Descartar</strong> da pendência anterior na aba Hoje: agora ele remove a pendência local e atualiza a tela imediatamente.</li>
             <li>Aba Hoje simplificada: <strong>Começar agora</strong> inicia a sessão planejada sem abrir popup intermediário.</li>
             <li>Check-in completo ficou com um fluxo mais claro: gerar recomendação, aplicar e começar, ou cancelar e voltar.</li>
             <li>Removidos caminhos duplicados que levavam para a mesma tela e confundiam o usuário novo.</li>
@@ -8424,7 +8425,7 @@
 </script>
 
 <script>
-  const METATREINO_APP_VERSION = "0.4.6";
+  const METATREINO_APP_VERSION = "0.4.7";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -8998,7 +8999,7 @@
 <script id="mt-v042-final-corrections">
 (function(){
   const byId = function(id){ return document.getElementById(id); };
-  const APP_VERSION_V042 = '0.4.6';
+  const APP_VERSION_V042 = '0.4.7';
   function safe(texto){ return typeof limparTextoSeguro === 'function' ? limparTextoSeguro(texto) : String(texto || ''); }
   function catNorm(c){ return typeof normalizarCategoriaTreino === 'function' ? normalizarCategoriaTreino(c || '') : String(c || ''); }
   function isStrength(c){ return typeof isForca === 'function' ? isForca(c) : ['superior','inferior','inferior_forca','inferior_moderado','core_abdomen','core_estabilidade','full_body','funcional'].indexOf(catNorm(c)) !== -1; }
@@ -9581,7 +9582,7 @@
     const total = Array.isArray(local.treino) ? local.treino.length : 0;
 
     if (concluidos <= 0) {
-      return "<div class='pendencia-zero-box'><strong>Pendência anterior detectada</strong><br><span class='small'>Você abriu um treino de força, mas não iniciou de fato. Ele não substitui o foco de hoje.</span><div class='plano-acoes-principais'><button type='button' class='botao-secundario' onclick='if(confirm(\"Descartar esse treino de força não iniciado?\")){localStorage.removeItem(\"metatreinoTreinoAtual\"); if(typeof renderizarHoje === \"function\") renderizarHoje();}'>Descartar</button><button type='button' class='botao-secundario' onclick='irParaPlano()'>Reagendar no plano</button></div></div>";
+      return "<div class='pendencia-zero-box'><strong>Pendência anterior detectada</strong><br><span class='small'>Você abriu um treino de força, mas não iniciou de fato. Ele não substitui o foco de hoje.</span><div class='plano-acoes-principais'><button type='button' class='botao-secundario' onclick='descartarPendenciaTreinoHojeV047(this)'>Descartar</button><button type='button' class='botao-secundario' onclick='irParaPlano()'>Reagendar no plano</button></div></div>";
     }
 
     const nome = typeof nomeAmigavelTreino === 'function' ? nomeAmigavelTreino(catLocal) : catLocal;
@@ -9726,7 +9727,7 @@
 
 <script id="mt-v046-ux-runner-hybrid-fix">
 (function(){
-  var VERSION = '0.4.6';
+  var VERSION = '0.4.7';
 
   function byId(id){ return document.getElementById(id); }
   function safe(texto){ return window.limparTextoSeguro ? window.limparTextoSeguro(texto) : String(texto || ''); }
@@ -9960,6 +9961,88 @@
 
   document.addEventListener('DOMContentLoaded', function(){
     var nota = byId('resumoHojeApp');
+    var badge = document.querySelector('.app-badge');
+    if (badge) badge.textContent = 'MetaTreino Hybrid • Beta ' + VERSION;
+    var meta = document.querySelector('meta[name="app-version"]');
+    if (meta) meta.setAttribute('content', VERSION);
+  });
+})();
+</script>
+
+
+<script id="mt-v047-descartar-pendencia-fix">
+(function(){
+  var VERSION = '0.4.7';
+
+  function byId(id){ return document.getElementById(id); }
+
+  function unique(lista){
+    var vistos = {};
+    return (lista || []).filter(function(item){
+      item = String(item || '').trim();
+      if (!item || vistos[item]) return false;
+      vistos[item] = true;
+      return true;
+    });
+  }
+
+  function emailAtual(){
+    try {
+      if (window.usuarioAtual && window.usuarioAtual.email) return String(window.usuarioAtual.email).toLowerCase();
+    } catch(e) {}
+    return 'anonimo';
+  }
+
+  function chavesTreinoAtual(){
+    var chaves = [];
+    try { if (typeof chaveTreinoAtual === 'function') chaves.push(chaveTreinoAtual()); } catch(e) {}
+    chaves.push('metatreino-treino-atual-' + emailAtual());
+    chaves.push('metatreino-treino-atual-anonimo');
+    chaves.push('metatreinoTreinoAtual');
+
+    // Varre o localStorage para cobrir contas que trocaram de e-mail/login no mesmo aparelho.
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && /^metatreino-treino-atual-/i.test(k)) chaves.push(k);
+      }
+    } catch(e) {}
+    return unique(chaves);
+  }
+
+  function limparEstadoTreinoAtual(){
+    try { if (typeof limparTreinoAtualLocal === 'function') limparTreinoAtualLocal(); } catch(e) {}
+    chavesTreinoAtual().forEach(function(chave){ try { localStorage.removeItem(chave); } catch(e) {} });
+
+    // Reseta também o estado em memória quando ele existir na sessão atual.
+    try { treinoAtual = []; } catch(e) {}
+    try { exerciciosConcluidos = []; } catch(e) {}
+    try { feedbackTreinoFinalAtual = ''; } catch(e) {}
+  }
+
+  window.descartarPendenciaTreinoHojeV047 = function(botao){
+    if (botao) {
+      botao.disabled = true;
+      botao.textContent = 'Descartado';
+    }
+
+    limparEstadoTreinoAtual();
+
+    // Remove visualmente sem depender do re-render. Depois renderiza a aba para recalcular o foco do dia.
+    try {
+      var box = botao && botao.closest ? botao.closest('.pendencia-zero-box, .pendente-anterior-box') : null;
+      if (box && box.parentNode) box.parentNode.removeChild(box);
+    } catch(e) {}
+
+    try { if (typeof renderizarHoje === 'function') renderizarHoje(); } catch(e) {}
+    try { if (typeof irParaHoje === 'function') irParaHoje(); } catch(e) {}
+
+    var insight = byId('insightHojeApp');
+    if (insight) insight.innerHTML = 'Pendência anterior descartada. O foco de hoje continua valendo pelo plano.';
+  };
+
+  // Garante que o selo e o meta fiquem coerentes mesmo se scripts antigos rodarem depois do carregamento inicial.
+  document.addEventListener('DOMContentLoaded', function(){
     var badge = document.querySelector('.app-badge');
     if (badge) badge.textContent = 'MetaTreino Hybrid • Beta ' + VERSION;
     var meta = document.querySelector('meta[name="app-version"]');

@@ -1,3 +1,19 @@
+MetaTreino Hybrid — v0.4.7 Beta
+=================================
+
+Atualizada em: 12/05/2026
+
+1. CORREÇÃO DA ABA HOJE
+   - Corrigido o botão "Descartar" da pendência anterior.
+   - Agora ele apaga corretamente o treino local não iniciado, remove o aviso da tela e mantém o usuário na aba Hoje com o foco do dia preservado.
+   - A correção também cobre chaves antigas/alternativas do localStorage, evitando que a pendência reapareça por cache ou troca de login.
+
+2. VERSIONAMENTO E CACHE
+   - Manifest, service worker e selo visual atualizados para v0.4.7 Beta.
+   - Cache do PWA renovado para o app carregar a correção sem ficar preso na versão anterior.
+
+---
+
 MetaTreino Hybrid — v0.4.6 Beta
 =================================
 
