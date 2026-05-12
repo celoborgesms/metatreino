@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino Hybrid</title>
-  <meta name="app-version" content="0.5.5">
+  <meta name="app-version" content="0.5.7">
   <meta name="theme-color" content="#020617">
-  <link rel="manifest" href="manifest.json?v=0.5.5">
-<link rel="icon" type="image/png" href="icon-512.png?v=0.5.5">
-<link rel="apple-touch-icon" href="icon-512.png?v=0.5.5">
+  <link rel="manifest" href="manifest.json?v=0.5.7">
+<link rel="icon" type="image/png" href="icon-512.png?v=0.5.7">
+<link rel="apple-touch-icon" href="icon-512.png?v=0.5.7">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1620,7 +1620,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino Hybrid • Beta 0.5.6</span>
+        <span class="app-badge">MetaTreino Hybrid • Beta 0.5.7</span>
         <h1><span class="hero-meta-word">Meta</span>Treino <span class="hero-hybrid-word">Hybrid</span></h1>
         <p>Musculação e corrida no mesmo plano: força, shape, fôlego e recuperação sem bagunçar sua semana.</p>
       </div>
@@ -1864,7 +1864,7 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino Hybrid 0.5.5 Beta</strong><br>
+          <strong>MetaTreino Hybrid 0.5.7 Beta</strong><br>
           <span class="tag beta">Hybrid</span>
           <p><strong>Atualizada em:</strong> 12/05/2026</p>
           <ul class="versao-atual-lista">
@@ -2532,7 +2532,7 @@
           treino: treinoAtual,
           letra: treinoAtual.letra || "",
           categoria: treinoAtual.categoria || treinoAtual.letra || "",
-          versaoGeracao: "0.5.6",
+          versaoGeracao: "0.5.7",
           concluidos: exerciciosConcluidos || [],
           feedback: feedbackTreinoFinalAtual || "",
           salvoEm: Date.now()
@@ -2956,7 +2956,7 @@
     function exportarMeusDados() {
       const dadosBase = {
         app: "MetaTreino",
-        versao: "0.5.5",
+        versao: "0.5.7",
         exportadoEm: new Date().toISOString(),
         usuario: usuarioAtual ? { uid: usuarioAtual.uid, email: usuarioAtual.email || "", nome: usuarioAtual.displayName || "" } : null,
         dadosLocais: coletarDadosLocaisPrivacidade(),
@@ -4583,7 +4583,7 @@
       });
 
       const plano = {
-        versao: "0.5.5",
+        versao: "0.5.7",
         inicioSemana: inicioSemanaAtualISO(),
         criadoEm: Date.now(),
         metaSemanal: dist.total,
@@ -7769,7 +7769,7 @@
 <script>
 (function() {
   const MT03 = {
-    versaoPlano: "0.5.5",
+    versaoPlano: "0.5.7",
     forca: ["superior", "inferior_forca", "inferior_moderado", "full_body", "core_estabilidade", "funcional"],
     corrida: ["corrida_leve", "corrida_regenerativa", "intervalado", "ritmo", "longo", "progressiva", "teste", "caminhada_leve"],
     recuperacao: ["caminhada_leve", "mobilidade", "alongamento", "recuperacao_pernas", "soltura_muscular", "relaxamento", "descanso_total"]
@@ -8559,7 +8559,7 @@
 </script>
 
 <script>
-  const METATREINO_APP_VERSION = "0.5.5";
+  const METATREINO_APP_VERSION = "0.5.7";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -12032,7 +12032,7 @@
 <script id="metatreino-midia-local-v053-hotfix">
 (function(){
   "use strict";
-  var VERSION_MIDIA_FIX = "0.5.5";
+  var VERSION_MIDIA_FIX = "0.5.7";
 
   // ── Utilitários ────────────────────────────────────────────────────────────
 
@@ -12344,7 +12344,7 @@
 <script id="mt-v054-nav-checkin-choice-fix">
 (function(){
   "use strict";
-  var VERSION_FIX = "0.5.5";
+  var VERSION_FIX = "0.5.7";
 
   function byId(id){ return document.getElementById(id); }
   function esc(valor){
@@ -12734,7 +12734,7 @@
 <script id="mt-v055-forca-checkin-simple-hotfix">
 (function(){
   "use strict";
-  var VERSION_V055 = "0.5.5";
+  var VERSION_V055 = "0.5.7";
   var oldIrParaTreinoV055 = window.irParaTreino;
   var oldGerarRecomendacaoV055 = window.gerarRecomendacaoCheckin;
   var oldAplicarRecomendacaoV055 = window.aplicarRecomendacaoCheckin;
@@ -13105,7 +13105,7 @@
 <script id="mt-v056-forca-nav-checkin-final-hotfix">
 (function(){
   "use strict";
-  var VERSION_V056 = "0.5.6";
+  var VERSION_V056 = "0.5.7";
   var oldGerarTreinoV056 = window.gerarTreino;
   var oldIrParaHojeV056 = window.irParaHoje;
   var oldIrParaPlanoV056 = window.irParaPlano;
@@ -13590,6 +13590,88 @@
   setTimeout(function(){ instalarNavLimpa(); simplificarCheckinUI(); aplicarVersao(); renderStatusLivre(); }, 300);
   setTimeout(function(){ instalarNavLimpa(); simplificarCheckinUI(); aplicarVersao(); }, 1100);
   setTimeout(function(){ instalarNavLimpa(); simplificarCheckinUI(); aplicarVersao(); }, 2200);
+})();
+</script>
+
+
+<script id="mt-v057-hard-cache-reset">
+(function(){
+  "use strict";
+  var VERSION_V057 = "0.5.7";
+  var RESET_KEY = "metatreinoHardCacheResetVersion";
+
+  function setBadge(){
+    try {
+      var badge = document.querySelector(".app-badge");
+      if (badge) badge.textContent = "MetaTreino Hybrid • Beta " + VERSION_V057;
+      var meta = document.querySelector('meta[name="app-version"]');
+      if (meta) meta.setAttribute("content", VERSION_V057);
+      window.VERSION = VERSION_V057;
+    } catch(e) {}
+  }
+
+  function limparCachesDoApp(){
+    if (!("caches" in window)) return Promise.resolve();
+    return caches.keys().then(function(keys){
+      return Promise.all(keys.map(function(key){
+        if (/metatreino|meta-treino|treino/i.test(key)) return caches.delete(key);
+        return Promise.resolve(false);
+      }));
+    }).catch(function(){ return null; });
+  }
+
+  function atualizarServiceWorker(){
+    if (!("serviceWorker" in navigator)) return Promise.resolve();
+    return navigator.serviceWorker.getRegistrations().then(function(regs){
+      return Promise.all(regs.map(function(reg){
+        try { if (reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"}); } catch(e) {}
+        return reg.update().catch(function(){ return null; });
+      }));
+    }).then(function(){
+      return navigator.serviceWorker.register("./service-worker.js?v=" + VERSION_V057 + "&t=" + Date.now());
+    }).then(function(reg){
+      try { if (reg && reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"}); } catch(e) {}
+      return reg;
+    }).catch(function(){ return null; });
+  }
+
+  function hardResetUmaVez(){
+    setBadge();
+    var atual = null;
+    try { atual = localStorage.getItem(RESET_KEY); } catch(e) {}
+    if (atual === VERSION_V057) return;
+    try { localStorage.setItem(RESET_KEY, VERSION_V057); } catch(e) {}
+    Promise.resolve()
+      .then(limparCachesDoApp)
+      .then(atualizarServiceWorker)
+      .then(function(){
+        var url = new URL(window.location.href);
+        if (url.searchParams.get("v") !== VERSION_V057) {
+          url.searchParams.set("v", VERSION_V057);
+          url.searchParams.set("cache", String(Date.now()));
+          window.location.replace(url.toString());
+        }
+      });
+  }
+
+  window.metatreinoLimparCacheV057 = function(){
+    try { localStorage.removeItem(RESET_KEY); } catch(e) {}
+    Promise.resolve().then(limparCachesDoApp).then(atualizarServiceWorker).then(function(){
+      var url = new URL(window.location.href);
+      url.searchParams.set("v", VERSION_V057);
+      url.searchParams.set("cache", String(Date.now()));
+      window.location.replace(url.toString());
+    });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", hardResetUmaVez);
+  } else {
+    hardResetUmaVez();
+  }
+  setTimeout(setBadge, 300);
+  setTimeout(setBadge, 1200);
+  setTimeout(setBadge, 2500);
 })();
 </script>
 

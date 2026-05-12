@@ -1,0 +1,12 @@
+MetaTreino Hybrid 0.5.7 - hotfix de atualização/cache
+
+Correções principais:
+1. Corrige referencias que ainda estavam em 0.5.5 dentro do index.html.
+2. Atualiza manifest, icones e registro do service worker para 0.5.7.
+3. Adiciona limpeza automática de caches antigos do PWA ao abrir a versão nova.
+4. Mantém o hotfix da aba Força/check-in simplificado da 0.5.6.
+
+Como publicar:
+- Substitua no servidor os arquivos index.html, manifest.json, service-worker.js e icon-512.png por estes arquivos.
+- Depois abra o app com reload total. A própria página executa uma limpeza de cache uma vez.
+- Se necessário, no console do navegador pode executar: metatreinoLimparCacheV057()
