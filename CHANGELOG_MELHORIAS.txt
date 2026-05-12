@@ -1,3 +1,27 @@
+MetaTreino Hybrid — v0.5.0 Beta
+Data: 12/05/2026
+
+Melhorias principais desta versão:
+1. Corrida como sessão guiada
+   - Cards de corrida agora mostram duração sugerida, esforço/RPE, zona, objetivo, execução, alternativa se cansar e orientação híbrida com musculação.
+   - A descrição deixou de ser apenas genérica e passou a orientar exatamente o que fazer.
+
+2. Botão de corrida mais claro
+   - No Plano, o botão mudou de "Registrar corrida" para "Ver treino de corrida".
+   - A ideia fica correta: primeiro o usuário vê/começa a sessão; depois registra resultado na Central de corrida.
+
+3. Sugestão adaptativa
+   - A prescrição considera nível, objetivo, condição atual, último cardio salvo, RPE, sensação das pernas, dor articular e proximidade de treino de pernas.
+   - Se houver fadiga/dor ou treino pesado de pernas perto, o app reduz agressividade e sugere sessão mais segura.
+
+4. Melhor relação força × corrida
+   - O Plano passa a explicar quando a corrida é compatível com musculação e quando deve ser mantida leve.
+   - Intervalado, ritmo e longão recebem alertas quando podem conflitar com pernas pesadas.
+
+5. Registro mais útil para evolução
+   - Distância, tempo, zona, RPE, sensação das pernas e dor articular continuam sendo salvos para guiar próximas adaptações.
+
+Histórico anterior:
 MetaTreino Hybrid — v0.4.9 Beta
 Data: 12/05/2026
 
