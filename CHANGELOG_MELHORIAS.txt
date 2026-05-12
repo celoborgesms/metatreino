@@ -1,3 +1,11 @@
+MetaTreino Hybrid — v0.5.2 Beta
+
+- Substitui o direcionamento principal ao YouTube por demonstrações animadas locais dentro dos cards de exercícios.
+- Adiciona banco interno MT_BANCO_MIDIAS_EXERCICIOS com tipos de mídia por padrão de movimento: agachamento, empurrar, puxar, hinge, core, corrida/cardio, mobilidade, braços e panturrilha.
+- Enriquece os exercícios do treino com mediaType, mediaKey, mediaTitle e mediaLocal, mantendo a demonstração vinculada ao próprio banco/index do app.
+- Troca os botões de cardio complementar para demonstrações locais, sem abrir YouTube.
+- Atualiza versão, manifest e service worker para 0.5.2, limpando cache antigo do PWA.
+
 MetaTreino Hybrid — v0.5.1 Beta
 
 Correções desta versão:
