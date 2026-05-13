@@ -1,3 +1,16 @@
+MetaTreino — v0.6.2 Beta
+Data: 13/05/2026
+
+Correções desta versão:
+- Corrigido o card de versão dentro da aba Perfil para exibir 0.6.2.
+- O check-in agora guarda a sessão original sugerida pelo plano antes de aceitar uma troca manual.
+- Ao selecionar "Automático pelo plano" depois de testar outro treino, o app restaura a sessão original do dia.
+- O botão "Voltar para sugestão do plano" agora desfaz a troca manual e recalcula a recomendação usando o treino sugerido.
+- A troca manual continua restrita à sessão atual; treinos futuros da semana não são substituídos.
+- Se uma instalação anterior já tiver sobrescrito a sessão sem guardar a origem, use "Reorganizar pendentes" na aba Plano para reconstruir o restante da semana preservando concluídos/pulados.
+
+------------------------------------------------------------
+
 MetaTreino — v0.6.1 Beta
 
 Correcoes de fluxo:

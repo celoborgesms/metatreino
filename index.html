@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.6.1">
+  <meta name="app-version" content="0.6.2">
   <meta name="theme-color" content="#020617">
-  <link rel="manifest" href="manifest.json?v=0.6.1">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.6.1">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.6.1">
+  <link rel="manifest" href="manifest.json?v=0.6.2">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.6.2">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.6.2">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1506,7 +1506,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino • Beta 0.6.0</span>
+        <span class="app-badge">MetaTreino • Beta 0.6.2</span>
         <h1><span class="hero-meta-word">Meta</span>Treino</h1>
         <p>Treinos inteligentes para academia, corrida ou os dois. Você escolhe o foco e o app preserva seu histórico.</p>
       </div>
@@ -1759,16 +1759,16 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino 0.6.0 Beta</strong><br>
+          <strong>MetaTreino 0.6.2 Beta</strong><br>
           <span class="tag beta">Modos</span>
           <p><strong>Atualizada em:</strong> 13/05/2026</p>
           <ul class="versao-atual-lista">
-            <li>O app agora trabalha com <strong>Foco principal</strong>: Academia, Corrida ou Academia + Corrida.</li>
-            <li>Salvar alterações no perfil preserva treinos concluídos, pulados e dias anteriores do plano semanal.</li>
-            <li>Atualizar ou reorganizar o plano adapta apenas sessões pendentes/futuras, sem zerar o progresso da semana.</li>
-            <li>A corrida foi simplificada para iniciantes: distância, tempo, esforço percebido, intensidade geral, pernas e dor articular.</li>
-            <li>Zonas de frequência cardíaca saíram do registro principal para não confundir quem está começando.</li>
-            <li>Hoje, Plano, Perfil e Progresso foram alinhados ao novo posicionamento: academia primeiro, corrida opcional e híbrido como modo avançado.</li>
+            <li>Corrigido o card de versão no Perfil para mostrar a versão atual do pacote.</li>
+            <li>Ao escolher um treino manual no check-in, o app agora guarda a sugestão original do plano.</li>
+            <li>Ao voltar para <strong>Automático pelo plano</strong>, a sessão original recomendada é restaurada.</li>
+            <li>O botão <strong>Voltar para sugestão do plano</strong> agora restaura o treino sugerido antes de gerar nova recomendação.</li>
+            <li>A troca manual continua valendo somente para a sessão atual e não altera os treinos futuros da semana.</li>
+            <li>As correções de preservação de histórico, modos Academia/Corrida/Híbrido e corrida simplificada continuam ativas.</li>
           </ul>
         </div>
         <button type="button" class="botao-principal" onclick="verificarAtualizacaoManual()">Verificar se há nova atualização</button>
@@ -8425,7 +8425,7 @@
 </script>
 
 <script>
-  const METATREINO_APP_VERSION = "0.6.0";
+  const METATREINO_APP_VERSION = "0.6.2";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -9962,7 +9962,7 @@
   document.addEventListener('DOMContentLoaded', function(){
     var nota = byId('resumoHojeApp');
     var badge = document.querySelector('.app-badge');
-    if (badge) badge.textContent = 'MetaTreino Hybrid • Beta ' + VERSION;
+    if (badge) badge.textContent = 'MetaTreino • Beta ' + VERSION;
     var meta = document.querySelector('meta[name="app-version"]');
     if (meta) meta.setAttribute('content', VERSION);
   });
@@ -10044,7 +10044,7 @@
   // Garante que o selo e o meta fiquem coerentes mesmo se scripts antigos rodarem depois do carregamento inicial.
   document.addEventListener('DOMContentLoaded', function(){
     var badge = document.querySelector('.app-badge');
-    if (badge) badge.textContent = 'MetaTreino Hybrid • Beta ' + VERSION;
+    if (badge) badge.textContent = 'MetaTreino • Beta ' + VERSION;
     var meta = document.querySelector('meta[name="app-version"]');
     if (meta) meta.setAttribute('content', VERSION);
   });
@@ -10068,7 +10068,7 @@
 
 <script id="mt-v048-checkin-contexto-fix">
 (function(){
-  var VERSION = '0.6.0';
+  var VERSION = '0.6.2';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -10416,7 +10416,7 @@
 
   document.addEventListener('DOMContentLoaded', function(){
     var badge = document.querySelector('.app-badge');
-    if (badge) badge.textContent = 'MetaTreino Hybrid • Beta ' + VERSION;
+    if (badge) badge.textContent = 'MetaTreino • Beta ' + VERSION;
     var meta = document.querySelector('meta[name="app-version"]');
     if (meta) meta.setAttribute('content', VERSION);
   });
@@ -10437,7 +10437,7 @@
 
 <script id="mt-v049-data-local-hoje-fix">
 (function(){
-  var VERSION = '0.6.0';
+  var VERSION = '0.6.2';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -10710,7 +10710,7 @@
 
   document.addEventListener('DOMContentLoaded', function(){
     var badge = document.querySelector('.app-badge');
-    if (badge) badge.textContent = 'MetaTreino Hybrid \u2022 Beta ' + VERSION;
+    if (badge) badge.textContent = 'MetaTreino \u2022 Beta ' + VERSION;
     var meta = document.querySelector('meta[name="app-version"]');
     if (meta) meta.setAttribute('content', VERSION);
     setTimeout(function(){ try { window.renderizarHoje(); } catch(e) {} }, 250);
@@ -10762,7 +10762,7 @@
 
 <script id="mt-v050-corrida-inteligente">
 (function(){
-  var VERSION_ATUAL = '0.6.0';
+  var VERSION_ATUAL = '0.6.2';
   try { window.VERSION = VERSION_ATUAL; } catch(e) {}
   try { if (typeof VERSION !== 'undefined') VERSION = VERSION_ATUAL; } catch(e) {}
 
@@ -11115,7 +11115,7 @@
   };
 
   document.addEventListener('DOMContentLoaded', function(){
-    var badge = document.querySelector('.app-badge'); if (badge) badge.textContent = 'MetaTreino Hybrid • Beta ' + VERSION_ATUAL;
+    var badge = document.querySelector('.app-badge'); if (badge) badge.textContent = 'MetaTreino • Beta ' + VERSION_ATUAL;
     var meta = document.querySelector('meta[name="app-version"]'); if (meta) meta.setAttribute('content', VERSION_ATUAL);
     var botaoCardioHoje = Array.from(document.querySelectorAll('button')).find(function(b){ return /Fazer corrida\/cardio hoje/i.test(b.textContent || ''); });
     if (botaoCardioHoje) botaoCardioHoje.textContent = 'Ver treino de corrida/cardio';
@@ -11127,7 +11127,7 @@
 
 <script id="mt-v060-modos-preservacao">
 (function(){
-  var VERSION_NOVA = '0.6.0';
+  var VERSION_NOVA = '0.6.2';
   function byId(id){ return document.getElementById(id); }
   function esc(v){
     try { return typeof limparTextoSeguro === 'function' ? limparTextoSeguro(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
@@ -11666,7 +11666,7 @@
       if (preservarStatus && devePreservar(old)) copiarPreservado(dia, old);
     });
     var plano = {
-      versao: '0.6.0-modos-preservacao',
+      versao: '0.6.2-restaurar-sugestao',
       inicioSemana: typeof inicioSemanaAtualISO === 'function' ? inicioSemanaAtualISO() : hoje(),
       criadoEm: Date.now(),
       focoPrincipal: modo,
@@ -11705,7 +11705,7 @@
 </style>
 <script id="mt-v061-reagendamento-e-treino-manual-fix">
 (function(){
-  var VERSION_FIX = '0.6.1';
+  var VERSION_FIX = '0.6.2';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -12108,6 +12108,358 @@
     var meta = document.querySelector('meta[name="app-version"]'); if (meta) meta.setAttribute('content', VERSION_FIX);
     var badge = document.querySelector('.app-badge'); if (badge) badge.textContent = 'MetaTreino • Beta ' + VERSION_FIX;
   });
+})();
+</script>
+
+
+
+<style id="mt-v062-restaurar-sugestao-style">
+  .mt-v062-aviso-restaurado {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(34, 197, 94, .38);
+    background: rgba(34, 197, 94, .12);
+    color: #bbf7d0;
+    line-height: 1.45;
+  }
+</style>
+<script id="mt-v062-restaurar-sugestao-original">
+(function(){
+  var VERSION_FIX = '0.6.2';
+  var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
+
+  function byId(id){ return document.getElementById(id); }
+  function esc(v){
+    try {
+      if (typeof window.limparTextoSeguro === 'function') return window.limparTextoSeguro(v);
+      return String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; });
+    } catch(e) { return String(v == null ? '' : v); }
+  }
+  function cat(v){
+    try { return typeof window.normalizarCategoriaTreino === 'function' ? window.normalizarCategoriaTreino(v) : String(v || '').trim(); }
+    catch(e){ return String(v || '').trim(); }
+  }
+  function hojeISO(){
+    try { if (typeof window.hojeISO === 'function') return window.hojeISO(); } catch(e) {}
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function planoAtual(){
+    try { if (typeof window.obterOuCriarPlanoSemanal === 'function') return window.obterOuCriarPlanoSemanal(false); } catch(e) {}
+    try { if (typeof window.lerPlanoSemanalLocal === 'function') return window.lerPlanoSemanalLocal(); } catch(e) {}
+    return null;
+  }
+  function salvarPlano(plano){
+    try { if (plano && typeof window.salvarPlanoSemanalLocal === 'function') window.salvarPlanoSemanalLocal(plano); } catch(e) {}
+  }
+  function renderizarTudo(){
+    try { if (typeof window.renderizarPlanoSemanal === 'function') window.renderizarPlanoSemanal(); } catch(e) {}
+    try { if (typeof window.renderizarHoje === 'function') window.renderizarHoje(); } catch(e) {}
+  }
+  function isForca(c){
+    c = cat(c);
+    return ['superior','inferior','inferior_forca','inferior_moderado','core_abdomen','core_estabilidade','full_body','funcional'].indexOf(c) !== -1;
+  }
+  function nomeCategoria(c){
+    c = cat(c);
+    try { if (typeof window.nomeAmigavelTreino === 'function') return window.nomeAmigavelTreino(c); } catch(e) {}
+    var mapa = {
+      superior:'Superiores', inferior:'Pernas', inferior_forca:'Pernas - Forca', inferior_moderado:'Pernas - Moderado',
+      core_abdomen:'Core', core_estabilidade:'Core e Estabilidade', full_body:'Corpo inteiro', funcional:'Forca funcional',
+      cardio:'Corrida/Cardio', recuperacao:'Recuperacao ativa', descanso:'Descanso'
+    };
+    return mapa[c] || c || 'Treino';
+  }
+  function snapshotSessao(dia){
+    dia = dia || {};
+    return {
+      categoria: dia.categoria,
+      focoHibrido: dia.focoHibrido,
+      subtipoCorrida: dia.subtipoCorrida,
+      tipoRecuperacao: dia.tipoRecuperacao,
+      protegidoPorCorrida: dia.protegidoPorCorrida,
+      ajustadoPeloCheckin: dia.ajustadoPeloCheckin,
+      adaptadoDeDescanso: dia.adaptadoDeDescanso
+    };
+  }
+  function aplicarSnapshot(dia, snap){
+    if (!dia || !snap) return;
+    ['categoria','focoHibrido','subtipoCorrida','tipoRecuperacao','protegidoPorCorrida','ajustadoPeloCheckin','adaptadoDeDescanso'].forEach(function(k){
+      if (snap[k] !== undefined) dia[k] = snap[k];
+      else delete dia[k];
+    });
+  }
+  function lerContexto(){
+    if (window.__mtCheckinContextoV048 && window.__mtCheckinContextoV048.dataISO) return window.__mtCheckinContextoV048;
+    try {
+      var bruto = localStorage.getItem(CONTEXT_KEY);
+      if (bruto) {
+        var ctx = JSON.parse(bruto);
+        if (ctx && ctx.dataISO) return ctx;
+      }
+    } catch(e) {}
+    return { dataISO: hojeISO(), origem:'hoje' };
+  }
+  function salvarContexto(ctx){
+    window.__mtCheckinContextoV048 = ctx;
+    try { localStorage.setItem(CONTEXT_KEY, JSON.stringify(ctx)); } catch(e) {}
+  }
+  function itemDoContexto(){
+    var ctx = lerContexto();
+    var plano = planoAtual();
+    var dias = plano && Array.isArray(plano.dias) ? plano.dias : [];
+    return dias.find(function(d){ return d && d.dataISO === ctx.dataISO; }) || dias.find(function(d){ return d && d.dataISO === hojeISO(); }) || null;
+  }
+  function itemEPlanoDoContexto(){
+    var ctx = lerContexto();
+    var plano = planoAtual();
+    var item = null;
+    if (plano && Array.isArray(plano.dias)) {
+      item = plano.dias.find(function(d){ return d && d.dataISO === ctx.dataISO; }) || plano.dias.find(function(d){ return d && d.dataISO === hojeISO(); }) || null;
+    }
+    return { ctx:ctx, plano:plano, item:item };
+  }
+  function categoriaSelecionada(){
+    var sel = byId('divisaoTreino');
+    return sel ? cat(sel.value) : '';
+  }
+  function obterSnapshotOriginal(item, ctx){
+    if (item && item.mtSugestaoOriginalCheckinV062 && item.mtSugestaoOriginalCheckinV062.categoria) return item.mtSugestaoOriginalCheckinV062;
+    if (item && item.mtSugestaoOriginalCheckin && item.mtSugestaoOriginalCheckin.categoria) return item.mtSugestaoOriginalCheckin;
+    if (item && item.mtPlanoOriginalCheckin && item.mtPlanoOriginalCheckin.categoria) return item.mtPlanoOriginalCheckin;
+    if (ctx && ctx.mtSugestaoOriginalCheckinV062 && ctx.mtSugestaoOriginalCheckinV062.categoria) return ctx.mtSugestaoOriginalCheckinV062;
+    if (ctx && ctx.categoriaOriginalPlano) return { categoria: ctx.categoriaOriginalPlano, focoHibrido:'forca' };
+    if (item && item.categoriaOriginalPlanejadaV062) return { categoria:item.categoriaOriginalPlanejadaV062, focoHibrido:'forca' };
+    if (item && item.categoriaOriginalPlanejada) return { categoria:item.categoriaOriginalPlanejada, focoHibrido:'forca' };
+    return null;
+  }
+  function categoriaPlanejadaOriginal(){
+    var dados = itemEPlanoDoContexto();
+    var original = obterSnapshotOriginal(dados.item, dados.ctx);
+    if (original && original.categoria) return cat(original.categoria);
+    return dados.item ? cat(dados.item.categoria) : '';
+  }
+  function garantirOriginalAntesDaTroca(item, ctx){
+    if (!item || !ctx) return null;
+    var existente = obterSnapshotOriginal(item, ctx);
+    if (existente && existente.categoria) return existente;
+    var snap = snapshotSessao(item);
+    if (!snap.categoria) return null;
+    item.mtSugestaoOriginalCheckinV062 = snap;
+    item.mtSugestaoOriginalCheckin = snap;
+    item.categoriaOriginalPlanejadaV062 = cat(snap.categoria);
+    item.categoriaOriginalPlanejada = cat(snap.categoria);
+    ctx.mtSugestaoOriginalCheckinV062 = snap;
+    ctx.categoriaOriginalPlano = cat(snap.categoria);
+    salvarContexto(ctx);
+    return snap;
+  }
+  function limparMarcadoresManuais(item, ctx){
+    if (item) {
+      delete item.ajustadoManualCheckin;
+      delete item.manualCheckin;
+      delete item.categoriaManualCheckin;
+      delete item.mtSugestaoOriginalCheckinV062;
+      delete item.mtSugestaoOriginalCheckin;
+      delete item.mtPlanoOriginalCheckin;
+      delete item.categoriaOriginalPlanejadaV062;
+      delete item.categoriaOriginalPlanejada;
+    }
+    if (ctx) {
+      delete ctx.mtSugestaoOriginalCheckinV062;
+      delete ctx.categoriaOriginalPlano;
+      delete ctx.categoriaManualCheckin;
+      ctx.manual = false;
+      salvarContexto(ctx);
+    }
+  }
+  function restaurarPlanoSugerido(silencioso){
+    var dados = itemEPlanoDoContexto();
+    var item = dados.item;
+    var ctx = dados.ctx;
+    var plano = dados.plano;
+    var original = obterSnapshotOriginal(item, ctx);
+    if (!item || !original || !original.categoria) {
+      if (!silencioso) alert('Nao encontrei a sugestao original guardada para esta sessao. Use Reorganizar pendentes na aba Plano para reconstruir a semana sem apagar o historico.');
+      return false;
+    }
+    aplicarSnapshot(item, original);
+    item.status = item.status === 'concluido' ? item.status : 'pendente';
+    limparMarcadoresManuais(item, ctx);
+    salvarPlano(plano);
+    var sel = byId('divisaoTreino');
+    if (sel && isForca(original.categoria)) sel.value = cat(original.categoria);
+    renderizarTudo();
+    return true;
+  }
+  function atualizarSessaoDoContexto(categoria){
+    var dados = itemEPlanoDoContexto();
+    var ctx = dados.ctx;
+    var plano = dados.plano;
+    var item = dados.item;
+    if (item) {
+      var original = garantirOriginalAntesDaTroca(item, ctx);
+      item.categoria = categoria;
+      item.focoHibrido = 'forca';
+      item.status = item.status === 'concluido' ? item.status : 'pendente';
+      item.ajustadoManualCheckin = true;
+      item.manualCheckin = true;
+      item.categoriaManualCheckin = categoria;
+      item.ajustadoPeloCheckin = true;
+      delete item.tipoRecuperacao;
+      delete item.subtipoCorrida;
+      if (original && original.categoria) {
+        ctx.mtSugestaoOriginalCheckinV062 = original;
+        ctx.categoriaOriginalPlano = cat(original.categoria);
+      }
+      salvarPlano(plano);
+    }
+    ctx.categoria = categoria;
+    ctx.categoriaManualCheckin = categoria;
+    ctx.titulo = nomeCategoria(categoria);
+    ctx.descricao = 'Treino escolhido manualmente no check-in.';
+    ctx.manual = true;
+    salvarContexto(ctx);
+    return item;
+  }
+
+  window.restaurarPlanoSugeridoCheckinV062 = function(){
+    var restaurou = restaurarPlanoSugerido(false);
+    if (restaurou && typeof window.gerarRecomendacaoCheckin === 'function') window.gerarRecomendacaoCheckin();
+  };
+
+  window.usarPlanoSugeridoCheckinV061 = function(){
+    var restaurou = restaurarPlanoSugerido(false);
+    if (!restaurou) return;
+    if (typeof window.gerarRecomendacaoCheckin === 'function') window.gerarRecomendacaoCheckin();
+  };
+
+  window.comecarTreinoEscolhidoManualCheckinV061 = function(){
+    var escolhida = categoriaSelecionada();
+    if (!isForca(escolhida)) {
+      alert('Escolha uma sessao de forca no campo "Sessao de forca" para liberar outro treino manualmente.');
+      return;
+    }
+    var planejada = categoriaPlanejadaOriginal();
+    if (planejada && planejada !== escolhida) {
+      var ok = confirm('O plano sugeria ' + nomeCategoria(planejada) + ', mas voce escolheu ' + nomeCategoria(escolhida) + '. Comecar mesmo assim? Ajuste cargas e volume se houver fadiga ou dor.');
+      if (!ok) return;
+    }
+    atualizarSessaoDoContexto(escolhida);
+    if (byId('divisaoTreino')) byId('divisaoTreino').value = escolhida;
+    var fluxo = { tipo:'forca', categoria:escolhida, manual:true };
+    if (typeof window.abrirFluxoCheckinV041 === 'function') return window.abrirFluxoCheckinV041(fluxo);
+    if (typeof window.irParaTreino === 'function') return window.irParaTreino();
+  };
+
+  var oldGerarRecomendacaoV062 = window.gerarRecomendacaoCheckin;
+  window.gerarRecomendacaoCheckin = function(){
+    var selecionadaAntes = categoriaSelecionada();
+
+    if (selecionadaAntes === 'automatico') {
+      restaurarPlanoSugerido(true);
+    } else if (isForca(selecionadaAntes)) {
+      var dadosAntes = itemEPlanoDoContexto();
+      var planejadaAntes = categoriaPlanejadaOriginal();
+      if (dadosAntes.item && planejadaAntes && selecionadaAntes !== planejadaAntes) {
+        garantirOriginalAntesDaTroca(dadosAntes.item, dadosAntes.ctx);
+        salvarPlano(dadosAntes.plano);
+      }
+    }
+
+    if (typeof oldGerarRecomendacaoV062 === 'function') oldGerarRecomendacaoV062.apply(this, arguments);
+
+    var planejada = categoriaPlanejadaOriginal();
+    var manualForca = isForca(selecionadaAntes) && selecionadaAntes !== 'automatico' && selecionadaAntes !== planejada;
+    var rec = window.__mt03RecomendacaoCheckin || {};
+
+    if (manualForca) {
+      rec = {
+        tipo:'forca',
+        categoria:selecionadaAntes,
+        titulo:'Treino manual liberado: ' + nomeCategoria(selecionadaAntes),
+        texto:'O plano sugeria ' + nomeCategoria(planejada) + ', mas voce selecionou ' + nomeCategoria(selecionadaAntes) + '. O app vai permitir essa troca apenas para esta sessao. Se quiser voltar atras, use Voltar para sugestao do plano ou selecione Automatico pelo plano.',
+        dataISO:(lerContexto().dataISO || hojeISO()),
+        manual:true
+      };
+      window.__mt03RecomendacaoCheckin = rec;
+    }
+
+    var box = byId('recomendacaoCheckinBox');
+    if (!box || !rec || !rec.tipo) return;
+    box.classList.remove('hidden');
+    var textoBotao = manualForca ? 'Comecar treino escolhido' : 'Aplicar e comecar';
+    var avisoManual = manualForca
+      ? '<div class="mt-v061-aviso-manual"><strong>Troca manual ativada</strong><br>Voce nao fica preso ao treino sugerido. Esta troca altera somente a sessao selecionada; o restante da semana continua preservado.<span class="mt-v061-mini">Sugestao original: ' + esc(nomeCategoria(planejada)) + ' • Escolhido agora: ' + esc(nomeCategoria(selecionadaAntes)) + '</span></div>'
+      : '';
+    var avisoRestaurado = (!manualForca && selecionadaAntes === 'automatico' && isForca(planejada))
+      ? '<div class="mt-v062-aviso-restaurado"><strong>Automatico pelo plano ativo</strong><br>O check-in esta usando novamente a sessao sugerida para hoje: ' + esc(nomeCategoria(planejada)) + '.</div>'
+      : '';
+    var botaoManualExtra = (!manualForca && isForca(selecionadaAntes) && selecionadaAntes !== 'automatico')
+      ? '<button type="button" class="botao-secundario" onclick="comecarTreinoEscolhidoManualCheckinV061()">Comecar treino escolhido mesmo assim</button>'
+      : '';
+    var botaoPlano = manualForca && isForca(planejada)
+      ? '<button type="button" class="botao-secundario" onclick="restaurarPlanoSugeridoCheckinV062()">Voltar para sugestao do plano</button>'
+      : '';
+
+    box.innerHTML =
+      '<h2>🧠 Recomendacao da sessao</h2>' +
+      '<strong>' + esc(rec.titulo || 'Ajuste sugerido') + '</strong>' +
+      '<p>' + esc(rec.texto || 'O app ajustou a sessao conforme seu check-in.') + '</p>' +
+      avisoManual +
+      avisoRestaurado +
+      '<div class="plano-acoes-principais">' +
+        '<button type="button" class="botao-principal" onclick="aplicarRecomendacaoCheckin()">' + textoBotao + '</button>' +
+        botaoManualExtra +
+        botaoPlano +
+        '<button type="button" class="botao-secundario" onclick="cancelarRecomendacaoCheckinV048 && cancelarRecomendacaoCheckinV048()">Cancelar e voltar</button>' +
+      '</div>' +
+      '<p class="fluxo-simples-nota">A recomendacao vale para a sessao selecionada. Voltar para Automatico restaura a sugestao original do plano; para mudar a semana inteira, use Reorganizar pendentes na aba Plano.</p>';
+  };
+
+  var oldAplicarV062 = window.aplicarRecomendacaoCheckin;
+  window.aplicarRecomendacaoCheckin = function(){
+    var rec = window.__mt03RecomendacaoCheckin;
+    if (rec && rec.manual && rec.tipo === 'forca' && isForca(rec.categoria)) {
+      atualizarSessaoDoContexto(rec.categoria);
+      if (byId('divisaoTreino')) byId('divisaoTreino').value = rec.categoria;
+      var fluxo = { tipo:'forca', categoria:rec.categoria, manual:true };
+      if (typeof window.abrirFluxoCheckinV041 === 'function') return window.abrirFluxoCheckinV041(fluxo);
+      if (typeof window.irParaTreino === 'function') return window.irParaTreino();
+      return;
+    }
+    if (categoriaSelecionada() === 'automatico') restaurarPlanoSugerido(true);
+    if (typeof oldAplicarV062 === 'function') return oldAplicarV062.apply(this, arguments);
+  };
+
+  var oldIrParaCheckinV062 = window.irParaCheckin;
+  window.irParaCheckin = function(){
+    var retorno = typeof oldIrParaCheckinV062 === 'function' ? oldIrParaCheckinV062.apply(this, arguments) : undefined;
+    var sel = byId('divisaoTreino');
+    if (sel && !sel.getAttribute('data-mt-v062-automatico-listener')) {
+      sel.setAttribute('data-mt-v062-automatico-listener', '1');
+      sel.addEventListener('change', function(){
+        var box = byId('recomendacaoCheckinBox');
+        if (box) { box.classList.add('hidden'); box.innerHTML = ''; }
+        window.__mt03RecomendacaoCheckin = null;
+        if (cat(sel.value) === 'automatico') restaurarPlanoSugerido(true);
+      });
+    }
+    return retorno;
+  };
+
+  function aplicarVersaoVisual(){
+    try { window.VERSION = VERSION_FIX; } catch(e) {}
+    try { window.VERSION_ATUAL = VERSION_FIX; } catch(e) {}
+    try { window.VERSION_NOVA = VERSION_FIX; } catch(e) {}
+    var meta = document.querySelector('meta[name="app-version"]'); if (meta) meta.setAttribute('content', VERSION_FIX);
+    var badge = document.querySelector('.app-badge'); if (badge) badge.textContent = 'MetaTreino • Beta ' + VERSION_FIX;
+    var card = document.querySelector('#cardVersaoAtual .plano-topo strong'); if (card) card.textContent = 'MetaTreino ' + VERSION_FIX + ' Beta';
+  }
+  document.addEventListener('DOMContentLoaded', aplicarVersaoVisual);
+  window.addEventListener('load', aplicarVersaoVisual);
+  setTimeout(aplicarVersaoVisual, 600);
 })();
 </script>
 
