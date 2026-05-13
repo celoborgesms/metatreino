@@ -1,3 +1,11 @@
+MetaTreino — v0.6.4 Beta
+
+NOVAS MELHORIAS DESTA ENTREGA
+1) Removido o redirecionamento para YouTube nos treinos de força.
+2) Adicionados vídeos curtos locais em loop (WebM/MP4) para demonstrações principais: agachamento, remada, supino, panturrilha e prancha.
+3) Mantida a ilustração local como fallback seguro para exercícios ainda sem vídeo específico.
+4) Atualizada a versão mostrada no app, manifest e service worker para 0.6.4.
+
 MetaTreino — v0.6.3 Beta
 Data: 13/05/2026
 

@@ -1,10 +1,10 @@
-const CACHE_NAME = "metatreino-cache-v0.6.3-ilustracoes-refinadas";
+const CACHE_NAME = "metatreino-cache-v0.6.4-demos-loop-locais";
 
 const APP_SHELL = [
   "./",
-  "./index.html?v=0.6.3",
-  "./manifest.json?v=0.6.3",
-  "./icon-512.png.png?v=0.6.3"
+  "./index.html?v=0.6.4",
+  "./manifest.json?v=0.6.4",
+  "./icon-512.png.png?v=0.6.4"
 ];
 
 // INSTALACAO
@@ -54,13 +54,13 @@ self.addEventListener("fetch", function(event) {
         .then(function(response) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(function(cache) {
-            cache.put("./index.html?v=0.6.3", copy);
+            cache.put("./index.html?v=0.6.4", copy);
             cache.put("./index.html", response.clone());
           });
           return response;
         })
         .catch(function() {
-          return caches.match("./index.html?v=0.6.3").then(function(cached) {
+          return caches.match("./index.html?v=0.6.4").then(function(cached) {
             return cached || caches.match("./index.html");
           });
         })

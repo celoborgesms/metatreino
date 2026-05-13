@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.6.3">
+  <meta name="app-version" content="0.6.4">
   <meta name="theme-color" content="#020617">
-  <link rel="manifest" href="manifest.json?v=0.6.3">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.6.3">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.6.3">
+  <link rel="manifest" href="manifest.json?v=0.6.4">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.6.4">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.6.4">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -595,6 +595,34 @@
       font-size: 13px;
       line-height: 1.48;
       color: #cbd5e1;
+    }
+
+    .exercise-demo-media {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.20);
+      background: radial-gradient(circle at top, rgba(59, 130, 246, 0.10), transparent 38%), linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 14px 26px rgba(2, 6, 23, 0.26);
+    }
+
+    .exercise-demo-video {
+      display: block;
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      object-fit: contain;
+      background: #020617;
+    }
+
+    .exercise-illustration-hint {
+      margin-top: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      color: #fca5a5;
     }
 
     .exercise-demo {
@@ -1743,7 +1771,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino • Beta 0.6.3</span>
+        <span class="app-badge">MetaTreino • Beta 0.6.4</span>
         <h1><span class="hero-meta-word">Meta</span>Treino</h1>
         <p>Treinos inteligentes para academia, corrida ou os dois. Você escolhe o foco e o app preserva seu histórico.</p>
       </div>
@@ -1996,7 +2024,7 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino 0.6.3 Beta</strong><br>
+          <strong>MetaTreino 0.6.4 Beta</strong><br>
           <span class="tag beta">Modos</span>
           <p><strong>Atualizada em:</strong> 13/05/2026</p>
           <ul class="versao-atual-lista">
@@ -6494,11 +6522,55 @@
       }
     }
 
+    function obterMidiaDemoExercicio(tipo, exercicio) {
+      const demos = {
+        squat: {
+          mp4: "assets/demos/squat-loop.mp4",
+          webm: "assets/demos/squat-loop.webm",
+          poster: "assets/demos/squat-poster.jpg",
+          titulo: "Demonstração local em loop — agachamento"
+        },
+        pull: {
+          mp4: "assets/demos/row-loop.mp4",
+          webm: "assets/demos/row-loop.webm",
+          poster: "assets/demos/row-poster.jpg",
+          titulo: "Demonstração local em loop — remada"
+        },
+        push: {
+          mp4: "assets/demos/bench-loop.mp4",
+          webm: "assets/demos/bench-loop.webm",
+          poster: "assets/demos/bench-poster.jpg",
+          titulo: "Demonstração local em loop — supino"
+        },
+        calf: {
+          mp4: "assets/demos/calf-loop.mp4",
+          webm: "assets/demos/calf-loop.webm",
+          poster: "assets/demos/calf-poster.jpg",
+          titulo: "Demonstração local em loop — panturrilha"
+        },
+        core: {
+          mp4: "assets/demos/plank-loop.mp4",
+          webm: "assets/demos/plank-loop.webm",
+          poster: "assets/demos/plank-poster.jpg",
+          titulo: "Demonstração local em loop — prancha"
+        }
+      };
+      return demos[tipo] || null;
+    }
+
+    function obterHtmlDemoVideoLocal(demo, descricao) {
+      return `<div class="exercise-illustration"><div class="exercise-illustration-top"><span class="exercise-illustration-title">Demonstração local do movimento</span><span class="tag tag-ilustracao">Loop local</span></div><div class="exercise-demo-media"><video class="exercise-demo-video" autoplay muted loop playsinline preload="metadata" poster="${demo.poster}" aria-label="${demo.titulo}"><source src="${demo.webm}" type="video/webm"><source src="${demo.mp4}" type="video/mp4"></video></div><div class="exercise-illustration-hint">Vídeo curto em loop, local no app, sem YouTube e sem anúncios.</div><div class="exercise-illustration-note">${descricao}</div></div>`;
+    }
+
     function obterIlustracaoLocalExercicio(exercicio) {
 
       const tipo = obterTipoIlustracaoExercicio(exercicio.nome, exercicio.grupo);
       const descricao = obterDescricaoIlustracaoExercicio(tipo, exercicio);
-      return `<div class="exercise-illustration"><div class="exercise-illustration-top"><span class="exercise-illustration-title">Ilustração local do movimento</span><span class="tag tag-ilustracao">Animação local</span></div>${obterSvgIlustracaoExercicio(tipo)}<div class="exercise-illustration-note">${descricao}</div></div>`;
+      const demo = obterMidiaDemoExercicio(tipo, exercicio);
+      if (demo) {
+        return obterHtmlDemoVideoLocal(demo, descricao);
+      }
+      return `<div class="exercise-illustration"><div class="exercise-illustration-top"><span class="exercise-illustration-title">Ilustração local do movimento</span><span class="tag tag-ilustracao">Ilustração local</span></div>${obterSvgIlustracaoExercicio(tipo)}<div class="exercise-illustration-note">${descricao}</div></div>`;
     }
 
     function obterComplementoCardioLocalHTML() {
@@ -8973,7 +9045,7 @@
 </script>
 
 <script>
-  const METATREINO_APP_VERSION = "0.6.3";
+  const METATREINO_APP_VERSION = "0.6.4";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -10616,7 +10688,7 @@
 
 <script id="mt-v048-checkin-contexto-fix">
 (function(){
-  var VERSION = '0.6.3';
+  var VERSION = '0.6.4';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -10985,7 +11057,7 @@
 
 <script id="mt-v049-data-local-hoje-fix">
 (function(){
-  var VERSION = '0.6.3';
+  var VERSION = '0.6.4';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -11310,7 +11382,7 @@
 
 <script id="mt-v050-corrida-inteligente">
 (function(){
-  var VERSION_ATUAL = '0.6.3';
+  var VERSION_ATUAL = '0.6.4';
   try { window.VERSION = VERSION_ATUAL; } catch(e) {}
   try { if (typeof VERSION !== 'undefined') VERSION = VERSION_ATUAL; } catch(e) {}
 
@@ -11675,7 +11747,7 @@
 
 <script id="mt-v060-modos-preservacao">
 (function(){
-  var VERSION_NOVA = '0.6.3';
+  var VERSION_NOVA = '0.6.4';
   function byId(id){ return document.getElementById(id); }
   function esc(v){
     try { return typeof limparTextoSeguro === 'function' ? limparTextoSeguro(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
@@ -12214,7 +12286,7 @@
       if (preservarStatus && devePreservar(old)) copiarPreservado(dia, old);
     });
     var plano = {
-      versao: '0.6.3-ilustracoes-refinadas',
+      versao: '0.6.4-demos-loop-locais',
       inicioSemana: typeof inicioSemanaAtualISO === 'function' ? inicioSemanaAtualISO() : hoje(),
       criadoEm: Date.now(),
       focoPrincipal: modo,
@@ -12253,7 +12325,7 @@
 </style>
 <script id="mt-v061-reagendamento-e-treino-manual-fix">
 (function(){
-  var VERSION_FIX = '0.6.3';
+  var VERSION_FIX = '0.6.4';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -12674,7 +12746,7 @@
 </style>
 <script id="mt-v062-restaurar-sugestao-original">
 (function(){
-  var VERSION_FIX = '0.6.3';
+  var VERSION_FIX = '0.6.4';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
