@@ -1,3 +1,14 @@
+MetaTreino — v0.6.5 Beta
+
+NOVAS MELHORIAS DESTA ENTREGA
+1) Baseada na v0.6.4 com pasta assets/demos mantida.
+2) Vídeos locais deixam de abrir automaticamente em cada card.
+3) Adicionado botão Ver modo de fazer para abrir a demonstração sob demanda.
+4) Adicionado modal de demonstração com vídeo local em loop, WebM primeiro e MP4 como fallback.
+5) Adicionado fallback visual/textual para evitar card azul ou vazio caso algum arquivo esteja ausente.
+6) Mapeamento inteligente ampliado: todos os exercícios são direcionados para uma demonstração específica ou para uma família de movimento.
+7) Service worker atualizado para versionamento 0.6.5 e cache dos arquivos em assets/demos.
+
 MetaTreino — v0.6.4 Beta
 
 NOVAS MELHORIAS DESTA ENTREGA

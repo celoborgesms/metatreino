@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.6.4">
+  <meta name="app-version" content="0.6.5">
   <meta name="theme-color" content="#020617">
-  <link rel="manifest" href="manifest.json?v=0.6.4">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.6.4">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.6.4">
+  <link rel="manifest" href="manifest.json?v=0.6.5">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.6.5">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.6.5">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -623,6 +623,54 @@
       font-weight: 800;
       letter-spacing: 0.01em;
       color: #fca5a5;
+    }
+
+    .demo-trigger-wrap {
+      margin: 14px 0 12px;
+      padding: 13px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.78));
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .demo-trigger-wrap p {
+      margin: 8px 0 0;
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .botao-demo-exercicio {
+      width: 100%;
+      margin-top: 0;
+      background: linear-gradient(135deg, #ef4444, #f97316);
+      color: #fff;
+      border: 0;
+      box-shadow: 0 12px 24px rgba(239, 68, 68, 0.22);
+    }
+
+    .demo-modal-card {
+      max-width: 430px;
+    }
+
+    .demo-modal-card .exercise-demo-media {
+      max-width: 360px;
+    }
+
+    .demo-modal-card .exercise-demo-video {
+      max-height: 68vh;
+    }
+
+    .demo-fallback-box {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.24);
+      color: #fecaca;
+      font-size: 13px;
+      line-height: 1.45;
     }
 
     .exercise-demo {
@@ -1771,7 +1819,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino • Beta 0.6.4</span>
+        <span class="app-badge">MetaTreino • Beta 0.6.5</span>
         <h1><span class="hero-meta-word">Meta</span>Treino</h1>
         <p>Treinos inteligentes para academia, corrida ou os dois. Você escolhe o foco e o app preserva seu histórico.</p>
       </div>
@@ -2024,7 +2072,7 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino 0.6.4 Beta</strong><br>
+          <strong>MetaTreino 0.6.5 Beta</strong><br>
           <span class="tag beta">Modos</span>
           <p><strong>Atualizada em:</strong> 13/05/2026</p>
           <ul class="versao-atual-lista">
@@ -2601,6 +2649,18 @@
       </div>
       <button type="button" class="botao-secundario" onclick="fecharModalCompartilhamento()">Fechar</button>
       <div id="mensagemCompartilhamento" class="alerta hidden"></div>
+    </div>
+  </div>
+
+
+  <div id="modalDemoExercicio" class="modal-overlay hidden">
+    <div class="modal-card demo-modal-card">
+      <span class="session-badge">Modo de fazer</span>
+      <h2 id="tituloModalDemoExercicio">Demonstração do exercício</h2>
+      <p id="textoModalDemoMusculos" class="small">Vídeo local em loop, sem YouTube e sem anúncios.</p>
+      <div id="conteudoModalDemoExercicio"></div>
+      <div id="fallbackModalDemoExercicio" class="demo-fallback-box hidden">Demonstração visual indisponível para este exercício. Siga as instruções escritas do card e respeite seus limites.</div>
+      <button type="button" class="botao-secundario" onclick="fecharModalDemoExercicio()">Fechar</button>
     </div>
   </div>
 
@@ -6522,55 +6582,152 @@
       }
     }
 
+    function normalizarChaveDemo(texto) {
+      return String(texto || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+    }
+
+    const DEMOS_EXERCICIOS_LOCAIS = {
+      squat: {
+        mp4: "assets/demos/squat-loop.mp4",
+        webm: "assets/demos/squat-loop.webm",
+        poster: "assets/demos/squat-poster.jpg",
+        titulo: "Agachamento / base de pernas",
+        musculos: "Quadríceps, glúteos e core"
+      },
+      row: {
+        mp4: "assets/demos/row-loop.mp4",
+        webm: "assets/demos/row-loop.webm",
+        poster: "assets/demos/row-poster.jpg",
+        titulo: "Remada / puxada",
+        musculos: "Costas, bíceps e antebraços"
+      },
+      bench: {
+        mp4: "assets/demos/bench-loop.mp4",
+        webm: "assets/demos/bench-loop.webm",
+        poster: "assets/demos/bench-poster.jpg",
+        titulo: "Supino / empurrar horizontal",
+        musculos: "Peitoral, tríceps e ombros"
+      },
+      calf: {
+        mp4: "assets/demos/calf-loop.mp4",
+        webm: "assets/demos/calf-loop.webm",
+        poster: "assets/demos/calf-poster.jpg",
+        titulo: "Panturrilha",
+        musculos: "Panturrilhas"
+      },
+      plank: {
+        mp4: "assets/demos/plank-loop.mp4",
+        webm: "assets/demos/plank-loop.webm",
+        poster: "assets/demos/plank-poster.jpg",
+        titulo: "Prancha / core",
+        musculos: "Abdômen, core e ombros"
+      }
+    };
+
     function obterMidiaDemoExercicio(tipo, exercicio) {
-      const demos = {
-        squat: {
-          mp4: "assets/demos/squat-loop.mp4",
-          webm: "assets/demos/squat-loop.webm",
-          poster: "assets/demos/squat-poster.jpg",
-          titulo: "Demonstração local em loop — agachamento"
-        },
-        pull: {
-          mp4: "assets/demos/row-loop.mp4",
-          webm: "assets/demos/row-loop.webm",
-          poster: "assets/demos/row-poster.jpg",
-          titulo: "Demonstração local em loop — remada"
-        },
-        push: {
-          mp4: "assets/demos/bench-loop.mp4",
-          webm: "assets/demos/bench-loop.webm",
-          poster: "assets/demos/bench-poster.jpg",
-          titulo: "Demonstração local em loop — supino"
-        },
-        calf: {
-          mp4: "assets/demos/calf-loop.mp4",
-          webm: "assets/demos/calf-loop.webm",
-          poster: "assets/demos/calf-poster.jpg",
-          titulo: "Demonstração local em loop — panturrilha"
-        },
-        core: {
-          mp4: "assets/demos/plank-loop.mp4",
-          webm: "assets/demos/plank-loop.webm",
-          poster: "assets/demos/plank-poster.jpg",
-          titulo: "Demonstração local em loop — prancha"
-        }
-      };
-      return demos[tipo] || null;
+      const nome = normalizarChaveDemo(exercicio && exercicio.nome);
+      const grupo = normalizarChaveDemo(exercicio && exercicio.grupo);
+
+      if (nome.includes("panturrilha")) return DEMOS_EXERCICIOS_LOCAIS.calf;
+
+      if (
+        nome.includes("prancha") || nome.includes("abdominal") || nome.includes("abdomen") ||
+        nome.includes("mountain") || nome.includes("superman") || grupo.includes("core") || grupo.includes("abdomen")
+      ) return DEMOS_EXERCICIOS_LOCAIS.plank;
+
+      if (
+        nome.includes("remada") || nome.includes("puxada") || nome.includes("pulldown") ||
+        nome.includes("pulley") || nome.includes("face pull") || nome.includes("pullover") ||
+        nome.includes("barra") || grupo.includes("costas")
+      ) return DEMOS_EXERCICIOS_LOCAIS.row;
+
+      if (
+        nome.includes("supino") || nome.includes("flexao") || nome.includes("flexão") ||
+        nome.includes("crucifixo") || nome.includes("desenvolvimento") || nome.includes("elevacao lateral") ||
+        nome.includes("elevação lateral") || nome.includes("elevacao frontal") || nome.includes("elevação frontal") ||
+        nome.includes("triceps") || nome.includes("tríceps") || grupo.includes("peito") || grupo.includes("ombro") || grupo.includes("triceps")
+      ) return DEMOS_EXERCICIOS_LOCAIS.bench;
+
+      if (
+        nome.includes("agachamento") || nome.includes("afundo") || nome.includes("passada") ||
+        nome.includes("leg press") || nome.includes("extensora") || nome.includes("flexora") ||
+        nome.includes("stiff") || nome.includes("terra") || nome.includes("ponte") ||
+        nome.includes("gluteo") || nome.includes("glúteo") || grupo.includes("perna") || grupo.includes("gluteo")
+      ) return DEMOS_EXERCICIOS_LOCAIS.squat;
+
+      if (nome.includes("rosca") || grupo.includes("biceps") || grupo.includes("bíceps")) return DEMOS_EXERCICIOS_LOCAIS.row;
+      if (tipo === "squat" || tipo === "lunge" || tipo === "hinge" || tipo === "bridge") return DEMOS_EXERCICIOS_LOCAIS.squat;
+      if (tipo === "pull") return DEMOS_EXERCICIOS_LOCAIS.row;
+      if (tipo === "push" || tipo === "press" || tipo === "curl") return DEMOS_EXERCICIOS_LOCAIS.bench;
+      if (tipo === "calf") return DEMOS_EXERCICIOS_LOCAIS.calf;
+      if (tipo === "core") return DEMOS_EXERCICIOS_LOCAIS.plank;
+
+      return null;
+    }
+
+    function obterHtmlBotaoDemoExercicio(exercicio, index) {
+      const tipo = obterTipoIlustracaoExercicio(exercicio.nome, exercicio.grupo);
+      const demo = obterMidiaDemoExercicio(tipo, exercicio);
+      const legenda = demo ? "Demonstração local disponível em loop." : "Demonstração visual genérica disponível como apoio.";
+      return "<div class='demo-trigger-wrap'>" +
+        "<button type='button' class='botao-demo-exercicio' onclick='abrirModalDemoExercicio(" + index + ")'>Ver modo de fazer</button>" +
+        "<p>" + legenda + " Use junto com as instruções escritas abaixo.</p>" +
+        "</div>";
     }
 
     function obterHtmlDemoVideoLocal(demo, descricao) {
-      return `<div class="exercise-illustration"><div class="exercise-illustration-top"><span class="exercise-illustration-title">Demonstração local do movimento</span><span class="tag tag-ilustracao">Loop local</span></div><div class="exercise-demo-media"><video class="exercise-demo-video" autoplay muted loop playsinline preload="metadata" poster="${demo.poster}" aria-label="${demo.titulo}"><source src="${demo.webm}" type="video/webm"><source src="${demo.mp4}" type="video/mp4"></video></div><div class="exercise-illustration-hint">Vídeo curto em loop, local no app, sem YouTube e sem anúncios.</div><div class="exercise-illustration-note">${descricao}</div></div>`;
+      return `<div class="exercise-demo-media"><video id="videoModalDemoExercicio" class="exercise-demo-video" autoplay muted loop playsinline preload="metadata" poster="${demo.poster}" aria-label="${demo.titulo}" onerror="mostrarFallbackDemoExercicio()"><source src="${demo.webm}" type="video/webm"><source src="${demo.mp4}" type="video/mp4"></video></div><div class="exercise-illustration-hint">Vídeo curto em loop, local no app, sem YouTube e sem anúncios.</div><div class="exercise-illustration-note">${descricao}</div>`;
     }
 
-    function obterIlustracaoLocalExercicio(exercicio) {
+    function abrirModalDemoExercicio(index) {
+      if (!treinoAtual || !treinoAtual[index]) {
+        mostrarMensagem("Não encontrei este exercício para abrir a demonstração.");
+        return;
+      }
 
+      const exercicio = treinoAtual[index];
       const tipo = obterTipoIlustracaoExercicio(exercicio.nome, exercicio.grupo);
       const descricao = obterDescricaoIlustracaoExercicio(tipo, exercicio);
       const demo = obterMidiaDemoExercicio(tipo, exercicio);
+      const modal = document.getElementById("modalDemoExercicio");
+      const titulo = document.getElementById("tituloModalDemoExercicio");
+      const musculos = document.getElementById("textoModalDemoMusculos");
+      const conteudo = document.getElementById("conteudoModalDemoExercicio");
+      const fallback = document.getElementById("fallbackModalDemoExercicio");
+      if (!modal || !titulo || !musculos || !conteudo || !fallback) return;
+
+      fallback.classList.add("hidden");
+      titulo.textContent = exercicio.nome || "Demonstração do exercício";
+
       if (demo) {
-        return obterHtmlDemoVideoLocal(demo, descricao);
+        musculos.textContent = "Músculos principais: " + demo.musculos + ".";
+        conteudo.innerHTML = obterHtmlDemoVideoLocal(demo, descricao);
+      } else {
+        musculos.textContent = "Demonstração visual genérica. Siga as instruções escritas para executar com segurança.";
+        conteudo.innerHTML = `<div class="exercise-illustration"><div class="exercise-illustration-top"><span class="exercise-illustration-title">Ilustração local do movimento</span><span class="tag tag-ilustracao">Ilustração local</span></div>${obterSvgIlustracaoExercicio(tipo)}<div class="exercise-illustration-note">${descricao}</div></div>`;
       }
-      return `<div class="exercise-illustration"><div class="exercise-illustration-top"><span class="exercise-illustration-title">Ilustração local do movimento</span><span class="tag tag-ilustracao">Ilustração local</span></div>${obterSvgIlustracaoExercicio(tipo)}<div class="exercise-illustration-note">${descricao}</div></div>`;
+
+      modal.classList.remove("hidden");
+    }
+
+    function mostrarFallbackDemoExercicio() {
+      const fallback = document.getElementById("fallbackModalDemoExercicio");
+      const conteudo = document.getElementById("conteudoModalDemoExercicio");
+      if (fallback) fallback.classList.remove("hidden");
+      if (conteudo) conteudo.innerHTML = "";
+    }
+
+    function fecharModalDemoExercicio() {
+      const modal = document.getElementById("modalDemoExercicio");
+      const conteudo = document.getElementById("conteudoModalDemoExercicio");
+      const fallback = document.getElementById("fallbackModalDemoExercicio");
+      if (conteudo) conteudo.innerHTML = "";
+      if (fallback) fallback.classList.add("hidden");
+      if (modal) modal.classList.add("hidden");
     }
 
     function obterComplementoCardioLocalHTML() {
@@ -7360,15 +7517,15 @@
           "<span>" + exercicio.series + " | " + exercicio.reps + "</span><br>";
         const sugestaoCargaHtml = exercicio.registravel === false ? "" : "<div class='alerta'>" + obterTextoSugestaoCarga(exercicio.nome) + "</div>";
         const botaoRegistrarHtml = exercicio.registravel === false ? "" : "<button type='button' class='botao-secundario' onclick='preencherRegistroComExercicio(" + index + ")'>Registrar este exercício</button>";
-        const ilustracaoExercicioHtml = obterIlustracaoLocalExercicio(exercicio);
+        const demoExercicioHtml = obterHtmlBotaoDemoExercicio(exercicio, index);
         div.innerHTML = "<strong>" + exercicio.nome + "</strong>" +
           blocoSeries +
           "<span class='tag'>Grupo: " + exercicio.grupo + "</span> " +
           "<span class='tag'>Equipamento: " + exercicio.equipamento + "</span>" +
           sugestaoCargaHtml +
-          ilustracaoExercicioHtml +
+          demoExercicioHtml +
           "<h4>Como fazer:</h4><ol>" + passosHTML + "</ol>" +
-          "<div class='aviso-video'>A ilustração acima é uma referência visual simples. Priorize execução controlada e pare se houver dor.</div>" +
+          "<div class='aviso-video'>Use o botão Ver modo de fazer como apoio visual. Priorize execução controlada e pare se houver dor.</div>" +
           "<label class='check-exercicio'><input type='checkbox' " + marcado + " onchange='marcarExercicioConcluido(" + index + ", this.checked)'>Exercício concluído</label>" +
           "<div class='acoes-exercicio-grid'>" +
           botaoRegistrarHtml +
@@ -9045,7 +9202,7 @@
 </script>
 
 <script>
-  const METATREINO_APP_VERSION = "0.6.4";
+  const METATREINO_APP_VERSION = "0.6.5";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -10688,7 +10845,7 @@
 
 <script id="mt-v048-checkin-contexto-fix">
 (function(){
-  var VERSION = '0.6.4';
+  var VERSION = '0.6.5';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -11057,7 +11214,7 @@
 
 <script id="mt-v049-data-local-hoje-fix">
 (function(){
-  var VERSION = '0.6.4';
+  var VERSION = '0.6.5';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -11382,7 +11539,7 @@
 
 <script id="mt-v050-corrida-inteligente">
 (function(){
-  var VERSION_ATUAL = '0.6.4';
+  var VERSION_ATUAL = '0.6.5';
   try { window.VERSION = VERSION_ATUAL; } catch(e) {}
   try { if (typeof VERSION !== 'undefined') VERSION = VERSION_ATUAL; } catch(e) {}
 
@@ -11747,7 +11904,7 @@
 
 <script id="mt-v060-modos-preservacao">
 (function(){
-  var VERSION_NOVA = '0.6.4';
+  var VERSION_NOVA = '0.6.5';
   function byId(id){ return document.getElementById(id); }
   function esc(v){
     try { return typeof limparTextoSeguro === 'function' ? limparTextoSeguro(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
@@ -12286,7 +12443,7 @@
       if (preservarStatus && devePreservar(old)) copiarPreservado(dia, old);
     });
     var plano = {
-      versao: '0.6.4-demos-loop-locais',
+      versao: '0.6.5-demos-botao-local',
       inicioSemana: typeof inicioSemanaAtualISO === 'function' ? inicioSemanaAtualISO() : hoje(),
       criadoEm: Date.now(),
       focoPrincipal: modo,
@@ -12325,7 +12482,7 @@
 </style>
 <script id="mt-v061-reagendamento-e-treino-manual-fix">
 (function(){
-  var VERSION_FIX = '0.6.4';
+  var VERSION_FIX = '0.6.5';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -12746,7 +12903,7 @@
 </style>
 <script id="mt-v062-restaurar-sugestao-original">
 (function(){
-  var VERSION_FIX = '0.6.4';
+  var VERSION_FIX = '0.6.5';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
