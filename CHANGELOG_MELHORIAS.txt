@@ -1,3 +1,12 @@
+MetaTreino — v0.6.1 Beta
+
+Correcoes de fluxo:
+- Reagendar agora pede confirmacao e guarda dados para desfazer.
+- Reabrir em uma sessao reagendada restaura o treino original.
+- Marcar feito/Pular em sessao reagendada restaura o treino original antes de aplicar status.
+- Check-in permite trocar manualmente o treino de forca do dia, com alerta, sem ficar preso ao plano recomendado.
+- A troca manual altera somente a sessao selecionada e preserva o restante da semana.
+
 MetaTreino — v0.6.0 Beta
 
 - Reposicionamento do app: MetaTreino agora trabalha com foco principal Academia, Corrida ou Academia + Corrida, sem obrigar todo usuário a usar híbrido.
