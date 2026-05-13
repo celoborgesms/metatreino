@@ -1,4 +1,4 @@
-MetaTreino — v0.6.2 Beta
+MetaTreino — v0.6.3 Beta
 Data: 13/05/2026
 
 Correções desta versão:
@@ -152,3 +152,12 @@ VERSAO 0.7.0 BETA
 - Cada card de exercício agora mostra uma referência visual simples do movimento sem abrir links externos.
 - Complemento opcional de cardio em casa foi convertido para orientações locais sem botões para conteúdo externo.
 - Atualizada a identidade da versão para 0.7.0.
+
+
+==============================
+VERSAO 0.6.3 BETA
+==============================
+- Corrigido o versionamento para seguir a sequência 0.6.x.
+- Ilustrações locais dos exercícios foram redesenhadas com vetores mais refinados e poses mais específicas por tipo de exercício.
+- Ajustado o fundo das ilustrações e dos cards locais para ficar alinhado com a identidade escura do app.
+- Mantida a navegação totalmente interna, sem abrir conteúdo externo para execução dos movimentos.
