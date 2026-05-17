@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.6.4">
+  <meta name="app-version" content="0.6.5">
   <meta name="theme-color" content="#020617">
-  <link rel="manifest" href="manifest.json?v=0.6.4">
-<link rel="icon" type="image/png" href="icon-512.png?v=0.6.4">
-<link rel="apple-touch-icon" href="icon-512.png?v=0.6.4">
+  <link rel="manifest" href="manifest.json?v=0.6.5">
+<link rel="icon" type="image/png" href="icon-512.png?v=0.6.5">
+<link rel="apple-touch-icon" href="icon-512.png?v=0.6.5">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -18,10 +18,10 @@
       --bg: #0f172a;
       --bg-2: #111827;
       --card: rgba(255, 255, 255, 0.92);
-      --primary: #ef4444;
-      --primary-dark: #991b1b;
-      --secondary: #991b1b;
-      --danger: #ef4444;
+      --primary: #06b6d4;
+      --primary-dark: #2563eb;
+      --secondary: #2563eb;
+      --danger: #fb7185;
       --text: #ffffff;
       --muted: #cbd5e1;
       --line: rgba(226, 232, 240, 0.9);
@@ -58,7 +58,7 @@
       display: inline-block;
       padding: 7px 11px;
       border-radius: 999px;
-      background: rgba(239, 68, 68, 0.16);
+      background: rgba(6, 182, 212, 0.16);
       color: #fecaca;
       border: 1px solid rgba(254, 202, 202, 0.25);
       font-size: 12px;
@@ -143,7 +143,7 @@
     textarea:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.16);
+      box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.16);
       background: white;
     }
 
@@ -180,9 +180,9 @@
     }
 
     .botao-perigo {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
+      background: linear-gradient(135deg, #06b6d4, #0891b2);
       color: white;
-      box-shadow: 0 12px 26px rgba(239, 68, 68, 0.24);
+      box-shadow: 0 12px 26px rgba(6, 182, 212, 0.24);
     }
 
     .hidden {
@@ -285,7 +285,7 @@
     }
 
     .botao-principal {
-      background: linear-gradient(135deg, #ef4444, #991b1b);
+      background: linear-gradient(135deg, #06b6d4, #2563eb);
       color: white;
       font-size: 17px;
       font-weight: 950;
@@ -298,7 +298,7 @@
       padding: 16px;
       border-radius: 22px;
       background: linear-gradient(135deg, #ecfdf5, #eff6ff);
-      border: 1px solid rgba(239, 68, 68, 0.28);
+      border: 1px solid rgba(6, 182, 212, 0.28);
       line-height: 1.55;
       color: #0f172a;
     }
@@ -307,8 +307,8 @@
       margin-top: 10px;
       padding: 12px;
       border-radius: 18px;
-      background: rgba(239, 68, 68, 0.10);
-      border: 1px solid rgba(239, 68, 68, 0.18);
+      background: rgba(6, 182, 212, 0.10);
+      border: 1px solid rgba(6, 182, 212, 0.18);
       color: #166534;
       font-weight: 850;
       line-height: 1.45;
@@ -355,8 +355,8 @@
       margin-top: 14px;
       padding: 14px;
       border-radius: 18px;
-      background: rgba(239, 68, 68, 0.10);
-      border: 1px solid rgba(239, 68, 68, 0.38);
+      background: rgba(6, 182, 212, 0.10);
+      border: 1px solid rgba(6, 182, 212, 0.38);
       color: #e2e8f0;
     }
 
@@ -514,7 +514,7 @@
     .concluido {
       opacity: 0.82;
       background: linear-gradient(180deg, #ecfdf5, #ffffff);
-      border-color: rgba(239, 68, 68, 0.55);
+      border-color: rgba(6, 182, 212, 0.55);
       transform: scale(0.995);
     }
 
@@ -690,7 +690,7 @@
     /* Botões principais agora usam azul confiança. O verde fica só como detalhe da marca. */
     .botao-principal,
     button {
-      background: linear-gradient(135deg, #991b1b, #2563eb) !important;
+      background: linear-gradient(135deg, #2563eb, #2563eb) !important;
       color: #ffffff !important;
       box-shadow: 0 14px 30px rgba(37, 99, 235, 0.28) !important;
     }
@@ -703,14 +703,14 @@
     }
 
     .botao-perigo {
-      background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+      background: linear-gradient(135deg, #06b6d4, #0891b2) !important;
       color: #ffffff !important;
-      box-shadow: 0 12px 26px rgba(239, 68, 68, 0.24) !important;
+      box-shadow: 0 12px 26px rgba(6, 182, 212, 0.24) !important;
     }
 
     .card::before,
     .grafico-barra {
-      background: linear-gradient(90deg, #ef4444, #991b1b) !important;
+      background: linear-gradient(90deg, #06b6d4, #2563eb) !important;
     }
 
     .alerta,
@@ -723,8 +723,8 @@
     }
 
     .alerta-sucesso {
-      background: rgba(239, 68, 68, 0.14) !important;
-      border-left-color: #ef4444 !important;
+      background: rgba(6, 182, 212, 0.14) !important;
+      border-left-color: #06b6d4 !important;
     }
 
     .alerta-aviso {
@@ -758,7 +758,7 @@
     .check-termos input {
       background: #ffffff !important;
       border-color: #94a3b8 !important;
-      accent-color: #ef4444 !important;
+      accent-color: #06b6d4 !important;
     }
 
     .check-exercicio span,
@@ -775,8 +775,8 @@
       margin-top: 16px;
       padding: 16px;
       border-radius: 22px;
-      background: rgba(239, 68, 68, 0.12);
-      border: 1px solid rgba(239, 68, 68, 0.32);
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.32);
       color: #e2e8f0 !important;
       line-height: 1.45;
       font-weight: 850;
@@ -834,7 +834,7 @@
 
     .exercise.concluido strong::after {
       content: "  ✓ concluído";
-      color: #ef4444 !important;
+      color: #06b6d4 !important;
       font-size: 13px;
     }
 
@@ -868,7 +868,7 @@
     }
 
     .dia-historico-btn.ativo {
-      background: linear-gradient(135deg, #ef4444, #991b1b) !important;
+      background: linear-gradient(135deg, #06b6d4, #2563eb) !important;
       color: #ffffff !important;
       border-color: rgba(255, 255, 255, 0.42) !important;
     }
@@ -926,7 +926,7 @@
       display: grid;
       place-items: center;
       border-radius: 999px;
-      background: linear-gradient(135deg, #ef4444, #991b1b);
+      background: linear-gradient(135deg, #06b6d4, #2563eb);
       color: #ffffff;
       font-weight: 950;
     }
@@ -951,7 +951,7 @@
     .ranking-pontos {
       flex: 0 0 auto;
       text-align: right;
-      color: #ef4444;
+      color: #06b6d4;
       font-weight: 950;
       font-size: 14px;
     }
@@ -1011,13 +1011,13 @@
     .checkbox-grid input {
       width: auto;
       margin: 0;
-      accent-color: #ef4444;
+      accent-color: #06b6d4;
     }
 
     .hoje-hero {
       padding: 18px;
       border-radius: 24px;
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(59, 130, 246, 0.16));
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.16), rgba(59, 130, 246, 0.16));
       border: 1px solid rgba(96, 165, 250, 0.42);
       line-height: 1.55;
     }
@@ -1087,7 +1087,7 @@
       color: #e2e8f0;
     }
 
-    .status-concluido { color: #fecaca; border-color: rgba(239, 68, 68, 0.42); background: rgba(239, 68, 68, 0.12); }
+    .status-concluido { color: #fecaca; border-color: rgba(6, 182, 212, 0.42); background: rgba(6, 182, 212, 0.12); }
     .status-pulado { color: #fed7aa; border-color: rgba(249, 115, 22, 0.42); background: rgba(249, 115, 22, 0.14); }
     .status-hoje { color: #dbeafe; border-color: rgba(59, 130, 246, 0.56); background: rgba(59, 130, 246, 0.16); }
 
@@ -1095,8 +1095,8 @@
       margin-top: 12px;
       padding: 14px;
       border-radius: 20px;
-      background: rgba(239, 68, 68, 0.12);
-      border: 1px solid rgba(239, 68, 68, 0.35);
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.35);
       line-height: 1.5;
     }
 
@@ -1112,7 +1112,7 @@
     .barra-progresso-fina > div {
       height: 100%;
       border-radius: 999px;
-      background: linear-gradient(90deg, #ef4444, #991b1b);
+      background: linear-gradient(90deg, #06b6d4, #2563eb);
     }
 
     .conquista-card .barra-progresso-fina {
@@ -1145,9 +1145,9 @@
       --bg-2: #0b1020;
       --card: rgba(12, 18, 32, 0.82);
       --card-strong: rgba(17, 24, 39, 0.94);
-      --primary: #ef4444;
+      --primary: #06b6d4;
       --primary-dark: #84cc16;
-      --secondary: #7f1d1d;
+      --secondary: #1e40af;
       --accent: #a78bfa;
       --danger: #fb7185;
       --text: #f8fafc;
@@ -1218,7 +1218,7 @@
     .card::before {
       height: 5px;
       width: 78px;
-      background: linear-gradient(90deg, #ef4444, #7f1d1d, #a78bfa) !important;
+      background: linear-gradient(90deg, #06b6d4, #1e40af, #a78bfa) !important;
       box-shadow: 0 0 24px rgba(190, 242, 100, 0.16);
     }
 
@@ -1242,9 +1242,9 @@
     }
 
     button, .botao-principal {
-      background: linear-gradient(135deg, #ef4444, #ef4444 50%, #7f1d1d) !important;
+      background: linear-gradient(135deg, #06b6d4, #06b6d4 50%, #1e40af) !important;
       color: #031313 !important;
-      box-shadow: 0 16px 32px rgba(239, 68, 68, 0.22) !important;
+      box-shadow: 0 16px 32px rgba(6, 182, 212, 0.22) !important;
       border: 1px solid rgba(255, 255, 255, 0.18) !important;
     }
 
@@ -1257,7 +1257,7 @@
     }
 
     .botao-perigo {
-      background: linear-gradient(135deg, #fb7185, #ef4444) !important;
+      background: linear-gradient(135deg, #fb7185, #06b6d4) !important;
       color: #ffffff !important;
     }
 
@@ -1279,7 +1279,7 @@
       border-color: rgba(148, 163, 184, 0.25) !important;
     }
 
-    .alerta-sucesso { border-left-color: #ef4444 !important; }
+    .alerta-sucesso { border-left-color: #06b6d4 !important; }
     .alerta-aviso { border-left-color: #fb923c !important; }
     .mensagem-inteligente { border-color: rgba(190, 242, 100, 0.28) !important; color: #ecfccb !important; }
 
@@ -1296,7 +1296,7 @@
       border: 1px solid rgba(148, 163, 184, 0.25) !important;
     }
 
-    .resumo-kpi strong { color: #ef4444 !important; }
+    .resumo-kpi strong { color: #06b6d4 !important; }
     .resumo-kpi span { color: #cbd5e1 !important; }
 
     .plano-semanal-box {
@@ -1337,7 +1337,7 @@
 
 .barra-progresso-fina > div,
     .grafico-barra {
-      background: linear-gradient(90deg, #ef4444, #7f1d1d, #a78bfa) !important;
+      background: linear-gradient(90deg, #06b6d4, #1e40af, #a78bfa) !important;
     }
 
     .checkbox-grid label {
@@ -1366,14 +1366,14 @@
     .impacto-pill { display:inline-flex; align-items:center; padding:5px 9px; margin:7px 6px 0 0; border-radius:999px; background:rgba(219,234,254,.12); border:1px solid rgba(191,219,254,.22); color:#dbeafe; font-size:12px; font-weight:800; }
     .impacto-pill.baixo { background:rgba(34,197,94,.16); color:#dcfce7; border-color:rgba(34,197,94,.30); }
     .impacto-pill.moderado { background:rgba(245,158,11,.16); color:#fef3c7; border-color:rgba(245,158,11,.34); }
-    .impacto-pill.alto { background:rgba(239,68,68,.16); color:#fee2e2; border-color:rgba(239,68,68,.35); }
+    .impacto-pill.alto { background:rgba(6,182,212,.16); color:#fee2e2; border-color:rgba(6,182,212,.35); }
     .corrida-dashboard { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin: 12px 0; }
     .metric-card { padding:13px; border-radius:17px; background:rgba(15,23,42,.80); border:1px solid rgba(148,163,184,.22); }
     .metric-card strong { display:block; color:#fff; font-size:21px; line-height:1.1; }
     .metric-card span { color:#cbd5e1; font-size:12px; }
     .tipo-registro-info { padding:12px; border-radius:16px; margin: 12px 0; background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.25); color:#dbeafe; }
     .plano-acoes-principais { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin-top:12px; }
-    .recomendacao-checkin { border-left: 4px solid #ef4444; background: rgba(34,197,94,.12); }
+    .recomendacao-checkin { border-left: 4px solid #06b6d4; background: rgba(34,197,94,.12); }
 
   </style>
 </head>
@@ -1382,7 +1382,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino • Beta 0.6.3</span>
+        <span class="app-badge">MetaTreino • Beta 0.6.5</span>
         <h1><span class="hero-meta-word">Meta</span>Treino</h1>
         <p>Treinos inteligentes para academia, corrida ou os dois. Você escolhe o foco e o app preserva seu histórico.</p>
       </div>
@@ -1635,7 +1635,7 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino 0.6.3 Beta</strong><br>
+          <strong>MetaTreino 0.6.5 Beta</strong><br>
           <span class="tag beta">Estabilidade</span>
           <p><strong>Atualizada em:</strong> 13/05/2026</p>
           <ul class="versao-atual-lista">
@@ -4833,7 +4833,7 @@
       const grad = ctx.createLinearGradient(0, 0, W, H);
       grad.addColorStop(0, "#0f172a");
       grad.addColorStop(0.48, "#1e3a8a");
-      grad.addColorStop(1, "#991b1b");
+      grad.addColorStop(1, "#2563eb");
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, W, H);
 
@@ -4850,7 +4850,7 @@
       ctx.lineWidth = 3;
       ctx.stroke();
 
-      ctx.fillStyle = "#ef4444";
+      ctx.fillStyle = "#06b6d4";
       ctx.font = "900 42px Arial, sans-serif";
       ctx.fillText("Meta", 115, 145);
       ctx.fillStyle = "#ffffff";
@@ -4895,7 +4895,7 @@
       desenharRetanguloArredondado(ctx, listaX, listaY, listaW, listaH, 32);
       ctx.fillStyle = "rgba(15, 23, 42, 0.60)";
       ctx.fill();
-      ctx.strokeStyle = "rgba(239, 68, 68, 0.36)";
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.36)";
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.save();
@@ -8355,7 +8355,7 @@
 </script>
 
 <script>
-  const METATREINO_APP_VERSION = "0.6.3";
+  const METATREINO_APP_VERSION = "0.6.5";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -8682,7 +8682,7 @@
         var lbl = d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
         return { y: Number(t.carga || 0), label: lbl };
       });
-      box.innerHTML = '<div class="evolucao-chart-titulo">Carga (kg) — ' + exercicio + '</div>' + criarSVGLinhas(pontos, null, 180, '#ef4444');
+      box.innerHTML = '<div class="evolucao-chart-titulo">Carga (kg) — ' + exercicio + '</div>' + criarSVGLinhas(pontos, null, 180, '#06b6d4');
     });
   };
 
@@ -9678,7 +9678,7 @@
 
 <script id="mt-v048-checkin-contexto-fix">
 (function(){
-  var VERSION = '0.6.3';
+  var VERSION = '0.6.5';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -10047,7 +10047,7 @@
 
 <script id="mt-v049-data-local-hoje-fix">
 (function(){
-  var VERSION = '0.6.3';
+  var VERSION = '0.6.5';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -10372,7 +10372,7 @@
 
 <script id="mt-v050-corrida-inteligente">
 (function(){
-  var VERSION_ATUAL = '0.6.3';
+  var VERSION_ATUAL = '0.6.5';
   try { window.VERSION = VERSION_ATUAL; } catch(e) {}
   try { if (typeof VERSION !== 'undefined') VERSION = VERSION_ATUAL; } catch(e) {}
 
@@ -10737,7 +10737,7 @@
 
 <script id="mt-v060-modos-preservacao">
 (function(){
-  var VERSION_NOVA = '0.6.3';
+  var VERSION_NOVA = '0.6.5';
   function byId(id){ return document.getElementById(id); }
   function esc(v){
     try { return typeof limparTextoSeguro === 'function' ? limparTextoSeguro(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
@@ -11276,7 +11276,7 @@
       if (preservarStatus && devePreservar(old)) copiarPreservado(dia, old);
     });
     var plano = {
-      versao: '0.6.3-estabilidade-visual',
+      versao: '0.6.5-fluxo-plano-checkin',
       inicioSemana: typeof inicioSemanaAtualISO === 'function' ? inicioSemanaAtualISO() : hoje(),
       criadoEm: Date.now(),
       focoPrincipal: modo,
@@ -11315,7 +11315,7 @@
 </style>
 <script id="mt-v061-reagendamento-e-treino-manual-fix">
 (function(){
-  var VERSION_FIX = '0.6.3';
+  var VERSION_FIX = '0.6.5';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -11736,7 +11736,7 @@
 </style>
 <script id="mt-v062-restaurar-sugestao-original">
 (function(){
-  var VERSION_FIX = '0.6.3';
+  var VERSION_FIX = '0.6.5';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -12078,8 +12078,8 @@
   :root {
     --mt063-card-border: rgba(148, 163, 184, .22);
     --mt063-card-bg: linear-gradient(180deg, rgba(15, 23, 42, .94), rgba(15, 23, 42, .72));
-    --mt063-red: #ef4444;
-    --mt063-red-soft: rgba(239, 68, 68, .14);
+    --mt063-red: #06b6d4;
+    --mt063-red-soft: rgba(6, 182, 212, .14);
     --mt063-green-soft: rgba(34, 197, 94, .13);
   }
 
@@ -12187,7 +12187,7 @@
     padding: 13px;
     border-radius: 18px;
     border: 1px solid rgba(248, 113, 113, .24);
-    background: radial-gradient(circle at top left, rgba(239, 68, 68, .16), transparent 40%), linear-gradient(180deg, rgba(15, 23, 42, .96), rgba(15, 23, 42, .76));
+    background: radial-gradient(circle at top left, rgba(6, 182, 212, .16), transparent 40%), linear-gradient(180deg, rgba(15, 23, 42, .96), rgba(15, 23, 42, .76));
     box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
   }
 
@@ -12224,7 +12224,7 @@
   }
 
   .mt-v063-youtube-button {
-    background: linear-gradient(135deg, #dc2626, #991b1b) !important;
+    background: linear-gradient(135deg, #0891b2, #2563eb) !important;
     color: white !important;
     border: 1px solid rgba(248, 113, 113, .42) !important;
   }
@@ -12285,7 +12285,7 @@
 
 <script id="mt-v063-estabilidade-visual">
 (function(){
-  var VERSION_FIX = '0.6.3';
+  var VERSION_FIX = '0.6.5';
 
   function byId(id){ return document.getElementById(id); }
   function normalizarTexto(v){
@@ -12489,7 +12489,7 @@
 
 
 <style id="mt-v064-consolidated-css-fixes">
-  /* MetaTreino v0.6.4 — CSS consolidado: uma fonte final para body, nav, hover e aba ativa. */
+  /* MetaTreino v0.6.5 — CSS consolidado: uma fonte final para body, nav, hover e aba ativa. */
   body {
     margin: 0;
     min-height: 100vh;
@@ -12726,6 +12726,459 @@
   });
   document.addEventListener("DOMContentLoaded", atualizarAbaAtiva);
   window.mtAtualizarAbaAtiva = atualizarAbaAtiva;
+})();
+</script>
+
+
+
+<style id="mt-v065-plano-checkin-ui-style">
+  /* MetaTreino v0.6.5 — restaura a identidade azul/ciano e deixa check-in/plano mais claros. */
+  :root {
+    --primary: #06b6d4;
+    --primary-dark: #2563eb;
+    --secondary: #22d3ee;
+    --accent: #38bdf8;
+    --danger: #fb7185;
+    --success-bg: rgba(34, 197, 94, .12);
+    --info-bg: rgba(14, 165, 233, .13);
+  }
+
+  .app-badge,
+  .session-badge.forca,
+  .session-badge.corrida,
+  .botao-principal,
+  button.botao-principal,
+  .btn-login-google {
+    background: linear-gradient(135deg, #06b6d4, #2563eb) !important;
+    border-color: rgba(125, 211, 252, .36) !important;
+  }
+
+  .recomendacao-checkin,
+  .mensagem-inteligente,
+  .tipo-registro-info,
+  .checkin-contexto-sessao {
+    border-left-color: #06b6d4 !important;
+  }
+
+  .resumo-kpi strong,
+  .hero-meta-word,
+  a,
+  .small strong {
+    color: #67e8f9 !important;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: #22d3ee !important;
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .18) !important;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: #06b6d4 !important;
+  }
+
+  .mt-v065-checkin-ajuda {
+    margin: 10px 0 12px;
+    padding: 12px;
+    border-radius: 16px;
+    background: rgba(14, 165, 233, .12);
+    border: 1px solid rgba(125, 211, 252, .24);
+    color: #dbeafe;
+    line-height: 1.45;
+  }
+
+  .mt-v065-feito-linha {
+    display: block;
+    margin-top: 8px;
+    color: #bbf7d0;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .mt-v065-dia-extra {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 14px;
+    background: rgba(34, 211, 238, .10);
+    border: 1px solid rgba(34, 211, 238, .18);
+    color: #e0f2fe;
+    font-size: 13px;
+  }
+</style>
+
+<script id="mt-v065-plano-checkin-state-fixes">
+(function(){
+  "use strict";
+  var VERSION = "0.6.5";
+
+  function byId(id){ return document.getElementById(id); }
+  function esc(v){
+    try { return typeof window.limparTextoSeguro === "function" ? window.limparTextoSeguro(v) : String(v == null ? "" : v).replace(/[&<>\"']/g, function(ch){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]; }); }
+    catch(e){ return String(v == null ? "" : v); }
+  }
+  function cat(v){
+    try { return typeof window.normalizarCategoriaTreino === "function" ? window.normalizarCategoriaTreino(v || "") : String(v || "").trim().toLowerCase(); }
+    catch(e){ return String(v || "").trim().toLowerCase(); }
+  }
+  function hojeISO(){
+    try { if (typeof window.hojeISO === "function") return window.hojeISO(); } catch(e) {}
+    try { if (typeof window.mtHojeLocalISO === "function") return window.mtHojeLocalISO(); } catch(e) {}
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function dataBR(iso){
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ""))) return String(iso || "");
+    var p = String(iso).split("-");
+    return p[2] + "/" + p[1] + "/" + p[0];
+  }
+  function addDias(iso, n){
+    try { if (typeof window.adicionarDiasISO === "function") return window.adicionarDiasISO(iso, n); } catch(e) {}
+    var d = new Date(String(iso) + "T00:00:00"); d.setDate(d.getDate() + n);
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function planoAtual(){
+    try { if (typeof window.obterOuCriarPlanoSemanal === "function") return window.obterOuCriarPlanoSemanal(false); } catch(e) {}
+    try { if (typeof window.lerPlanoSemanalLocal === "function") return window.lerPlanoSemanalLocal(); } catch(e) {}
+    return null;
+  }
+  function salvarPlano(plano){ try { if (plano && typeof window.salvarPlanoSemanalLocal === "function") window.salvarPlanoSemanalLocal(plano); } catch(e) {} }
+  function isForca(v){
+    var c = cat(v);
+    return ["superior","inferior","inferior_forca","inferior_moderado","core_abdomen","core_estabilidade","full_body","funcional"].indexOf(c) !== -1;
+  }
+  function isCorrida(v){ var c = cat(v); return c === "cardio" || c === "corrida"; }
+  function nomeCategoria(v){
+    var c = cat(v);
+    try { if (typeof window.nomeAmigavelTreino === "function") return window.nomeAmigavelTreino(c); } catch(e) {}
+    var mapa = { superior:"Superiores", inferior:"Inferior / pernas", inferior_forca:"Inferior / pernas - força", inferior_moderado:"Inferior / pernas - moderado", core_abdomen:"Abdômen / core", core_estabilidade:"Abdômen / core", full_body:"Corpo inteiro", funcional:"Funcional", cardio:"Corrida", recuperacao:"Recuperação", descanso:"Descanso" };
+    return mapa[c] || c || "Treino";
+  }
+  function chavesTreinoAtual(){
+    var keys = [];
+    try { if (typeof window.chaveTreinoAtual === "function") keys.push(window.chaveTreinoAtual()); } catch(e) {}
+    try { if (window.usuarioAtual && window.usuarioAtual.email) keys.push("metatreino-treino-atual-" + String(window.usuarioAtual.email).toLowerCase()); } catch(e) {}
+    keys.push("metatreino-treino-atual-anonimo", "metatreinoTreinoAtual");
+    try {
+      for (var i=0; i<localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && /^metatreino-treino-atual-/i.test(k)) keys.push(k);
+      }
+    } catch(e) {}
+    return keys.filter(function(v, i, a){ return v && a.indexOf(v) === i; });
+  }
+  function limparTreinoAtualCompleto(){
+    try { if (typeof window.limparTreinoAtualLocal === "function") window.limparTreinoAtualLocal(); } catch(e) {}
+    chavesTreinoAtual().forEach(function(k){ try { localStorage.removeItem(k); } catch(e) {} });
+    try { window.treinoAtual = []; } catch(e) {}
+    try { treinoAtual = []; } catch(e) {}
+    try { window.exerciciosConcluidos = []; } catch(e) {}
+    try { exerciciosConcluidos = []; } catch(e) {}
+    try { window.feedbackTreinoFinalAtual = ""; } catch(e) {}
+    try { feedbackTreinoFinalAtual = ""; } catch(e) {}
+  }
+  function lerTreinoLocalValido(){
+    var bruto = null;
+    var chaveUsada = null;
+    var keys = chavesTreinoAtual();
+    for (var i=0; i<keys.length; i++) {
+      try { bruto = localStorage.getItem(keys[i]); } catch(e) { bruto = null; }
+      if (bruto) { chaveUsada = keys[i]; break; }
+    }
+    if (!bruto) return null;
+    try {
+      var dados = JSON.parse(bruto);
+      if (!dados || !Array.isArray(dados.treino) || !dados.treino.length) return null;
+      var salvoEm = Number(dados.salvoEm || dados.criadoEm || 0);
+      var data = dados.dataISO || dados.diaISO || (salvoEm ? new Date(salvoEm).toISOString().slice(0,10) : "");
+      var todos = Array.isArray(dados.concluidos) && dados.concluidos.length > 0 && dados.concluidos.every(function(x){ return x === true; });
+      var muitoAntigo = salvoEm && (Date.now() - salvoEm) > 12 * 60 * 60 * 1000;
+      var outroDia = data && data !== hojeISO();
+      if (outroDia || (todos && muitoAntigo)) {
+        try { localStorage.removeItem(chaveUsada); } catch(e) {}
+        return null;
+      }
+      dados.dataISO = data || hojeISO();
+      return dados;
+    } catch(e){ return null; }
+  }
+
+  window.lerResumoTreinoAtualLocal = function(){ return lerTreinoLocalValido(); };
+
+  var oldCarregarTreinoAtualLocal = window.carregarTreinoAtualLocal;
+  window.carregarTreinoAtualLocal = function(){
+    var dados = lerTreinoLocalValido();
+    if (!dados) { limparTreinoAtualCompleto(); return false; }
+    if (typeof oldCarregarTreinoAtualLocal === "function") return oldCarregarTreinoAtualLocal.apply(this, arguments);
+    return false;
+  };
+
+  var oldSalvarTreinoAtualLocal = window.salvarTreinoAtualLocal;
+  window.salvarTreinoAtualLocal = function(){
+    if (typeof oldSalvarTreinoAtualLocal === "function") oldSalvarTreinoAtualLocal.apply(this, arguments);
+    try {
+      var keys = chavesTreinoAtual();
+      keys.forEach(function(k){
+        var bruto = localStorage.getItem(k);
+        if (!bruto) return;
+        var dados = JSON.parse(bruto);
+        dados.dataISO = hojeISO();
+        dados.salvoEm = dados.salvoEm || Date.now();
+        localStorage.setItem(k, JSON.stringify(dados));
+      });
+    } catch(e) {}
+  };
+
+  window.alvoQuantidadeExercicios = function(tempo, perfil){
+    var iniciante = perfil && perfil.iniciante;
+    var avancado = perfil && perfil.avancado;
+    if (tempo === "rapido") return iniciante ? 3 : 4;
+    if (tempo === "normal") return avancado ? 5 : 4;
+    return avancado ? 8 : (iniciante ? 5 : 6);
+  };
+  window.mtV065FaixaExercicios = function(tempo){
+    if (tempo === "rapido") return {min:3, max:4, texto:"até 30 min: 3 a 4 exercícios"};
+    if (tempo === "longo") return {min:5, max:8, texto:"acima de 1h: 5 a 8 exercícios"};
+    return {min:4, max:5, texto:"cerca de 1h: 4 a 5 exercícios"};
+  };
+
+  var oldObterBase = window.obterBaseTreinoPorCategoria;
+  window.obterBaseTreinoPorCategoria = function(categoria){
+    var c = cat(categoria);
+    var baseCat = c;
+    if (c === "inferior_forca" || c === "inferior_moderado") baseCat = "inferior";
+    if (c === "core_estabilidade") baseCat = "core_abdomen";
+    var lista = [];
+    try { if (typeof oldObterBase === "function") lista = oldObterBase(baseCat) || oldObterBase(c) || []; } catch(e) { lista = []; }
+    if ((!lista || lista.length < 4) && typeof window.bibliotecaProfissionalPorCategoria === "function") {
+      try { lista = (lista || []).concat(window.bibliotecaProfissionalPorCategoria(baseCat)); } catch(e) {}
+    }
+    var vistos = {};
+    return (lista || []).filter(function(ex){
+      var nome = ex && ex.nome ? String(ex.nome).toLowerCase() : "";
+      if (!nome || vistos[nome]) return false;
+      vistos[nome] = true;
+      return true;
+    });
+  };
+
+  function normalizarTipoFeito(tipo){
+    var t = cat(tipo);
+    if (t === "treino" || t === "forca" || isForca(t)) return "forca";
+    if (t === "cardio" || t === "corrida") return "cardio";
+    if (t === "recuperacao" || t === "descanso") return "recuperacao";
+    return t || "atividade";
+  }
+  function nomesFeitos(item){
+    var s = item && item.sessoesConcluidas ? item.sessoesConcluidas : {};
+    var nomes = [];
+    if (s.forca || item && item.concluidoComo === "forca" || item && item.concluidoComo === "treino") nomes.push("Força");
+    if (s.cardio || item && item.concluidoComo === "cardio") nomes.push("Corrida");
+    if (s.recuperacao || item && item.concluidoComo === "recuperacao") nomes.push("Recuperação");
+    return nomes.filter(function(v, i, a){ return a.indexOf(v) === i; });
+  }
+
+  window.marcarPlanoHojeConcluido = function(tipo){
+    var plano = planoAtual();
+    if (!plano || !Array.isArray(plano.dias)) return;
+    var hoje = hojeISO();
+    var item = plano.dias.find(function(d){ return d && d.dataISO === hoje; });
+    if (!item) return;
+    var feito = normalizarTipoFeito(tipo);
+    item.sessoesConcluidas = item.sessoesConcluidas || {};
+    item.sessoesConcluidas[feito] = true;
+    item.status = "concluido";
+    var feitos = nomesFeitos(item);
+    item.concluidoComo = item.sessoesConcluidas.forca && item.sessoesConcluidas.cardio ? "forca+cardio" : feito;
+    item.ultimoConcluidoEm = new Date().toISOString();
+    if ((cat(item.categoria) === "descanso" || cat(item.categoria) === "recuperacao") && feito === "forca") {
+      item.categoria = "full_body";
+      item.adaptadoDeDescanso = true;
+    }
+    if (cat(item.categoria) === "descanso" && feito === "cardio") {
+      item.categoria = "cardio";
+      item.adaptadoDeDescanso = true;
+    }
+    if (feito === "forca") limparTreinoAtualCompleto();
+    salvarPlano(plano);
+    try { if (typeof window.renderizarPlanoSemanal === "function") window.renderizarPlanoSemanal(); } catch(e) {}
+    try { if (typeof window.renderizarHoje === "function") window.renderizarHoje(); } catch(e) {}
+  };
+
+  function textoStatus(item){
+    if (!item) return "Pendente";
+    if (item.status === "pulado") return "Pulado";
+    if (item.status === "reagendado") return "Reagendado";
+    if (item.status === "concluido") {
+      var feitos = nomesFeitos(item);
+      return feitos.length ? "Feito: " + feitos.join(" + ") : "Concluído";
+    }
+    return "Pendente";
+  }
+
+  var oldMontarPlano = window.montarHTMLPlanoSemanal;
+  window.montarHTMLPlanoSemanal = function(){
+    var p = null; try { p = typeof perfilUsuario !== "undefined" ? perfilUsuario : window.perfilUsuario; } catch(e) {}
+    if (!p) return '<p class="small">Preencha e salve o perfil para montar o plano da semana.</p>';
+    var plano = planoAtual();
+    if (!plano || !Array.isArray(plano.dias)) return typeof oldMontarPlano === "function" ? oldMontarPlano() : '<p class="small">Plano ainda não gerado.</p>';
+    var dias = plano.dias;
+    var h = hojeISO();
+    var atividades = dias.filter(function(d){ return cat(d.categoria) !== "descanso"; }).length;
+    var forca = dias.filter(function(d){ return isForca(d.categoria); }).length;
+    var corrida = dias.filter(function(d){ return isCorrida(d.categoria); }).length;
+    var recuperacao = dias.filter(function(d){ return cat(d.categoria) === "recuperacao"; }).length;
+    var concluidos = dias.filter(function(d){ return d.status === "concluido" && cat(d.categoria) !== "descanso"; }).length;
+    var pct = atividades ? Math.min(100, Math.round((concluidos / atividades) * 100)) : 0;
+    var fim = plano.inicioSemana ? addDias(plano.inicioSemana, 6) : "";
+    var foco = p.focoPrincipal || p.modoTreino || "academia";
+    var focoNome = foco === "corrida" ? "Corrida" : foco === "hibrido" ? "Academia + corrida" : "Academia";
+    var html = '<div class="plano-topo"><strong>Semana de ' + esc(dataBR(plano.inicioSemana)) + ' a ' + esc(dataBR(fim)) + '</strong><br>' +
+      'Foco: ' + esc(focoNome) + ' | Sessões planejadas: ' + atividades + ' | Força: ' + forca + ' | Corrida: ' + corrida + ' | Recuperação: ' + recuperacao + ' | Dias concluídos: ' + concluidos +
+      '<div class="barra-progresso-fina"><div style="width:' + pct + '%"></div></div>' +
+      '<span class="small">Força e corrida podem ser registradas no mesmo dia. O plano mostra ambas como feitas sem trocar o treino planejado por corrida.</span>' +
+      '<div class="plano-acoes-principais"><button type="button" class="botao-principal" onclick="gerarPlanoSemanalInteligente(true)">Atualizar plano preservando histórico</button><button type="button" class="botao-secundario" onclick="reorganizarPlanoSemana()">Reorganizar pendentes</button><button type="button" class="botao-secundario" onclick="irParaCheckin()">Ajustar treino de hoje</button></div></div>';
+    dias.forEach(function(dia, i){
+      var c = cat(dia.categoria);
+      var badge = isCorrida(c) ? "corrida" : c === "recuperacao" ? "recuperacao" : c === "descanso" ? "descanso" : "forca";
+      var rotulo = badge === "forca" ? "Força" : badge === "corrida" ? "Corrida" : badge === "recuperacao" ? "Recuperação" : "Descanso";
+      var nome = ""; try { nome = typeof window.nomeItemPlanoHibrido === "function" ? window.nomeItemPlanoHibrido(dia) : nomeCategoria(c); } catch(e){ nome = nomeCategoria(c); }
+      var desc = ""; try { desc = typeof window.descricaoPlanoItemHibrido === "function" ? window.descricaoPlanoItemHibrido(dia) : ""; } catch(e) {}
+      var feitos = nomesFeitos(dia);
+      var extra = feitos.length > 1 ? '<div class="mt-v065-dia-extra">Mesmo dia com registro duplo: ' + esc(feitos.join(" + ")) + '.</div>' : '';
+      var botao = isCorrida(c) ? "Abrir Corrida" : c === "recuperacao" ? "Abrir recuperação" : c === "descanso" ? "Check-in opcional" : "Começar força";
+      html += '<div class="plano-semanal-dia"><strong>' + esc(dia.nomeDia || "Dia") + (dia.dataISO === h ? " Hoje" : "") + '</strong><span class="data-plano-dia">' + esc(dataBR(dia.dataISO)) + '</span>' +
+        '<span class="session-badge ' + badge + '">' + esc(rotulo) + '</span><br>' +
+        '<span><strong>' + esc(nome) + '</strong></span><br>' +
+        '<span class="small">' + esc(desc) + '</span>' +
+        '<span class="mt-v065-feito-linha">' + esc(textoStatus(dia)) + '</span>' + extra +
+        '<div class="plano-acoes-dia"><button type="button" class="botao-secundario" onclick="comecarItemPlano(' + i + ')">' + esc(botao) + '</button>' +
+        (c !== "descanso" ? '<button type="button" class="botao-secundario" onclick="marcarStatusPlanoDia(' + i + ', ' + JSON.stringify("concluido") + ')">Marcar feito</button><button type="button" class="botao-pular" onclick="marcarStatusPlanoDia(' + i + ', ' + JSON.stringify("pulado") + ')">Pular</button><button type="button" class="botao-secundario" onclick="reagendarItemPlano(' + i + ')">Reagendar</button>' : '') +
+        '<button type="button" class="botao-secundario" onclick="marcarStatusPlanoDia(' + i + ', ' + JSON.stringify("pendente") + ')">Reabrir</button></div></div>';
+    });
+    return html;
+  };
+
+  var oldMarcarStatus = window.marcarStatusPlanoDia;
+  window.marcarStatusPlanoDia = function(indice, status){
+    var plano = planoAtual();
+    var dia = plano && Array.isArray(plano.dias) ? plano.dias[Number(indice)] : null;
+    if (dia && status === "concluido") {
+      dia.status = "concluido";
+      dia.sessoesConcluidas = dia.sessoesConcluidas || {};
+      if (isForca(dia.categoria)) dia.sessoesConcluidas.forca = true;
+      else if (isCorrida(dia.categoria)) dia.sessoesConcluidas.cardio = true;
+      else if (cat(dia.categoria) === "recuperacao") dia.sessoesConcluidas.recuperacao = true;
+      dia.concluidoComo = nomesFeitos(dia).join("+").toLowerCase() || dia.categoria;
+      salvarPlano(plano);
+      try { if (typeof window.renderizarPlanoSemanal === "function") window.renderizarPlanoSemanal(); } catch(e) {}
+      try { if (typeof window.renderizarHoje === "function") window.renderizarHoje(); } catch(e) {}
+      return;
+    }
+    if (dia && status === "pendente") {
+      delete dia.sessoesConcluidas;
+      delete dia.ultimoConcluidoEm;
+      delete dia.concluidoComo;
+      dia.status = "pendente";
+      salvarPlano(plano);
+      try { if (typeof window.renderizarPlanoSemanal === "function") window.renderizarPlanoSemanal(); } catch(e) {}
+      try { if (typeof window.renderizarHoje === "function") window.renderizarHoje(); } catch(e) {}
+      return;
+    }
+    if (typeof oldMarcarStatus === "function") return oldMarcarStatus.apply(this, arguments);
+  };
+
+  var oldResumoHoje = window.montarResumoHojeBase;
+  window.montarResumoHojeBase = function(){
+    var item = null; try { item = typeof window.obterItemPlanoHoje === "function" ? window.obterItemPlanoHoje() : null; } catch(e) {}
+    var treinoLocal = lerTreinoLocalValido();
+    if (treinoLocal) {
+      var categoria = cat(treinoLocal.categoria || treinoLocal.letra || "");
+      var concluidos = (treinoLocal.concluidos || []).filter(function(x){ return x === true; }).length;
+      var total = treinoLocal.treino ? treinoLocal.treino.length : 0;
+      return '<span class="session-badge forca">Força</span><br><strong>Treino em andamento</strong><br>' + esc(nomeCategoria(categoria)) + '<br>Progresso: ' + concluidos + ' de ' + total + ' exercício(s).<br><span class="small">Esse bloco aparece só para treino de hoje ainda não salvo.</span>';
+    }
+    if (!item) return typeof oldResumoHoje === "function" ? oldResumoHoje() : '<strong>Comece pelo plano</strong><br>Salve o perfil e gere o plano semanal.';
+    var c = cat(item.categoria);
+    var badge = isCorrida(c) ? "corrida" : c === "recuperacao" ? "recuperacao" : c === "descanso" ? "descanso" : "forca";
+    var rotulo = badge === "forca" ? "Força" : badge === "corrida" ? "Corrida" : badge === "recuperacao" ? "Recuperação" : "Descanso";
+    var feitos = nomesFeitos(item);
+    var motivo = item.status === "concluido" ? (feitos.length ? "Você já registrou hoje: " + feitos.join(" + ") + "." : "Atividade de hoje já concluída.") : "Escolhido pelo plano semanal conforme seu foco principal.";
+    var nome = ""; try { nome = typeof window.nomeItemPlanoHibrido === "function" ? window.nomeItemPlanoHibrido(item) : nomeCategoria(c); } catch(e){ nome = nomeCategoria(c); }
+    var desc = ""; try { desc = typeof window.descricaoPlanoItemHibrido === "function" ? window.descricaoPlanoItemHibrido(item) : ""; } catch(e) {}
+    return '<span class="session-badge ' + badge + '">' + esc(rotulo) + '</span><br><strong>Hoje o foco é:</strong><br>' + esc(nome) + '<br><span class="small">' + esc(desc) + '</span><br><br><strong>Status:</strong><br>' + esc(motivo);
+  };
+
+  function atualizarCheckinUI(){
+    var label = document.querySelector('label[for="divisaoTreino"]');
+    if (label) label.textContent = "Qual parte do corpo você quer treinar hoje?";
+    var sel = byId("divisaoTreino");
+    if (sel && !sel.getAttribute("data-mt-v065-opcoes")) {
+      sel.setAttribute("data-mt-v065-opcoes", "1");
+      sel.innerHTML = '' +
+        '<option value="automatico" selected>Automático pelo plano</option>' +
+        '<option value="superior">Parte superior — peito, costas, ombros e braços</option>' +
+        '<option value="inferior_forca">Parte inferior — pernas/glúteos com foco em força</option>' +
+        '<option value="inferior_moderado">Parte inferior leve/moderada — melhor perto de corrida</option>' +
+        '<option value="core_estabilidade">Abdômen/Core — abdome, lombar e estabilidade</option>' +
+        '<option value="full_body">Corpo inteiro — quando quer treinar tudo um pouco</option>' +
+        '<option value="funcional">Funcional — força geral e movimento</option>' +
+        '<option value="recuperacao">Recuperação ativa — mobilidade/caminhada leve</option>';
+    }
+    if (sel && !byId("mtV065AjudaCheckin")) {
+      var p = document.createElement("div");
+      p.id = "mtV065AjudaCheckin";
+      p.className = "mt-v065-checkin-ajuda";
+      p.innerHTML = '<strong>Regra de volume:</strong> até 30 min gera 3–4 exercícios; cerca de 1h gera 4–5; acima de 1h gera 5–8. Se você escolher superior, inferior ou abdômen/core, o app respeita essa escolha e só reduz quando houver dor, fadiga ou corrida pesada próxima.';
+      sel.insertAdjacentElement("afterend", p);
+    }
+  }
+
+  var oldGerarRecomendacao = window.gerarRecomendacaoCheckin;
+  window.gerarRecomendacaoCheckin = function(){
+    atualizarCheckinUI();
+    var retorno = typeof oldGerarRecomendacao === "function" ? oldGerarRecomendacao.apply(this, arguments) : undefined;
+    setTimeout(function(){
+      var box = byId("recomendacaoCheckinBox");
+      var tempo = byId("tempo") ? byId("tempo").value : "normal";
+      var div = byId("divisaoTreino") ? cat(byId("divisaoTreino").value) : "automatico";
+      if (box && !box.classList.contains("hidden")) {
+        var faixa = window.mtV065FaixaExercicios(tempo);
+        var escolhido = div && div !== "automatico" ? nomeCategoria(div) : "Automático pelo plano";
+        if (!box.querySelector("#mtV065ResumoVolume")) {
+          box.insertAdjacentHTML("beforeend", '<div id="mtV065ResumoVolume" class="mt-v065-checkin-ajuda"><strong>Escolha atual:</strong> ' + esc(escolhido) + '.<br><strong>Volume esperado:</strong> ' + esc(faixa.texto) + '.</div>');
+        }
+      }
+    }, 0);
+    return retorno;
+  };
+
+  var oldIrParaCheckin = window.irParaCheckin;
+  window.irParaCheckin = function(){
+    var r = typeof oldIrParaCheckin === "function" ? oldIrParaCheckin.apply(this, arguments) : undefined;
+    setTimeout(atualizarCheckinUI, 0);
+    return r;
+  };
+
+  function aplicarVersao(){
+    try { window.VERSION = VERSION; } catch(e) {}
+    try { window.VERSION_ATUAL = VERSION; } catch(e) {}
+    try { window.VERSION_NOVA = VERSION; } catch(e) {}
+    var meta = document.querySelector('meta[name="app-version"]'); if (meta) meta.setAttribute("content", VERSION);
+    var badge = document.querySelector(".app-badge"); if (badge) badge.textContent = "MetaTreino • Beta " + VERSION;
+    var card = document.querySelector("#cardVersaoAtual .plano-topo strong"); if (card) card.textContent = "MetaTreino " + VERSION + " Beta";
+    var links = document.querySelectorAll('link[href*="?v="], a[href*="?v="]');
+    Array.prototype.forEach.call(links, function(el){
+      var attr = el.tagName === "A" ? "href" : "href";
+      var href = el.getAttribute(attr) || "";
+      if (href.indexOf("?v=") >= 0) el.setAttribute(attr, href.replace(/\?v=[^\"']+/, "?v=" + VERSION));
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){ aplicarVersao(); atualizarCheckinUI(); setTimeout(aplicarVersao, 500); });
+  window.addEventListener("load", function(){ aplicarVersao(); atualizarCheckinUI(); setTimeout(aplicarVersao, 1000); });
+  setTimeout(function(){ aplicarVersao(); atualizarCheckinUI(); }, 1500);
 })();
 </script>
 

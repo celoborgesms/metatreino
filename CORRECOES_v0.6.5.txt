@@ -1,0 +1,15 @@
+MetaTreino v0.6.5 — correções de fluxo, plano e check-in
+
+Correções principais:
+- Corrigido o selo/versão visível: scripts internos que ainda gravavam 0.6.3/0.6.4 foram atualizados para 0.6.5.
+- Atualizado manifest.json e service-worker.js para v0.6.5, com novo cache para forçar atualização do PWA.
+- Removidos destaques vermelhos herdados da versão anterior. A identidade visual volta para azul/ciano; vermelho/rosa fica reservado apenas para alertas de risco.
+- Corrigido cache de "treino em andamento": treinos salvos, treinos de outro dia e treinos 100% concluídos antigos deixam de aparecer na aba Hoje.
+- Corrigido plano no mesmo dia: agora força + corrida podem ser registradas no mesmo dia sem a corrida apagar o treino de força planejado.
+- Plano semanal agora exibe quando o dia teve registro duplo: Força + Corrida.
+- Check-in ficou mais explícito: campo "Qual parte do corpo você quer treinar hoje?" com opções de parte superior, inferior, abdômen/core, corpo inteiro, funcional ou recuperação.
+- Regra de volume restaurada: até 30 min = 3 a 4 exercícios; cerca de 1h = 4 a 5; acima de 1h = 5 a 8.
+- Melhorado fallback de base de exercícios para evitar treinos de força com apenas 1 exercício quando houver opções suficientes.
+
+Observação:
+- Ao instalar esta versão como PWA, pode ser necessário abrir uma vez com internet e atualizar/recarregar para o service worker antigo ser substituído.

@@ -1,0 +1,156 @@
+MetaTreino — v0.6.3 Beta
+Data: 13/05/2026
+
+Correções e ajustes desta versão:
+- Mantido YouTube como apoio visual por enquanto, para não entregar demonstrações internas fracas.
+- Melhorada a busca do YouTube: agora o app procura execução correta em português com termos mais confiáveis.
+- Adicionado guia rápido antes do vídeo em cada card de exercício, com dicas de execução e erro comum.
+- Ajustados botões, grids, cards de treino e alinhamentos para reduzir quebras visuais no celular.
+- Reforçada a versão visual do app para 0.6.3 no Perfil, manifest e service worker.
+- Mantidas as correções da 0.6.2: restauração da sugestão original, treino manual sem alterar a semana inteira e preservação de histórico.
+
+
+MetaTreino — v0.6.2 Beta
+Data: 13/05/2026
+
+Correções desta versão:
+- Corrigido o card de versão dentro da aba Perfil para exibir 0.6.2.
+- O check-in agora guarda a sessão original sugerida pelo plano antes de aceitar uma troca manual.
+- Ao selecionar "Automático pelo plano" depois de testar outro treino, o app restaura a sessão original do dia.
+- O botão "Voltar para sugestão do plano" agora desfaz a troca manual e recalcula a recomendação usando o treino sugerido.
+- A troca manual continua restrita à sessão atual; treinos futuros da semana não são substituídos.
+- Se uma instalação anterior já tiver sobrescrito a sessão sem guardar a origem, use "Reorganizar pendentes" na aba Plano para reconstruir o restante da semana preservando concluídos/pulados.
+
+------------------------------------------------------------
+
+MetaTreino — v0.6.1 Beta
+
+Correcoes de fluxo:
+- Reagendar agora pede confirmacao e guarda dados para desfazer.
+- Reabrir em uma sessao reagendada restaura o treino original.
+- Marcar feito/Pular em sessao reagendada restaura o treino original antes de aplicar status.
+- Check-in permite trocar manualmente o treino de forca do dia, com alerta, sem ficar preso ao plano recomendado.
+- A troca manual altera somente a sessao selecionada e preserva o restante da semana.
+
+MetaTreino — v0.6.0 Beta
+
+- Reposicionamento do app: MetaTreino agora trabalha com foco principal Academia, Corrida ou Academia + Corrida, sem obrigar todo usuário a usar híbrido.
+- Perfil recebeu seleção de foco principal e textos mais claros para academia, corrida separada e modo híbrido avançado.
+- Correção crítica: alterar peso, local de treino, objetivo, dias disponíveis ou preferências não apaga mais treinos concluídos, pulados ou dias anteriores do plano semanal.
+- Atualização do plano agora preserva histórico e adapta apenas sessões pendentes/futuras.
+- Corrida foi simplificada para iniciantes: registro principal usa distância, tempo, esforço percebido, intensidade geral, sensação das pernas e dor articular. Zonas ficaram fora da interface principal.
+- Plano, Hoje e Progresso receberam textos alinhados ao novo posicionamento: academia primeiro, corrida opcional, híbrido como modo escolhido pelo usuário.
+- Conquistas passam a reduzir ruído: conquistas híbridas não aparecem para quem escolhe apenas Academia ou apenas Corrida.
+
+MetaTreino Hybrid — v0.5.0 Beta
+Data: 12/05/2026
+
+Melhorias principais desta versão:
+1. Corrida como sessão guiada
+   - Cards de corrida agora mostram duração sugerida, esforço/RPE, zona, objetivo, execução, alternativa se cansar e orientação híbrida com musculação.
+   - A descrição deixou de ser apenas genérica e passou a orientar exatamente o que fazer.
+
+2. Botão de corrida mais claro
+   - No Plano, o botão mudou de "Registrar corrida" para "Ver treino de corrida".
+   - A ideia fica correta: primeiro o usuário vê/começa a sessão; depois registra resultado na Central de corrida.
+
+3. Sugestão adaptativa
+   - A prescrição considera nível, objetivo, condição atual, último cardio salvo, RPE, sensação das pernas, dor articular e proximidade de treino de pernas.
+   - Se houver fadiga/dor ou treino pesado de pernas perto, o app reduz agressividade e sugere sessão mais segura.
+
+4. Melhor relação força × corrida
+   - O Plano passa a explicar quando a corrida é compatível com musculação e quando deve ser mantida leve.
+   - Intervalado, ritmo e longão recebem alertas quando podem conflitar com pernas pesadas.
+
+5. Registro mais útil para evolução
+   - Distância, tempo, zona, RPE, sensação das pernas e dor articular continuam sendo salvos para guiar próximas adaptações.
+
+Histórico anterior:
+MetaTreino Hybrid — v0.4.9 Beta
+Data: 12/05/2026
+
+Correção principal desta versão:
+1. Data local da aba Hoje
+   - Corrigido o bug em que a aba Hoje podia mostrar a sessão do dia seguinte quando o usuário estava em um fuso horário atrás do UTC.
+   - Agora a aba Hoje usa o dia local do aparelho, não new Date().toISOString().slice(0, 10).
+
+2. Consistência entre Hoje, Plano e Check-in
+   - A sessão exibida na aba Hoje passa a ser buscada pelo mesmo dia local que o plano mostra como "Hoje".
+   - Começar agora e Adaptar check-in / recalcular passam o contexto local correto para o check-in.
+
+3. Proteção contra regressão do v0.4.8
+   - O check-in continua respeitando cards específicos do Plano, mas sem contaminar a aba Hoje com a data do dia seguinte.
+   - Cache do PWA renovado para forçar atualização no celular.
+
+Histórico anterior:
+MetaTreino Hybrid — v0.4.8 Beta
+Data: 12/05/2026
+
+Correção principal desta versão:
+1. Check-in com contexto correto
+   - Ao abrir o check-in por um card específico do Plano, a recomendação passa a usar aquele dia e aquela sessão.
+   - Corrige o bug em que o usuário abria treino de força/superiores e a recomendação mostrava corrida/caminhada de outro dia.
+
+2. Recomendação antiga limpa ao entrar no check-in
+   - O box de recomendação não fica mais reaproveitando resultado anterior.
+   - Evita aparecer sugestão de corrida quando o usuário ainda está ajustando força.
+
+3. Aviso visual no check-in
+   - A tela agora mostra qual sessão está sendo ajustada: tipo, data e foco.
+   - Isso reduz confusão entre aba Hoje, Plano e Check-in.
+
+4. Aplicação da recomendação no dia certo
+   - Ao aplicar o ajuste, o app atualiza a sessão selecionada, não necessariamente a data atual do aparelho.
+
+Histórico anterior:
+MetaTreino Hybrid — v0.4.7 Beta
+=================================
+
+Atualizada em: 12/05/2026
+
+1. CORREÇÃO DA ABA HOJE
+   - Corrigido o botão "Descartar" da pendência anterior.
+   - Agora ele apaga corretamente o treino local não iniciado, remove o aviso da tela e mantém o usuário na aba Hoje com o foco do dia preservado.
+   - A correção também cobre chaves antigas/alternativas do localStorage, evitando que a pendência reapareça por cache ou troca de login.
+
+2. VERSIONAMENTO E CACHE
+   - Manifest, service worker e selo visual atualizados para v0.4.7 Beta.
+   - Cache do PWA renovado para o app carregar a correção sem ficar preso na versão anterior.
+
+---
+
+MetaTreino Hybrid — v0.4.6 Beta
+=================================
+
+Atualizada em: 11/05/2026
+
+1. FLUXO DA ABA HOJE SIMPLIFICADO
+   - O botão "Começar agora" não abre mais o check-in rápido em popup.
+   - Agora ele tenta iniciar diretamente a sessão planejada do dia: força, corrida/cardio, recuperação ou descanso.
+   - O botão "Adaptar check-in / recalcular" permanece como único caminho claro para quem quer ajustar energia, dor, tempo ou foco do dia.
+
+2. CHECK-IN COMPLETO MAIS LIMPO
+   - Removidos botões redundantes que levavam para fluxos parecidos.
+   - Depois de gerar a recomendação, aparecem apenas duas ações principais: "Aplicar e começar" ou "Cancelar e voltar".
+   - A recomendação continua ajustando apenas o treino do dia; mudanças na semana inteira continuam na aba Plano.
+
+3. BIBLIOTECA DE FORÇA MAIS HÍBRIDA
+   - Adicionados exercícios úteis para corredores:
+     • Step-down unilateral controlado
+     • Copenhagen plank adaptado
+     • Clamshell com elástico
+     • Panturrilha em pé com pausa no alongamento
+     • Nordic curl assistido
+     • Marcha A técnica
+   - Pernas — Força preserva estímulos mais fortes de membros inferiores.
+   - Pernas — Moderado evita exercícios mais agressivos e prioriza controle, estabilidade e menor fadiga para corrida.
+
+4. MELHORIAS DE PERFORMANCE
+   - Cache curto para histórico de treinos e cardios, reduzindo leituras repetidas na aba Evolução/Progresso durante a mesma renderização.
+
+5. MELHORIAS VISUAIS
+   - Pequeno refinamento visual nas áreas Hoje, Plano, Check-in e Progresso para reforçar a identidade híbrida sem poluir a tela.
+
+6. TRANSPARÊNCIA DE VERSÃO
+   - A aba Versão atual foi atualizada para v0.4.6 Beta com a lista real das mudanças desta entrega.
+   - Manifest e service worker também foram atualizados para forçar cache novo no PWA.
