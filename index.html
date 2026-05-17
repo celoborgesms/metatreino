@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.6.5">
+  <meta name="app-version" content="0.6.6">
   <meta name="theme-color" content="#020617">
-  <link rel="manifest" href="manifest.json?v=0.6.5">
-<link rel="icon" type="image/png" href="icon-512.png?v=0.6.5">
-<link rel="apple-touch-icon" href="icon-512.png?v=0.6.5">
+  <link rel="manifest" href="manifest.json?v=0.6.6">
+<link rel="icon" type="image/png" href="icon-512.png?v=0.6.6">
+<link rel="apple-touch-icon" href="icon-512.png?v=0.6.6">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1382,7 +1382,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino • Beta 0.6.5</span>
+        <span class="app-badge">MetaTreino • Beta 0.6.6</span>
         <h1><span class="hero-meta-word">Meta</span>Treino</h1>
         <p>Treinos inteligentes para academia, corrida ou os dois. Você escolhe o foco e o app preserva seu histórico.</p>
       </div>
@@ -1635,7 +1635,7 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino 0.6.5 Beta</strong><br>
+          <strong>MetaTreino 0.6.6 Beta</strong><br>
           <span class="tag beta">Estabilidade</span>
           <p><strong>Atualizada em:</strong> 13/05/2026</p>
           <ul class="versao-atual-lista">
@@ -8355,7 +8355,7 @@
 </script>
 
 <script>
-  const METATREINO_APP_VERSION = "0.6.5";
+  const METATREINO_APP_VERSION = "0.6.6";
 
   function verificarAtualizacaoManual() {
     const status = document.getElementById("statusAtualizacaoManual");
@@ -9678,7 +9678,7 @@
 
 <script id="mt-v048-checkin-contexto-fix">
 (function(){
-  var VERSION = '0.6.5';
+  var VERSION = '0.6.6';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -10047,7 +10047,7 @@
 
 <script id="mt-v049-data-local-hoje-fix">
 (function(){
-  var VERSION = '0.6.5';
+  var VERSION = '0.6.6';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -10372,7 +10372,7 @@
 
 <script id="mt-v050-corrida-inteligente">
 (function(){
-  var VERSION_ATUAL = '0.6.5';
+  var VERSION_ATUAL = '0.6.6';
   try { window.VERSION = VERSION_ATUAL; } catch(e) {}
   try { if (typeof VERSION !== 'undefined') VERSION = VERSION_ATUAL; } catch(e) {}
 
@@ -10737,7 +10737,7 @@
 
 <script id="mt-v060-modos-preservacao">
 (function(){
-  var VERSION_NOVA = '0.6.5';
+  var VERSION_NOVA = '0.6.6';
   function byId(id){ return document.getElementById(id); }
   function esc(v){
     try { return typeof limparTextoSeguro === 'function' ? limparTextoSeguro(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
@@ -11276,7 +11276,7 @@
       if (preservarStatus && devePreservar(old)) copiarPreservado(dia, old);
     });
     var plano = {
-      versao: '0.6.5-fluxo-plano-checkin',
+      versao: '0.6.6-fluxo-plano-checkin',
       inicioSemana: typeof inicioSemanaAtualISO === 'function' ? inicioSemanaAtualISO() : hoje(),
       criadoEm: Date.now(),
       focoPrincipal: modo,
@@ -11315,7 +11315,7 @@
 </style>
 <script id="mt-v061-reagendamento-e-treino-manual-fix">
 (function(){
-  var VERSION_FIX = '0.6.5';
+  var VERSION_FIX = '0.6.6';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -11736,7 +11736,7 @@
 </style>
 <script id="mt-v062-restaurar-sugestao-original">
 (function(){
-  var VERSION_FIX = '0.6.5';
+  var VERSION_FIX = '0.6.6';
   var CONTEXT_KEY = 'metatreinoCheckinContextoV048';
 
   function byId(id){ return document.getElementById(id); }
@@ -12285,7 +12285,7 @@
 
 <script id="mt-v063-estabilidade-visual">
 (function(){
-  var VERSION_FIX = '0.6.5';
+  var VERSION_FIX = '0.6.6';
 
   function byId(id){ return document.getElementById(id); }
   function normalizarTexto(v){
@@ -12489,7 +12489,7 @@
 
 
 <style id="mt-v064-consolidated-css-fixes">
-  /* MetaTreino v0.6.5 — CSS consolidado: uma fonte final para body, nav, hover e aba ativa. */
+  /* MetaTreino v0.6.6 — CSS consolidado: uma fonte final para body, nav, hover e aba ativa. */
   body {
     margin: 0;
     min-height: 100vh;
@@ -12732,7 +12732,7 @@
 
 
 <style id="mt-v065-plano-checkin-ui-style">
-  /* MetaTreino v0.6.5 — restaura a identidade azul/ciano e deixa check-in/plano mais claros. */
+  /* MetaTreino v0.6.6 — restaura a identidade azul/ciano e deixa check-in/plano mais claros. */
   :root {
     --primary: #06b6d4;
     --primary-dark: #2563eb;
@@ -12811,7 +12811,7 @@
 <script id="mt-v065-plano-checkin-state-fixes">
 (function(){
   "use strict";
-  var VERSION = "0.6.5";
+  var VERSION = "0.6.6";
 
   function byId(id){ return document.getElementById(id); }
   function esc(v){
@@ -13181,6 +13181,68 @@
   setTimeout(function(){ aplicarVersao(); atualizarCheckinUI(); }, 1500);
 })();
 </script>
+
+
+
+<style id="mt-v066-perfil-wizard-tabs-fix">
+  /* MetaTreino v0.6.6 — restaura o Perfil em abas/passos. */
+  .wizard-passo {
+    display: none !important;
+  }
+
+  .wizard-passo.visivel {
+    display: block !important;
+  }
+
+  .wizard-progress {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 14px 0 18px;
+  }
+
+  .wizard-step-dot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .wizard-dot-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    color: #94a3b8;
+    background: rgba(15, 23, 42, .88);
+    border: 1px solid rgba(148, 163, 184, .28);
+  }
+
+  .wizard-dot-circle.ativo,
+  .wizard-dot-circle.feito {
+    color: #ffffff;
+    background: linear-gradient(135deg, #06b6d4, #2563eb);
+    border-color: rgba(125, 211, 252, .46);
+    box-shadow: 0 0 18px rgba(34, 211, 238, .18);
+  }
+
+  .wizard-dot-label {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .wizard-dot-label.ativo,
+  .wizard-dot-label.feito {
+    color: #e0f2fe;
+  }
+</style>
 
 </body>
 </html>
