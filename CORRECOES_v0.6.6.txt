@@ -1,6 +1,0 @@
-MetaTreino v0.6.6 — correção do Perfil em abas
-
-- Restaurado o comportamento da aba Perfil em passos/abas, evitando que todas as perguntas apareçam como uma lista única.
-- Adicionado CSS explícito para .wizard-passo e .wizard-passo.visivel.
-- Mantidas as correções anteriores da v0.6.5 para plano, check-in, força + corrida no mesmo dia e estado de treino em andamento.
-- Atualizados versão visível, manifest e service worker para 0.6.6 com novo cache.
