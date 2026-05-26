@@ -4603,7 +4603,10 @@
     function descricaoPlanoItemHibrido(dia, indiceDia) {
       if (!dia) return "";
       if (dia.categoria === "cardio") return descricaoCorridaSubtipo(dia.subtipoCorrida || "corrida_leve");
-      if (dia.categoria === "inferior" && dia.protegidoPorCorrida) return "Pernas ajustadas porque há corrida forte/longão próximo. Foque técnica e evite falha.";
+      if (dia.categoria === "inferior" && dia.protegidoPorCorrida) {
+        const foco = perfilUsuario ? (perfilUsuario.focoPrincipal || perfilUsuario.modoTreino || "") : "";
+        if (foco !== "academia") return "Pernas ajustadas porque há corrida forte/longão próximo. Foque técnica e evite falha.";
+      }
       return descricaoPlanoCategoria(dia.categoria, indiceDia);
     }
 
@@ -7682,7 +7685,10 @@
           "<span>Sugestão de recuperação — sem carga/repetições para registrar</span><br>" :
           "<span>" + exercicio.series + " | " + exercicio.reps + "</span><br>";
         const sugestaoCargaHtml = exercicio.registravel === false ? "" : "<div class='alerta'>" + obterTextoSugestaoCarga(exercicio.nome) + "</div>";
-        const botaoRegistrarHtml = exercicio.registravel === false ? "" : "<button type='button' class='botao-secundario' onclick='preencherRegistroComExercicio(" + index + ")'>Registrar este exercício</button>";
+        const botaoRegistrarHtml = exercicio.registravel === false ? "" :
+          "<button type='button' class='" + (exerciciosConcluidos[index] ? "botao-principal" : "botao-secundario") + "' onclick='marcarERegistrar(" + index + ")' id='btnConcluir" + index + "'>" +
+          (exerciciosConcluidos[index] ? "✅ Concluído — alterar registro" : "✔ Concluir e registrar") +
+          "</button>";
         const demoExercicioHtml = obterHtmlBotaoDemoExercicio(exercicio, index);
         div.innerHTML = "<strong>" + exercicio.nome + "</strong>" +
           blocoSeries +
@@ -7691,8 +7697,6 @@
           sugestaoCargaHtml +
           demoExercicioHtml +
           "<h4>Como fazer:</h4><ol>" + passosHTML + "</ol>" +
-          "<div class='aviso-video'>Use o botão Ver modo de fazer como apoio visual. Priorize execução controlada e pare se houver dor.</div>" +
-          "<label class='check-exercicio'><input type='checkbox' " + marcado + " onchange='marcarExercicioConcluido(" + index + ", this.checked)'>Exercício concluído</label>" +
           "<div class='acoes-exercicio-grid'>" +
           botaoRegistrarHtml +
           "<button type='button' class='botao-secundario' onclick='substituirExercicio(" + index + ")'>Equipamento ocupado / substituir</button>" +
@@ -7719,13 +7723,25 @@
       atualizarProgressoExercicios();
     }
 
+    function marcarERegistrar(index) {
+      const jaConcluido = exerciciosConcluidos[index] === true;
+      // Toggle: se já concluído, abre só o registro para editar; se não, marca e abre
+      exerciciosConcluidos[index] = true;
+      salvarTreinoAtualLocal();
+      mostrarTreinoNaTela();
+      atualizarProgressoExercicios();
+      preencherRegistroComExercicio(index);
+      setTimeout(function() {
+        const alvo = document.getElementById("registroEvolucao");
+        if (alvo) alvo.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+
     function marcarExercicioConcluido(index, concluido) {
       exerciciosConcluidos[index] = concluido;
-
       if (concluido && treinoAtual[index]) {
         preencherRegistroComExercicio(index);
       }
-
       salvarTreinoAtualLocal();
       mostrarTreinoNaTela();
       atualizarProgressoExercicios();
@@ -8003,11 +8019,11 @@
 
     function salvarTreinoFeito() {
       if (!acessoLiberado || !usuarioAtual || !db) {
-        alert("Faça login com um e-mail autorizado para salvar o treino na nuvem.");
+        mostrarModalAviso("Faça login com um e-mail autorizado para salvar o treino na nuvem.");
         return;
       }
 
-      if (treinoAtual.length === 0) { alert("Gere um treino antes de salvar."); return; }
+      if (treinoAtual.length === 0) { mostrarModalAviso("Gere um treino antes de salvar."); return; }
 
       const exercicioRegistro = document.getElementById("exercicioRegistro").value.trim();
       const carga = document.getElementById("carga").value;
@@ -8016,7 +8032,7 @@
       const observacao = document.getElementById("observacaoTreino").value.trim();
 
       if (carga === "" || Number(carga) < 0 || Number(reps) <= 0) {
-        alert("Informe uma carga de 0 kg ou mais e as repetições feitas.");
+        mostrarModalAviso("Informe uma carga de 0 kg ou mais e as repetições feitas antes de salvar.");
         return;
       }
 
@@ -8061,7 +8077,7 @@
         .then(function() {
           ultimoTreinoSalvoCompartilhavel = treinoSalvo;
           marcarPlanoHojeConcluido("treino");
-          alert("Treino salvo na nuvem. O plano de hoje foi marcado como concluído. Você já pode gerar o card para compartilhar.");
+          mostrarModalAviso("✅ Treino salvo! O plano de hoje foi marcado como concluído. Você já pode gerar o card para compartilhar.");
           const boxCompartilharTreino = document.getElementById("compartilharUltimoTreinoBox");
           if (boxCompartilharTreino) boxCompartilharTreino.classList.remove("hidden");
           mostrarHistorico();
@@ -8076,7 +8092,7 @@
           const alvo = proximoIndex >= 0 ? document.getElementById("cardExercicio" + proximoIndex) : document.getElementById("resultadoTreino");
           if (alvo) alvo.scrollIntoView({ behavior: "smooth", block: "start" });
         })
-        .catch(function(erro) { console.log("Erro ao salvar treino na nuvem:", erro); alert("Não foi possível salvar o treino na nuvem. Confira sua conexão e tente novamente."); });
+        .catch(function(erro) { console.log("Erro ao salvar treino na nuvem:", erro); mostrarModalAviso("Não foi possível salvar o treino na nuvem. Confira sua conexão e tente novamente."); });
     }
 
     function obterHistoricoDaNuvem(callback) {
@@ -8377,25 +8393,33 @@
 
     function deletarRegistroTreino(id) {
       if (!acessoLiberado || !usuarioAtual || !db) {
-        alert("Faça login para deletar o histórico.");
+        mostrarModalConfirmacao("Faça login para deletar o histórico.", null);
         return;
       }
       if (!id) {
-        alert("Não foi possível identificar este registro de treino.");
+        mostrarModalConfirmacao("Não foi possível identificar este registro de treino.", null);
         return;
       }
-      if (!confirm("Tem certeza que deseja deletar este registro de treino?")) return;
-
-      db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").doc(id).delete()
-        .then(function() {
-          alert("Registro de treino deletado.");
-          mostrarHistoricoCompleto();
-          mostrarHistorico();
-        })
-        .catch(function(erro) {
-          console.log("Erro ao deletar treino:", erro);
-          alert("Não foi possível deletar este treino agora.");
-        });
+      mostrarModalConfirmacao("Deseja deletar este registro de treino? O status do dia no plano também será revertido para pendente.", function() {
+        db.collection("usuarios").doc(usuarioAtual.uid).collection("treinos").doc(id).delete()
+          .then(function() {
+            // Reverter status do plano do dia correspondente
+            try {
+              const plano = obterOuCriarPlanoSemanal(false);
+              const hoje = hojeISO();
+              const item = plano && plano.dias ? plano.dias.find(function(d){ return d.dataISO === hoje && d.status === "concluido"; }) : null;
+              if (item) { item.status = "pendente"; delete item.concluidoComo; salvarPlanoSemanalLocal(plano); }
+            } catch(e) {}
+            mostrarHistoricoCompleto();
+            mostrarHistorico();
+            renderizarPlanoSemanal();
+            renderizarHoje();
+          })
+          .catch(function(erro) {
+            console.log("Erro ao deletar treino:", erro);
+            mostrarModalConfirmacao("Não foi possível deletar este treino agora.", null);
+          });
+      });
     }
 
     function editarRegistroCardio(id, distanciaAtual, tempoAtual) {
@@ -13452,8 +13476,56 @@
   document.addEventListener('DOMContentLoaded', aplicarVersaoVisual);
   window.addEventListener('load', aplicarVersaoVisual);
   setTimeout(aplicarVersaoVisual, 600);
+
+  // Modal estilizado v0.6.7 — substitui alert/confirm nativos
+  window.mostrarModalAviso = function(texto) {
+    const modal = document.getElementById("modalAppConfirmacao");
+    const txtEl = document.getElementById("modalAppConfirmacaoTexto");
+    const btnOk = document.getElementById("modalAppConfirmacaoBtnOk");
+    const btnCancel = document.getElementById("modalAppConfirmacaoBtnCancelar");
+    if (!modal) { alert(texto); return; }
+    txtEl.innerHTML = texto;
+    btnCancel.style.display = "none";
+    btnOk.textContent = "OK";
+    modal.style.display = "flex";
+    btnOk.onclick = function() { modal.style.display = "none"; };
+  };
+
+  window.mostrarModalConfirmacao = function(texto, callbackSim) {
+    const modal = document.getElementById("modalAppConfirmacao");
+    const txtEl = document.getElementById("modalAppConfirmacaoTexto");
+    const btnOk = document.getElementById("modalAppConfirmacaoBtnOk");
+    const btnCancel = document.getElementById("modalAppConfirmacaoBtnCancelar");
+    if (!modal) { if (callbackSim && confirm(texto)) callbackSim(); return; }
+    txtEl.innerHTML = texto;
+    if (callbackSim) {
+      btnCancel.style.display = "";
+      btnOk.textContent = "Confirmar";
+      btnOk.onclick = function() { modal.style.display = "none"; callbackSim(); };
+      btnCancel.onclick = function() { modal.style.display = "none"; };
+    } else {
+      btnCancel.style.display = "none";
+      btnOk.textContent = "OK";
+      btnOk.onclick = function() { modal.style.display = "none"; };
+    }
+    modal.style.display = "flex";
+  };
+
+  window.mostrarMensagem = window.mostrarModalAviso;
+
 })();
 </script>
+
+<!-- Modal de aviso/confirmação estilizado v0.6.7 -->
+<div id="modalAppConfirmacao" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.72);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:18px;max-width:360px;width:100%;padding:28px 24px;box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+    <p id="modalAppConfirmacaoTexto" style="color:#e5e7eb;font-size:1em;line-height:1.55;margin:0 0 22px;"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="modalAppConfirmacaoBtnCancelar" type="button" style="padding:10px 20px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#e5e7eb;font-size:0.9em;cursor:pointer;">Cancelar</button>
+      <button id="modalAppConfirmacaoBtnOk" type="button" style="padding:10px 20px;border-radius:10px;border:none;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-size:0.9em;font-weight:600;cursor:pointer;">OK</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
