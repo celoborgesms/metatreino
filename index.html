@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MetaTreino</title>
-  <meta name="app-version" content="0.6.7">
+  <meta name="app-version" content="0.6.8">
   <meta name="theme-color" content="#020617">
-  <link rel="manifest" href="manifest.json?v=0.6.7">
-<link rel="icon" type="image/png" href="icon-512.png.png?v=0.6.7">
-<link rel="apple-touch-icon" href="icon-512.png.png?v=0.6.7">
+  <link rel="manifest" href="manifest.json?v=0.6.8">
+<link rel="icon" type="image/png" href="icon-512.png.png?v=0.6.8">
+<link rel="apple-touch-icon" href="icon-512.png.png?v=0.6.8">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1819,7 +1819,7 @@
   <div class="container">
     <div class="app-hero">
       <div>
-        <span class="app-badge">MetaTreino • Beta 0.6.7</span>
+        <span class="app-badge">MetaTreino • Beta 0.6.8</span>
         <h1><span class="hero-meta-word">Meta</span>Treino</h1>
         <p>Treinos inteligentes para academia, corrida ou os dois. Você escolhe o foco e o app preserva seu histórico.</p>
       </div>
@@ -2079,16 +2079,21 @@
         <h2>✨ Versão atual</h2>
         <p class="small"><strong>Regra fixa de atualizações:</strong> dentro do app será mostrada somente a versão atual. O histórico completo fica no arquivo CHANGELOG que acompanha o pacote da versão.</p>
         <div class="plano-topo">
-          <strong>MetaTreino 0.6.7 Beta</strong><br>
+          <strong>MetaTreino 0.6.8 Beta</strong><br>
           <span class="tag beta">Modos</span>
-          <p><strong>Atualizada em:</strong> 13/05/2026</p>
+          <p><strong>Atualizada em:</strong> 26/05/2026</p>
           <ul class="versao-atual-lista">
-            <li>Corrigido o card de versão no Perfil para mostrar a versão atual do pacote.</li>
-            <li>Ao escolher um treino manual no check-in, o app agora guarda a sugestão original do plano.</li>
-            <li>Ao voltar para <strong>Automático pelo plano</strong>, a sessão original recomendada é restaurada.</li>
-            <li>O botão <strong>Voltar para sugestão do plano</strong> agora restaura o treino sugerido antes de gerar nova recomendação.</li>
-            <li>A troca manual continua valendo somente para a sessão atual e não altera os treinos futuros da semana.</li>
-            <li>As correções de preservação de histórico, modos Academia/Corrida/Híbrido e corrida simplificada continuam ativas.</li>
+            <li><strong>Check-in adaptado ao foco</strong>: opções de sessão de força limpas para quem treina só academia. Vocabulário de corrida aparece somente no modo híbrido/corrida.</li>
+            <li><strong>Plano inteligente após troca manual</strong>: ao trocar o treino hoje, os próximos dias pendentes se reequilibram automaticamente evitando repetir o mesmo grupo muscular.</li>
+            <li><strong>Botões de status do plano unificados</strong>: Marcar feito, Reagendar e Reabrir agora têm comportamento consistente em todas as renderizações do plano semanal.</li>
+            <li><strong>Modo menstruação (perfil feminino)</strong>: mulheres veem no check-in uma opção discreta para informar o período e recebem sugestões de treino adaptativo para dor/desconforto.</li>
+            <li><strong>Edição rápida de peso</strong>: novo card no perfil para atualizar o peso sem passar pelo wizard completo.</li>
+            <li><strong>Botões de sensação com visual forte</strong>: Fácil / Normal / Difícil agora têm contraste claro ao selecionar — cor sólida + texto em negrito.</li>
+            <li><strong>Resumo visual pós-treino</strong>: ao salvar treino de força, aparece um card com grupos musculares trabalhados, calorias estimadas e status de exercícios.</li>
+            <li><strong>Feedback de corrida humanizado</strong>: mensagens pós-cardio com tom de coach — celebra boas performances, encoraja em dias difíceis, alerta perto do desafio.</li>
+            <li><strong>Data da versão corrigida</strong>: o card de versão passa a exibir a data real da atualização atual, sem data fixa.</li>
+            <li><strong>Detecção de sequência muscular</strong>: o app avisa quando o mesmo grupo foi treinado dois dias seguidos e sugere rodízio.</li>
+            <li><strong>Alerta inteligente de desafio</strong>: com menos de 7 dias para o desafio de corrida, o app orienta treinos mais leves e de preservação.</li>
           </ul>
         </div>
         <button type="button" class="botao-principal" onclick="verificarAtualizacaoManual()">Verificar se há nova atualização</button>
@@ -13526,6 +13531,762 @@
     </div>
   </div>
 </div>
+
+
+<!-- ============================================================ -->
+<!-- MetaTreino v0.6.8 — Patch completo                          -->
+<!-- 1. Check-in adaptado ao foco                                 -->
+<!-- 2. Plano reequilibra após troca manual                       -->
+<!-- 3. Botões de status unificados                               -->
+<!-- 4. Modo menstruação (perfil feminino)                        -->
+<!-- 5. Edição rápida de peso no perfil                           -->
+<!-- 6. Botões de sensação com contraste forte                    -->
+<!-- 7. Resumo visual pós-treino                                  -->
+<!-- 8. Feedback de corrida humanizado                            -->
+<!-- 9. Data da versão corrigida                                  -->
+<!-- + Detecção de sequência muscular                             -->
+<!-- + Alerta inteligente de desafio próximo                      -->
+<!-- + Campo de peso com acesso rápido                            -->
+<!-- ============================================================ -->
+<script id="mt-v068-patch">(function(){
+  'use strict';
+  var VERSION_068 = '0.6.8';
+
+  /* ── utilitários internos ── */
+  function byId(id){ return document.getElementById(id); }
+  function safe(t){ var d=document.createElement('div'); d.textContent=String(t||''); return d.innerHTML; }
+  function perfil(){ try{ return JSON.parse(localStorage.getItem('perfilUsuario')||'null'); }catch(e){ return null; } }
+  function isFeminino(){ var p=perfil(); return p && (p.sexo==='feminino'||p.sexo==='f'); }
+  function hojeIso(){ return new Date().toISOString().slice(0,10); }
+  function lerPlano(){ try{ return JSON.parse(localStorage.getItem('planoSemanal')||'null'); }catch(e){ return null; } }
+  function salvarPlano(p){ try{ localStorage.setItem('planoSemanal',JSON.stringify(p)); }catch(e){} }
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 9 — Versão visual
+  ════════════════════════════════════════════════════════════ */
+  function aplicarVersao068(){
+    var VERSION_FIX = VERSION_068;
+    var meta = document.querySelector('meta[name="app-version"]');
+    if(meta) meta.setAttribute('content', VERSION_FIX);
+    var badge = document.querySelector('.app-badge');
+    if(badge) badge.textContent = 'MetaTreino • Beta ' + VERSION_FIX;
+    var card = document.querySelector('#cardVersaoAtual .plano-topo strong');
+    if(card) card.textContent = 'MetaTreino ' + VERSION_FIX + ' Beta';
+    try{ if(window.VERSION !== undefined) window.VERSION = VERSION_FIX; }catch(e){}
+    try{ if(window.VERSION_ATUAL !== undefined) window.VERSION_ATUAL = VERSION_FIX; }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded', aplicarVersao068);
+  window.addEventListener('load', aplicarVersao068);
+  setTimeout(aplicarVersao068, 800);
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 6 — Botões de sensação com contraste forte
+  ════════════════════════════════════════════════════════════ */
+  (function injetarEstilosSensacao(){
+    var style = document.createElement('style');
+    style.id = 'mt068-sensacao-style';
+    style.textContent = [
+      '.botao-sensacao { transition: all 0.18s ease !important; }',
+      '.botao-sensacao.selecionado-facil  { background: rgba(34,197,94,0.55) !important; border-color:#22c55e !important; color:#fff !important; font-weight:700 !important; box-shadow:0 0 0 2px rgba(34,197,94,0.35); }',
+      '.botao-sensacao.selecionado-normal { background: rgba(59,130,246,0.6) !important; border-color:#3b82f6 !important; color:#fff !important; font-weight:700 !important; box-shadow:0 0 0 2px rgba(59,130,246,0.35); }',
+      '.botao-sensacao.selecionado-dificil{ background: rgba(239,68,68,0.6)  !important; border-color:#ef4444 !important; color:#fff !important; font-weight:700 !important; box-shadow:0 0 0 2px rgba(239,68,68,0.35); }',
+      /* resumo pós-treino */
+      '#mt068-resumo-pos-treino { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:16px; margin-top:14px; }',
+      '#mt068-resumo-pos-treino h3 { margin:0 0 10px; font-size:1em; color:#e5e7eb; }',
+      '.mt068-grupo-badge { display:inline-block; padding:3px 10px; border-radius:999px; background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.35); color:#93c5fd; font-size:0.78em; margin:3px 3px 0 0; }',
+      '.mt068-stat-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }',
+      '.mt068-stat { flex:1; min-width:80px; background:rgba(255,255,255,0.05); border-radius:10px; padding:8px 10px; text-align:center; }',
+      '.mt068-stat strong { display:block; font-size:1.1em; color:#fff; }',
+      '.mt068-stat span { font-size:0.75em; color:#94a3b8; }',
+      /* card rápido de peso */
+      '#mt068-card-peso { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:16px; margin-top:12px; }',
+      '#mt068-card-peso h3 { margin:0 0 10px; font-size:0.95em; color:#e5e7eb; }',
+      /* modo menstruação */
+      '#mt068-menstruacao-card { background:rgba(236,72,153,0.1); border:1px solid rgba(236,72,153,0.25); border-radius:14px; padding:14px; margin-top:12px; }',
+      '#mt068-menstruacao-card h3 { margin:0 0 8px; font-size:0.9em; color:#f9a8d4; }',
+      '.mt068-mens-btn { padding:8px 14px; border-radius:10px; border:1.5px solid rgba(236,72,153,0.35); background:rgba(236,72,153,0.08); color:#fbcfe8; font-size:0.85em; cursor:pointer; transition:all 0.18s; margin-right:6px; margin-top:4px; }',
+      '.mt068-mens-btn.ativo { background:rgba(236,72,153,0.4) !important; border-color:#ec4899 !important; color:#fff !important; font-weight:700; }',
+      /* alerta de sequência */
+      '#mt068-alerta-sequencia { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); border-radius:12px; padding:12px 14px; margin-bottom:10px; color:#fde68a; font-size:0.88em; display:none; }',
+      /* alerta desafio */
+      '#mt068-alerta-desafio { background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); border-radius:12px; padding:12px 14px; margin-bottom:10px; color:#c7d2fe; font-size:0.88em; display:none; }'
+    ].join('\n');
+    document.head.appendChild(style);
+  })();
+
+  var oldSelecionarSensacao = window.selecionarSensacao;
+  window.selecionarSensacao = function(valor){
+    ['facil','normal','dificil'].forEach(function(v){
+      var btn = byId('btnSensacao'+v.charAt(0).toUpperCase()+v.slice(1));
+      if(btn){
+        btn.classList.remove('selecionado-facil','selecionado-normal','selecionado-dificil');
+        btn.style.background='';
+        btn.style.borderColor='';
+        btn.style.color='';
+        btn.style.fontWeight='';
+      }
+    });
+    var alvo = byId('btnSensacao'+valor.charAt(0).toUpperCase()+valor.slice(1));
+    if(alvo) alvo.classList.add('selecionado-'+valor);
+    var inp = byId('sensacao'); if(inp) inp.value = valor;
+    if(oldSelecionarSensacao && typeof oldSelecionarSensacao === 'function'){
+      try{ oldSelecionarSensacao(valor); }catch(e){}
+    }
+  };
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 7 — Resumo visual pós-treino
+  ════════════════════════════════════════════════════════════ */
+  function caloriasEstimadas(totalExercicios, sensacao, peso){
+    var base = (totalExercicios || 4) * 12;
+    var mult = sensacao === 'dificil' ? 1.4 : sensacao === 'facil' ? 0.85 : 1.1;
+    var ajustePeso = peso ? Math.sqrt(peso/70) : 1;
+    return Math.round(base * mult * ajustePeso);
+  }
+
+  function nomeGrupo(g){
+    var mapa = {
+      'peito':'Peito','costas':'Costas','ombros':'Ombros','biceps':'Bíceps','triceps':'Tríceps',
+      'pernas':'Pernas','gluteos':'Glúteos','core':'Core','full_body':'Corpo todo',
+      'superior_forca':'Superior','inferior_forca':'Inferior','funcional':'Funcional'
+    };
+    return mapa[g] || g;
+  }
+
+  function mostrarResumoPosterior(treinoSalvo){
+    var box = byId('resultadoTreino');
+    if(!box) return;
+    var grupos = (treinoSalvo.gruposTreinados || []);
+    var conc = treinoSalvo.totalConcluidos || 0;
+    var total = treinoSalvo.totalExercicios || conc;
+    var cals = caloriasEstimadas(total, treinoSalvo.sensacao, perfil() ? perfil().peso : 70);
+    var gruposHtml = grupos.map(function(g){ return '<span class="mt068-grupo-badge">'+safe(nomeGrupo(g))+'</span>'; }).join('');
+
+    var resumoEl = byId('mt068-resumo-pos-treino');
+    if(!resumoEl){
+      resumoEl = document.createElement('div');
+      resumoEl.id = 'mt068-resumo-pos-treino';
+      box.appendChild(resumoEl);
+    }
+
+    var pct = total > 0 ? Math.round((conc/total)*100) : 100;
+    var corBarra = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
+    var emoji = pct >= 90 ? '🔥' : pct >= 60 ? '💪' : '👍';
+    var msgMotiv = pct >= 90 ? 'Treino completo! Ótimo trabalho.' : pct >= 60 ? 'Bom treino! Progresso consistente.' : 'Feito o que deu hoje — isso também conta.';
+
+    resumoEl.innerHTML =
+      '<h3>'+emoji+' Resumo do treino</h3>'+
+      '<p style="margin:0 0 10px;font-size:0.85em;color:#94a3b8;">'+safe(msgMotiv)+'</p>'+
+      '<div style="background:rgba(255,255,255,0.08);border-radius:8px;height:8px;margin-bottom:12px;overflow:hidden;">'+
+        '<div style="height:100%;width:'+pct+'%;background:'+corBarra+';border-radius:8px;transition:width 0.6s ease;"></div>'+
+      '</div>'+
+      '<div class="mt068-stat-row">'+
+        '<div class="mt068-stat"><strong>'+conc+'/'+total+'</strong><span>Exercícios</span></div>'+
+        '<div class="mt068-stat"><strong>~'+cals+' kcal</strong><span>Estimativa</span></div>'+
+        '<div class="mt068-stat"><strong>'+pct+'%</strong><span>Concluído</span></div>'+
+      '</div>'+
+      (gruposHtml ? '<div style="margin-top:12px;"><span style="font-size:0.78em;color:#94a3b8;display:block;margin-bottom:4px;">Grupos trabalhados</span>'+gruposHtml+'</div>' : '');
+
+    resumoEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  /* sobrescrever salvarTreinoFeito para mostrar resumo após salvar */
+  var oldSalvarTreinoFeito = window.salvarTreinoFeito;
+  window.salvarTreinoFeito = function(){
+    /* captura os dados antes de chamar o original */
+    var sensacaoVal = byId('sensacao') ? byId('sensacao').value : 'normal';
+    var trAtual = window.treinoAtual || [];
+    var concluidos = window.exerciciosConcluidos || [];
+    var grupos = Array.from(new Set(trAtual.map(function(e){ return e.grupo||''; }).filter(Boolean)));
+    var totalConc = concluidos.filter(function(x){ return x===true; }).length;
+    var totalEx = trAtual.length || totalConc;
+
+    if(typeof oldSalvarTreinoFeito === 'function') oldSalvarTreinoFeito.apply(this, arguments);
+
+    /* mostra resumo depois do salvamento */
+    setTimeout(function(){
+      mostrarResumoPosterior({
+        gruposTreinados: grupos,
+        totalConcluidos: totalConc,
+        totalExercicios: totalEx,
+        sensacao: sensacaoVal
+      });
+      /* FIX 10 — detecção de sequência muscular */
+      verificarSequenciaMusculosRepetidos(grupos);
+    }, 800);
+  };
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 10 — Detecção de sequência muscular repetida
+  ════════════════════════════════════════════════════════════ */
+  function gruposForca(lista){
+    return lista.filter(function(g){
+      return ['peito','costas','ombros','biceps','triceps','superior_forca'].indexOf(g) !== -1
+        ? 'superior' : ['pernas','gluteos','inferior_forca'].indexOf(g) !== -1 ? 'inferior' : null;
+    });
+  }
+
+  function verificarSequenciaMusculosRepetidos(gruposHoje){
+    try{
+      var hist = JSON.parse(localStorage.getItem('historico_grupos_068') || '[]');
+      var ontem = hist[0];
+      if(!ontem || !ontem.grupos || !ontem.data) return;
+      var diffDias = Math.round((new Date(hojeIso()) - new Date(ontem.data)) / 86400000);
+      if(diffDias > 1) return;
+
+      var catHoje = gruposHoje.map(function(g){
+        if(['peito','costas','ombros','biceps','triceps','superior_forca'].indexOf(g)!==-1) return 'superior';
+        if(['pernas','gluteos','inferior_forca'].indexOf(g)!==-1) return 'inferior';
+        return null;
+      }).filter(Boolean);
+
+      var catOntem = ontem.grupos.map(function(g){
+        if(['peito','costas','ombros','biceps','triceps','superior_forca'].indexOf(g)!==-1) return 'superior';
+        if(['pernas','gluteos','inferior_forca'].indexOf(g)!==-1) return 'inferior';
+        return null;
+      }).filter(Boolean);
+
+      var overlap = catHoje.filter(function(c){ return catOntem.indexOf(c)!==-1; });
+      if(overlap.length > 0){
+        var nomeOv = overlap[0] === 'superior' ? 'superiores' : 'inferiores';
+        var alertaEl = byId('mt068-alerta-sequencia');
+        if(alertaEl){
+          alertaEl.textContent = '⚠️ Você treinou '+nomeOv+' ontem também. Amanhã o plano vai priorizar o grupo oposto ou recuperação.';
+          alertaEl.style.display = 'block';
+        }
+        /* ajusta próximo dia do plano */
+        reequilibrarProximoDia(overlap[0] === 'superior' ? 'inferior' : 'superior');
+      }
+
+      /* salva histórico */
+      hist.unshift({ data: hojeIso(), grupos: gruposHoje });
+      hist = hist.slice(0,14);
+      localStorage.setItem('historico_grupos_068', JSON.stringify(hist));
+    }catch(e){}
+  }
+
+  function reequilibrarProximoDia(prioridade){
+    try{
+      var plano = lerPlano();
+      if(!plano || !Array.isArray(plano.dias)) return;
+      var hoje = hojeIso();
+      var proximos = plano.dias.filter(function(d){
+        return d.dataISO > hoje && !d.status && d.status !== 'concluido';
+      }).sort(function(a,b){ return a.dataISO.localeCompare(b.dataISO); });
+      if(!proximos.length) return;
+      var prox = proximos[0];
+      var cat = prox.categoria || '';
+      /* só altera se for força e não for já o grupo correto */
+      var ehSuperior = ['superior_forca','peito','costas','ombros','biceps','triceps'].indexOf(cat)!==-1;
+      var ehInferior = ['inferior_forca','pernas','gluteos'].indexOf(cat)!==-1;
+      if(prioridade === 'inferior' && ehSuperior){
+        prox.categoria = 'inferior_forca';
+        prox.ajustado068 = true;
+        salvarPlano(plano);
+      } else if(prioridade === 'superior' && ehInferior){
+        prox.categoria = 'superior_forca';
+        prox.ajustado068 = true;
+        salvarPlano(plano);
+      }
+    }catch(e){}
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 2 — Plano reequilibra após troca manual
+  ════════════════════════════════════════════════════════════ */
+  var oldAplicarCheckin = window.aplicarRecomendacaoCheckin;
+  window.aplicarRecomendacaoCheckin = function(){
+    var rec = window.__mt03RecomendacaoCheckin;
+    if(oldAplicarCheckin && typeof oldAplicarCheckin === 'function'){
+      oldAplicarCheckin.apply(this, arguments);
+    }
+    if(rec && rec.manual && rec.tipo === 'forca'){
+      setTimeout(function(){
+        reequilibrarSemanaAposTroca(rec.categoria);
+      }, 300);
+    }
+  };
+
+  function reequilibrarSemanaAposTroca(categoriaFeitaHoje){
+    try{
+      var plano = lerPlano();
+      if(!plano || !Array.isArray(plano.dias)) return;
+      var hoje = hojeIso();
+
+      /* determina se o que foi feito hoje é superior ou inferior */
+      var isSupHoje = ['superior_forca','peito','costas','ombros','biceps','triceps'].indexOf(categoriaFeitaHoje)!==-1;
+      var isInfHoje = ['inferior_forca','pernas','gluteos'].indexOf(categoriaFeitaHoje)!==-1;
+      if(!isSupHoje && !isInfHoje) return;
+
+      /* dias futuros pendentes (não concluídos, não descanso) */
+      var pendentes = plano.dias.filter(function(d){
+        return d.dataISO > hoje &&
+          d.status !== 'concluido' &&
+          ['superior_forca','inferior_forca','peito','costas','pernas','gluteos','full_body'].indexOf(d.categoria||'')!==-1;
+      }).sort(function(a,b){ return a.dataISO.localeCompare(b.dataISO); });
+
+      if(!pendentes.length) return;
+
+      /* alterna: o próximo força deve ser o grupo oposto */
+      var proximo = pendentes[0];
+      var proxEhSup = ['superior_forca','peito','costas','ombros','biceps','triceps'].indexOf(proximo.categoria||'')!==-1;
+      var proxEhInf = ['inferior_forca','pernas','gluteos'].indexOf(proximo.categoria||'')!==-1;
+
+      if(isSupHoje && proxEhSup){
+        proximo.categoria = 'inferior_forca';
+        proximo.ajustado068 = true;
+        proximo.motivoAjuste = 'Trocado: hoje você treinou superiores, então priorizei inferiores aqui.';
+      } else if(isInfHoje && proxEhInf){
+        proximo.categoria = 'superior_forca';
+        proximo.ajustado068 = true;
+        proximo.motivoAjuste = 'Trocado: hoje você treinou inferiores, então priorizei superiores aqui.';
+      }
+
+      salvarPlano(plano);
+
+      /* renderiza plano se função disponível */
+      setTimeout(function(){
+        if(typeof window.renderizarPlanoSemanal === 'function') window.renderizarPlanoSemanal();
+      }, 200);
+    }catch(e){}
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 3 — Botões de status do plano (unificado)
+  ════════════════════════════════════════════════════════════ */
+  window.mt068MarcarStatusPlanoDia = function(dataISO, novoStatus){
+    try{
+      var plano = lerPlano();
+      if(!plano || !Array.isArray(plano.dias)) return;
+      var dia = plano.dias.find(function(d){ return d.dataISO === dataISO; });
+      if(!dia) return;
+
+      if(novoStatus === 'concluido'){
+        dia.status = 'concluido';
+        dia.concluidoEm = new Date().toISOString();
+      } else if(novoStatus === 'reagendado'){
+        dia.status = 'reagendado';
+        dia.reagendadoEm = new Date().toISOString();
+        /* move para o próximo dia disponível sem conflito */
+        var proxData = proximoDiaLivre(plano, dataISO);
+        dia.reagendadoPara = proxData;
+      } else if(novoStatus === 'aberto'){
+        delete dia.status;
+        delete dia.concluidoEm;
+        delete dia.reagendadoEm;
+        delete dia.reagendadoPara;
+        delete dia.ajustadoPeloCheckin;
+      }
+
+      salvarPlano(plano);
+      if(typeof window.renderizarPlanoSemanal === 'function') window.renderizarPlanoSemanal();
+      if(typeof window.renderizarHoje === 'function') window.renderizarHoje();
+    }catch(e){ console.log('[068] erro status plano:', e); }
+  };
+
+  function proximoDiaLivre(plano, fromISO){
+    var dias = (plano.dias || []).sort(function(a,b){ return a.dataISO.localeCompare(b.dataISO); });
+    for(var i=0;i<dias.length;i++){
+      if(dias[i].dataISO > fromISO && !dias[i].status){
+        return dias[i].dataISO;
+      }
+    }
+    return fromISO;
+  }
+
+  /* sobrescreve marcarStatusPlanoDia existente */
+  var oldMarcar = window.marcarStatusPlanoDia;
+  window.marcarStatusPlanoDia = function(dataISO, novoStatus){
+    window.mt068MarcarStatusPlanoDia(dataISO, novoStatus);
+    if(oldMarcar && typeof oldMarcar === 'function'){
+      try{ oldMarcar.apply(this, arguments); }catch(e){}
+    }
+  };
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 1 — Check-in adaptado ao foco
+  ════════════════════════════════════════════════════════════ */
+  function adaptarOpcoesCheckin(){
+    var sel = byId('divisaoTreino');
+    if(!sel) return;
+    var p = perfil();
+    var foco = (p && p.focoPrincipal) ? p.focoPrincipal : 'hibrido';
+    /* inferir foco pelo diasCorridaSemana se não tiver campo */
+    if(!p || !p.focoPrincipal){
+      foco = (p && Number(p.diasCorridaSemana||0) === 0) ? 'academia' : 'hibrido';
+    }
+
+    /* salva as opções originais */
+    if(!sel._068OpcoesOriginais){
+      sel._068OpcoesOriginais = Array.from(sel.options).map(function(o){
+        return { value: o.value, text: o.text };
+      });
+    }
+
+    /* reconstrói opções conforme foco */
+    while(sel.options.length > 0) sel.remove(0);
+
+    var opcoesAcademia = [
+      { value:'automatico',       text:'🤖 Automático pelo plano' },
+      { value:'full_body',        text:'🏋️ Corpo todo' },
+      { value:'superior_forca',   text:'💪 Superiores (peito, costas, ombros, braços)' },
+      { value:'inferior_forca',   text:'🦵 Inferiores (pernas, glúteos)' },
+      { value:'peito',            text:'🫁 Peito e tríceps' },
+      { value:'costas',           text:'🔙 Costas e bíceps' },
+      { value:'ombros',           text:'🔼 Ombros e trapézio' },
+      { value:'core',             text:'⚡ Core e funcional' },
+      { value:'recuperacao',      text:'🌿 Recuperação / mobilidade' }
+    ];
+
+    var opcoesHibrido = opcoesAcademia.concat([
+      { value:'cardio',           text:'🏃 Corrida / cardio (ir para aba corrida)' },
+      { value:'corrida_leve',     text:'🟢 Corrida leve / regenerativa' },
+      { value:'corrida_longo',    text:'🔵 Corrida longa (longe de desafio)' },
+      { value:'corrida_intervalado', text:'🔴 Tiros / intervalado (semana sem prova)' },
+      { value:'corrida_progressiva', text:'🟡 Corrida progressiva' }
+    ]);
+
+    var opcoes = foco === 'academia' ? opcoesAcademia : opcoesHibrido;
+    opcoes.forEach(function(op){
+      var o = document.createElement('option');
+      o.value = op.value;
+      o.textContent = op.text;
+      sel.appendChild(o);
+    });
+  }
+
+  /* roda ao abrir o check-in */
+  var oldIrParaCheckin068 = window.irParaCheckin;
+  window.irParaCheckin = function(){
+    var ret = oldIrParaCheckin068 ? oldIrParaCheckin068.apply(this, arguments) : undefined;
+    setTimeout(adaptarOpcoesCheckin, 150);
+    setTimeout(injetarMenstruacaoCheckin, 200);
+    setTimeout(mostrarAlertaDesafioProximo, 250);
+    return ret;
+  };
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 4 — Modo menstruação (perfil feminino)
+  ════════════════════════════════════════════════════════════ */
+  function injetarMenstruacaoCheckin(){
+    if(!isFeminino()) return;
+    if(byId('mt068-menstruacao-card')) return;
+
+    var anchor = byId('recomendacaoCheckinBox') || byId('divisaoTreino');
+    if(!anchor) return;
+    var parent = anchor.closest('.card') || anchor.parentElement;
+    if(!parent) return;
+
+    var card = document.createElement('div');
+    card.id = 'mt068-menstruacao-card';
+    card.innerHTML =
+      '<h3>🩸 Naqueles dias?</h3>'+
+      '<p style="margin:0 0 8px;font-size:0.82em;color:#fbcfe8;opacity:0.9;">Se estiver no período menstrual, posso adaptar o treino de hoje.</p>'+
+      '<div>'+
+        '<button type="button" class="mt068-mens-btn" id="mt068-mens-nao" onclick="mt068SelecionarMens('nao')">Não estou</button>'+
+        '<button type="button" class="mt068-mens-btn" id="mt068-mens-leve" onclick="mt068SelecionarMens('leve')">Sim, desconforto leve</button>'+
+        '<button type="button" class="mt068-mens-btn" id="mt068-mens-forte" onclick="mt068SelecionarMens('forte')">Sim, com bastante dor</button>'+
+      '</div>'+
+      '<div id="mt068-mens-sugestao" style="margin-top:10px;font-size:0.85em;color:#f9a8d4;display:none;"></div>';
+
+    parent.appendChild(card);
+  }
+
+  window.mt068SelecionarMens = function(nivel){
+    ['nao','leve','forte'].forEach(function(n){
+      var btn = byId('mt068-mens-'+n);
+      if(btn) btn.classList.toggle('ativo', n === nivel);
+    });
+
+    var sug = byId('mt068-mens-sugestao');
+    if(!sug) return;
+
+    var textos = {
+      nao:   null,
+      leve:  '💜 Recomendação: treino com intensidade moderada, evite carga máxima. Foque em técnica e respiração.',
+      forte: '💜 Recomendação: hoje priorize mobilidade, alongamento ou caminhada leve. Seu corpo precisa de cuidado.'
+    };
+
+    if(nivel === 'nao'){
+      sug.style.display = 'none';
+      sug.textContent = '';
+      return;
+    }
+
+    sug.style.display = 'block';
+    sug.textContent = textos[nivel];
+
+    /* ajusta o select de divisão */
+    var sel = byId('divisaoTreino');
+    if(!sel) return;
+    if(nivel === 'forte'){
+      sel.value = 'recuperacao';
+    } else if(nivel === 'leve'){
+      /* se for inferiores, troca para superiores (menos cólica) */
+      if(['inferior_forca','pernas','gluteos'].indexOf(sel.value)!==-1){
+        sel.value = 'superior_forca';
+      }
+    }
+
+    /* salva no checkin */
+    try{ localStorage.setItem('mt068_mens_hoje', JSON.stringify({ data: hojeIso(), nivel: nivel })); }catch(e){}
+  };
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 5 — Edição rápida de peso no perfil
+  ════════════════════════════════════════════════════════════ */
+  function injetarCardPesoRapido(){
+    if(byId('mt068-card-peso')) return;
+
+    /* localiza o card de resultado do perfil */
+    var anchor = byId('resultadoPerfil');
+    if(!anchor) return;
+    var parent = anchor.parentElement;
+    if(!parent) return;
+
+    var p = perfil();
+    var pesoAtual = p ? (p.peso || '') : '';
+
+    var card = document.createElement('div');
+    card.id = 'mt068-card-peso';
+    card.innerHTML =
+      '<h3>⚖️ Atualizar peso</h3>'+
+      '<div style="display:flex;align-items:center;gap:10px;">'+
+        '<input id="mt068-peso-input" type="number" min="30" max="700" step="0.1" value="'+safe(pesoAtual)+'" placeholder="Ex: 75.5" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#fff;font-size:1.1em;font-weight:700;text-align:center;">'+
+        '<span style="color:#94a3b8;font-size:0.9em;white-space:nowrap;">kg</span>'+
+        '<button type="button" onclick="mt068SalvarPesoRapido()" style="padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-weight:600;cursor:pointer;white-space:nowrap;">Salvar</button>'+
+      '</div>'+
+      '<div id="mt068-peso-msg" style="margin-top:8px;font-size:0.82em;color:#86efac;display:none;"></div>';
+
+    /* insere após o resultado do perfil */
+    if(anchor.nextSibling){
+      parent.insertBefore(card, anchor.nextSibling);
+    } else {
+      parent.appendChild(card);
+    }
+  }
+
+  window.mt068SalvarPesoRapido = function(){
+    var inp = byId('mt068-peso-input');
+    if(!inp) return;
+    var novo = Number(inp.value);
+    if(!novo || novo < 30 || novo > 700){
+      var msg = byId('mt068-peso-msg');
+      if(msg){ msg.style.color='#fca5a5'; msg.textContent='Informe um peso válido entre 30 e 700 kg.'; msg.style.display='block'; }
+      return;
+    }
+
+    var p = perfil();
+    if(!p){ alert('Perfil não encontrado. Preencha o perfil primeiro.'); return; }
+    p.peso = novo;
+    var altM = (p.alturaCm||170) / 100;
+    p.imc = (novo / (altM*altM)).toFixed(1);
+    localStorage.setItem('perfilUsuario', JSON.stringify(p));
+
+    /* histórico de peso */
+    try{
+      var hist = JSON.parse(localStorage.getItem('historicoPeso')||'[]');
+      hist.unshift({ data: new Date().toLocaleString('pt-BR'), peso: novo });
+      localStorage.setItem('historicoPeso', JSON.stringify(hist.slice(0,60)));
+    }catch(e){}
+
+    var msg = byId('mt068-peso-msg');
+    if(msg){
+      msg.style.color='#86efac';
+      msg.textContent='✅ Peso atualizado para '+novo+' kg. IMC recalculado: '+p.imc;
+      msg.style.display='block';
+      setTimeout(function(){ msg.style.display='none'; }, 3500);
+    }
+
+    /* atualiza o resumo de perfil se visível */
+    if(typeof window.mostrarResumoPerfilCarregado === 'function') window.mostrarResumoPerfilCarregado();
+  };
+
+  /* injeta o card ao exibir a página de perfil */
+  var oldIrParaPerfil = window.irParaPerfil;
+  window.irParaPerfil = function(){
+    var ret = oldIrParaPerfil ? oldIrParaPerfil.apply(this, arguments) : undefined;
+    setTimeout(injetarCardPesoRapido, 300);
+    return ret;
+  };
+
+  /* também injeta ao carregar perfil automaticamente */
+  var oldCarrAuto = window.carregarPerfilAutomaticamente;
+  window.carregarPerfilAutomaticamente = function(){
+    var ret = oldCarrAuto ? oldCarrAuto.apply(this, arguments) : undefined;
+    setTimeout(injetarCardPesoRapido, 500);
+    return ret;
+  };
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 8 — Feedback de corrida humanizado
+  ════════════════════════════════════════════════════════════ */
+  function gerarFeedbackCorrida(corrida){
+    var dist = Number(corrida.distancia || 0);
+    var tempo = Number(corrida.tempo || 0);
+    var sensacao = corrida.sensacao || 'normal';
+    var intensidade = corrida.intensidade || 'moderado';
+    var temDesafio = corrida.temDesafio || false;
+    var dataDesafio = corrida.dataDesafio || '';
+    var distDesafio = Number(corrida.distanciaDesafio || 0);
+    var p = perfil();
+    var nome = p ? p.nome.split(' ')[0] : 'você';
+
+    var linhas = [];
+
+    /* ── Performance ── */
+    if(dist > 0 && tempo > 0){
+      var pace = tempo / dist;
+      if(dist >= 5){
+        linhas.push(dist >= 10
+          ? '🏆 '+nome+', '+dist.toFixed(1)+' km é um baita resultado. Manter esse ritmo exige consistência — e você tem mostrado isso.'
+          : '🎯 '+dist.toFixed(1)+' km concluídos! Cada quilômetro que você coloca no histórico faz diferença na base aeróbica.');
+      } else {
+        linhas.push('✅ Sessão registrada: '+dist.toFixed(1)+' km em '+tempo+' min. Progressão consistente é mais importante que distância isolada.');
+      }
+      if(pace > 0){
+        var paceMin = Math.floor(pace);
+        var paceSeg = Math.round((pace - paceMin)*60);
+        linhas.push('⏱️ Pace médio: '+paceMin+':'+(paceSeg<10?'0':'')+paceSeg+' min/km.');
+      }
+    }
+
+    /* ── Sensação ── */
+    if(sensacao === 'facil'){
+      linhas.push('💡 Sessão tranquila — ótimo para recuperação. Quando tudo parece fácil, significa que a base está evoluindo.');
+    } else if(sensacao === 'dificil' || intensidade === 'pesado' || intensidade === 'forte'){
+      linhas.push('💪 Treino puxado. Lembre: é na recuperação que o corpo melhora, não na fadiga. Priorize sono e hidratação agora.');
+    } else {
+      linhas.push('👌 Esforço controlado — exatamente o tipo de treino que constrói base sem desgastar.');
+    }
+
+    /* ── Desafio próximo ── */
+    if(temDesafio && dataDesafio){
+      try{
+        var hoje = new Date(); hoje.setHours(0,0,0,0);
+        var dtDesafio = new Date(dataDesafio);
+        dtDesafio.setHours(0,0,0,0);
+        var diasRestantes = Math.round((dtDesafio - hoje) / 86400000);
+
+        if(diasRestantes <= 0){
+          /* dia do desafio ou passou */
+          if(diasRestantes === 0){
+            if(dist >= distDesafio * 0.9){
+              linhas.push('🏅 ISSO! Você correu '+dist.toFixed(1)+' km no dia do desafio de '+distDesafio+' km. Resultado registrado — missão cumprida!');
+            } else if(dist > 0){
+              linhas.push('💛 Você foi lá e fez o que deu. Completar parcialmente também conta — o que importa é que você estava na largada.');
+            }
+          } else {
+            linhas.push('📋 Desafio concluído. Que tal atualizar seu objetivo para o próximo?');
+          }
+        } else if(diasRestantes <= 3){
+          linhas.push('🚨 Faltam apenas '+diasRestantes+' dia(s) para o desafio. NADA de treino pesado agora — descanse as pernas e confie no trabalho que já fez.');
+        } else if(diasRestantes <= 7){
+          linhas.push('📅 A '+diasRestantes+' dias do desafio: priorize sessões curtas e leves. Seu condicionamento já está construído — agora é preservar.');
+        } else if(diasRestantes <= 14){
+          linhas.push('🎯 A 2 semanas do desafio: diminua volume gradualmente, mantenha intensidade moderada. Chegue descansado na largada.');
+        } else {
+          linhas.push('🗓️ Faltam '+diasRestantes+' dias para o desafio de '+distDesafio+' km. Continue progredindo com consistência.');
+        }
+      }catch(e){}
+    }
+
+    return linhas.join('<br><br>');
+  }
+
+  /* sobrescreve salvarCardio para injetar feedback humanizado */
+  var oldSalvarCardio = window.salvarCardio;
+  window.salvarCardio = function(){
+    /* captura dados antes */
+    var corridaCapturada = {};
+    try{
+      corridaCapturada = {
+        distancia: byId('distanciaCardio') ? byId('distanciaCardio').value : 0,
+        tempo:     byId('tempoCardio')     ? byId('tempoCardio').value : 0,
+        sensacao:  byId('sensacaoCardio')  ? byId('sensacaoCardio').value : 'normal',
+        intensidade: byId('intensidadeCardio') ? byId('intensidadeCardio').value : 'moderado',
+        temDesafio: byId('temDesafioCardio') ? byId('temDesafioCardio').checked : false,
+        distanciaDesafio: byId('distanciaDesafioCardio') ? byId('distanciaDesafioCardio').value : 0,
+        dataDesafio: byId('dataDesafioCardio') ? byId('dataDesafioCardio').value : ''
+      };
+    }catch(e){}
+
+    if(typeof oldSalvarCardio === 'function') oldSalvarCardio.apply(this, arguments);
+
+    /* injeta feedback após salvamento */
+    setTimeout(function(){
+      var caixa = byId('mensagemCardio');
+      if(!caixa) return;
+      var feedback = gerarFeedbackCorrida(corridaCapturada);
+      if(!feedback) return;
+      /* adiciona abaixo da mensagem existente */
+      var fbDiv = byId('mt068-feedback-corrida');
+      if(!fbDiv){
+        fbDiv = document.createElement('div');
+        fbDiv.id = 'mt068-feedback-corrida';
+        fbDiv.style.cssText = 'margin-top:12px;padding:14px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:12px;color:#c7d2fe;font-size:0.88em;line-height:1.55;';
+        caixa.parentNode.insertBefore(fbDiv, caixa.nextSibling);
+      }
+      fbDiv.innerHTML = feedback;
+      fbDiv.style.display = 'block';
+    }, 900);
+  };
+
+  /* ════════════════════════════════════════════════════════════
+     FIX 11 — Alerta inteligente de desafio próximo no check-in
+  ════════════════════════════════════════════════════════════ */
+  function mostrarAlertaDesafioProximo(){
+    var alertaEl = byId('mt068-alerta-desafio');
+    if(!alertaEl){
+      var containerCheckin = document.querySelector('#paginaCheckin .card');
+      if(!containerCheckin) return;
+      alertaEl = document.createElement('div');
+      alertaEl.id = 'mt068-alerta-desafio';
+      containerCheckin.insertBefore(alertaEl, containerCheckin.firstChild);
+    }
+
+    /* lê dados de desafio do cardio (última corrida com desafio) */
+    try{
+      var cardios = window.ultimaCardioCache;
+      if(!cardios || !cardios.temDesafio || !cardios.dataDesafio){ alertaEl.style.display='none'; return; }
+      var hoje = new Date(); hoje.setHours(0,0,0,0);
+      var dtDesafio = new Date(cardios.dataDesafio); dtDesafio.setHours(0,0,0,0);
+      var dias = Math.round((dtDesafio - hoje) / 86400000);
+      if(dias < 0 || dias > 14){ alertaEl.style.display='none'; return; }
+
+      var msg = '';
+      if(dias === 0)        msg = '🏁 É hoje! Dia do desafio. Bora com tudo — você se preparou para isso!';
+      else if(dias <= 2)    msg = '🚨 Faltam '+dias+' dia(s) para o desafio. Nada pesado hoje — perna descansada é vantagem na largada.';
+      else if(dias <= 7)    msg = '📅 '+dias+' dias para o desafio. Prefira treino leve ou regenerativo hoje.';
+      else                  msg = '🗓️ '+dias+' dias para o desafio. Mantenha volume controlado esta semana.';
+
+      alertaEl.textContent = msg;
+      alertaEl.style.display = 'block';
+    }catch(e){ alertaEl.style.display='none'; }
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     Init geral — roda ao carregar
+  ════════════════════════════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', function(){
+    /* aplica versão */
+    aplicarVersao068();
+
+    /* injeta alerta de sequência no topo da aba treino se existir */
+    var paginaTreino = byId('paginaTreino');
+    if(paginaTreino){
+      var alertaSeq = document.createElement('div');
+      alertaSeq.id = 'mt068-alerta-sequencia';
+      paginaTreino.insertBefore(alertaSeq, paginaTreino.firstChild);
+    }
+  });
+
+  /* expõe funções úteis globalmente */
+  window.mt068ReequilibrarSemana = reequilibrarSemanaAposTroca;
+  window.mt068AdaptarOpcoesCheckin = adaptarOpcoesCheckin;
+
+})();
+</script>
 
 </body>
 </html>
