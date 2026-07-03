@@ -882,7 +882,7 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="list-row" onclick="openTrophies()">🏆 <span>Meus troféus</span></div>
     <div class="list-row" onclick="openModal('change-pass')">🔑 <span>Alterar senha</span></div>
     <div class="list-row" onclick="mtCheckUpdate()" id="pf-update-btn">🔄 <span>Verificar atualização</span><span id="pf-update-badge" style="margin-left:auto;font-size:11px"></span></div>
-    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v3.1</div>
+    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v3.2</div>
     <div class="list-row danger" style="margin-top:14px" onclick="doLogout()">🚪 Sair da conta</div>
   </div>
 </div>
@@ -929,9 +929,9 @@ a{color:var(--primary-2);text-decoration:none}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=3.1"></script>
+<script src="./app.js?v=3.2"></script>
 <script>
-const APP_VERSION = 'v3.1';
+const APP_VERSION = 'v3.2';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {

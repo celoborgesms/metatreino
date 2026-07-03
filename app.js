@@ -1,5 +1,5 @@
-// ===== MetaTreino v3.1 =====
-const APP_VERSION = 'v3.1';
+// ===== MetaTreino v3.2 =====
+const APP_VERSION = 'v3.2';
 const AUTH_KEY = 'metatreino_auth_v1';
 const USERS_KEY = 'metatreino_users_v1';
 const ALLOW_KEY = 'metatreino_allowlist_v1';
@@ -103,18 +103,23 @@ function doLogin(){
   err.innerHTML='';
   if(!e || !p){ err.innerHTML='<div class="err">Preencha e-mail e senha.</div>'; return; }
 
-  // Admin login
+  // Admin login (accept EITHER admin master password OR user account password)
   if(e === ADMIN_EMAIL){
-    if(p !== getAdminPass()){ err.innerHTML='<div class="err">Senha incorreta.</div>'; return; }
-    // Load existing admin data or create fresh (as a normal user with isAdmin flag)
     const users = getUsers();
+    const u = users[ADMIN_EMAIL];
+    const validMaster = (p === getAdminPass());
+    const validUser = (u && u.pass === p);
+    if(!validMaster && !validUser){ err.innerHTML='<div class="err">Senha incorreta. Use a senha do admin (celo1995) ou a senha que você cadastrou.</div>'; return; }
+    // If admin user record doesn't exist, create it
     if(!users[ADMIN_EMAIL]){
       users[ADMIN_EMAIL] = { name:'Marcelo', email:ADMIN_EMAIL, pass:p, createdAt:Date.now(), isAdmin:true };
-      setUsers(users);
+    } else {
+      users[ADMIN_EMAIL].isAdmin = true;
     }
+    setUsers(users);
     // Ensure admin is in allowlist with vitalício
     const allow = getAllow();
-    allow[ADMIN_EMAIL] = { addedAt:Date.now(), expiresAt:null, active:true, name:'Admin (Marcelo)', notes:'Administrador — acesso vitalício' };
+    allow[ADMIN_EMAIL] = { ...(allow[ADMIN_EMAIL]||{}), addedAt:allow[ADMIN_EMAIL]?.addedAt||Date.now(), expiresAt:null, active:true, name:'Admin (Marcelo)', notes:'Administrador — acesso vitalício' };
     setAllow(allow);
     state.user = { ...users[ADMIN_EMAIL], isAdmin:true };
     saveAuth();
@@ -127,16 +132,24 @@ function doLogin(){
   const u = users[e];
   if(!u || u.pass !== p){ err.innerHTML='<div class="err">E-mail ou senha inválidos.</div>'; return; }
 
+  // Force admin recognition by email even if user was created as normal
+  if(e === ADMIN_EMAIL){ u.isAdmin = true; users[e] = u; setUsers(users); }
+
   // Check allowlist
   const allow = getAllow();
   const a = allow[e];
   if(!a || !a.active){
-    state.user = { name:u.name, email:e, blocked:true };
-    saveAuth();
-    showScreen('scr-noaccess');
-    return;
-  }
-  if(a.expiresAt && a.expiresAt < Date.now()){
+    // Admin sempre passa mesmo sem allowlist
+    if(e === ADMIN_EMAIL){
+      allow[ADMIN_EMAIL] = { addedAt:Date.now(), expiresAt:null, active:true, name:'Admin (Marcelo)' };
+      setAllow(allow);
+    } else {
+      state.user = { name:u.name, email:e, blocked:true };
+      saveAuth();
+      showScreen('scr-noaccess');
+      return;
+    }
+  } else if(a.expiresAt && a.expiresAt < Date.now() && e !== ADMIN_EMAIL){
     state.user = { name:u.name, email:e, blocked:true };
     saveAuth();
     showScreen('scr-noaccess');
@@ -184,6 +197,18 @@ function doLogout(){
 
 function bootAfterAuth(){
   cleanupOldHistory();
+  // Force admin flag by email (source of truth)
+  if(state.user && state.user.email === ADMIN_EMAIL){
+    state.user.isAdmin = true;
+    // Ensure allowlist entry as vitalício
+    const allow = getAllow();
+    allow[ADMIN_EMAIL] = { ...(allow[ADMIN_EMAIL]||{}), addedAt:allow[ADMIN_EMAIL]?.addedAt||Date.now(), expiresAt:null, active:true, name:'Admin (Marcelo)', notes:'Administrador — acesso vitalício' };
+    setAllow(allow);
+    // Ensure user record has isAdmin
+    const users = getUsers();
+    if(users[ADMIN_EMAIL]){ users[ADMIN_EMAIL].isAdmin = true; setUsers(users); }
+    saveAuth();
+  }
   if(!state.user.profile || !state.user.profile.quiz_done){
     showScreen('scr-quiz'); bindOpts('scr-quiz');
     return;
@@ -1041,8 +1066,9 @@ function renderProfile(){
   renderAvatar('pf-avatar');
   $('pf-name').textContent = p.nickname || u.name;
   $('pf-email').textContent = u.email;
-  // Show admin button if admin
-  if(u.isAdmin){ $('pf-admin-btn').classList.remove('hidden'); } else { $('pf-admin-btn').classList.add('hidden'); }
+  // Show admin button if admin (by email — fonte da verdade)
+  const isAdminUser = u.isAdmin || u.email === ADMIN_EMAIL;
+  if(isAdminUser){ $('pf-admin-btn').classList.remove('hidden'); state.user.isAdmin = true; } else { $('pf-admin-btn').classList.add('hidden'); }
   const days = accessDaysLeft();
   $('pf-trial').textContent = u.isAdmin ? '♾️ Acesso vitalício (Admin)' : accessLabel(days);
   $('pf-goal').textContent = 'Objetivo: '+ ({emagrecer:'Emagrecer',massa:'Ganhar massa',forca:'Ganhar força',condicionamento:'Condicionamento',tonificar:'Tonificar',saude:'Saúde geral'}[p.goal]||'—');
