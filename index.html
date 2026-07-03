@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050914">
+<title>MetaTreino — Treinos inteligentes</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link rel="apple-touch-icon" href="./icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050914;
+  --bg-2:#0a1122;
+  --surface:rgba(148,163,184,0.05);
+  --surface-2:rgba(148,163,184,0.09);
+  --border:rgba(148,163,184,0.14);
+  --border-strong:rgba(148,163,184,0.22);
+  --primary:#10b981;
+  --primary-2:#34d399;
+  --primary-dark:#059669;
+  --primary-glow:rgba(16,185,129,0.35);
+  --accent:#f59e0b;
+  --accent-2:#fbbf24;
+  --danger:#f43f5e;
+  --info:#38bdf8;
+  --text:#e2e8f0;
+  --text-dim:#94a3b8;
+  --text-mute:#64748b;
+  --run:#f59e0b;
+  --lift:#10b981;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:'Outfit',system-ui,sans-serif;font-weight:400;overscroll-behavior-y:none}
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse 800px 500px at 20% -10%, rgba(16,185,129,0.10), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(245,158,11,0.06), transparent 60%),
+    radial-gradient(ellipse 900px 600px at 50% 100%, rgba(56,189,248,0.05), transparent 65%),
+    var(--bg);
+  padding-bottom:calc(88px + env(safe-area-inset-bottom));
+  font-feature-settings:"cv11","ss01";
+}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font-family:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+a{color:var(--primary-2);text-decoration:none}
+.wrap{max-width:540px;margin:0 auto;padding:20px 18px;padding-top:calc(20px + env(safe-area-inset-top))}
+.hidden{display:none!important}
+
+/* Header */
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.brand-logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:grid;place-items:center;font-weight:900;font-size:20px;color:#022c22;box-shadow:0 8px 24px var(--primary-glow),inset 0 1px 0 rgba(255,255,255,0.2)}
+.brand-name{font-weight:800;letter-spacing:2.4px;font-size:16px}
+.brand-tag{font-size:11px;color:var(--text-dim);letter-spacing:0.3px}
+
+/* Module Toggle */
+.mod-toggle{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:999px;background:var(--surface);border:1px solid var(--border);margin-bottom:18px}
+.mod-cur{display:flex;align-items:center;gap:8px;padding:6px 10px;font-weight:700}
+.mod-cur.run{color:var(--run)}
+.mod-cur.lift{color:var(--primary-2)}
+.mod-cur svg{width:18px;height:18px}
+.mod-switch{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);font-size:13px;font-weight:600;transition:.2s}
+.mod-switch:hover{background:var(--border);transform:translateY(-1px)}
+.mod-switch svg{width:14px;height:14px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px;margin-bottom:14px;position:relative;backdrop-filter:blur(20px)}
+.card-alert{border-color:rgba(16,185,129,0.35);background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(16,185,129,0.02))}
+.card-info{border-color:rgba(56,189,248,0.28);background:linear-gradient(135deg,rgba(56,189,248,0.06),rgba(56,189,248,0.01))}
+.card-warn{border-color:rgba(245,158,11,0.35);background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(245,158,11,0.01))}
+.card-row{display:flex;gap:14px;align-items:center}
+.card-icon{width:44px;height:44px;flex:0 0 44px;border-radius:12px;background:var(--surface-2);display:grid;place-items:center;font-size:22px}
+.card-title{font-weight:700;font-size:15px}
+.card-title.acc{color:var(--primary-2)}
+.card-title.warn{color:var(--accent)}
+.card-title.info{color:var(--info)}
+.card-sub{font-size:13px;color:var(--text-dim);margin-top:2px;line-height:1.4}
+.card-chev{margin-left:auto;color:var(--primary-2);font-size:20px}
+
+/* Section header */
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:22px 2px 12px}
+.section-head h2{font-size:20px;font-weight:800;letter-spacing:-0.4px}
+.section-head a{font-size:13px;color:var(--primary-2);font-weight:600}
+
+/* Hero greet */
+.greet{display:flex;align-items:center;gap:14px;margin:8px 2px 14px}
+.avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;background:var(--surface-2);border:2px solid var(--primary);box-shadow:0 0 24px var(--primary-glow);display:grid;place-items:center;font-size:22px;color:var(--primary-2);font-weight:700}
+.greet h1{font-size:26px;font-weight:800;letter-spacing:-0.6px}
+.greet-sub{font-size:14px;color:var(--text-dim);margin-top:2px}
+
+/* Quote card */
+.quote{padding:14px 16px;border-left:3px solid var(--primary);border-radius:14px;background:linear-gradient(90deg,rgba(16,185,129,0.06),transparent);margin-bottom:14px}
+.quote-label{font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--primary-2)}
+.quote-txt{font-size:15px;margin-top:6px;color:#f1f5f9}
+
+/* Progress week */
+.plan-card{padding:16px;border-radius:18px;background:var(--surface);border:1px solid var(--border)}
+.plan-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.plan-title{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+.plan-badge{padding:5px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:1px;border:1px solid var(--primary);color:var(--primary-2)}
+.progress{height:6px;border-radius:999px;background:var(--surface-2);margin:12px 0 8px;overflow:hidden}
+.progress > div{height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-2));border-radius:999px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.plan-foot{font-size:13px;color:var(--text-dim)}
+
+/* Today workout card */
+.today{padding:20px;border-radius:22px;background:linear-gradient(160deg,rgba(16,185,129,0.08),var(--surface));border:1px solid var(--border-strong);position:relative;overflow:hidden}
+.today::before{content:"";position:absolute;top:0;left:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--primary),transparent)}
+.today-label{font-size:11px;font-weight:700;letter-spacing:1.6px;color:var(--text-dim)}
+.today-title{font-size:22px;font-weight:800;margin-top:6px;letter-spacing:-0.4px;padding-right:70px}
+.today-diff{position:absolute;top:20px;right:20px;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.4px}
+.diff-easy{background:rgba(16,185,129,0.14);color:var(--primary-2);border:1px solid rgba(16,185,129,0.3)}
+.diff-med{background:rgba(245,158,11,0.14);color:var(--accent-2);border:1px solid rgba(245,158,11,0.3)}
+.diff-hard{background:rgba(244,63,94,0.14);color:#fda4af;border:1px solid rgba(244,63,94,0.3)}
+.today-desc{font-size:14.5px;line-height:1.55;color:#cbd5e1;margin-top:14px;white-space:pre-line}
+.today-meta{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);font-size:13px;font-weight:600}
+.chip.mono{font-family:'JetBrains Mono',monospace}
+.today-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.btn{padding:14px 16px;border-radius:14px;font-weight:700;font-size:14.5px;text-align:center;transition:.15s;letter-spacing:-0.1px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#022c22;box-shadow:0 8px 24px var(--primary-glow)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 28px var(--primary-glow)}
+.btn-ghost{background:var(--surface-2);border:1px solid var(--border-strong);color:var(--text)}
+.btn-ghost:hover{background:var(--surface);border-color:var(--primary)}
+.btn-outline{background:transparent;border:1px solid var(--primary);color:var(--primary-2)}
+.btn-outline:hover{background:rgba(16,185,129,0.08)}
+.btn-block{width:100%}
+
+/* Week dots */
+.week{margin:22px 0 8px}
+.week h2{font-size:20px;font-weight:800;margin-bottom:14px}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:12px;transition:.2s}
+.day.today{background:var(--surface-2);border:1px solid var(--primary)}
+.day.today .day-name{color:var(--primary-2)}
+.day-name{font-size:12px;color:var(--text-dim);font-weight:600}
+.day-dot{width:8px;height:8px;border-radius:50%;background:var(--surface-2)}
+.day-dot.done{background:var(--primary);box-shadow:0 0 12px var(--primary-glow)}
+.day-dot.plan{background:rgba(16,185,129,0.4)}
+.day-emoji{font-size:18px;line-height:1;opacity:.85}
+.day.rest .day-emoji{opacity:.3}
+
+/* Your trainings list */
+.list-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;transition:.15s;position:relative}
+.list-item:hover{border-color:var(--primary);transform:translateY(-1px)}
+.list-dot{width:8px;height:8px;border-radius:50%;background:var(--primary);box-shadow:0 0 10px var(--primary-glow);flex:0 0 8px}
+.list-badge{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#022c22;display:grid;place-items:center;font-weight:900;font-size:15px;flex:0 0 36px}
+.list-info{flex:1;min-width:0}
+.list-tag{font-size:11px;color:var(--text-dim);letter-spacing:1px;font-weight:700}
+.list-name{font-weight:700;font-size:15px;margin-top:2px}
+.list-right{color:var(--primary-2);font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px}
+
+/* Rest day */
+.rest-card{padding:28px 20px;text-align:center;background:linear-gradient(180deg,rgba(56,189,248,0.05),var(--surface));border:1px solid var(--border);border-radius:22px;margin-bottom:14px}
+.rest-emoji{font-size:56px;margin-bottom:8px}
+.rest-title{font-size:22px;font-weight:800;letter-spacing:-0.4px}
+.rest-sub{color:var(--text-dim);margin-top:6px;font-size:14.5px}
+.rest-divider{margin:22px 0 16px;display:flex;align-items:center;gap:12px;color:var(--text-mute);font-size:13px}
+.rest-divider::before,.rest-divider::after{content:"";flex:1;height:1px;background:var(--border)}
+.anticipate{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.antic-card{padding:14px 8px;border-radius:14px;border:1px solid var(--primary);background:rgba(16,185,129,0.04);text-align:center;transition:.15s}
+.antic-card:hover{background:rgba(16,185,129,0.09);transform:translateY(-2px)}
+.antic-letter{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#022c22;display:grid;place-items:center;font-weight:900;margin:0 auto 8px}
+.antic-name{font-weight:700;font-size:14px}
+.antic-day{font-size:12px;color:var(--text-dim);margin-top:2px}
+
+/* Bottom nav */
+.tabbar{position:fixed;bottom:0;left:0;right:0;background:rgba(5,9,20,0.92);backdrop-filter:blur(24px);border-top:1px solid var(--border);padding:8px 4px calc(8px + env(safe-area-inset-bottom));display:flex;justify-content:space-around;z-index:100}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-radius:10px;color:var(--text-mute);font-size:11px;font-weight:600;transition:.15s;min-width:0}
+.tab.active{color:var(--primary-2)}
+.tab.active .tab-icon{color:var(--primary-2);filter:drop-shadow(0 0 8px var(--primary-glow))}
+.tab-icon{width:24px;height:24px}
+
+/* Screen switching */
+.screen{display:none}
+.screen.active{display:block;animation:fadeup .35s ease}
+@keyframes fadeup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* Auth screens */
+.auth-wrap{min-height:100vh;padding:24px;display:flex;flex-direction:column;justify-content:center;max-width:440px;margin:0 auto;padding-bottom:60px}
+.auth-hero{text-align:center;margin-bottom:26px}
+.auth-logo{width:76px;height:76px;border-radius:22px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:grid;place-items:center;margin:0 auto 18px;font-size:36px;font-weight:900;color:#022c22;box-shadow:0 16px 40px var(--primary-glow)}
+.auth-hero h1{font-size:34px;font-weight:800;letter-spacing:-1px}
+.auth-hero p{color:var(--text-dim);margin-top:8px;font-size:15px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--text-dim);font-weight:700;letter-spacing:0.5px;margin-bottom:6px;text-transform:uppercase}
+.input{width:100%;padding:15px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:15.5px;transition:.15s}
+.input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(16,185,129,0.14)}
+.input::placeholder{color:var(--text-mute)}
+.auth-swap{text-align:center;margin-top:14px;font-size:14px;color:var(--text-dim)}
+.auth-swap b{color:var(--primary-2);cursor:pointer}
+.err{color:#fda4af;font-size:13px;margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.24)}
+
+/* Onboarding module choice */
+.pick-wrap{padding-top:30px}
+.pick-title{font-size:28px;font-weight:800;letter-spacing:-0.6px;margin-bottom:6px}
+.pick-sub{color:var(--text-dim);margin-bottom:22px}
+.pick-card{padding:22px;border-radius:22px;border:1px solid var(--border);background:var(--surface);margin-bottom:12px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:16px}
+.pick-card:hover{border-color:var(--primary);transform:translateY(-2px);background:var(--surface-2)}
+.pick-card.run:hover{border-color:var(--accent)}
+.pick-icon{width:56px;height:56px;border-radius:16px;flex:0 0 56px;display:grid;place-items:center;font-size:26px}
+.pick-card.lift .pick-icon{background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(16,185,129,0.05));color:var(--primary-2)}
+.pick-card.run .pick-icon{background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(245,158,11,0.05));color:var(--accent-2)}
+.pick-name{font-weight:800;font-size:19px}
+.pick-desc{font-size:13.5px;color:var(--text-dim);margin-top:4px}
+
+/* Setup form */
+.setup h1{font-size:26px;font-weight:800;margin-bottom:6px}
+.setup .sub{color:var(--text-dim);margin-bottom:18px}
+.radio-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.radio-grid.g3{grid-template-columns:1fr 1fr 1fr}
+.opt{padding:14px 10px;border-radius:12px;border:1px solid var(--border);background:var(--surface);text-align:center;font-size:14px;font-weight:600;transition:.15s;cursor:pointer}
+.opt:hover{border-color:var(--primary)}
+.opt.on{border-color:var(--primary);background:rgba(16,185,129,0.08);color:var(--primary-2)}
+.opt-multi{padding:10px 6px;font-size:13px}
+.opt-multi.on{background:rgba(16,185,129,0.15)}
+
+/* Session detail */
+.detail-hero{padding:22px;border-radius:22px;background:linear-gradient(160deg,rgba(16,185,129,0.08),var(--surface));border:1px solid var(--border-strong);margin-bottom:14px;position:relative;overflow:hidden}
+.detail-hero::before{content:"";position:absolute;top:0;left:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--primary),transparent)}
+.detail-hero h2{font-size:24px;font-weight:800;letter-spacing:-0.5px}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.info-cell{padding:14px 8px;border-radius:14px;background:var(--surface-2);border:1px solid var(--border);text-align:center}
+.info-cell-icon{font-size:22px}
+.info-cell-lbl{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--text-dim);margin-top:6px}
+.info-cell-val{font-weight:800;font-size:15px;margin-top:2px}
+
+.block{margin-bottom:12px;border-radius:16px;background:var(--surface);border:1px solid var(--border);overflow:hidden}
+.block-head{padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:.15s;background:var(--surface-2)}
+.block-head:hover{background:var(--border)}
+.block-head.warm{color:var(--accent-2)}
+.block-head.main{color:var(--primary-2)}
+.block-head.cool{color:var(--info)}
+.block-head-txt{flex:1}
+.block-name{font-weight:800;font-size:15px}
+.block-sub{font-size:12px;color:var(--text-dim);margin-top:2px;font-weight:400}
+.block-chev{font-size:14px;transition:.2s}
+.block.open .block-chev{transform:rotate(180deg)}
+.block-body{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .35s ease}
+.block.open .block-body{max-height:2000px;padding:8px 16px 16px}
+.ex{padding:12px 0;border-bottom:1px dashed var(--border);display:flex;gap:12px;align-items:flex-start}
+.ex:last-child{border-bottom:none}
+.ex-num{width:26px;height:26px;border-radius:50%;border:1px solid var(--primary);color:var(--primary-2);display:grid;place-items:center;font-weight:700;font-size:12px;flex:0 0 26px;margin-top:2px}
+.ex-name{font-weight:700;font-size:14.5px}
+.ex-desc{font-size:13px;color:var(--text-dim);margin-top:2px;line-height:1.4}
+.ex-meta{color:var(--primary-2);font-weight:700;font-size:13px;text-align:right;white-space:nowrap;font-family:'JetBrains Mono',monospace}
+
+/* Stats grid Desempenho */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.stat{padding:16px 10px;border-radius:16px;background:var(--surface);border:1px solid var(--border);text-align:center}
+.stat-lbl{font-size:11px;font-weight:700;letter-spacing:0.8px;color:var(--text-dim);text-transform:uppercase}
+.stat-val{font-size:26px;font-weight:800;color:var(--primary-2);margin-top:6px;font-family:'JetBrains Mono',monospace}
+.stat-val small{font-size:12px;color:var(--text-dim);font-weight:600;margin-left:2px}
+.stat-note{font-size:12px;color:var(--text-dim);margin-top:4px}
+
+.stat-mini{padding:14px 8px;border-radius:14px;background:var(--surface);border:1px solid var(--border);text-align:center}
+.stat-mini-emo{font-size:22px}
+.stat-mini-val{font-size:22px;font-weight:800;color:var(--primary-2);margin-top:4px;font-family:'JetBrains Mono',monospace}
+.stat-mini-lbl{font-size:11px;color:var(--text-dim);margin-top:2px;line-height:1.2}
+
+/* Chart card */
+.chart-card{padding:18px;border-radius:20px;background:var(--surface);border:1px solid var(--border);margin-bottom:14px}
+.chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.chart-title{font-weight:700;font-size:16px}
+.chart{height:180px;position:relative}
+
+/* Library */
+.lib-cat{margin:22px 0 10px;display:flex;align-items:center;gap:10px;padding-left:12px;border-left:3px solid var(--primary)}
+.lib-cat.orange{border-color:var(--accent)}
+.lib-cat.red{border-color:#f43f5e}
+.lib-cat.pink{border-color:#ec4899}
+.lib-cat.teal{border-color:#14b8a6}
+.lib-cat-emo{font-size:22px}
+.lib-cat-name{font-weight:700;font-size:17px;color:var(--primary-2)}
+.lib-cat.orange .lib-cat-name{color:var(--accent-2)}
+.lib-cat.red .lib-cat-name{color:#fda4af}
+.lib-cat.pink .lib-cat-name{color:#f9a8d4}
+.lib-cat.teal .lib-cat-name{color:#5eead4}
+.lib-cat-count{font-size:12px;color:var(--text-dim);margin-top:2px}
+.lib-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:6px;transition:.15s;cursor:pointer}
+.lib-item:hover{border-color:var(--primary);transform:translateX(2px)}
+.lib-info{flex:1;min-width:0}
+.lib-name{font-weight:700;font-size:14.5px}
+.lib-part{font-size:12.5px;color:var(--text-dim);margin-top:2px}
+.lib-play{width:32px;height:32px;border-radius:50%;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.35);color:var(--primary-2);display:grid;place-items:center;flex:0 0 32px}
+.lib-item.orange .lib-play{background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.35);color:var(--accent-2)}
+.lib-item.red .lib-play{background:rgba(244,63,94,0.12);border-color:rgba(244,63,94,0.35);color:#fda4af}
+.lib-item.pink .lib-play{background:rgba(236,72,153,0.12);border-color:rgba(236,72,153,0.35);color:#f9a8d4}
+.lib-item.teal .lib-play{background:rgba(20,184,166,0.12);border-color:rgba(20,184,166,0.35);color:#5eead4}
+.search{padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--border);width:100%;color:var(--text)}
+.search:focus{outline:none;border-color:var(--primary)}
+.chips-row{display:flex;gap:8px;overflow-x:auto;margin:12px 0;padding-bottom:4px;scrollbar-width:none}
+.chips-row::-webkit-scrollbar{display:none}
+.filter-chip{white-space:nowrap;padding:8px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;flex:0 0 auto}
+.filter-chip.on{border-color:var(--primary);color:var(--primary-2);background:rgba(16,185,129,0.08)}
+
+/* Profile */
+.profile-head{display:flex;gap:16px;align-items:center;margin-bottom:14px}
+.profile-avatar{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#022c22;display:grid;place-items:center;font-size:30px;font-weight:800;border:2px solid var(--primary);box-shadow:0 0 24px var(--primary-glow);position:relative}
+.profile-name{font-size:22px;font-weight:800}
+.profile-tag{font-size:13px;color:var(--accent-2);font-weight:700;margin-top:2px;display:flex;align-items:center;gap:6px}
+.profile-email{font-size:13px;color:var(--text-dim);margin-top:2px}
+.mod-current{padding:16px;border-radius:16px;border:1px solid var(--primary);background:rgba(16,185,129,0.05);display:flex;align-items:center;gap:14px;margin:14px 0}
+.mod-current .icon{width:48px;height:48px;border-radius:12px;background:var(--surface-2);display:grid;place-items:center;font-size:24px;flex:0 0 48px}
+.mod-current .name{font-weight:800;font-size:17px;color:var(--primary-2)}
+.mod-current .goal{font-size:13px;color:var(--text-dim);margin-top:2px}
+.section-lbl{font-size:11px;font-weight:800;letter-spacing:1.4px;color:var(--text-dim);text-transform:uppercase;margin:22px 2px 10px}
+.list-row{display:flex;align-items:center;gap:12px;padding:15px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;cursor:pointer;transition:.15s;color:var(--primary-2);font-weight:600}
+.list-row:hover{border-color:var(--primary)}
+.list-row.warn{color:var(--accent-2);border-color:rgba(245,158,11,0.28)}
+.list-row.danger{color:#fda4af;border-color:rgba(244,63,94,0.28);justify-content:center}
+
+/* Help/footer */
+.help{text-align:center;margin:30px 0 14px}
+.help p{color:var(--text-dim);font-size:14px}
+.help-btn{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:grid;place-items:center;margin:12px auto;box-shadow:0 8px 24px var(--primary-glow);cursor:pointer}
+.help-links{display:flex;justify-content:center;gap:14px;font-size:13px;color:var(--text-dim);margin-top:8px}
+.help-links a{color:var(--text-dim);text-decoration:underline}
+
+/* Toast */
+.toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--primary);color:var(--text);padding:12px 18px;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.4);font-size:14px;font-weight:600;z-index:200;animation:pop .3s}
+@keyframes pop{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* Modal */
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-back.on{display:flex}
+.modal{background:var(--bg-2);border:1px solid var(--border-strong);border-radius:22px;padding:24px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:20px;font-weight:800;margin-bottom:10px}
+.modal p{color:var(--text-dim);font-size:14.5px;line-height:1.5}
+
+/* Utility */
+.row{display:flex;gap:10px;align-items:center}
+.gap8{gap:8px}
+.mt10{margin-top:10px}
+.mt14{margin-top:14px}
+.mb14{margin-bottom:14px}
+.center{text-align:center}
+.text-dim{color:var(--text-dim)}
+.text-acc{color:var(--primary-2)}
+.text-warn{color:var(--accent-2)}
+
+/* Scrollbar for chips */
+.hs{overflow-x:auto;display:flex;gap:8px;scrollbar-width:none}
+.hs::-webkit-scrollbar{display:none}
+
+/* SVG icons wrapper */
+.i{width:1em;height:1em;display:inline-block;vertical-align:-2px}
+
+/* Bell */
+.bell{width:38px;height:38px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;color:var(--accent-2)}
+
+/* Admin */
+.stud{padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;cursor:pointer;transition:.15s}
+.stud:hover{border-color:var(--primary);transform:translateY(-1px)}
+.stud-top{display:flex;justify-content:space-between;align-items:center}
+.stud-name{font-weight:800;font-size:15px}
+.stud-email{font-size:12.5px;color:var(--text-dim);margin-top:2px}
+.stud-days{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.4px}
+.stud-days.on{background:rgba(16,185,129,0.14);color:var(--primary-2);border:1px solid rgba(16,185,129,0.3)}
+.stud-days.warn{background:rgba(245,158,11,0.14);color:var(--accent-2);border:1px solid rgba(245,158,11,0.3)}
+.stud-days.off{background:rgba(244,63,94,0.14);color:#fda4af;border:1px solid rgba(244,63,94,0.3)}
+.stud-meta{display:flex;gap:10px;margin-top:8px;font-size:12px;color:var(--text-dim);flex-wrap:wrap}
+.stud-meta b{color:var(--text)}
+
+/* Trophy */
+.trophy-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.trophy{padding:16px 12px;border-radius:16px;background:var(--surface);border:1px solid var(--border);text-align:center;transition:.15s}
+.trophy.unlock{border-color:var(--primary);background:linear-gradient(160deg,rgba(16,185,129,0.08),var(--surface))}
+.trophy-emoji{font-size:36px;filter:grayscale(1) opacity(.4)}
+.trophy.unlock .trophy-emoji{filter:none}
+.trophy-name{font-weight:800;font-size:13px;margin-top:8px}
+.trophy.unlock .trophy-name{color:var(--primary-2)}
+.trophy-desc{font-size:11.5px;color:var(--text-dim);margin-top:3px;line-height:1.3}
+
+/* Set logger */
+.set-row{display:grid;grid-template-columns:36px 1fr 1fr 40px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--border)}
+.set-row:last-child{border-bottom:none}
+.set-num{width:32px;height:32px;border-radius:50%;background:var(--surface-2);border:1px solid var(--primary);color:var(--primary-2);display:grid;place-items:center;font-weight:800;font-size:13px}
+.set-in{padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:14px;text-align:center;width:100%}
+.set-in:focus{outline:none;border-color:var(--primary)}
+.set-x{width:36px;height:36px;border-radius:8px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.28);color:#fda4af;font-weight:800}
+
+/* PR badge */
+.pr-badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(245,158,11,0.14);color:var(--accent-2);border:1px solid rgba(245,158,11,0.3);font-size:11px;font-weight:800;letter-spacing:0.4px;margin-left:6px}
+
+/* Simple weight chart */
+.wchart{height:120px;padding:8px 0}
+
+/* Profile avatar with img */
+.profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+</style>
+</head>
+<body>
+
+<!-- ========== AUTH ========== -->
+<div id="scr-auth" class="screen active">
+  <div class="auth-wrap">
+    <div class="auth-hero">
+      <div class="auth-logo">M</div>
+      <h1>MetaTreino</h1>
+      <p>Treinos inteligentes que evoluem com você</p>
+    </div>
+
+    <div id="auth-login">
+      <div class="field"><label>E-mail</label><input class="input" type="email" id="lg-email" placeholder="seu@email.com"></div>
+      <div class="field"><label>Senha</label><input class="input" type="password" id="lg-pass" placeholder="••••••••"></div>
+      <div id="lg-err"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="doLogin()">Entrar</button>
+      <div class="auth-swap"><a href="#" onclick="openForgotPass();return false" style="color:var(--text-dim);font-size:13px">Esqueci minha senha</a></div>
+      <div class="auth-swap">Não tem conta? <b onclick="showSignup()">Criar agora</b></div>
+    </div>
+
+    <div id="auth-signup" class="hidden">
+      <div class="field"><label>Nome</label><input class="input" type="text" id="sg-name" placeholder="Seu nome"></div>
+      <div class="field"><label>E-mail</label><input class="input" type="email" id="sg-email" placeholder="seu@email.com"></div>
+      <div class="field"><label>Senha</label><input class="input" type="password" id="sg-pass" placeholder="Mínimo 6 caracteres"></div>
+      <div id="sg-err"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="doSignup()">Criar conta</button>
+      <div class="auth-swap">Já tem conta? <b onclick="showLogin()">Entrar</b></div>
+      <p style="text-align:center;color:var(--text-mute);font-size:12px;margin-top:20px;line-height:1.5">Acesso liberado apenas para alunos autorizados pelo treinador.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SEM ACESSO ========== -->
+<div id="scr-noaccess" class="screen">
+  <div class="auth-wrap">
+    <div class="auth-hero">
+      <div class="auth-logo" style="background:linear-gradient(135deg,#f43f5e,#be123c);color:#fff">🔒</div>
+      <h1>Sem acesso liberado</h1>
+      <p>Seu e-mail ainda não foi autorizado pelo treinador. Entre em contato para liberar seu acesso.</p>
+    </div>
+    <div class="card"><div class="card-title" style="color:var(--accent-2);text-align:center">📞 Fale com o treinador</div><div style="text-align:center;margin-top:14px"><a href="mailto:celoborgesms@gmail.com?subject=Solicitação%20de%20acesso%20MetaTreino" class="btn btn-primary btn-block">✉️ Enviar e-mail</a></div><div style="text-align:center;margin-top:10px;color:var(--text-dim);font-size:13px">celoborgesms@gmail.com</div></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="doLogout()">← Voltar para login</button>
+  </div>
+</div>
+
+<!-- ========== QUESTIONÁRIO ========== -->
+<div id="scr-quiz" class="screen">
+  <div class="wrap setup">
+    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">METATREINO</div><div class="brand-tag">Questionário inicial</div></div></div>
+    <h1>Vamos te conhecer!</h1>
+    <p class="sub">Responda pra personalizarmos seu plano.</p>
+
+    <div class="field"><label>Como quer ser chamado?</label><input class="input" id="q-nick" placeholder="Ex: Celo, João, Bea..."></div>
+    <div class="field"><label>Sexo</label>
+      <div class="radio-grid g3" id="q-sex"><div class="opt" data-val="m">👨 Masculino</div><div class="opt" data-val="f">👩 Feminino</div><div class="opt" data-val="o">👤 Outro</div></div>
+    </div>
+    <div class="field"><label>Idade</label><input class="input mono" type="number" id="q-age" placeholder="Anos" min="10" max="99"></div>
+    <div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="q-height" placeholder="Ex: 175" min="100" max="230"></div>
+    <div class="field"><label>Peso atual (kg)</label><input class="input mono" type="number" step="0.1" id="q-weight" placeholder="Ex: 78" min="30" max="250"></div>
+    <div class="field"><label>WhatsApp (com DDD)</label><input class="input mono" type="tel" id="q-whats" placeholder="Ex: 61999999999"></div>
+
+    <div class="field"><label>Objetivo principal</label>
+      <div class="radio-grid" id="q-goal">
+        <div class="opt" data-val="emagrecer">📉 Emagrecer</div>
+        <div class="opt" data-val="massa">📈 Ganhar massa</div>
+        <div class="opt" data-val="forca">🔥 Ganhar força</div>
+        <div class="opt" data-val="condicionamento">⚡ Condicionamento</div>
+        <div class="opt" data-val="tonificar">💪 Tonificar</div>
+        <div class="opt" data-val="saude">❤️ Saúde geral</div>
+      </div>
+    </div>
+    <div class="field"><label>Nível atual de atividade</label>
+      <div class="radio-grid g3" id="q-level"><div class="opt on" data-val="sedentario">Sedentário</div><div class="opt" data-val="ativo">Ativo</div><div class="opt" data-val="atleta">Atleta</div></div>
+    </div>
+    <div id="q-err"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="saveQuiz()">Continuar →</button>
+  </div>
+</div>
+
+<!-- ========== ADMIN DASHBOARD ========== -->
+<div id="scr-admin" class="screen">
+  <div class="wrap">
+    <div class="brand"><div class="brand-logo" style="background:linear-gradient(135deg,#f59e0b,#b45309);color:#3a2404">⚡</div><div><div class="brand-name">ADMIN</div><div class="brand-tag">Painel do treinador</div></div></div>
+
+    <div class="row" style="justify-content:space-between;margin:12px 0 16px">
+      <h1 style="font-size:26px;font-weight:800;letter-spacing:-0.6px">👋 <span id="adm-hi">Olá!</span></h1>
+      <div class="row" style="gap:8px"><button class="btn btn-outline" onclick="goTab('home')" style="padding:8px 12px;font-size:13px">← Voltar ao app</button><button class="btn btn-ghost" onclick="doLogout()" style="padding:8px 12px;font-size:13px">Sair</button></div>
+    </div>
+
+    <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat"><div class="stat-lbl">Alunos ativos</div><div class="stat-val" id="adm-active">0</div></div>
+      <div class="stat"><div class="stat-lbl">Expirando (7d)</div><div class="stat-val" style="color:var(--accent-2)" id="adm-exp">0</div></div>
+      <div class="stat"><div class="stat-lbl">Total cadastrados</div><div class="stat-val" id="adm-total" style="color:var(--info)">0</div></div>
+      <div class="stat"><div class="stat-lbl">Expirados</div><div class="stat-val" style="color:#fda4af" id="adm-vencidos">0</div></div>
+    </div>
+
+    <button class="btn btn-primary btn-block" style="margin:14px 0" onclick="openModal('add-student')">➕ Liberar acesso a novo aluno</button>
+
+    <div class="section-head"><h2>Alunos</h2><span class="text-dim" style="font-size:13px" id="adm-list-count">0</span></div>
+    <input class="search" placeholder="🔍 Buscar por e-mail ou nome..." id="adm-search" oninput="renderAdminList()">
+    <div class="chips-row" id="adm-filter-chips" style="margin:12px 0">
+      <div class="filter-chip on" data-f="all" onclick="setAdminFilter('all')">Todos</div>
+      <div class="filter-chip" data-f="active" onclick="setAdminFilter('active')">Ativos</div>
+      <div class="filter-chip" data-f="expiring" onclick="setAdminFilter('expiring')">Expirando</div>
+      <div class="filter-chip" data-f="expired" onclick="setAdminFilter('expired')">Vencidos</div>
+    </div>
+    <div id="adm-list"></div>
+
+    <div class="section-lbl">Ferramentas</div>
+    <div class="list-row" onclick="openModal('change-admin-pass')">🔑 <span>Alterar minha senha</span></div>
+    <div class="list-row" onclick="exportData()">📤 <span>Exportar dados (backup JSON)</span></div>
+    <div class="list-row warn" onclick="openModal('broadcast')">📢 <span>Mensagem em massa (WhatsApp)</span></div>
+  </div>
+</div>
+
+<!-- ========== ADMIN STUDENT DETAIL ========== -->
+<div id="scr-admin-student" class="screen">
+  <div class="wrap">
+    <div class="brand"><div class="brand-logo" style="background:linear-gradient(135deg,#f59e0b,#b45309);color:#3a2404">⚡</div><div><div class="brand-name">ADMIN</div><div class="brand-tag" id="stud-tag">Detalhes do aluno</div></div></div>
+    <div class="row" style="margin-bottom:14px"><button class="btn btn-outline" onclick="goAdmin()">← Voltar</button></div>
+    <div id="stud-content"></div>
+  </div>
+</div>
+<div id="scr-pick" class="screen">
+  <div class="wrap pick-wrap">
+    <div class="brand">
+      <div class="brand-logo">M</div>
+      <div><div class="brand-name">METATREINO</div><div class="brand-tag">Escolha seu foco</div></div>
+    </div>
+    <h1 class="pick-title">Bem-vindo, Atleta! 👋</h1>
+    <p class="pick-sub">Escolha o módulo que quer começar. Você pode alternar entre eles a qualquer momento.</p>
+
+    <div class="pick-card lift" onclick="pickModule('lift')">
+      <div class="pick-icon">🏋️</div>
+      <div><div class="pick-name">Musculação</div><div class="pick-desc">Treinos ABCD, hipertrofia, força, com biblioteca de 65+ exercícios</div></div>
+    </div>
+    <div class="pick-card run" onclick="pickModule('run')">
+      <div class="pick-icon">🏃</div>
+      <div><div class="pick-name">Corrida</div><div class="pick-desc">Planos de 5K, 10K, meia e maratona · Ritmo · Zonas de FC</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SETUP (LIFT) ========== -->
+<div id="scr-setup-lift" class="screen">
+  <div class="wrap setup">
+    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">MUSCULAÇÃO</div><div class="brand-tag">Configure seu plano</div></div></div>
+    <h1>Vamos montar seu plano</h1>
+    <p class="sub">Responda pra receber um plano feito pra você.</p>
+
+    <div class="field"><label>Objetivo</label>
+      <div class="radio-grid" id="lift-goal">
+        <div class="opt on" data-val="hipertrofia">💪 Hipertrofia</div>
+        <div class="opt" data-val="forca">🔥 Força</div>
+        <div class="opt" data-val="emagrecimento">⚡ Emagrecimento</div>
+        <div class="opt" data-val="resistencia">🎯 Resistência</div>
+      </div>
+    </div>
+    <div class="field"><label>Dias por semana</label>
+      <div class="radio-grid g3" id="lift-days">
+        <div class="opt" data-val="3">3 dias</div>
+        <div class="opt on" data-val="4">4 dias</div>
+        <div class="opt" data-val="5">5 dias</div>
+      </div>
+    </div>
+    <div id="lift-week-days-wrap"><div class="field"><label>Quais dias? (selecione <span id="lift-days-count">4</span>)</label>
+      <div class="radio-grid" id="lift-week-days" style="grid-template-columns:repeat(4,1fr)">
+        <div class="opt opt-multi on" data-val="1">Seg</div>
+        <div class="opt opt-multi on" data-val="2">Ter</div>
+        <div class="opt opt-multi" data-val="3">Qua</div>
+        <div class="opt opt-multi on" data-val="4">Qui</div>
+        <div class="opt opt-multi on" data-val="5">Sex</div>
+        <div class="opt opt-multi" data-val="6">Sáb</div>
+        <div class="opt opt-multi" data-val="7">Dom</div>
+      </div>
+    </div></div>
+    <div class="field"><label>Equipamentos disponíveis</label>
+      <div class="radio-grid" id="lift-equip">
+        <div class="opt on" data-val="academia">🏋️ Academia completa</div>
+        <div class="opt" data-val="halteres">🎒 Só halteres</div>
+        <div class="opt" data-val="casa">🏠 Peso do corpo</div>
+        <div class="opt" data-val="basico">💪 Básico</div>
+      </div>
+    </div>
+    <div class="field"><label>Nível de experiência</label>
+      <div class="radio-grid g3" id="lift-level">
+        <div class="opt on" data-val="iniciante">Iniciante</div>
+        <div class="opt" data-val="intermediario">Intermediário</div>
+        <div class="opt" data-val="avancado">Avançado</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="finishSetup('lift')">Criar meu plano →</button>
+  </div>
+</div>
+
+<!-- ========== SETUP (RUN) ========== -->
+<div id="scr-setup-run" class="screen">
+  <div class="wrap setup">
+    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">CORRIDA</div><div class="brand-tag">Configure seu plano</div></div></div>
+    <h1>Bora correr?</h1>
+    <p class="sub">Configuramos seu plano em segundos.</p>
+
+    <div class="field"><label>Objetivo</label>
+      <div class="radio-grid" id="run-goal">
+        <div class="opt on" data-val="5km">🏁 5 km</div>
+        <div class="opt" data-val="10km">🎽 10 km</div>
+        <div class="opt" data-val="21km">🥇 Meia (21k)</div>
+        <div class="opt" data-val="42km">🏆 Maratona (42k)</div>
+      </div>
+    </div>
+    <div class="field"><label>Nível</label>
+      <div class="radio-grid g3" id="run-level">
+        <div class="opt on" data-val="iniciante">Iniciante</div>
+        <div class="opt" data-val="intermediario">Intermediário</div>
+        <div class="opt" data-val="avancado">Avançado</div>
+      </div>
+    </div>
+    <div class="field"><label>Dias por semana</label>
+      <div class="radio-grid g3" id="run-days">
+        <div class="opt" data-val="3">3 dias</div>
+        <div class="opt on" data-val="4">4 dias</div>
+        <div class="opt" data-val="5">5 dias</div>
+      </div>
+    </div>
+    <div id="run-week-days-wrap"><div class="field"><label>Quais dias? (selecione <span id="run-days-count">4</span>)</label>
+      <div class="radio-grid" id="run-week-days" style="grid-template-columns:repeat(4,1fr)">
+        <div class="opt opt-multi on" data-val="1">Seg</div>
+        <div class="opt opt-multi" data-val="2">Ter</div>
+        <div class="opt opt-multi on" data-val="3">Qua</div>
+        <div class="opt opt-multi" data-val="4">Qui</div>
+        <div class="opt opt-multi on" data-val="5">Sex</div>
+        <div class="opt opt-multi" data-val="6">Sáb</div>
+        <div class="opt opt-multi on" data-val="7">Dom</div>
+      </div>
+    </div></div>
+    <div class="field"><label>🎯 Tem prova alvo? (opcional)</label>
+      <input class="input" type="date" id="run-race-date" style="color-scheme:dark">
+      <div class="text-dim" style="font-size:12px;margin-top:4px">Se preencher, o plano ajusta o cronograma pra chegar em pico nessa data.</div>
+    </div>
+    <div class="field"><label>Terreno preferido</label>
+      <div class="radio-grid" id="run-terrain">
+        <div class="opt on" data-val="asfalto">🛣️ Asfalto</div>
+        <div class="opt" data-val="esteira">🏃 Esteira</div>
+        <div class="opt" data-val="trilha">⛰️ Trilha</div>
+        <div class="opt" data-val="pista">🏟️ Pista</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="finishSetup('run')">Criar meu plano →</button>
+  </div>
+</div>
+
+<!-- ========== HOME (HOJE) ========== -->
+<div id="scr-home" class="screen">
+  <div class="wrap">
+    <!-- Module toggle -->
+    <div class="mod-toggle" id="mod-toggle"></div>
+
+    <!-- Alerts -->
+    <div class="card card-alert card-row hidden" id="card-plan-alert">
+      <div class="card-icon">🎉</div>
+      <div><div class="card-title acc">Seu plano de treino foi criado!</div><div class="card-sub" id="trial-msg">Bora começar seu primeiro treino?</div></div>
+    </div>
+
+    <div class="card card-info card-row" id="card-access-info">
+      <div class="card-icon">🎫</div>
+      <div style="flex:1"><div class="card-title info">Acesso ativo</div><div class="card-sub" id="access-days">— dias restantes</div></div>
+    </div>
+
+    <!-- Brand -->
+    <div class="brand" style="margin-top:22px"><div class="brand-logo">M</div><div><div class="brand-name">METATREINO</div><div class="brand-tag">Treinos inteligentes que evoluem com você</div></div></div>
+
+    <!-- Greet -->
+    <div class="greet">
+      <div class="avatar" id="home-avatar">A</div>
+      <div><h1 id="home-hi">Bom dia, Atleta! 👋</h1><div class="greet-sub" id="home-goal">Objetivo: —</div></div>
+    </div>
+
+    <!-- Quote -->
+    <div class="quote"><div class="quote-label">FRASE DO DIA</div><div class="quote-txt" id="daily-quote">🌱 Pequeno hoje, grande amanhã. Confie no processo.</div></div>
+
+    <!-- Plan progress -->
+    <div class="plan-card">
+      <div class="plan-head">
+        <div class="plan-title"><span>📆</span> <span id="plan-week">Semana 1 de 8</span></div>
+        <div class="plan-badge" id="plan-phase">BUILD</div>
+      </div>
+      <div class="progress"><div id="plan-progress" style="width:12%"></div></div>
+      <div class="plan-foot" id="plan-foot">🏗️ Fase de construção · Aumentando base. 7 semanas até o pico.</div>
+    </div>
+
+    <!-- Today workout OR rest -->
+    <div id="today-slot"></div>
+
+    <!-- Week -->
+    <div class="week">
+      <h2>Semana</h2>
+      <div class="week-grid" id="week-grid"></div>
+    </div>
+
+    <!-- Your trainings -->
+    <div class="section-head"><h2>Seus treinos</h2><a href="#" onclick="goTab('sessions');return false">Ver todos →</a></div>
+    <div id="your-list"></div>
+
+    <!-- Support tool -->
+    <div class="card card-warn card-row" style="margin-top:16px" onclick="openModal('support-info')">
+      <div class="card-icon">⚕️</div>
+      <div><div class="card-title warn">Ferramenta de apoio ao treino</div><div class="card-sub">Não substitui avaliação médica nem acompanhamento profissional. Toque pra saber mais →</div></div>
+    </div>
+
+    <div class="card card-info card-row" style="margin-top:14px" onclick="openTrophies()"><div class="card-icon">🏆</div><div style="flex:1"><div class="card-title info">Suas conquistas</div><div class="card-sub" id="trophy-count">0 troféus desbloqueados</div></div><div class="card-chev">›</div></div>
+
+    <div class="help"><p>Precisa de ajuda?</p><a href="mailto:celoborgesms@gmail.com" class="help-btn" style="display:grid;text-decoration:none">✉️</a><div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div></div>
+  </div>
+</div>
+
+<!-- ========== SESSIONS ========== -->
+<div id="scr-sessions" class="screen">
+  <div class="wrap">
+    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">METATREINO</div><div class="brand-tag" id="sessions-tag">Sessões</div></div></div>
+    <div class="row" style="margin-bottom:14px">
+      <button class="btn btn-outline" onclick="goTab('home')">← Início</button>
+      <h1 style="font-size:24px;font-weight:800;letter-spacing:-0.4px" id="sessions-title">🏃 Sessões</h1>
+    </div>
+
+    <div class="hs" id="sessions-chips"></div>
+    <div class="card card-alert card-row" onclick="toggleWeeklyBlock()"><div class="card-icon" id="sess-mod-icon">🏃</div><div style="flex:1"><div class="card-title acc">Programação semanal</div><div class="card-sub" id="weekly-info">Meta: — · Semana 1 · 4× por semana</div></div><div class="card-chev">▾</div></div>
+
+    <div id="session-detail-slot"></div>
+    <div class="help"><p>Dúvidas? Fale com o treinador</p><a href="mailto:celoborgesms@gmail.com" class="help-btn" style="display:grid;text-decoration:none">✉️</a></div>
+  </div>
+</div>
+
+<!-- ========== DESEMPENHO ========== -->
+<div id="scr-perf" class="screen">
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><h1 style="font-size:28px;font-weight:800;letter-spacing:-0.6px">📊 Desempenho</h1><div class="text-dim" style="margin-top:2px">Últimos 7 dias</div></div>
+      <div class="bell">🔔</div>
+    </div>
+
+    <div class="stat-grid" style="margin-top:16px">
+      <div class="stat"><div class="stat-lbl" id="s1-lbl">Treinos</div><div class="stat-val" id="s1-val">0<small>/3</small></div><div class="stat-note" id="s1-note">0%</div></div>
+      <div class="stat"><div class="stat-lbl" id="s2-lbl">Volume</div><div class="stat-val" id="s2-val">0<small>kg</small></div><div class="stat-note" id="s2-note">↑ +0%</div></div>
+      <div class="stat"><div class="stat-lbl">Gasto Calórico</div><div class="stat-val" id="s3-val">0</div><div class="stat-note">kcal</div></div>
+    </div>
+
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat-mini"><div class="stat-mini-emo">🔥</div><div class="stat-mini-val" id="m-streak">0</div><div class="stat-mini-lbl">Streak atual</div></div>
+      <div class="stat-mini"><div class="stat-mini-emo">📅</div><div class="stat-mini-val" id="m-wk">0<small>/3</small></div><div class="stat-mini-lbl">Treinos da semana</div></div>
+      <div class="stat-mini"><div class="stat-mini-emo">⏱️</div><div class="stat-mini-val" id="m-total">0h</div><div class="stat-mini-lbl">Total treinado</div></div>
+    </div>
+    <div class="stat-grid" style="grid-template-columns:1fr 1fr">
+      <div class="stat-mini"><div class="stat-mini-emo">🏆</div><div class="stat-mini-val" id="m-best">0</div><div class="stat-mini-lbl">Melhor streak</div></div>
+      <div class="stat-mini"><div class="stat-mini-emo">❤️</div><div class="stat-mini-val" id="m-fc">—</div><div class="stat-mini-lbl">FC média (sem dados)</div></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head"><div class="chart-title">Evolução de Performance</div><div class="filter-chip on">4 Semanas ▾</div></div>
+      <svg class="chart" viewBox="0 0 400 180" preserveAspectRatio="none" width="100%">
+        <line x1="0" y1="20" x2="400" y2="20" stroke="rgba(148,163,184,0.14)"/>
+        <line x1="0" y1="60" x2="400" y2="60" stroke="rgba(148,163,184,0.14)"/>
+        <line x1="0" y1="100" x2="400" y2="100" stroke="rgba(148,163,184,0.14)"/>
+        <line x1="0" y1="140" x2="400" y2="140" stroke="rgba(148,163,184,0.14)"/>
+        <text x="4" y="16" fill="#64748b" font-size="10">100%</text>
+        <text x="4" y="56" fill="#64748b" font-size="10">75%</text>
+        <text x="4" y="96" fill="#64748b" font-size="10">50%</text>
+        <text x="4" y="136" fill="#64748b" font-size="10">25%</text>
+        <text x="4" y="176" fill="#64748b" font-size="10">0%</text>
+        <polyline id="perf-line" points="40,170 140,150 240,120 340,90" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="40" cy="170" r="4" fill="#10b981"/><circle cx="140" cy="150" r="4" fill="#10b981"/><circle cx="240" cy="120" r="4" fill="#10b981"/><circle cx="340" cy="90" r="4" fill="#10b981"/>
+        <text x="40" y="178" fill="#64748b" font-size="10" text-anchor="middle">S1</text><text x="140" y="178" fill="#64748b" font-size="10" text-anchor="middle">S2</text><text x="240" y="178" fill="#64748b" font-size="10" text-anchor="middle">S3</text><text x="340" y="178" fill="#64748b" font-size="10" text-anchor="middle">S4</text>
+      </svg>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title" style="margin-bottom:14px">Distribuição dos Treinos</div>
+      <div class="row" style="gap:20px">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="45" fill="none" stroke="rgba(148,163,184,0.14)" stroke-width="14"/>
+          <text x="60" y="66" text-anchor="middle" fill="#94a3b8" font-size="12">Sem dados</text>
+        </svg>
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;padding:6px 0"><span>🟢 Força</span><b>0%</b></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0"><span>🔵 Cardio</span><b>0%</b></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0"><span>⚪ Mobilidade</span><b>0%</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== HISTÓRICO ========== -->
+<div id="scr-history" class="screen">
+  <div class="wrap">
+    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">METATREINO</div><div class="brand-tag" id="hist-tag">Histórico</div></div></div>
+    <h1 id="hist-title" style="font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:14px">🏋️ Histórico</h1>
+
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-mini-emo" id="h-icon">🏋️</div><div class="stat-val" id="h-count">0</div><div class="stat-lbl" id="h-lbl1">Treinos</div></div>
+      <div class="stat"><div class="stat-mini-emo">🔥</div><div class="stat-val" id="h-streak">0d</div><div class="stat-lbl">Sequência</div></div>
+      <div class="stat"><div class="stat-mini-emo" id="h-icon3">⏱️</div><div class="stat-val" id="h-total">0h</div><div class="stat-lbl" id="h-lbl3">Total</div></div>
+    </div>
+
+    <div id="history-list"></div>
+
+    <div id="history-empty">
+      <div class="rest-card" style="margin-top:22px">
+        <div style="font-size:56px;margin-bottom:8px">📭</div>
+        <div class="rest-title" id="he-title">Nenhum treino registrado ainda</div>
+        <div class="rest-sub" id="he-sub">Cada treino que você finalizar vai aparecer aqui com data, duração e detalhes.</div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="goTab('home')">💪 Iniciar treino agora</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PLANO ========== -->
+<div id="scr-plan" class="screen">
+  <div class="wrap">
+    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">METATREINO</div><div class="brand-tag">Seu plano atual</div></div></div>
+    <h1 style="font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:14px" id="plan-title">💎 Plano</h1>
+
+    <div id="plan-details"></div>
+
+    <div class="row" style="margin-top:16px;gap:10px">
+      <button class="btn btn-outline btn-block" onclick="regenPlan()">🔄 Recriar plano</button>
+    </div>
+
+    <div class="section-lbl">Acesso</div>
+    <div class="card card-info card-row"><div class="card-icon">🎫</div><div><div class="card-title info" id="pl-access">Acesso ativo</div><div class="card-sub" id="pl-days">— dias restantes</div></div></div>
+  </div>
+</div>
+
+<!-- ========== BIBLIOTECA ========== -->
+<div id="scr-library" class="screen">
+  <div class="wrap">
+    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">METATREINO</div><div class="brand-tag">Treinos inteligentes que evoluem com você</div></div></div>
+    <div class="row" style="margin-bottom:8px"><button class="btn btn-outline" onclick="goTab('home')">← Início</button></div>
+    <h1 style="font-size:26px;font-weight:800;letter-spacing:-0.6px">📚 Biblioteca</h1>
+    <div class="text-dim" style="margin-top:4px" id="lib-count">Catálogo completo · 65 exercícios</div>
+
+    <input class="search" placeholder="🔍 Buscar exercício ou grupo muscular..." id="lib-search" oninput="filterLib()" style="margin-top:14px">
+    <div class="chips-row" id="lib-chips"></div>
+    <div id="lib-list"></div>
+  </div>
+</div>
+
+<!-- ========== PROFILE ========== -->
+<div id="scr-profile" class="screen">
+  <div class="wrap">
+    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">METATREINO</div><div class="brand-tag">Perfil</div></div></div>
+    <div class="row" style="margin-bottom:14px"><button class="btn btn-outline" onclick="goTab('home')">← Início</button></div>
+
+    <div class="profile-head">
+      <div class="profile-avatar" id="pf-avatar" onclick="pickPhoto()" style="cursor:pointer;overflow:hidden">A</div>
+      <div><div class="profile-name" id="pf-name">Atleta</div><div class="profile-tag" id="pf-status">🎫 <span>Acesso ativo</span></div><div class="profile-email" id="pf-email">—</div></div>
+    </div>
+    <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="onPhotoPicked(event)">
+
+    <div class="card card-info card-row"><div class="card-icon">🎫</div><div><div class="card-title info" id="pf-trial">— dias restantes</div><div class="card-sub" id="pf-goal">Objetivo: —</div></div></div>
+
+    <div class="section-lbl">📊 Meu progresso corporal</div>
+    <div class="card" id="pf-body-card">
+      <div id="pf-body-info"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="openModal('add-weight')">➕ Registrar peso hoje</button>
+      <div id="pf-weight-chart-slot" style="margin-top:14px"></div>
+    </div>
+
+    <div class="section-lbl">Módulo atual</div>
+    <div class="mod-current" id="pf-mod"></div>
+
+    <div class="section-lbl" id="pf-plan-lbl">Plano</div>
+    <div class="card" id="pf-plan-card"></div>
+
+    <div class="row" style="gap:10px;margin-top:8px">
+      <button class="btn btn-ghost btn-block" onclick="regenPlan()">🔄 Trocar plano</button>
+      <button class="btn btn-ghost btn-block" onclick="switchModuleUI()">🔀 Trocar módulo</button>
+    </div>
+
+    <div class="section-lbl">Meu perfil</div>
+    <div class="list-row hidden" id="pf-admin-btn" onclick="goAdmin()" style="color:var(--accent-2);border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.06)">🛠️ <span>Acessar Painel ADM</span></div>
+    <div class="list-row" onclick="openModal('edit-profile')">✏️ <span>Editar dados pessoais</span></div>
+    <div class="list-row" onclick="openTrophies()">🏆 <span>Meus troféus</span></div>
+    <div class="list-row" onclick="openModal('change-pass')">🔑 <span>Alterar senha</span></div>
+    <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
+  </div>
+</div>
+
+<!-- ========== BOTTOM TABBAR ========== -->
+<nav class="tabbar hidden" id="tabbar">
+  <div class="tab" data-tab="home" onclick="goTab('home')">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z"/></svg>
+    <span>Hoje</span>
+  </div>
+  <div class="tab" data-tab="sessions" onclick="goTab('sessions')">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M10 8l3 4-2 4 3 4"/><path d="M14 12l3-2"/><path d="M8 14l-3 3"/></svg>
+    <span id="tab-sess-lbl">Sessões</span>
+  </div>
+  <div class="tab" data-tab="library" onclick="goTab('library')" id="tab-library">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 0-2 2z"/></svg>
+    <span>Biblioteca</span>
+  </div>
+  <div class="tab" data-tab="perf" onclick="goTab('perf')">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 4 3 5-7"/></svg>
+    <span>Desempenho</span>
+  </div>
+  <div class="tab" data-tab="history" onclick="goTab('history')">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M8 4v4M16 4v4"/></svg>
+    <span>Histórico</span>
+  </div>
+  <div class="tab" data-tab="plan" onclick="goTab('plan')">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l6 4 6-4v18l-6-4-6 4z"/></svg>
+    <span>Plano</span>
+  </div>
+  <div class="tab" data-tab="profile" onclick="goTab('profile')">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+    <span>Perfil</span>
+  </div>
+</nav>
+
+<!-- Modal placeholder -->
+<div class="modal-back" id="modal-back" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-inner"></div>
+</div>
+
+<script src="./app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
