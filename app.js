@@ -1,5 +1,5 @@
-// ===== MetaTreino v3.4 =====
-const APP_VERSION = 'v3.4';
+// ===== MetaTreino v3.5 =====
+const APP_VERSION = 'v3.5';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'celoborgesms@gmail.com';
@@ -29,6 +29,7 @@ let state = {
   prs: {},        // { exId: {peso, reps, at} }
   weights: [],    // [{date, weight}]
   trophies: [],   // ['first_workout', ...]
+  stats: { liftTotal:0, runTotal:0, runKmTotal:0 }, // contadores vitalícios — nunca são apagados pela limpeza de 90 dias
   ui: { tab: 'home', selectedSession: null }
 };
 
@@ -39,7 +40,30 @@ const QUOTES = [
   '🎯 Foco no processo, o resultado vem.',
   '⚡ Constância bate intensidade no longo prazo.',
   '🚀 Cada série te aproxima da versão melhor de você.',
-  '🌊 Você é mais forte do que sua última desculpa.'
+  '🌊 Você é mais forte do que sua última desculpa.',
+  '🏆 Ninguém se arrepende do treino que fez.',
+  '🧱 Um tijolo por dia constrói qualquer muro.',
+  '⏰ O melhor horário pra treinar é o que você aparece.',
+  '🌄 Comece devagar, mas não fique parado.',
+  '💭 Seu corpo escuta tudo que sua mente diz.',
+  '🔁 Repetição é a mãe da evolução.',
+  '🥇 Compita com quem você era ontem.',
+  '🌧️ Treinar nos dias difíceis é o que te diferencia.',
+  '🔋 Descansar também é treinar. Respeite a recuperação.',
+  '📈 Progresso não é linear — continue mesmo assim.',
+  '🎒 A carga fica mais leve pra quem não larga.',
+  '🕯️ Motivação acende o fogo; hábito mantém a chama.',
+  '🐢 Devagar e sempre chega antes de rápido e nunca.',
+  '💦 O suor de hoje é o resultado de amanhã.',
+  '🧭 Não precisa ser perfeito, precisa ser consistente.',
+  '🌟 Grandes mudanças começam com decisões pequenas.',
+  '🛠️ Você está construindo algo que ninguém pode te tirar.',
+  '🚪 A parte mais difícil é sair de casa. O resto flui.',
+  '🎵 Encontre seu ritmo — a pressa é inimiga da constância.',
+  '🌻 Cuide do corpo. É o único lugar que você tem pra viver.',
+  '🧗 Cada dia treinado é um degrau que ninguém desfaz.',
+  '⛰️ A montanha parece grande até você começar a subir.',
+  '❤️ Treine por amor ao processo, não por ódio ao espelho.'
 ];
 
 const TROPHIES = [
@@ -292,6 +316,7 @@ function accessLabel(days){
 
 // ---------- CLEANUP HISTORY (90 days) ----------
 function cleanupOldHistory(){
+  ensureStats(); // captura os totais vitalícios ANTES de apagar o histórico antigo
   const cutoff = Date.now() - HISTORY_RETENTION_DAYS*86400000;
   ['lift','run'].forEach(m=>{
     if(state.modules[m] && state.modules[m].history){
@@ -346,10 +371,17 @@ function readSelectedDays(id){
   const on = [...el.querySelectorAll('.opt.on')].map(o=>parseInt(o.dataset.val)).sort((a,b)=>a-b);
   return on.length?on:null;
 }
-// Multi-select bind (for week days)
+// Multi-select bind (for week days) — com limite pelo número de dias escolhido
 function bindMultiOpts(scrId){
+  const m = scrId.replace('scr-setup-','');
   document.querySelectorAll('#'+scrId+' .opt-multi').forEach(o=>{
-    o.onclick = ()=>{ o.classList.toggle('on'); };
+    o.onclick = ()=>{
+      if(o.classList.contains('on')){ o.classList.remove('on'); return; } // desmarcar sempre pode
+      const max = parseInt(readOpt(m+'-days')) || 7;
+      const cur = document.querySelectorAll('#'+m+'-week-days .opt-multi.on').length;
+      if(cur >= max){ toast(`Você escolheu ${max} dias por semana — desmarque um dia antes de marcar outro`); return; }
+      o.classList.add('on');
+    };
   });
 }
 // Show/hide "which days" section based on day count
@@ -359,6 +391,9 @@ function bindDaysUpdate(m){
   const update = ()=>{
     const n = parseInt(readOpt(m+'-days')) || 0;
     if(weekWrap){ weekWrap.style.display = n>0 ? 'block':'none'; $(m+'-days-count').textContent = n; }
+    // se o total marcado excede o novo limite, desmarca os últimos
+    const on = [...document.querySelectorAll('#'+m+'-week-days .opt-multi.on')];
+    if(n>0 && on.length>n){ on.slice(n).forEach(o=>o.classList.remove('on')); }
   };
   daysGroup.querySelectorAll('.opt').forEach(o=>{ o.addEventListener('click', ()=>setTimeout(update,10)); });
   update();
@@ -377,11 +412,14 @@ function generatePlan(module, setup){
     // Use user-selected days if available, otherwise defaults
     const wkDays = (setup.selectedDays && setup.selectedDays.length===days) ? setup.selectedDays : ({ 3:[1,3,5], 4:[1,2,4,5], 5:[1,2,3,5,6] }[days] || [1,2,4,5]);
     const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
-    const workouts = split.map((s,i)=>({
-      ...s, dayIdx:wkDays[i], dayName:dayNames[wkDays[i]-1],
-      duration:45+(setup.level==='avancado'?10:setup.level==='intermediario'?5:0),
-      exercises:buildLiftExercises(s.parts,setup)
-    }));
+    const workouts = split.map((s,i)=>{
+      const exercises = buildLiftExercises(s.parts,setup);
+      return {
+        ...s, dayIdx:wkDays[i], dayName:dayNames[wkDays[i]-1],
+        duration:estimateLiftDuration(exercises, setup.goal),
+        exercises
+      };
+    });
     return { type:'lift', goal:setup.goal, workouts, totalWeeks:12 };
   } else {
     const goal = setup.goal || '5km';
@@ -393,8 +431,9 @@ function generatePlan(module, setup){
       const kind = types[i%types.length];
       const targetGoal = setup.goal;
       const distance = kind==='Corrida Longa' ? (targetGoal==='42km'?'~15km':targetGoal==='21km'?'~8km':targetGoal==='10km'?'~5km':'~3km') : kind==='Intervalado'?'~4km':'~2.5km';
-      const duration = kind==='Corrida Longa'?(targetGoal==='42km'?85:targetGoal==='21km'?60:55):kind==='Intervalado'?38:31;
-      return { k:'S'+(i+1), name:kind+' — treino '+(i+1), dayIdx:d, dayName:dayNames[d-1], duration, distance, targetPace:runPace(kind,setup), blocks:buildRunBlocks(kind,setup) };
+      const blocks = buildRunBlocks(kind,setup);
+      const duration = blocks.reduce((s,b)=>s+b.exs.reduce((x,e)=>x+(e.min||0),0),0);
+      return { k:'S'+(i+1), name:kind+' — treino '+(i+1), dayIdx:d, dayName:dayNames[d-1], duration, distance, targetPace:runPace(kind,setup), blocks };
     });
     return { type:'run', goal, terrain:setup.terrain, workouts, totalWeeks };
   }
@@ -414,35 +453,110 @@ function runPace(kind, setup){
 
 function buildLiftExercises(parts, setup){
   const level = setup.level || 'iniciante';
-  const setsMap = {iniciante:3, intermediario:4, avancado:4};
+  const goal = setup.goal || 'hipertrofia';
+  // séries variam por nível E objetivo
+  const setsMap = {
+    iniciante:{hipertrofia:3, forca:3, emagrecimento:3, resistencia:2},
+    intermediario:{hipertrofia:4, forca:4, emagrecimento:3, resistencia:3},
+    avancado:{hipertrofia:4, forca:5, emagrecimento:4, resistencia:3}
+  };
   const repsMap = {hipertrofia:'8-12', forca:'4-6', emagrecimento:'12-15', resistencia:'15-20'};
-  const sets = setsMap[level];
-  const reps = repsMap[setup.goal || 'hipertrofia'];
+  const restMap = {hipertrofia:'60-90s', forca:'2-3min', emagrecimento:'30-45s', resistencia:'30s'};
+  const sets = (setsMap[level]||setsMap.iniciante)[goal] || 3;
+  const reps = repsMap[goal];
+  const rest = restMap[goal];
   const equip = setup.equip || 'academia';
-  // basico = subset de halteres (mais simples), casa = peso corporal
   const equipFilter = equip==='basico' ? ['casa','halteres'] : equip==='academia' ? ['academia','halteres','casa'] : equip==='halteres' ? ['halteres','casa'] : ['casa'];
+  // quantidade de exercícios por grupo varia por nível
+  const needBig = level==='avancado'?4 : level==='intermediario'?3 : 2;   // grupos grandes
+  const needSmall = level==='avancado'?2 : level==='intermediario'?2 : 1; // core/panturrilha/trapézio
+  // offset por objetivo: objetivos diferentes puxam exercícios diferentes do banco
+  const goalOffset = {hipertrofia:0, forca:0, emagrecimento:1, resistencia:2}[goal] || 0;
   const list = [];
   parts.forEach(p=>{
     const cat = EX_BANK.find(c=>c.name===p); if(!cat) return;
-    // filter exercises that support the equipment
-    const compat = cat.items.filter(ex => (ex.equip||[]).some(e => equipFilter.includes(e)));
+    let compat = cat.items.filter(ex => (ex.equip||[]).some(e => equipFilter.includes(e)));
     if(!compat.length) return;
-    const need = p==='Core'||p==='Panturrilha'||p==='Trapézio' ? 2 : 3;
+    // Força prioriza exercícios compostos/pesados (os primeiros do banco em cada grupo
+    // são os básicos de academia); emagrecimento/resistência rotacionam a lista pra
+    // priorizar variações mais dinâmicas.
+    if(goal!=='forca' && goalOffset>0 && compat.length>3){
+      compat = [...compat.slice(goalOffset), ...compat.slice(0,goalOffset)];
+    }
+    const need = (p==='Core'||p==='Panturrilha'||p==='Trapézio') ? needSmall : needBig;
     const pick = compat.slice(0, Math.min(need, compat.length));
-    pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps, rest:'60-90s', part:p, equip:ex.equip }); });
+    pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps, rest, part:p, equip:ex.equip }); });
   });
   return list;
+}
+// duração estimada calculada do volume real: (tempo da série + descanso) × séries × exercícios + aquecimento
+function estimateLiftDuration(exercises, goal){
+  const restSec = {hipertrofia:75, forca:150, emagrecimento:40, resistencia:30}[goal||'hipertrofia'] || 75;
+  const workSec = 40; // tempo médio executando uma série
+  const totalSets = exercises.reduce((s,ex)=>s+(ex.sets||3),0);
+  const mins = Math.round((totalSets*(workSec+restSec))/60) + 8; // +8 min aquecimento/transições
+  return Math.max(25, Math.min(90, mins));
 }
 function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
 
 function buildRunBlocks(kind, setup){
+  const terrain = setup.terrain || 'asfalto';
+  const level = setup.level || 'iniciante';
   const warm = {name:'Aquecimento',exs:[{name:'Caminhada leve',desc:'Ritmo natural, aumente gradualmente',min:5},{name:'Mobilidade dinâmica',desc:'Rotações + elevação de joelhos',min:2}]};
-  let main;
-  if(kind==='Intervalado') main = {name:'Principal',exs:[{name:'6× 400m rápido',desc:'85% do máximo, recuperação 90s trotando',min:20},{name:'Trote leve',desc:'Recuperação ativa',min:5}]};
-  else if(kind==='Corrida Longa') main = {name:'Principal',exs:[{name:'Corrida contínua',desc:'Ritmo confortável, converse sem fôlego',min:40}]};
-  else if(kind==='Ritmo Constante') main = {name:'Principal',exs:[{name:'Corrida em ritmo alvo',desc:'Zona 3-4, um pouco desconfortável',min:25}]};
-  else main = {name:'Principal',exs:[{name:'Corrida em ritmo leve',desc:'Zona 2, converse sem esforço',min:21}]};
   const cool = {name:'Desaquecimento',exs:[{name:'Caminhada leve',desc:'Normalize a FC gradualmente',min:5}]};
+  let main;
+
+  if(kind==='Intervalado'){
+    const nReps = level==='avancado'?8 : level==='intermediario'?6 : 5;
+    if(terrain==='esteira'){
+      // Na esteira não dá pra "dar tiros" com segurança: a mudança de velocidade é
+      // gradual. O intervalado vira blocos de tempo com velocidade/inclinação.
+      main = {name:'Principal',exs:[
+        {name:`${nReps}× 2 min forte / 2 min leve`,desc:'Suba a velocidade até um ritmo desafiador (esforço 8/10), depois reduza pra recuperar. Ajuste a velocidade ANTES do bloco começar.',min:nReps*4},
+        {name:'Opcional: inclinação 4-6%',desc:'Se preferir, mantenha a velocidade e use a inclinação como intensidade',min:0}
+      ]};
+    } else if(terrain==='trilha'){
+      // Trilha tem terreno irregular: intervalado por esforço/tempo, não por distância
+      main = {name:'Principal',exs:[
+        {name:`${nReps}× 90s forte / 2 min leve`,desc:'Por esforço (8/10), não por ritmo — o terreno muda muito. Atenção redobrada com pisada em raízes e pedras.',min:Math.round(nReps*3.5)},
+        {name:'Trote leve',desc:'Recuperação ativa em trecho plano',min:5}
+      ]};
+    } else if(terrain==='pista'){
+      main = {name:'Principal',exs:[
+        {name:`${nReps}× 400m rápido`,desc:'85% do máximo, recuperação 90s trotando. Use as marcações da pista.',min:Math.round(nReps*3.3)},
+        {name:'Trote leve',desc:'Recuperação ativa',min:5}
+      ]};
+    } else { // asfalto
+      main = {name:'Principal',exs:[
+        {name:`${nReps}× 1 min forte / 90s leve`,desc:'Tiros por tempo (esforço 8/10) — mais seguro que por distância no asfalto. Escolha um trecho plano e sem cruzamentos.',min:Math.round(nReps*2.5)},
+        {name:'Trote leve',desc:'Recuperação ativa',min:5}
+      ]};
+    }
+  } else if(kind==='Corrida Longa'){
+    const tips = {
+      esteira:'Na esteira use inclinação de 1% pra simular a rua. Quebre mentalmente em blocos de 10 min.',
+      trilha:'Na trilha o ritmo naturalmente cai — vá por tempo e esforço, não por pace. Leve água.',
+      pista:'Na pista, alterne o sentido a cada 15 min pra não sobrecarregar um lado do corpo.',
+      asfalto:'Ritmo confortável, converse sem ficar sem fôlego. Hidrate a cada 20 min.'
+    };
+    main = {name:'Principal',exs:[{name:'Corrida contínua',desc:tips[terrain]||tips.asfalto,min:40}]};
+  } else if(kind==='Ritmo Constante'){
+    const tips = {
+      esteira:'Trave a velocidade no ritmo alvo e segure — a esteira é ótima pra isso.',
+      trilha:'Em trilha, mantenha o ESFORÇO constante (zona 3-4), o ritmo vai variar com o terreno.',
+      pista:'Use as voltas pra conferir se o ritmo está estável (anote o tempo por volta).',
+      asfalto:'Zona 3-4, um pouco desconfortável mas sustentável.'
+    };
+    main = {name:'Principal',exs:[{name:'Corrida em ritmo alvo',desc:tips[terrain]||tips.asfalto,min:25}]};
+  } else {
+    const tips = {
+      esteira:'Zona 2 com inclinação 1%. Bom dia pra assistir algo e deixar o tempo passar.',
+      trilha:'Zona 2, aproveite a paisagem. Terreno leve, evite subidas fortes hoje.',
+      pista:'Zona 2, ritmo bem tranquilo. Deixe os mais rápidos passarem por fora.',
+      asfalto:'Zona 2, converse sem esforço. Esse treino constrói sua base aeróbica.'
+    };
+    main = {name:'Principal',exs:[{name:'Corrida em ritmo leve',desc:tips[terrain]||tips.asfalto,min:21}]};
+  }
   return [warm, main, cool];
 }
 
@@ -644,7 +758,8 @@ function renderHome(){
   renderAvatar('home-avatar');
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
   $('home-goal').textContent = 'Objetivo: ' + labelGoal(mod);
-  $('daily-quote').textContent = QUOTES[new Date().getDate() % QUOTES.length];
+  const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
+  $('daily-quote').textContent = QUOTES[doy % QUOTES.length];
 
   const days = accessDaysLeft();
   $('access-days').textContent = accessLabel(days);
@@ -661,7 +776,16 @@ function renderHome(){
     alertCard.classList.remove('hidden');
     alertCard.querySelector('.card-icon').textContent = '🏁';
     alertCard.querySelector('.card-title').textContent = daysToR===0 ? 'É HOJE! 🎉' : `${daysToR} dia${daysToR>1?'s':''} para sua prova`;
-    alertCard.querySelector('.card-sub').textContent = daysToR<=7 ? 'Semana da prova: reduza o volume, foco em recuperação' : daysToR<=14 ? 'Fase de taper: intensidade cai, você fica afiado' : 'Continue firme no plano — cada treino conta';
+    let msg;
+    if(daysToR===0) msg = 'Confie no seu treino, comece devagar e aproveite cada km. Você se preparou pra isso!';
+    else if(daysToR===1) msg = 'Véspera: nada de treino forte. Separe a roupa, hidrate bem e durma cedo. Amanhã é seu dia! 😴';
+    else if(daysToR<=3) msg = 'Reta final: só trotes leves. A energia que você poupa agora aparece na prova.';
+    else if(daysToR<=7) msg = 'Semana da prova: reduza o volume, foco em recuperação e sono. O trabalho duro já foi feito 💪';
+    else if(daysToR<=14) msg = 'Fase de taper: a intensidade cai e você chega afiado. Confie no processo, não invente treino novo.';
+    else if(daysToR<=30) msg = 'Menos de um mês! Seus treinos-chave estão acontecendo agora — cada um deles conta muito.';
+    else if(daysToR<=60) msg = 'Você está no meio da preparação. Constância nas próximas semanas é o que define seu resultado.';
+    else msg = 'Prova no radar! Construa a base com calma — quem chega longe é quem não pula etapas.';
+    alertCard.querySelector('.card-sub').textContent = msg;
   } else {
     alertCard.classList.add('hidden');
   }
@@ -713,8 +837,12 @@ function renderTodayWorkout(w, isLift){
     </div>
   </div>`;
 }
-function liftDesc(w){ const parts=w.parts.join(' + '); return `🎯 Foco em ${parts.toLowerCase()}\n\nAqueça bem por 5-8 min. Registre suas séries pra acompanhar sua evolução.\n\n💧 Hidrate-se durante e mantenha os intervalos de 60-90s.`; }
-function runDesc(w){ return `🔥 Aquecimento: 5 min de caminhada leve\n\nRitmo de conversa (você consegue falar frases completas sem ficar sem ar).\n\n🏁 Desaquecimento: 5 min de caminhada leve para normalizar a FC`; }
+function liftDesc(w){ const parts=w.parts.join(' + '); return `🎯 Foco em ${parts.toLowerCase()}\n\nAqueça bem por 5-8 min. Registre suas séries pra acompanhar sua evolução.\n\n💧 Hidrate-se durante e mantenha os intervalos indicados em cada exercício.`; }
+function runDesc(w){
+  const main = (w.blocks||[]).find(b=>b.name==='Principal');
+  const mainTxt = main && main.exs[0] ? `${main.exs[0].name} — ${main.exs[0].desc}` : 'Ritmo de conversa (você consegue falar frases completas sem ficar sem ar).';
+  return `🔥 Aquecimento: 5-7 min de caminhada leve + mobilidade\n\n${mainTxt}\n\n🏁 Desaquecimento: 5 min de caminhada leve para normalizar a FC`;
+}
 
 function renderRestDay(mod){
   const isLift = mod.plan.type==='lift';
@@ -942,6 +1070,7 @@ function finishLiftWorkout(k){
   if(!checkLiftDone(w)){ toast('Registre ao menos uma série antes de salvar'); return; }
   mod.history = mod.history || [];
   mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:w.duration, module:'lift' });
+  ensureStats(); state.stats.liftTotal++;
   checkTrophies();
   saveData();
   toast('✅ Treino salvo com sucesso!');
@@ -953,6 +1082,7 @@ function markRunDone(dayIdx){
   if(!w) return;
   mod.history = mod.history || [];
   mod.history.push({ id:w.k, name:w.name, at:Date.now(), duration:w.duration, module:'run' });
+  ensureStats(); state.stats.runTotal++;
   checkTrophies();
   saveData();
   toast('✅ Corrida marcada como feita!');
@@ -1191,9 +1321,23 @@ function unlockTrophy(id){
   const t = TROPHIES.find(x=>x.id===id);
   if(t) setTimeout(()=>toast(`${t.emoji} Troféu desbloqueado: ${t.name}!`), 800);
 }
+// Garante que os contadores vitalícios existem; migra dados de quem já tinha histórico
+function ensureStats(){
+  if(!state.stats) state.stats = { liftTotal:0, runTotal:0, runKmTotal:0 };
+  const liftH = state.modules.lift?.history?.length || 0;
+  const runH = state.modules.run?.history?.length || 0;
+  const kmH = (state.modules.run?.history||[]).reduce((s,r)=>s+(r.distance||0),0);
+  // o contador nunca pode ser menor que o histórico visível (migração de versões antigas)
+  if(state.stats.liftTotal < liftH) state.stats.liftTotal = liftH;
+  if(state.stats.runTotal < runH) state.stats.runTotal = runH;
+  if(state.stats.runKmTotal < kmH) state.stats.runKmTotal = kmH;
+}
 function checkTrophies(){
-  const liftDone = state.modules.lift?.history?.length || 0;
-  const runDone = state.modules.run?.history?.length || 0;
+  ensureStats();
+  // Contadores vitalícios: não zeram quando o histórico de 90 dias é limpo,
+  // então troféus como "Centurião" (100 treinos) são alcançáveis de verdade.
+  const liftDone = state.stats.liftTotal;
+  const runDone = state.stats.runTotal;
   const totalDone = liftDone + runDone;
   if(totalDone>=1) unlockTrophy('first_workout');
   // Musculação
@@ -1210,8 +1354,8 @@ function checkTrophies(){
   if(runDone>=10) unlockTrophy('run_10');
   if(runDone>=25) unlockTrophy('run_25');
   if(runDone>=50) unlockTrophy('run_50');
-  // KM acumulados
-  const totalKm = (state.modules.run?.history||[]).reduce((s,r)=>s+(r.distance||0),0);
+  // KM acumulados (vitalício)
+  const totalKm = state.stats.runKmTotal;
   if(totalKm>=10) unlockTrophy('run_km_10');
   if(totalKm>=50) unlockTrophy('run_km_50');
   if(totalKm>=100) unlockTrophy('run_km_100');
@@ -1635,6 +1779,7 @@ function saveRunLog(dayIdx){
   const paceStr = Math.floor(pace) + ':' + String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0') + '/km';
   mod.history = mod.history || [];
   mod.history.push({ id:w.k, name:w.name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, module:'run' });
+  ensureStats(); state.stats.runTotal++; state.stats.runKmTotal += km;
   // Check evolution
   checkRunEvolution(km, paceStr);
   checkTrophies();
