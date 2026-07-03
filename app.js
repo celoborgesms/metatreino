@@ -1,5 +1,5 @@
-// ===== MetaTreino v3.2 =====
-const APP_VERSION = 'v3.2';
+// ===== MetaTreino v3.3 =====
+const APP_VERSION = 'v3.3';
 const AUTH_KEY = 'metatreino_auth_v1';
 const USERS_KEY = 'metatreino_users_v1';
 const ALLOW_KEY = 'metatreino_allowlist_v1';
@@ -193,6 +193,21 @@ function doLogout(){
   showLogin();
   $('tabbar').classList.add('hidden');
   $('lg-email').value=''; $('lg-pass').value=''; $('lg-err').innerHTML='';
+}
+
+function doDeleteAccount(){
+  if(!state.user || !state.user.email) return;
+  const email = state.user.email;
+  if(email === ADMIN_EMAIL){ toast('⚠️ A conta de administrador não pode ser excluída por aqui.'); closeModal(); return; }
+  if(!confirm('Tem certeza? Todo o seu progresso será apagado para sempre.')) return;
+  const users = getUsers(); delete users[email]; setUsers(users);
+  try{ localStorage.removeItem(DATA_PREFIX+email); }catch(e){}
+  localStorage.removeItem(AUTH_KEY);
+  state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], ui:{tab:'home',selectedSession:null} };
+  closeModal();
+  showScreen('scr-auth');
+  showSignup();
+  toast('✅ Conta excluída. Comece do zero quando quiser.');
 }
 
 function bootAfterAuth(){
@@ -1278,6 +1293,7 @@ function openExercise(name){ window.open(ytLink(name), '_blank'); }
 
 // ---------- MODALS ----------
 const MODAL_CONTENT = {
+  'support-info':`<h3>⚕️ Ferramenta de apoio ao treino</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">O MetaTreino organiza e acompanha seus treinos de forma automatizada, mas <b>não substitui uma avaliação médica nem o acompanhamento de um profissional de educação física</b>.<br><br>Antes de iniciar qualquer programa de exercícios — principalmente se você tem alguma condição de saúde, lesão, ou está voltando a treinar depois de um tempo parado — procure um médico para uma avaliação e, se possível, um profissional de educação física para orientação individual.<br><br>Pense no app como um apoio para organizar sua rotina, não como um substituto do acompanhamento profissional.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Entendi</button>`,
   'faq':`<h3>❓ FAQ / Sobre</h3><p><b>MetaTreino</b> gera planos de treino inteligentes de musculação e corrida, personalizados.<br><br><b>Como funciona?</b> Escolha o módulo, responda o questionário e receba um plano progressivo.<br><br><b>Meus dados ficam salvos?</b> Sim, localmente no seu dispositivo. Histórico de treinos guardado por 90 dias.<br><br><b>Contato:</b> celoborgesms@gmail.com</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
   'privacy':`<h3>🔒 Privacidade</h3><p>Seus dados são armazenados apenas no seu dispositivo. Não coletamos, não compartilhamos e não vendemos informações. Se precisar, contate <a href="mailto:celoborgesms@gmail.com">celoborgesms@gmail.com</a>.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
   'terms':`<h3>📄 Termos de uso</h3><p>App fornecido "no estado em que se encontra", sem garantias. Consulte profissional de saúde antes de iniciar qualquer programa. Uso restrito a alunos autorizados.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
@@ -1287,6 +1303,7 @@ const MODAL_CONTENT = {
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
   'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
   'broadcast':`<h3>📢 Mensagem em massa (WhatsApp)</h3><p style="color:var(--text-dim);font-size:13px">Gera um link do WhatsApp Web para cada aluno com o texto abaixo. Os alunos precisam ter WhatsApp cadastrado.</p><div class="field"><label>Mensagem</label><textarea class="input" id="bc-msg" rows="4" style="resize:vertical">Olá, treinador aqui do MetaTreino! Passando pra lembrar...</textarea></div><button class="btn btn-primary btn-block" onclick="doBroadcast()">Abrir links WhatsApp</button>`,
+  'delete-account':()=>{ const email=(state.user&&state.user.email)||''; return `<h3>🗑️ Excluir minha conta</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Isso apaga <b>permanentemente</b> todo o seu progresso: treinos, PRs, histórico de peso e troféus.<br><br>Seu acesso ao app continua liberado — você pode criar uma conta nova com o mesmo e-mail (<b>${email}</b>) e começar do zero na hora.<br><br>Essa ação <b>não pode ser desfeita</b>.</p><button class="btn btn-outline btn-block" style="margin-top:16px;border-color:#ef4444;color:#ef4444" onclick="doDeleteAccount()">Sim, excluir minha conta</button><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`; },
 };
 function openModal(k){
   const c = MODAL_CONTENT[k];

@@ -882,8 +882,9 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="list-row" onclick="openTrophies()">🏆 <span>Meus troféus</span></div>
     <div class="list-row" onclick="openModal('change-pass')">🔑 <span>Alterar senha</span></div>
     <div class="list-row" onclick="mtCheckUpdate()" id="pf-update-btn">🔄 <span>Verificar atualização</span><span id="pf-update-badge" style="margin-left:auto;font-size:11px"></span></div>
-    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v3.2</div>
-    <div class="list-row danger" style="margin-top:14px" onclick="doLogout()">🚪 Sair da conta</div>
+    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v3.3</div>
+    <div class="list-row danger" style="margin-top:14px" onclick="openModal('delete-account')">🗑️ <span>Excluir minha conta</span></div>
+    <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
   </div>
 </div>
 
@@ -929,9 +930,9 @@ a{color:var(--primary-2);text-decoration:none}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=3.2"></script>
+<script src="./app.js?v=3.3"></script>
 <script>
-const APP_VERSION = 'v3.2';
+const APP_VERSION = 'v3.3';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {
@@ -958,23 +959,42 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+function mtNotify(msg){
+  if (typeof toast === 'function') toast(msg); else alert(msg);
+}
 window.mtCheckUpdate = async function(){
-  if (!('serviceWorker' in navigator)) { alert('Seu navegador não suporta atualização automática.'); return; }
+  const badge = document.getElementById('pf-update-badge');
+  if (badge) badge.textContent = 'verificando...';
+  if (!('serviceWorker' in navigator)) {
+    if (badge) badge.textContent = '';
+    mtNotify('Seu navegador não suporta atualização automática.');
+    return;
+  }
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     if (!reg) { window.location.reload(); return; }
     await reg.update();
-    // se novo SW está esperando, ativa e recarrega
+    // se novo SW já está esperando, ativa e recarrega
     if (reg.waiting) {
+      if (badge) badge.textContent = '';
       reg.waiting.postMessage('skipWaiting');
       return;
     }
-    // força purge do cache e reload
+    // sem SW esperando: limpa cache antigo e verifica de novo
     const keys = await caches.keys();
     await Promise.all(keys.map(k => caches.delete(k)));
-    window.location.reload(true);
+    const reg2 = await navigator.serviceWorker.getRegistration();
+    if (reg2) await reg2.update();
+    if (reg2 && reg2.waiting) {
+      if (badge) badge.textContent = '';
+      reg2.waiting.postMessage('skipWaiting');
+      return;
+    }
+    if (badge) badge.textContent = '';
+    mtNotify('✅ Nenhuma atualização encontrada. Você já está na versão mais recente.');
   } catch(e) {
-    window.location.reload(true);
+    if (badge) badge.textContent = '';
+    mtNotify('⚠️ Não foi possível verificar agora. Tente novamente em instantes.');
   }
 };
 </script>
