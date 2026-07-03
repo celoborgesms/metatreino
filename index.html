@@ -350,6 +350,47 @@ a{color:var(--primary-2);text-decoration:none}
 
 /* Bell */
 .bell{width:38px;height:38px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;color:var(--accent-2)}
+
+/* Admin */
+.stud{padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;cursor:pointer;transition:.15s}
+.stud:hover{border-color:var(--primary);transform:translateY(-1px)}
+.stud-top{display:flex;justify-content:space-between;align-items:center}
+.stud-name{font-weight:800;font-size:15px}
+.stud-email{font-size:12.5px;color:var(--text-dim);margin-top:2px}
+.stud-days{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.4px}
+.stud-days.on{background:rgba(16,185,129,0.14);color:var(--primary-2);border:1px solid rgba(16,185,129,0.3)}
+.stud-days.warn{background:rgba(245,158,11,0.14);color:var(--accent-2);border:1px solid rgba(245,158,11,0.3)}
+.stud-days.off{background:rgba(244,63,94,0.14);color:#fda4af;border:1px solid rgba(244,63,94,0.3)}
+.stud-meta{display:flex;gap:10px;margin-top:8px;font-size:12px;color:var(--text-dim);flex-wrap:wrap}
+.stud-meta b{color:var(--text)}
+
+/* Trophy */
+.trophy-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.trophy{padding:16px 12px;border-radius:16px;background:var(--surface);border:1px solid var(--border);text-align:center;transition:.15s}
+.trophy.unlock{border-color:var(--primary);background:linear-gradient(160deg,rgba(16,185,129,0.08),var(--surface))}
+.trophy-emoji{font-size:36px;filter:grayscale(1) opacity(.4)}
+.trophy.unlock .trophy-emoji{filter:none}
+.trophy-name{font-weight:800;font-size:13px;margin-top:8px}
+.trophy.unlock .trophy-name{color:var(--primary-2)}
+.trophy-desc{font-size:11.5px;color:var(--text-dim);margin-top:3px;line-height:1.3}
+
+/* Set logger */
+.set-row{display:grid;grid-template-columns:36px 1fr 1fr 40px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--border)}
+.set-row:last-child{border-bottom:none}
+.set-num{width:32px;height:32px;border-radius:50%;background:var(--surface-2);border:1px solid var(--primary);color:var(--primary-2);display:grid;place-items:center;font-weight:800;font-size:13px}
+.set-in{padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:14px;text-align:center;width:100%}
+.set-in:focus{outline:none;border-color:var(--primary)}
+.set-x{width:36px;height:36px;border-radius:8px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.28);color:#fda4af;font-weight:800}
+
+/* PR badge */
+.pr-badge{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(245,158,11,0.14);color:var(--accent-2);border:1px solid rgba(245,158,11,0.3);font-size:11px;font-weight:800;letter-spacing:0.4px;margin-left:6px}
+
+/* Simple weight chart */
+.wchart{height:120px;padding:8px 0}
+
+/* Profile avatar with img */
+.profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 </style>
 </head>
 <body>
@@ -376,13 +417,104 @@ a{color:var(--primary-2);text-decoration:none}
       <div class="field"><label>E-mail</label><input class="input" type="email" id="sg-email" placeholder="seu@email.com"></div>
       <div class="field"><label>Senha</label><input class="input" type="password" id="sg-pass" placeholder="Mínimo 6 caracteres"></div>
       <div id="sg-err"></div>
-      <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="doSignup()">Criar conta grátis</button>
+      <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="doSignup()">Criar conta</button>
       <div class="auth-swap">Já tem conta? <b onclick="showLogin()">Entrar</b></div>
+      <p style="text-align:center;color:var(--text-mute);font-size:12px;margin-top:20px;line-height:1.5">Acesso liberado apenas para alunos autorizados pelo treinador.</p>
     </div>
   </div>
 </div>
 
-<!-- ========== MODULE PICK ========== -->
+<!-- ========== SEM ACESSO ========== -->
+<div id="scr-noaccess" class="screen">
+  <div class="auth-wrap">
+    <div class="auth-hero">
+      <div class="auth-logo" style="background:linear-gradient(135deg,#f43f5e,#be123c);color:#fff">🔒</div>
+      <h1>Sem acesso liberado</h1>
+      <p>Seu e-mail ainda não foi autorizado pelo treinador. Entre em contato para liberar seu acesso.</p>
+    </div>
+    <div class="card"><div class="card-title" style="color:var(--accent-2);text-align:center">📞 Fale com o treinador</div><div style="text-align:center;margin-top:14px"><a href="mailto:celoborgesms@gmail.com?subject=Solicitação%20de%20acesso%20MetaTreino" class="btn btn-primary btn-block">✉️ Enviar e-mail</a></div><div style="text-align:center;margin-top:10px;color:var(--text-dim);font-size:13px">celoborgesms@gmail.com</div></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="doLogout()">← Voltar para login</button>
+  </div>
+</div>
+
+<!-- ========== QUESTIONÁRIO ========== -->
+<div id="scr-quiz" class="screen">
+  <div class="wrap setup">
+    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">METATREINO</div><div class="brand-tag">Questionário inicial</div></div></div>
+    <h1>Vamos te conhecer!</h1>
+    <p class="sub">Responda pra personalizarmos seu plano.</p>
+
+    <div class="field"><label>Como quer ser chamado?</label><input class="input" id="q-nick" placeholder="Ex: Celo, João, Bea..."></div>
+    <div class="field"><label>Sexo</label>
+      <div class="radio-grid g3" id="q-sex"><div class="opt" data-val="m">👨 Masculino</div><div class="opt" data-val="f">👩 Feminino</div><div class="opt" data-val="o">👤 Outro</div></div>
+    </div>
+    <div class="field"><label>Idade</label><input class="input mono" type="number" id="q-age" placeholder="Anos" min="10" max="99"></div>
+    <div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="q-height" placeholder="Ex: 175" min="100" max="230"></div>
+    <div class="field"><label>Peso atual (kg)</label><input class="input mono" type="number" step="0.1" id="q-weight" placeholder="Ex: 78" min="30" max="250"></div>
+    <div class="field"><label>WhatsApp (com DDD)</label><input class="input mono" type="tel" id="q-whats" placeholder="Ex: 61999999999"></div>
+
+    <div class="field"><label>Objetivo principal</label>
+      <div class="radio-grid" id="q-goal">
+        <div class="opt" data-val="emagrecer">📉 Emagrecer</div>
+        <div class="opt" data-val="massa">📈 Ganhar massa</div>
+        <div class="opt" data-val="forca">🔥 Ganhar força</div>
+        <div class="opt" data-val="condicionamento">⚡ Condicionamento</div>
+        <div class="opt" data-val="tonificar">💪 Tonificar</div>
+        <div class="opt" data-val="saude">❤️ Saúde geral</div>
+      </div>
+    </div>
+    <div class="field"><label>Nível atual de atividade</label>
+      <div class="radio-grid g3" id="q-level"><div class="opt on" data-val="sedentario">Sedentário</div><div class="opt" data-val="ativo">Ativo</div><div class="opt" data-val="atleta">Atleta</div></div>
+    </div>
+    <div id="q-err"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="saveQuiz()">Continuar →</button>
+  </div>
+</div>
+
+<!-- ========== ADMIN DASHBOARD ========== -->
+<div id="scr-admin" class="screen">
+  <div class="wrap">
+    <div class="brand"><div class="brand-logo" style="background:linear-gradient(135deg,#f59e0b,#b45309);color:#3a2404">⚡</div><div><div class="brand-name">ADMIN</div><div class="brand-tag">Painel do treinador</div></div></div>
+
+    <div class="row" style="justify-content:space-between;margin:12px 0 16px">
+      <h1 style="font-size:26px;font-weight:800;letter-spacing:-0.6px">👋 <span id="adm-hi">Olá!</span></h1>
+      <button class="btn btn-ghost" onclick="doLogout()" style="padding:8px 14px">Sair</button>
+    </div>
+
+    <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat"><div class="stat-lbl">Alunos ativos</div><div class="stat-val" id="adm-active">0</div></div>
+      <div class="stat"><div class="stat-lbl">Expirando (7d)</div><div class="stat-val" style="color:var(--accent-2)" id="adm-exp">0</div></div>
+      <div class="stat"><div class="stat-lbl">Total cadastrados</div><div class="stat-val" id="adm-total" style="color:var(--info)">0</div></div>
+      <div class="stat"><div class="stat-lbl">Expirados</div><div class="stat-val" style="color:#fda4af" id="adm-vencidos">0</div></div>
+    </div>
+
+    <button class="btn btn-primary btn-block" style="margin:14px 0" onclick="openModal('add-student')">➕ Liberar acesso a novo aluno</button>
+
+    <div class="section-head"><h2>Alunos</h2><span class="text-dim" style="font-size:13px" id="adm-list-count">0</span></div>
+    <input class="search" placeholder="🔍 Buscar por e-mail ou nome..." id="adm-search" oninput="renderAdminList()">
+    <div class="chips-row" id="adm-filter-chips" style="margin:12px 0">
+      <div class="filter-chip on" data-f="all" onclick="setAdminFilter('all')">Todos</div>
+      <div class="filter-chip" data-f="active" onclick="setAdminFilter('active')">Ativos</div>
+      <div class="filter-chip" data-f="expiring" onclick="setAdminFilter('expiring')">Expirando</div>
+      <div class="filter-chip" data-f="expired" onclick="setAdminFilter('expired')">Vencidos</div>
+    </div>
+    <div id="adm-list"></div>
+
+    <div class="section-lbl">Ferramentas</div>
+    <div class="list-row" onclick="openModal('change-admin-pass')">🔑 <span>Alterar minha senha</span></div>
+    <div class="list-row" onclick="exportData()">📤 <span>Exportar dados (backup JSON)</span></div>
+    <div class="list-row warn" onclick="openModal('broadcast')">📢 <span>Mensagem em massa (WhatsApp)</span></div>
+  </div>
+</div>
+
+<!-- ========== ADMIN STUDENT DETAIL ========== -->
+<div id="scr-admin-student" class="screen">
+  <div class="wrap">
+    <div class="brand"><div class="brand-logo" style="background:linear-gradient(135deg,#f59e0b,#b45309);color:#3a2404">⚡</div><div><div class="brand-name">ADMIN</div><div class="brand-tag" id="stud-tag">Detalhes do aluno</div></div></div>
+    <div class="row" style="margin-bottom:14px"><button class="btn btn-outline" onclick="goAdmin()">← Voltar</button></div>
+    <div id="stud-content"></div>
+  </div>
+</div>
 <div id="scr-pick" class="screen">
   <div class="wrap pick-wrap">
     <div class="brand">
@@ -494,15 +626,14 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="mod-toggle" id="mod-toggle"></div>
 
     <!-- Alerts -->
-    <div class="card card-alert card-row" id="card-plan-alert">
+    <div class="card card-alert card-row hidden" id="card-plan-alert">
       <div class="card-icon">🎉</div>
-      <div><div class="card-title acc">Seu plano de treino foi criado!</div><div class="card-sub" id="trial-msg">Você tem 14 dias grátis pra explorar tudo. Bora começar?</div></div>
+      <div><div class="card-title acc">Seu plano de treino foi criado!</div><div class="card-sub" id="trial-msg">Bora começar seu primeiro treino?</div></div>
     </div>
 
-    <div class="card card-info card-row" onclick="openModal('partners')">
-      <div class="card-icon">👥</div>
-      <div style="flex:1"><div class="card-title info">Profissionais parceiros</div><div class="card-sub">1 parceiro selecionado pra complementar seu treino</div></div>
-      <div class="card-chev">›</div>
+    <div class="card card-info card-row" id="card-access-info">
+      <div class="card-icon">🎫</div>
+      <div style="flex:1"><div class="card-title info">Acesso ativo</div><div class="card-sub" id="access-days">— dias restantes</div></div>
     </div>
 
     <!-- Brand -->
@@ -546,7 +677,9 @@ a{color:var(--primary-2);text-decoration:none}
       <div><div class="card-title warn">Ferramenta de apoio ao treino</div><div class="card-sub">Não substitui avaliação médica nem acompanhamento profissional. Toque pra saber mais →</div></div>
     </div>
 
-    <div class="help"><p>Precisa de ajuda? Fale com a gente.</p><div class="help-btn" onclick="openModal('contact')">✉️</div><div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div></div>
+    <div class="card card-info card-row" style="margin-top:14px" onclick="openTrophies()"><div class="card-icon">🏆</div><div style="flex:1"><div class="card-title info">Suas conquistas</div><div class="card-sub" id="trophy-count">0 troféus desbloqueados</div></div><div class="card-chev">›</div></div>
+
+    <div class="help"><p>Precisa de ajuda?</p><a href="mailto:celoborgesms@gmail.com" class="help-btn" style="display:grid;text-decoration:none">✉️</a><div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div></div>
   </div>
 </div>
 
@@ -560,10 +693,10 @@ a{color:var(--primary-2);text-decoration:none}
     </div>
 
     <div class="hs" id="sessions-chips"></div>
-    <div class="card card-alert card-row" onclick="toggleWeeklyBlock()"><div class="card-icon">🏃</div><div style="flex:1"><div class="card-title acc">Programação semanal</div><div class="card-sub" id="weekly-info">Meta: — · Semana 1 · 4× por semana</div></div><div class="card-chev">▾</div></div>
+    <div class="card card-alert card-row" onclick="toggleWeeklyBlock()"><div class="card-icon" id="sess-mod-icon">🏃</div><div style="flex:1"><div class="card-title acc">Programação semanal</div><div class="card-sub" id="weekly-info">Meta: — · Semana 1 · 4× por semana</div></div><div class="card-chev">▾</div></div>
 
     <div id="session-detail-slot"></div>
-    <div class="help"><p>Precisa de ajuda? Fale com a gente.</p><div class="help-btn" onclick="openModal('contact')">✉️</div></div>
+    <div class="help"><p>Dúvidas? Fale com o treinador</p><a href="mailto:celoborgesms@gmail.com" class="help-btn" style="display:grid;text-decoration:none">✉️</a></div>
   </div>
 </div>
 
@@ -663,9 +796,8 @@ a{color:var(--primary-2);text-decoration:none}
       <button class="btn btn-outline btn-block" onclick="regenPlan()">🔄 Recriar plano</button>
     </div>
 
-    <div class="section-lbl">Assinatura</div>
-    <div class="card card-warn card-row"><div class="card-icon">🎁</div><div><div class="card-title warn">Teste grátis ativo</div><div class="card-sub" id="trial-days">14 dias restantes</div></div></div>
-    <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="openModal('upgrade')">💳 Assinar Premium</button>
+    <div class="section-lbl">Acesso</div>
+    <div class="card card-info card-row"><div class="card-icon">🎫</div><div><div class="card-title info" id="pl-access">Acesso ativo</div><div class="card-sub" id="pl-days">— dias restantes</div></div></div>
   </div>
 </div>
 
@@ -677,9 +809,7 @@ a{color:var(--primary-2);text-decoration:none}
     <h1 style="font-size:26px;font-weight:800;letter-spacing:-0.6px">📚 Biblioteca</h1>
     <div class="text-dim" style="margin-top:4px" id="lib-count">Catálogo completo · 65 exercícios</div>
 
-    <div class="card card-info card-row" style="margin-top:14px" onclick="openModal('partners')"><div class="card-icon">👥</div><div style="flex:1"><div class="card-title info">Profissionais parceiros</div><div class="card-sub">1 parceiro selecionado pra complementar seu treino</div></div><div class="card-chev">›</div></div>
-
-    <input class="search" placeholder="🔍 Buscar exercício ou grupo muscular..." id="lib-search" oninput="filterLib()">
+    <input class="search" placeholder="🔍 Buscar exercício ou grupo muscular..." id="lib-search" oninput="filterLib()" style="margin-top:14px">
     <div class="chips-row" id="lib-chips"></div>
     <div id="lib-list"></div>
   </div>
@@ -692,11 +822,19 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="row" style="margin-bottom:14px"><button class="btn btn-outline" onclick="goTab('home')">← Início</button></div>
 
     <div class="profile-head">
-      <div class="profile-avatar" id="pf-avatar">A</div>
-      <div><div class="profile-name" id="pf-name">Atleta</div><div class="profile-tag">🎁 <span>Teste grátis</span></div><div class="profile-email" id="pf-email">—</div></div>
+      <div class="profile-avatar" id="pf-avatar" onclick="pickPhoto()" style="cursor:pointer;overflow:hidden">A</div>
+      <div><div class="profile-name" id="pf-name">Atleta</div><div class="profile-tag" id="pf-status">🎫 <span>Acesso ativo</span></div><div class="profile-email" id="pf-email">—</div></div>
     </div>
+    <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="onPhotoPicked(event)">
 
-    <div class="card card-warn card-row"><div class="card-icon">⏳</div><div><div class="card-title warn" id="pf-trial">14 dias restantes de teste</div></div></div>
+    <div class="card card-info card-row"><div class="card-icon">🎫</div><div><div class="card-title info" id="pf-trial">— dias restantes</div><div class="card-sub" id="pf-goal">Objetivo: —</div></div></div>
+
+    <div class="section-lbl">📊 Meu progresso corporal</div>
+    <div class="card" id="pf-body-card">
+      <div id="pf-body-info"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="openModal('add-weight')">➕ Registrar peso hoje</button>
+      <div id="pf-weight-chart-slot" style="margin-top:14px"></div>
+    </div>
 
     <div class="section-lbl">Módulo atual</div>
     <div class="mod-current" id="pf-mod"></div>
@@ -711,8 +849,8 @@ a{color:var(--primary-2);text-decoration:none}
 
     <div class="section-lbl">Meu perfil</div>
     <div class="list-row" onclick="openModal('edit-profile')">✏️ <span>Editar dados pessoais</span></div>
-    <div class="list-row warn" onclick="openModal('upgrade')">💳 <span>Gerenciar assinatura</span></div>
-    <div class="list-row" onclick="openModal('partners')">👥 <span>Profissionais parceiros</span></div>
+    <div class="list-row" onclick="openTrophies()">🏆 <span>Meus troféus</span></div>
+    <div class="list-row" onclick="openModal('change-pass')">🔑 <span>Alterar senha</span></div>
     <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
   </div>
 </div>
