@@ -1,14 +1,24 @@
-// ===== MetaTreino v3.3 =====
-const APP_VERSION = 'v3.3';
-const AUTH_KEY = 'metatreino_auth_v1';
-const USERS_KEY = 'metatreino_users_v1';
-const ALLOW_KEY = 'metatreino_allowlist_v1';
-const ADMIN_KEY = 'metatreino_admin_v1';
-const DATA_PREFIX = 'metatreino_data_';
-
+// ===== MetaTreino v3.4 =====
+const APP_VERSION = 'v3.4';
+const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'celoborgesms@gmail.com';
 const HISTORY_RETENTION_DAYS = 90;
+
+// ---------- FIREBASE ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyBMjCfbTjKkh04WLcyY-TWWPzwkrDUKEfg",
+  authDomain: "meu-treino-inteligente.firebaseapp.com",
+  projectId: "meu-treino-inteligente",
+  storageBucket: "meu-treino-inteligente.firebasestorage.app",
+  messagingSenderId: "51290225183",
+  appId: "1:51290225183:web:dfebcf71e6ce3a65db332a",
+  measurementId: "G-6413FEHHXL"
+};
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+const db = firebase.firestore();
+try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
 
 // ---------- STATE ----------
 let state = {
@@ -74,156 +84,139 @@ const TROPHIES = [
   { id:'weight_up_10', emoji:'🦾', name:'Ganhou 10kg', desc:'Ganho de massa +10kg', cat:'body' }
 ];
 
-// ---------- STORAGE ----------
+// ---------- STORAGE (nuvem + cache local) ----------
+let fbUser = null;          // usuário autenticado (uid, email, displayName)
+let cloudSyncTimer = null;
+
+function localCacheKey(uid){ return DATA_PREFIX + uid; }
+
 function saveData(){
-  if(!state.user) return;
-  try{ localStorage.setItem(DATA_PREFIX+state.user.email, JSON.stringify(state)); }catch(e){}
+  if(!state.user || !fbUser) return;
+  try{ localStorage.setItem(localCacheKey(fbUser.uid), JSON.stringify(state)); }catch(e){}
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(syncToCloud, 1200);
 }
-function loadData(email){
+function syncToCloud(){
+  if(!fbUser) return;
+  db.collection('usuarios').doc(fbUser.uid).set({
+    email: fbUser.email,
+    nome: (state.user && state.user.profile && state.user.profile.nickname) || fbUser.displayName || '',
+    atualizadoEm: Date.now(),
+    estadoApp: state
+  }, {merge:true}).catch(e=>console.log('Erro ao salvar na nuvem:', e));
+}
+async function loadData(){
   try{
-    const s = JSON.parse(localStorage.getItem(DATA_PREFIX+email)||'null');
+    const doc = await db.collection('usuarios').doc(fbUser.uid).get();
+    if(doc.exists && doc.data().estadoApp){
+      const s = doc.data().estadoApp;
+      state = {...state, ...s, ui:{...state.ui, ...(s.ui||{})}};
+      try{ localStorage.setItem(localCacheKey(fbUser.uid), JSON.stringify(state)); }catch(e){}
+      return;
+    }
+  }catch(e){ console.log('Sem conexão com a nuvem agora, usando cache local:', e); }
+  try{
+    const s = JSON.parse(localStorage.getItem(localCacheKey(fbUser.uid))||'null');
     if(s) state = {...state, ...s, ui:{...state.ui, ...(s.ui||{})}};
   }catch(e){}
 }
-function saveAuth(){ localStorage.setItem(AUTH_KEY, JSON.stringify(state.user)); }
-function getUsers(){ return JSON.parse(localStorage.getItem(USERS_KEY)||'{}'); }
-function setUsers(u){ localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
-function getAllow(){ return JSON.parse(localStorage.getItem(ALLOW_KEY)||'{}'); }
-function setAllow(a){ localStorage.setItem(ALLOW_KEY, JSON.stringify(a)); }
-function getAdminPass(){ return (JSON.parse(localStorage.getItem(ADMIN_KEY)||'null')||{}).pass || 'celo1995'; }
-function setAdminPass(p){ localStorage.setItem(ADMIN_KEY, JSON.stringify({pass:p})); }
 
-// ---------- AUTH ----------
-function showLogin(){ $('auth-login').classList.remove('hidden'); $('auth-signup').classList.add('hidden'); }
-function showSignup(){ $('auth-login').classList.add('hidden'); $('auth-signup').classList.remove('hidden'); }
-function doLogin(){
-  const e = $('lg-email').value.trim().toLowerCase();
-  const p = $('lg-pass').value;
-  const err = $('lg-err');
-  err.innerHTML='';
-  if(!e || !p){ err.innerHTML='<div class="err">Preencha e-mail e senha.</div>'; return; }
-
-  // Admin login (accept EITHER admin master password OR user account password)
-  if(e === ADMIN_EMAIL){
-    const users = getUsers();
-    const u = users[ADMIN_EMAIL];
-    const validMaster = (p === getAdminPass());
-    const validUser = (u && u.pass === p);
-    if(!validMaster && !validUser){ err.innerHTML='<div class="err">Senha incorreta. Use a senha do admin (celo1995) ou a senha que você cadastrou.</div>'; return; }
-    // If admin user record doesn't exist, create it
-    if(!users[ADMIN_EMAIL]){
-      users[ADMIN_EMAIL] = { name:'Marcelo', email:ADMIN_EMAIL, pass:p, createdAt:Date.now(), isAdmin:true };
-    } else {
-      users[ADMIN_EMAIL].isAdmin = true;
-    }
-    setUsers(users);
-    // Ensure admin is in allowlist with vitalício
-    const allow = getAllow();
-    allow[ADMIN_EMAIL] = { ...(allow[ADMIN_EMAIL]||{}), addedAt:allow[ADMIN_EMAIL]?.addedAt||Date.now(), expiresAt:null, active:true, name:'Admin (Marcelo)', notes:'Administrador — acesso vitalício' };
-    setAllow(allow);
-    state.user = { ...users[ADMIN_EMAIL], isAdmin:true };
-    saveAuth();
-    loadData(ADMIN_EMAIL);
-    bootAfterAuth();
-    return;
-  }
-
-  const users = getUsers();
-  const u = users[e];
-  if(!u || u.pass !== p){ err.innerHTML='<div class="err">E-mail ou senha inválidos.</div>'; return; }
-
-  // Force admin recognition by email even if user was created as normal
-  if(e === ADMIN_EMAIL){ u.isAdmin = true; users[e] = u; setUsers(users); }
-
-  // Check allowlist
-  const allow = getAllow();
-  const a = allow[e];
-  if(!a || !a.active){
-    // Admin sempre passa mesmo sem allowlist
-    if(e === ADMIN_EMAIL){
-      allow[ADMIN_EMAIL] = { addedAt:Date.now(), expiresAt:null, active:true, name:'Admin (Marcelo)' };
-      setAllow(allow);
-    } else {
-      state.user = { name:u.name, email:e, blocked:true };
-      saveAuth();
-      showScreen('scr-noaccess');
-      return;
-    }
-  } else if(a.expiresAt && a.expiresAt < Date.now() && e !== ADMIN_EMAIL){
-    state.user = { name:u.name, email:e, blocked:true };
-    saveAuth();
-    showScreen('scr-noaccess');
-    return;
-  }
-
-  state.user = u;
-  saveAuth();
-  loadData(e);
-  bootAfterAuth();
-}
-function doSignup(){
-  const n = $('sg-name').value.trim();
-  const e = $('sg-email').value.trim().toLowerCase();
-  const p = $('sg-pass').value;
-  const err = $('sg-err');
-  err.innerHTML='';
-  if(!n || !e || !p){ err.innerHTML='<div class="err">Preencha todos os campos.</div>'; return; }
-  if(p.length<6){ err.innerHTML='<div class="err">Senha precisa de 6+ caracteres.</div>'; return; }
-  if(e === ADMIN_EMAIL){ err.innerHTML='<div class="err">Este e-mail é reservado ao administrador. Faça login.</div>'; return; }
-  const users = getUsers();
-  if(users[e]){ err.innerHTML='<div class="err">E-mail já cadastrado. Faça login.</div>'; return; }
-  const user = { name:n, email:e, pass:p, createdAt:Date.now() };
-  users[e] = user; setUsers(users);
-  state.user = user; saveAuth();
-
-  // Check allowlist
-  const allow = getAllow();
-  if(!allow[e] || !allow[e].active || (allow[e].expiresAt && allow[e].expiresAt < Date.now())){
-    state.user.blocked = true; saveAuth();
-    showScreen('scr-noaccess');
-    return;
-  }
-  loadData(e);
-  bootAfterAuth();
+// ---------- AUTH (Google) ----------
+function doGoogleSignIn(){
+  const btn=$('google-btn'), lbl=$('google-btn-lbl'), err=$('auth-err');
+  if(err) err.innerHTML='';
+  if(btn) btn.style.opacity='0.7';
+  if(lbl) lbl.textContent='Entrando...';
+  const provider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.signInWithPopup(provider).catch(e=>{
+    console.log('Erro no login Google:', e);
+    if(btn) btn.style.opacity='1';
+    if(lbl) lbl.textContent='Entrar com Google';
+    if(err && e.code!=='auth/popup-closed-by-user') err.innerHTML='<div class="err">Não foi possível entrar com o Google. Tente novamente.</div>';
+  });
 }
 function doLogout(){
-  localStorage.removeItem(AUTH_KEY);
+  fbAuth.signOut().catch(()=>{});
+  fbUser = null;
   state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], ui:{tab:'home',selectedSession:null} };
   showScreen('scr-auth');
-  showLogin();
   $('tabbar').classList.add('hidden');
-  $('lg-email').value=''; $('lg-pass').value=''; $('lg-err').innerHTML='';
+  const err=$('auth-err'); if(err) err.innerHTML='';
+  const btn=$('google-btn'); if(btn) btn.style.opacity='1';
+  const lbl=$('google-btn-lbl'); if(lbl) lbl.textContent='Entrar com Google';
 }
-
 function doDeleteAccount(){
-  if(!state.user || !state.user.email) return;
-  const email = state.user.email;
+  if(!state.user || !fbUser) return;
+  const email = fbUser.email;
   if(email === ADMIN_EMAIL){ toast('⚠️ A conta de administrador não pode ser excluída por aqui.'); closeModal(); return; }
   if(!confirm('Tem certeza? Todo o seu progresso será apagado para sempre.')) return;
-  const users = getUsers(); delete users[email]; setUsers(users);
-  try{ localStorage.removeItem(DATA_PREFIX+email); }catch(e){}
-  localStorage.removeItem(AUTH_KEY);
+  const uid = fbUser.uid;
+  db.collection('usuarios').doc(uid).delete().catch(e=>console.log('Erro ao excluir na nuvem:', e));
+  try{ localStorage.removeItem(localCacheKey(uid)); }catch(e){}
+  fbAuth.signOut().catch(()=>{});
+  fbUser = null;
   state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], ui:{tab:'home',selectedSession:null} };
   closeModal();
   showScreen('scr-auth');
-  showSignup();
   toast('✅ Conta excluída. Comece do zero quando quiser.');
 }
 
+async function afterGoogleSignIn(user){
+  fbUser = user;
+  const email = (user.email||'').toLowerCase();
+  showScreen('scr-auth');
+  const lbl = $('google-btn-lbl'); if(lbl) lbl.textContent='Verificando acesso...';
+
+  let isAdmin = false;
+  try{
+    const adminDoc = await db.collection('admins').doc(email).get();
+    isAdmin = adminDoc.exists && adminDoc.data().ativo === true;
+  }catch(e){ console.log('Erro ao verificar admin:', e); }
+
+  let allowData = null;
+  try{
+    const allowDoc = await db.collection('usuariosAutorizados').doc(email).get();
+    if(allowDoc.exists) allowData = allowDoc.data();
+  }catch(e){ console.log('Erro ao verificar acesso:', e); }
+
+  const now = Date.now();
+  const temAcesso = allowData && allowData.active && (!allowData.expiresAt || allowData.expiresAt > now);
+
+  if(!isAdmin && !temAcesso){
+    state.user = { name:user.displayName||'', email, blocked:true };
+    showScreen('scr-noaccess');
+    return;
+  }
+
+  if(isAdmin && !temAcesso){
+    const dadosAdmin = { active:true, expiresAt:null, name:user.displayName||'Admin (Marcelo)', notes:'Administrador — acesso vitalício', addedAt:now };
+    try{
+      await db.collection('usuariosAutorizados').doc(email).set(dadosAdmin, {merge:true});
+    }catch(e){ console.log('Erro ao liberar acesso do admin:', e); }
+    allowData = dadosAdmin;
+  }
+  myAccess = allowData;
+
+  state.user = { name:user.displayName||'', email, isAdmin };
+  await loadData();
+  if(!state.user) state.user = { name:user.displayName||'', email, isAdmin };
+  state.user.isAdmin = isAdmin;
+  state.user.email = email;
+  bootAfterAuth();
+}
+
+fbAuth.onAuthStateChanged(function(user){
+  if(user){
+    afterGoogleSignIn(user);
+  } else {
+    fbUser = null;
+    if(!state.user || !state.user.blocked) showScreen('scr-auth');
+  }
+});
+
 function bootAfterAuth(){
   cleanupOldHistory();
-  // Force admin flag by email (source of truth)
-  if(state.user && state.user.email === ADMIN_EMAIL){
-    state.user.isAdmin = true;
-    // Ensure allowlist entry as vitalício
-    const allow = getAllow();
-    allow[ADMIN_EMAIL] = { ...(allow[ADMIN_EMAIL]||{}), addedAt:allow[ADMIN_EMAIL]?.addedAt||Date.now(), expiresAt:null, active:true, name:'Admin (Marcelo)', notes:'Administrador — acesso vitalício' };
-    setAllow(allow);
-    // Ensure user record has isAdmin
-    const users = getUsers();
-    if(users[ADMIN_EMAIL]){ users[ADMIN_EMAIL].isAdmin = true; setUsers(users); }
-    saveAuth();
-  }
+  if(!state.user){ showScreen('scr-auth'); return; }
   if(!state.user.profile || !state.user.profile.quiz_done){
     showScreen('scr-quiz'); bindOpts('scr-quiz');
     return;
@@ -260,9 +253,6 @@ function saveQuiz(){
 
   const profile = { nickname:nick, sex, age, height, currentWeight:weight, whatsapp:whats, goal, level, quiz_done:true };
   state.user.profile = profile;
-  // save to users bank
-  const users = getUsers(); users[state.user.email] = {...users[state.user.email], profile}; setUsers(users);
-  saveAuth();
   // seed weight history
   state.weights = [{ date:Date.now(), weight }];
   saveData();
@@ -287,13 +277,12 @@ function latestWeight(){ if(!state.weights.length) return null; return state.wei
 function firstWeight(){ if(!state.weights.length) return null; return state.weights[0].weight; }
 
 // ---------- ACCESS ----------
+let myAccess = null; // dados de acesso (usuariosAutorizados) do usuário logado, carregados no login
 function accessDaysLeft(){
   if(state.user && state.user.isAdmin) return 999999;
-  const allow = getAllow();
-  const a = allow[state.user.email];
-  if(!a || !a.active) return 0;
-  if(!a.expiresAt) return 999999;
-  return Math.max(0, Math.ceil((a.expiresAt - Date.now())/86400000));
+  if(!myAccess || !myAccess.active) return 0;
+  if(!myAccess.expiresAt) return 999999;
+  return Math.max(0, Math.ceil((myAccess.expiresAt - Date.now())/86400000));
 }
 function accessLabel(days){
   if(days>=999999) return '♾️ Acesso vitalício';
@@ -1153,8 +1142,7 @@ function onPhotoPicked(ev){
       const data = c.toDataURL('image/jpeg', 0.85);
       state.user.profile = state.user.profile || {};
       state.user.profile.photo = data;
-      const users = getUsers(); users[state.user.email] = {...users[state.user.email], profile:state.user.profile}; setUsers(users);
-      saveAuth(); saveData();
+      saveData();
       toast('✅ Foto atualizada');
       goTab('profile');
     };
@@ -1169,7 +1157,7 @@ function saveWeight(){
   if(!v || v<30 || v>250) return toast('Peso inválido');
   state.weights.push({ date:Date.now(), weight:v });
   state.user.profile.currentWeight = v;
-  saveAuth(); saveData();
+  saveData();
   checkWeightTrophies();
   toast(`✅ Peso ${v}kg registrado!`);
   closeModal();
@@ -1294,16 +1282,14 @@ function openExercise(name){ window.open(ytLink(name), '_blank'); }
 // ---------- MODALS ----------
 const MODAL_CONTENT = {
   'support-info':`<h3>⚕️ Ferramenta de apoio ao treino</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">O MetaTreino organiza e acompanha seus treinos de forma automatizada, mas <b>não substitui uma avaliação médica nem o acompanhamento de um profissional de educação física</b>.<br><br>Antes de iniciar qualquer programa de exercícios — principalmente se você tem alguma condição de saúde, lesão, ou está voltando a treinar depois de um tempo parado — procure um médico para uma avaliação e, se possível, um profissional de educação física para orientação individual.<br><br>Pense no app como um apoio para organizar sua rotina, não como um substituto do acompanhamento profissional.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Entendi</button>`,
-  'faq':`<h3>❓ FAQ / Sobre</h3><p><b>MetaTreino</b> gera planos de treino inteligentes de musculação e corrida, personalizados.<br><br><b>Como funciona?</b> Escolha o módulo, responda o questionário e receba um plano progressivo.<br><br><b>Meus dados ficam salvos?</b> Sim, localmente no seu dispositivo. Histórico de treinos guardado por 90 dias.<br><br><b>Contato:</b> celoborgesms@gmail.com</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
-  'privacy':`<h3>🔒 Privacidade</h3><p>Seus dados são armazenados apenas no seu dispositivo. Não coletamos, não compartilhamos e não vendemos informações. Se precisar, contate <a href="mailto:celoborgesms@gmail.com">celoborgesms@gmail.com</a>.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
+  'faq':`<h3>❓ FAQ / Sobre</h3><p><b>MetaTreino</b> gera planos de treino inteligentes de musculação e corrida, personalizados.<br><br><b>Como funciona?</b> Escolha o módulo, responda o questionário e receba um plano progressivo.<br><br><b>Meus dados ficam salvos?</b> Sim, na nuvem, vinculados à sua conta Google — você pode entrar de qualquer aparelho. Histórico de treinos guardado por 90 dias.<br><br><b>Contato:</b> celoborgesms@gmail.com</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
+  'privacy':`<h3>🔒 Privacidade</h3><p>Seus dados de treino ficam salvos na nuvem, vinculados à sua conta Google, e visíveis apenas para você e para o treinador. Não coletamos, não compartilhamos e não vendemos suas informações. Se precisar, contate <a href="mailto:celoborgesms@gmail.com">celoborgesms@gmail.com</a>.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
   'terms':`<h3>📄 Termos de uso</h3><p>App fornecido "no estado em que se encontra", sem garantias. Consulte profissional de saúde antes de iniciar qualquer programa. Uso restrito a alunos autorizados.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
   'edit-profile':()=>{ const p = state.user.profile||{}; return `<h3>✏️ Editar perfil</h3><div class="field"><label>Como quer ser chamado</label><input class="input" id="ep-nick" value="${p.nickname||''}"></div><div class="field"><label>Idade</label><input class="input mono" type="number" id="ep-age" value="${p.age||''}"></div><div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="ep-height" value="${p.height||''}"></div><div class="field"><label>WhatsApp</label><input class="input mono" id="ep-whats" value="${p.whatsapp||''}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveProfileEdit()">Salvar</button>`; },
-  'change-pass':`<h3>🔑 Alterar senha</h3><div class="field"><label>Senha atual</label><input class="input" type="password" id="cp-cur"></div><div class="field"><label>Nova senha (mín 6)</label><input class="input" type="password" id="cp-new"></div><div id="cp-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doChangePass()">Salvar</button>`,
-  'change-admin-pass':`<h3>🔑 Alterar senha do admin</h3><div class="field"><label>Senha atual</label><input class="input" type="password" id="ap-cur"></div><div class="field"><label>Nova senha (mín 6)</label><input class="input" type="password" id="ap-new"></div><div id="ap-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doChangeAdminPass()">Salvar</button>`,
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
-  'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
+  'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno (mesmo da conta Google)</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
   'broadcast':`<h3>📢 Mensagem em massa (WhatsApp)</h3><p style="color:var(--text-dim);font-size:13px">Gera um link do WhatsApp Web para cada aluno com o texto abaixo. Os alunos precisam ter WhatsApp cadastrado.</p><div class="field"><label>Mensagem</label><textarea class="input" id="bc-msg" rows="4" style="resize:vertical">Olá, treinador aqui do MetaTreino! Passando pra lembrar...</textarea></div><button class="btn btn-primary btn-block" onclick="doBroadcast()">Abrir links WhatsApp</button>`,
-  'delete-account':()=>{ const email=(state.user&&state.user.email)||''; return `<h3>🗑️ Excluir minha conta</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Isso apaga <b>permanentemente</b> todo o seu progresso: treinos, PRs, histórico de peso e troféus.<br><br>Seu acesso ao app continua liberado — você pode criar uma conta nova com o mesmo e-mail (<b>${email}</b>) e começar do zero na hora.<br><br>Essa ação <b>não pode ser desfeita</b>.</p><button class="btn btn-outline btn-block" style="margin-top:16px;border-color:#ef4444;color:#ef4444" onclick="doDeleteAccount()">Sim, excluir minha conta</button><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`; },
+  'delete-account':()=>{ const email=(state.user&&state.user.email)||''; return `<h3>🗑️ Excluir minha conta</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Isso apaga <b>permanentemente</b> todo o seu progresso: treinos, PRs, histórico de peso e troféus.<br><br>Seu acesso ao app continua liberado — você pode entrar de novo com a mesma conta Google (<b>${email}</b>) e começar do zero na hora.<br><br>Essa ação <b>não pode ser desfeita</b>.</p><button class="btn btn-outline btn-block" style="margin-top:16px;border-color:#ef4444;color:#ef4444" onclick="doDeleteAccount()">Sim, excluir minha conta</button><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`; },
 };
 function openModal(k){
   const c = MODAL_CONTENT[k];
@@ -1318,40 +1304,44 @@ function saveProfileEdit(){
   p.age = parseInt($('ep-age').value) || p.age;
   p.height = parseFloat($('ep-height').value) || p.height;
   p.whatsapp = $('ep-whats').value.trim();
-  const users = getUsers(); users[state.user.email] = {...users[state.user.email], profile:p}; setUsers(users);
-  saveAuth(); saveData(); toast('✅ Perfil atualizado'); closeModal(); goTab('profile');
-}
-function doChangePass(){
-  const cur=$('cp-cur').value, nw=$('cp-new').value, err=$('cp-err'); err.innerHTML='';
-  if(cur !== state.user.pass){ err.innerHTML='<div class="err">Senha atual incorreta.</div>'; return; }
-  if(nw.length<6){ err.innerHTML='<div class="err">Nova senha muito curta.</div>'; return; }
-  state.user.pass = nw;
-  const users = getUsers(); users[state.user.email].pass = nw; setUsers(users);
-  saveAuth(); toast('✅ Senha alterada'); closeModal();
-}
-function doChangeAdminPass(){
-  const cur=$('ap-cur').value, nw=$('ap-new').value, err=$('ap-err'); err.innerHTML='';
-  if(cur !== getAdminPass()){ err.innerHTML='<div class="err">Senha atual incorreta.</div>'; return; }
-  if(nw.length<6){ err.innerHTML='<div class="err">Nova senha muito curta.</div>'; return; }
-  setAdminPass(nw);
-  toast('✅ Senha do admin alterada'); closeModal();
+  saveData(); toast('✅ Perfil atualizado'); closeModal(); goTab('profile');
 }
 
 // ---------- ADMIN ----------
 let admFilter = 'all';
-function goAdmin(){
+let allowCache = {};     // email -> doc de usuariosAutorizados
+let usuariosCache = {};  // email -> doc de usuarios (estadoApp, nome...) — pra stats/perfil na visão do admin
+let admLoaded = false;
+
+async function loadAdminData(){
+  try{
+    const [allowSnap, usersSnap] = await Promise.all([
+      db.collection('usuariosAutorizados').get(),
+      db.collection('usuarios').get()
+    ]);
+    allowCache = {};
+    allowSnap.forEach(doc=>{ allowCache[doc.id] = doc.data(); });
+    usuariosCache = {};
+    usersSnap.forEach(doc=>{ const d = doc.data(); if(d.email) usuariosCache[d.email.toLowerCase()] = {...d, _uid:doc.id}; });
+    admLoaded = true;
+  }catch(e){
+    console.log('Erro ao carregar dados do painel admin:', e);
+    toast('⚠️ Não foi possível carregar os dados. Confira sua conexão e as permissões do Firestore.');
+  }
+}
+async function goAdmin(){
   $('tabbar').classList.add('hidden');
   showScreen('scr-admin');
   const p = state.user.profile;
   $('adm-hi').textContent = 'Olá, '+((p&&p.nickname)||'Marcelo')+'!';
+  $('adm-list').innerHTML = `<div class="rest-card"><div style="font-size:34px">⏳</div><div class="rest-sub">Carregando alunos...</div></div>`;
+  await loadAdminData();
   renderAdminStats();
   renderAdminList();
 }
 function renderAdminStats(){
-  const allow = getAllow();
-  const users = getUsers();
   const now = Date.now();
-  const list = Object.entries(allow);
+  const list = Object.entries(allowCache);
   const active = list.filter(([,a])=>a.active && (!a.expiresAt||a.expiresAt>now)).length;
   const expiring = list.filter(([,a])=>a.active && a.expiresAt && a.expiresAt>now && a.expiresAt<now+7*86400000).length;
   const expired = list.filter(([,a])=>!a.active||(a.expiresAt&&a.expiresAt<=now)).length;
@@ -1362,13 +1352,11 @@ function renderAdminStats(){
 }
 function setAdminFilter(f){ admFilter=f; document.querySelectorAll('#adm-filter-chips .filter-chip').forEach(c=>c.classList.toggle('on', c.dataset.f===f)); renderAdminList(); }
 function renderAdminList(){
-  const allow = getAllow();
-  const users = getUsers();
   const now = Date.now();
   const q = ($('adm-search').value||'').toLowerCase();
-  let items = Object.entries(allow).map(([email,a])=>({email,...a, user:users[email]}));
+  let items = Object.entries(allowCache).map(([email,a])=>({email,...a, user:usuariosCache[email]}));
   items = items.filter(x=>{
-    if(!x.email.includes(q) && !(x.user?.name||'').toLowerCase().includes(q)) return false;
+    if(!x.email.includes(q) && !(x.user?.nome||'').toLowerCase().includes(q) && !(x.name||'').toLowerCase().includes(q)) return false;
     const isActive = x.active && (!x.expiresAt || x.expiresAt>now);
     const isExpiring = isActive && x.expiresAt && x.expiresAt<now+7*86400000;
     const isExpired = !x.active || (x.expiresAt && x.expiresAt<=now);
@@ -1386,12 +1374,12 @@ function renderAdminList(){
     const cls = !isActive?'off':days<7?'warn':'on';
     const daysLbl = days>=9999?'∞':days<=0?'Expirado':`${days}d`;
     return `<div class="stud" onclick="openStudent('${x.email}')">
-      <div class="stud-top"><div><div class="stud-name">${x.user?.name || x.name || x.email.split('@')[0]}</div><div class="stud-email">${x.email}</div></div><div class="stud-days ${cls}">${daysLbl}</div></div>
+      <div class="stud-top"><div><div class="stud-name">${x.user?.nome || x.name || x.email.split('@')[0]}</div><div class="stud-email">${x.email}</div></div><div class="stud-days ${cls}">${daysLbl}</div></div>
       <div class="stud-meta">${x.phone?`<span>📱 <b>${x.phone}</b></span>`:''}${x.notes?`<span>📝 ${x.notes}</span>`:''}${x.discount?`<span>🏷️ <b>${x.discount}% off</b></span>`:''}</div>
     </div>`;
   }).join('');
 }
-function doAddStudent(){
+async function doAddStudent(){
   const email = $('as-email').value.trim().toLowerCase();
   const name = $('as-name').value.trim();
   const phone = $('as-whats').value.trim();
@@ -1400,31 +1388,34 @@ function doAddStudent(){
   const err = $('as-err'); err.innerHTML='';
   if(!email || !email.includes('@')){ err.innerHTML='<div class="err">E-mail inválido</div>'; return; }
   if(!dur){ err.innerHTML='<div class="err">Selecione a duração</div>'; return; }
-  const allow = getAllow();
-  allow[email] = { addedAt:Date.now(), expiresAt: dur>=9999?null:Date.now()+dur*86400000, active:true, phone, notes, name, discount:0 };
-  setAllow(allow);
-  toast('✅ Acesso liberado');
-  closeModal();
-  goAdmin();
+  const dados = { addedAt:Date.now(), expiresAt: dur>=9999?null:Date.now()+dur*86400000, active:true, phone, notes, name, discount:0 };
+  try{
+    await db.collection('usuariosAutorizados').doc(email).set(dados, {merge:true});
+    allowCache[email] = {...(allowCache[email]||{}), ...dados};
+    toast('✅ Acesso liberado');
+    closeModal();
+    goAdmin();
+  }catch(e){
+    console.log('Erro ao liberar aluno:', e);
+    err.innerHTML='<div class="err">Não foi possível liberar o aluno. Confira as permissões do Firestore.</div>';
+  }
 }
 
 function openStudent(email){
-  const allow = getAllow();
-  const users = getUsers();
-  const a = allow[email]; if(!a) return;
-  const u = users[email];
+  const a = allowCache[email]; if(!a) return;
+  const u = usuariosCache[email];
   const now = Date.now();
   const days = a.expiresAt ? Math.ceil((a.expiresAt-now)/86400000) : 9999;
   const daysLbl = days>=9999?'Vitalício':days<=0?'Expirado':`${days} dias`;
-  const p = u?.profile;
-  const data = u ? JSON.parse(localStorage.getItem(DATA_PREFIX+email)||'null') : null;
+  const data = u?.estadoApp;
+  const p = data?.user?.profile;
   const totalWk = (data?.modules?.lift?.history?.length||0) + (data?.modules?.run?.history?.length||0);
   showScreen('scr-admin-student');
   $('stud-tag').textContent = 'Aluno · '+email;
   $('stud-content').innerHTML = `
     <div class="profile-head">
-      <div class="profile-avatar" style="overflow:hidden">${p?.photo?`<img src="${p.photo}">`:(p?.nickname||u?.name||'?').charAt(0).toUpperCase()}</div>
-      <div><div class="profile-name">${p?.nickname||u?.name||'—'}</div><div class="profile-email">${email}</div><div class="profile-tag">${a.active?'🎫 Ativo':'🔒 Bloqueado'} · ${daysLbl}</div></div>
+      <div class="profile-avatar" style="overflow:hidden">${p?.photo?`<img src="${p.photo}">`:(p?.nickname||u?.nome||'?').charAt(0).toUpperCase()}</div>
+      <div><div class="profile-name">${p?.nickname||u?.nome||'—'}</div><div class="profile-email">${email}</div><div class="profile-tag">${a.active?'🎫 Ativo':'🔒 Bloqueado'} · ${daysLbl}</div></div>
     </div>
 
     <div class="section-lbl">Ações rápidas</div>
@@ -1466,46 +1457,59 @@ function openStudent(email){
     <button class="btn btn-ghost btn-block danger" style="margin-top:8px;color:#fda4af;border-color:rgba(244,63,94,0.3)" onclick="removeStudent('${email}')">🗑️ Remover aluno</button>
   `;
 }
-function adjustDays(email, days){
-  const allow = getAllow(); const a = allow[email]; if(!a) return;
+async function adjustDays(email, days){
+  const a = allowCache[email]; if(!a) return;
   const base = a.expiresAt || Date.now();
-  a.expiresAt = base + days*86400000;
-  if(a.expiresAt < Date.now()) a.active = false;
-  setAllow(allow);
-  toast(days>0?`+${days} dias`:`${days} dias`);
-  openStudent(email);
+  let novoExpira = base + days*86400000;
+  let ativo = a.active;
+  if(novoExpira < Date.now()) ativo = false;
+  try{
+    await db.collection('usuariosAutorizados').doc(email).update({ expiresAt:novoExpira, active:ativo });
+    a.expiresAt = novoExpira; a.active = ativo;
+    toast(days>0?`+${days} dias`:`${days} dias`);
+    openStudent(email);
+  }catch(e){ console.log('Erro ao ajustar dias:', e); toast('⚠️ Não foi possível salvar. Confira as permissões do Firestore.'); }
 }
-function setStudentDiscount(email){
-  const allow = getAllow(); const a = allow[email]; if(!a) return;
-  a.discount = parseInt($('stud-disc').value)||0;
-  setAllow(allow);
-  toast('✅ Desconto salvo');
+async function setStudentDiscount(email){
+  const a = allowCache[email]; if(!a) return;
+  const val = parseInt($('stud-disc').value)||0;
+  try{
+    await db.collection('usuariosAutorizados').doc(email).update({ discount:val });
+    a.discount = val;
+    toast('✅ Desconto salvo');
+  }catch(e){ console.log('Erro ao salvar desconto:', e); toast('⚠️ Não foi possível salvar. Confira as permissões do Firestore.'); }
 }
-function toggleStudent(email){
-  const allow = getAllow(); const a = allow[email]; if(!a) return;
-  a.active = !a.active; setAllow(allow);
-  toast(a.active?'🔓 Aluno reativado':'🔒 Aluno bloqueado');
-  openStudent(email);
+async function toggleStudent(email){
+  const a = allowCache[email]; if(!a) return;
+  const novoAtivo = !a.active;
+  try{
+    await db.collection('usuariosAutorizados').doc(email).update({ active:novoAtivo });
+    a.active = novoAtivo;
+    toast(a.active?'🔓 Aluno reativado':'🔒 Aluno bloqueado');
+    openStudent(email);
+  }catch(e){ console.log('Erro ao bloquear/reativar aluno:', e); toast('⚠️ Não foi possível salvar. Confira as permissões do Firestore.'); }
 }
-function removeStudent(email){
+async function removeStudent(email){
   if(!confirm('Remover este aluno da lista? A conta dele será mantida mas ele perderá o acesso.')) return;
-  const allow = getAllow(); delete allow[email]; setAllow(allow);
-  toast('🗑️ Aluno removido'); goAdmin();
+  try{
+    await db.collection('usuariosAutorizados').doc(email).delete();
+    delete allowCache[email];
+    toast('🗑️ Aluno removido'); goAdmin();
+  }catch(e){ console.log('Erro ao remover aluno:', e); toast('⚠️ Não foi possível remover. Confira as permissões do Firestore.'); }
 }
 function doBroadcast(){
   const msg = $('bc-msg').value;
-  const allow = getAllow();
-  const phones = Object.entries(allow).filter(([,a])=>a.active && a.phone).map(([,a])=>a.phone);
+  const phones = Object.values(allowCache).filter(a=>a.active && a.phone).map(a=>a.phone);
   if(!phones.length){ toast('Nenhum aluno com WhatsApp cadastrado'); return; }
   closeModal();
   const links = phones.map(p=>`https://wa.me/${p.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`);
   const w = window.open('','_blank');
   w.document.write(`<html><head><title>Envio em massa</title><style>body{font-family:sans-serif;padding:20px;background:#050914;color:#e2e8f0}a{display:block;padding:12px 16px;background:#10b981;color:#022c22;text-decoration:none;border-radius:12px;margin:6px 0;font-weight:700}</style></head><body><h2>📢 Clique em cada link para abrir o WhatsApp:</h2>${links.map((l,i)=>`<a href="${l}" target="_blank">Aluno ${i+1} · abrir WhatsApp</a>`).join('')}</body></html>`);
 }
-function exportData(){
-  const data = { auth:JSON.parse(localStorage.getItem(AUTH_KEY)||'null'), users:getUsers(), allow:getAllow(), admin:JSON.parse(localStorage.getItem(ADMIN_KEY)||'null') };
-  const keys = Object.keys(localStorage).filter(k=>k.startsWith(DATA_PREFIX));
-  data.data = {}; keys.forEach(k=>data.data[k]=JSON.parse(localStorage.getItem(k)));
+async function exportData(){
+  toast('📤 Preparando backup...');
+  if(!admLoaded) await loadAdminData();
+  const data = { usuariosAutorizados:allowCache, usuarios:usuariosCache, exportadoEm:new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1663,34 +1667,6 @@ function checkRunEvolution(km, paceStr){
 }
 function parsePace(s){ if(!s) return 9999; const [m,sec] = s.split(':'); return parseFloat(m)*60 + parseFloat(sec||'0'); }
 
-// ---------- PASSWORD RESET ----------
-function openForgotPass(){
-  const html = `
-    <h3>🔑 Recuperar senha</h3>
-    <p style="color:var(--text-dim);font-size:13px">Como os dados ficam salvos no dispositivo, você pode redefinir sua senha respondendo o seu próprio e-mail cadastrado:</p>
-    <div class="field" style="margin-top:12px"><label>Seu e-mail</label><input class="input" type="email" id="fp-email" placeholder="seu@email.com"></div>
-    <div class="field"><label>Nova senha (mín 6)</label><input class="input" type="password" id="fp-new" placeholder="••••••••"></div>
-    <div id="fp-err"></div>
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doForgotPass()">Redefinir senha</button>
-    <p style="color:var(--text-mute);font-size:11.5px;margin-top:12px;text-align:center">Se não funcionar, contate <a href="mailto:${CONTACT_EMAIL}">seu treinador</a></p>`;
-  $('modal-inner').innerHTML = html;
-  $('modal-back').classList.add('on');
-}
-function doForgotPass(){
-  const e = $('fp-email').value.trim().toLowerCase();
-  const nw = $('fp-new').value;
-  const err = $('fp-err'); err.innerHTML='';
-  if(!e){ err.innerHTML='<div class="err">Informe o e-mail</div>'; return; }
-  if(nw.length<6){ err.innerHTML='<div class="err">Senha muito curta</div>'; return; }
-  if(e === ADMIN_EMAIL){ err.innerHTML='<div class="err">Para o admin use "Alterar senha" no painel</div>'; return; }
-  const users = getUsers();
-  if(!users[e]){ err.innerHTML='<div class="err">E-mail não cadastrado</div>'; return; }
-  users[e].pass = nw; setUsers(users);
-  toast('✅ Senha redefinida! Faça login.');
-  closeModal();
-  $('lg-email').value = e; $('lg-pass').value = nw;
-}
-
 // ---------- RACE TARGET ----------
 function daysToRace(){
   const rd = state.modules.run?.setup?.raceDate;
@@ -1704,19 +1680,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     const b = $('update-banner'); if(b) b.style.display='block';
     const badge = $('pf-update-badge'); if(badge) badge.innerHTML='<span style="padding:3px 8px;border-radius:999px;background:var(--accent);color:#3a2404;font-weight:800">nova!</span>';
   });
-  const authStored = JSON.parse(localStorage.getItem(AUTH_KEY)||'null');
-  if(authStored){
-    state.user = authStored;
-    if(state.user.blocked){ showScreen('scr-noaccess'); return; }
-    loadData(state.user.email);
-    bootAfterAuth();
-  } else {
-    showScreen('scr-auth');
-    showLogin();
-  }
-  ['lg-pass','sg-pass'].forEach(id=>{
-    const el=$(id); if(el) el.addEventListener('keydown',e=>{ if(e.key==='Enter'){ id==='lg-pass'?doLogin():doSignup(); } });
-  });
+  // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doLogin,doSignup,doLogout,showLogin,showSignup,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,saveWeight,doChangePass,doChangeAdminPass,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openForgotPass,doForgotPass,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry});
