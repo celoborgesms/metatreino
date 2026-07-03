@@ -1,5 +1,5 @@
-// ===== MetaTreino v3.5 =====
-const APP_VERSION = 'v3.5';
+// ===== MetaTreino v3.7 =====
+const APP_VERSION = 'v3.7';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'celoborgesms@gmail.com';
@@ -29,7 +29,7 @@ let state = {
   prs: {},        // { exId: {peso, reps, at} }
   weights: [],    // [{date, weight}]
   trophies: [],   // ['first_workout', ...]
-  stats: { liftTotal:0, runTotal:0, runKmTotal:0 }, // contadores vitalícios — nunca são apagados pela limpeza de 90 dias
+  stats: { liftTotal:0, runTotal:0, runKmTotal:0, walkTotal:0, walkKmTotal:0, bikeTotal:0, bikeKmTotal:0 }, // contadores vitalícios — nunca são apagados pela limpeza de 90 dias
   ui: { tab: 'home', selectedSession: null }
 };
 
@@ -98,6 +98,24 @@ const TROPHIES = [
   { id:'run_42k_run', emoji:'👑', name:'Maratona', desc:'42 km em uma sessão', cat:'run' },
   { id:'run_pr_distance', emoji:'📈', name:'Nova distância', desc:'Bateu recorde de distância', cat:'run' },
   { id:'run_pr_pace', emoji:'⚡', name:'Novo ritmo', desc:'Bateu recorde de ritmo', cat:'run' },
+  // CAMINHADA
+  { id:'walk_1', emoji:'🚶', name:'Primeira caminhada', desc:'Sua primeira caminhada registrada', cat:'walk' },
+  { id:'walk_10', emoji:'👟', name:'10 caminhadas', desc:'10 caminhadas concluídas', cat:'walk' },
+  { id:'walk_25', emoji:'🥾', name:'25 caminhadas', desc:'25 caminhadas concluídas', cat:'walk' },
+  { id:'walk_km_10', emoji:'📏', name:'10 km caminhados', desc:'Distância total 10 km', cat:'walk' },
+  { id:'walk_km_50', emoji:'🛤️', name:'50 km caminhados', desc:'Distância total 50 km', cat:'walk' },
+  { id:'walk_km_100', emoji:'🌍', name:'100 km caminhados', desc:'Distância total 100 km', cat:'walk' },
+  { id:'walk_3k', emoji:'🏅', name:'Caminhada 3K', desc:'Caminhou 3 km em uma sessão', cat:'walk' },
+  { id:'walk_5k', emoji:'🥇', name:'Caminhada 5K', desc:'Caminhou 5 km em uma sessão', cat:'walk' },
+  // BIKE
+  { id:'bike_1', emoji:'🚴', name:'Primeiro pedal', desc:'Seu primeiro pedal registrado', cat:'bike' },
+  { id:'bike_10', emoji:'⚙️', name:'10 pedais', desc:'10 pedaladas concluídas', cat:'bike' },
+  { id:'bike_25', emoji:'🚵', name:'25 pedais', desc:'25 pedaladas concluídas', cat:'bike' },
+  { id:'bike_km_50', emoji:'📏', name:'50 km pedalados', desc:'Distância total 50 km', cat:'bike' },
+  { id:'bike_km_100', emoji:'🛤️', name:'100 km pedalados', desc:'Distância total 100 km', cat:'bike' },
+  { id:'bike_km_500', emoji:'🌍', name:'500 km pedalados', desc:'Distância total 500 km', cat:'bike' },
+  { id:'bike_20k', emoji:'🏅', name:'Pedal 20K', desc:'Pedalou 20 km em uma sessão', cat:'bike' },
+  { id:'bike_50k', emoji:'🥇', name:'Pedal 50K', desc:'Pedalou 50 km em uma sessão', cat:'bike' },
   // PESO CORPORAL
   { id:'weight_down_1', emoji:'📉', name:'Perdeu 1kg', desc:'Emagrecimento -1kg', cat:'body' },
   { id:'weight_down_3', emoji:'🎉', name:'Perdeu 3kg', desc:'Emagrecimento -3kg', cat:'body' },
@@ -462,9 +480,13 @@ function buildLiftExercises(parts, setup){
   };
   const repsMap = {hipertrofia:'8-12', forca:'4-6', emagrecimento:'12-15', resistencia:'15-20'};
   const restMap = {hipertrofia:'60-90s', forca:'2-3min', emagrecimento:'30-45s', resistencia:'30s'};
+  // 50+ anos: recuperação entre séries é naturalmente mais lenta — descanso maior protege e melhora a qualidade das séries
+  const restMap50 = {hipertrofia:'90-120s', forca:'3min', emagrecimento:'45-60s', resistencia:'45s'};
+  const prof = state.user && state.user.profile;
+  const isSenior = prof && prof.age >= 50;
   const sets = (setsMap[level]||setsMap.iniciante)[goal] || 3;
   const reps = repsMap[goal];
-  const rest = restMap[goal];
+  const rest = (isSenior ? restMap50 : restMap)[goal];
   const equip = setup.equip || 'academia';
   const equipFilter = equip==='basico' ? ['casa','halteres'] : equip==='academia' ? ['academia','halteres','casa'] : equip==='halteres' ? ['halteres','casa'] : ['casa'];
   // quantidade de exercícios por grupo varia por nível
@@ -502,11 +524,26 @@ function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036
 function buildRunBlocks(kind, setup){
   const terrain = setup.terrain || 'asfalto';
   const level = setup.level || 'iniciante';
-  const warm = {name:'Aquecimento',exs:[{name:'Caminhada leve',desc:'Ritmo natural, aumente gradualmente',min:5},{name:'Mobilidade dinâmica',desc:'Rotações + elevação de joelhos',min:2}]};
+  // Perfil de menor impacto: iniciantes com IMC alto ou 50+ anos começam com
+  // blocos caminhada+corrida intercalados — protege articulações e reduz risco de lesão.
+  // (Ajuste silencioso: o app nunca expõe o motivo em termos de peso.)
+  const p = state.user && state.user.profile;
+  const imcVal = (()=>{ try{ const r = calcIMC(); return r ? parseFloat(r.value) : null; }catch(e){ return null; } })();
+  const gentle = level==='iniciante' && ((imcVal && imcVal >= 30) || (p && p.age >= 50));
+
+  const warm = {name:'Aquecimento',exs:[{name:'Caminhada leve',desc:'Ritmo natural, aumente gradualmente',min:gentle?7:5},{name:'Mobilidade dinâmica',desc:'Rotações + elevação de joelhos',min:2}]};
   const cool = {name:'Desaquecimento',exs:[{name:'Caminhada leve',desc:'Normalize a FC gradualmente',min:5}]};
   let main;
 
   if(kind==='Intervalado'){
+    if(gentle){
+      // Versão de baixo impacto: intervalos caminhada rápida / corrida leve
+      main = {name:'Principal',exs:[
+        {name:'6× 1 min corrida leve / 2 min caminhada rápida',desc:'Corra devagar, no ritmo que consegue conversar. A caminhada entre blocos é parte do treino, não pausa — mantenha ela ativa.',min:18},
+        {name:'Caminhada moderada',desc:'Finalize com ritmo confortável',min:5}
+      ]};
+      return [warm, main, cool];
+    }
     const nReps = level==='avancado'?8 : level==='intermediario'?6 : 5;
     if(terrain==='esteira'){
       // Na esteira não dá pra "dar tiros" com segurança: a mudança de velocidade é
@@ -533,6 +570,10 @@ function buildRunBlocks(kind, setup){
       ]};
     }
   } else if(kind==='Corrida Longa'){
+    if(gentle){
+      main = {name:'Principal',exs:[{name:'30 min alternando: 3 min corrida leve / 2 min caminhada',desc:'O objetivo é tempo em movimento, não velocidade. Com as semanas, os blocos de corrida vão crescendo naturalmente.',min:30}]};
+      return [warm, main, cool];
+    }
     const tips = {
       esteira:'Na esteira use inclinação de 1% pra simular a rua. Quebre mentalmente em blocos de 10 min.',
       trilha:'Na trilha o ritmo naturalmente cai — vá por tempo e esforço, não por pace. Leve água.',
@@ -549,6 +590,10 @@ function buildRunBlocks(kind, setup){
     };
     main = {name:'Principal',exs:[{name:'Corrida em ritmo alvo',desc:tips[terrain]||tips.asfalto,min:25}]};
   } else {
+    if(gentle){
+      main = {name:'Principal',exs:[{name:'20 min alternando: 2 min corrida leve / 2 min caminhada',desc:'Zona 2, sempre conseguindo conversar. Esse formato constrói base protegendo joelhos e canelas.',min:20}]};
+      return [warm, main, cool];
+    }
     const tips = {
       esteira:'Zona 2 com inclinação 1%. Bom dia pra assistir algo e deixar o tempo passar.',
       trilha:'Zona 2, aproveite a paisagem. Terreno leve, evite subidas fortes hoje.',
@@ -821,11 +866,13 @@ function labelGoal(mod){
 
 function renderTodayWorkout(w, isLift){
   const desc = isLift ? liftDesc(w) : runDesc(w);
+  const sug = isLift ? liftLoadSuggestion() : null;
   return `<div class="today">
     <div class="today-label">TREINO DE HOJE</div>
     <div class="today-diff ${isLift?'diff-med':'diff-easy'}">${isLift?'Foco':'Fácil'}</div>
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:w.name}</div>
     <div class="today-desc">${desc}</div>
+    ${sug?`<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);font-size:13px;line-height:1.45">${sug.emo} <b>Sugestão de hoje:</b> ${sug.txt}</div>`:''}
     <div class="today-meta">
       <span class="chip mono">⏱️ ${w.duration} min</span>
       ${w.distance?`<span class="chip mono">📍 ${w.distance}</span>`:''}
@@ -853,13 +900,26 @@ function renderRestDay(mod){
 function renderWeekGrid(mod){
   const days = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
   const today = getDayIdx();
-  const emo = mod.plan.type==='lift'?'💪':'🏃';
-  const scheduled = new Set(mod.plan.workouts.map(w=>w.dayIdx));
   const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-(today-1));
-  const doneDays = new Set((mod.history||[]).filter(h=>h.at>=startWk.getTime()).map(h=>{ const d=new Date(h.at); return d.getDay()===0?7:d.getDay(); }));
+  // Mescla os dois módulos: se a pessoa tem musculação E corrida, a semana mostra os dois
+  const sources = [];
+  if(state.modules.lift) sources.push({mod:state.modules.lift, emo:'💪'});
+  if(state.modules.run) sources.push({mod:state.modules.run, emo:'🏃'});
+  const dayInfo = {}; // idx -> {emos:[], done:bool}
+  sources.forEach(({mod:m, emo})=>{
+    m.plan.workouts.forEach(w=>{
+      dayInfo[w.dayIdx] = dayInfo[w.dayIdx] || {emos:[], done:false};
+      if(!dayInfo[w.dayIdx].emos.includes(emo)) dayInfo[w.dayIdx].emos.push(emo);
+    });
+    (m.history||[]).filter(h=>h.at>=startWk.getTime()).forEach(h=>{
+      const d=new Date(h.at); const idx = d.getDay()===0?7:d.getDay();
+      dayInfo[idx] = dayInfo[idx] || {emos:[], done:false};
+      dayInfo[idx].done = true;
+    });
+  });
   $('week-grid').innerHTML = days.map((n,i)=>{
-    const idx=i+1, has=scheduled.has(idx), done=doneDays.has(idx), isT=idx===today;
-    return `<div class="day ${isT?'today':''} ${!has?'rest':''}"><div class="day-name">${n.slice(0,3)}</div><div class="day-dot ${done?'done':has?'plan':''}"></div><div class="day-emoji">${has?emo:'·'}</div></div>`;
+    const idx=i+1, info=dayInfo[idx], has=!!(info&&info.emos.length), done=!!(info&&info.done), isT=idx===today;
+    return `<div class="day ${isT?'today':''} ${!has?'rest':''}"><div class="day-name">${n.slice(0,3)}</div><div class="day-dot ${done?'done':has?'plan':''}"></div><div class="day-emoji" style="${has&&info.emos.length>1?'font-size:11px;letter-spacing:-2px':''}">${has?info.emos.join(''):'·'}</div></div>`;
   }).join('');
 }
 
@@ -1068,13 +1128,48 @@ function finishLiftWorkout(k){
   const w = mod.plan.workouts.find(x=>x.k===k);
   if(!w) return;
   if(!checkLiftDone(w)){ toast('Registre ao menos uma série antes de salvar'); return; }
+  // Pergunta como a pessoa terminou o treino (auto-regulação)
+  const html = `
+    <h3>💪 Como você terminou o treino?</h3>
+    <p style="color:var(--text-dim);font-size:13px">Sua resposta ajuda a ajustar a sugestão do próximo treino.</p>
+    <div class="radio-grid" id="fl-feel" style="margin-top:12px">
+      <div class="opt" data-val="otimo">🚀 Muito bem, sobrou energia</div>
+      <div class="opt on" data-val="bem">😊 Bem, treino na medida</div>
+      <div class="opt" data-val="cansado">😮‍💨 Cansado, foi puxado</div>
+      <div class="opt" data-val="exausto">😩 Exausto, foi demais</div>
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="confirmLiftWorkout('${k}')">✅ Salvar treino</button>`;
+  $('modal-inner').innerHTML = html;
+  $('modal-back').classList.add('on');
+  bindOpts('modal-inner');
+}
+function confirmLiftWorkout(k){
+  const mod = state.modules.lift;
+  const w = mod.plan.workouts.find(x=>x.k===k);
+  if(!w) return;
+  const feel = readOpt('fl-feel') || 'bem';
   mod.history = mod.history || [];
-  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:w.duration, module:'lift' });
+  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:w.duration, module:'lift', feel });
   ensureStats(); state.stats.liftTotal++;
   checkTrophies();
   saveData();
-  toast('✅ Treino salvo com sucesso!');
+  closeModal();
+  if(feel==='exausto') toast('✅ Salvo! Vou sugerir pegar mais leve no próximo treino 😌');
+  else if(feel==='otimo') toast('✅ Salvo! Se sobrou energia, considere subir a carga no próximo 📈');
+  else toast('✅ Treino salvo com sucesso!');
   goTab('home');
+}
+// Sugestão de auto-regulação com base nos últimos treinos de musculação
+function liftLoadSuggestion(){
+  const h = (state.modules.lift?.history||[]).filter(x=>x.feel).slice(-2);
+  if(!h.length) return null;
+  const last = h[h.length-1];
+  const lastTwo = h.length>=2 && h.every(x=>x.feel==='exausto');
+  if(lastTwo) return {emo:'🛑', txt:'Seus 2 últimos treinos terminaram em exaustão. Hoje reduza a carga em ~20% e priorize a técnica — recuperar também é evoluir.'};
+  if(last.feel==='exausto') return {emo:'😌', txt:'Último treino foi pesado demais. Sugestão: reduza a carga em ~10% hoje e capriche na execução.'};
+  if(last.feel==='cansado') return {emo:'⚖️', txt:'Último treino foi puxado. Mantenha a mesma carga hoje e foque em completar todas as séries com boa forma.'};
+  if(last.feel==='otimo') return {emo:'📈', txt:'Você terminou o último treino com energia sobrando — boa hora pra subir a carga em ~5% ou adicionar 1-2 repetições.'};
+  return null;
 }
 function markRunDone(dayIdx){
   const mod = state.modules.run;
@@ -1094,10 +1189,10 @@ function renderHistory(){
   const mod = state.modules[state.active];
   const isLift = state.active==='lift';
   const h = mod.history||[];
-  $('hist-title').textContent = `${isLift?'🏋️':'🏃'} Histórico${isLift?'':' de Corrida'}`;
-  $('hist-tag').textContent = `Histórico · ${isLift?'Musculação':'Corrida'}`;
+  $('hist-title').textContent = `${isLift?'🏋️':'🏃'} Histórico${isLift?'':' de Atividades'}`;
+  $('hist-tag').textContent = `Histórico · ${isLift?'Musculação':'Corrida, caminhada e bike'}`;
   $('h-icon').textContent = isLift?'🏋️':'🏃';
-  $('h-lbl1').textContent = isLift?'Treinos':'Corridas';
+  $('h-lbl1').textContent = isLift?'Treinos':'Atividades';
   $('h-icon3').textContent = isLift?'⏱️':'📍';
   $('h-lbl3').textContent = isLift?'Total':'Total';
   $('h-count').textContent = h.length;
@@ -1323,14 +1418,23 @@ function unlockTrophy(id){
 }
 // Garante que os contadores vitalícios existem; migra dados de quem já tinha histórico
 function ensureStats(){
-  if(!state.stats) state.stats = { liftTotal:0, runTotal:0, runKmTotal:0 };
+  if(!state.stats) state.stats = {};
+  const s = state.stats;
+  ['liftTotal','runTotal','runKmTotal','walkTotal','walkKmTotal','bikeTotal','bikeKmTotal'].forEach(k=>{ if(typeof s[k]!=='number') s[k]=0; });
   const liftH = state.modules.lift?.history?.length || 0;
-  const runH = state.modules.run?.history?.length || 0;
-  const kmH = (state.modules.run?.history||[]).reduce((s,r)=>s+(r.distance||0),0);
+  const runH = state.modules.run?.history || [];
+  const runOnly = runH.filter(x=>!x.activity || x.activity==='corrida');
+  const walkOnly = runH.filter(x=>x.activity==='caminhada');
+  const bikeOnly = runH.filter(x=>x.activity==='bike');
+  const sumKm = arr => arr.reduce((t,r)=>t+(r.distance||0),0);
   // o contador nunca pode ser menor que o histórico visível (migração de versões antigas)
-  if(state.stats.liftTotal < liftH) state.stats.liftTotal = liftH;
-  if(state.stats.runTotal < runH) state.stats.runTotal = runH;
-  if(state.stats.runKmTotal < kmH) state.stats.runKmTotal = kmH;
+  if(s.liftTotal < liftH) s.liftTotal = liftH;
+  if(s.runTotal < runOnly.length) s.runTotal = runOnly.length;
+  if(s.runKmTotal < sumKm(runOnly)) s.runKmTotal = sumKm(runOnly);
+  if(s.walkTotal < walkOnly.length) s.walkTotal = walkOnly.length;
+  if(s.walkKmTotal < sumKm(walkOnly)) s.walkKmTotal = sumKm(walkOnly);
+  if(s.bikeTotal < bikeOnly.length) s.bikeTotal = bikeOnly.length;
+  if(s.bikeKmTotal < sumKm(bikeOnly)) s.bikeKmTotal = sumKm(bikeOnly);
 }
 function checkTrophies(){
   ensureStats();
@@ -1360,8 +1464,24 @@ function checkTrophies(){
   if(totalKm>=50) unlockTrophy('run_km_50');
   if(totalKm>=100) unlockTrophy('run_km_100');
   if(totalKm>=500) unlockTrophy('run_km_500');
-  // Best single run
-  const bestKm = Math.max(0, ...((state.modules.run?.history||[]).map(r=>r.distance||0)));
+  // Caminhada (vitalício)
+  const wT = state.stats.walkTotal, wKm = state.stats.walkKmTotal;
+  if(wT>=1) unlockTrophy('walk_1');
+  if(wT>=10) unlockTrophy('walk_10');
+  if(wT>=25) unlockTrophy('walk_25');
+  if(wKm>=10) unlockTrophy('walk_km_10');
+  if(wKm>=50) unlockTrophy('walk_km_50');
+  if(wKm>=100) unlockTrophy('walk_km_100');
+  // Bike (vitalício)
+  const bT = state.stats.bikeTotal, bKm = state.stats.bikeKmTotal;
+  if(bT>=1) unlockTrophy('bike_1');
+  if(bT>=10) unlockTrophy('bike_10');
+  if(bT>=25) unlockTrophy('bike_25');
+  if(bKm>=50) unlockTrophy('bike_km_50');
+  if(bKm>=100) unlockTrophy('bike_km_100');
+  if(bKm>=500) unlockTrophy('bike_km_500');
+  // Best single run (só corrida — caminhada e bike têm troféus próprios)
+  const bestKm = Math.max(0, ...((state.modules.run?.history||[]).filter(r=>!r.activity||r.activity==='corrida').map(r=>r.distance||0)));
   if(bestKm>=5) unlockTrophy('run_5k_run');
   if(bestKm>=10) unlockTrophy('run_10k_run');
   if(bestKm>=21) unlockTrophy('run_21k_run');
@@ -1375,7 +1495,7 @@ function checkTrophies(){
   if(s>=30) unlockTrophy('streak_30');
   // Meta semanal
   const mod = state.modules[state.active];
-  if(mod){
+  if(mod && mod.plan){
     const wkTarget = mod.plan.workouts.length;
     const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-6);
     const done7d = (mod.history||[]).filter(h=>h.at>=startWk.getTime()).length;
@@ -1383,8 +1503,8 @@ function checkTrophies(){
   }
 }
 function openTrophies(){
-  const catNames = { geral:'🌟 Gerais', streak:'🔥 Consistência', lift:'🏋️ Musculação', run:'🏃 Corrida', body:'⚖️ Corpo' };
-  const cats = ['geral','streak','lift','run','body'];
+  const catNames = { geral:'🌟 Gerais', streak:'🔥 Consistência', lift:'🏋️ Musculação', run:'🏃 Corrida', walk:'🚶 Caminhada', bike:'🚴 Bike', body:'⚖️ Corpo' };
+  const cats = ['geral','streak','lift','run','walk','bike','body'];
   const groups = cats.map(c=>({ cat:c, name:catNames[c], items:TROPHIES.filter(t=>t.cat===c) }));
   const totalUnlocked = state.trophies.length;
   const html = `
@@ -1752,9 +1872,12 @@ function openRunLog(dayIdx){
   const w = mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx));
   if(!w) return;
   const html = `
-    <h3>🏃 Registrar corrida</h3>
+    <h3>📝 Registrar atividade</h3>
     <p style="color:var(--text-dim);font-size:13px">${w.name} · Alvo: ${w.distance} em ${w.duration} min</p>
-    <div class="field" style="margin-top:12px"><label>Distância percorrida (km)</label><input class="input mono" type="number" step="0.1" id="rl-km" placeholder="Ex: 5.2"></div>
+    <div class="field" style="margin-top:12px"><label>O que você fez hoje?</label>
+      <div class="radio-grid g3" id="rl-type"><div class="opt on" data-val="corrida">🏃 Corrida</div><div class="opt" data-val="caminhada">🚶 Caminhada</div><div class="opt" data-val="bike">🚴 Bike</div></div>
+    </div>
+    <div class="field"><label>Distância percorrida (km)</label><input class="input mono" type="number" step="0.1" id="rl-km" placeholder="Ex: 5.2"></div>
     <div class="field"><label>Tempo total (minutos)</label><input class="input mono" type="number" id="rl-min" placeholder="Ex: 32" value="${w.duration}"></div>
     <div class="field"><label>Como se sentiu?</label>
       <div class="radio-grid g3" id="rl-rate"><div class="opt" data-val="1">😩 Difícil</div><div class="opt on" data-val="3">😊 Normal</div><div class="opt" data-val="5">🚀 Ótimo</div></div>
@@ -1767,29 +1890,44 @@ function openRunLog(dayIdx){
   $('modal-back').classList.add('on');
   bindOpts('modal-inner');
 }
+const ACTIVITY_META = { corrida:{emo:'🏃',lbl:'Corrida'}, caminhada:{emo:'🚶',lbl:'Caminhada'}, bike:{emo:'🚴',lbl:'Bike'} };
 function saveRunLog(dayIdx){
   const km = parseFloat($('rl-km').value);
   const min = parseInt($('rl-min').value);
   const rate = parseInt(readOpt('rl-rate')) || 3;
+  const type = readOpt('rl-type') || 'corrida';
   if(!km || km<=0){ toast('Distância inválida'); return; }
   if(!min || min<=0){ toast('Tempo inválido'); return; }
   const mod = state.modules.run;
   const w = mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx));
   const pace = (min/km);
   const paceStr = Math.floor(pace) + ':' + String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0') + '/km';
+  const meta = ACTIVITY_META[type] || ACTIVITY_META.corrida;
+  const name = type==='corrida' ? w.name : `${meta.emo} ${meta.lbl} — ${km}km`;
   mod.history = mod.history || [];
-  mod.history.push({ id:w.k, name:w.name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, module:'run' });
-  ensureStats(); state.stats.runTotal++; state.stats.runKmTotal += km;
-  // Check evolution
-  checkRunEvolution(km, paceStr);
+  mod.history.push({ id:w.k, name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, module:'run', activity:type });
+  ensureStats();
+  if(type==='corrida'){
+    // só corrida conta pros troféus e recordes de corrida (caminhada/bike têm ritmos incomparáveis)
+    state.stats.runTotal++; state.stats.runKmTotal += km;
+    checkRunEvolution(km, paceStr);
+  } else if(type==='caminhada'){
+    state.stats.walkTotal++; state.stats.walkKmTotal += km;
+    if(km>=3) unlockTrophy('walk_3k');
+    if(km>=5) unlockTrophy('walk_5k');
+  } else if(type==='bike'){
+    state.stats.bikeTotal++; state.stats.bikeKmTotal += km;
+    if(km>=20) unlockTrophy('bike_20k');
+    if(km>=50) unlockTrophy('bike_50k');
+  }
   checkTrophies();
   saveData();
-  toast(`🏃 Corrida salva: ${km}km em ${min}min (${paceStr})`);
+  toast(`${meta.emo} ${meta.lbl} salva: ${km}km em ${min}min (${paceStr})`);
   closeModal();
   goTab('home');
 }
 function checkRunEvolution(km, paceStr){
-  const h = state.modules.run.history || [];
+  const h = (state.modules.run.history || []).filter(r=>!r.activity||r.activity==='corrida');
   const prev = h.slice(0,-1);
   if(!prev.length) return;
   const maxKm = Math.max(...prev.map(r=>r.distance||0));
@@ -1823,9 +1961,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // Update available listener
   document.addEventListener('mt:update-available', ()=>{
     const b = $('update-banner'); if(b) b.style.display='block';
-    const badge = $('pf-update-badge'); if(badge) badge.innerHTML='<span style="padding:3px 8px;border-radius:999px;background:var(--accent);color:#3a2404;font-weight:800">nova!</span>';
   });
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry});
