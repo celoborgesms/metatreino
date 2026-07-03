@@ -32,22 +32,45 @@ const QUOTES = [
 ];
 
 const TROPHIES = [
-  { id:'first_workout', emoji:'🥇', name:'Primeiro treino', desc:'Concluiu o primeiro treino' },
-  { id:'streak_3', emoji:'🔥', name:'Streak 3 dias', desc:'3 dias seguidos treinando' },
-  { id:'streak_7', emoji:'⚡', name:'Streak 7 dias', desc:'Uma semana firme!' },
-  { id:'streak_14', emoji:'🌟', name:'Streak 14 dias', desc:'Duas semanas de disciplina' },
-  { id:'streak_30', emoji:'💎', name:'Streak 30 dias', desc:'Um mês inteiro sem falhar' },
-  { id:'workouts_10', emoji:'💪', name:'10 treinos', desc:'10 treinos concluídos' },
-  { id:'workouts_25', emoji:'🏋️', name:'25 treinos', desc:'25 treinos concluídos' },
-  { id:'workouts_50', emoji:'🏆', name:'50 treinos', desc:'50 treinos concluídos' },
-  { id:'workouts_100', emoji:'👑', name:'Centurião', desc:'100 treinos concluídos' },
-  { id:'week_goal', emoji:'🎯', name:'Meta da semana', desc:'Bateu a meta semanal' },
-  { id:'weight_down_1', emoji:'📉', name:'Perdeu 1kg', desc:'Emagrecimento -1kg' },
-  { id:'weight_down_3', emoji:'🎉', name:'Perdeu 3kg', desc:'Emagrecimento -3kg' },
-  { id:'weight_down_5', emoji:'🚀', name:'Perdeu 5kg', desc:'Emagrecimento -5kg' },
-  { id:'weight_up_2', emoji:'📈', name:'Ganhou 2kg', desc:'Ganho de massa +2kg' },
-  { id:'weight_up_5', emoji:'💥', name:'Ganhou 5kg', desc:'Ganho de massa +5kg' },
-  { id:'first_pr', emoji:'🏅', name:'Primeiro PR', desc:'Bateu recorde pessoal' }
+  // GERAIS
+  { id:'first_workout', emoji:'🥇', name:'Primeiro treino', desc:'Concluiu seu primeiro treino', cat:'geral' },
+  { id:'week_goal', emoji:'🎯', name:'Meta da semana', desc:'Bateu a meta semanal', cat:'geral' },
+  // STREAKS
+  { id:'streak_3', emoji:'🔥', name:'Streak 3 dias', desc:'3 dias seguidos treinando', cat:'streak' },
+  { id:'streak_7', emoji:'⚡', name:'Streak 7 dias', desc:'Uma semana firme!', cat:'streak' },
+  { id:'streak_14', emoji:'🌟', name:'Streak 14 dias', desc:'Duas semanas de disciplina', cat:'streak' },
+  { id:'streak_30', emoji:'💎', name:'Streak 30 dias', desc:'Um mês inteiro sem falhar', cat:'streak' },
+  // MUSCULAÇÃO
+  { id:'lift_10', emoji:'💪', name:'10 treinos', desc:'10 treinos de musculação', cat:'lift' },
+  { id:'lift_25', emoji:'🏋️', name:'25 treinos', desc:'25 treinos de musculação', cat:'lift' },
+  { id:'lift_50', emoji:'🏆', name:'50 treinos', desc:'50 treinos de musculação', cat:'lift' },
+  { id:'lift_100', emoji:'👑', name:'Centurião', desc:'100 treinos de musculação', cat:'lift' },
+  { id:'first_pr', emoji:'🏅', name:'Primeiro PR', desc:'Bateu recorde pessoal', cat:'lift' },
+  { id:'pr_5', emoji:'⚔️', name:'5 PRs', desc:'5 recordes pessoais quebrados', cat:'lift' },
+  { id:'pr_20', emoji:'🛡️', name:'20 PRs', desc:'Máquina de progressão', cat:'lift' },
+  // CORRIDA
+  { id:'run_1', emoji:'🏃', name:'Primeira corrida', desc:'Sua primeira corrida registrada', cat:'run' },
+  { id:'run_10', emoji:'👟', name:'10 corridas', desc:'10 corridas concluídas', cat:'run' },
+  { id:'run_25', emoji:'🎽', name:'25 corridas', desc:'25 corridas concluídas', cat:'run' },
+  { id:'run_50', emoji:'🥇', name:'50 corridas', desc:'50 corridas concluídas', cat:'run' },
+  { id:'run_km_10', emoji:'📏', name:'10 km acumulados', desc:'Distância total 10 km', cat:'run' },
+  { id:'run_km_50', emoji:'🛤️', name:'50 km acumulados', desc:'Distância total 50 km', cat:'run' },
+  { id:'run_km_100', emoji:'🌍', name:'100 km acumulados', desc:'Distância total 100 km', cat:'run' },
+  { id:'run_km_500', emoji:'🚀', name:'500 km acumulados', desc:'Meio milhar de km', cat:'run' },
+  { id:'run_5k_run', emoji:'🏁', name:'5K em uma corrida', desc:'Correu 5 km em uma sessão', cat:'run' },
+  { id:'run_10k_run', emoji:'🥈', name:'10K em uma corrida', desc:'Correu 10 km em uma sessão', cat:'run' },
+  { id:'run_21k_run', emoji:'🥇', name:'Meia maratona', desc:'21 km em uma sessão', cat:'run' },
+  { id:'run_42k_run', emoji:'👑', name:'Maratona', desc:'42 km em uma sessão', cat:'run' },
+  { id:'run_pr_distance', emoji:'📈', name:'Nova distância', desc:'Bateu recorde de distância', cat:'run' },
+  { id:'run_pr_pace', emoji:'⚡', name:'Novo ritmo', desc:'Bateu recorde de ritmo', cat:'run' },
+  // PESO CORPORAL
+  { id:'weight_down_1', emoji:'📉', name:'Perdeu 1kg', desc:'Emagrecimento -1kg', cat:'body' },
+  { id:'weight_down_3', emoji:'🎉', name:'Perdeu 3kg', desc:'Emagrecimento -3kg', cat:'body' },
+  { id:'weight_down_5', emoji:'🎊', name:'Perdeu 5kg', desc:'Emagrecimento -5kg', cat:'body' },
+  { id:'weight_down_10', emoji:'🚀', name:'Perdeu 10kg', desc:'Emagrecimento -10kg', cat:'body' },
+  { id:'weight_up_2', emoji:'📈', name:'Ganhou 2kg', desc:'Ganho de massa +2kg', cat:'body' },
+  { id:'weight_up_5', emoji:'💥', name:'Ganhou 5kg', desc:'Ganho de massa +5kg', cat:'body' },
+  { id:'weight_up_10', emoji:'🦾', name:'Ganhou 10kg', desc:'Ganho de massa +10kg', cat:'body' }
 ];
 
 // ---------- STORAGE ----------
@@ -82,9 +105,20 @@ function doLogin(){
   // Admin login
   if(e === ADMIN_EMAIL){
     if(p !== getAdminPass()){ err.innerHTML='<div class="err">Senha incorreta.</div>'; return; }
-    state.user = { name:'Admin', email:ADMIN_EMAIL, isAdmin:true };
+    // Load existing admin data or create fresh (as a normal user with isAdmin flag)
+    const users = getUsers();
+    if(!users[ADMIN_EMAIL]){
+      users[ADMIN_EMAIL] = { name:'Marcelo', email:ADMIN_EMAIL, pass:p, createdAt:Date.now(), isAdmin:true };
+      setUsers(users);
+    }
+    // Ensure admin is in allowlist with vitalício
+    const allow = getAllow();
+    allow[ADMIN_EMAIL] = { addedAt:Date.now(), expiresAt:null, active:true, name:'Admin (Marcelo)', notes:'Administrador — acesso vitalício' };
+    setAllow(allow);
+    state.user = { ...users[ADMIN_EMAIL], isAdmin:true };
     saveAuth();
-    goAdmin();
+    loadData(ADMIN_EMAIL);
+    bootAfterAuth();
     return;
   }
 
@@ -149,7 +183,6 @@ function doLogout(){
 
 function bootAfterAuth(){
   cleanupOldHistory();
-  if(state.user.isAdmin){ goAdmin(); return; }
   if(!state.user.profile || !state.user.profile.quiz_done){
     showScreen('scr-quiz'); bindOpts('scr-quiz');
     return;
@@ -214,10 +247,17 @@ function firstWeight(){ if(!state.weights.length) return null; return state.weig
 
 // ---------- ACCESS ----------
 function accessDaysLeft(){
+  if(state.user && state.user.isAdmin) return 999999;
   const allow = getAllow();
   const a = allow[state.user.email];
-  if(!a || !a.expiresAt) return 0;
+  if(!a || !a.active) return 0;
+  if(!a.expiresAt) return 999999;
   return Math.max(0, Math.ceil((a.expiresAt - Date.now())/86400000));
+}
+function accessLabel(days){
+  if(days>=999999) return '♾️ Acesso vitalício';
+  if(days<=0) return 'Acesso expirado';
+  return `${days} dias restantes`;
 }
 
 // ---------- CLEANUP HISTORY (90 days) ----------
@@ -237,10 +277,16 @@ function cleanupOldHistory(){
 }
 
 // ---------- MODULE PICK / SETUP ----------
-function pickModule(m){ state.active=m; saveData(); showScreen('scr-setup-'+m); bindOpts('scr-setup-'+m); }
+function pickModule(m){
+  state.active=m; saveData();
+  showScreen('scr-setup-'+m);
+  bindOpts('scr-setup-'+m);
+  bindMultiOpts('scr-setup-'+m);
+  bindDaysUpdate(m);
+}
 function bindOpts(scrId){
-  document.querySelectorAll('#'+scrId+' .opt').forEach(o=>{
-    o.onclick = ()=>{ o.parentNode.querySelectorAll('.opt').forEach(x=>x.classList.remove('on')); o.classList.add('on'); };
+  document.querySelectorAll('#'+scrId+' .opt:not(.opt-multi)').forEach(o=>{
+    o.onclick = ()=>{ o.parentNode.querySelectorAll('.opt:not(.opt-multi)').forEach(x=>x.classList.remove('on')); o.classList.add('on'); };
   });
 }
 function readOpt(id){ const on = document.querySelector('#'+id+' .opt.on'); return on?on.dataset.val:null; }
@@ -248,14 +294,44 @@ function readOpt(id){ const on = document.querySelector('#'+id+' .opt.on'); retu
 function finishSetup(m){
   const setup = m==='lift' ? {
     goal:readOpt('lift-goal'), days:parseInt(readOpt('lift-days')),
-    equip:readOpt('lift-equip'), level:readOpt('lift-level')
+    equip:readOpt('lift-equip'), level:readOpt('lift-level'),
+    selectedDays: readSelectedDays('lift-week-days')
   } : {
     goal:readOpt('run-goal'), level:readOpt('run-level'),
-    days:parseInt(readOpt('run-days')), terrain:readOpt('run-terrain')
+    days:parseInt(readOpt('run-days')), terrain:readOpt('run-terrain'),
+    selectedDays: readSelectedDays('run-week-days'),
+    raceDate: $('run-race-date') ? $('run-race-date').value : null
   };
+  // validate day count matches
+  if(setup.selectedDays && setup.selectedDays.length !== setup.days){
+    toast(`Selecione exatamente ${setup.days} dia${setup.days>1?'s':''} da semana`);
+    return;
+  }
   state.modules[m] = { setup, plan:generatePlan(m,setup), week:1, createdAt:Date.now(), history:[] };
   state.active = m;
   saveData(); goTab('home'); toast('🎉 Plano criado!');
+}
+function readSelectedDays(id){
+  const el = $(id); if(!el) return null;
+  const on = [...el.querySelectorAll('.opt.on')].map(o=>parseInt(o.dataset.val)).sort((a,b)=>a-b);
+  return on.length?on:null;
+}
+// Multi-select bind (for week days)
+function bindMultiOpts(scrId){
+  document.querySelectorAll('#'+scrId+' .opt-multi').forEach(o=>{
+    o.onclick = ()=>{ o.classList.toggle('on'); };
+  });
+}
+// Show/hide "which days" section based on day count
+function bindDaysUpdate(m){
+  const daysGroup = $(m+'-days');
+  const weekWrap = $(m+'-week-days-wrap');
+  const update = ()=>{
+    const n = parseInt(readOpt(m+'-days')) || 0;
+    if(weekWrap){ weekWrap.style.display = n>0 ? 'block':'none'; $(m+'-days-count').textContent = n; }
+  };
+  daysGroup.querySelectorAll('.opt').forEach(o=>{ o.addEventListener('click', ()=>setTimeout(update,10)); });
+  update();
 }
 
 // ---------- PLAN GENERATION ----------
@@ -268,7 +344,8 @@ function generatePlan(module, setup){
       5:[{k:'A',name:'Peito',parts:['Peito','Tríceps']},{k:'B',name:'Costas',parts:['Costas','Bíceps']},{k:'C',name:'Pernas',parts:['Pernas','Panturrilha']},{k:'D',name:'Ombro + Braços',parts:['Ombro','Bíceps','Tríceps']},{k:'E',name:'Glúteos + Core',parts:['Glúteos','Core']}]
     };
     const split = splitMap[days] || splitMap[4];
-    const wkDays = { 3:[1,3,5], 4:[1,2,4,5], 5:[1,2,3,5,6] }[days] || [1,2,4,5];
+    // Use user-selected days if available, otherwise defaults
+    const wkDays = (setup.selectedDays && setup.selectedDays.length===days) ? setup.selectedDays : ({ 3:[1,3,5], 4:[1,2,4,5], 5:[1,2,3,5,6] }[days] || [1,2,4,5]);
     const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
     const workouts = split.map((s,i)=>({
       ...s, dayIdx:wkDays[i], dayName:dayNames[wkDays[i]-1],
@@ -279,21 +356,30 @@ function generatePlan(module, setup){
   } else {
     const goal = setup.goal || '5km';
     const totalWeeks = {'5km':8,'10km':10,'21km':12,'42km':16}[goal];
-    const wkDays = { 3:[2,4,6], 4:[1,3,5,0], 5:[1,2,4,5,0] }[setup.days] || [1,3,5,0];
-    const dayNames = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    const wkDays = (setup.selectedDays && setup.selectedDays.length===setup.days) ? setup.selectedDays : ({ 3:[2,4,6], 4:[1,3,5,7], 5:[1,2,4,5,7] }[setup.days] || [1,3,5,7]);
+    const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
     const types = ['Corrida Leve','Intervalado','Corrida Longa','Ritmo Constante'];
     const workouts = wkDays.map((d,i)=>{
       const kind = types[i%types.length];
-      return {
-        k:'S'+(i+1), name:kind+' (plano de segurança)',
-        dayIdx:d===0?7:d, dayName:dayNames[d===0?0:d],
-        duration:kind==='Corrida Longa'?55:kind==='Intervalado'?38:31,
-        distance:kind==='Corrida Longa'?'~5km':kind==='Intervalado'?'~4km':'~2.3km',
-        blocks:buildRunBlocks(kind,setup)
-      };
+      const targetGoal = setup.goal;
+      const distance = kind==='Corrida Longa' ? (targetGoal==='42km'?'~15km':targetGoal==='21km'?'~8km':targetGoal==='10km'?'~5km':'~3km') : kind==='Intervalado'?'~4km':'~2.5km';
+      const duration = kind==='Corrida Longa'?(targetGoal==='42km'?85:targetGoal==='21km'?60:55):kind==='Intervalado'?38:31;
+      return { k:'S'+(i+1), name:kind+' — treino '+(i+1), dayIdx:d, dayName:dayNames[d-1], duration, distance, targetPace:runPace(kind,setup), blocks:buildRunBlocks(kind,setup) };
     });
     return { type:'run', goal, terrain:setup.terrain, workouts, totalWeeks };
   }
+}
+function runPace(kind, setup){
+  const paces = {
+    iniciante:{leve:'8:00/km',ritmo:'7:00/km',longa:'8:30/km',interval:'5:30/km'},
+    intermediario:{leve:'6:30/km',ritmo:'5:30/km',longa:'6:45/km',interval:'4:30/km'},
+    avancado:{leve:'5:30/km',ritmo:'4:30/km',longa:'5:45/km',interval:'3:45/km'}
+  };
+  const p = paces[setup.level||'iniciante'];
+  if(kind==='Intervalado') return p.interval;
+  if(kind==='Corrida Longa') return p.longa;
+  if(kind==='Ritmo Constante') return p.ritmo;
+  return p.leve;
 }
 
 function buildLiftExercises(parts, setup){
@@ -302,11 +388,18 @@ function buildLiftExercises(parts, setup){
   const repsMap = {hipertrofia:'8-12', forca:'4-6', emagrecimento:'12-15', resistencia:'15-20'};
   const sets = setsMap[level];
   const reps = repsMap[setup.goal || 'hipertrofia'];
+  const equip = setup.equip || 'academia';
+  // basico = subset de halteres (mais simples), casa = peso corporal
+  const equipFilter = equip==='basico' ? ['casa','halteres'] : equip==='academia' ? ['academia','halteres','casa'] : equip==='halteres' ? ['halteres','casa'] : ['casa'];
   const list = [];
   parts.forEach(p=>{
     const cat = EX_BANK.find(c=>c.name===p); if(!cat) return;
-    const pick = cat.items.slice(0, p==='Core'||p==='Panturrilha'||p==='Trapézio'?2:3);
-    pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps, rest:'60-90s' }); });
+    // filter exercises that support the equipment
+    const compat = cat.items.filter(ex => (ex.equip||[]).some(e => equipFilter.includes(e)));
+    if(!compat.length) return;
+    const need = p==='Core'||p==='Panturrilha'||p==='Trapézio' ? 2 : 3;
+    const pick = compat.slice(0, Math.min(need, compat.length));
+    pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps, rest:'60-90s', part:p, equip:ex.equip }); });
   });
   return list;
 }
@@ -324,17 +417,153 @@ function buildRunBlocks(kind, setup){
 }
 
 // ---------- EXERCISE BANK ----------
+// equip tags: 'casa' (peso corporal / sem equipamento), 'halteres' (halteres/anilhas soltas), 'academia' (máquinas/barras/cabos)
 const EX_BANK = [
-  {name:'Peito',emo:'💪',color:'',items:[{name:'Supino Reto com Barra',sub:'Peito'},{name:'Supino Inclinado com Halteres',sub:'Peito Superior'},{name:'Supino Declinado',sub:'Peito Inferior'},{name:'Crucifixo com Halteres',sub:'Peito'},{name:'Crucifixo Inclinado',sub:'Peito Superior'},{name:'Crossover no Cabo',sub:'Peito'},{name:'Flexão de Braço',sub:'Peito / Tríceps'},{name:'Pullover com Halter',sub:'Peito / Serrátil'}]},
-  {name:'Costas',emo:'🔙',color:'',items:[{name:'Puxada Frontal no Pulley',sub:'Costas Lats'},{name:'Puxada Aberta com Pegada Pronada',sub:'Costas Lats'},{name:'Puxada com Triângulo',sub:'Costas / Romboides'},{name:'Remada Curvada com Barra',sub:'Costas Média'},{name:'Remada Curvada com Halteres',sub:'Costas'},{name:'Remada Unilateral com Haltere',sub:'Costas'},{name:'Remada Cavalinho (T-Bar)',sub:'Costas Média'},{name:'Remada Baixa no Cabo',sub:'Costas Média'},{name:'Pulldown no Cabo',sub:'Costas'},{name:'Barra Fixa',sub:'Costas / Bíceps'},{name:'Levantamento Terra',sub:'Costas / Posterior'}]},
-  {name:'Ombro',emo:'⛰️',color:'',items:[{name:'Desenvolvimento com Barra',sub:'Ombro'},{name:'Desenvolvimento Arnold',sub:'Ombro'},{name:'Elevação Lateral com Halteres',sub:'Ombro Lateral'},{name:'Elevação Frontal',sub:'Ombro Frontal'},{name:'Elevação Posterior Curvado',sub:'Ombro Posterior'},{name:'Desenvolvimento Militar',sub:'Ombro'},{name:'Face Pull no Cabo',sub:'Ombro Posterior'}]},
-  {name:'Bíceps',emo:'💪',color:'',items:[{name:'Rosca Direta com Barra',sub:'Bíceps'},{name:'Rosca Alternada com Halteres',sub:'Bíceps'},{name:'Rosca Martelo com Halteres',sub:'Braquial / Bíceps'},{name:'Rosca Concentrada',sub:'Bíceps'},{name:'Rosca Scott',sub:'Bíceps'},{name:'Rosca Inversa',sub:'Antebraço'}]},
-  {name:'Tríceps',emo:'🔱',color:'orange',items:[{name:'Tríceps Pulley no Cabo',sub:'Tríceps'},{name:'Tríceps Francês com Halteres',sub:'Tríceps'},{name:'Tríceps Corda no Cabo',sub:'Tríceps'},{name:'Mergulho nas Paralelas',sub:'Tríceps / Peito'},{name:'Tríceps Coice com Haltere',sub:'Tríceps'},{name:'Tríceps Testa',sub:'Tríceps'}]},
-  {name:'Pernas',emo:'🦵',color:'orange',items:[{name:'Agachamento Livre com Barra',sub:'Quadríceps / Glúteos'},{name:'Agachamento Frontal',sub:'Quadríceps'},{name:'Leg Press 45°',sub:'Quadríceps'},{name:'Hack Machine',sub:'Quadríceps'},{name:'Afundo com Halteres',sub:'Quadríceps / Glúteos'},{name:'Agachamento Búlgaro',sub:'Quadríceps / Glúteos'},{name:'Cadeira Extensora',sub:'Quadríceps'},{name:'Stiff com Halteres',sub:'Posterior / Glúteos'},{name:'Stiff com Barra',sub:'Posterior / Glúteos'},{name:'Mesa Flexora',sub:'Posterior de Coxa'},{name:'Cadeira Flexora',sub:'Posterior de Coxa'}]},
-  {name:'Glúteos',emo:'🍑',color:'pink',items:[{name:'Elevação Pélvica (Hip Thrust)',sub:'Glúteos'},{name:'Glúteo no Cabo',sub:'Glúteos'},{name:'Glúteo 4 Apoios com Caneleira',sub:'Glúteos'},{name:'Coice na Polia Baixa',sub:'Glúteos'},{name:'Cadeira Abdutora',sub:'Abdutores / Glúteo Médio'},{name:'Adução na Máquina',sub:'Adutores'},{name:'Agachamento Sumô com Haltere',sub:'Glúteos / Quadríceps'}]},
-  {name:'Panturrilha',emo:'🦶',color:'teal',items:[{name:'Panturrilha em Pé',sub:'Panturrilha'},{name:'Panturrilha Sentado',sub:'Panturrilha Sóleo'},{name:'Panturrilha no Leg Press',sub:'Panturrilha'}]},
-  {name:'Trapézio',emo:'🦅',color:'',items:[{name:'Encolhimento com Halteres',sub:'Trapézio'},{name:'Encolhimento com Barra',sub:'Trapézio'}]},
-  {name:'Core',emo:'🎯',color:'',items:[{name:'Prancha (Plank)',sub:'Core'},{name:'Abdominal Crunch',sub:'Core'},{name:'Mountain Climber',sub:'Core / Cardio'},{name:'Abdominal Bicicleta',sub:'Core / Oblíquos'}]}
+  {name:'Peito',emo:'💪',color:'',items:[
+    // ACADEMIA
+    {name:'Supino Reto com Barra',sub:'Peito',equip:['academia']},
+    {name:'Supino Inclinado com Halteres',sub:'Peito Superior',equip:['academia','halteres']},
+    {name:'Supino Declinado',sub:'Peito Inferior',equip:['academia']},
+    {name:'Crossover no Cabo',sub:'Peito',equip:['academia']},
+    {name:'Peck Deck (voador)',sub:'Peito',equip:['academia']},
+    {name:'Supino Reto com Halteres',sub:'Peito',equip:['academia','halteres']},
+    // HALTERES
+    {name:'Crucifixo com Halteres',sub:'Peito',equip:['academia','halteres']},
+    {name:'Crucifixo Inclinado',sub:'Peito Superior',equip:['academia','halteres']},
+    {name:'Pullover com Halter',sub:'Peito / Serrátil',equip:['academia','halteres']},
+    // CASA (peso corporal)
+    {name:'Flexão de Braço',sub:'Peito / Tríceps',equip:['academia','halteres','casa']},
+    {name:'Flexão Inclinada (pés elevados)',sub:'Peito Superior',equip:['casa','halteres','academia']},
+    {name:'Flexão Declinada (mãos elevadas)',sub:'Peito Inferior',equip:['casa','halteres','academia']},
+    {name:'Flexão Diamante',sub:'Peito Central / Tríceps',equip:['casa','halteres','academia']},
+    {name:'Flexão Aberta',sub:'Peito',equip:['casa','halteres','academia']}
+  ]},
+  {name:'Costas',emo:'🔙',color:'',items:[
+    // ACADEMIA
+    {name:'Puxada Frontal no Pulley',sub:'Costas Lats',equip:['academia']},
+    {name:'Puxada Aberta com Pegada Pronada',sub:'Costas Lats',equip:['academia']},
+    {name:'Puxada com Triângulo',sub:'Costas / Romboides',equip:['academia']},
+    {name:'Remada Cavalinho (T-Bar)',sub:'Costas Média',equip:['academia']},
+    {name:'Remada Baixa no Cabo',sub:'Costas Média',equip:['academia']},
+    {name:'Pulldown no Cabo',sub:'Costas',equip:['academia']},
+    {name:'Levantamento Terra',sub:'Costas / Posterior',equip:['academia']},
+    // HALTERES
+    {name:'Remada Curvada com Halteres',sub:'Costas',equip:['academia','halteres']},
+    {name:'Remada Unilateral com Haltere',sub:'Costas',equip:['academia','halteres']},
+    {name:'Remada Curvada com Barra',sub:'Costas Média',equip:['academia','halteres']},
+    // CASA
+    {name:'Barra Fixa (parque/porta)',sub:'Costas / Bíceps',equip:['academia','casa']},
+    {name:'Remada Invertida (mesa)',sub:'Costas',equip:['casa','academia']},
+    {name:'Superman',sub:'Lombar / Costas Baixa',equip:['casa','halteres','academia']},
+    {name:'Remada com Toalha (isométrica)',sub:'Costas',equip:['casa']}
+  ]},
+  {name:'Ombro',emo:'⛰️',color:'',items:[
+    // ACADEMIA
+    {name:'Desenvolvimento com Barra',sub:'Ombro',equip:['academia']},
+    {name:'Desenvolvimento Militar',sub:'Ombro',equip:['academia']},
+    {name:'Face Pull no Cabo',sub:'Ombro Posterior',equip:['academia']},
+    // HALTERES
+    {name:'Desenvolvimento Arnold',sub:'Ombro',equip:['academia','halteres']},
+    {name:'Elevação Lateral com Halteres',sub:'Ombro Lateral',equip:['academia','halteres']},
+    {name:'Elevação Frontal',sub:'Ombro Frontal',equip:['academia','halteres']},
+    {name:'Elevação Posterior Curvado',sub:'Ombro Posterior',equip:['academia','halteres']},
+    {name:'Desenvolvimento com Halteres',sub:'Ombro',equip:['academia','halteres']},
+    // CASA
+    {name:'Pike Push-up',sub:'Ombro',equip:['casa','halteres','academia']},
+    {name:'Elevação Lateral com Garrafas',sub:'Ombro Lateral',equip:['casa']},
+    {name:'Handstand contra parede',sub:'Ombro',equip:['casa','academia']}
+  ]},
+  {name:'Bíceps',emo:'💪',color:'',items:[
+    // ACADEMIA
+    {name:'Rosca Direta com Barra',sub:'Bíceps',equip:['academia']},
+    {name:'Rosca Scott',sub:'Bíceps',equip:['academia']},
+    {name:'Rosca no Cabo',sub:'Bíceps',equip:['academia']},
+    // HALTERES
+    {name:'Rosca Alternada com Halteres',sub:'Bíceps',equip:['academia','halteres']},
+    {name:'Rosca Martelo com Halteres',sub:'Braquial / Bíceps',equip:['academia','halteres']},
+    {name:'Rosca Concentrada',sub:'Bíceps',equip:['academia','halteres']},
+    {name:'Rosca Inversa',sub:'Antebraço',equip:['academia','halteres']},
+    // CASA
+    {name:'Rosca com Mochila',sub:'Bíceps',equip:['casa']},
+    {name:'Chin-up (barra pegada supinada)',sub:'Bíceps / Costas',equip:['academia','casa']},
+    {name:'Rosca isométrica (toalha)',sub:'Bíceps',equip:['casa']}
+  ]},
+  {name:'Tríceps',emo:'🔱',color:'orange',items:[
+    // ACADEMIA
+    {name:'Tríceps Pulley no Cabo',sub:'Tríceps',equip:['academia']},
+    {name:'Tríceps Corda no Cabo',sub:'Tríceps',equip:['academia']},
+    {name:'Tríceps Testa (barra EZ)',sub:'Tríceps',equip:['academia']},
+    // HALTERES
+    {name:'Tríceps Francês com Halteres',sub:'Tríceps',equip:['academia','halteres']},
+    {name:'Tríceps Coice com Haltere',sub:'Tríceps',equip:['academia','halteres']},
+    {name:'Tríceps Testa com Halteres',sub:'Tríceps',equip:['academia','halteres']},
+    // CASA
+    {name:'Mergulho no Banco/Cadeira',sub:'Tríceps',equip:['casa','halteres','academia']},
+    {name:'Flexão Fechada (diamante)',sub:'Tríceps',equip:['casa','halteres','academia']},
+    {name:'Mergulho nas Paralelas',sub:'Tríceps / Peito',equip:['academia','casa']}
+  ]},
+  {name:'Pernas',emo:'🦵',color:'orange',items:[
+    // ACADEMIA
+    {name:'Leg Press 45°',sub:'Quadríceps',equip:['academia']},
+    {name:'Hack Machine',sub:'Quadríceps',equip:['academia']},
+    {name:'Cadeira Extensora',sub:'Quadríceps',equip:['academia']},
+    {name:'Mesa Flexora',sub:'Posterior de Coxa',equip:['academia']},
+    {name:'Cadeira Flexora',sub:'Posterior de Coxa',equip:['academia']},
+    {name:'Agachamento Livre com Barra',sub:'Quadríceps / Glúteos',equip:['academia']},
+    {name:'Agachamento Frontal',sub:'Quadríceps',equip:['academia']},
+    // HALTERES
+    {name:'Afundo com Halteres',sub:'Quadríceps / Glúteos',equip:['academia','halteres']},
+    {name:'Agachamento Búlgaro',sub:'Quadríceps / Glúteos',equip:['academia','halteres','casa']},
+    {name:'Stiff com Halteres',sub:'Posterior / Glúteos',equip:['academia','halteres']},
+    {name:'Agachamento Goblet',sub:'Quadríceps / Glúteos',equip:['academia','halteres']},
+    {name:'Passada com Halteres',sub:'Pernas Completo',equip:['academia','halteres']},
+    // CASA
+    {name:'Agachamento Livre (peso corporal)',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
+    {name:'Afundo Alternado',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
+    {name:'Agachamento Sumô',sub:'Adutores / Glúteos',equip:['casa','halteres','academia']},
+    {name:'Agachamento Jump',sub:'Quadríceps Explosivo',equip:['casa','halteres','academia']},
+    {name:'Cadeira contra parede (isométrico)',sub:'Quadríceps',equip:['casa','halteres','academia']},
+    {name:'Pistol Squat (uma perna)',sub:'Quadríceps avançado',equip:['casa','academia']},
+    {name:'Step-up em banco/degrau',sub:'Pernas',equip:['casa','halteres','academia']}
+  ]},
+  {name:'Glúteos',emo:'🍑',color:'pink',items:[
+    // ACADEMIA
+    {name:'Elevação Pélvica (Hip Thrust)',sub:'Glúteos',equip:['academia','halteres']},
+    {name:'Glúteo no Cabo',sub:'Glúteos',equip:['academia']},
+    {name:'Cadeira Abdutora',sub:'Abdutores / Glúteo Médio',equip:['academia']},
+    {name:'Adução na Máquina',sub:'Adutores',equip:['academia']},
+    // HALTERES + CASA
+    {name:'Ponte de Glúteo',sub:'Glúteos',equip:['casa','halteres','academia']},
+    {name:'Ponte com uma perna',sub:'Glúteos',equip:['casa','halteres','academia']},
+    {name:'Coice de Cachorro (4 apoios)',sub:'Glúteos',equip:['casa','halteres','academia']},
+    {name:'Elevação lateral de perna',sub:'Glúteo Médio',equip:['casa','halteres','academia']},
+    {name:'Concha (Clam Shell)',sub:'Glúteo Médio',equip:['casa','halteres','academia']},
+    {name:'Agachamento Sumô com Haltere',sub:'Glúteos / Quadríceps',equip:['academia','halteres','casa']}
+  ]},
+  {name:'Panturrilha',emo:'🦶',color:'teal',items:[
+    {name:'Panturrilha em Pé',sub:'Panturrilha',equip:['academia','halteres']},
+    {name:'Panturrilha Sentado',sub:'Panturrilha Sóleo',equip:['academia']},
+    {name:'Panturrilha no Leg Press',sub:'Panturrilha',equip:['academia']},
+    {name:'Panturrilha em pé (peso corporal)',sub:'Panturrilha',equip:['casa','halteres','academia']},
+    {name:'Panturrilha unilateral em degrau',sub:'Panturrilha',equip:['casa','halteres','academia']}
+  ]},
+  {name:'Trapézio',emo:'🦅',color:'',items:[
+    {name:'Encolhimento com Halteres',sub:'Trapézio',equip:['academia','halteres']},
+    {name:'Encolhimento com Barra',sub:'Trapézio',equip:['academia']},
+    {name:'Encolhimento com Mochila',sub:'Trapézio',equip:['casa']}
+  ]},
+  {name:'Core',emo:'🎯',color:'',items:[
+    {name:'Prancha (Plank)',sub:'Core',equip:['casa','halteres','academia']},
+    {name:'Abdominal Crunch',sub:'Core',equip:['casa','halteres','academia']},
+    {name:'Mountain Climber',sub:'Core / Cardio',equip:['casa','halteres','academia']},
+    {name:'Abdominal Bicicleta',sub:'Core / Oblíquos',equip:['casa','halteres','academia']},
+    {name:'Elevação de Pernas',sub:'Core Baixo',equip:['casa','halteres','academia']},
+    {name:'Prancha Lateral',sub:'Oblíquos',equip:['casa','halteres','academia']},
+    {name:'Dead Bug',sub:'Core Profundo',equip:['casa','halteres','academia']},
+    {name:'Russian Twist',sub:'Oblíquos',equip:['casa','halteres','academia']},
+    {name:'Hollow Hold',sub:'Core',equip:['casa','halteres','academia']},
+    {name:'V-up',sub:'Core',equip:['casa','halteres','academia']}
+  ]}
 ];
 
 // ---------- HELPERS ----------
@@ -388,10 +617,24 @@ function renderHome(){
   $('daily-quote').textContent = QUOTES[new Date().getDate() % QUOTES.length];
 
   const days = accessDaysLeft();
-  $('access-days').textContent = days>0 ? `${days} dias restantes` : 'Acesso expirado';
+  $('access-days').textContent = accessLabel(days);
+  const cardAccess = $('card-access-info');
+  cardAccess.querySelector('.card-title').textContent = days>=999999 ? '♾️ Acesso vitalício' : days>0 ? 'Acesso ativo' : 'Acesso expirado';
 
   // trophies count
   $('trophy-count').textContent = `${state.trophies.length} de ${TROPHIES.length} troféus`;
+
+  // race target card (only for run)
+  const daysToR = state.active==='run' ? daysToRace() : null;
+  const alertCard = $('card-plan-alert');
+  if(daysToR !== null && daysToR >= 0 && daysToR < 365){
+    alertCard.classList.remove('hidden');
+    alertCard.querySelector('.card-icon').textContent = '🏁';
+    alertCard.querySelector('.card-title').textContent = daysToR===0 ? 'É HOJE! 🎉' : `${daysToR} dia${daysToR>1?'s':''} para sua prova`;
+    alertCard.querySelector('.card-sub').textContent = daysToR<=7 ? 'Semana da prova: reduza o volume, foco em recuperação' : daysToR<=14 ? 'Fase de taper: intensidade cai, você fica afiado' : 'Continue firme no plano — cada treino conta';
+  } else {
+    alertCard.classList.add('hidden');
+  }
 
   const wk = mod.week||1, total = mod.plan.totalWeeks;
   $('plan-week').textContent = `Semana ${wk} de ${total}`;
@@ -436,7 +679,7 @@ function renderTodayWorkout(w, isLift){
     </div>
     <div class="today-actions">
       <button class="btn btn-primary" onclick="openSession('${w.k||w.dayIdx}')">▶ Ver sessão</button>
-      <button class="btn btn-ghost" onclick="${isLift?`openSession('${w.k}')`:`markRunDone('${w.dayIdx}')`}">${isLift?'📝 Registrar treino':'✓ Marcar feito'}</button>
+      <button class="btn btn-ghost" onclick="${isLift?`openSession('${w.k}')`:`openRunLog('${w.dayIdx}')`}">${isLift?'📝 Registrar treino':'📝 Registrar corrida'}</button>
     </div>
   </div>`;
 }
@@ -505,7 +748,7 @@ function renderSessionDetail(w){
     </div>
     <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.':'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
-    ${isLift ? `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>` : `<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="markRunDone('${w.dayIdx}')">✓ Marcar sessão como feita</button>`}
+    ${isLift ? `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>` : `<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar corrida (km + tempo)</button>`}
   `;
   $('session-detail-slot').innerHTML = html;
 }
@@ -554,6 +797,7 @@ function renderExerciseCard(ex, idx){
         <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
           <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="openSetLog('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">📝 Registrar</button>
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="window.open('${ytLink(ex.name)}','_blank')">▶ Ver como fazer</button>
+          <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="openSwapExercise('${ex.id}')">🔄 Trocar</button>
         </div>
       </div>
     </div>`;
@@ -708,7 +952,8 @@ function renderHistory(){
     $('history-empty').classList.add('hidden');
     $('history-list').innerHTML = h.slice().reverse().map(x=>{
       const d = new Date(x.at);
-      return `<div class="list-item"><div class="list-dot"></div><div class="list-info"><div class="list-tag">${d.toLocaleDateString('pt-BR')} · ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><div class="list-name">${x.name}</div></div><div class="list-right mono">${x.duration}min</div></div>`;
+      const extra = x.distance ? `${x.distance}km · ${x.pace||''}` : '';
+      return `<div class="list-item"><div class="list-dot"></div><div class="list-info"><div class="list-tag">${d.toLocaleDateString('pt-BR')} · ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${extra?' · '+extra:''}</div><div class="list-name">${x.name}</div></div><div class="list-right mono">${x.duration}min</div></div>`;
     }).join('');
   }
 }
@@ -732,8 +977,9 @@ function renderPerf(){
   $('s1-val').innerHTML = `${weekDone}<small>/${wkTarget}</small>`;
   $('s1-note').textContent = Math.round(weekDone/wkTarget*100)+'%';
   const totalVol = calcTotalVolume(state.progress);
-  $('s2-lbl').textContent = isLift?'Volume 7d':'Km';
-  $('s2-val').innerHTML = isLift?`${Math.round(totalVol)}<small>kg</small>`:`0<small>km</small>`;
+  $('s2-lbl').textContent = isLift?'Volume 7d':'Km 7d';
+  const km7d = isLift ? 0 : h.filter(x=>x.at>=start.getTime()).reduce((s,r)=>s+(r.distance||0),0);
+  $('s2-val').innerHTML = isLift?`${Math.round(totalVol)}<small>kg</small>`:`${km7d.toFixed(1)}<small>km</small>`;
   $('s2-note').textContent = '↑ +0%';
   $('s3-val').textContent = h.length*220;
   $('m-streak').textContent = calcStreak(h);
@@ -782,10 +1028,10 @@ function renderPlan(){
   ];
   $('plan-details').innerHTML = `<div class="card">${rows.map(r=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--border)"><span class="text-dim">${r[0]}</span><b>${r[1]}</b></div>`).join('')}</div>`;
   const days = accessDaysLeft();
-  $('pl-access').textContent = days>0?'Acesso ativo':'Acesso expirado';
-  $('pl-days').textContent = days>0?`${days} dias restantes`:'Fale com seu treinador';
+  $('pl-access').textContent = days>=999999 ? '♾️ Acesso vitalício' : days>0?'Acesso ativo':'Acesso expirado';
+  $('pl-days').textContent = accessLabel(days);
 }
-function regenPlan(){ showScreen('scr-setup-'+state.active); bindOpts('scr-setup-'+state.active); }
+function regenPlan(){ showScreen('scr-setup-'+state.active); bindOpts('scr-setup-'+state.active); bindMultiOpts('scr-setup-'+state.active); bindDaysUpdate(state.active); }
 
 // ---------- PROFILE ----------
 function renderProfile(){
@@ -793,8 +1039,10 @@ function renderProfile(){
   renderAvatar('pf-avatar');
   $('pf-name').textContent = p.nickname || u.name;
   $('pf-email').textContent = u.email;
+  // Show admin button if admin
+  if(u.isAdmin){ $('pf-admin-btn').classList.remove('hidden'); } else { $('pf-admin-btn').classList.add('hidden'); }
   const days = accessDaysLeft();
-  $('pf-trial').textContent = days>0?`${days} dias de acesso restantes`:'Acesso expirado';
+  $('pf-trial').textContent = u.isAdmin ? '♾️ Acesso vitalício (Admin)' : accessLabel(days);
   $('pf-goal').textContent = 'Objetivo: '+ ({emagrecer:'Emagrecer',massa:'Ganhar massa',forca:'Ganhar força',condicionamento:'Condicionamento',tonificar:'Tonificar',saude:'Saúde geral'}[p.goal]||'—');
 
   // Body info
@@ -894,10 +1142,12 @@ function checkWeightTrophies(){
     if(lost>=1) unlockTrophy('weight_down_1');
     if(lost>=3) unlockTrophy('weight_down_3');
     if(lost>=5) unlockTrophy('weight_down_5');
+    if(lost>=10) unlockTrophy('weight_down_10');
     toast(`🎉 Parabéns! Você perdeu ${lost.toFixed(1)}kg desde o início!`);
   } else if(p.goal==='massa' && delta > 0){
     if(delta>=2) unlockTrophy('weight_up_2');
     if(delta>=5) unlockTrophy('weight_up_5');
+    if(delta>=10) unlockTrophy('weight_up_10');
     toast(`💪 Bora! Você ganhou ${delta.toFixed(1)}kg desde o início!`);
   }
 }
@@ -911,33 +1161,68 @@ function unlockTrophy(id){
   if(t) setTimeout(()=>toast(`${t.emoji} Troféu desbloqueado: ${t.name}!`), 800);
 }
 function checkTrophies(){
-  const totalDone = (state.modules.lift?.history?.length||0) + (state.modules.run?.history?.length||0);
+  const liftDone = state.modules.lift?.history?.length || 0;
+  const runDone = state.modules.run?.history?.length || 0;
+  const totalDone = liftDone + runDone;
   if(totalDone>=1) unlockTrophy('first_workout');
-  if(totalDone>=10) unlockTrophy('workouts_10');
-  if(totalDone>=25) unlockTrophy('workouts_25');
-  if(totalDone>=50) unlockTrophy('workouts_50');
-  if(totalDone>=100) unlockTrophy('workouts_100');
-  const s = Math.max(calcStreak(state.modules.lift?.history||[]), calcStreak(state.modules.run?.history||[]));
+  // Musculação
+  if(liftDone>=10) unlockTrophy('lift_10');
+  if(liftDone>=25) unlockTrophy('lift_25');
+  if(liftDone>=50) unlockTrophy('lift_50');
+  if(liftDone>=100) unlockTrophy('lift_100');
+  // PRs count
+  const prCount = Object.keys(state.prs||{}).length;
+  if(prCount>=5) unlockTrophy('pr_5');
+  if(prCount>=20) unlockTrophy('pr_20');
+  // Corrida
+  if(runDone>=1) unlockTrophy('run_1');
+  if(runDone>=10) unlockTrophy('run_10');
+  if(runDone>=25) unlockTrophy('run_25');
+  if(runDone>=50) unlockTrophy('run_50');
+  // KM acumulados
+  const totalKm = (state.modules.run?.history||[]).reduce((s,r)=>s+(r.distance||0),0);
+  if(totalKm>=10) unlockTrophy('run_km_10');
+  if(totalKm>=50) unlockTrophy('run_km_50');
+  if(totalKm>=100) unlockTrophy('run_km_100');
+  if(totalKm>=500) unlockTrophy('run_km_500');
+  // Best single run
+  const bestKm = Math.max(0, ...((state.modules.run?.history||[]).map(r=>r.distance||0)));
+  if(bestKm>=5) unlockTrophy('run_5k_run');
+  if(bestKm>=10) unlockTrophy('run_10k_run');
+  if(bestKm>=21) unlockTrophy('run_21k_run');
+  if(bestKm>=42) unlockTrophy('run_42k_run');
+  // Streaks (combinado)
+  const allHist = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
+  const s = calcStreak(allHist);
   if(s>=3) unlockTrophy('streak_3');
   if(s>=7) unlockTrophy('streak_7');
   if(s>=14) unlockTrophy('streak_14');
   if(s>=30) unlockTrophy('streak_30');
+  // Meta semanal
   const mod = state.modules[state.active];
-  const wkTarget = mod.plan.workouts.length;
-  const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-6);
-  const done7d = (mod.history||[]).filter(h=>h.at>=startWk.getTime()).length;
-  if(done7d >= wkTarget) unlockTrophy('week_goal');
+  if(mod){
+    const wkTarget = mod.plan.workouts.length;
+    const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-6);
+    const done7d = (mod.history||[]).filter(h=>h.at>=startWk.getTime()).length;
+    if(done7d >= wkTarget) unlockTrophy('week_goal');
+  }
 }
 function openTrophies(){
+  const catNames = { geral:'🌟 Gerais', streak:'🔥 Consistência', lift:'🏋️ Musculação', run:'🏃 Corrida', body:'⚖️ Corpo' };
+  const cats = ['geral','streak','lift','run','body'];
+  const groups = cats.map(c=>({ cat:c, name:catNames[c], items:TROPHIES.filter(t=>t.cat===c) }));
+  const totalUnlocked = state.trophies.length;
   const html = `
     <h3>🏆 Suas conquistas</h3>
-    <p style="color:var(--text-dim);font-size:13px;margin-top:2px">${state.trophies.length} de ${TROPHIES.length} desbloqueados</p>
-    <div class="trophy-grid" style="margin-top:14px">
-      ${TROPHIES.map(t=>{
-        const u = state.trophies.includes(t.id);
-        return `<div class="trophy ${u?'unlock':''}"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div></div>`;
-      }).join('')}
-    </div>
+    <p style="color:var(--text-dim);font-size:13px;margin-top:2px">${totalUnlocked} de ${TROPHIES.length} desbloqueados</p>
+    ${groups.map(g=>{
+      const u = g.items.filter(t=>state.trophies.includes(t.id)).length;
+      return `<div style="margin-top:18px"><div class="section-lbl" style="margin:0 0 8px">${g.name} · ${u}/${g.items.length}</div>
+        <div class="trophy-grid">${g.items.map(t=>{
+          const ul = state.trophies.includes(t.id);
+          return `<div class="trophy ${ul?'unlock':''}"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div></div>`;
+        }).join('')}</div></div>`;
+    }).join('')}
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');
@@ -1012,7 +1297,8 @@ let admFilter = 'all';
 function goAdmin(){
   $('tabbar').classList.add('hidden');
   showScreen('scr-admin');
-  $('adm-hi').textContent = 'Olá, Marcelo!';
+  const p = state.user.profile;
+  $('adm-hi').textContent = 'Olá, '+((p&&p.nickname)||'Marcelo')+'!';
   renderAdminStats();
   renderAdminList();
 }
@@ -1183,13 +1469,149 @@ function exportData(){
   toast('📤 Backup exportado');
 }
 
-// ---------- INIT ----------
+// ---------- SWAP EXERCISE ----------
+function openSwapExercise(exId){
+  const mod = state.modules.lift;
+  const w = mod.plan.workouts.find(w=>w.exercises.some(e=>e.id===exId));
+  if(!w) return;
+  const cur = w.exercises.find(e=>e.id===exId);
+  const equip = mod.setup.equip || 'academia';
+  const equipFilter = equip==='basico'?['casa','halteres']:equip==='academia'?['academia','halteres','casa']:equip==='halteres'?['halteres','casa']:['casa'];
+  // Find category
+  const cat = EX_BANK.find(c=>c.name===cur.part) || EX_BANK.find(c=>c.items.some(x=>slug(x.name)===exId));
+  if(!cat){ toast('Não foi possível encontrar alternativas'); return; }
+  const usedIds = new Set(w.exercises.map(e=>e.id));
+  const alts = cat.items.filter(ex => !usedIds.has(slug(ex.name)) && (ex.equip||[]).some(e=>equipFilter.includes(e)));
+  if(!alts.length){ toast('Sem alternativas disponíveis pro seu equipamento'); return; }
+  const html = `
+    <h3>🔄 Trocar exercício</h3>
+    <p style="color:var(--text-dim);font-size:13px">Substituir <b style="color:var(--text)">${cur.name}</b> por outro que trabalhe o mesmo grupo (${cat.name}):</p>
+    <div style="margin-top:14px;max-height:400px;overflow-y:auto">
+      ${alts.map(ex=>`<div class="lib-item" onclick="doSwapExercise('${exId}','${slug(ex.name)}','${ex.name.replace(/'/g,"\\'")}','${ex.sub.replace(/'/g,"\\'")}')"><div class="lib-info"><div class="lib-name">${ex.name}</div><div class="lib-part">${ex.sub}</div></div><div class="lib-play">→</div></div>`).join('')}
+    </div>
+    <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="closeModal()">Cancelar</button>
+  `;
+  $('modal-inner').innerHTML = html;
+  $('modal-back').classList.add('on');
+}
+function doSwapExercise(oldId, newId, newName, newSub){
+  const mod = state.modules.lift;
+  const w = mod.plan.workouts.find(w=>w.exercises.some(e=>e.id===oldId));
+  const idx = w.exercises.findIndex(e=>e.id===oldId);
+  const old = w.exercises[idx];
+  const cat = EX_BANK.find(c=>c.items.some(x=>slug(x.name)===newId));
+  const newEx = cat.items.find(x=>slug(x.name)===newId);
+  w.exercises[idx] = { id:newId, name:newName, sub:newSub, sets:old.sets, reps:old.reps, rest:old.rest, part:old.part, equip:newEx.equip };
+  saveData();
+  toast(`✅ Trocado por ${newName}`);
+  closeModal();
+  if(state.ui.tab==='sessions') renderSessions();
+}
+
+// ---------- RUN LOG (km + tempo real) ----------
+function openRunLog(dayIdx){
+  const mod = state.modules.run;
+  const w = mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx));
+  if(!w) return;
+  const html = `
+    <h3>🏃 Registrar corrida</h3>
+    <p style="color:var(--text-dim);font-size:13px">${w.name} · Alvo: ${w.distance} em ${w.duration} min</p>
+    <div class="field" style="margin-top:12px"><label>Distância percorrida (km)</label><input class="input mono" type="number" step="0.1" id="rl-km" placeholder="Ex: 5.2"></div>
+    <div class="field"><label>Tempo total (minutos)</label><input class="input mono" type="number" id="rl-min" placeholder="Ex: 32" value="${w.duration}"></div>
+    <div class="field"><label>Como se sentiu?</label>
+      <div class="radio-grid g3" id="rl-rate"><div class="opt" data-val="1">😩 Difícil</div><div class="opt on" data-val="3">😊 Normal</div><div class="opt" data-val="5">🚀 Ótimo</div></div>
+    </div>
+    <div class="row" style="gap:8px;margin-top:14px">
+      <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-block" onclick="saveRunLog('${dayIdx}')">💾 Salvar</button>
+    </div>`;
+  $('modal-inner').innerHTML = html;
+  $('modal-back').classList.add('on');
+  bindOpts('modal-inner');
+}
+function saveRunLog(dayIdx){
+  const km = parseFloat($('rl-km').value);
+  const min = parseInt($('rl-min').value);
+  const rate = parseInt(readOpt('rl-rate')) || 3;
+  if(!km || km<=0){ toast('Distância inválida'); return; }
+  if(!min || min<=0){ toast('Tempo inválido'); return; }
+  const mod = state.modules.run;
+  const w = mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx));
+  const pace = (min/km);
+  const paceStr = Math.floor(pace) + ':' + String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0') + '/km';
+  mod.history = mod.history || [];
+  mod.history.push({ id:w.k, name:w.name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, module:'run' });
+  // Check evolution
+  checkRunEvolution(km, paceStr);
+  checkTrophies();
+  saveData();
+  toast(`🏃 Corrida salva: ${km}km em ${min}min (${paceStr})`);
+  closeModal();
+  goTab('home');
+}
+function checkRunEvolution(km, paceStr){
+  const h = state.modules.run.history || [];
+  const prev = h.slice(0,-1);
+  if(!prev.length) return;
+  const maxKm = Math.max(...prev.map(r=>r.distance||0));
+  if(km > maxKm){
+    setTimeout(()=>toast(`🎉 NOVA MELHOR DISTÂNCIA! ${km}km`), 1000);
+    unlockTrophy('run_pr_distance');
+  }
+  // Best pace at same-ish distance
+  const similar = prev.filter(r=>r.distance && Math.abs(r.distance-km)<0.5);
+  if(similar.length){
+    const bestPace = similar.reduce((b,r)=>{
+      const p=parsePace(r.pace); return p<b?p:b;
+    }, 9999);
+    const curP = parsePace(paceStr);
+    if(curP < bestPace){
+      setTimeout(()=>toast(`🚀 NOVO RITMO RECORDE! ${paceStr}`), 1200);
+      unlockTrophy('run_pr_pace');
+    }
+  }
+}
+function parsePace(s){ if(!s) return 9999; const [m,sec] = s.split(':'); return parseFloat(m)*60 + parseFloat(sec||'0'); }
+
+// ---------- PASSWORD RESET ----------
+function openForgotPass(){
+  const html = `
+    <h3>🔑 Recuperar senha</h3>
+    <p style="color:var(--text-dim);font-size:13px">Como os dados ficam salvos no dispositivo, você pode redefinir sua senha respondendo o seu próprio e-mail cadastrado:</p>
+    <div class="field" style="margin-top:12px"><label>Seu e-mail</label><input class="input" type="email" id="fp-email" placeholder="seu@email.com"></div>
+    <div class="field"><label>Nova senha (mín 6)</label><input class="input" type="password" id="fp-new" placeholder="••••••••"></div>
+    <div id="fp-err"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doForgotPass()">Redefinir senha</button>
+    <p style="color:var(--text-mute);font-size:11.5px;margin-top:12px;text-align:center">Se não funcionar, contate <a href="mailto:${CONTACT_EMAIL}">seu treinador</a></p>`;
+  $('modal-inner').innerHTML = html;
+  $('modal-back').classList.add('on');
+}
+function doForgotPass(){
+  const e = $('fp-email').value.trim().toLowerCase();
+  const nw = $('fp-new').value;
+  const err = $('fp-err'); err.innerHTML='';
+  if(!e){ err.innerHTML='<div class="err">Informe o e-mail</div>'; return; }
+  if(nw.length<6){ err.innerHTML='<div class="err">Senha muito curta</div>'; return; }
+  if(e === ADMIN_EMAIL){ err.innerHTML='<div class="err">Para o admin use "Alterar senha" no painel</div>'; return; }
+  const users = getUsers();
+  if(!users[e]){ err.innerHTML='<div class="err">E-mail não cadastrado</div>'; return; }
+  users[e].pass = nw; setUsers(users);
+  toast('✅ Senha redefinida! Faça login.');
+  closeModal();
+  $('lg-email').value = e; $('lg-pass').value = nw;
+}
+
+// ---------- RACE TARGET ----------
+function daysToRace(){
+  const rd = state.modules.run?.setup?.raceDate;
+  if(!rd) return null;
+  const d = new Date(rd); if(isNaN(d)) return null;
+  return Math.ceil((d - Date.now())/86400000);
+}
 window.addEventListener('DOMContentLoaded', ()=>{
-  // ensure admin exists in allow list so if he ever signs up he isn't blocked
   const authStored = JSON.parse(localStorage.getItem(AUTH_KEY)||'null');
   if(authStored){
     state.user = authStored;
-    if(state.user.isAdmin) { goAdmin(); return; }
     if(state.user.blocked){ showScreen('scr-noaccess'); return; }
     loadData(state.user.email);
     bootAfterAuth();
@@ -1202,4 +1624,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   });
 });
 
-Object.assign(window,{doLogin,doSignup,doLogout,showLogin,showSignup,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,saveWeight,doChangePass,doChangeAdminPass,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData});
+Object.assign(window,{doLogin,doSignup,doLogout,showLogin,showSignup,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,saveWeight,doChangePass,doChangeAdminPass,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openForgotPass,doForgotPass});
