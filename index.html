@@ -881,7 +881,9 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="list-row" onclick="openModal('edit-profile')">✏️ <span>Editar dados pessoais</span></div>
     <div class="list-row" onclick="openTrophies()">🏆 <span>Meus troféus</span></div>
     <div class="list-row" onclick="openModal('change-pass')">🔑 <span>Alterar senha</span></div>
-    <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
+    <div class="list-row" onclick="mtCheckUpdate()" id="pf-update-btn">🔄 <span>Verificar atualização</span><span id="pf-update-badge" style="margin-left:auto;font-size:11px"></span></div>
+    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v3.1</div>
+    <div class="list-row danger" style="margin-top:14px" onclick="doLogout()">🚪 Sair da conta</div>
   </div>
 </div>
 
@@ -917,16 +919,64 @@ a{color:var(--primary-2);text-decoration:none}
   </div>
 </nav>
 
+<!-- Update banner -->
+<div id="update-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#10b981,#059669);color:#022c22;padding:12px 16px;text-align:center;font-weight:700;font-size:14px;z-index:400;cursor:pointer;box-shadow:0 4px 20px rgba(16,185,129,0.4)" onclick="mtCheckUpdate()">
+  🎉 Nova versão disponível! Toque aqui para atualizar
+</div>
+
 <!-- Modal placeholder -->
 <div class="modal-back" id="modal-back" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js"></script>
+<script src="./app.js?v=3.1"></script>
 <script>
+const APP_VERSION = 'v3.1';
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').then(reg => {
+      // Verifica atualização a cada abertura
+      reg.update();
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            // Nova versão disponível
+            window.__hasUpdate = true;
+            document.dispatchEvent(new Event('mt:update-available'));
+          }
+        });
+      });
+    }).catch(()=>{});
+    // recarrega quando novo SW assume o controle
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  });
 }
+window.mtCheckUpdate = async function(){
+  if (!('serviceWorker' in navigator)) { alert('Seu navegador não suporta atualização automática.'); return; }
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) { window.location.reload(); return; }
+    await reg.update();
+    // se novo SW está esperando, ativa e recarrega
+    if (reg.waiting) {
+      reg.waiting.postMessage('skipWaiting');
+      return;
+    }
+    // força purge do cache e reload
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+    window.location.reload(true);
+  } catch(e) {
+    window.location.reload(true);
+  }
+};
 </script>
 </body>
 </html>

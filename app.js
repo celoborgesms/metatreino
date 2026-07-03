@@ -1,4 +1,5 @@
-// ===== MetaTreino v2.0 =====
+// ===== MetaTreino v3.1 =====
+const APP_VERSION = 'v3.1';
 const AUTH_KEY = 'metatreino_auth_v1';
 const USERS_KEY = 'metatreino_users_v1';
 const ALLOW_KEY = 'metatreino_allowlist_v1';
@@ -950,10 +951,11 @@ function renderHistory(){
     $('he-sub').textContent = 'Cada sessão que você finalizar vai aparecer aqui (guardamos últimos 90 dias).';
   } else {
     $('history-empty').classList.add('hidden');
-    $('history-list').innerHTML = h.slice().reverse().map(x=>{
+    $('history-list').innerHTML = h.slice().reverse().map((x,idx)=>{
+      const realIdx = h.length-1-idx;
       const d = new Date(x.at);
       const extra = x.distance ? `${x.distance}km · ${x.pace||''}` : '';
-      return `<div class="list-item"><div class="list-dot"></div><div class="list-info"><div class="list-tag">${d.toLocaleDateString('pt-BR')} · ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${extra?' · '+extra:''}</div><div class="list-name">${x.name}</div></div><div class="list-right mono">${x.duration}min</div></div>`;
+      return `<div class="list-item" style="cursor:pointer" onclick="openHistoryEntry(${realIdx})"><div class="list-dot"></div><div class="list-info"><div class="list-tag">${d.toLocaleDateString('pt-BR')} · ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${extra?' · '+extra:''}</div><div class="list-name">${x.name}</div></div><div class="list-right mono">${x.duration}min ›</div></div>`;
     }).join('');
   }
 }
@@ -1469,6 +1471,51 @@ function exportData(){
   toast('📤 Backup exportado');
 }
 
+// ---------- HISTORY ENTRY EDIT/DELETE ----------
+function openHistoryEntry(idx){
+  const mod = state.modules[state.active];
+  const x = (mod.history||[])[idx];
+  if(!x) return;
+  const d = new Date(x.at);
+  const isRun = state.active==='run';
+  const html = `
+    <h3>📝 Editar treino</h3>
+    <div class="field" style="margin-top:12px"><label>Nome</label><input class="input" id="he-name" value="${x.name.replace(/"/g,'&quot;')}"></div>
+    <div class="field"><label>Data</label><input class="input" type="datetime-local" id="he-date" value="${d.toISOString().slice(0,16)}" style="color-scheme:dark"></div>
+    <div class="field"><label>Duração (min)</label><input class="input mono" type="number" id="he-dur" value="${x.duration||0}"></div>
+    ${isRun?`<div class="field"><label>Distância (km)</label><input class="input mono" type="number" step="0.1" id="he-km" value="${x.distance||''}"></div>`:''}
+    <div class="row" style="gap:8px;margin-top:14px">
+      <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-block" onclick="saveHistoryEntry(${idx})">💾 Salvar</button>
+    </div>
+    <button class="btn btn-block" style="margin-top:10px;background:rgba(244,63,94,0.1);color:#fda4af;border:1px solid rgba(244,63,94,0.3)" onclick="deleteHistoryEntry(${idx})">🗑️ Excluir este treino</button>
+  `;
+  $('modal-inner').innerHTML = html;
+  $('modal-back').classList.add('on');
+}
+function saveHistoryEntry(idx){
+  const mod = state.modules[state.active];
+  const x = (mod.history||[])[idx]; if(!x) return;
+  x.name = $('he-name').value.trim() || x.name;
+  const dv = $('he-date').value;
+  if(dv){ const nd = new Date(dv); if(!isNaN(nd)) x.at = nd.getTime(); }
+  x.duration = parseInt($('he-dur').value) || x.duration;
+  const kmEl = $('he-km'); if(kmEl){ const km = parseFloat(kmEl.value); if(km>0){ x.distance = km; if(x.duration) { const pace = x.duration/km; x.pace = Math.floor(pace)+':'+String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0')+'/km'; } } }
+  saveData();
+  toast('✅ Treino atualizado');
+  closeModal();
+  renderHistory();
+}
+function deleteHistoryEntry(idx){
+  if(!confirm('Excluir este treino do histórico? Não pode ser desfeito.')) return;
+  const mod = state.modules[state.active];
+  mod.history.splice(idx, 1);
+  saveData();
+  toast('🗑️ Treino excluído');
+  closeModal();
+  renderHistory();
+}
+
 // ---------- SWAP EXERCISE ----------
 function openSwapExercise(exId){
   const mod = state.modules.lift;
@@ -1609,6 +1656,11 @@ function daysToRace(){
   return Math.ceil((d - Date.now())/86400000);
 }
 window.addEventListener('DOMContentLoaded', ()=>{
+  // Update available listener
+  document.addEventListener('mt:update-available', ()=>{
+    const b = $('update-banner'); if(b) b.style.display='block';
+    const badge = $('pf-update-badge'); if(badge) badge.innerHTML='<span style="padding:3px 8px;border-radius:999px;background:var(--accent);color:#3a2404;font-weight:800">nova!</span>';
+  });
   const authStored = JSON.parse(localStorage.getItem(AUTH_KEY)||'null');
   if(authStored){
     state.user = authStored;
@@ -1624,4 +1676,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   });
 });
 
-Object.assign(window,{doLogin,doSignup,doLogout,showLogin,showSignup,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,saveWeight,doChangePass,doChangeAdminPass,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openForgotPass,doForgotPass});
+Object.assign(window,{doLogin,doSignup,doLogout,showLogin,showSignup,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,saveWeight,doChangePass,doChangeAdminPass,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openForgotPass,doForgotPass,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry});
