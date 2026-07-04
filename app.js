@@ -1,5 +1,5 @@
-// ===== MetaTreino v3.9 =====
-const APP_VERSION = 'v3.9';
+// ===== MetaTreino v4.0 =====
+const APP_VERSION = 'v4.0';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'celoborgesms@gmail.com';
@@ -1219,14 +1219,23 @@ function confirmLiftWorkout(k){
   const feel = readOpt('fl-feel') || 'bem';
   // captura o que foi feito hoje em cada exercício (pra histórico e compartilhamento)
   const today = new Date(); today.setHours(0,0,0,0);
+  let firstLogAt = null;
   const exercisesDone = (w.exercises||[]).map(ex=>{
     const entry = (state.progress[ex.id]||[]).find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime() && p.sets.length; });
     if(!entry) return null;
+    if(!firstLogAt || entry.date < firstLogAt) firstLogAt = entry.date;
     const top = entry.sets.reduce((b,s)=>((s.peso||0)*(s.reps||0) > (b.peso||0)*(b.reps||0) ? s : b), entry.sets[0]);
     return { name:ex.name, part:ex.part, sets:entry.sets.length, best: top.peso>0 ? `${top.peso}kg×${top.reps}` : `${top.reps} reps` };
   }).filter(Boolean);
+  // duração REAL: do primeiro registro de série até agora (com limites de sanidade);
+  // se não der pra medir, usa a estimativa do plano
+  let realDuration = w.duration;
+  if(firstLogAt){
+    const mins = Math.round((Date.now() - firstLogAt) / 60000);
+    if(mins >= 5 && mins <= 240) realDuration = mins;
+  }
   mod.history = mod.history || [];
-  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:w.duration, module:'lift', feel, parts:[...(w.parts||[])], exercisesDone });
+  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:realDuration, plannedDuration:w.duration, module:'lift', feel, parts:[...(w.parts||[])], exercisesDone });
   ensureStats(); state.stats.liftTotal++;
   checkTrophies();
   saveData();
@@ -1761,31 +1770,48 @@ function saveProfileEdit(){
 }
 
 // ---------- MAPA MUSCULAR ----------
-// Silhueta simples com os grupos treinados acesos em verde
-const MUSCLE_POS = {
-  'Ombro':[[38,34],[82,34]], 'Trapézio':[[60,28]], 'Peito':[[49,44],[71,44]],
-  'Bíceps':[[30,52],[90,52]], 'Tríceps':[[26,58],[94,58]], 'Antebraço':[[24,70],[96,70]],
-  'Costas':[[60,46]], 'Core':[[60,62]], 'Lombar':[[60,72]],
-  'Glúteo':[[52,82],[68,82]], 'Quadríceps':[[50,96],[70,96]], 'Posterior':[[46,100],[74,100]],
-  'Panturrilha':[[49,122],[71,122]], 'Pernas':[[50,96],[70,96]]
+// Estilo anatômico: frente + costas em traço fino, músculos treinados preenchidos em verde
+const MUSCLE_SHAPES = {
+  // ===== FRENTE (figura da esquerda, centro x=62) =====
+  'Ombro':      ['M44 55 q-8 2 -9 11 q6 5 12 1 q3 -7 -3 -12 Z','M80 55 q8 2 9 11 q-6 5 -12 1 q-3 -7 3 -12 Z'],
+  'Peito':      ['M48 64 q12 -5 13 4 l0 12 q-8 4 -14 -1 q-3 -8 1 -15 Z','M76 64 q-12 -5 -13 4 l0 12 q8 4 14 -1 q3 -8 -1 -15 Z'],
+  'Bíceps':     ['M38 72 q-6 3 -6 12 q0 6 5 8 q5 -4 5 -11 q0 -6 -4 -9 Z','M86 72 q6 3 6 12 q0 6 -5 8 q-5 -4 -5 -11 q0 -6 4 -9 Z'],
+  'Antebraço':  ['M32 95 q-4 4 -5 14 q3 5 7 3 q3 -8 3 -14 q-2 -4 -5 -3 Z','M92 95 q4 4 5 14 q-3 5 -7 3 q-3 -8 -3 -14 q2 -4 5 -3 Z'],
+  'Core':       ['M55 82 l14 0 q2 14 0 28 q-7 4 -14 0 q-2 -14 0 -28 Z'],
+  'Quadríceps': ['M52 118 q-5 16 -3 34 q4 6 9 2 q4 -18 2 -34 q-4 -4 -8 -2 Z','M72 118 q5 16 3 34 q-4 6 -9 2 q-4 -18 -2 -34 q4 -4 8 -2 Z'],
+  'Pernas':     ['M52 118 q-5 16 -3 34 q4 6 9 2 q4 -18 2 -34 q-4 -4 -8 -2 Z','M72 118 q5 16 3 34 q-4 6 -9 2 q-4 -18 -2 -34 q4 -4 8 -2 Z'],
+  // ===== COSTAS (figura da direita, centro x=178) =====
+  'Trapézio':   ['M170 48 l16 0 l-4 22 q-4 3 -8 0 Z'],
+  'Costas':     ['M160 70 q10 -4 16 2 l0 20 q-10 6 -17 -2 q-2 -12 1 -20 Z','M196 70 q-10 -4 -16 2 l0 20 q10 6 17 -2 q2 -12 -1 -20 Z'],
+  'Lombar':     ['M170 94 l16 0 q2 8 0 14 q-8 3 -16 0 q-2 -6 0 -14 Z'],
+  'Tríceps':    ['M154 70 q-6 4 -6 13 q1 7 6 8 q4 -5 4 -12 q0 -6 -4 -9 Z','M202 70 q6 4 6 13 q-1 7 -6 8 q-4 -5 -4 -12 q0 -6 4 -9 Z'],
+  'Glúteo':     ['M168 112 q-7 2 -7 10 q0 7 8 8 q6 -2 6 -9 q-1 -8 -7 -9 Z','M188 112 q7 2 7 10 q0 7 -8 8 q-6 -2 -6 -9 q1 -8 7 -9 Z'],
+  'Posterior':  ['M167 134 q-4 15 -2 30 q4 5 8 1 q3 -16 1 -30 q-3 -4 -7 -1 Z','M189 134 q4 15 2 30 q-4 5 -8 1 q-3 -16 -1 -30 q3 -4 7 -1 Z'],
+  'Panturrilha':['M168 172 q-4 8 -2 20 q3 5 7 2 q3 -11 1 -20 q-3 -4 -6 -2 Z','M188 172 q4 8 2 20 q-3 5 -7 2 q-3 -11 -1 -20 q3 -4 6 -2 Z']
 };
+// contorno do corpo (frente e costas) em traço fino
+function bodyOutline(cx){
+  return `M${cx} 18 m-8 0 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0
+    M${cx-5} 30 l10 0 l2 6 q14 3 16 16 l4 32 q1 6 -3 7 q-4 1 -5 -4 l-4 -26 l-1 26 q2 14 -1 26 l-4 46 q-1 6 -6 6 q-4 0 -4 -6 l1 -42 l-5 -12 l-5 12 l1 42 q0 6 -4 6 q-5 0 -6 -6 l-4 -46 q-3 -12 -1 -26 l-1 -26 l-4 26 q-1 5 -5 4 q-4 -1 -3 -7 l4 -32 q2 -13 16 -16 Z`;
+}
 function muscleBodySVG(parts, size){
-  size = size || 130;
+  size = size || 150;
   const lit = new Set(parts||[]);
-  const glow = [];
-  Object.entries(MUSCLE_POS).forEach(([name, spots])=>{
-    if(lit.has(name)){
-      spots.forEach(([x,y])=>{
-        glow.push(`<circle cx="${x}" cy="${y}" r="9" fill="rgba(16,185,129,0.25)"/><circle cx="${x}" cy="${y}" r="4.5" fill="#10b981"/>`);
-      });
-    }
+  // "Pernas" acende quadríceps + posterior + glúteo
+  if(lit.has('Pernas')){ lit.add('Quadríceps'); lit.add('Posterior'); lit.add('Glúteo'); }
+  const shapes = [];
+  Object.entries(MUSCLE_SHAPES).forEach(([name, paths])=>{
+    const on = lit.has(name);
+    paths.forEach(p=>{
+      shapes.push(`<path d="${p}" fill="${on?'rgba(16,185,129,0.85)':'none'}" stroke="${on?'#10b981':'rgba(148,163,184,0.4)'}" stroke-width="1.2"/>`);
+    });
   });
-  return `<svg viewBox="0 0 120 150" width="${size}" height="${Math.round(size*1.25)}">
-    <g fill="rgba(148,163,184,0.18)" stroke="rgba(148,163,184,0.35)" stroke-width="1.5">
-      <circle cx="60" cy="14" r="9"/>
-      <path d="M45 26 Q60 22 75 26 L80 30 Q92 34 94 46 L97 72 Q97 76 93 76 L90 76 Q87 74 87 70 L84 50 L82 66 Q83 76 81 84 L78 108 L76 134 Q76 140 71 140 L68 140 Q65 138 66 132 L67 106 L63 88 L60 86 L57 88 L53 106 L54 132 Q55 138 52 140 L49 140 Q44 140 44 134 L42 108 L39 84 Q37 76 38 66 L36 50 L33 70 Q33 74 30 76 L27 76 Q23 76 23 72 L26 46 Q28 34 40 30 Z"/>
-    </g>
-    ${glow.join('')}
+  return `<svg viewBox="0 0 240 215" width="${size}" height="${Math.round(size*0.9)}">
+    <path d="${bodyOutline(62)}" fill="none" stroke="rgba(148,163,184,0.55)" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="${bodyOutline(178)}" fill="none" stroke="rgba(148,163,184,0.55)" stroke-width="1.6" stroke-linejoin="round"/>
+    ${shapes.join('')}
+    <text x="62" y="212" text-anchor="middle" fill="#64748b" font-size="9" font-family="system-ui">FRENTE</text>
+    <text x="178" y="212" text-anchor="middle" fill="#64748b" font-size="9" font-family="system-ui">COSTAS</text>
   </svg>`;
 }
 function partsFromEntry(x){
@@ -1851,95 +1877,99 @@ function openWeekSummary(){
   $('modal-back').classList.add('on');
 }
 // Gera uma imagem com a marca do MetaTreino e compartilha (ou baixa)
+// Card no estilo clássico do MetaTreino: moldura, marca, grade de stats e lista de exercícios
 function buildShareCanvas(opts){
-  // opts: {title, subtitle, bigLines:[], detailLines:[], chips:[]}
-  const W = 1080;
-  const detail = opts.detailLines||[];
-  const chips = opts.chips||[];
-  const H = Math.max(1080, 560 + (opts.bigLines||[]).length*86 + (chips.length?100:0) + detail.length*58 + 230);
+  // opts: {title, subtitle, stats:[{rotulo,valor}] (até 4), listaTitulo, lista:[], destaque}
+  const W = 1080, H = 1350;
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const x = c.getContext('2d');
-  // fundo com gradiente
-  const g = x.createLinearGradient(0,0,W,H);
-  g.addColorStop(0,'#050914'); g.addColorStop(0.55,'#07131f'); g.addColorStop(1,'#0a1a2e');
-  x.fillStyle = g; x.fillRect(0,0,W,H);
-  // brilhos
-  let rg = x.createRadialGradient(540,180,40,540,180,560);
-  rg.addColorStop(0,'rgba(16,185,129,0.30)'); rg.addColorStop(1,'rgba(16,185,129,0)');
-  x.fillStyle = rg; x.fillRect(0,0,W,H);
-  rg = x.createRadialGradient(100,H-150,20,100,H-150,420);
-  rg.addColorStop(0,'rgba(245,158,11,0.10)'); rg.addColorStop(1,'rgba(245,158,11,0)');
-  x.fillStyle = rg; x.fillRect(0,0,W,H);
-  // moldura sutil
-  x.strokeStyle = 'rgba(16,185,129,0.35)'; x.lineWidth = 4;
-  roundRect(x, 40, 40, W-80, H-80, 44); x.stroke();
-  // logo
+  // fundo gradiente escuro → verde
+  const g = x.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#050914');
+  g.addColorStop(0.5, '#06281f');
+  g.addColorStop(1, '#0a3d2e');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  // círculos decorativos
+  x.globalAlpha = 0.10; x.fillStyle = '#10b981';
+  x.beginPath(); x.arc(915, 170, 180, 0, Math.PI*2); x.fill();
+  x.beginPath(); x.arc(120, 1120, 230, 0, Math.PI*2); x.fill();
+  x.globalAlpha = 1;
+  // painel central
+  roundRect(x, 70, 60, W-140, H-120, 58);
+  x.fillStyle = 'rgba(5, 9, 20, 0.80)'; x.fill();
+  x.strokeStyle = 'rgba(16, 185, 129, 0.40)'; x.lineWidth = 3; x.stroke();
+  // marca
+  x.textAlign = 'left';
   x.fillStyle = '#10b981';
-  roundRect(x, 490, 90, 100, 100, 26); x.fill();
-  x.fillStyle = '#022c22'; x.textAlign = 'center';
-  x.font = '900 62px system-ui, sans-serif';
-  x.fillText('M', 540, 160);
-  // título
-  x.fillStyle = '#e2e8f0';
-  x.font = '800 58px system-ui, sans-serif';
-  x.fillText(opts.title, 540, 280);
-  if(opts.subtitle){
+  x.font = '900 42px Arial, sans-serif';
+  x.fillText('Meta', 115, 145);
+  x.fillStyle = '#ffffff';
+  x.fillText('Treino', 213, 145);
+  x.fillStyle = '#6ee7b7';
+  x.font = '700 26px Arial, sans-serif';
+  x.fillText('treino inteligente do dia', 115, 183);
+  // título e subtítulo
+  x.fillStyle = '#ffffff';
+  x.font = '900 66px Arial, sans-serif';
+  x.fillText(cutTxt(x, opts.title||'Atividade concluída', 850), 115, 292);
+  x.fillStyle = '#a7f3d0';
+  x.font = '800 36px Arial, sans-serif';
+  x.fillText(cutTxt(x, opts.subtitle||'MetaTreino', 850), 115, 352);
+  // grade de stats 2×2
+  const stats = (opts.stats||[]).slice(0,4);
+  const boxW = 405, boxH = 132;
+  stats.forEach((item,i)=>{
+    const col = i%2, row = Math.floor(i/2);
+    const bx = 115 + col*435, by = 430 + row*156;
+    roundRect(x, bx, by, boxW, boxH, 28);
+    x.fillStyle = 'rgba(255,255,255,0.08)'; x.fill();
+    x.strokeStyle = 'rgba(16,185,129,0.35)'; x.lineWidth = 2; x.stroke();
     x.fillStyle = '#94a3b8';
-    x.font = '600 36px system-ui, sans-serif';
-    x.fillText(opts.subtitle, 540, 335);
-  }
-  let y = 430;
-  // linhas grandes
-  x.fillStyle = '#e2e8f0';
-  x.font = '700 48px system-ui, sans-serif';
-  (opts.bigLines||[]).forEach(l=>{ x.fillText(l, 540, y); y += 86; });
-  // chips de músculos
-  if(chips.length){
-    y += 6;
-    x.font = '700 30px system-ui, sans-serif';
-    let rowChips = [], rows = [], rowW = 0;
-    chips.forEach(ch=>{
-      const w = x.measureText(ch).width + 56;
-      if(rowW + w > 900 && rowChips.length){ rows.push(rowChips); rowChips=[]; rowW=0; }
-      rowChips.push(ch); rowW += w + 16;
-    });
-    if(rowChips.length) rows.push(rowChips);
-    rows.forEach(row=>{
-      const totalW = row.reduce((s,ch)=>s + x.measureText(ch).width + 56, 0) + (row.length-1)*16;
-      let cx = 540 - totalW/2;
-      row.forEach(ch=>{
-        const w = x.measureText(ch).width + 56;
-        x.fillStyle = 'rgba(16,185,129,0.15)';
-        roundRect(x, cx, y-38, w, 56, 28); x.fill();
-        x.strokeStyle = 'rgba(16,185,129,0.5)'; x.lineWidth=2; roundRect(x, cx, y-38, w, 56, 28); x.stroke();
-        x.fillStyle = '#34d399'; x.textAlign='left';
-        x.fillText(ch, cx+28, y+2);
-        cx += w + 16;
-      });
-      x.textAlign='center';
-      y += 76;
-    });
-    y += 14;
-  }
-  // linhas de detalhe (exercícios)
-  if(detail.length){
-    x.textAlign = 'center';
-    x.font = '600 34px system-ui, sans-serif';
-    detail.forEach(l=>{
-      x.fillStyle = '#cbd5e1';
-      x.fillText(l, 540, y); y += 58;
-    });
-  }
-  // rodapé/marca
-  x.textAlign = 'center';
-  x.fillStyle = '#10b981';
-  x.font = '900 60px system-ui, sans-serif';
-  x.fillText('MetaTreino', 540, H-120);
-  x.fillStyle = '#64748b';
-  x.font = '500 32px system-ui, sans-serif';
-  x.fillText('Treinos inteligentes que evoluem com você', 540, H-70);
+    x.font = '800 24px Arial, sans-serif';
+    x.fillText(cutTxt(x, String(item.rotulo||''), boxW-56), bx+28, by+42);
+    x.fillStyle = '#ffffff';
+    x.font = '900 37px Arial, sans-serif';
+    x.fillText(cutTxt(x, String(item.valor||''), boxW-56), bx+28, by+92);
+  });
+  // caixa de lista (exercícios por grupo muscular)
+  const listaX = 115, listaY = 775, listaW = 850, listaH = 330;
+  roundRect(x, listaX, listaY, listaW, listaH, 32);
+  x.fillStyle = 'rgba(5, 9, 20, 0.65)'; x.fill();
+  x.strokeStyle = 'rgba(16,185,129,0.40)'; x.lineWidth = 2; x.stroke();
+  x.save();
+  roundRect(x, listaX+2, listaY+2, listaW-4, listaH-4, 30); x.clip();
+  x.fillStyle = '#6ee7b7';
+  x.font = '900 29px Arial, sans-serif';
+  x.fillText(cutTxt(x, opts.listaTitulo||'Resumo', 780), 145, listaY+56);
+  x.fillStyle = '#ffffff';
+  x.font = '700 26px Arial, sans-serif';
+  let yL = listaY + 106;
+  const lista = (opts.lista&&opts.lista.length)?opts.lista:['Atividade registrada com sucesso'];
+  const vis = lista.slice(0,6);
+  vis.forEach((item,i)=>{
+    let t = '• ' + item;
+    if(i===5 && lista.length>6) t = '• +' + (lista.length-5) + ' registro(s)';
+    x.fillText(cutTxt(x, t, 790), 145, yL);
+    yL += 38;
+  });
+  x.restore();
+  // destaque e rodapé
+  x.fillStyle = '#ffffff';
+  x.font = '900 34px Arial, sans-serif';
+  x.fillText(cutTxt(x, opts.destaque||'Treinei hoje com MetaTreino 💪', 850), 115, 1170);
+  x.fillStyle = '#6ee7b7';
+  x.font = '700 24px Arial, sans-serif';
+  x.fillText('MetaTreino • treinos inteligentes que evoluem com você', 115, 1235);
+  x.fillStyle = '#34d399';
+  x.font = '700 21px Arial, sans-serif';
+  x.fillText('MetaTreino App', 115, 1268);
   return c;
+}
+function cutTxt(x, txt, maxW){
+  if(x.measureText(txt).width <= maxW) return txt;
+  while(txt.length>2 && x.measureText(txt+'…').width > maxW) txt = txt.slice(0,-1);
+  return txt+'…';
 }
 function roundRect(x, px, py, w, h, r){
   x.beginPath();
@@ -1963,15 +1993,35 @@ async function shareCanvas(canvas, filename, shareText){
     toast('🖼️ Imagem salva — poste onde quiser!');
   }, 'image/png');
 }
+// Agrupa exercícios feitos por grupo muscular: "Quadríceps: Hack Machine, Cadeira Extensora"
+function groupByPart(exercisesDone){
+  const map = {};
+  (exercisesDone||[]).forEach(e=>{
+    const p = e.part||'Outros';
+    (map[p] = map[p]||[]).push(e.name);
+  });
+  return Object.entries(map).map(([part,names])=>`${part}: ${names.join(', ')}`);
+}
 function shareWeekImage(){
   const s = weekStats();
-  const bigLines = [];
-  if(s.lift) bigLines.push(`💪 ${s.lift} treino${s.lift>1?'s':''} de musculação`);
-  if(s.runs) bigLines.push(`🏃 ${s.runs} corrida${s.runs>1?'s':''} · ${s.kmRun.toFixed(1)}km`);
-  if(s.walks) bigLines.push(`🚶 ${s.walks} caminhada${s.walks>1?'s':''} · ${s.kmWalk.toFixed(1)}km`);
-  if(s.bikes) bigLines.push(`🚴 ${s.bikes} pedal${s.bikes>1?'is':''} · ${s.kmBike.toFixed(1)}km`);
-  bigLines.push(`⏱️ ${s.totalMin} min em movimento`);
-  const c = buildShareCanvas({ title:'Minha semana de treinos 🔥', subtitle:new Date().toLocaleDateString('pt-BR'), bigLines });
+  const lista = [];
+  if(s.lift) lista.push(`💪 ${s.lift} treino${s.lift>1?'s':''} de musculação`);
+  if(s.runs) lista.push(`🏃 ${s.runs} corrida${s.runs>1?'s':''} · ${s.kmRun.toFixed(1)}km`);
+  if(s.walks) lista.push(`🚶 ${s.walks} caminhada${s.walks>1?'s':''} · ${s.kmWalk.toFixed(1)}km`);
+  if(s.bikes) lista.push(`🚴 ${s.bikes} pedal${s.bikes>1?'is':''} · ${s.kmBike.toFixed(1)}km`);
+  const c = buildShareCanvas({
+    title:'Minha semana de treinos',
+    subtitle:'Semana de '+new Date().toLocaleDateString('pt-BR'),
+    stats:[
+      {rotulo:'Atividades', valor:String(s.total)},
+      {rotulo:'Em movimento', valor:s.totalMin+' min'},
+      {rotulo:'Musculação', valor:String(s.lift)},
+      {rotulo:'Km na semana', valor:(s.kmRun+s.kmWalk+s.kmBike).toFixed(1)+' km'}
+    ],
+    listaTitulo:'O que rolou na semana',
+    lista,
+    destaque:'Mais uma semana concluída 🔥'
+  });
   shareCanvas(c, 'metatreino-semana.png', 'Minha semana de treinos no MetaTreino 💪');
 }
 function shareWorkoutImage(histIdx){
@@ -1980,17 +2030,40 @@ function shareWorkoutImage(histIdx){
   if(!x) return;
   const d = new Date(x.at);
   const isRun = x.module==='run';
-  const emo = x.activity==='caminhada'?'🚶':x.activity==='bike'?'🚴':isRun?'🏃':'💪';
-  const bigLines = [ x.name.replace(/^[🚶🚴🏃]\s*/,'') ];
-  if(x.distance) bigLines.push(`📍 ${x.distance}km${x.pace?' · '+x.pace:''}`);
-  bigLines.push(`⏱️ ${x.duration} min`);
-  // músculos e exercícios completos (musculação)
-  const chips = !isRun ? partsFromEntry(x) : [];
-  const detailLines = (x.exercisesDone||[]).map(e=>`${e.name} — ${e.sets}× · ${e.best}`);
+  const feelLbl = {otimo:'Muito bem 🚀', bem:'Bem 😊', cansado:'Cansado 😮‍💨', exausto:'Exausto 😩'}[x.feel];
+  if(isRun){
+    const atv = x.activity==='caminhada'?'Caminhada':x.activity==='bike'?'Bike':'Corrida';
+    const emo = x.activity==='caminhada'?'🚶':x.activity==='bike'?'🚴':'🏃';
+    const c = buildShareCanvas({
+      title:`${atv} concluída ${emo}`,
+      subtitle:d.toLocaleDateString('pt-BR'),
+      stats:[
+        {rotulo:'Distância', valor:(x.distance||0)+' km'},
+        {rotulo:'Tempo', valor:x.duration+' min'},
+        {rotulo:'Ritmo médio', valor:x.pace||'—'},
+        {rotulo:'Sensação', valor:x.rating>=5?'Ótimo 🚀':x.rating<=1?'Difícil 😩':'Normal 😊'}
+      ],
+      listaTitulo:'Atividade',
+      lista:[x.name.replace(/^[🚶🚴🏃]\\s*/,'')],
+      destaque:'Treinei hoje com MetaTreino 💪'
+    });
+    shareCanvas(c, 'metatreino-atividade.png', `${atv} concluída no MetaTreino ${emo}`);
+    return;
+  }
+  const parts = partsFromEntry(x);
+  const lista = (x.exercisesDone&&x.exercisesDone.length) ? groupByPart(x.exercisesDone) : parts.map(p=>p);
   const c = buildShareCanvas({
-    title:`Treino concluído ${emo}`,
-    subtitle:d.toLocaleDateString('pt-BR'),
-    bigLines, chips, detailLines
+    title:'Treino concluído 💪',
+    subtitle:x.name,
+    stats:[
+      {rotulo:'Exercícios', valor:String((x.exercisesDone||[]).length||'Salvo')},
+      {rotulo:'Duração', valor:x.duration+' min'},
+      {rotulo:'Músculos', valor:parts.slice(0,2).join(' + ')||'—'},
+      {rotulo:'Sensação', valor:feelLbl||'Registrada'}
+    ],
+    listaTitulo:'Exercícios do treino',
+    lista,
+    destaque:'Treinei hoje com MetaTreino 💪'
   });
   shareCanvas(c, 'metatreino-treino.png', 'Treino concluído no MetaTreino 💪');
 }
@@ -2221,8 +2294,9 @@ function openHistoryEntry(idx){
       <div style="display:flex;gap:5px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:11.5px;padding:3px 10px;border-radius:999px;background:rgba(16,185,129,0.12);color:var(--primary-2);font-weight:700">${p}</span>`).join('')}</div></div>
     </div>` : '';
   const exBlock = (x.exercisesDone && x.exercisesDone.length) ? `
-    <div class="section-lbl" style="margin-top:14px">Exercícios registrados</div>
-    <div class="card">${x.exercisesDone.map(e=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:13.5px">${e.name}</span><b class="mono" style="font-size:13px;color:var(--primary-2)">${e.sets}× · ${e.best}</b></div>`).join('')}</div>` : '';
+    <div class="section-lbl" style="margin-top:14px">Exercícios por grupo</div>
+    <div class="card">${groupByPart(x.exercisesDone).map(l=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13.5px"><b style="color:var(--primary-2)">${l.split(':')[0]}:</b>${l.split(':').slice(1).join(':')}</div>`).join('')}
+    <div style="margin-top:8px">${x.exercisesDone.map(e=>`<div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:13px;color:var(--text-dim)">${e.name}</span><b class="mono" style="font-size:12.5px;color:var(--primary-2)">${e.sets}× · ${e.best}</b></div>`).join('')}</div></div>` : '';
   const html = `
     <h3>📝 Detalhes do treino</h3>
     ${muscleBlock}
