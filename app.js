@@ -1,5 +1,5 @@
-// ===== MetaTreino v3.8 =====
-const APP_VERSION = 'v3.8';
+// ===== MetaTreino v3.9 =====
+const APP_VERSION = 'v3.9';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'celoborgesms@gmail.com';
@@ -1003,17 +1003,18 @@ function renderExerciseCard(ex, idx){
   const pr = state.prs[ex.id];
   const today = new Date(); today.setHours(0,0,0,0);
   const todayLogs = (state.progress[ex.id]||[]).filter(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime(); });
-  const setsToday = todayLogs.length? todayLogs[todayLogs.length-1].sets.length : 0;
+  const todayEntry = todayLogs.length? todayLogs[todayLogs.length-1] : null;
+  const doneToday = todayEntry && todayEntry.sets.length>0;
   return `
-    <div class="ex">
-      <div class="ex-num">${idx+1}</div>
+    <div class="ex" style="${doneToday?'border-left:3px solid var(--primary);padding-left:10px':''}">
+      <div class="ex-num" style="${doneToday?'background:var(--primary);color:#022c22':''}">${doneToday?'✓':idx+1}</div>
       <div style="flex:1">
         <div class="ex-name">${ex.name} ${pr?`<span class="pr-badge">🏆 PR ${pr.peso}kg×${pr.reps}</span>`:''}</div>
         <div class="ex-desc">${ex.sub} · Alvo: <b>${ex.sets}×${ex.reps}</b> · Descanso ${ex.rest}</div>
         ${last?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px">📊 Última: ${last.sets.map(s=>`${s.peso}kg×${s.reps}`).join(', ')}</div>`:''}
-        ${setsToday>0?`<div class="ex-desc" style="color:var(--accent-2);margin-top:4px">✍️ Hoje: ${setsToday} série${setsToday>1?'s':''} registrada${setsToday>1?'s':''}</div>`:''}
+        ${doneToday?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px;font-weight:700">✅ Hoje: ${todayEntry.sets.map(s=>`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', ')}</div>`:''}
         <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="openSetLog('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">📝 Registrar</button>
+          <button class="btn ${doneToday?'btn-ghost':'btn-primary'}" style="padding:8px 14px;font-size:13px" onclick="openSetLog('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">${doneToday?'✏️ Editar séries':'📝 Registrar'}</button>
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="window.open('${ytLink(ex.name)}','_blank')">▶ Ver como fazer</button>
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="openSwapExercise('${ex.id}')">🔄 Trocar</button>
         </div>
@@ -1141,10 +1142,12 @@ function addSet(){
 function delSet(i){ curLog.entry.sets.splice(i,1); renderSetLogModal(); }
 function updateSet(i,k,v){ curLog.entry.sets[i][k] = k==='peso'?parseFloat(v)||0:parseInt(v)||0; }
 function closeSetLog(save){
+  const savedExId = curLog ? curLog.exId : null;
   if(save){
-    curLog.entry.sets = curLog.entry.sets.filter(s=>s.peso>0 && s.reps>0);
-    // check PR
-    curLog.entry.sets.forEach(s=>{
+    // reps>0 basta: peso 0 é válido (exercícios de peso corporal)
+    curLog.entry.sets = curLog.entry.sets.filter(s=>s.reps>0 && s.peso>=0);
+    // check PR (só faz sentido com peso externo)
+    curLog.entry.sets.filter(s=>s.peso>0).forEach(s=>{
       const pr = state.prs[curLog.exId];
       if(!pr || s.peso > pr.peso || (s.peso===pr.peso && s.reps > pr.reps)){
         state.prs[curLog.exId] = { peso:s.peso, reps:s.reps, at:Date.now() };
@@ -1157,12 +1160,35 @@ function closeSetLog(save){
     state.progress[curLog.exId] = arr.filter(p=>p.sets.length>0);
     if(!state.progress[curLog.exId].length) delete state.progress[curLog.exId];
     saveData();
-    toast('✅ Série(s) salvas');
     // refresh session view
     if(state.ui.tab==='sessions') renderSessions();
   }
   curLog = null;
   closeModal();
+  // Fluxo contínuo: depois de salvar, abre automaticamente o próximo exercício não registrado
+  if(save && savedExId){
+    const next = nextUnloggedExercise(savedExId);
+    if(next){
+      toast('✅ Salvo! Próximo: '+next.name);
+      setTimeout(()=>openSetLog(next.id, next.name), 650);
+    } else {
+      toast('🎉 Todos os exercícios registrados! Toque em "Salvar treino" pra finalizar.');
+    }
+  }
+}
+function nextUnloggedExercise(afterExId){
+  const w = state.ui.selectedSession || (state.modules.lift?.plan?.workouts||[]).find(x=>x.dayIdx===getDayIdx());
+  if(!w || !w.exercises) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const isLogged = id => ((state.progress[id]||[]).some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime() && p.sets.length>0; }));
+  const list = w.exercises;
+  const idx = list.findIndex(e=>e.id===afterExId);
+  // procura a partir do seguinte, dando a volta na lista
+  for(let i=1;i<=list.length;i++){
+    const ex = list[(idx+i) % list.length];
+    if(ex.id!==afterExId && !isLogged(ex.id)) return ex;
+  }
+  return null;
 }
 
 // ---------- FINISH LIFT WORKOUT ----------
@@ -1191,8 +1217,16 @@ function confirmLiftWorkout(k){
   const w = mod.plan.workouts.find(x=>x.k===k);
   if(!w) return;
   const feel = readOpt('fl-feel') || 'bem';
+  // captura o que foi feito hoje em cada exercício (pra histórico e compartilhamento)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exercisesDone = (w.exercises||[]).map(ex=>{
+    const entry = (state.progress[ex.id]||[]).find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime() && p.sets.length; });
+    if(!entry) return null;
+    const top = entry.sets.reduce((b,s)=>((s.peso||0)*(s.reps||0) > (b.peso||0)*(b.reps||0) ? s : b), entry.sets[0]);
+    return { name:ex.name, part:ex.part, sets:entry.sets.length, best: top.peso>0 ? `${top.peso}kg×${top.reps}` : `${top.reps} reps` };
+  }).filter(Boolean);
   mod.history = mod.history || [];
-  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:w.duration, module:'lift', feel });
+  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:w.duration, module:'lift', feel, parts:[...(w.parts||[])], exercisesDone });
   ensureStats(); state.stats.liftTotal++;
   checkTrophies();
   saveData();
@@ -1252,7 +1286,9 @@ function renderHistory(){
       const realIdx = h.length-1-idx;
       const d = new Date(x.at);
       const extra = x.distance ? `${x.distance}km · ${x.pace||''}` : '';
-      return `<div class="list-item" style="cursor:pointer" onclick="openHistoryEntry(${realIdx})"><div class="list-dot"></div><div class="list-info"><div class="list-tag">${d.toLocaleDateString('pt-BR')} · ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${extra?' · '+extra:''}</div><div class="list-name">${x.name}</div></div><div class="list-right mono">${x.duration}min ›</div></div>`;
+      const parts = x.module==='lift' ? partsFromEntry(x) : [];
+      const chips = parts.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${parts.map(p=>`<span style="font-size:10.5px;padding:2px 8px;border-radius:999px;background:rgba(16,185,129,0.12);color:var(--primary-2);font-weight:700">${p}</span>`).join('')}</div>` : '';
+      return `<div class="list-item" style="cursor:pointer" onclick="openHistoryEntry(${realIdx})"><div class="list-dot"></div><div class="list-info"><div class="list-tag">${d.toLocaleDateString('pt-BR')} · ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${extra?' · '+extra:''}</div><div class="list-name">${x.name}</div>${chips}</div><div class="list-right mono">${x.duration}min ›</div></div>`;
     }).join('');
   }
 }
@@ -1270,36 +1306,119 @@ function renderPerf(){
   const isLift = state.active==='lift';
   const h = mod.history||[];
   const wkTarget = mod.plan.workouts.length;
-  const start = new Date(); start.setDate(start.getDate()-7); start.setHours(0,0,0,0);
-  const weekDone = h.filter(x=>x.at>=start.getTime()).length;
-  $('s1-lbl').textContent = isLift?'Treinos':'Corridas';
+  const now = Date.now();
+  const start = now - 7*86400000;
+  const prevStart = now - 14*86400000;
+  const weekDone = h.filter(x=>x.at>=start).length;
+  $('s1-lbl').textContent = isLift?'Treinos 7d':'Atividades 7d';
   $('s1-val').innerHTML = `${weekDone}<small>/${wkTarget}</small>`;
-  $('s1-note').textContent = Math.round(weekDone/wkTarget*100)+'%';
-  const totalVol = calcTotalVolume(state.progress);
+  $('s1-note').textContent = Math.round(weekDone/wkTarget*100)+'% da meta';
+  // volume/km com variação REAL vs semana anterior
   $('s2-lbl').textContent = isLift?'Volume 7d':'Km 7d';
-  const km7d = isLift ? 0 : h.filter(x=>x.at>=start.getTime()).reduce((s,r)=>s+(r.distance||0),0);
-  $('s2-val').innerHTML = isLift?`${Math.round(totalVol)}<small>kg</small>`:`${km7d.toFixed(1)}<small>km</small>`;
-  $('s2-note').textContent = '↑ +0%';
-  $('s3-val').textContent = h.length*220;
+  let cur, prev;
+  if(isLift){
+    cur = calcVolumeBetween(start, now); prev = calcVolumeBetween(prevStart, start);
+    $('s2-val').innerHTML = `${Math.round(cur)}<small>kg</small>`;
+  } else {
+    const kmIn=(a,b)=>h.filter(x=>x.at>=a&&x.at<b).reduce((s,r)=>s+(r.distance||0),0);
+    cur = kmIn(start,now+1); prev = kmIn(prevStart,start);
+    $('s2-val').innerHTML = `${cur.toFixed(1)}<small>km</small>`;
+  }
+  $('s2-note').textContent = prev>0 ? (cur>=prev?`↑ +${Math.round((cur-prev)/prev*100)}% vs semana passada`:`↓ ${Math.round((cur-prev)/prev*100)}% vs semana passada`) : (cur>0?'primeira semana com registro':'—');
+  // recordes reais
+  ensureStats();
+  if(isLift){
+    $('s3-lbl').textContent = 'Recordes (PRs)';
+    $('s3-val').textContent = Object.keys(state.prs||{}).length;
+    $('s3-note').textContent = 'exercícios com PR';
+  } else {
+    $('s3-lbl').textContent = 'Km na vida';
+    $('s3-val').textContent = state.stats.runKmTotal.toFixed(0);
+    $('s3-note').textContent = 'km de corrida acumulados';
+  }
   $('m-streak').textContent = calcStreak(h);
   $('m-wk').innerHTML = `${weekDone}<small>/${wkTarget}</small>`;
   const totalMin = h.reduce((s,x)=>s+(x.duration||0),0);
   $('m-total').textContent = totalMin<60?totalMin+'min':(totalMin/60).toFixed(1)+'h';
-  $('m-best').textContent = calcStreak(h);
-  const line = $('perf-line');
-  if(line){
-    if(!h.length) line.setAttribute('points','40,170 140,170 240,170 340,170');
-    else {
-      const now=Date.now(), pts=[];
-      for(let i=3;i>=0;i--){
-        const s=now-(i+1)*7*86400000, e=now-i*7*86400000;
-        const done = h.filter(x=>x.at>=s && x.at<e).length;
-        const pct = Math.min(100,(done/wkTarget)*100);
-        pts.push(`${40+(3-i)*100},${170-pct*1.5}`);
-      }
-      line.setAttribute('points', pts.join(' '));
-    }
+  // melhor sequência REAL (calculada do histórico + memória vitalícia)
+  const best = calcBestStreak(h);
+  if(!state.stats.bestStreak || best > state.stats.bestStreak){ state.stats.bestStreak = best; saveData(); }
+  $('m-best').textContent = Math.max(best, state.stats.bestStreak||0) + 'd';
+  // card extra real: peso atual (musculação) ou melhor pace (corrida)
+  if(isLift){
+    const w = latestWeight();
+    $('m-extra-emo').textContent = '⚖️';
+    $('m-extra').textContent = w ? w+'kg' : '—';
+    $('m-extra-lbl').textContent = 'Peso atual';
+  } else {
+    const paces = h.filter(r=>(!r.activity||r.activity==='corrida') && r.pace).map(r=>({p:parsePace(r.pace), s:r.pace}));
+    const bp = paces.length ? paces.reduce((b,x)=>x.p<b.p?x:b) : null;
+    $('m-extra-emo').textContent = '⚡';
+    $('m-extra').textContent = bp ? bp.s.replace('/km','') : '—';
+    $('m-extra-lbl').textContent = 'Melhor pace (/km)';
   }
+  // constância 4 semanas (dados reais do histórico)
+  const line = $('perf-line'), dots = $('perf-dots');
+  if(line){
+    const pts=[];
+    for(let i=3;i>=0;i--){
+      const s=now-(i+1)*7*86400000, e=now-i*7*86400000;
+      const done = h.filter(x=>x.at>=s && x.at<e).length;
+      const pct = Math.min(100,(done/wkTarget)*100);
+      pts.push([40+(3-i)*100, 170-pct*1.5]);
+    }
+    line.setAttribute('points', pts.map(p=>p.join(',')).join(' '));
+    if(dots) dots.innerHTML = pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#10b981"/>`).join('');
+  }
+  renderDistDonut();
+}
+function calcVolumeBetween(a,b){
+  let t=0;
+  Object.values(state.progress||{}).forEach(logs=>{
+    logs.forEach(p=>{ if(p.date>=a && p.date<b) p.sets.forEach(s=>{ t += (s.peso||0)*(s.reps||0); }); });
+  });
+  return t;
+}
+function calcBestStreak(h){
+  if(!h||!h.length) return 0;
+  const days = [...new Set(h.map(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime(); }))].sort((a,b)=>a-b);
+  let best=1, cur=1;
+  for(let i=1;i<days.length;i++){
+    if(days[i]-days[i-1]===86400000){ cur++; best=Math.max(best,cur); } else cur=1;
+  }
+  return best;
+}
+// Donut real: distribuição de TODAS as atividades dos últimos 7 dias (ambos módulos)
+function renderDistDonut(){
+  const start = Date.now()-7*86400000;
+  const liftN = (state.modules.lift?.history||[]).filter(x=>x.at>=start).length;
+  const runH = (state.modules.run?.history||[]).filter(x=>x.at>=start);
+  const runN = runH.filter(r=>!r.activity||r.activity==='corrida').length;
+  const walkN = runH.filter(r=>r.activity==='caminhada').length;
+  const bikeN = runH.filter(r=>r.activity==='bike').length;
+  const total = liftN+runN+walkN+bikeN;
+  const donut = $('dist-donut'), legend = $('dist-legend');
+  if(!donut||!legend) return;
+  const cats = [
+    {n:liftN, lbl:'💪 Musculação', color:'#10b981'},
+    {n:runN, lbl:'🏃 Corrida', color:'#f59e0b'},
+    {n:walkN, lbl:'🚶 Caminhada', color:'#38bdf8'},
+    {n:bikeN, lbl:'🚴 Bike', color:'#a78bfa'}
+  ].filter(c=>c.n>0);
+  if(!total){
+    donut.innerHTML = `<circle cx="60" cy="60" r="45" fill="none" stroke="rgba(148,163,184,0.14)" stroke-width="14"/><text x="60" y="66" text-anchor="middle" fill="#94a3b8" font-size="12">Sem dados</text>`;
+    legend.innerHTML = `<div class="text-dim" style="font-size:13px">Registre treinos essa semana pra ver a distribuição aqui.</div>`;
+    return;
+  }
+  const C = 2*Math.PI*45;
+  let off = 0;
+  donut.innerHTML = cats.map(c=>{
+    const frac = c.n/total;
+    const seg = `<circle cx="60" cy="60" r="45" fill="none" stroke="${c.color}" stroke-width="14" stroke-dasharray="${(frac*C).toFixed(1)} ${(C-frac*C).toFixed(1)}" stroke-dashoffset="${(-off*C).toFixed(1)}" transform="rotate(-90 60 60)"/>`;
+    off += frac;
+    return seg;
+  }).join('') + `<text x="60" y="66" text-anchor="middle" fill="#e2e8f0" font-size="16" font-weight="800">${total}</text>`;
+  legend.innerHTML = cats.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${c.color};margin-right:6px"></span>${c.lbl}</span><b>${Math.round(c.n/total*100)}%</b></div>`).join('');
 }
 function calcTotalVolume(prog){
   const cutoff = Date.now() - 7*86400000;
@@ -1337,7 +1456,7 @@ function renderProfile(){
   const u = state.user, p = u.profile || {};
   renderAvatar('pf-avatar');
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
-  const qe = $('pf-quick-equip'); if(qe) qe.style.display = state.modules.lift ? 'block' : 'none';
+  const qe = $('pf-quick-equip'); if(qe) qe.style.display = (state.active==='lift' && state.modules.lift) ? 'block' : 'none';
   $('pf-name').textContent = p.nickname || u.name;
   $('pf-email').textContent = u.email;
   // Show admin button if admin (by email — fonte da verdade)
@@ -1641,6 +1760,41 @@ function saveProfileEdit(){
   saveData(); toast('✅ Perfil atualizado'); closeModal(); goTab('profile');
 }
 
+// ---------- MAPA MUSCULAR ----------
+// Silhueta simples com os grupos treinados acesos em verde
+const MUSCLE_POS = {
+  'Ombro':[[38,34],[82,34]], 'Trapézio':[[60,28]], 'Peito':[[49,44],[71,44]],
+  'Bíceps':[[30,52],[90,52]], 'Tríceps':[[26,58],[94,58]], 'Antebraço':[[24,70],[96,70]],
+  'Costas':[[60,46]], 'Core':[[60,62]], 'Lombar':[[60,72]],
+  'Glúteo':[[52,82],[68,82]], 'Quadríceps':[[50,96],[70,96]], 'Posterior':[[46,100],[74,100]],
+  'Panturrilha':[[49,122],[71,122]], 'Pernas':[[50,96],[70,96]]
+};
+function muscleBodySVG(parts, size){
+  size = size || 130;
+  const lit = new Set(parts||[]);
+  const glow = [];
+  Object.entries(MUSCLE_POS).forEach(([name, spots])=>{
+    if(lit.has(name)){
+      spots.forEach(([x,y])=>{
+        glow.push(`<circle cx="${x}" cy="${y}" r="9" fill="rgba(16,185,129,0.25)"/><circle cx="${x}" cy="${y}" r="4.5" fill="#10b981"/>`);
+      });
+    }
+  });
+  return `<svg viewBox="0 0 120 150" width="${size}" height="${Math.round(size*1.25)}">
+    <g fill="rgba(148,163,184,0.18)" stroke="rgba(148,163,184,0.35)" stroke-width="1.5">
+      <circle cx="60" cy="14" r="9"/>
+      <path d="M45 26 Q60 22 75 26 L80 30 Q92 34 94 46 L97 72 Q97 76 93 76 L90 76 Q87 74 87 70 L84 50 L82 66 Q83 76 81 84 L78 108 L76 134 Q76 140 71 140 L68 140 Q65 138 66 132 L67 106 L63 88 L60 86 L57 88 L53 106 L54 132 Q55 138 52 140 L49 140 Q44 140 44 134 L42 108 L39 84 Q37 76 38 66 L36 50 L33 70 Q33 74 30 76 L27 76 Q23 76 23 72 L26 46 Q28 34 40 30 Z"/>
+    </g>
+    ${glow.join('')}
+  </svg>`;
+}
+function partsFromEntry(x){
+  if(x.parts && x.parts.length) return x.parts;
+  // migração: extrai do nome "Treino C — Pernas + Ombro"
+  const m = (x.name||'').split('—')[1];
+  return m ? m.split('+').map(s=>s.trim()).filter(Boolean) : [];
+}
+
 // ---------- TROCA RÁPIDA DE EQUIPAMENTO ----------
 function quickChangeEquip(equip){
   const mod = state.modules.lift;
@@ -1697,34 +1851,104 @@ function openWeekSummary(){
   $('modal-back').classList.add('on');
 }
 // Gera uma imagem com a marca do MetaTreino e compartilha (ou baixa)
-function buildShareCanvas(title, lines, footer){
+function buildShareCanvas(opts){
+  // opts: {title, subtitle, bigLines:[], detailLines:[], chips:[]}
+  const W = 1080;
+  const detail = opts.detailLines||[];
+  const chips = opts.chips||[];
+  const H = Math.max(1080, 560 + (opts.bigLines||[]).length*86 + (chips.length?100:0) + detail.length*58 + 230);
   const c = document.createElement('canvas');
-  c.width = 1080; c.height = 1080;
+  c.width = W; c.height = H;
   const x = c.getContext('2d');
-  // fundo
-  const g = x.createLinearGradient(0,0,1080,1080);
-  g.addColorStop(0,'#050914'); g.addColorStop(1,'#0a1628');
-  x.fillStyle = g; x.fillRect(0,0,1080,1080);
-  // brilho verde
-  const rg = x.createRadialGradient(540,200,50,540,200,600);
-  rg.addColorStop(0,'rgba(16,185,129,0.25)'); rg.addColorStop(1,'rgba(16,185,129,0)');
-  x.fillStyle = rg; x.fillRect(0,0,1080,1080);
-  // título
-  x.fillStyle = '#e2e8f0'; x.textAlign = 'center';
-  x.font = '800 64px system-ui, sans-serif';
-  x.fillText(title, 540, 200);
-  // linhas
-  x.font = '600 52px system-ui, sans-serif';
-  let y = 380;
-  lines.forEach(l=>{ x.fillText(l, 540, y); y += 100; });
-  // rodapé/marca
+  // fundo com gradiente
+  const g = x.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'#050914'); g.addColorStop(0.55,'#07131f'); g.addColorStop(1,'#0a1a2e');
+  x.fillStyle = g; x.fillRect(0,0,W,H);
+  // brilhos
+  let rg = x.createRadialGradient(540,180,40,540,180,560);
+  rg.addColorStop(0,'rgba(16,185,129,0.30)'); rg.addColorStop(1,'rgba(16,185,129,0)');
+  x.fillStyle = rg; x.fillRect(0,0,W,H);
+  rg = x.createRadialGradient(100,H-150,20,100,H-150,420);
+  rg.addColorStop(0,'rgba(245,158,11,0.10)'); rg.addColorStop(1,'rgba(245,158,11,0)');
+  x.fillStyle = rg; x.fillRect(0,0,W,H);
+  // moldura sutil
+  x.strokeStyle = 'rgba(16,185,129,0.35)'; x.lineWidth = 4;
+  roundRect(x, 40, 40, W-80, H-80, 44); x.stroke();
+  // logo
   x.fillStyle = '#10b981';
-  x.font = '800 56px system-ui, sans-serif';
-  x.fillText('MetaTreino', 540, 950);
+  roundRect(x, 490, 90, 100, 100, 26); x.fill();
+  x.fillStyle = '#022c22'; x.textAlign = 'center';
+  x.font = '900 62px system-ui, sans-serif';
+  x.fillText('M', 540, 160);
+  // título
+  x.fillStyle = '#e2e8f0';
+  x.font = '800 58px system-ui, sans-serif';
+  x.fillText(opts.title, 540, 280);
+  if(opts.subtitle){
+    x.fillStyle = '#94a3b8';
+    x.font = '600 36px system-ui, sans-serif';
+    x.fillText(opts.subtitle, 540, 335);
+  }
+  let y = 430;
+  // linhas grandes
+  x.fillStyle = '#e2e8f0';
+  x.font = '700 48px system-ui, sans-serif';
+  (opts.bigLines||[]).forEach(l=>{ x.fillText(l, 540, y); y += 86; });
+  // chips de músculos
+  if(chips.length){
+    y += 6;
+    x.font = '700 30px system-ui, sans-serif';
+    let rowChips = [], rows = [], rowW = 0;
+    chips.forEach(ch=>{
+      const w = x.measureText(ch).width + 56;
+      if(rowW + w > 900 && rowChips.length){ rows.push(rowChips); rowChips=[]; rowW=0; }
+      rowChips.push(ch); rowW += w + 16;
+    });
+    if(rowChips.length) rows.push(rowChips);
+    rows.forEach(row=>{
+      const totalW = row.reduce((s,ch)=>s + x.measureText(ch).width + 56, 0) + (row.length-1)*16;
+      let cx = 540 - totalW/2;
+      row.forEach(ch=>{
+        const w = x.measureText(ch).width + 56;
+        x.fillStyle = 'rgba(16,185,129,0.15)';
+        roundRect(x, cx, y-38, w, 56, 28); x.fill();
+        x.strokeStyle = 'rgba(16,185,129,0.5)'; x.lineWidth=2; roundRect(x, cx, y-38, w, 56, 28); x.stroke();
+        x.fillStyle = '#34d399'; x.textAlign='left';
+        x.fillText(ch, cx+28, y+2);
+        cx += w + 16;
+      });
+      x.textAlign='center';
+      y += 76;
+    });
+    y += 14;
+  }
+  // linhas de detalhe (exercícios)
+  if(detail.length){
+    x.textAlign = 'center';
+    x.font = '600 34px system-ui, sans-serif';
+    detail.forEach(l=>{
+      x.fillStyle = '#cbd5e1';
+      x.fillText(l, 540, y); y += 58;
+    });
+  }
+  // rodapé/marca
+  x.textAlign = 'center';
+  x.fillStyle = '#10b981';
+  x.font = '900 60px system-ui, sans-serif';
+  x.fillText('MetaTreino', 540, H-120);
   x.fillStyle = '#64748b';
-  x.font = '500 34px system-ui, sans-serif';
-  x.fillText(footer || 'Treinos inteligentes que evoluem com você', 540, 1010);
+  x.font = '500 32px system-ui, sans-serif';
+  x.fillText('Treinos inteligentes que evoluem com você', 540, H-70);
   return c;
+}
+function roundRect(x, px, py, w, h, r){
+  x.beginPath();
+  x.moveTo(px+r, py);
+  x.arcTo(px+w, py, px+w, py+h, r);
+  x.arcTo(px+w, py+h, px, py+h, r);
+  x.arcTo(px, py+h, px, py, r);
+  x.arcTo(px, py, px+w, py, r);
+  x.closePath();
 }
 async function shareCanvas(canvas, filename, shareText){
   canvas.toBlob(async blob=>{
@@ -1741,13 +1965,13 @@ async function shareCanvas(canvas, filename, shareText){
 }
 function shareWeekImage(){
   const s = weekStats();
-  const lines = [];
-  if(s.lift) lines.push(`💪 ${s.lift} treino${s.lift>1?'s':''} de musculação`);
-  if(s.runs) lines.push(`🏃 ${s.runs} corrida${s.runs>1?'s':''} · ${s.kmRun.toFixed(1)}km`);
-  if(s.walks) lines.push(`🚶 ${s.walks} caminhada${s.walks>1?'s':''} · ${s.kmWalk.toFixed(1)}km`);
-  if(s.bikes) lines.push(`🚴 ${s.bikes} pedal${s.bikes>1?'is':''} · ${s.kmBike.toFixed(1)}km`);
-  lines.push(`⏱️ ${s.totalMin} min em movimento`);
-  const c = buildShareCanvas('Minha semana de treinos 🔥', lines, 'MetaTreino · Treinos inteligentes');
+  const bigLines = [];
+  if(s.lift) bigLines.push(`💪 ${s.lift} treino${s.lift>1?'s':''} de musculação`);
+  if(s.runs) bigLines.push(`🏃 ${s.runs} corrida${s.runs>1?'s':''} · ${s.kmRun.toFixed(1)}km`);
+  if(s.walks) bigLines.push(`🚶 ${s.walks} caminhada${s.walks>1?'s':''} · ${s.kmWalk.toFixed(1)}km`);
+  if(s.bikes) bigLines.push(`🚴 ${s.bikes} pedal${s.bikes>1?'is':''} · ${s.kmBike.toFixed(1)}km`);
+  bigLines.push(`⏱️ ${s.totalMin} min em movimento`);
+  const c = buildShareCanvas({ title:'Minha semana de treinos 🔥', subtitle:new Date().toLocaleDateString('pt-BR'), bigLines });
   shareCanvas(c, 'metatreino-semana.png', 'Minha semana de treinos no MetaTreino 💪');
 }
 function shareWorkoutImage(histIdx){
@@ -1755,12 +1979,19 @@ function shareWorkoutImage(histIdx){
   const x = (mod.history||[])[histIdx];
   if(!x) return;
   const d = new Date(x.at);
-  const lines = [ x.name.replace(/^[🚶🚴🏃]\s*/,'') ];
-  if(x.distance) lines.push(`📍 ${x.distance}km${x.pace?' · '+x.pace:''}`);
-  lines.push(`⏱️ ${x.duration} min`);
-  lines.push(d.toLocaleDateString('pt-BR'));
-  const emo = x.activity==='caminhada'?'🚶':x.activity==='bike'?'🚴':x.module==='run'?'🏃':'💪';
-  const c = buildShareCanvas(`Treino concluído ${emo}`, lines, 'MetaTreino · Treinos inteligentes');
+  const isRun = x.module==='run';
+  const emo = x.activity==='caminhada'?'🚶':x.activity==='bike'?'🚴':isRun?'🏃':'💪';
+  const bigLines = [ x.name.replace(/^[🚶🚴🏃]\s*/,'') ];
+  if(x.distance) bigLines.push(`📍 ${x.distance}km${x.pace?' · '+x.pace:''}`);
+  bigLines.push(`⏱️ ${x.duration} min`);
+  // músculos e exercícios completos (musculação)
+  const chips = !isRun ? partsFromEntry(x) : [];
+  const detailLines = (x.exercisesDone||[]).map(e=>`${e.name} — ${e.sets}× · ${e.best}`);
+  const c = buildShareCanvas({
+    title:`Treino concluído ${emo}`,
+    subtitle:d.toLocaleDateString('pt-BR'),
+    bigLines, chips, detailLines
+  });
   shareCanvas(c, 'metatreino-treino.png', 'Treino concluído no MetaTreino 💪');
 }
 
@@ -1982,8 +2213,20 @@ function openHistoryEntry(idx){
   if(!x) return;
   const d = new Date(x.at);
   const isRun = state.active==='run';
+  const parts = !isRun ? partsFromEntry(x) : [];
+  const muscleBlock = parts.length ? `
+    <div class="card" style="display:flex;gap:14px;align-items:center;margin-top:12px">
+      <div>${muscleBodySVG(parts, 100)}</div>
+      <div style="flex:1"><div class="section-lbl" style="margin:0 0 6px">Músculos trabalhados</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:11.5px;padding:3px 10px;border-radius:999px;background:rgba(16,185,129,0.12);color:var(--primary-2);font-weight:700">${p}</span>`).join('')}</div></div>
+    </div>` : '';
+  const exBlock = (x.exercisesDone && x.exercisesDone.length) ? `
+    <div class="section-lbl" style="margin-top:14px">Exercícios registrados</div>
+    <div class="card">${x.exercisesDone.map(e=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:13.5px">${e.name}</span><b class="mono" style="font-size:13px;color:var(--primary-2)">${e.sets}× · ${e.best}</b></div>`).join('')}</div>` : '';
   const html = `
-    <h3>📝 Editar treino</h3>
+    <h3>📝 Detalhes do treino</h3>
+    ${muscleBlock}
+    ${exBlock}
     <div class="field" style="margin-top:12px"><label>Nome</label><input class="input" id="he-name" value="${x.name.replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Data</label><input class="input" type="datetime-local" id="he-date" value="${d.toISOString().slice(0,16)}" style="color-scheme:dark"></div>
     <div class="field"><label>Duração (min)</label><input class="input mono" type="number" id="he-dur" value="${x.duration||0}"></div>
