@@ -1,5 +1,5 @@
-// ===== MetaTreino v4.4 =====
-const APP_VERSION = 'v4.4';
+// ===== MetaTreino v4.5 =====
+const APP_VERSION = 'v4.5';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -201,6 +201,17 @@ function doLogout(){
   const btn=$('google-btn'); if(btn) btn.style.opacity='1';
   const lbl=$('google-btn-lbl'); if(lbl) lbl.textContent='Entrar com Google';
 }
+function doRestart(){
+  if(!state.user || !fbUser) return;
+  if(!confirm('Tem certeza? Todo o progresso será apagado, mas sua conta e acesso continuam.')) return;
+  const keep = { name:state.user.name, email:state.user.email, isAdmin:state.user.isAdmin };
+  state = { user:keep, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
+  saveData(); syncToCloud();
+  closeModal();
+  $('tabbar').classList.add('hidden');
+  toast('🔄 Recomeçando! Preencha o questionário de novo.');
+  showScreen('scr-quiz'); bindOpts('scr-quiz');
+}
 function doDeleteAccount(){
   if(!state.user || !fbUser) return;
   const email = fbUser.email;
@@ -264,6 +275,7 @@ async function afterGoogleSignIn(user){
 
   state.user = { name:user.displayName||'', email, isAdmin };
   loadVideoLinks(); // não bloqueia o login; links do treinador pros vídeos
+  loadCoachMural(); // logo/mensagem fixada do treinador
   await loadData();
   if(!state.user) state.user = { name:user.displayName||'', email, isAdmin };
   state.user.isAdmin = isAdmin;
@@ -380,6 +392,28 @@ function pickModule(m){
   bindOpts('scr-setup-'+m);
   bindMultiOpts('scr-setup-'+m);
   bindDaysUpdate(m);
+  prefillSetupFromQuiz(m);
+}
+// Usa as respostas do questionário inicial pra já deixar o plano pré-selecionado
+// (a pessoa só confirma ou ajusta — sem responder duas vezes a mesma coisa)
+function prefillSetupFromQuiz(m){
+  const p = state.user && state.user.profile;
+  if(!p) return;
+  const setOn = (groupId, val)=>{
+    const g = $(groupId); if(!g) return;
+    const target = g.querySelector(`.opt[data-val="${val}"]`);
+    if(!target) return;
+    g.querySelectorAll('.opt').forEach(o=>o.classList.remove('on'));
+    target.classList.add('on');
+  };
+  // nível de atividade geral → sugestão de nível de experiência
+  const lvlMap = { sedentario:'iniciante', ativo:'intermediario', atleta:'avancado' };
+  if(p.level && lvlMap[p.level]) setOn(m+'-level', lvlMap[p.level]);
+  if(m==='lift' && p.goal){
+    // objetivo de vida → objetivo de treino sugerido
+    const goalMap = { emagrecer:'emagrecimento', massa:'hipertrofia', forca:'forca', condicionamento:'resistencia', tonificar:'hipertrofia', saude:'resistencia' };
+    if(goalMap[p.goal]) setOn('lift-goal', goalMap[p.goal]);
+  }
 }
 function bindOpts(scrId){
   document.querySelectorAll('#'+scrId+' .opt:not(.opt-multi)').forEach(o=>{
@@ -870,6 +904,7 @@ function renderHome(){
   $('home-goal').textContent = 'Objetivo: ' + labelGoal(mod);
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
   $('daily-quote').textContent = QUOTES[doy % QUOTES.length];
+  renderCoachMural();
 
   const days = accessDaysLeft();
   $('access-days').textContent = accessLabel(days);
@@ -1041,6 +1076,8 @@ function renderSessionDetail(w){
   if(!w){ $('session-detail-slot').innerHTML=''; return; }
   const isLift = state.active==='lift';
   const done = isLift ? checkLiftDone(w) : false;
+  const lockedToday = isLift ? liftDoneToday(w) : false;
+  curSessionLocked = lockedToday;
   const html = `
     <div class="detail-hero">
       <h2>${isLift?`Treino ${w.k} — ${w.name}`:w.name}</h2>
@@ -1054,11 +1091,21 @@ function renderSessionDetail(w){
     </div>
     <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.':'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
-    ${isLift ? `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>` : `<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar corrida (km + tempo)</button>`}
+    ${isLift ? (lockedToday
+      ? `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído hoje</div><div class="card-sub">Pra ajustar algo, edite pelo Histórico. Amanhã a sessão libera de novo.</div></div>`
+      : `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>`) : `<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar corrida (km + tempo)</button>`}
   `;
   $('session-detail-slot').innerHTML = html;
 }
 
+function liftDoneToday(w){
+  const today = new Date(); today.setHours(0,0,0,0);
+  return (state.modules.lift?.history||[]).some(h=>{
+    if(h.id!==w.k) return false;
+    const d = new Date(h.at); d.setHours(0,0,0,0);
+    return d.getTime()===today.getTime();
+  });
+}
 function checkLiftDone(w){
   const today = new Date(); today.setHours(0,0,0,0);
   return w.exercises.some(ex=>{
@@ -1086,6 +1133,7 @@ function renderLiftBlocks(w){
     </div>
   `).join('');
 }
+let curSessionLocked = false;
 function renderExerciseCard(ex, idx){
   const last = getLastLog(ex.id);
   const pr = state.prs[ex.id];
@@ -1102,7 +1150,9 @@ function renderExerciseCard(ex, idx){
         ${last?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px">📊 Última: ${last.sets.map(s=>`${s.peso}kg×${s.reps}`).join(', ')}</div>`:''}
         ${doneToday?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px;font-weight:700">✅ Hoje: ${todayEntry.sets.map(s=>`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', ')}</div>`:''}
         <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
-          <button class="btn ${doneToday?'btn-ghost':'btn-primary'}" style="padding:8px 14px;font-size:13px" onclick="openSetLog('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">${doneToday?'✏️ Editar séries':'📝 Registrar'}</button>
+          ${curSessionLocked
+            ? `<span style="font-size:12px;color:var(--text-mute);padding:8px 4px">🔒 Concluído hoje — edite pelo Histórico</span>`
+            : `<button class="btn ${doneToday?'btn-ghost':'btn-primary'}" style="padding:8px 14px;font-size:13px" onclick="openSetLog('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">${doneToday?'✏️ Editar séries':'📝 Registrar'}</button>`}
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="window.open('${ytLink(ex.name)}','_blank')">▶ Ver como fazer</button>
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="openSwapExercise('${ex.id}')">🔄 Trocar</button>
         </div>
@@ -1318,7 +1368,7 @@ function confirmLiftWorkout(k){
     if(!entry) return null;
     if(!firstLogAt || entry.date < firstLogAt) firstLogAt = entry.date;
     const top = entry.sets.reduce((b,s)=>((s.peso||0)*(s.reps||0) > (b.peso||0)*(b.reps||0) ? s : b), entry.sets[0]);
-    return { name:ex.name, part:ex.part, sets:entry.sets.length, best: top.peso>0 ? `${top.peso}kg×${top.reps}` : `${top.reps} reps` };
+    return { id:ex.id, name:ex.name, part:ex.part, sets:entry.sets.length, best: top.peso>0 ? `${top.peso}kg×${top.reps}` : `${top.reps} reps` };
   }).filter(Boolean);
   // duração REAL: do primeiro registro de série até agora (com limites de sanidade);
   // se não der pra medir, usa a estimativa do plano
@@ -1945,6 +1995,9 @@ const MODAL_CONTENT = {
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
   'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno (mesmo da conta Google)</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="7">🎁 Teste 7 dias</div><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
   'broadcast':`<h3>📢 Mensagem em massa (WhatsApp)</h3><p style="color:var(--text-dim);font-size:13px">Gera um link do WhatsApp Web para cada aluno com o texto abaixo. Os alunos precisam ter WhatsApp cadastrado.</p><div class="field"><label>Mensagem</label><textarea class="input" id="bc-msg" rows="4" style="resize:vertical">Olá, treinador aqui do MetaTreino! Passando pra lembrar...</textarea></div><button class="btn btn-primary btn-block" onclick="doBroadcast()">Abrir links WhatsApp</button>`,
+  'restart':()=>`<h3>🔄 Começar do zero</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Apaga todo o seu progresso — treinos, séries registradas, recordes, histórico de peso e troféus — e refaz o questionário inicial.<br><br>Sua <b>conta e seu acesso continuam ativos</b> (diferente de excluir a conta).<br><br>Essa ação <b>não pode ser desfeita</b>.</p>
+    <button class="btn btn-outline btn-block" style="margin-top:16px;border-color:#f59e0b;color:var(--accent-2)" onclick="doRestart()">🔄 Sim, começar do zero</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`,
   'delete-account':()=>{ const email=(state.user&&state.user.email)||''; return `<h3>🗑️ Excluir minha conta</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Isso apaga <b>permanentemente</b> todo o seu progresso: treinos, PRs, histórico de peso e troféus.<br><br>Seu acesso ao app continua liberado — você pode entrar de novo com a mesma conta Google (<b>${email}</b>) e começar do zero na hora.<br><br>Essa ação <b>não pode ser desfeita</b>.</p><button class="btn btn-outline btn-block" style="margin-top:16px;border-color:#ef4444;color:#ef4444" onclick="doDeleteAccount()">Sim, excluir minha conta</button><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`; },
 };
 function openModal(k){
@@ -2382,6 +2435,97 @@ function shareWorkoutImage(histIdx){
   shareCanvas(c, 'metatreino-treino.png', 'Treino concluído no MetaTreino 💪');
 }
 
+// ---------- MURAL DO TREINADOR ----------
+// Foto e mensagem fixada que o admin edita e todos os alunos veem na tela Hoje.
+let coachMural = null;
+async function loadCoachMural(){
+  try{
+    const doc = await db.collection('config').doc('mural').get();
+    coachMural = doc.exists ? doc.data() : null;
+    try{ localStorage.setItem('metatreino_mural', JSON.stringify(coachMural)); }catch(e){}
+  }catch(e){
+    try{ coachMural = JSON.parse(localStorage.getItem('metatreino_mural')||'null'); }catch(e2){ coachMural=null; }
+  }
+  renderCoachMural();
+}
+function renderCoachMural(){
+  // logo personalizado no cabeçalho da Home
+  const logo = $('home-brand-logo');
+  if(logo){
+    if(coachMural && coachMural.foto){
+      logo.style.background='none';
+      logo.innerHTML = `<img src="${coachMural.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+    } else { logo.style.background=''; logo.innerHTML = 'M'; }
+  }
+  // mensagem fixada
+  const card = $('card-coach-msg');
+  if(card){
+    if(coachMural && coachMural.mensagem){
+      card.classList.remove('hidden');
+      $('coach-msg-text').textContent = coachMural.mensagem;
+    } else card.classList.add('hidden');
+  }
+}
+// --- editor (admin) ---
+function openMuralAdmin(){
+  const m = coachMural||{};
+  $('modal-inner').innerHTML = `
+    <h3>📢 Mural e logo do app</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">A mensagem fica fixada na tela Hoje de todos os alunos. A foto substitui o "M" verde do cabeçalho — boa pra datas especiais (Natal, aniversário do projeto...).</p>
+    <div class="field" style="margin-top:12px"><label>Mensagem fixada (vazio = sem mensagem)</label><textarea class="input" id="mural-msg" rows="3" style="resize:vertical">${(m.mensagem||'').replace(/</g,'&lt;')}</textarea></div>
+    <div class="field"><label>Foto/logo temporário</label>
+      <div class="row" style="gap:8px;align-items:center">
+        <div id="mural-preview" style="width:52px;height:52px;border-radius:12px;overflow:hidden;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:900;color:#022c22;flex-shrink:0">${m.foto?`<img src="${m.foto}" style="width:100%;height:100%;object-fit:cover">`:'M'}</div>
+        <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('mural-foto-input').click()">📷 Escolher foto</button>
+        ${m.foto?`<button class="btn btn-ghost" onclick="muralFotoTemp='REMOVE';document.getElementById('mural-preview').innerHTML='M'">🗑️</button>`:''}
+      </div>
+      <input type="file" id="mural-foto-input" accept="image/*" style="display:none" onchange="onMuralFotoPicked(event)">
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveMural()">💾 Publicar pra todos os alunos</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+}
+let muralFotoTemp = null;
+function onMuralFotoPicked(ev){
+  const file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    img.onload = ()=>{
+      // comprime pra 160px (fica leve no Firestore e rápido de carregar)
+      const c = document.createElement('canvas');
+      const s = Math.min(img.width, img.height);
+      c.width = 160; c.height = 160;
+      const x = c.getContext('2d');
+      x.drawImage(img, (img.width-s)/2, (img.height-s)/2, s, s, 0, 0, 160, 160);
+      muralFotoTemp = c.toDataURL('image/jpeg', 0.82);
+      $('mural-preview').innerHTML = `<img src="${muralFotoTemp}" style="width:100%;height:100%;object-fit:cover">`;
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+  ev.target.value = '';
+}
+async function saveMural(){
+  const msg = $('mural-msg').value.trim();
+  const data = { mensagem:msg, atualizadoEm:Date.now() };
+  if(muralFotoTemp==='REMOVE') data.foto = null;
+  else if(muralFotoTemp) data.foto = muralFotoTemp;
+  else if(coachMural && coachMural.foto) data.foto = coachMural.foto;
+  try{
+    await db.collection('config').doc('mural').set(data);
+    coachMural = data; muralFotoTemp = null;
+    try{ localStorage.setItem('metatreino_mural', JSON.stringify(coachMural)); }catch(e){}
+    renderCoachMural();
+    closeModal();
+    toast('📢 Mural publicado pra todos os alunos!');
+  }catch(e){
+    console.log('Erro ao salvar mural:', e);
+    toast('⚠️ Não foi possível publicar. Confira as regras do Firestore (coleção config).');
+  }
+}
+
 // ---------- PAINEL DE VÍDEOS (ADMIN) ----------
 async function openVideoAdmin(){
   await loadVideoLinks(); // garante a lista mais atual
@@ -2557,6 +2701,11 @@ function openStudent(email){
       <button class="btn btn-ghost" onclick="adjustDays('${email}',90)" style="flex:1">+90d</button>
       <button class="btn btn-ghost" onclick="adjustDays('${email}',-7)" style="flex:1">-7d</button>
     </div>
+    <div class="row" style="gap:6px;margin-top:8px">
+      ${a.expiresAt
+        ? `<button class="btn btn-outline btn-block" style="border-color:rgba(16,185,129,0.4)" onclick="setLifetime('${email}')">♾️ Tornar vitalício</button>`
+        : `<button class="btn btn-ghost btn-block" onclick="unsetLifetime('${email}')">📅 Remover vitalício (definir 30 dias)</button>`}
+    </div>
 
     ${p?`
       <div class="section-lbl">Dados do aluno</div>
@@ -2580,9 +2729,29 @@ function openStudent(email){
     <button class="btn btn-ghost btn-block danger" style="margin-top:8px;color:#fda4af;border-color:rgba(244,63,94,0.3)" onclick="removeStudent('${email}')">🗑️ Remover aluno</button>
   `;
 }
+async function setLifetime(email){
+  const a = allowCache[email]; if(!a) return;
+  try{
+    await db.collection('usuariosAutorizados').doc(email).update({ expiresAt:null, active:true });
+    a.expiresAt = null; a.active = true;
+    toast('♾️ Acesso vitalício ativado');
+    openStudent(email);
+  }catch(e){ console.log('Erro ao definir vitalício:', e); toast('⚠️ Não foi possível salvar. Confira as permissões do Firestore.'); }
+}
+async function unsetLifetime(email){
+  const a = allowCache[email]; if(!a) return;
+  const novoExpira = Date.now() + 30*86400000;
+  try{
+    await db.collection('usuariosAutorizados').doc(email).update({ expiresAt:novoExpira, active:true });
+    a.expiresAt = novoExpira; a.active = true;
+    toast('📅 Vitalício removido — acesso por 30 dias (ajuste com os botões acima)');
+    openStudent(email);
+  }catch(e){ console.log('Erro ao remover vitalício:', e); toast('⚠️ Não foi possível salvar. Confira as permissões do Firestore.'); }
+}
 async function adjustDays(email, days){
   const a = allowCache[email]; if(!a) return;
-  const base = a.expiresAt || Date.now();
+  if(!a.expiresAt){ toast('♾️ Este aluno é vitalício — use "Remover vitalício" antes de ajustar dias'); return; }
+  const base = a.expiresAt;
   let novoExpira = base + days*86400000;
   let ativo = a.active;
   if(novoExpira < Date.now()) ativo = false;
@@ -2683,6 +2852,24 @@ function saveHistoryEntry(idx){
 function deleteHistoryEntry(idx){
   if(!confirm('Excluir este treino do histórico? Não pode ser desfeito.')) return;
   const mod = state.modules[state.active];
+  const x = mod.history[idx];
+  // se for treino de musculação DE HOJE, oferece limpar também as séries registradas —
+  // assim a sessão volta ao estado "pra fazer" e pode ser registrada de novo
+  if(x && x.module==='lift'){
+    const d = new Date(x.at); d.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
+    if(d.getTime()===today.getTime() && confirm('Limpar também as séries registradas hoje nesses exercícios? (Assim você pode registrar o treino de novo do zero)')){
+      const ids = (x.exercisesDone||[]).map(e=>e.id || slug(e.name));
+      ids.forEach(id=>{
+        if(!state.progress[id]) return;
+        state.progress[id] = state.progress[id].filter(p=>{ const pd=new Date(p.date); pd.setHours(0,0,0,0); return pd.getTime()!==today.getTime(); });
+        if(!state.progress[id].length) delete state.progress[id];
+      });
+      // desfaz o contador vitalício deste treino
+      ensureStats();
+      if(state.stats.liftTotal>0) state.stats.liftTotal--;
+    }
+  }
   mod.history.splice(idx, 1);
   saveData();
   toast('🗑️ Treino excluído');
@@ -2828,4 +3015,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,startRestFor,startRestTimer,stopRestTimer,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openMuralAdmin,onMuralFotoPicked,saveMural,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage});
