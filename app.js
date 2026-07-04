@@ -1,5 +1,5 @@
-// ===== MetaTreino v3.7 =====
-const APP_VERSION = 'v3.7';
+// ===== MetaTreino v3.8 =====
+const APP_VERSION = 'v3.8';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'celoborgesms@gmail.com';
@@ -1060,10 +1060,53 @@ function openSetLog(exId, exName){
   renderSetLogModal();
   $('modal-back').classList.add('on');
 }
+// ---------- PROGRESSÃO ADAPTATIVA ----------
+// Analisa o histórico real do exercício e a faixa de repetições do plano
+// pra sugerir o próximo passo — o app "aprende" com a evolução do aluno.
+function repRangeFor(exId){
+  const w = (state.modules.lift?.plan?.workouts||[]).flatMap(x=>x.exercises||[]).find(e=>e.id===exId);
+  if(!w || !w.reps) return {lo:8, hi:12};
+  const m = String(w.reps).match(/(\d+)\s*-\s*(\d+)/);
+  return m ? {lo:parseInt(m[1]), hi:parseInt(m[2])} : {lo:8, hi:12};
+}
+function smartProgressionHint(exId){
+  const logs = (state.progress[exId]||[]).filter(p=>p.sets && p.sets.length);
+  const prev = logs.filter(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); const t=new Date(); t.setHours(0,0,0,0); return d.getTime()<t.getTime(); });
+  if(!prev.length) return {cls:'card-info', txt:'🌱 Primeira vez neste exercício: comece com uma carga confortável e capriche na técnica. O app vai aprender com seus registros.'};
+  const range = repRangeFor(exId);
+  const last = prev[prev.length-1];
+  const lastW = Math.max(...last.sets.map(s=>+s.peso||0));
+  const allTop = arr => arr.sets.every(s=>(+s.reps||0) >= range.hi);
+  const anyBelow = last.sets.some(s=>(+s.reps||0) > 0 && (+s.reps||0) < range.lo);
+  // como terminou o último treino de musculação?
+  const lastFeel = (state.modules.lift?.history||[]).filter(x=>x.feel).slice(-1)[0]?.feel;
+  const isBodyweight = lastW === 0;
+
+  if(lastFeel==='exausto'){
+    return {cls:'card-warn', txt:`😌 Último treino terminou em exaustão — hoje mantenha ${isBodyweight?'as repetições de sempre':lastW+'kg'} (ou um pouco menos) e priorize a execução.`};
+  }
+  const twoTop = prev.length>=2 && allTop(prev[prev.length-1]) && allTop(prev[prev.length-2]) && Math.max(...prev[prev.length-2].sets.map(s=>+s.peso||0)) >= lastW;
+  if(twoTop){
+    return isBodyweight
+      ? {cls:'card-ok', txt:`📈 Você bateu o topo da faixa (${range.hi} reps) nas 2 últimas sessões — hora de dificultar: +2 repetições por série ou uma variação mais difícil.`}
+      : {cls:'card-ok', txt:`📈 Você bateu o topo da faixa (${range.hi} reps) 2 sessões seguidas com ${lastW}kg — o app sugere subir pra ${(lastW+2.5).toFixed(1).replace('.0','')}kg hoje.`};
+  }
+  if(allTop(last)){
+    return isBodyweight
+      ? {cls:'card-info', txt:`💪 Sessão passada você fechou todas as séries em ${range.hi}+ reps. Repita hoje — mais uma assim e sobe o desafio.`}
+      : {cls:'card-info', txt:`💪 Sessão passada: todas as séries no topo da faixa com ${lastW}kg. Repita hoje — mais uma assim e o app sugere aumentar.`};
+  }
+  if(anyBelow){
+    return isBodyweight
+      ? {cls:'card-warn', txt:`⚖️ Na última sessão algumas séries ficaram abaixo de ${range.lo} reps. Sem problema: mantenha e busque chegar na faixa ${range.lo}-${range.hi} antes de progredir.`}
+      : {cls:'card-warn', txt:`⚖️ Na última sessão (${lastW}kg) algumas séries ficaram abaixo de ${range.lo} reps. Mantenha ${lastW}kg e busque a faixa completa antes de subir.`};
+  }
+  return {cls:'card-info', txt:`🎯 Última vez: ${last.sets.map(s=>`${s.peso}kg×${s.reps}`).join(', ')}. Hoje tente ${isBodyweight?'+1 repetição por série':'as mesmas cargas com +1 repetição'} — progresso constante vence pressa.`};
+}
 function renderSetLogModal(){
   const { exId, exName, entry } = curLog;
-  const last = getLastLog(exId);
-  const suggested = last ? `<div class="card card-info" style="padding:12px;margin-bottom:12px"><div class="card-sub">💡 Última vez: ${last.sets.map(s=>`${s.peso}kg×${s.reps}`).join(', ')}. Tenta ${last.sets[0].peso+2.5}kg × ${last.sets[0].reps} reps hoje?</div></div>` : '';
+  const hint = smartProgressionHint(exId);
+  const suggested = `<div class="card ${hint.cls}" style="padding:12px;margin-bottom:12px"><div class="card-sub">${hint.txt}</div></div>`;
   const rows = entry.sets.length? entry.sets.map((s,i)=>`
     <div class="set-row">
       <div class="set-num">${i+1}</div>
@@ -1293,6 +1336,8 @@ function regenPlan(){ showScreen('scr-setup-'+state.active); bindOpts('scr-setup
 function renderProfile(){
   const u = state.user, p = u.profile || {};
   renderAvatar('pf-avatar');
+  const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
+  const qe = $('pf-quick-equip'); if(qe) qe.style.display = state.modules.lift ? 'block' : 'none';
   $('pf-name').textContent = p.nickname || u.name;
   $('pf-email').textContent = u.email;
   // Show admin button if admin (by email — fonte da verdade)
@@ -1545,10 +1590,35 @@ function openExercise(name){ window.open(ytLink(name), '_blank'); }
 
 // ---------- MODALS ----------
 const MODAL_CONTENT = {
-  'support-info':`<h3>⚕️ Ferramenta de apoio ao treino</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">O MetaTreino organiza e acompanha seus treinos de forma automatizada, mas <b>não substitui uma avaliação médica nem o acompanhamento de um profissional de educação física</b>.<br><br>Antes de iniciar qualquer programa de exercícios — principalmente se você tem alguma condição de saúde, lesão, ou está voltando a treinar depois de um tempo parado — procure um médico para uma avaliação e, se possível, um profissional de educação física para orientação individual.<br><br>Pense no app como um apoio para organizar sua rotina, não como um substituto do acompanhamento profissional.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Entendi</button>`,
+  'support-info':`<h3>⚕️ Ferramenta de apoio ao treino</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">O MetaTreino organiza e acompanha seus treinos de forma automatizada, mas <b>não substitui uma avaliação médica nem o acompanhamento de um profissional de educação física</b>.<br><br>Antes de iniciar qualquer programa de exercícios — principalmente se você tem alguma condição de saúde, lesão, ou está voltando a treinar depois de um tempo parado — procure um médico para uma avaliação e, se possível, um profissional de educação física para orientação individual.<br><br>Pare imediatamente e procure ajuda médica se sentir dor aguda, tontura, falta de ar excessiva ou desconforto no peito.</p><button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="openModal('terms')">📄 Ler os Termos de Uso</button><button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Entendi</button>`,
+  'terms':`<h3>📄 Termos de Uso — MetaTreino</h3>
+    <div style="font-size:13px;color:var(--text-dim);line-height:1.55;max-height:60vh;overflow-y:auto">
+    <p style="color:var(--text-mute);font-size:11.5px">Última atualização: julho de 2026</p>
+    <p><b style="color:var(--text)">1. Quem oferece.</b> O MetaTreino é oferecido por <b style="color:var(--text)">Marcelo Borges</b>, pessoa física, de <b style="color:var(--text)">Sorriso-MT</b>. Ao usar o app, você concorda com estes termos.</p>
+    <p><b style="color:var(--text)">2. O que o app faz.</b> Gera planos de treino de musculação e corrida a partir das suas respostas, registra seu histórico e evolução, e sugere ajustes de carga com base no seu desempenho.</p>
+    <p><b style="color:var(--text)">3. ⚠️ Aviso importante de saúde.</b> O MetaTreino é uma ferramenta de apoio e <b style="color:var(--text)">não substitui médico nem profissional de educação física</b>. Os treinos são sugestões genéricas, não prescrição individualizada. Consulte um médico antes de começar, principalmente se você tem mais de 35 anos, é sedentário, tem lesão, doença cardíaca, diabetes, hipertensão, está grávida ou no pós-parto. Sentiu dor aguda, tontura ou desconforto no peito? Pare na hora e procure ajuda médica.</p>
+    <p><b style="color:var(--text)">4. Sua conta.</b> O acesso é liberado pelo treinador, individual e intransferível. É proibido revender ou compartilhar o acesso. Você é responsável pelos dados que informa.</p>
+    <p><b style="color:var(--text)">5. Seus dados.</b> Ficam salvos na nuvem vinculados à sua conta Google, visíveis só para você e para o treinador. Não vendemos nem compartilhamos seus dados. Você pode excluir sua conta e todo o progresso a qualquer momento pelo próprio app (Perfil → Excluir minha conta).</p>
+    <p><b style="color:var(--text)">6. Responsabilidade.</b> O app é fornecido "como está", sem garantia de resultados (que variam de pessoa pra pessoa) nem de disponibilidade ininterrupta. O uso das sugestões de treino é por sua conta e risco — respeite sempre os limites do seu corpo.</p>
+    <p><b style="color:var(--text)">7. Encerramento.</b> O acesso pode ser suspenso em caso de uso indevido. Você pode parar de usar quando quiser.</p>
+    <p><b style="color:var(--text)">8. Lei aplicável.</b> Estes termos seguem as leis brasileiras, incluindo o Código de Defesa do Consumidor e a LGPD.</p>
+    <p><b style="color:var(--text)">9. Contato.</b> Dúvidas, suporte ou pedidos: <a href="mailto:metatreinooficial@gmail.com">metatreinooficial@gmail.com</a></p>
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`,
+  'privacy':`<h3>🔒 Privacidade</h3><p>Seus dados de treino ficam salvos na nuvem, vinculados à sua conta Google, e visíveis apenas para você e para o treinador. Não coletamos, não compartilhamos e não vendemos suas informações. Você pode excluir tudo a qualquer momento em Perfil → Excluir minha conta. Contato: <a href="mailto:metatreinooficial@gmail.com">metatreinooficial@gmail.com</a>.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
+  'change-equip':()=>{
+    const cur = state.modules.lift?.setup?.equip || 'academia';
+    const opts = [
+      {v:'academia', emo:'🏋️', t:'Academia completa', s:'Máquinas, cabos, halteres, barras'},
+      {v:'halteres', emo:'🎒', t:'Só halteres', s:'Halteres e barras em casa'},
+      {v:'casa', emo:'🏠', t:'Peso do corpo', s:'Sem equipamentos'},
+      {v:'basico', emo:'💪', t:'Básico', s:'Peso do corpo + halteres leves'}
+    ];
+    return `<h3>🏋️ Troca rápida de equipamento</h3><p style="color:var(--text-dim);font-size:13px">Seus treinos são regenerados na hora com o novo equipamento — objetivo, dias e nível continuam os mesmos.</p>
+      ${opts.map(o=>`<div class="list-row" style="${o.v===cur?'border:1px solid var(--primary);border-radius:14px':''}" onclick="quickChangeEquip('${o.v}')">${o.emo} <span><b>${o.t}</b>${o.v===cur?' ✓ atual':''}<br><span style="font-size:12px;color:var(--text-dim)">${o.s}</span></span></div>`).join('')}
+      <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Cancelar</button>`;
+  },
   'faq':`<h3>❓ FAQ / Sobre</h3><p><b>MetaTreino</b> gera planos de treino inteligentes de musculação e corrida, personalizados.<br><br><b>Como funciona?</b> Escolha o módulo, responda o questionário e receba um plano progressivo.<br><br><b>Meus dados ficam salvos?</b> Sim, na nuvem, vinculados à sua conta Google — você pode entrar de qualquer aparelho. Histórico de treinos guardado por 90 dias.<br><br><b>Contato:</b> celoborgesms@gmail.com</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
-  'privacy':`<h3>🔒 Privacidade</h3><p>Seus dados de treino ficam salvos na nuvem, vinculados à sua conta Google, e visíveis apenas para você e para o treinador. Não coletamos, não compartilhamos e não vendemos suas informações. Se precisar, contate <a href="mailto:celoborgesms@gmail.com">celoborgesms@gmail.com</a>.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
-  'terms':`<h3>📄 Termos de uso</h3><p>App fornecido "no estado em que se encontra", sem garantias. Consulte profissional de saúde antes de iniciar qualquer programa. Uso restrito a alunos autorizados.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
   'edit-profile':()=>{ const p = state.user.profile||{}; return `<h3>✏️ Editar perfil</h3><div class="field"><label>Como quer ser chamado</label><input class="input" id="ep-nick" value="${p.nickname||''}"></div><div class="field"><label>Idade</label><input class="input mono" type="number" id="ep-age" value="${p.age||''}"></div><div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="ep-height" value="${p.height||''}"></div><div class="field"><label>WhatsApp</label><input class="input mono" id="ep-whats" value="${p.whatsapp||''}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveProfileEdit()">Salvar</button>`; },
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
   'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno (mesmo da conta Google)</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
@@ -1569,6 +1639,129 @@ function saveProfileEdit(){
   p.height = parseFloat($('ep-height').value) || p.height;
   p.whatsapp = $('ep-whats').value.trim();
   saveData(); toast('✅ Perfil atualizado'); closeModal(); goTab('profile');
+}
+
+// ---------- TROCA RÁPIDA DE EQUIPAMENTO ----------
+function quickChangeEquip(equip){
+  const mod = state.modules.lift;
+  if(!mod || !mod.plan){ toast('Crie um plano de musculação primeiro'); closeModal(); return; }
+  mod.setup.equip = equip;
+  // Regenera SÓ os exercícios de cada treino — dias, objetivo e nível permanecem
+  mod.plan.workouts.forEach(w=>{
+    w.exercises = buildLiftExercises(w.parts, mod.setup);
+    w.duration = estimateLiftDuration(w.exercises, mod.setup.goal);
+  });
+  saveData();
+  closeModal();
+  const lbl = {academia:'Academia completa', halteres:'Só halteres', casa:'Peso do corpo', basico:'Básico'}[equip]||equip;
+  toast(`🏋️ Treinos regenerados para: ${lbl}`);
+  goTab('profile');
+}
+
+// ---------- FOTO DE PERFIL ----------
+function removePhoto(){
+  if(!state.user || !state.user.profile || !state.user.profile.photo) return;
+  if(!confirm('Remover sua foto de perfil?')) return;
+  delete state.user.profile.photo;
+  saveData();
+  toast('🗑️ Foto removida');
+  goTab('profile');
+}
+
+// ---------- RESUMO DA SEMANA + COMPARTILHAMENTO ----------
+function weekStats(){
+  const today = getDayIdx();
+  const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-(today-1));
+  const t0 = startWk.getTime();
+  const liftH = (state.modules.lift?.history||[]).filter(h=>h.at>=t0);
+  const runH = (state.modules.run?.history||[]).filter(h=>h.at>=t0);
+  const kmBy = type => runH.filter(r=>type==='corrida' ? (!r.activity||r.activity==='corrida') : r.activity===type).reduce((s,r)=>s+(r.distance||0),0);
+  const totalMin = [...liftH,...runH].reduce((s,x)=>s+(x.duration||0),0);
+  return { lift:liftH.length, runs:runH.filter(r=>!r.activity||r.activity==='corrida').length,
+    walks:runH.filter(r=>r.activity==='caminhada').length, bikes:runH.filter(r=>r.activity==='bike').length,
+    kmRun:kmBy('corrida'), kmWalk:kmBy('caminhada'), kmBike:kmBy('bike'), totalMin, total:liftH.length+runH.length };
+}
+function openWeekSummary(){
+  const s = weekStats();
+  const rows = [];
+  if(s.lift) rows.push(`💪 ${s.lift} treino${s.lift>1?'s':''} de musculação`);
+  if(s.runs) rows.push(`🏃 ${s.runs} corrida${s.runs>1?'s':''} · ${s.kmRun.toFixed(1)}km`);
+  if(s.walks) rows.push(`🚶 ${s.walks} caminhada${s.walks>1?'s':''} · ${s.kmWalk.toFixed(1)}km`);
+  if(s.bikes) rows.push(`🚴 ${s.bikes} pedal${s.bikes>1?'is':''} · ${s.kmBike.toFixed(1)}km`);
+  const body = s.total
+    ? `<div style="font-size:15px;line-height:2">${rows.join('<br>')}</div><p style="color:var(--text-dim);font-size:13px;margin-top:10px">⏱️ ${s.totalMin} minutos em movimento essa semana. Continue assim!</p>`
+    : `<p style="color:var(--text-dim);font-size:14px">Nenhum treino registrado essa semana ainda — mas a semana não acabou! 😉</p>`;
+  $('modal-inner').innerHTML = `<h3>📊 Resumo da semana</h3>${body}
+    ${s.total?`<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="shareWeekImage()">📤 Compartilhar resumo</button>`:''}
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+// Gera uma imagem com a marca do MetaTreino e compartilha (ou baixa)
+function buildShareCanvas(title, lines, footer){
+  const c = document.createElement('canvas');
+  c.width = 1080; c.height = 1080;
+  const x = c.getContext('2d');
+  // fundo
+  const g = x.createLinearGradient(0,0,1080,1080);
+  g.addColorStop(0,'#050914'); g.addColorStop(1,'#0a1628');
+  x.fillStyle = g; x.fillRect(0,0,1080,1080);
+  // brilho verde
+  const rg = x.createRadialGradient(540,200,50,540,200,600);
+  rg.addColorStop(0,'rgba(16,185,129,0.25)'); rg.addColorStop(1,'rgba(16,185,129,0)');
+  x.fillStyle = rg; x.fillRect(0,0,1080,1080);
+  // título
+  x.fillStyle = '#e2e8f0'; x.textAlign = 'center';
+  x.font = '800 64px system-ui, sans-serif';
+  x.fillText(title, 540, 200);
+  // linhas
+  x.font = '600 52px system-ui, sans-serif';
+  let y = 380;
+  lines.forEach(l=>{ x.fillText(l, 540, y); y += 100; });
+  // rodapé/marca
+  x.fillStyle = '#10b981';
+  x.font = '800 56px system-ui, sans-serif';
+  x.fillText('MetaTreino', 540, 950);
+  x.fillStyle = '#64748b';
+  x.font = '500 34px system-ui, sans-serif';
+  x.fillText(footer || 'Treinos inteligentes que evoluem com você', 540, 1010);
+  return c;
+}
+async function shareCanvas(canvas, filename, shareText){
+  canvas.toBlob(async blob=>{
+    if(!blob){ toast('⚠️ Não foi possível gerar a imagem'); return; }
+    const file = new File([blob], filename, {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], text:shareText}); return; }catch(e){ /* usuário cancelou */ return; }
+    }
+    // fallback: download
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+    toast('🖼️ Imagem salva — poste onde quiser!');
+  }, 'image/png');
+}
+function shareWeekImage(){
+  const s = weekStats();
+  const lines = [];
+  if(s.lift) lines.push(`💪 ${s.lift} treino${s.lift>1?'s':''} de musculação`);
+  if(s.runs) lines.push(`🏃 ${s.runs} corrida${s.runs>1?'s':''} · ${s.kmRun.toFixed(1)}km`);
+  if(s.walks) lines.push(`🚶 ${s.walks} caminhada${s.walks>1?'s':''} · ${s.kmWalk.toFixed(1)}km`);
+  if(s.bikes) lines.push(`🚴 ${s.bikes} pedal${s.bikes>1?'is':''} · ${s.kmBike.toFixed(1)}km`);
+  lines.push(`⏱️ ${s.totalMin} min em movimento`);
+  const c = buildShareCanvas('Minha semana de treinos 🔥', lines, 'MetaTreino · Treinos inteligentes');
+  shareCanvas(c, 'metatreino-semana.png', 'Minha semana de treinos no MetaTreino 💪');
+}
+function shareWorkoutImage(histIdx){
+  const mod = state.modules[state.active];
+  const x = (mod.history||[])[histIdx];
+  if(!x) return;
+  const d = new Date(x.at);
+  const lines = [ x.name.replace(/^[🚶🚴🏃]\s*/,'') ];
+  if(x.distance) lines.push(`📍 ${x.distance}km${x.pace?' · '+x.pace:''}`);
+  lines.push(`⏱️ ${x.duration} min`);
+  lines.push(d.toLocaleDateString('pt-BR'));
+  const emo = x.activity==='caminhada'?'🚶':x.activity==='bike'?'🚴':x.module==='run'?'🏃':'💪';
+  const c = buildShareCanvas(`Treino concluído ${emo}`, lines, 'MetaTreino · Treinos inteligentes');
+  shareCanvas(c, 'metatreino-treino.png', 'Treino concluído no MetaTreino 💪');
 }
 
 // ---------- ADMIN ----------
@@ -1799,7 +1992,8 @@ function openHistoryEntry(idx){
       <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary btn-block" onclick="saveHistoryEntry(${idx})">💾 Salvar</button>
     </div>
-    <button class="btn btn-block" style="margin-top:10px;background:rgba(244,63,94,0.1);color:#fda4af;border:1px solid rgba(244,63,94,0.3)" onclick="deleteHistoryEntry(${idx})">🗑️ Excluir este treino</button>
+    <button class="btn btn-outline btn-block" style="margin-top:10px" onclick="shareWorkoutImage(${idx})">📤 Compartilhar como imagem</button>
+    <button class="btn btn-block" style="margin-top:8px;background:rgba(244,63,94,0.1);color:#fda4af;border:1px solid rgba(244,63,94,0.3)" onclick="deleteHistoryEntry(${idx})">🗑️ Excluir este treino</button>
   `;
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');
@@ -1965,4 +2159,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,openWeekSummary,shareWeekImage,shareWorkoutImage});
