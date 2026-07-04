@@ -1,5 +1,5 @@
-// ===== MetaTreino v4.3 =====
-const APP_VERSION = 'v4.3';
+// ===== MetaTreino v4.4 =====
+const APP_VERSION = 'v4.4';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -142,12 +142,14 @@ function saveData(){
 function syncToCloud(){
   if(!fbUser || !state.user) return;
   clearTimeout(cloudSyncTimer);
+  // set SEM merge: substitui o documento inteiro. Com merge, campos apagados
+  // localmente (ex: foto removida) "ressuscitavam" da nuvem no próximo login.
   db.collection('usuarios').doc(fbUser.uid).set({
     email: fbUser.email,
     nome: (state.user && state.user.profile && state.user.profile.nickname) || fbUser.displayName || '',
     atualizadoEm: state._savedAt || Date.now(),
     estadoApp: state
-  }, {merge:true}).catch(e=>console.log('Erro ao salvar na nuvem:', e));
+  }).catch(e=>console.log('Erro ao salvar na nuvem:', e));
 }
 // Ao minimizar/fechar o app, envia pra nuvem NA HORA (sem esperar o debounce) —
 // evita perder o treino de quem salva e fecha o app em seguida.
@@ -261,6 +263,7 @@ async function afterGoogleSignIn(user){
   myAccess = allowData;
 
   state.user = { name:user.displayName||'', email, isAdmin };
+  loadVideoLinks(); // não bloqueia o login; links do treinador pros vídeos
   await loadData();
   if(!state.user) state.user = { name:user.displayName||'', email, isAdmin };
   state.user.isAdmin = isAdmin;
@@ -805,7 +808,26 @@ function toast(msg){ const t=document.createElement('div'); t.className='toast';
 function getDayIdx(){ const d=new Date().getDay(); return d===0?7:d; }
 function greetTime(){ const h=new Date().getHours(); if(h<12) return 'Bom dia'; if(h<18) return 'Boa tarde'; return 'Boa noite'; }
 function firstName(){ const p = state.user.profile; return (p&&p.nickname) || (state.user.name||'').split(' ')[0]; }
-function ytLink(ex){ return 'https://www.youtube.com/results?search_query=' + encodeURIComponent('como fazer '+ex+' técnica correta'); }
+// ---------- VÍDEOS PERSONALIZADOS DOS EXERCÍCIOS ----------
+// O treinador cadastra links no painel admin (coleção videosExercicios).
+// "Ver como fazer" usa o link do treinador; sem link cadastrado, cai na busca do YouTube.
+let videoLinks = {};
+async function loadVideoLinks(){
+  try{
+    const snap = await db.collection('videosExercicios').get();
+    videoLinks = {};
+    snap.forEach(doc=>{ const d=doc.data(); if(d.url) videoLinks[doc.id] = d.url; });
+    try{ localStorage.setItem('metatreino_videos', JSON.stringify(videoLinks)); }catch(e){}
+  }catch(e){
+    // offline: usa o cache
+    try{ videoLinks = JSON.parse(localStorage.getItem('metatreino_videos')||'{}'); }catch(e2){ videoLinks={}; }
+  }
+}
+function ytLink(ex){
+  const custom = videoLinks[slug(ex)];
+  if(custom) return custom;
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent('como fazer '+ex+' técnica correta');
+}
 
 // ---------- MODULE TOGGLE ----------
 function renderModToggle(){
@@ -2105,8 +2127,8 @@ function quickChangeEquip(equip){
 function removePhoto(){
   if(!state.user || !state.user.profile || !state.user.profile.photo) return;
   if(!confirm('Remover sua foto de perfil?')) return;
-  delete state.user.profile.photo;
-  saveData();
+  state.user.profile.photo = null; // null sobrescreve na nuvem (delete não propagava)
+  saveData(); syncToCloud();
   toast('🗑️ Foto removida');
   goTab('profile');
 }
@@ -2360,6 +2382,56 @@ function shareWorkoutImage(histIdx){
   shareCanvas(c, 'metatreino-treino.png', 'Treino concluído no MetaTreino 💪');
 }
 
+// ---------- PAINEL DE VÍDEOS (ADMIN) ----------
+async function openVideoAdmin(){
+  await loadVideoLinks(); // garante a lista mais atual
+  const groups = EX_BANK.map(cat=>{
+    const items = cat.items.map(ex=>{
+      const id = slug(ex.name);
+      const cur = videoLinks[id]||'';
+      return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13.5px;font-weight:700">${ex.name} ${cur?'<span style="color:var(--primary-2);font-size:11px">● link próprio</span>':''}</div>
+        <div class="row" style="gap:6px;margin-top:6px">
+          <input class="input" id="vid-${id}" value="${cur.replace(/"/g,'&quot;')}" placeholder="Cole o link do vídeo (YouTube, Drive...)" style="flex:1;font-size:12.5px;padding:9px 12px">
+          <button class="btn btn-primary" style="padding:9px 14px;font-size:12.5px" onclick="saveVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">💾</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="margin-top:16px"><div class="section-lbl" style="margin:0 0 4px">${cat.name} · ${cat.items.length}</div>${items}</div>`;
+  }).join('');
+  $('modal-inner').innerHTML = `
+    <h3>🎬 Vídeos dos exercícios</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cole o link do SEU vídeo pra cada exercício. Quando o aluno tocar em "Ver como fazer", abre o seu vídeo. Sem link cadastrado, abre a busca do YouTube. Deixe vazio e salve pra remover.</p>
+    <div style="max-height:56vh;overflow-y:auto;margin-top:6px">${groups}</div>
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+async function saveVideoLink(id, exName){
+  const inp = $('vid-'+id); if(!inp) return;
+  const url = inp.value.trim();
+  if(url && !/^https?:\/\//i.test(url)){ toast('⚠️ O link precisa começar com http:// ou https://'); return; }
+  try{
+    if(url){
+      await db.collection('videosExercicios').doc(id).set({ nome:exName, url, atualizadoEm:Date.now() });
+      videoLinks[id] = url;
+      toast('✅ Vídeo salvo: '+exName);
+    } else {
+      await db.collection('videosExercicios').doc(id).delete();
+      delete videoLinks[id];
+      toast('🗑️ Link removido: '+exName);
+    }
+    try{ localStorage.setItem('metatreino_videos', JSON.stringify(videoLinks)); }catch(e){}
+    renderVideoCount();
+  }catch(e){
+    console.log('Erro ao salvar vídeo:', e);
+    toast('⚠️ Não foi possível salvar. Confira as regras do Firestore (coleção videosExercicios).');
+  }
+}
+function renderVideoCount(){
+  const el = $('adm-video-count');
+  if(el) el.textContent = Object.keys(videoLinks).length ? Object.keys(videoLinks).length+' cadastrados' : '';
+}
+
 // ---------- ADMIN ----------
 let admFilter = 'all';
 let allowCache = {};     // email -> doc de usuariosAutorizados
@@ -2390,6 +2462,7 @@ async function goAdmin(){
   $('adm-list').innerHTML = `<div class="rest-card"><div style="font-size:34px">⏳</div><div class="rest-sub">Carregando alunos...</div></div>`;
   await loadAdminData();
   renderAdminStats();
+  renderVideoCount();
   renderAdminList();
 }
 function renderAdminStats(){
@@ -2755,4 +2828,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,startRestFor,startRestTimer,stopRestTimer,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,startRestFor,startRestTimer,stopRestTimer,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage});
