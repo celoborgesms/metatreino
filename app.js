@@ -1,5 +1,5 @@
-// ===== MetaTreino v4.0 =====
-const APP_VERSION = 'v4.0';
+// ===== MetaTreino v4.1 =====
+const APP_VERSION = 'v4.1';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'celoborgesms@gmail.com';
@@ -126,7 +126,7 @@ const TROPHIES = [
   { id:'weight_up_10', emoji:'🦾', name:'Ganhou 10kg', desc:'Ganho de massa +10kg', cat:'body' }
 ];
 
-// ---------- STORAGE (nuvem + cache local) ----------
+// ---------- STORAGE (nuvem + cache local, o MAIS NOVO vence) ----------
 let fbUser = null;          // usuário autenticado (uid, email, displayName)
 let cloudSyncTimer = null;
 
@@ -134,33 +134,44 @@ function localCacheKey(uid){ return DATA_PREFIX + uid; }
 
 function saveData(){
   if(!state.user || !fbUser) return;
+  state._savedAt = Date.now(); // carimbo pra decidir quem é mais novo (nuvem × local)
   try{ localStorage.setItem(localCacheKey(fbUser.uid), JSON.stringify(state)); }catch(e){}
   clearTimeout(cloudSyncTimer);
-  cloudSyncTimer = setTimeout(syncToCloud, 1200);
+  cloudSyncTimer = setTimeout(syncToCloud, 800);
 }
 function syncToCloud(){
-  if(!fbUser) return;
+  if(!fbUser || !state.user) return;
+  clearTimeout(cloudSyncTimer);
   db.collection('usuarios').doc(fbUser.uid).set({
     email: fbUser.email,
     nome: (state.user && state.user.profile && state.user.profile.nickname) || fbUser.displayName || '',
-    atualizadoEm: Date.now(),
+    atualizadoEm: state._savedAt || Date.now(),
     estadoApp: state
   }, {merge:true}).catch(e=>console.log('Erro ao salvar na nuvem:', e));
 }
+// Ao minimizar/fechar o app, envia pra nuvem NA HORA (sem esperar o debounce) —
+// evita perder o treino de quem salva e fecha o app em seguida.
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') syncToCloud(); });
+window.addEventListener('pagehide', ()=>syncToCloud());
+
 async function loadData(){
+  let cloud = null, local = null;
   try{
     const doc = await db.collection('usuarios').doc(fbUser.uid).get();
-    if(doc.exists && doc.data().estadoApp){
-      const s = doc.data().estadoApp;
-      state = {...state, ...s, ui:{...state.ui, ...(s.ui||{})}};
-      try{ localStorage.setItem(localCacheKey(fbUser.uid), JSON.stringify(state)); }catch(e){}
-      return;
-    }
+    if(doc.exists && doc.data().estadoApp) cloud = doc.data().estadoApp;
   }catch(e){ console.log('Sem conexão com a nuvem agora, usando cache local:', e); }
-  try{
-    const s = JSON.parse(localStorage.getItem(localCacheKey(fbUser.uid))||'null');
-    if(s) state = {...state, ...s, ui:{...state.ui, ...(s.ui||{})}};
-  }catch(e){}
+  try{ local = JSON.parse(localStorage.getItem(localCacheKey(fbUser.uid))||'null'); }catch(e){}
+  // decide pela cópia mais recente — nunca deixa a nuvem antiga apagar treino recém-salvo no aparelho
+  const cloudAt = (cloud && cloud._savedAt) || 0;
+  const localAt = (local && local._savedAt) || 0;
+  let chosen = null, needPush = false;
+  if(cloud && local){ chosen = localAt > cloudAt ? local : cloud; needPush = localAt > cloudAt; }
+  else chosen = cloud || local;
+  if(chosen){
+    state = {...state, ...chosen, ui:{...state.ui, ...(chosen.ui||{})}};
+    try{ localStorage.setItem(localCacheKey(fbUser.uid), JSON.stringify(state)); }catch(e){}
+    if(needPush) syncToCloud(); // devolve pra nuvem a versão local mais nova
+  }
 }
 
 // ---------- AUTH (Google) ----------
@@ -1291,13 +1302,41 @@ function renderHistory(){
     $('he-sub').textContent = 'Cada sessão que você finalizar vai aparecer aqui (guardamos últimos 90 dias).';
   } else {
     $('history-empty').classList.add('hidden');
-    $('history-list').innerHTML = h.slice().reverse().map((x,idx)=>{
-      const realIdx = h.length-1-idx;
+    // agrupa por dia, mais recente primeiro
+    const sorted = h.slice().map((x,i)=>({...x,_idx:i})).sort((a,b)=>b.at-a.at);
+    const groups = [];
+    sorted.forEach(x=>{
       const d = new Date(x.at);
-      const extra = x.distance ? `${x.distance}km · ${x.pace||''}` : '';
-      const parts = x.module==='lift' ? partsFromEntry(x) : [];
-      const chips = parts.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${parts.map(p=>`<span style="font-size:10.5px;padding:2px 8px;border-radius:999px;background:rgba(16,185,129,0.12);color:var(--primary-2);font-weight:700">${p}</span>`).join('')}</div>` : '';
-      return `<div class="list-item" style="cursor:pointer" onclick="openHistoryEntry(${realIdx})"><div class="list-dot"></div><div class="list-info"><div class="list-tag">${d.toLocaleDateString('pt-BR')} · ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}${extra?' · '+extra:''}</div><div class="list-name">${x.name}</div>${chips}</div><div class="list-right mono">${x.duration}min ›</div></div>`;
+      const key = d.toDateString();
+      let g = groups.find(gr=>gr.key===key);
+      if(!g){ g = {key, date:d, items:[]}; groups.push(g); }
+      g.items.push(x);
+    });
+    const todayKey = new Date().toDateString();
+    const yestKey = new Date(Date.now()-86400000).toDateString();
+    $('history-list').innerHTML = groups.map(g=>{
+      const lbl = g.key===todayKey ? 'Hoje' : g.key===yestKey ? 'Ontem' : g.date.toLocaleDateString('pt-BR',{weekday:'long', day:'2-digit', month:'2-digit'});
+      const cards = g.items.map(x=>{
+        const d = new Date(x.at);
+        const isRunEntry = x.module==='run';
+        const emo = x.activity==='caminhada'?'🚶':x.activity==='bike'?'🚴':isRunEntry?'🏃':'💪';
+        const feelEmo = {otimo:'🚀',bem:'😊',cansado:'😮‍💨',exausto:'😩'}[x.feel]||'';
+        const parts = !isRunEntry ? partsFromEntry(x) : [];
+        const nExs = (x.exercisesDone||[]).length;
+        const meta = isRunEntry
+          ? `<span>⏱️ <b>${x.duration}min</b></span>${x.distance?`<span>📍 <b>${x.distance}km</b></span>`:''}${x.pace?`<span>⚡ <b>${x.pace}</b></span>`:''}`
+          : `<span>⏱️ <b>${x.duration}min</b></span>${nExs?`<span>🏋️ <b>${nExs} exercícios</b></span>`:''}${feelEmo?`<span>${feelEmo}</span>`:''}`;
+        return `<div class="hist-card ${isRunEntry?'run':''}" onclick="openHistoryEntry(${x._idx})">
+          <div class="hist-emo">${emo}</div>
+          <div style="flex:1;min-width:0">
+            <div class="hist-name">${x.name.replace(/^[🚶🚴🏃]\s*/,'')}</div>
+            <div class="hist-meta"><span>🕐 ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>${meta}</div>
+            ${parts.length?`<div class="hist-chips">${parts.map(p=>`<span class="hist-chip">${p}</span>`).join('')}</div>`:''}
+          </div>
+          <div class="hist-arrow">›</div>
+        </div>`;
+      }).join('');
+      return `<div class="hist-day-lbl">${lbl}</div>${cards}`;
     }).join('');
   }
 }

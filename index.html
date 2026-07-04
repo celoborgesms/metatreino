@@ -150,6 +150,19 @@ a{color:var(--primary-2);text-decoration:none}
 /* Your trainings list */
 .list-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;transition:.15s;position:relative}
 .list-item:hover{border-color:var(--primary);transform:translateY(-1px)}
+/* Histórico repaginado */
+.hist-day-lbl{font-size:11.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-mute);margin:18px 2px 8px}
+.hist-card{display:flex;gap:13px;padding:15px 16px;background:linear-gradient(135deg,var(--surface),rgba(16,185,129,0.035));border:1px solid var(--border);border-radius:18px;margin-bottom:10px;cursor:pointer;transition:.15s;align-items:flex-start}
+.hist-card:hover{border-color:var(--primary);transform:translateY(-1px)}
+.hist-card.run{background:linear-gradient(135deg,var(--surface),rgba(245,158,11,0.04))}
+.hist-emo{width:44px;height:44px;border-radius:14px;background:rgba(16,185,129,0.12);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.hist-card.run .hist-emo{background:rgba(245,158,11,0.12)}
+.hist-name{font-weight:800;font-size:14.5px;letter-spacing:-0.2px}
+.hist-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;font-size:12px;color:var(--text-dim)}
+.hist-meta b{color:var(--text)}
+.hist-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+.hist-chip{font-size:10.5px;padding:2.5px 9px;border-radius:999px;background:rgba(16,185,129,0.12);color:var(--primary-2);font-weight:700}
+.hist-arrow{margin-left:auto;color:var(--text-mute);font-size:18px;align-self:center}
 .list-dot{width:8px;height:8px;border-radius:50%;background:var(--primary);box-shadow:0 0 10px var(--primary-glow);flex:0 0 8px}
 .list-badge{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#022c22;display:grid;place-items:center;font-weight:900;font-size:15px;flex:0 0 36px}
 .list-info{flex:1;min-width:0}
@@ -410,7 +423,7 @@ a{color:var(--primary-2);text-decoration:none}
     </div>
 
     <button class="btn btn-primary btn-block" id="google-btn" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="doGoogleSignIn()">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v4.08h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v4.18h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
       <span id="google-btn-lbl">Entrar com Google</span>
     </button>
     <div id="auth-err" style="margin-top:10px"></div>
@@ -875,7 +888,7 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="list-row" onclick="openTrophies()">🏆 <span>Meus troféus</span></div>
     <div class="list-row" onclick="openWeekSummary()">📊 <span>Resumo da semana</span></div>
     <div class="list-row" onclick="openModal('terms')">📄 <span>Termos de uso</span></div>
-    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v4.0</div>
+    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v4.1</div>
     <div class="list-row danger" style="margin-top:14px" onclick="openModal('delete-account')">🗑️ <span>Excluir minha conta</span></div>
     <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
   </div>
@@ -923,9 +936,9 @@ a{color:var(--primary-2);text-decoration:none}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=4.0"></script>
+<script src="./app.js?v=4.1"></script>
 <script>
-const APP_VERSION = 'v4.0';
+const APP_VERSION = 'v4.1';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {

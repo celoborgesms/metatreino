@@ -1,4 +1,4 @@
-const APP_VERSION = 'v4.0';
+const APP_VERSION = 'v4.1';
 const CACHE = 'metatreino-' + APP_VERSION;
 const CRITICAL = ['./index.html', './app.js']; // network-first (updates first)
 const STATIC = ['./manifest.json', './icon.svg', './icon-512.png']; // cache-first
@@ -25,9 +25,9 @@ self.addEventListener('fetch', (e) => {
   const isCritical = CRITICAL.includes(path) || url.pathname === '/' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/app.js');
 
   if (isCritical) {
-    // Network-first: try fetch, fallback to cache
+    // Network-first com revalidação forçada (GitHub Pages usa cache HTTP de 10min)
     e.respondWith(
-      fetch(e.request).then(res => {
+      fetch(e.request, { cache: 'no-cache' }).then(res => {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
         return res;
