@@ -1,8 +1,8 @@
-// ===== MetaTreino v4.1 =====
-const APP_VERSION = 'v4.1';
+// ===== MetaTreino v4.2 =====
+const APP_VERSION = 'v4.2';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
-const CONTACT_EMAIL = 'celoborgesms@gmail.com';
+const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
 const HISTORY_RETENTION_DAYS = 90;
 
 // ---------- FIREBASE ----------
@@ -480,6 +480,21 @@ function runPace(kind, setup){
   return p.leve;
 }
 
+// Regiões com dor → grupos musculares a evitar nos treinos
+const PAIN_MAP = {
+  'Ombro':['Ombro','Peito','Tríceps','Trapézio'],
+  'Lombar':['Costas','Glúteos'],
+  'Joelho':['Pernas','Glúteos','Panturrilha'],
+  'Punho/Cotovelo':['Bíceps','Tríceps','Peito'],
+  'Tornozelo':['Panturrilha','Pernas'],
+  'Pescoço':['Trapézio','Ombro']
+};
+function painBlockedParts(){
+  const pains = (state.user && state.user.pain) || [];
+  const blocked = new Set();
+  pains.forEach(p=>(PAIN_MAP[p]||[]).forEach(x=>blocked.add(x)));
+  return blocked;
+}
 function buildLiftExercises(parts, setup){
   const level = setup.level || 'iniciante';
   const goal = setup.goal || 'hipertrofia';
@@ -505,8 +520,10 @@ function buildLiftExercises(parts, setup){
   const needSmall = level==='avancado'?2 : level==='intermediario'?2 : 1; // core/panturrilha/trapézio
   // offset por objetivo: objetivos diferentes puxam exercícios diferentes do banco
   const goalOffset = {hipertrofia:0, forca:0, emagrecimento:1, resistencia:2}[goal] || 0;
+  const blocked = painBlockedParts();
   const list = [];
   parts.forEach(p=>{
+    if(blocked.has(p)) return; // pula grupos que sobrecarregam a região dolorida
     const cat = EX_BANK.find(c=>c.name===p); if(!cat) return;
     let compat = cat.items.filter(ex => (ex.equip||[]).some(e => equipFilter.includes(e)));
     if(!compat.length) return;
@@ -520,6 +537,11 @@ function buildLiftExercises(parts, setup){
     const pick = compat.slice(0, Math.min(need, compat.length));
     pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps, rest, part:p, equip:ex.equip }); });
   });
+  // se a dor bloqueou todos os grupos do dia, entrega ao menos um treino leve de Core
+  if(!list.length && !blocked.has('Core')){
+    const core = EX_BANK.find(c=>c.name==='Core');
+    if(core) core.items.slice(0,3).forEach(ex=>{ list.push({ id:slug(ex.name), name:ex.name, sub:ex.sub, sets:2, reps:'12-15', rest:'45s', part:'Core', equip:ex.equip }); });
+  }
   return list;
 }
 // duração estimada calculada do volume real: (tempo da série + descanso) × séries × exercícios + aquecimento
@@ -846,12 +868,24 @@ function renderHome(){
     alertCard.classList.add('hidden');
   }
 
-  const wk = mod.week||1, total = mod.plan.totalWeeks;
-  $('plan-week').textContent = `Semana ${wk} de ${total}`;
+  const cw = currentWeek(mod);
+  // aviso de dor: corrida com dor em perna/joelho/tornozelo → sugerir caminhada ou bike
+  const pains = (state.user&&state.user.pain)||[];
+  const legPain = pains.some(p=>['Joelho','Tornozelo','Lombar'].includes(p));
+  if(state.active==='run' && legPain && $('card-plan-alert') && $('card-plan-alert').classList.contains('hidden')){
+    const ac = $('card-plan-alert');
+    ac.classList.remove('hidden');
+    ac.querySelector('.card-icon').textContent = '🩹';
+    ac.querySelector('.card-title').textContent = 'Dor registrada: '+pains.join(', ');
+    ac.querySelector('.card-sub').textContent = 'Hoje considere trocar a corrida por caminhada leve ou bike (menos impacto). Se a dor persistir, procure um profissional de saúde.';
+  }
+  const wk = cw.wk, total = cw.total;
+  $('plan-week').textContent = mod.plan.type==='lift' && cw.cycle>1 ? `Semana ${wk} de ${total} · ${cw.cycle}º ciclo` : `Semana ${wk} de ${total}`;
   $('plan-progress').style.width = Math.min(100,(wk/total)*100)+'%';
   const phase = wk<=Math.floor(total*0.6)?'BUILD':wk<=Math.floor(total*0.85)?'PEAK':'TAPER';
   $('plan-phase').textContent = phase;
-  $('plan-foot').textContent = phase==='BUILD'?`🏗️ Fase de construção · ${isLift?'Ganhando base muscular':'Aumentando base aeróbica'}. ${total-wk} semanas até o pico.`:phase==='PEAK'?`🚀 Fase de pico · Alta intensidade. ${total-wk} semanas restantes.`:`🎯 Fase de taper · Recuperação e afinação final.`;
+  const isLiftPlan = mod.plan.type==='lift';
+  $('plan-foot').textContent = cw.done ? '🏁 Programa concluído! Toque em "Trocar plano" pra começar um novo ciclo.' : phase==='BUILD'?`🏗️ Fase de construção · ${isLiftPlan?'Ganhando base muscular':'Aumentando base aeróbica'}. ${total-wk} semanas até o pico.`:phase==='PEAK'?`🚀 Fase de pico · Alta intensidade. ${total-wk} semanas restantes.`:isLiftPlan?`🎯 Fase de consolidação · Na semana ${total} o ciclo recomeça renovado.`:`🎯 Fase de taper · Recuperação e afinação final.`;
 
   const today = getDayIdx();
   const todayWk = mod.plan.workouts.find(w=>w.dayIdx===today);
@@ -946,7 +980,8 @@ function renderSessions(){
   $('sess-mod-icon').textContent = isLift?'🏋️':'🏃';
   $('sessions-title').innerHTML = `${isLift?'🏋️':'🏃'} Sessões`;
   $('sessions-tag').textContent = `Sessões · ${isLift?'Musculação':'Corrida'}`;
-  $('weekly-info').textContent = `Meta: ${labelGoal(mod)} · Semana ${mod.week}/${mod.plan.totalWeeks} · ${mod.plan.workouts.length}× por semana`;
+  const cwInfo = currentWeek(mod);
+  $('weekly-info').textContent = `Meta: ${labelGoal(mod)} · Semana ${cwInfo.wk}/${cwInfo.total} · ${mod.plan.workouts.length}× por semana`;
 
   const sel = state.ui.selectedSession || (mod.plan.workouts.find(w=>w.dayIdx===getDayIdx()) || mod.plan.workouts[0]);
   $('sessions-chips').innerHTML = mod.plan.workouts.map(w=>{
@@ -1504,6 +1539,7 @@ function renderProfile(){
   const u = state.user, p = u.profile || {};
   renderAvatar('pf-avatar');
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
+  const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:999px;background:rgba(244,63,94,0.15);color:#fda4af;font-weight:800">${pn.join(', ')}</span>`:''; }
   const qe = $('pf-quick-equip'); if(qe) qe.style.display = (state.active==='lift' && state.modules.lift) ? 'block' : 'none';
   $('pf-name').textContent = p.nickname || u.name;
   $('pf-email').textContent = u.email;
@@ -1714,20 +1750,50 @@ function checkTrophies(){
     if(done7d >= wkTarget) unlockTrophy('week_goal');
   }
 }
+// Progresso atual rumo a cada troféu contável (pra barra de progresso)
+function trophyProgress(id){
+  ensureStats();
+  const s = state.stats, h = state.modules[state.active]?.history||[];
+  const allH = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
+  const streak = calcStreak(allH);
+  const prN = Object.keys(state.prs||{}).length;
+  const map = {
+    lift_10:[s.liftTotal,10], lift_25:[s.liftTotal,25], lift_50:[s.liftTotal,50], lift_100:[s.liftTotal,100],
+    pr_5:[prN,5], pr_20:[prN,20],
+    run_10:[s.runTotal,10], run_25:[s.runTotal,25], run_50:[s.runTotal,50],
+    run_km_10:[s.runKmTotal,10], run_km_50:[s.runKmTotal,50], run_km_100:[s.runKmTotal,100], run_km_500:[s.runKmTotal,500],
+    walk_10:[s.walkTotal,10], walk_25:[s.walkTotal,25],
+    walk_km_10:[s.walkKmTotal,10], walk_km_50:[s.walkKmTotal,50], walk_km_100:[s.walkKmTotal,100],
+    bike_10:[s.bikeTotal,10], bike_25:[s.bikeTotal,25],
+    bike_km_50:[s.bikeKmTotal,50], bike_km_100:[s.bikeKmTotal,100], bike_km_500:[s.bikeKmTotal,500],
+    streak_3:[streak,3], streak_7:[streak,7], streak_14:[streak,14], streak_30:[streak,30]
+  };
+  return map[id]||null;
+}
 function openTrophies(){
   const catNames = { geral:'🌟 Gerais', streak:'🔥 Consistência', lift:'🏋️ Musculação', run:'🏃 Corrida', walk:'🚶 Caminhada', bike:'🚴 Bike', body:'⚖️ Corpo' };
   const cats = ['geral','streak','lift','run','walk','bike','body'];
   const groups = cats.map(c=>({ cat:c, name:catNames[c], items:TROPHIES.filter(t=>t.cat===c) }));
   const totalUnlocked = state.trophies.length;
+  const pctAll = Math.round(totalUnlocked/TROPHIES.length*100);
   const html = `
     <h3>🏆 Suas conquistas</h3>
     <p style="color:var(--text-dim);font-size:13px;margin-top:2px">${totalUnlocked} de ${TROPHIES.length} desbloqueados</p>
+    <div style="height:8px;border-radius:99px;background:rgba(148,163,184,0.15);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pctAll}%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:99px"></div></div>
     ${groups.map(g=>{
       const u = g.items.filter(t=>state.trophies.includes(t.id)).length;
       return `<div style="margin-top:18px"><div class="section-lbl" style="margin:0 0 8px">${g.name} · ${u}/${g.items.length}</div>
         <div class="trophy-grid">${g.items.map(t=>{
           const ul = state.trophies.includes(t.id);
-          return `<div class="trophy ${ul?'unlock':''}"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div></div>`;
+          let bar = '';
+          if(!ul){
+            const pr = trophyProgress(t.id);
+            if(pr && pr[0]>0){
+              const pct = Math.min(99, Math.round(pr[0]/pr[1]*100));
+              bar = `<div style="height:5px;border-radius:99px;background:rgba(148,163,184,0.18);margin-top:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--primary)"></div></div><div style="font-size:9.5px;color:var(--text-mute);margin-top:3px">${Math.floor(pr[0])}/${pr[1]}</div>`;
+            }
+          }
+          return `<div class="trophy ${ul?'unlock':''}"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div>${bar}</div>`;
         }).join('')}</div></div>`;
     }).join('')}
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
@@ -1773,6 +1839,14 @@ const MODAL_CONTENT = {
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`,
   'privacy':`<h3>🔒 Privacidade</h3><p>Seus dados de treino ficam salvos na nuvem, vinculados à sua conta Google, e visíveis apenas para você e para o treinador. Não coletamos, não compartilhamos e não vendemos suas informações. Você pode excluir tudo a qualquer momento em Perfil → Excluir minha conta. Contato: <a href="mailto:metatreinooficial@gmail.com">metatreinooficial@gmail.com</a>.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
+  'pain':()=>{
+    const cur = (state.user&&state.user.pain)||[];
+    const areas = Object.keys(PAIN_MAP);
+    return `<h3>🩹 Estou com dor</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Marque onde dói e o app adapta seus treinos na hora, evitando exercícios que sobrecarregam a região. Isso NÃO substitui avaliação médica — dor persistente merece um profissional.</p>
+      <div class="radio-grid" id="pain-areas" style="margin-top:12px">${areas.map(a=>`<div class="opt opt-multi ${cur.includes(a)?'on':''}" data-val="${a}">${a}</div>`).join('')}</div>
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="savePain()">💾 Salvar e adaptar treinos</button>
+      ${cur.length?`<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="clearPain()">✅ Estou sem dor — voltar ao normal</button>`:''}`;
+  },
   'change-equip':()=>{
     const cur = state.modules.lift?.setup?.equip || 'academia';
     const opts = [
@@ -1785,10 +1859,10 @@ const MODAL_CONTENT = {
       ${opts.map(o=>`<div class="list-row" style="${o.v===cur?'border:1px solid var(--primary);border-radius:14px':''}" onclick="quickChangeEquip('${o.v}')">${o.emo} <span><b>${o.t}</b>${o.v===cur?' ✓ atual':''}<br><span style="font-size:12px;color:var(--text-dim)">${o.s}</span></span></div>`).join('')}
       <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Cancelar</button>`;
   },
-  'faq':`<h3>❓ FAQ / Sobre</h3><p><b>MetaTreino</b> gera planos de treino inteligentes de musculação e corrida, personalizados.<br><br><b>Como funciona?</b> Escolha o módulo, responda o questionário e receba um plano progressivo.<br><br><b>Meus dados ficam salvos?</b> Sim, na nuvem, vinculados à sua conta Google — você pode entrar de qualquer aparelho. Histórico de treinos guardado por 90 dias.<br><br><b>Contato:</b> celoborgesms@gmail.com</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
+  'faq':`<h3>❓ FAQ / Sobre</h3><p><b>MetaTreino</b> gera planos de treino inteligentes de musculação e corrida, personalizados.<br><br><b>Como funciona?</b> Escolha o módulo, responda o questionário e receba um plano progressivo.<br><br><b>Meus dados ficam salvos?</b> Sim, na nuvem, vinculados à sua conta Google — você pode entrar de qualquer aparelho. Histórico de treinos guardado por 90 dias.<br><br><b>Contato:</b> metatreinooficial@gmail.com</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
   'edit-profile':()=>{ const p = state.user.profile||{}; return `<h3>✏️ Editar perfil</h3><div class="field"><label>Como quer ser chamado</label><input class="input" id="ep-nick" value="${p.nickname||''}"></div><div class="field"><label>Idade</label><input class="input mono" type="number" id="ep-age" value="${p.age||''}"></div><div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="ep-height" value="${p.height||''}"></div><div class="field"><label>WhatsApp</label><input class="input mono" id="ep-whats" value="${p.whatsapp||''}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveProfileEdit()">Salvar</button>`; },
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
-  'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno (mesmo da conta Google)</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
+  'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno (mesmo da conta Google)</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="7">🎁 Teste 7 dias</div><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
   'broadcast':`<h3>📢 Mensagem em massa (WhatsApp)</h3><p style="color:var(--text-dim);font-size:13px">Gera um link do WhatsApp Web para cada aluno com o texto abaixo. Os alunos precisam ter WhatsApp cadastrado.</p><div class="field"><label>Mensagem</label><textarea class="input" id="bc-msg" rows="4" style="resize:vertical">Olá, treinador aqui do MetaTreino! Passando pra lembrar...</textarea></div><button class="btn btn-primary btn-block" onclick="doBroadcast()">Abrir links WhatsApp</button>`,
   'delete-account':()=>{ const email=(state.user&&state.user.email)||''; return `<h3>🗑️ Excluir minha conta</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Isso apaga <b>permanentemente</b> todo o seu progresso: treinos, PRs, histórico de peso e troféus.<br><br>Seu acesso ao app continua liberado — você pode entrar de novo com a mesma conta Google (<b>${email}</b>) e começar do zero na hora.<br><br>Essa ação <b>não pode ser desfeita</b>.</p><button class="btn btn-outline btn-block" style="margin-top:16px;border-color:#ef4444;color:#ef4444" onclick="doDeleteAccount()">Sim, excluir minha conta</button><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`; },
 };
@@ -1797,6 +1871,7 @@ function openModal(k){
   $('modal-inner').innerHTML = typeof c==='function' ? c() : c;
   $('modal-back').classList.add('on');
   if(k==='add-student') bindOpts('modal-inner');
+  if(k==='pain') document.querySelectorAll('#pain-areas .opt-multi').forEach(o=>{ o.onclick=()=>o.classList.toggle('on'); });
 }
 function closeModal(){ $('modal-back').classList.remove('on'); }
 function saveProfileEdit(){
@@ -1808,56 +1883,50 @@ function saveProfileEdit(){
   saveData(); toast('✅ Perfil atualizado'); closeModal(); goTab('profile');
 }
 
-// ---------- MAPA MUSCULAR ----------
-// Estilo anatômico: frente + costas em traço fino, músculos treinados preenchidos em verde
-const MUSCLE_SHAPES = {
-  // ===== FRENTE (figura da esquerda, centro x=62) =====
-  'Ombro':      ['M44 55 q-8 2 -9 11 q6 5 12 1 q3 -7 -3 -12 Z','M80 55 q8 2 9 11 q-6 5 -12 1 q-3 -7 3 -12 Z'],
-  'Peito':      ['M48 64 q12 -5 13 4 l0 12 q-8 4 -14 -1 q-3 -8 1 -15 Z','M76 64 q-12 -5 -13 4 l0 12 q8 4 14 -1 q3 -8 -1 -15 Z'],
-  'Bíceps':     ['M38 72 q-6 3 -6 12 q0 6 5 8 q5 -4 5 -11 q0 -6 -4 -9 Z','M86 72 q6 3 6 12 q0 6 -5 8 q-5 -4 -5 -11 q0 -6 4 -9 Z'],
-  'Antebraço':  ['M32 95 q-4 4 -5 14 q3 5 7 3 q3 -8 3 -14 q-2 -4 -5 -3 Z','M92 95 q4 4 5 14 q-3 5 -7 3 q-3 -8 -3 -14 q2 -4 5 -3 Z'],
-  'Core':       ['M55 82 l14 0 q2 14 0 28 q-7 4 -14 0 q-2 -14 0 -28 Z'],
-  'Quadríceps': ['M52 118 q-5 16 -3 34 q4 6 9 2 q4 -18 2 -34 q-4 -4 -8 -2 Z','M72 118 q5 16 3 34 q-4 6 -9 2 q-4 -18 -2 -34 q4 -4 8 -2 Z'],
-  'Pernas':     ['M52 118 q-5 16 -3 34 q4 6 9 2 q4 -18 2 -34 q-4 -4 -8 -2 Z','M72 118 q5 16 3 34 q-4 6 -9 2 q-4 -18 -2 -34 q4 -4 8 -2 Z'],
-  // ===== COSTAS (figura da direita, centro x=178) =====
-  'Trapézio':   ['M170 48 l16 0 l-4 22 q-4 3 -8 0 Z'],
-  'Costas':     ['M160 70 q10 -4 16 2 l0 20 q-10 6 -17 -2 q-2 -12 1 -20 Z','M196 70 q-10 -4 -16 2 l0 20 q10 6 17 -2 q2 -12 -1 -20 Z'],
-  'Lombar':     ['M170 94 l16 0 q2 8 0 14 q-8 3 -16 0 q-2 -6 0 -14 Z'],
-  'Tríceps':    ['M154 70 q-6 4 -6 13 q1 7 6 8 q4 -5 4 -12 q0 -6 -4 -9 Z','M202 70 q6 4 6 13 q-1 7 -6 8 q-4 -5 -4 -12 q0 -6 4 -9 Z'],
-  'Glúteo':     ['M168 112 q-7 2 -7 10 q0 7 8 8 q6 -2 6 -9 q-1 -8 -7 -9 Z','M188 112 q7 2 7 10 q0 7 -8 8 q-6 -2 -6 -9 q1 -8 7 -9 Z'],
-  'Posterior':  ['M167 134 q-4 15 -2 30 q4 5 8 1 q3 -16 1 -30 q-3 -4 -7 -1 Z','M189 134 q4 15 2 30 q-4 5 -8 1 q-3 -16 -1 -30 q3 -4 7 -1 Z'],
-  'Panturrilha':['M168 172 q-4 8 -2 20 q3 5 7 2 q3 -11 1 -20 q-3 -4 -6 -2 Z','M188 172 q4 8 2 20 q-3 5 -7 2 q-3 -11 -1 -20 q3 -4 6 -2 Z']
-};
-// contorno do corpo (frente e costas) em traço fino
-function bodyOutline(cx){
-  return `M${cx} 18 m-8 0 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0
-    M${cx-5} 30 l10 0 l2 6 q14 3 16 16 l4 32 q1 6 -3 7 q-4 1 -5 -4 l-4 -26 l-1 26 q2 14 -1 26 l-4 46 q-1 6 -6 6 q-4 0 -4 -6 l1 -42 l-5 -12 l-5 12 l1 42 q0 6 -4 6 q-5 0 -6 -6 l-4 -46 q-3 -12 -1 -26 l-1 -26 l-4 26 q-1 5 -5 4 q-4 -1 -3 -7 l4 -32 q2 -13 16 -16 Z`;
-}
-function muscleBodySVG(parts, size){
-  size = size || 150;
-  const lit = new Set(parts||[]);
-  // "Pernas" acende quadríceps + posterior + glúteo
-  if(lit.has('Pernas')){ lit.add('Quadríceps'); lit.add('Posterior'); lit.add('Glúteo'); }
-  const shapes = [];
-  Object.entries(MUSCLE_SHAPES).forEach(([name, paths])=>{
-    const on = lit.has(name);
-    paths.forEach(p=>{
-      shapes.push(`<path d="${p}" fill="${on?'rgba(16,185,129,0.85)':'none'}" stroke="${on?'#10b981':'rgba(148,163,184,0.4)'}" stroke-width="1.2"/>`);
-    });
-  });
-  return `<svg viewBox="0 0 240 215" width="${size}" height="${Math.round(size*0.9)}">
-    <path d="${bodyOutline(62)}" fill="none" stroke="rgba(148,163,184,0.55)" stroke-width="1.6" stroke-linejoin="round"/>
-    <path d="${bodyOutline(178)}" fill="none" stroke="rgba(148,163,184,0.55)" stroke-width="1.6" stroke-linejoin="round"/>
-    ${shapes.join('')}
-    <text x="62" y="212" text-anchor="middle" fill="#64748b" font-size="9" font-family="system-ui">FRENTE</text>
-    <text x="178" y="212" text-anchor="middle" fill="#64748b" font-size="9" font-family="system-ui">COSTAS</text>
-  </svg>`;
+// Semana atual do plano, calculada da data de criação (avança sozinha).
+// Musculação: ciclo de 12 semanas que recomeça (mesociclo). Corrida: para no total (prova).
+function currentWeek(mod){
+  if(!mod || !mod.plan) return {wk:1, total:12, cycle:1};
+  const total = mod.plan.totalWeeks || 12;
+  const created = mod.createdAt || Date.now();
+  const elapsed = Math.floor((Date.now() - created) / (7*86400000)); // semanas completas
+  if(mod.plan.type === 'lift'){
+    return { wk:(elapsed % total)+1, total, cycle:Math.floor(elapsed/total)+1 };
+  }
+  return { wk:Math.min(elapsed+1, total), total, cycle:1, done:elapsed+1>total };
 }
 function partsFromEntry(x){
   if(x.parts && x.parts.length) return x.parts;
   // migração: extrai do nome "Treino C — Pernas + Ombro"
   const m = (x.name||'').split('—')[1];
   return m ? m.split('+').map(s=>s.trim()).filter(Boolean) : [];
+}
+
+// ---------- DOR / ADAPTAÇÃO ----------
+function regenLiftExercises(){
+  const mod = state.modules.lift;
+  if(!mod || !mod.plan) return;
+  mod.plan.workouts.forEach(w=>{
+    w.exercises = buildLiftExercises(w.parts, mod.setup);
+    w.duration = estimateLiftDuration(w.exercises, mod.setup.goal);
+  });
+}
+function savePain(){
+  const sel = [...document.querySelectorAll('#pain-areas .opt-multi.on')].map(o=>o.dataset.val);
+  state.user.pain = sel;
+  regenLiftExercises();
+  saveData();
+  closeModal();
+  toast(sel.length ? '🩹 Treinos adaptados pra proteger: '+sel.join(', ') : '✅ Sem dor registrada');
+  goTab(state.ui.tab||'home');
+}
+function clearPain(){
+  state.user.pain = [];
+  regenLiftExercises();
+  saveData();
+  closeModal();
+  toast('✅ Que bom! Treinos de volta ao normal.');
+  goTab(state.ui.tab||'home');
 }
 
 // ---------- TROCA RÁPIDA DE EQUIPAMENTO ----------
@@ -2175,7 +2244,7 @@ function renderAdminList(){
     const daysLbl = days>=9999?'∞':days<=0?'Expirado':`${days}d`;
     return `<div class="stud" onclick="openStudent('${x.email}')">
       <div class="stud-top"><div><div class="stud-name">${x.user?.nome || x.name || x.email.split('@')[0]}</div><div class="stud-email">${x.email}</div></div><div class="stud-days ${cls}">${daysLbl}</div></div>
-      <div class="stud-meta">${x.phone?`<span>📱 <b>${x.phone}</b></span>`:''}${x.notes?`<span>📝 ${x.notes}</span>`:''}${x.discount?`<span>🏷️ <b>${x.discount}% off</b></span>`:''}</div>
+      <div class="stud-meta">${x.phone?`<span>📱 <b>${x.phone}</b></span>`:''}${x.notes?`<span>📝 ${x.notes}</span>`:''}${x.expiresAt && (x.expiresAt-x.addedAt)<=8*86400000?`<span>🎁 <b>teste</b></span>`:''}</div>
     </div>`;
   }).join('');
 }
@@ -2188,7 +2257,7 @@ async function doAddStudent(){
   const err = $('as-err'); err.innerHTML='';
   if(!email || !email.includes('@')){ err.innerHTML='<div class="err">E-mail inválido</div>'; return; }
   if(!dur){ err.innerHTML='<div class="err">Selecione a duração</div>'; return; }
-  const dados = { addedAt:Date.now(), expiresAt: dur>=9999?null:Date.now()+dur*86400000, active:true, phone, notes, name, discount:0 };
+  const dados = { addedAt:Date.now(), expiresAt: dur>=9999?null:Date.now()+dur*86400000, active:true, phone, notes, name };
   try{
     await db.collection('usuariosAutorizados').doc(email).set(dados, {merge:true});
     allowCache[email] = {...(allowCache[email]||{}), ...dados};
@@ -2232,9 +2301,6 @@ function openStudent(email){
       <button class="btn btn-ghost" onclick="adjustDays('${email}',-7)" style="flex:1">-7d</button>
     </div>
 
-    <div class="section-lbl">Desconto</div>
-    <div class="card"><div class="row"><input class="input mono" id="stud-disc" type="number" value="${a.discount||0}" min="0" max="100" style="flex:1"><button class="btn btn-primary" onclick="setStudentDiscount('${email}')">Salvar %</button></div></div>
-
     ${p?`
       <div class="section-lbl">Dados do aluno</div>
       <div class="card">
@@ -2269,15 +2335,6 @@ async function adjustDays(email, days){
     toast(days>0?`+${days} dias`:`${days} dias`);
     openStudent(email);
   }catch(e){ console.log('Erro ao ajustar dias:', e); toast('⚠️ Não foi possível salvar. Confira as permissões do Firestore.'); }
-}
-async function setStudentDiscount(email){
-  const a = allowCache[email]; if(!a) return;
-  const val = parseInt($('stud-disc').value)||0;
-  try{
-    await db.collection('usuariosAutorizados').doc(email).update({ discount:val });
-    a.discount = val;
-    toast('✅ Desconto salvo');
-  }catch(e){ console.log('Erro ao salvar desconto:', e); toast('⚠️ Não foi possível salvar. Confira as permissões do Firestore.'); }
 }
 async function toggleStudent(email){
   const a = allowCache[email]; if(!a) return;
@@ -2327,10 +2384,9 @@ function openHistoryEntry(idx){
   const isRun = state.active==='run';
   const parts = !isRun ? partsFromEntry(x) : [];
   const muscleBlock = parts.length ? `
-    <div class="card" style="display:flex;gap:14px;align-items:center;margin-top:12px">
-      <div>${muscleBodySVG(parts, 100)}</div>
-      <div style="flex:1"><div class="section-lbl" style="margin:0 0 6px">Músculos trabalhados</div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:11.5px;padding:3px 10px;border-radius:999px;background:rgba(16,185,129,0.12);color:var(--primary-2);font-weight:700">${p}</span>`).join('')}</div></div>
+    <div class="card" style="margin-top:12px">
+      <div class="section-lbl" style="margin:0 0 8px">💪 Músculos trabalhados</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:12.5px;padding:5px 13px;border-radius:999px;background:rgba(16,185,129,0.14);color:var(--primary-2);font-weight:800;border:1px solid rgba(16,185,129,0.3)">${p}</span>`).join('')}</div>
     </div>` : '';
   const exBlock = (x.exercisesDone && x.exercisesDone.length) ? `
     <div class="section-lbl" style="margin-top:14px">Exercícios por grupo</div>
@@ -2515,4 +2571,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,setStudentDiscount,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,openWeekSummary,shareWeekImage,shareWorkoutImage});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage});
