@@ -1,5 +1,5 @@
-// ===== MetaTreino v4.2 =====
-const APP_VERSION = 'v4.2';
+// ===== MetaTreino v4.3 =====
+const APP_VERSION = 'v4.3';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -189,6 +189,7 @@ function doGoogleSignIn(){
   });
 }
 function doLogout(){
+  syncToCloud(); // envia qualquer alteração pendente (ex: foto removida) ANTES de sair
   fbAuth.signOut().catch(()=>{});
   fbUser = null;
   state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], ui:{tab:'home',selectedSession:null} };
@@ -219,18 +220,27 @@ async function afterGoogleSignIn(user){
   const email = (user.email||'').toLowerCase();
   showScreen('scr-auth');
   const lbl = $('google-btn-lbl'); if(lbl) lbl.textContent='Verificando acesso...';
+  const accessCacheKey = 'metatreino_access_'+email;
 
-  let isAdmin = false;
+  let isAdmin = false, allowData = null, checkedOnline = false;
   try{
     const adminDoc = await db.collection('admins').doc(email).get();
     isAdmin = adminDoc.exists && adminDoc.data().ativo === true;
-  }catch(e){ console.log('Erro ao verificar admin:', e); }
-
-  let allowData = null;
-  try{
     const allowDoc = await db.collection('usuariosAutorizados').doc(email).get();
     if(allowDoc.exists) allowData = allowDoc.data();
-  }catch(e){ console.log('Erro ao verificar acesso:', e); }
+    checkedOnline = true;
+    // guarda a verificação pra permitir uso offline por até 7 dias
+    try{ localStorage.setItem(accessCacheKey, JSON.stringify({isAdmin, allowData, at:Date.now()})); }catch(e){}
+  }catch(e){
+    console.log('Sem conexão pra verificar acesso — tentando cache offline:', e);
+    try{
+      const cached = JSON.parse(localStorage.getItem(accessCacheKey)||'null');
+      if(cached && (Date.now()-cached.at) < 7*86400000){
+        isAdmin = cached.isAdmin; allowData = cached.allowData;
+        toast('📴 Modo offline — treinos serão sincronizados quando a internet voltar');
+      }
+    }catch(e2){}
+  }
 
   const now = Date.now();
   const temAcesso = allowData && allowData.active && (!allowData.expiresAt || allowData.expiresAt > now);
@@ -241,7 +251,7 @@ async function afterGoogleSignIn(user){
     return;
   }
 
-  if(isAdmin && !temAcesso){
+  if(isAdmin && !temAcesso && checkedOnline){
     const dadosAdmin = { active:true, expiresAt:null, name:user.displayName||'Admin (Marcelo)', notes:'Administrador — acesso vitalício', addedAt:now };
     try{
       await db.collection('usuariosAutorizados').doc(email).set(dadosAdmin, {merge:true});
@@ -869,6 +879,16 @@ function renderHome(){
   }
 
   const cw = currentWeek(mod);
+  // lembrete de peso: 7+ dias sem registrar
+  const wr = $('card-weight-reminder');
+  if(wr){
+    const lastW = state.weights.length ? state.weights[state.weights.length-1].date : 0;
+    const daysNoWeight = lastW ? Math.floor((Date.now()-lastW)/86400000) : 99;
+    if(daysNoWeight >= 7){
+      wr.classList.remove('hidden');
+      $('weight-reminder-sub').textContent = lastW ? `Faz ${daysNoWeight} dias que você não registra. Toque pra atualizar →` : 'Registre seu peso pra acompanhar sua evolução. Toque aqui →';
+    } else wr.classList.add('hidden');
+  }
   // aviso de dor: corrida com dor em perna/joelho/tornozelo → sugerir caminhada ou bike
   const pains = (state.user&&state.user.pain)||[];
   const legPain = pains.some(p=>['Joelho','Tornozelo','Lombar'].includes(p));
@@ -1172,11 +1192,16 @@ function renderSetLogModal(){
       ${rows}
     </div>
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="addSet()">+ Nova série</button>
+    <button class="btn btn-outline btn-block" style="margin-top:8px;border-color:rgba(16,185,129,0.4)" onclick="startRestFor('${exId}','${exName.replace(/'/g,"\\'")}')">⏱️ Iniciar descanso</button>
     <div class="row" style="gap:8px;margin-top:14px">
       <button class="btn btn-ghost btn-block" onclick="closeSetLog(false)">Cancelar</button>
       <button class="btn btn-primary btn-block" onclick="closeSetLog(true)">Salvar</button>
     </div>
   `;
+}
+function startRestFor(exId, exName){
+  const ex = (state.modules.lift?.plan?.workouts||[]).flatMap(w=>w.exercises||[]).find(e=>e.id===exId);
+  startRestTimer(parseRestSeconds(ex && ex.rest), exName);
 }
 function addSet(){
   const last = curLog.entry.sets[curLog.entry.sets.length-1];
@@ -1322,6 +1347,7 @@ function renderHistory(){
   const isLift = state.active==='lift';
   const h = mod.history||[];
   $('hist-title').textContent = `${isLift?'🏋️':'🏃'} Histórico${isLift?'':' de Atividades'}`;
+  renderHistEvolution(isLift, (state.modules[state.active]?.history)||[]);
   $('hist-tag').textContent = `Histórico · ${isLift?'Musculação':'Corrida, caminhada e bike'}`;
   $('h-icon').textContent = isLift?'🏋️':'🏃';
   $('h-lbl1').textContent = isLift?'Treinos':'Atividades';
@@ -1454,6 +1480,21 @@ function renderPerf(){
     if(dots) dots.innerHTML = pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#10b981"/>`).join('');
   }
   renderDistDonut();
+  // metas semanal e mensal (reais)
+  const gb = $('goals-box');
+  if(gb){
+    const monthDone = h.filter(x=>x.at >= now-30*86400000).length;
+    const monthTarget = wkTarget*4;
+    const bar = (done,target,lbl,emo)=>{
+      const pct = Math.min(100, Math.round(done/target*100));
+      const hit = done>=target;
+      return `<div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>${emo} ${lbl}</span><b style="color:${hit?'var(--primary-2)':'var(--text)'}">${done}/${target}${hit?' 🎉':''}</b></div>
+        <div style="height:9px;border-radius:99px;background:rgba(148,163,184,0.15);overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:99px;transition:width .4s"></div></div>
+      </div>`;
+    };
+    gb.innerHTML = bar(weekDone, wkTarget, 'Meta da semana', '📅') + bar(monthDone, monthTarget, 'Meta do mês', '🗓️');
+  }
 }
 function calcVolumeBetween(a,b){
   let t=0;
@@ -1541,6 +1582,7 @@ function renderProfile(){
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
   const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:999px;background:rgba(244,63,94,0.15);color:#fda4af;font-weight:800">${pn.join(', ')}</span>`:''; }
   const qe = $('pf-quick-equip'); if(qe) qe.style.display = (state.active==='lift' && state.modules.lift) ? 'block' : 'none';
+  const qt = $('pf-quick-terrain'); if(qt) qt.style.display = (state.active==='run' && state.modules.run) ? 'block' : 'none';
   $('pf-name').textContent = p.nickname || u.name;
   $('pf-email').textContent = u.email;
   // Show admin button if admin (by email — fonte da verdade)
@@ -1839,6 +1881,11 @@ const MODAL_CONTENT = {
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`,
   'privacy':`<h3>🔒 Privacidade</h3><p>Seus dados de treino ficam salvos na nuvem, vinculados à sua conta Google, e visíveis apenas para você e para o treinador. Não coletamos, não compartilhamos e não vendemos suas informações. Você pode excluir tudo a qualquer momento em Perfil → Excluir minha conta. Contato: <a href="mailto:metatreinooficial@gmail.com">metatreinooficial@gmail.com</a>.</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
+  'backup':`<h3>💾 Backup dos meus dados</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Seus dados já ficam salvos na nuvem automaticamente. O backup em arquivo é uma segurança extra — guarde o arquivo onde quiser e restaure quando precisar.</p>
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="exportMyData()">📥 Baixar meu backup (.json)</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="document.getElementById('restore-input').click()">📤 Restaurar de um arquivo</button>
+    <input type="file" id="restore-input" accept="application/json,.json" style="display:none" onchange="importMyData(event)">
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`,
   'pain':()=>{
     const cur = (state.user&&state.user.pain)||[];
     const areas = Object.keys(PAIN_MAP);
@@ -1846,6 +1893,18 @@ const MODAL_CONTENT = {
       <div class="radio-grid" id="pain-areas" style="margin-top:12px">${areas.map(a=>`<div class="opt opt-multi ${cur.includes(a)?'on':''}" data-val="${a}">${a}</div>`).join('')}</div>
       <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="savePain()">💾 Salvar e adaptar treinos</button>
       ${cur.length?`<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="clearPain()">✅ Estou sem dor — voltar ao normal</button>`:''}`;
+  },
+  'change-terrain':()=>{
+    const cur = state.modules.run?.setup?.terrain || 'asfalto';
+    const opts = [
+      {v:'asfalto', emo:'🛣️', t:'Asfalto', s:'Rua, avenidas, parques pavimentados'},
+      {v:'esteira', emo:'🏃', t:'Esteira', s:'Academia ou em casa'},
+      {v:'trilha', emo:'⛰️', t:'Trilha', s:'Terreno irregular, natureza'},
+      {v:'pista', emo:'🏟️', t:'Pista', s:'Pista de atletismo com marcações'}
+    ];
+    return `<h3>🏃 Troca rápida de terreno</h3><p style="color:var(--text-dim);font-size:13px">Seus treinos de corrida são regenerados na hora pro novo terreno — objetivo, dias e nível continuam os mesmos.</p>
+      ${opts.map(o=>`<div class="list-row" style="${o.v===cur?'border:1px solid var(--primary);border-radius:14px':''}" onclick="quickChangeTerrain('${o.v}')">${o.emo} <span><b>${o.t}</b>${o.v===cur?' ✓ atual':''}<br><span style="font-size:12px;color:var(--text-dim)">${o.s}</span></span></div>`).join('')}
+      <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Cancelar</button>`;
   },
   'change-equip':()=>{
     const cur = state.modules.lift?.setup?.equip || 'academia';
@@ -1902,6 +1961,83 @@ function partsFromEntry(x){
   return m ? m.split('+').map(s=>s.trim()).filter(Boolean) : [];
 }
 
+// ---------- BACKUP DO ALUNO ----------
+function exportMyData(){
+  const data = { app:'MetaTreino', versao:APP_VERSION, exportadoEm:new Date().toISOString(), estado:state };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `metatreino-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('📥 Backup baixado — guarde em local seguro');
+}
+function importMyData(ev){
+  const file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      const est = data.estado || data; // aceita o arquivo completo ou só o estado
+      if(!est || !est.user){ toast('⚠️ Arquivo inválido — não parece um backup do MetaTreino'); return; }
+      if(!confirm('Restaurar este backup? Seus dados atuais serão SUBSTITUÍDOS pelos do arquivo.')) return;
+      const keepUser = { ...est.user, email: state.user.email, isAdmin: state.user.isAdmin }; // conta logada manda
+      state = {...state, ...est, user:keepUser, ui:{tab:'home',selectedSession:null}};
+      ensureStats();
+      saveData(); syncToCloud();
+      closeModal();
+      toast('✅ Backup restaurado com sucesso!');
+      goTab('home');
+    }catch(e){ toast('⚠️ Não foi possível ler o arquivo'); }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+
+// ---------- TIMER DE DESCANSO ----------
+let restTimerInt = null;
+function parseRestSeconds(str){
+  if(!str) return 60;
+  const s = String(str).toLowerCase();
+  const nums = (s.match(/\d+/g)||[]).map(Number);
+  if(!nums.length) return 60;
+  const val = nums.length>1 ? (nums[0]+nums[1])/2 : nums[0]; // faixa → ponto médio
+  return Math.round(s.includes('min') ? val*60 : val);
+}
+function startRestTimer(seconds, exName){
+  stopRestTimer();
+  let left = seconds;
+  let el = $('rest-timer-banner');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'rest-timer-banner';
+    el.style.cssText = 'position:fixed;bottom:76px;left:14px;right:14px;z-index:350;background:linear-gradient(135deg,#0a1628,#06281f);border:1.5px solid var(--primary);border-radius:18px;padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(16,185,129,0.25)';
+    document.body.appendChild(el);
+  }
+  const render = ()=>{
+    const m = Math.floor(left/60), s = left%60;
+    el.innerHTML = `<span style="font-size:22px">⏱️</span>
+      <div style="flex:1"><div style="font-weight:800;font-size:14px">Descanso${exName?' · '+exName:''}</div><div style="font-size:12px;color:var(--text-dim)">Respira, hidrata e volta com tudo</div></div>
+      <div class="mono" style="font-weight:900;font-size:24px;color:var(--primary-2)">${m}:${String(s).padStart(2,'0')}</div>
+      <button onclick="stopRestTimer()" style="background:none;border:none;color:var(--text-mute);font-size:18px;padding:4px">✕</button>`;
+  };
+  render();
+  restTimerInt = setInterval(()=>{
+    left--;
+    if(left<=0){
+      stopRestTimer();
+      toast('💪 Descanso acabou — próxima série!');
+      if(navigator.vibrate) navigator.vibrate([200,100,200]);
+      return;
+    }
+    render();
+  }, 1000);
+}
+function stopRestTimer(){
+  clearInterval(restTimerInt); restTimerInt = null;
+  const el = $('rest-timer-banner'); if(el) el.remove();
+}
+
 // ---------- DOR / ADAPTAÇÃO ----------
 function regenLiftExercises(){
   const mod = state.modules.lift;
@@ -1927,6 +2063,25 @@ function clearPain(){
   closeModal();
   toast('✅ Que bom! Treinos de volta ao normal.');
   goTab(state.ui.tab||'home');
+}
+
+function quickChangeTerrain(terrain){
+  const mod = state.modules.run;
+  if(!mod || !mod.plan){ toast('Crie um plano de corrida primeiro'); closeModal(); return; }
+  mod.setup.terrain = terrain;
+  mod.plan.terrain = terrain;
+  // Regenera os blocos de cada treino — dias, objetivo e nível permanecem
+  mod.plan.workouts.forEach(w=>{
+    const kind = (w.name||'').split(' — ')[0];
+    w.blocks = buildRunBlocks(kind, mod.setup);
+    w.duration = w.blocks.reduce((s,b)=>s+b.exs.reduce((x,e)=>x+(e.min||0),0),0);
+    w.targetPace = runPace(kind, mod.setup);
+  });
+  saveData();
+  closeModal();
+  const lbl = {asfalto:'Asfalto', esteira:'Esteira', trilha:'Trilha', pista:'Pista'}[terrain]||terrain;
+  toast(`🏃 Treinos regenerados para: ${lbl}`);
+  goTab('profile');
 }
 
 // ---------- TROCA RÁPIDA DE EQUIPAMENTO ----------
@@ -1985,6 +2140,35 @@ function openWeekSummary(){
   $('modal-back').classList.add('on');
 }
 // Gera uma imagem com a marca do MetaTreino e compartilha (ou baixa)
+// Gráfico de evolução no histórico: volume/semana (musculação) ou km/semana (corrida), últimas 8 semanas
+function renderHistEvolution(isLift, h){
+  const box = $('hist-evo'); if(!box) return;
+  const now = Date.now();
+  const vals = [];
+  for(let i=7;i>=0;i--){
+    const a = now-(i+1)*7*86400000, b = now-i*7*86400000;
+    if(isLift) vals.push(calcVolumeBetween(a,b));
+    else vals.push(h.filter(x=>x.at>=a&&x.at<b).reduce((s,r)=>s+(r.distance||0),0));
+  }
+  const max = Math.max(...vals);
+  if(max<=0){ box.style.display='none'; return; }
+  box.style.display='block';
+  $('hist-evo-title').textContent = isLift ? '📈 Volume levantado por semana (kg)' : '📈 Km por semana';
+  const svg = $('hist-evo-svg');
+  const barW = 34, gap = (400 - 8*barW) / 9;
+  svg.innerHTML = vals.map((v,i)=>{
+    const hgt = max>0 ? Math.max(2, (v/max)*110) : 2;
+    const x = gap + i*(barW+gap);
+    const cur = i===7;
+    return `<rect x="${x}" y="${130-hgt}" width="${barW}" height="${hgt}" rx="6" fill="${cur?'#10b981':'rgba(16,185,129,0.35)'}"/>
+      ${v>0?`<text x="${x+barW/2}" y="${124-hgt}" text-anchor="middle" fill="${cur?'#34d399':'#64748b'}" font-size="9.5" font-weight="700">${isLift?Math.round(v):v.toFixed(1)}</text>`:''}
+      <text x="${x+barW/2}" y="146" text-anchor="middle" fill="#64748b" font-size="9">S${i+1}</text>`;
+  }).join('');
+  $('hist-evo-sub').textContent = isLift
+    ? 'Soma de peso × repetições de todas as séries registradas em cada semana. S8 = semana atual.'
+    : 'Km somados de corrida, caminhada e bike em cada semana. S8 = semana atual.';
+}
+
 // Card no estilo clássico do MetaTreino: moldura, marca, grade de stats e lista de exercícios
 function buildShareCanvas(opts){
   // opts: {title, subtitle, stats:[{rotulo,valor}] (até 4), listaTitulo, lista:[], destaque}
@@ -2571,4 +2755,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,startRestFor,startRestTimer,stopRestTimer,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage});
