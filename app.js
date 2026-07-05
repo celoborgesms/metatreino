@@ -1,5 +1,5 @@
-// ===== MetaTreino v4.8 =====
-const APP_VERSION = 'v4.8';
+// ===== MetaTreino v4.9 =====
+const APP_VERSION = 'v4.9';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -710,153 +710,137 @@ function buildRunBlocks(kind, setup){
 // ---------- EXERCISE BANK ----------
 // equip tags: 'casa' (peso corporal / sem equipamento), 'halteres' (halteres/anilhas soltas), 'academia' (máquinas/barras/cabos)
 const EX_BANK = [
-  {name:'Peito',emo:'🏋️',color:'',items:[
-    // ACADEMIA
-    {name:'Supino Reto com Barra',sub:'Peito',equip:['academia']},
-    {name:'Supino Inclinado com Halteres',sub:'Peito Superior',equip:['academia','halteres']},
-    {name:'Supino Declinado',sub:'Peito Inferior',equip:['academia']},
-    {name:'Crossover no Cabo',sub:'Peito',equip:['academia']},
-    {name:'Peck Deck (voador)',sub:'Peito',equip:['academia']},
-    {name:'Supino Reto com Halteres',sub:'Peito',equip:['academia','halteres']},
+  {name:'Peito',emo:'🫸',color:'',items:[
+    // ACADEMIA (máquinas, cabos, barra)
+    {name:'Supino Reto com Barra',sub:'Peito (força)',equip:['academia']},
+    {name:'Supino Inclinado com Barra',sub:'Peito Superior',equip:['academia']},
+    {name:'Supino na Máquina (Hammer)',sub:'Peito',equip:['academia']},
+    {name:'Crossover no Cabo',sub:'Peito (isolador)',equip:['academia']},
+    {name:'Peck Deck (voador)',sub:'Peito (isolador)',equip:['academia']},
     // HALTERES
-    {name:'Crucifixo com Halteres',sub:'Peito',equip:['academia','halteres']},
-    {name:'Crucifixo Inclinado',sub:'Peito Superior',equip:['academia','halteres']},
+    {name:'Supino Reto com Halteres',sub:'Peito',equip:['academia','halteres']},
+    {name:'Supino Inclinado com Halteres',sub:'Peito Superior',equip:['academia','halteres']},
+    {name:'Crucifixo com Halteres',sub:'Peito (isolador)',equip:['academia','halteres']},
     {name:'Pullover com Halter',sub:'Peito / Serrátil',equip:['academia','halteres']},
     // CASA (peso corporal)
     {name:'Flexão de Braço',sub:'Peito / Tríceps',equip:['academia','halteres','casa']},
     {name:'Flexão Inclinada (pés elevados)',sub:'Peito Superior',equip:['casa','halteres','academia']},
-    {name:'Flexão Declinada (mãos elevadas)',sub:'Peito Inferior',equip:['casa','halteres','academia']},
-    {name:'Flexão Diamante',sub:'Peito Central / Tríceps',equip:['casa','halteres','academia']},
-    {name:'Flexão Aberta',sub:'Peito',equip:['casa','halteres','academia']}
+    {name:'Flexão Diamante',sub:'Peito Central / Tríceps',equip:['casa','halteres','academia']}
   ]},
   {name:'Costas',emo:'🧗',color:'',items:[
     // ACADEMIA
-    {name:'Puxada Frontal no Pulley',sub:'Costas Lats',equip:['academia']},
-    {name:'Puxada Aberta com Pegada Pronada',sub:'Costas Lats',equip:['academia']},
-    {name:'Puxada com Triângulo',sub:'Costas / Romboides',equip:['academia']},
+    {name:'Puxada Frontal no Pulley',sub:'Dorsais (largura)',equip:['academia']},
+    {name:'Puxada com Triângulo',sub:'Dorsais / Romboides',equip:['academia']},
+    {name:'Remada Baixa no Cabo',sub:'Costas Média (espessura)',equip:['academia']},
     {name:'Remada Cavalinho (T-Bar)',sub:'Costas Média',equip:['academia']},
-    {name:'Remada Baixa no Cabo',sub:'Costas Média',equip:['academia']},
-    {name:'Pulldown no Cabo',sub:'Costas',equip:['academia']},
-    {name:'Levantamento Terra',sub:'Costas / Posterior',equip:['academia']},
+    {name:'Remada na Máquina (Hammer)',sub:'Costas Média',equip:['academia']},
+    {name:'Levantamento Terra',sub:'Cadeia posterior (força)',equip:['academia']},
     // HALTERES
-    {name:'Remada Curvada com Halteres',sub:'Costas',equip:['academia','halteres']},
-    {name:'Remada Unilateral com Haltere',sub:'Costas',equip:['academia','halteres']},
     {name:'Remada Curvada com Barra',sub:'Costas Média',equip:['academia','halteres']},
+    {name:'Remada Unilateral com Haltere',sub:'Dorsais (unilateral)',equip:['academia','halteres']},
     // CASA
-    {name:'Barra Fixa (parque/porta)',sub:'Costas / Bíceps',equip:['academia','casa']},
-    {name:'Remada Invertida (mesa)',sub:'Costas',equip:['casa','academia']},
-    {name:'Superman',sub:'Lombar / Costas Baixa',equip:['casa','halteres','academia']},
-    {name:'Remada com Toalha (isométrica)',sub:'Costas',equip:['casa']}
+    {name:'Barra Fixa',sub:'Dorsais / Bíceps',equip:['academia','casa']},
+    {name:'Remada Invertida (mesa/barra baixa)',sub:'Costas',equip:['casa','academia']},
+    {name:'Superman',sub:'Lombar / Costas Baixa',equip:['casa','halteres','academia']}
   ]},
   {name:'Ombro',emo:'🙆',color:'',items:[
     // ACADEMIA
-    {name:'Desenvolvimento com Barra',sub:'Ombro',equip:['academia']},
-    {name:'Desenvolvimento Militar',sub:'Ombro',equip:['academia']},
-    {name:'Face Pull no Cabo',sub:'Ombro Posterior',equip:['academia']},
+    {name:'Desenvolvimento com Barra',sub:'Ombro (força)',equip:['academia']},
+    {name:'Desenvolvimento na Máquina',sub:'Ombro',equip:['academia']},
+    {name:'Elevação Lateral na Polia',sub:'Ombro Lateral',equip:['academia']},
+    {name:'Face Pull no Cabo',sub:'Ombro Posterior / Postura',equip:['academia']},
     // HALTERES
-    {name:'Desenvolvimento Arnold',sub:'Ombro',equip:['academia','halteres']},
-    {name:'Elevação Lateral com Halteres',sub:'Ombro Lateral',equip:['academia','halteres']},
-    {name:'Elevação Frontal',sub:'Ombro Frontal',equip:['academia','halteres']},
-    {name:'Elevação Posterior Curvado',sub:'Ombro Posterior',equip:['academia','halteres']},
     {name:'Desenvolvimento com Halteres',sub:'Ombro',equip:['academia','halteres']},
+    {name:'Desenvolvimento Arnold',sub:'Ombro (completo)',equip:['academia','halteres']},
+    {name:'Elevação Lateral com Halteres',sub:'Ombro Lateral',equip:['academia','halteres']},
+    {name:'Elevação Posterior Curvado',sub:'Ombro Posterior',equip:['academia','halteres']},
     // CASA
     {name:'Pike Push-up',sub:'Ombro',equip:['casa','halteres','academia']},
-    {name:'Elevação Lateral com Garrafas',sub:'Ombro Lateral',equip:['casa']},
-    {name:'Handstand contra parede',sub:'Ombro',equip:['casa','academia']}
+    {name:'Elevação Lateral com Garrafas',sub:'Ombro Lateral',equip:['casa']}
   ]},
   {name:'Bíceps',emo:'💪',color:'',items:[
     // ACADEMIA
     {name:'Rosca Direta com Barra',sub:'Bíceps',equip:['academia']},
-    {name:'Rosca Scott',sub:'Bíceps',equip:['academia']},
-    {name:'Rosca no Cabo',sub:'Bíceps',equip:['academia']},
+    {name:'Rosca Scott (banco)',sub:'Bíceps (pico)',equip:['academia']},
+    {name:'Rosca no Cabo',sub:'Bíceps (tensão contínua)',equip:['academia']},
     // HALTERES
     {name:'Rosca Alternada com Halteres',sub:'Bíceps',equip:['academia','halteres']},
-    {name:'Rosca Martelo com Halteres',sub:'Braquial / Bíceps',equip:['academia','halteres']},
-    {name:'Rosca Concentrada',sub:'Bíceps',equip:['academia','halteres']},
-    {name:'Rosca Inversa',sub:'Antebraço',equip:['academia','halteres']},
+    {name:'Rosca Martelo com Halteres',sub:'Braquial / Antebraço',equip:['academia','halteres']},
+    {name:'Rosca Concentrada',sub:'Bíceps (pico)',equip:['academia','halteres']},
     // CASA
-    {name:'Rosca com Mochila',sub:'Bíceps',equip:['casa']},
     {name:'Chin-up (barra pegada supinada)',sub:'Bíceps / Costas',equip:['academia','casa']},
-    {name:'Rosca isométrica (toalha)',sub:'Bíceps',equip:['casa']}
+    {name:'Rosca com Mochila/Bolsa',sub:'Bíceps',equip:['casa']}
   ]},
   {name:'Tríceps',emo:'🦾',color:'orange',items:[
     // ACADEMIA
-    {name:'Tríceps Pulley no Cabo',sub:'Tríceps',equip:['academia']},
-    {name:'Tríceps Corda no Cabo',sub:'Tríceps',equip:['academia']},
-    {name:'Tríceps Testa (barra EZ)',sub:'Tríceps',equip:['academia']},
+    {name:'Tríceps na Polia (barra)',sub:'Tríceps',equip:['academia']},
+    {name:'Tríceps Corda no Cabo',sub:'Tríceps (cabeça lateral)',equip:['academia']},
+    {name:'Tríceps Testa (barra EZ)',sub:'Tríceps (cabeça longa)',equip:['academia']},
     // HALTERES
-    {name:'Tríceps Francês com Halteres',sub:'Tríceps',equip:['academia','halteres']},
+    {name:'Tríceps Francês com Halteres',sub:'Tríceps (cabeça longa)',equip:['academia','halteres']},
     {name:'Tríceps Coice com Haltere',sub:'Tríceps',equip:['academia','halteres']},
-    {name:'Tríceps Testa com Halteres',sub:'Tríceps',equip:['academia','halteres']},
     // CASA
     {name:'Mergulho no Banco/Cadeira',sub:'Tríceps',equip:['casa','halteres','academia']},
-    {name:'Flexão Fechada (diamante)',sub:'Tríceps',equip:['casa','halteres','academia']},
     {name:'Mergulho nas Paralelas',sub:'Tríceps / Peito',equip:['academia','casa']}
   ]},
   {name:'Pernas',emo:'🦵',color:'orange',items:[
     // ACADEMIA
-    {name:'Leg Press 45°',sub:'Quadríceps',equip:['academia']},
+    {name:'Agachamento Livre com Barra',sub:'Quadríceps / Glúteos (força)',equip:['academia']},
+    {name:'Agachamento no Smith',sub:'Quadríceps / Glúteos',equip:['academia']},
+    {name:'Leg Press 45°',sub:'Quadríceps / Glúteos',equip:['academia']},
     {name:'Hack Machine',sub:'Quadríceps',equip:['academia']},
-    {name:'Cadeira Extensora',sub:'Quadríceps',equip:['academia']},
-    {name:'Mesa Flexora',sub:'Posterior de Coxa',equip:['academia']},
-    {name:'Cadeira Flexora',sub:'Posterior de Coxa',equip:['academia']},
-    {name:'Agachamento Livre com Barra',sub:'Quadríceps / Glúteos',equip:['academia']},
-    {name:'Agachamento Frontal',sub:'Quadríceps',equip:['academia']},
+    {name:'Cadeira Extensora',sub:'Quadríceps (isolador)',equip:['academia']},
+    {name:'Mesa Flexora',sub:'Posterior de Coxa (isolador)',equip:['academia']},
+    {name:'Cadeira Adutora',sub:'Adutores',equip:['academia']},
+    {name:'Cadeira Abdutora',sub:'Abdutores / Glúteo Médio',equip:['academia']},
     // HALTERES
+    {name:'Agachamento Búlgaro',sub:'Quadríceps / Glúteos (unilateral)',equip:['academia','halteres','casa']},
     {name:'Afundo com Halteres',sub:'Quadríceps / Glúteos',equip:['academia','halteres']},
-    {name:'Agachamento Búlgaro',sub:'Quadríceps / Glúteos',equip:['academia','halteres','casa']},
     {name:'Stiff com Halteres',sub:'Posterior / Glúteos',equip:['academia','halteres']},
     {name:'Agachamento Goblet',sub:'Quadríceps / Glúteos',equip:['academia','halteres']},
-    {name:'Passada com Halteres',sub:'Pernas Completo',equip:['academia','halteres']},
     // CASA
     {name:'Agachamento Livre (peso corporal)',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
     {name:'Afundo Alternado',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
     {name:'Agachamento Sumô',sub:'Adutores / Glúteos',equip:['casa','halteres','academia']},
-    {name:'Agachamento Jump',sub:'Quadríceps Explosivo',equip:['casa','halteres','academia']},
-    {name:'Cadeira contra parede (isométrico)',sub:'Quadríceps',equip:['casa','halteres','academia']},
-    {name:'Pistol Squat (uma perna)',sub:'Quadríceps avançado',equip:['casa','academia']},
-    {name:'Step-up em banco/degrau',sub:'Pernas',equip:['casa','halteres','academia']}
+    {name:'Step-up em banco/degrau',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
+    {name:'Cadeira contra parede (isométrico)',sub:'Quadríceps (resistência)',equip:['casa','halteres','academia']},
+    {name:'Agachamento Jump',sub:'Quadríceps (explosão)',equip:['casa','halteres','academia']}
   ]},
   {name:'Glúteos',emo:'🍑',color:'pink',items:[
     // ACADEMIA
-    {name:'Elevação Pélvica (Hip Thrust)',sub:'Glúteos',equip:['academia','halteres']},
-    {name:'Glúteo no Cabo',sub:'Glúteos',equip:['academia']},
-    {name:'Cadeira Abdutora',sub:'Abdutores / Glúteo Médio',equip:['academia']},
-    {name:'Adução na Máquina',sub:'Adutores',equip:['academia']},
+    {name:'Elevação Pélvica (Hip Thrust)',sub:'Glúteos (força)',equip:['academia','halteres']},
+    {name:'Coice na Polia (Glúteo no Cabo)',sub:'Glúteo Máximo',equip:['academia']},
+    {name:'Cadeira Abdutora (foco glúteo)',sub:'Glúteo Médio',equip:['academia']},
     // HALTERES + CASA
     {name:'Ponte de Glúteo',sub:'Glúteos',equip:['casa','halteres','academia']},
-    {name:'Ponte com uma perna',sub:'Glúteos',equip:['casa','halteres','academia']},
-    {name:'Coice de Cachorro (4 apoios)',sub:'Glúteos',equip:['casa','halteres','academia']},
-    {name:'Elevação lateral de perna',sub:'Glúteo Médio',equip:['casa','halteres','academia']},
+    {name:'Ponte com uma perna',sub:'Glúteos (unilateral)',equip:['casa','halteres','academia']},
+    {name:'Coice de Cachorro (4 apoios)',sub:'Glúteo Máximo',equip:['casa','halteres','academia']},
     {name:'Concha (Clam Shell)',sub:'Glúteo Médio',equip:['casa','halteres','academia']},
-    {name:'Agachamento Sumô com Haltere',sub:'Glúteos / Quadríceps',equip:['academia','halteres','casa']}
+    {name:'Abdução lateral de perna',sub:'Glúteo Médio',equip:['casa','halteres','academia']}
   ]},
   {name:'Panturrilha',emo:'🦶',color:'teal',items:[
-    {name:'Panturrilha em Pé',sub:'Panturrilha',equip:['academia','halteres']},
-    {name:'Panturrilha Sentado',sub:'Panturrilha Sóleo',equip:['academia']},
+    {name:'Panturrilha em Pé (máquina/Smith)',sub:'Panturrilha (gastrocnêmio)',equip:['academia']},
+    {name:'Panturrilha Sentado',sub:'Panturrilha (sóleo)',equip:['academia']},
     {name:'Panturrilha no Leg Press',sub:'Panturrilha',equip:['academia']},
     {name:'Panturrilha em pé (peso corporal)',sub:'Panturrilha',equip:['casa','halteres','academia']},
-    {name:'Panturrilha unilateral em degrau',sub:'Panturrilha',equip:['casa','halteres','academia']}
+    {name:'Panturrilha unilateral em degrau',sub:'Panturrilha (unilateral)',equip:['casa','halteres','academia']}
   ]},
   {name:'Trapézio',emo:'🤷',color:'',items:[
-    {name:'Encolhimento com Halteres',sub:'Trapézio',equip:['academia','halteres']},
     {name:'Encolhimento com Barra',sub:'Trapézio',equip:['academia']},
-    {name:'Encolhimento com Mochila',sub:'Trapézio',equip:['casa']}
+    {name:'Encolhimento com Halteres',sub:'Trapézio',equip:['academia','halteres']},
+    {name:'Encolhimento com Mochila/Bolsa',sub:'Trapézio',equip:['casa']}
   ]},
   {name:'Core',emo:'🧱',color:'',items:[
-    {name:'Prancha (Plank)',sub:'Core',equip:['casa','halteres','academia']},
-    {name:'Abdominal Crunch',sub:'Core',equip:['casa','halteres','academia']},
-    {name:'Mountain Climber',sub:'Core / Cardio',equip:['casa','halteres','academia']},
-    {name:'Abdominal Bicicleta',sub:'Core / Oblíquos',equip:['casa','halteres','academia']},
-    {name:'Elevação de Pernas',sub:'Core Baixo',equip:['casa','halteres','academia']},
+    {name:'Prancha (Plank)',sub:'Core (estabilidade)',equip:['casa','halteres','academia']},
     {name:'Prancha Lateral',sub:'Oblíquos',equip:['casa','halteres','academia']},
-    {name:'Dead Bug',sub:'Core Profundo',equip:['casa','halteres','academia']},
-    {name:'Russian Twist',sub:'Oblíquos',equip:['casa','halteres','academia']},
-    {name:'Hollow Hold',sub:'Core',equip:['casa','halteres','academia']},
-    {name:'V-up',sub:'Core',equip:['casa','halteres','academia']}
+    {name:'Abdominal Crunch',sub:'Reto abdominal',equip:['casa','halteres','academia']},
+    {name:'Abdominal Bicicleta',sub:'Reto / Oblíquos',equip:['casa','halteres','academia']},
+    {name:'Elevação de Pernas',sub:'Abdômen Inferior',equip:['casa','halteres','academia']},
+    {name:'Russian Twist',sub:'Oblíquos (rotação)',equip:['casa','halteres','academia']},
+    {name:'Dead Bug',sub:'Core Profundo (anti-extensão)',equip:['casa','halteres','academia']},
+    {name:'Mountain Climber',sub:'Core / Cardio',equip:['casa','halteres','academia']}
   ]}
 ];
-
 // ---------- HELPERS ----------
 function $(id){ return document.getElementById(id); }
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); window.scrollTo({top:0,behavior:'instant'}); }
