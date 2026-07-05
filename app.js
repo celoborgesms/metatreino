@@ -1,5 +1,5 @@
-// ===== MetaTreino v4.6 =====
-const APP_VERSION = 'v4.6';
+// ===== MetaTreino v4.7 =====
+const APP_VERSION = 'v4.7';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -688,7 +688,7 @@ function buildRunBlocks(kind, setup){
 // ---------- EXERCISE BANK ----------
 // equip tags: 'casa' (peso corporal / sem equipamento), 'halteres' (halteres/anilhas soltas), 'academia' (máquinas/barras/cabos)
 const EX_BANK = [
-  {name:'Peito',emo:'🫸',color:'',items:[
+  {name:'Peito',emo:'🏋️',color:'',items:[
     // ACADEMIA
     {name:'Supino Reto com Barra',sub:'Peito',equip:['academia']},
     {name:'Supino Inclinado com Halteres',sub:'Peito Superior',equip:['academia','halteres']},
@@ -961,13 +961,20 @@ function renderHome(){
     const runToday = state.modules.run?.plan?.workouts?.find(w=>w.dayIdx===today);
     if(liftToday && runToday){
       combo.classList.remove('hidden');
-      const legDay = (liftToday.parts||[]).some(p=>['Pernas','Glúteos','Panturrilha'].includes(p));
+      const parts = liftToday.parts||[];
+      const heavyLeg = parts.includes('Pernas');                       // quadríceps/posterior: conflito forte
+      const gluteDay = !heavyLeg && parts.includes('Glúteos');         // glúteo: conflito moderado (motor da passada)
+      const calfOnly = !heavyLeg && !gluteDay && parts.includes('Panturrilha');
       const hardRun = /Intervalado|Longa/.test(runToday.name||'');
+      const partsLbl = parts.join(' + ').toLowerCase();
       let msgC;
-      if(legDay && hardRun) msgC = 'Hoje tem treino de PERNA e corrida forte. Escolha um pra valer: ou encurta a corrida (metade da distância, ritmo leve) ou reduz as séries de perna em ~30%. Fazer os dois no talo cobra a conta amanhã.';
-      else if(legDay) msgC = 'Perna + corrida no mesmo dia: corra ANTES do treino de força se a corrida é sua prioridade, ou depois (bem leve) se a musculação vem primeiro.';
-      else if(hardRun) msgC = 'Corrida forte + musculação hoje: faça a corrida primeiro e deixe a musculação mais controlada — evite falhar séries.';
-      else msgC = 'Dois treinos hoje! Combinação tranquila: só garanta boa alimentação e hidratação entre eles.';
+      if(heavyLeg && hardRun) msgC = `Hoje tem treino de ${partsLbl} e corrida forte. Escolha um pra valer: ou encurta a corrida (metade da distância, ritmo leve) ou reduz as séries de perna em ~30%. Fazer os dois no talo cobra a conta amanhã.`;
+      else if(heavyLeg) msgC = `${partsLbl.charAt(0).toUpperCase()+partsLbl.slice(1)} + corrida no mesmo dia: corra ANTES do treino de força se a corrida é sua prioridade, ou depois (bem leve) se a musculação vem primeiro.`;
+      else if(gluteDay && hardRun) msgC = `Hoje tem ${partsLbl} e corrida forte. O glúteo é o motor da passada, então dá pra fazer os dois — mas deixe um espaço de algumas horas entre eles, ou reduza um pouco o volume de um dos dois se sentir as pernas pesadas.`;
+      else if(gluteDay) msgC = `${partsLbl.charAt(0).toUpperCase()+partsLbl.slice(1)} + corrida leve combinam bem hoje. Só evite falhar as séries de glúteo se ainda for correr depois.`;
+      else if(calfOnly && hardRun) msgC = `Panturrilha + corrida forte no mesmo dia: a panturrilha trabalha muito na corrida — treine-a DEPOIS de correr, nunca antes.`;
+      else if(hardRun) msgC = `Corrida forte + ${partsLbl} hoje: faça a corrida primeiro e deixe a musculação mais controlada — evite falhar séries.`;
+      else msgC = `Dois treinos hoje (${partsLbl} + corrida leve)! Combinação tranquila: só garanta boa alimentação e hidratação entre eles.`;
       $('combo-msg').textContent = msgC;
     } else combo.classList.add('hidden');
   }
@@ -1032,7 +1039,7 @@ function renderTodayWorkout(w, isLift){
   </div>`;
 }
 const PART_CUES = {
-  'Peito':'🫸 No empurrar, desça controlado e não deixe o cotovelo abrir demais.',
+  'Peito':'🏋️ No empurrar, desça controlado e não deixe o cotovelo abrir demais.',
   'Costas':'🧗 Puxe com as costas, não com o braço: pense em levar o cotovelo pra trás.',
   'Ombro':'🙆 Ombro gosta de técnica: carga moderada e amplitude completa valem mais que peso.',
   'Bíceps':'💪 Cotovelo colado no corpo — balançou o tronco, a carga está alta demais.',
@@ -1960,7 +1967,8 @@ function openTrophies(){
 let libFilter = 'Todos';
 function renderLibrary(){
   const chips = ['Todos', ...EX_BANK.map(c=>c.name)];
-  const emos = {'Todos':'📚','Peito':'💪','Costas':'🔙','Ombro':'⛰️','Bíceps':'💪','Tríceps':'🔱','Pernas':'🦵','Glúteos':'🍑','Panturrilha':'🦶','Trapézio':'🦅','Core':'🎯'};
+  const emos = {'Todos':'📚'};
+  EX_BANK.forEach(c=>{ emos[c.name] = c.emo; }); // fonte única: mesmo emoji do catálogo
   $('lib-chips').innerHTML = chips.map(c=>`<div class="filter-chip ${c===libFilter?'on':''}" onclick="setLibFilter('${c}')">${emos[c]||''} ${c}</div>`).join('');
   const q = ($('lib-search').value||'').toLowerCase();
   const total = EX_BANK.reduce((s,c)=>s+c.items.length,0);
