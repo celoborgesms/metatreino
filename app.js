@@ -1,5 +1,5 @@
-// ===== MetaTreino v4.7 =====
-const APP_VERSION = 'v4.7';
+// ===== MetaTreino v4.8 =====
+const APP_VERSION = 'v4.8';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -294,6 +294,7 @@ fbAuth.onAuthStateChanged(function(user){
 
 function bootAfterAuth(){
   cleanupOldHistory();
+  recalibrateRunPlan(); // semana avançou? plano acompanha
   if(!state.user){ showScreen('scr-auth'); return; }
   if(!state.user.profile || !state.user.profile.quiz_done){
     showScreen('scr-quiz'); bindOpts('scr-quiz');
@@ -503,15 +504,33 @@ function generatePlan(module, setup){
     const wkDays = (setup.selectedDays && setup.selectedDays.length===setup.days) ? setup.selectedDays : ({ 3:[2,4,6], 4:[1,3,5,7], 5:[1,2,4,5,7] }[setup.days] || [1,3,5,7]);
     const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
     const types = ['Corrida Leve','Intervalado','Corrida Longa','Ritmo Constante'];
+    // distância base = a da prova; escala pelo nível (avançado corre mais no dia a dia)
+    const raceKm = parseFloat(String(goal).replace(/[^\d.]/g,'')) || 5;
+    const level = setup.level || 'iniciante';
+    // a "corrida longa" chega perto da distância da prova conforme o nível
+    const longMult = { iniciante:0.6, intermediario:0.8, avancado:1.0 }[level];
+    // fatores de cada tipo de treino em relação à corrida longa
+    const kindFactor = { 'Corrida Longa':1.0, 'Corrida Leve':0.55, 'Ritmo Constante':0.7, 'Intervalado':0.6 };
+    // se a pessoa já registrou corridas, usa a maior como piso de realidade
+    const runsSoFar = (state.modules.run?.history||[]).filter(r=>!r.activity||r.activity==='corrida');
+    const longestDone = runsSoFar.length ? Math.max(...runsSoFar.map(r=>r.distance||0)) : 0;
+    const baseLong = Math.max(raceKm*longMult, longestDone*0.9); // não sugerir menos que ~90% do que já faz
+    const paceMinKm = { iniciante:7.5, intermediario:6, avancado:5 }[level]; // min por km aproximado
     const workouts = wkDays.map((d,i)=>{
       const kind = types[i%types.length];
-      const targetGoal = setup.goal;
-      const distance = kind==='Corrida Longa' ? (targetGoal==='42km'?'~15km':targetGoal==='21km'?'~8km':targetGoal==='10km'?'~5km':'~3km') : kind==='Intervalado'?'~4km':'~2.5km';
-      const blocks = buildRunBlocks(kind,setup);
+      const km = Math.max(1.5, Math.round(baseLong * kindFactor[kind] * 2) / 2); // arredonda a 0,5km
+      const distance = '~'+km+'km';
+      // minutos estimados da parte principal = distância × pace do nível
+      // (intervalado é mais curto em distância mas exige mais tempo por causa das pausas)
+      const mainMin = kind==='Intervalado'
+        ? Math.round(km * paceMinKm * 1.25)
+        : Math.round(km * paceMinKm);
+      const nReps = kind==='Intervalado' ? Math.max(4, Math.min(12, Math.round(km/0.6))) : 0;
+      const blocks = buildRunBlocks(kind, {...setup, _mainMin:mainMin, _nReps:nReps});
       const duration = blocks.reduce((s,b)=>s+b.exs.reduce((x,e)=>x+(e.min||0),0),0);
-      return { k:'S'+(i+1), name:kind+' — treino '+(i+1), dayIdx:d, dayName:dayNames[d-1], duration, distance, targetPace:runPace(kind,setup), blocks };
+      return { k:'S'+(i+1), name:kind+' — treino '+(i+1), dayIdx:d, dayName:dayNames[d-1], duration, distance, targetKm:km, targetPace:runPace(kind,setup), blocks };
     });
-    return { type:'run', goal, terrain:setup.terrain, workouts, totalWeeks };
+    return { type:'run', goal, terrain:setup.terrain, level, workouts, totalWeeks };
   }
 }
 function runPace(kind, setup){
@@ -624,7 +643,7 @@ function buildRunBlocks(kind, setup){
       ]};
       return [warm, main, cool];
     }
-    const nReps = level==='avancado'?8 : level==='intermediario'?6 : 5;
+    const nReps = setup._nReps || (level==='avancado'?8 : level==='intermediario'?6 : 5);
     if(terrain==='esteira'){
       // Na esteira não dá pra "dar tiros" com segurança: a mudança de velocidade é
       // gradual. O intervalado vira blocos de tempo com velocidade/inclinação.
@@ -660,7 +679,8 @@ function buildRunBlocks(kind, setup){
       pista:'Na pista, alterne o sentido a cada 15 min pra não sobrecarregar um lado do corpo.',
       asfalto:'Ritmo confortável, converse sem ficar sem fôlego. Hidrate a cada 20 min.'
     };
-    main = {name:'Principal',exs:[{name:'Corrida contínua',desc:tips[terrain]||tips.asfalto,min:40}]};
+    const longaMin = setup._mainMin || ({iniciante:35,intermediario:50,avancado:65}[level]||40);
+    main = {name:'Principal',exs:[{name:'Corrida contínua',desc:tips[terrain]||tips.asfalto,min:longaMin}]};
   } else if(kind==='Ritmo Constante'){
     const tips = {
       esteira:'Trave a velocidade no ritmo alvo e segure — a esteira é ótima pra isso.',
@@ -668,7 +688,8 @@ function buildRunBlocks(kind, setup){
       pista:'Use as voltas pra conferir se o ritmo está estável (anote o tempo por volta).',
       asfalto:'Zona 3-4, um pouco desconfortável mas sustentável.'
     };
-    main = {name:'Principal',exs:[{name:'Corrida em ritmo alvo',desc:tips[terrain]||tips.asfalto,min:25}]};
+    const ritmoMin = setup._mainMin || ({iniciante:20,intermediario:25,avancado:32}[level]||25);
+    main = {name:'Principal',exs:[{name:'Corrida em ritmo alvo',desc:tips[terrain]||tips.asfalto,min:ritmoMin}]};
   } else {
     if(gentle){
       main = {name:'Principal',exs:[{name:'20 min alternando: 2 min corrida leve / 2 min caminhada',desc:'Zona 2, sempre conseguindo conversar. Esse formato constrói base protegendo joelhos e canelas.',min:20}]};
@@ -680,7 +701,8 @@ function buildRunBlocks(kind, setup){
       pista:'Zona 2, ritmo bem tranquilo. Deixe os mais rápidos passarem por fora.',
       asfalto:'Zona 2, converse sem esforço. Esse treino constrói sua base aeróbica.'
     };
-    main = {name:'Principal',exs:[{name:'Corrida em ritmo leve',desc:tips[terrain]||tips.asfalto,min:21}]};
+    const leveMin = setup._mainMin || ({iniciante:20,intermediario:30,avancado:40}[level]||20);
+    main = {name:'Principal',exs:[{name:'Corrida em ritmo leve',desc:tips[terrain]||tips.asfalto,min:leveMin}]};
   }
   return [warm, main, cool];
 }
@@ -1021,10 +1043,12 @@ function labelGoal(mod){
 function renderTodayWorkout(w, isLift){
   const desc = isLift ? liftDesc(w) : runDesc(w);
   const sug = isLift ? liftLoadSuggestion() : runSmartSuggestion(w);
+  const runDone = !isLift && runDoneToday(w);
   return `<div class="today">
     <div class="today-label">TREINO DE HOJE</div>
     <div class="today-diff ${isLift?'diff-med':'diff-easy'}">${isLift?'Foco':'Fácil'}</div>
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:w.name}</div>
+    ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:999px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
     <div class="today-desc">${desc}</div>
     ${sug?`<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);font-size:13px;line-height:1.45">${sug.emo} <b>Sugestão de hoje:</b> ${sug.txt}</div>`:''}
     <div class="today-meta">
@@ -1141,7 +1165,9 @@ function renderSessionDetail(w){
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift ? (lockedToday
       ? `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído hoje</div><div class="card-sub">Pra ajustar algo, edite pelo Histórico. Amanhã a sessão libera de novo.</div></div>`
-      : `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>`) : `<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar corrida (km + tempo)</button>`}
+      : `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>`) : (runDoneToday(w)
+      ? `<div class="card card-ok" style="margin-top:14px;text-align:center;padding:12px"><div style="color:var(--primary-2);font-weight:800">✅ Atividade registrada hoje</div><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar outra atividade</button></div>`
+      : `<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar atividade (km + tempo)</button>`)}
   `;
   $('session-detail-slot').innerHTML = html;
 }
@@ -2208,6 +2234,70 @@ function quickChangeTerrain(terrain){
   goTab('profile');
 }
 
+
+// ---------- RECALIBRAÇÃO INTELIGENTE DA CORRIDA ----------
+// Recalcula os alvos de cada treino a partir do que a pessoa REALMENTE correu
+// (maior corrida dos últimos 21 dias), do nível e da proximidade da prova.
+// Roda a cada registro de corrida e a cada abertura do app.
+function recalibrateRunPlan(){
+  const mod = state.modules.run;
+  if(!mod || !mod.plan) return;
+  const setup = mod.setup||{};
+  const level = setup.level||'iniciante';
+  // perfil suave (IMC alto/50+ iniciante) mantém a progressão protegida — não recalibra pra cima
+  const p = state.user && state.user.profile;
+  const imcVal = (()=>{ try{ const r=calcIMC(); return r?parseFloat(r.value):null; }catch(e){ return null; } })();
+  if(level==='iniciante' && ((imcVal&&imcVal>=30)||(p&&p.age>=50))) return;
+
+  const cutoff = Date.now()-21*86400000;
+  const runs = (mod.history||[]).filter(r=>(!r.activity||r.activity==='corrida') && r.at>=cutoff);
+  const longest = runs.length ? Math.max(...runs.map(r=>r.distance||0)) : 0;
+  const levelBase = {iniciante:2, intermediario:4, avancado:6}[level]||2;
+  const base = Math.max(longest, levelBase); // km de referência: o app aprende com o registro
+
+  const raceKm = parseFloat(String(setup.goal||'').replace(/[^\d.]/g,''))||0;
+  const dRace = (typeof daysToRace==='function') ? daysToRace() : null;
+  const taper = dRace!==null && dRace>=0 && dRace<=10;
+  const cw = currentWeek(mod);
+  // longa cresce ~10% por semana do plano, mirando a distância da prova (sem passar dela antes do taper)
+  let longaKm = base*0.9*(1+0.08*(cw.wk-1));
+  if(raceKm) longaKm = Math.min(longaKm, raceKm);
+  longaKm = Math.max(2, Math.min(32, longaKm));
+  let leveKm = Math.max(2, Math.min(12, base*0.45));
+  let ritmoKm = Math.max(2.5, Math.min(14, base*0.6));
+  let intKm = Math.max(3, Math.min(12, base*0.55));
+  if(taper){ longaKm*=0.5; leveKm*=0.7; ritmoKm*=0.6; intKm*=0.6; } // semana da prova: volume cai
+
+  const paceMap = { // min/km típicos por nível e tipo
+    leve:{iniciante:7.5,intermediario:6.5,avancado:5.5},
+    ritmo:{iniciante:7.0,intermediario:6.0,avancado:5.0},
+    longa:{iniciante:8.0,intermediario:7.0,avancado:6.0}
+  };
+  const nRepsFor = ()=> Math.min(12, base<=3?5 : base<=5?7 : base<=8?9 : 10);
+
+  mod.plan.workouts.forEach(w=>{
+    const kind = (w.name||'').split(' — ')[0];
+    let km, mainMin, extra={};
+    if(kind==='Corrida Longa'){ km=longaKm; mainMin=Math.round(km*paceMap.longa[level]); }
+    else if(kind==='Ritmo Constante'){ km=ritmoKm; mainMin=Math.round(km*paceMap.ritmo[level]); }
+    else if(kind==='Intervalado'){ km=intKm; extra._nReps=nRepsFor(); mainMin=null; }
+    else { km=leveKm; mainMin=Math.round(km*paceMap.leve[level]); }
+    w.distance = '~'+(Math.round(km*2)/2)+'km';
+    w.blocks = buildRunBlocks(kind, {...setup, _mainMin:mainMin||undefined, ...extra});
+    w.duration = w.blocks.reduce((s,b)=>s+b.exs.reduce((x,e)=>x+(e.min||0),0),0);
+    w.targetPace = runPace(kind, setup);
+  });
+}
+// treino de corrida já registrado hoje?
+function runDoneToday(w){
+  const today = new Date(); today.setHours(0,0,0,0);
+  return (state.modules.run?.history||[]).some(h=>{
+    if(h.id!==w.k) return false;
+    const d=new Date(h.at); d.setHours(0,0,0,0);
+    return d.getTime()===today.getTime();
+  });
+}
+
 // ---------- INTELIGÊNCIA DE CORRIDA ----------
 // Sugestão adaptativa: aprende com as últimas corridas registradas (distância vs alvo e sensação)
 function runSmartSuggestion(w){
@@ -2223,7 +2313,12 @@ function runSmartSuggestion(w){
   if(last.rating<=1){
     return {emo:'😌', txt:'A última corrida pesou. Hoje segure o ritmo mais leve que o alvo e encerre se sentir o corpo reclamar.'};
   }
-  // passou muito do alvo na última → segurar hoje
+  // vem correndo bem ACIMA do alvo do plano (padrão repetido) → sugerir subir o nível do plano
+  const recentBig = runs.slice(-3).filter(r=>{ const wk=state.modules.run?.plan?.workouts?.find(x=>x.name===r.name); return wk && wk.targetKm && r.distance >= wk.targetKm*1.3; });
+  if(recentBig.length>=2){
+    return {emo:'🚀', txt:'Você vem correndo bem além do que o plano pede! Sinal de evolução real — vá no Perfil → Meu plano → Recriar plano e suba o nível ou a distância-alvo pra o treino acompanhar seu ritmo.'};
+  }
+  // passou muito do alvo na última (pontual) → segurar hoje
   if(targetKm>0 && last.distance > targetKm*1.4){
     return {emo:'⚖️', txt:`Na última você foi bem além do alvo (${last.distance}km). Ótimo sinal — mas hoje respeite a distância do treino: o descanso relativo é o que transforma esforço em evolução.`};
   }
@@ -3070,6 +3165,7 @@ function saveRunLog(dayIdx){
     if(km>=50) unlockTrophy('bike_50k');
   }
   checkTrophies();
+  recalibrateRunPlan(); // os próximos treinos se ajustam ao que você registrou
   saveData();
   toast(`${meta.emo} ${meta.lbl} salva: ${km}km em ${min}min (${paceStr})`);
   closeModal();
