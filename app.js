@@ -1,5 +1,5 @@
-// ===== MetaTreino v4.5 =====
-const APP_VERSION = 'v4.5';
+// ===== MetaTreino v4.6 =====
+const APP_VERSION = 'v4.6';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -688,7 +688,7 @@ function buildRunBlocks(kind, setup){
 // ---------- EXERCISE BANK ----------
 // equip tags: 'casa' (peso corporal / sem equipamento), 'halteres' (halteres/anilhas soltas), 'academia' (máquinas/barras/cabos)
 const EX_BANK = [
-  {name:'Peito',emo:'💪',color:'',items:[
+  {name:'Peito',emo:'🫸',color:'',items:[
     // ACADEMIA
     {name:'Supino Reto com Barra',sub:'Peito',equip:['academia']},
     {name:'Supino Inclinado com Halteres',sub:'Peito Superior',equip:['academia','halteres']},
@@ -707,7 +707,7 @@ const EX_BANK = [
     {name:'Flexão Diamante',sub:'Peito Central / Tríceps',equip:['casa','halteres','academia']},
     {name:'Flexão Aberta',sub:'Peito',equip:['casa','halteres','academia']}
   ]},
-  {name:'Costas',emo:'🔙',color:'',items:[
+  {name:'Costas',emo:'🧗',color:'',items:[
     // ACADEMIA
     {name:'Puxada Frontal no Pulley',sub:'Costas Lats',equip:['academia']},
     {name:'Puxada Aberta com Pegada Pronada',sub:'Costas Lats',equip:['academia']},
@@ -726,7 +726,7 @@ const EX_BANK = [
     {name:'Superman',sub:'Lombar / Costas Baixa',equip:['casa','halteres','academia']},
     {name:'Remada com Toalha (isométrica)',sub:'Costas',equip:['casa']}
   ]},
-  {name:'Ombro',emo:'⛰️',color:'',items:[
+  {name:'Ombro',emo:'🙆',color:'',items:[
     // ACADEMIA
     {name:'Desenvolvimento com Barra',sub:'Ombro',equip:['academia']},
     {name:'Desenvolvimento Militar',sub:'Ombro',equip:['academia']},
@@ -757,7 +757,7 @@ const EX_BANK = [
     {name:'Chin-up (barra pegada supinada)',sub:'Bíceps / Costas',equip:['academia','casa']},
     {name:'Rosca isométrica (toalha)',sub:'Bíceps',equip:['casa']}
   ]},
-  {name:'Tríceps',emo:'🔱',color:'orange',items:[
+  {name:'Tríceps',emo:'🦾',color:'orange',items:[
     // ACADEMIA
     {name:'Tríceps Pulley no Cabo',sub:'Tríceps',equip:['academia']},
     {name:'Tríceps Corda no Cabo',sub:'Tríceps',equip:['academia']},
@@ -816,12 +816,12 @@ const EX_BANK = [
     {name:'Panturrilha em pé (peso corporal)',sub:'Panturrilha',equip:['casa','halteres','academia']},
     {name:'Panturrilha unilateral em degrau',sub:'Panturrilha',equip:['casa','halteres','academia']}
   ]},
-  {name:'Trapézio',emo:'🦅',color:'',items:[
+  {name:'Trapézio',emo:'🤷',color:'',items:[
     {name:'Encolhimento com Halteres',sub:'Trapézio',equip:['academia','halteres']},
     {name:'Encolhimento com Barra',sub:'Trapézio',equip:['academia']},
     {name:'Encolhimento com Mochila',sub:'Trapézio',equip:['casa']}
   ]},
-  {name:'Core',emo:'🎯',color:'',items:[
+  {name:'Core',emo:'🧱',color:'',items:[
     {name:'Prancha (Plank)',sub:'Core',equip:['casa','halteres','academia']},
     {name:'Abdominal Crunch',sub:'Core',equip:['casa','halteres','academia']},
     {name:'Mountain Climber',sub:'Core / Cardio',equip:['casa','halteres','academia']},
@@ -838,7 +838,13 @@ const EX_BANK = [
 // ---------- HELPERS ----------
 function $(id){ return document.getElementById(id); }
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); window.scrollTo({top:0,behavior:'instant'}); }
-function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2500); }
+function toast(msg){
+  let wrap = document.getElementById('toast-wrap');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='toast-wrap'; document.body.appendChild(wrap); }
+  const t = document.createElement('div'); t.className='toast'; t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(()=>t.remove(), 3200);
+}
 function getDayIdx(){ const d=new Date().getDay(); return d===0?7:d; }
 function greetTime(){ const h=new Date().getHours(); if(h<12) return 'Bom dia'; if(h<18) return 'Boa tarde'; return 'Boa noite'; }
 function firstName(){ const p = state.user.profile; return (p&&p.nickname) || (state.user.name||'').split(' ')[0]; }
@@ -930,7 +936,8 @@ function renderHome(){
     else if(daysToR<=30) msg = 'Menos de um mês! Seus treinos-chave estão acontecendo agora — cada um deles conta muito.';
     else if(daysToR<=60) msg = 'Você está no meio da preparação. Constância nas próximas semanas é o que define seu resultado.';
     else msg = 'Prova no radar! Construa a base com calma — quem chega longe é quem não pula etapas.';
-    alertCard.querySelector('.card-sub').textContent = msg;
+    const personal = raceSmartTip(daysToR);
+    alertCard.querySelector('.card-sub').textContent = personal ? msg+' '+personal : msg;
   } else {
     alertCard.classList.add('hidden');
   }
@@ -946,6 +953,24 @@ function renderHome(){
       $('weight-reminder-sub').textContent = lastW ? `Faz ${daysNoWeight} dias que você não registra. Toque pra atualizar →` : 'Registre seu peso pra acompanhar sua evolução. Toque aqui →';
     } else wr.classList.add('hidden');
   }
+  // corrida + musculação no MESMO dia: dica de como combinar sem se destruir
+  const combo = $('card-combo');
+  if(combo){
+    const today = getDayIdx();
+    const liftToday = state.modules.lift?.plan?.workouts?.find(w=>w.dayIdx===today);
+    const runToday = state.modules.run?.plan?.workouts?.find(w=>w.dayIdx===today);
+    if(liftToday && runToday){
+      combo.classList.remove('hidden');
+      const legDay = (liftToday.parts||[]).some(p=>['Pernas','Glúteos','Panturrilha'].includes(p));
+      const hardRun = /Intervalado|Longa/.test(runToday.name||'');
+      let msgC;
+      if(legDay && hardRun) msgC = 'Hoje tem treino de PERNA e corrida forte. Escolha um pra valer: ou encurta a corrida (metade da distância, ritmo leve) ou reduz as séries de perna em ~30%. Fazer os dois no talo cobra a conta amanhã.';
+      else if(legDay) msgC = 'Perna + corrida no mesmo dia: corra ANTES do treino de força se a corrida é sua prioridade, ou depois (bem leve) se a musculação vem primeiro.';
+      else if(hardRun) msgC = 'Corrida forte + musculação hoje: faça a corrida primeiro e deixe a musculação mais controlada — evite falhar séries.';
+      else msgC = 'Dois treinos hoje! Combinação tranquila: só garanta boa alimentação e hidratação entre eles.';
+      $('combo-msg').textContent = msgC;
+    } else combo.classList.add('hidden');
+  }
   // aviso de dor: corrida com dor em perna/joelho/tornozelo → sugerir caminhada ou bike
   const pains = (state.user&&state.user.pain)||[];
   const legPain = pains.some(p=>['Joelho','Tornozelo','Lombar'].includes(p));
@@ -954,7 +979,7 @@ function renderHome(){
     ac.classList.remove('hidden');
     ac.querySelector('.card-icon').textContent = '🩹';
     ac.querySelector('.card-title').textContent = 'Dor registrada: '+pains.join(', ');
-    ac.querySelector('.card-sub').textContent = 'Hoje considere trocar a corrida por caminhada leve ou bike (menos impacto). Se a dor persistir, procure um profissional de saúde.';
+    ac.querySelector('.card-sub').textContent = 'Hoje troque a corrida por caminhada leve ou bike (menos impacto). Fortalecer com musculação leve de core e quadril também ajuda a proteger a região. Dor persistindo, procure um profissional de saúde.';
   }
   const wk = cw.wk, total = cw.total;
   $('plan-week').textContent = mod.plan.type==='lift' && cw.cycle>1 ? `Semana ${wk} de ${total} · ${cw.cycle}º ciclo` : `Semana ${wk} de ${total}`;
@@ -988,7 +1013,7 @@ function labelGoal(mod){
 
 function renderTodayWorkout(w, isLift){
   const desc = isLift ? liftDesc(w) : runDesc(w);
-  const sug = isLift ? liftLoadSuggestion() : null;
+  const sug = isLift ? liftLoadSuggestion() : runSmartSuggestion(w);
   return `<div class="today">
     <div class="today-label">TREINO DE HOJE</div>
     <div class="today-diff ${isLift?'diff-med':'diff-easy'}">${isLift?'Foco':'Fácil'}</div>
@@ -1006,7 +1031,23 @@ function renderTodayWorkout(w, isLift){
     </div>
   </div>`;
 }
-function liftDesc(w){ const parts=w.parts.join(' + '); return `🎯 Foco em ${parts.toLowerCase()}\n\nAqueça bem por 5-8 min. Registre suas séries pra acompanhar sua evolução.\n\n💧 Hidrate-se durante e mantenha os intervalos indicados em cada exercício.`; }
+const PART_CUES = {
+  'Peito':'🫸 No empurrar, desça controlado e não deixe o cotovelo abrir demais.',
+  'Costas':'🧗 Puxe com as costas, não com o braço: pense em levar o cotovelo pra trás.',
+  'Ombro':'🙆 Ombro gosta de técnica: carga moderada e amplitude completa valem mais que peso.',
+  'Bíceps':'💪 Cotovelo colado no corpo — balançou o tronco, a carga está alta demais.',
+  'Tríceps':'🦾 Trave o cotovelo no lugar e estenda até o fim: a queima boa mora ali.',
+  'Pernas':'🦵 Joelho acompanhando a ponta do pé e desça até onde a técnica permitir.',
+  'Glúteos':'🍑 Aperte o glúteo no topo do movimento por 1 segundo — faz diferença real.',
+  'Panturrilha':'🦶 Pausa embaixo, subida completa: panturrilha responde a amplitude, não a pressa.',
+  'Core':'🧱 Qualidade > quantidade: prancha tremendo com postura vale mais que o dobro largado.',
+  'Trapézio':'🤷 Encolha reto pra cima, sem rolar os ombros — rolar não ajuda e machuca.'
+};
+function liftDesc(w){
+  const parts = w.parts.join(' + ');
+  const cue = PART_CUES[w.parts[0]] || '💡 Técnica primeiro, carga depois. Registre as séries pra ver sua evolução.';
+  return `🎯 Foco em ${parts.toLowerCase()}\n\n${cue}\n\n💧 Aqueça 5-8 min, hidrate-se e respeite os intervalos de cada exercício.`;
+}
 function runDesc(w){
   const main = (w.blocks||[]).find(b=>b.name==='Principal');
   const mainTxt = main && main.exs[0] ? `${main.exs[0].name} — ${main.exs[0].desc}` : 'Ritmo de conversa (você consegue falar frases completas sem ficar sem ar).';
@@ -2159,7 +2200,57 @@ function quickChangeTerrain(terrain){
   goTab('profile');
 }
 
-// ---------- TROCA RÁPIDA DE EQUIPAMENTO ----------
+// ---------- INTELIGÊNCIA DE CORRIDA ----------
+// Sugestão adaptativa: aprende com as últimas corridas registradas (distância vs alvo e sensação)
+function runSmartSuggestion(w){
+  const runs = (state.modules.run?.history||[]).filter(r=>!r.activity||r.activity==='corrida');
+  if(!runs.length) return null;
+  const last = runs[runs.length-1];
+  const last2 = runs.slice(-2);
+  const targetKm = parseFloat(String(w.distance||'').replace(/[^\d.]/g,'')) || 0;
+  // duas últimas difíceis → reduzir
+  if(last2.length>=2 && last2.every(r=>r.rating<=1)){
+    return {emo:'🛑', txt:'Suas 2 últimas corridas foram difíceis. Hoje corte ~20% da distância ou troque por caminhada — recuperar faz parte do treino.'};
+  }
+  if(last.rating<=1){
+    return {emo:'😌', txt:'A última corrida pesou. Hoje segure o ritmo mais leve que o alvo e encerre se sentir o corpo reclamar.'};
+  }
+  // passou muito do alvo na última → segurar hoje
+  if(targetKm>0 && last.distance > targetKm*1.4){
+    return {emo:'⚖️', txt:`Na última você foi bem além do alvo (${last.distance}km). Ótimo sinal — mas hoje respeite a distância do treino: o descanso relativo é o que transforma esforço em evolução.`};
+  }
+  // duas últimas ótimas → pode puxar um pouco
+  if(last2.length>=2 && last2.every(r=>r.rating>=5)){
+    return {emo:'📈', txt:'Duas corridas seguidas se sentindo ótimo! Se o corpo pedir, pode esticar ~10% na distância ou apertar levemente o ritmo hoje.'};
+  }
+  return null;
+}
+// Dica personalizada pra prova alvo: combina dias restantes, distância da prova,
+// perfil (iniciante/IMC/idade) e a maior corrida recente registrada
+function raceSmartTip(daysToR){
+  const setup = state.modules.run?.setup || {};
+  const raceKm = parseFloat(String(setup.goal||'').replace(/[^\d.]/g,'')) || 5;
+  const runs = (state.modules.run?.history||[]).filter(r=>!r.activity||r.activity==='corrida');
+  const longest = runs.length ? Math.max(...runs.map(r=>r.distance||0)) : 0;
+  const p = state.user && state.user.profile;
+  const imcVal = (()=>{ try{ const r=calcIMC(); return r?parseFloat(r.value):null; }catch(e){ return null; } })();
+  const gentle = (setup.level==='iniciante') && ((imcVal && imcVal>=30) || (p && p.age>=50));
+  const weeks = Math.ceil(daysToR/7);
+  const tips = [];
+  if(longest>0 && longest < raceKm*0.6 && daysToR<=14){
+    tips.push(`Sua maior corrida registrada foi ${longest}km e a prova tem ${raceKm}km — com ${daysToR} dias, talvez não dê pra correr tudo, e está TUDO BEM: intercalar corrida e caminhada na prova é estratégia inteligente, não fracasso. Defina blocos (ex: corre 5 min, caminha 2) e cruze a linha sorrindo.`);
+  } else if(longest>0 && longest < raceKm*0.8 && daysToR>14){
+    tips.push(`Sua maior corrida foi ${longest}km. Faltam ${weeks} semanas: aumente a corrida longa ~10% por semana até chegar perto de ${Math.round(raceKm*0.9)}km — dá tempo, sem pressa.`);
+  } else if(longest >= raceKm && daysToR>7){
+    tips.push(`Você já cobriu ${longest}km em treino — a distância da prova está no bolso. Agora o jogo é chegar descansado: não invente treino heroico nessa reta.`);
+  }
+  if(gentle && daysToR<=21){
+    tips.push('Pelo seu perfil, priorize terminar bem em vez de terminar rápido: comece a prova mais devagar do que parece necessário — no final você agradece.');
+  }
+  return tips.length ? tips[0] : null;
+}
+
+// ---------- TROCA RÁPIDA DE EQUIPAMENTO / TERRENO ----------
 function quickChangeEquip(equip){
   const mod = state.modules.lift;
   if(!mod || !mod.plan){ toast('Crie um plano de musculação primeiro'); closeModal(); return; }
