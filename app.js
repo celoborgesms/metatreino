@@ -1,5 +1,5 @@
-// ===== MetaTreino v4.9 =====
-const APP_VERSION = 'v4.9';
+// ===== MetaTreino v5.0 =====
+const APP_VERSION = 'v5.0';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -715,8 +715,9 @@ const EX_BANK = [
     {name:'Supino Reto com Barra',sub:'Peito (força)',equip:['academia']},
     {name:'Supino Inclinado com Barra',sub:'Peito Superior',equip:['academia']},
     {name:'Supino na Máquina (Hammer)',sub:'Peito',equip:['academia']},
-    {name:'Crossover no Cabo',sub:'Peito (isolador)',equip:['academia']},
-    {name:'Peck Deck (voador)',sub:'Peito (isolador)',equip:['academia']},
+    {name:'Crucifixo no Voador (Peck Deck)',sub:'Peito (isolador)',equip:['academia']},
+    {name:'Crossover no Cabo (alto)',sub:'Peito Inferior',equip:['academia']},
+    {name:'Crossover no Cabo (baixo)',sub:'Peito Superior',equip:['academia']},
     // HALTERES
     {name:'Supino Reto com Halteres',sub:'Peito',equip:['academia','halteres']},
     {name:'Supino Inclinado com Halteres',sub:'Peito Superior',equip:['academia','halteres']},
@@ -725,7 +726,9 @@ const EX_BANK = [
     // CASA (peso corporal)
     {name:'Flexão de Braço',sub:'Peito / Tríceps',equip:['academia','halteres','casa']},
     {name:'Flexão Inclinada (pés elevados)',sub:'Peito Superior',equip:['casa','halteres','academia']},
-    {name:'Flexão Diamante',sub:'Peito Central / Tríceps',equip:['casa','halteres','academia']}
+    {name:'Flexão com Mãos Elevadas',sub:'Peito Inferior (iniciante)',equip:['casa','halteres','academia']},
+    {name:'Flexão Diamante',sub:'Peito Central / Tríceps',equip:['casa','halteres','academia']},
+    {name:'Flexão Arqueiro',sub:'Peito (unilateral avançado)',equip:['casa','academia']}
   ]},
   {name:'Costas',emo:'🧗',color:'',items:[
     // ACADEMIA
@@ -734,13 +737,15 @@ const EX_BANK = [
     {name:'Remada Baixa no Cabo',sub:'Costas Média (espessura)',equip:['academia']},
     {name:'Remada Cavalinho (T-Bar)',sub:'Costas Média',equip:['academia']},
     {name:'Remada na Máquina (Hammer)',sub:'Costas Média',equip:['academia']},
+    {name:'Pullover na Polia',sub:'Dorsais (isolador)',equip:['academia']},
     {name:'Levantamento Terra',sub:'Cadeia posterior (força)',equip:['academia']},
     // HALTERES
     {name:'Remada Curvada com Barra',sub:'Costas Média',equip:['academia','halteres']},
     {name:'Remada Unilateral com Haltere',sub:'Dorsais (unilateral)',equip:['academia','halteres']},
     // CASA
     {name:'Barra Fixa',sub:'Dorsais / Bíceps',equip:['academia','casa']},
-    {name:'Remada Invertida (mesa/barra baixa)',sub:'Costas',equip:['casa','academia']},
+    {name:'Remada Invertida (mesa/barra baixa)',sub:'Costas (horizontal)',equip:['casa','academia']},
+    {name:'Remada com Toalha na Porta',sub:'Costas',equip:['casa']},
     {name:'Superman',sub:'Lombar / Costas Baixa',equip:['casa','halteres','academia']}
   ]},
   {name:'Ombro',emo:'🙆',color:'',items:[
@@ -756,7 +761,9 @@ const EX_BANK = [
     {name:'Elevação Posterior Curvado',sub:'Ombro Posterior',equip:['academia','halteres']},
     // CASA
     {name:'Pike Push-up',sub:'Ombro',equip:['casa','halteres','academia']},
-    {name:'Elevação Lateral com Garrafas',sub:'Ombro Lateral',equip:['casa']}
+    {name:'Elevação Lateral com Garrafas',sub:'Ombro Lateral',equip:['casa']},
+    {name:'Elevação Frontal com Garrafas',sub:'Ombro Frontal',equip:['casa']},
+    {name:'Flexão Pike Elevada',sub:'Ombro (avançado)',equip:['casa','academia']}
   ]},
   {name:'Bíceps',emo:'💪',color:'',items:[
     // ACADEMIA
@@ -769,7 +776,9 @@ const EX_BANK = [
     {name:'Rosca Concentrada',sub:'Bíceps (pico)',equip:['academia','halteres']},
     // CASA
     {name:'Chin-up (barra pegada supinada)',sub:'Bíceps / Costas',equip:['academia','casa']},
-    {name:'Rosca com Mochila/Bolsa',sub:'Bíceps',equip:['casa']}
+    {name:'Rosca com Mochila/Bolsa',sub:'Bíceps',equip:['casa']},
+    {name:'Rosca Martelo com Garrafas',sub:'Braquial / Antebraço',equip:['casa']},
+    {name:'Rosca Isométrica com Toalha',sub:'Bíceps (isometria)',equip:['casa']}
   ]},
   {name:'Tríceps',emo:'🦾',color:'orange',items:[
     // ACADEMIA
@@ -781,7 +790,9 @@ const EX_BANK = [
     {name:'Tríceps Coice com Haltere',sub:'Tríceps',equip:['academia','halteres']},
     // CASA
     {name:'Mergulho no Banco/Cadeira',sub:'Tríceps',equip:['casa','halteres','academia']},
-    {name:'Mergulho nas Paralelas',sub:'Tríceps / Peito',equip:['academia','casa']}
+    {name:'Mergulho nas Paralelas',sub:'Tríceps / Peito',equip:['academia','casa']},
+    {name:'Flexão Fechada (diamante)',sub:'Tríceps',equip:['casa','halteres','academia']},
+    {name:'Tríceps Testa com Garrafa',sub:'Tríceps',equip:['casa']}
   ]},
   {name:'Pernas',emo:'🦵',color:'orange',items:[
     // ACADEMIA
@@ -803,6 +814,7 @@ const EX_BANK = [
     {name:'Afundo Alternado',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
     {name:'Agachamento Sumô',sub:'Adutores / Glúteos',equip:['casa','halteres','academia']},
     {name:'Step-up em banco/degrau',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
+    {name:'Stiff Unilateral (peso corporal)',sub:'Posterior de Coxa',equip:['casa','halteres','academia']},
     {name:'Cadeira contra parede (isométrico)',sub:'Quadríceps (resistência)',equip:['casa','halteres','academia']},
     {name:'Agachamento Jump',sub:'Quadríceps (explosão)',equip:['casa','halteres','academia']}
   ]},
@@ -816,7 +828,8 @@ const EX_BANK = [
     {name:'Ponte com uma perna',sub:'Glúteos (unilateral)',equip:['casa','halteres','academia']},
     {name:'Coice de Cachorro (4 apoios)',sub:'Glúteo Máximo',equip:['casa','halteres','academia']},
     {name:'Concha (Clam Shell)',sub:'Glúteo Médio',equip:['casa','halteres','academia']},
-    {name:'Abdução lateral de perna',sub:'Glúteo Médio',equip:['casa','halteres','academia']}
+    {name:'Abdução lateral de perna',sub:'Glúteo Médio',equip:['casa','halteres','academia']},
+    {name:'Agachamento Sumô com Pausa',sub:'Glúteos / Adutores',equip:['casa','halteres','academia']}
   ]},
   {name:'Panturrilha',emo:'🦶',color:'teal',items:[
     {name:'Panturrilha em Pé (máquina/Smith)',sub:'Panturrilha (gastrocnêmio)',equip:['academia']},
@@ -840,8 +853,7 @@ const EX_BANK = [
     {name:'Dead Bug',sub:'Core Profundo (anti-extensão)',equip:['casa','halteres','academia']},
     {name:'Mountain Climber',sub:'Core / Cardio',equip:['casa','halteres','academia']}
   ]}
-];
-// ---------- HELPERS ----------
+];// ---------- HELPERS ----------
 function $(id){ return document.getElementById(id); }
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); window.scrollTo({top:0,behavior:'instant'}); }
 function toast(msg){
