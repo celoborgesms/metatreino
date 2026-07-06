@@ -1,5 +1,5 @@
-// ===== MetaTreino v5.0 =====
-const APP_VERSION = 'v5.0';
+// ===== MetaTreino v5.1 =====
+const APP_VERSION = 'v5.1';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -600,7 +600,12 @@ function buildLiftExercises(parts, setup){
       compat = [...compat.slice(goalOffset), ...compat.slice(0,goalOffset)];
     }
     const need = (p==='Core'||p==='Panturrilha'||p==='Trapézio') ? needSmall : needBig;
-    const pick = compat.slice(0, Math.min(need, compat.length));
+    // escolhe exercícios com estímulos VARIADOS (evita 2 isoladores ou 2 "superior" no mesmo grupo):
+    // percorre a lista e só adiciona se a assinatura do sub ainda não foi usada; completa se faltar
+    const stim = s => (s||'').toLowerCase().replace(/[()]/g,'').trim();
+    const pick = [], usedStim = new Set();
+    compat.forEach(ex => { if(pick.length<need && !usedStim.has(stim(ex.sub))){ pick.push(ex); usedStim.add(stim(ex.sub)); } });
+    if(pick.length<need){ compat.forEach(ex => { if(pick.length<need && !pick.includes(ex)) pick.push(ex); }); }
     pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps, rest, part:p, equip:ex.equip }); });
   });
   // se a dor bloqueou todos os grupos do dia, entrega ao menos um treino leve de Core
@@ -3075,17 +3080,25 @@ function openSwapExercise(exId){
   const cur = w.exercises.find(e=>e.id===exId);
   const equip = mod.setup.equip || 'academia';
   const equipFilter = equip==='basico'?['casa','halteres']:equip==='academia'?['academia','halteres','casa']:equip==='halteres'?['halteres','casa']:['casa'];
-  // Find category
   const cat = EX_BANK.find(c=>c.name===cur.part) || EX_BANK.find(c=>c.items.some(x=>slug(x.name)===exId));
   if(!cat){ toast('Não foi possível encontrar alternativas'); return; }
   const usedIds = new Set(w.exercises.map(e=>e.id));
-  const alts = cat.items.filter(ex => !usedIds.has(slug(ex.name)) && (ex.equip||[]).some(e=>equipFilter.includes(e)));
-  if(!alts.length){ toast('Sem alternativas disponíveis pro seu equipamento'); return; }
+  // "assinatura" do estímulo: parte específica do músculo (ex: "Peito Superior", "Peito (isolador)")
+  // — usada pra não sugerir algo que treina exatamente o mesmo que outro exercício já no treino
+  const stim = s => (s||'').toLowerCase().replace(/[()]/g,'').trim();
+  const usedStims = new Set(w.exercises.filter(e=>e.id!==exId).map(e=>stim(e.sub)));
+  const compat = cat.items.filter(ex => !usedIds.has(slug(ex.name)) && (ex.equip||[]).some(e=>equipFilter.includes(e)));
+  if(!compat.length){ toast('Sem alternativas disponíveis pro seu equipamento'); return; }
+  // separa em "recomendadas" (estímulo diferente do que já tem no treino) e "similares"
+  const recomendadas = compat.filter(ex => !usedStims.has(stim(ex.sub)));
+  const similares = compat.filter(ex => usedStims.has(stim(ex.sub)));
+  const card = ex => `<div class="lib-item" onclick="doSwapExercise('${exId}','${slug(ex.name)}','${ex.name.replace(/'/g,"\\'")}','${ex.sub.replace(/'/g,"\\'")}')"><div class="lib-info"><div class="lib-name">${ex.name}</div><div class="lib-part">${ex.sub}</div></div><div class="lib-play">→</div></div>`;
   const html = `
     <h3>🔄 Trocar exercício</h3>
-    <p style="color:var(--text-dim);font-size:13px">Substituir <b style="color:var(--text)">${cur.name}</b> por outro que trabalhe o mesmo grupo (${cat.name}):</p>
-    <div style="margin-top:14px;max-height:400px;overflow-y:auto">
-      ${alts.map(ex=>`<div class="lib-item" onclick="doSwapExercise('${exId}','${slug(ex.name)}','${ex.name.replace(/'/g,"\\'")}','${ex.sub.replace(/'/g,"\\'")}')"><div class="lib-info"><div class="lib-name">${ex.name}</div><div class="lib-part">${ex.sub}</div></div><div class="lib-play">→</div></div>`).join('')}
+    <p style="color:var(--text-dim);font-size:13px">Substituir <b style="color:var(--text)">${cur.name}</b> por outro de <b>${cat.name}</b>:</p>
+    <div style="margin-top:14px;max-height:60vh;overflow-y:auto">
+      ${recomendadas.length ? `<div class="section-lbl" style="margin:0 0 8px">✅ Recomendados (estímulo diferente do resto do treino)</div>${recomendadas.map(card).join('')}` : ''}
+      ${similares.length ? `<div class="section-lbl" style="margin:16px 0 8px">⚠️ Parecidos com outro do dia (evite repetir estímulo)</div>${similares.map(card).join('')}` : ''}
     </div>
     <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="closeModal()">Cancelar</button>
   `;
