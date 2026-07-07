@@ -1,5 +1,5 @@
-// ===== MetaTreino v5.1 =====
-const APP_VERSION = 'v5.1';
+// ===== MetaTreino v5.2 =====
+const APP_VERSION = 'v5.2';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -63,8 +63,59 @@ const QUOTES = [
   '🌻 Cuide do corpo. É o único lugar que você tem pra viver.',
   '🧗 Cada dia treinado é um degrau que ninguém desfaz.',
   '⛰️ A montanha parece grande até você começar a subir.',
-  '❤️ Treine por amor ao processo, não por ódio ao espelho.'
+  '❤️ Treine por amor ao processo, não por ódio ao espelho.',
+  '🌅 Todo campeão já foi um iniciante que não desistiu.',
+  '🪨 Seja mais teimoso que suas desculpas.',
+  '🌿 O corpo alcança o que a mente acredita.',
+  '⚓ Ancoragem: um hábito por vez, sem pressa de chegar.',
+  '🎬 Não espere estar pronto. Comece e fique pronto no caminho.',
+  '🧊 Saia da zona de conforto — é lá que a mágica mora.',
+  '🏹 Mire no progresso, não na perfeição.',
+  '🌙 Descanso não é fraqueza, é parte do plano.',
+  '🔩 Pequenos ajustes hoje, grandes conquistas amanhã.',
+  '🌊 Persistência dissolve resistência.',
+  '🦁 Coragem não é ausência de cansaço, é treinar apesar dele.',
+  '📆 Um mês de constância muda mais que um dia perfeito.',
+  '🧠 Treinar a mente é tão importante quanto treinar o corpo.',
+  '⚙️ Sistemas vencem metas. Confie na sua rotina.',
+  '🌤️ Depois do esforço vem a leveza. Aguente mais um pouco.',
+  '🎯 Foque no próximo passo, não na escada inteira.',
+  '🔥 A dor de hoje é a força de amanhã.',
+  '🌱 Você não precisa ser extremo, precisa ser constante.',
+  '🏔️ Grandes feitos são muitos pequenos feitos repetidos.',
+  '💧 Hidrate o corpo, alimente a alma, mova-se todo dia.',
+  '🚴 O importante não é a velocidade, é não parar.',
+  '🧩 Cada treino é uma peça do seu melhor você.',
+  '🌟 Acredite: seu eu do futuro está torcendo por você agora.',
+  '🕊️ Liberdade é ter um corpo que te obedece.',
+  '⏳ O tempo vai passar de qualquer jeito. Use-o a seu favor.',
+  '🎒 Leve consigo: disciplina, paciência e boas escolhas.',
+  '🏅 O troféu é secundário. A pessoa que você vira é o prêmio.',
+  '🌊 Fluir é treinar sem guerra contra si mesmo.',
+  '🔆 Brilhe pelo esforço, não pela comparação.',
+  '🌰 Toda árvore forte já foi uma semente que insistiu.'
 ];
+// Frases contextuais, com base no histórico recente do aluno (têm prioridade quando fazem sentido)
+function contextualQuote(){
+  const allH = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
+  if(!allH.length) return null;
+  const streak = calcStreak(allH);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const last = allH.reduce((a,b)=>a.at>b.at?a:b);
+  const daysSince = Math.floor((Date.now()-last.at)/86400000);
+  const totalWk = allH.length;
+  const cands = [];
+  if(streak>=7) cands.push(`🔥 ${streak} dias seguidos treinando! Você virou uma máquina de constância.`);
+  else if(streak>=3) cands.push(`🔥 ${streak} dias de sequência! Não quebre a corrente hoje.`);
+  if(daysSince>=4) cands.push('👋 Que saudade! Bora retomar hoje — o corpo agradece e a mente também.');
+  if(totalWk>=50) cands.push(`🏆 Você já registrou ${totalWk} treinos no MetaTreino. Isso é história sendo construída.`);
+  else if(totalWk>=10) cands.push(`💪 ${totalWk} treinos registrados! A constância está virando hábito.`);
+  const lastFeel = (state.modules.lift?.history||[]).filter(x=>x.feel).slice(-1)[0]?.feel;
+  if(lastFeel==='exausto') cands.push('😌 Ontem pegou pesado. Hoje escute o corpo: qualidade vale mais que carga.');
+  if(!cands.length) return null;
+  // aleatória entre as candidatas
+  return cands[Math.floor(Math.random()*cands.length)];
+}
 
 const TROPHIES = [
   // GERAIS
@@ -439,9 +490,11 @@ function finishSetup(m){
     toast(`Selecione exatamente ${setup.days} dia${setup.days>1?'s':''} da semana`);
     return;
   }
-  state.modules[m] = { setup, plan:generatePlan(m,setup), week:1, createdAt:Date.now(), history:[] };
+  // preserva histórico e data de início ao RECRIAR um plano (não zera o progresso do aluno)
+  const prev = state.modules[m];
+  state.modules[m] = { setup, plan:generatePlan(m,setup), week:1, createdAt: (prev && prev.createdAt) || Date.now(), history: (prev && prev.history) || [] };
   state.active = m;
-  saveData(); goTab('home'); toast('🎉 Plano criado!');
+  saveData(); goTab('home'); toast(prev ? '🔄 Plano recriado! Seu histórico foi mantido.' : '🎉 Plano criado!');
 }
 function readSelectedDays(id){
   const el = $(id); if(!el) return null;
@@ -932,7 +985,9 @@ function renderHome(){
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
   $('home-goal').textContent = 'Objetivo: ' + labelGoal(mod);
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
-  $('daily-quote').textContent = QUOTES[doy % QUOTES.length];
+  // 40% de chance de mostrar uma frase contextual (se houver); senão, uma do dia
+  const ctxQuote = Math.random() < 0.4 ? contextualQuote() : null;
+  $('daily-quote').textContent = ctxQuote || QUOTES[doy % QUOTES.length];
   renderCoachMural();
 
   const days = accessDaysLeft();
@@ -1383,15 +1438,10 @@ function closeSetLog(save){
   }
   curLog = null;
   closeModal();
-  // Fluxo contínuo: depois de salvar, abre automaticamente o próximo exercício não registrado
+  // Sem avanço automático: a pessoa escolhe manualmente o próximo exercício
   if(save && savedExId){
     const next = nextUnloggedExercise(savedExId);
-    if(next){
-      toast('✅ Salvo! Próximo: '+next.name);
-      setTimeout(()=>openSetLog(next.id, next.name), 650);
-    } else {
-      toast('🎉 Todos os exercícios registrados! Toque em "Salvar treino" pra finalizar.');
-    }
+    toast(next ? '✅ Série salva!' : '🎉 Todos registrados! Toque em "Salvar treino" pra finalizar.');
   }
 }
 function nextUnloggedExercise(afterExId){
@@ -1985,7 +2035,8 @@ function openTrophies(){
           return `<div class="trophy ${ul?'unlock':''}"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div>${bar}</div>`;
         }).join('')}</div></div>`;
     }).join('')}
-    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
+    <button class="btn btn-outline btn-block" style="margin-top:14px;border-color:rgba(16,185,129,0.4)" onclick="shareTrophiesImage()">📤 Compartilhar minhas conquistas</button>
+    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');
 }
@@ -2147,6 +2198,13 @@ function importMyData(ev){
 
 // ---------- TIMER DE DESCANSO ----------
 let restTimerInt = null;
+let wakeLock = null;
+async function requestWakeLock(){
+  try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); } }catch(e){}
+}
+function releaseWakeLock(){ try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
+// reativa o wake lock se o app voltar ao foco com timer rodando
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && restTimerInt) requestWakeLock(); });
 function parseRestSeconds(str){
   if(!str) return 60;
   const s = String(str).toLowerCase();
@@ -2173,12 +2231,13 @@ function startRestTimer(seconds, exName){
       <button onclick="stopRestTimer()" style="background:none;border:none;color:var(--text-mute);font-size:18px;padding:4px">✕</button>`;
   };
   render();
+  requestWakeLock(); // mantém a tela ligada durante o descanso
   restTimerInt = setInterval(()=>{
     left--;
     if(left<=0){
       stopRestTimer();
       toast('💪 Descanso acabou — próxima série!');
-      if(navigator.vibrate) navigator.vibrate([200,100,200]);
+      if(navigator.vibrate) navigator.vibrate([300,120,300,120,300]); // vibração mais forte
       return;
     }
     render();
@@ -2186,6 +2245,7 @@ function startRestTimer(seconds, exName){
 }
 function stopRestTimer(){
   clearInterval(restTimerInt); restTimerInt = null;
+  releaseWakeLock();
   const el = $('rest-timer-banner'); if(el) el.remove();
 }
 
@@ -2542,18 +2602,36 @@ function roundRect(x, px, py, w, h, r){
   x.arcTo(px, py, px+w, py, r);
   x.closePath();
 }
+let _lastShareBlob = null, _lastShareName = 'metatreino.png';
 async function shareCanvas(canvas, filename, shareText){
   canvas.toBlob(async blob=>{
     if(!blob){ toast('⚠️ Não foi possível gerar a imagem'); return; }
-    const file = new File([blob], filename, {type:'image/png'});
-    if(navigator.canShare && navigator.canShare({files:[file]})){
-      try{ await navigator.share({files:[file], text:shareText}); return; }catch(e){ /* usuário cancelou */ return; }
-    }
-    // fallback: download
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = filename; a.click();
-    toast('🖼️ Imagem salva — poste onde quiser!');
+    _lastShareBlob = blob; _lastShareName = filename;
+    // mostra um modal com as duas opções: compartilhar OU salvar no celular
+    $('modal-inner').innerHTML = `
+      <h3>📤 Compartilhar</h3>
+      <p style="color:var(--text-dim);font-size:13px;line-height:1.5">A imagem está pronta! Escolha como quer usá-la. Se for postar no Instagram Stories, <b>salvar no celular</b> e postar pela galeria costuma dar o melhor resultado.</p>
+      <img src="${URL.createObjectURL(blob)}" style="width:100%;border-radius:14px;margin:12px 0;border:1px solid var(--border)">
+      <button class="btn btn-primary btn-block" onclick="doShareNow('${shareText.replace(/'/g,"\\'")}')">📲 Compartilhar agora</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="doSaveToDevice()">💾 Salvar no celular</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+    $('modal-back').classList.add('on');
   }, 'image/png');
+}
+async function doShareNow(shareText){
+  if(!_lastShareBlob) return;
+  const file = new File([_lastShareBlob], _lastShareName, {type:'image/png'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], text:shareText}); }catch(e){ /* cancelou */ }
+  } else {
+    doSaveToDevice();
+  }
+}
+function doSaveToDevice(){
+  if(!_lastShareBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(_lastShareBlob); a.download = _lastShareName; a.click();
+  toast('💾 Imagem salva na galeria/downloads!');
 }
 // Agrupa exercícios feitos por grupo muscular: "Quadríceps: Hack Machine, Cadeira Extensora"
 function groupByPart(exercisesDone){
@@ -2585,6 +2663,26 @@ function shareWeekImage(){
     destaque:'Mais uma semana concluída 🔥'
   });
   shareCanvas(c, 'metatreino-semana.png', 'Minha semana de treinos no MetaTreino 💪');
+}
+function shareTrophiesImage(){
+  const unlocked = TROPHIES.filter(t=>state.trophies.includes(t.id));
+  if(!unlocked.length){ toast('Você ainda não desbloqueou conquistas — bora treinar! 💪'); return; }
+  // pega as conquistas mais "raras"/recentes pra destacar (últimas da lista de desbloqueadas)
+  const destaque = unlocked.slice(-6).map(t=>t.emoji+' '+t.name);
+  const c = buildShareCanvas({
+    title:'Minhas conquistas 🏆',
+    subtitle:unlocked.length+' de '+TROPHIES.length+' troféus',
+    stats:[
+      {rotulo:'Desbloqueados', valor:String(unlocked.length)},
+      {rotulo:'Progresso', valor:Math.round(unlocked.length/TROPHIES.length*100)+'%'},
+      {rotulo:'Musculação', valor:String(unlocked.filter(t=>t.cat==='lift').length)},
+      {rotulo:'Corrida', valor:String(unlocked.filter(t=>t.cat==='run').length)}
+    ],
+    listaTitulo:'Conquistas em destaque',
+    lista:destaque,
+    destaque:'Colecionando vitórias no MetaTreino 🏆'
+  });
+  shareCanvas(c, 'metatreino-conquistas.png', 'Minhas conquistas no MetaTreino 🏆');
 }
 function shareWorkoutImage(histIdx){
   const mod = state.modules[state.active];
@@ -2732,6 +2830,7 @@ async function openVideoAdmin(){
         <div style="font-size:13.5px;font-weight:700">${ex.name} ${cur?'<span style="color:var(--primary-2);font-size:11px">● link próprio</span>':''}</div>
         <div class="row" style="gap:6px;margin-top:6px">
           <input class="input" id="vid-${id}" value="${cur.replace(/"/g,'&quot;')}" placeholder="Cole o link do vídeo (YouTube, Drive...)" style="flex:1;font-size:12.5px;padding:9px 12px">
+          <button class="btn btn-ghost" style="padding:9px 12px;font-size:12.5px" onclick="testVideoLink('${id}')" title="Abrir link para testar">▶</button>
           <button class="btn btn-primary" style="padding:9px 14px;font-size:12.5px" onclick="saveVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">💾</button>
         </div>
       </div>`;
@@ -2744,6 +2843,13 @@ async function openVideoAdmin(){
     <div style="max-height:56vh;overflow-y:auto;margin-top:6px">${groups}</div>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
+}
+function testVideoLink(id){
+  const inp = $('vid-'+id); if(!inp) return;
+  const url = inp.value.trim();
+  if(!url){ toast('Cole um link primeiro'); return; }
+  if(!/^https?:\/\//i.test(url)){ toast('⚠️ O link precisa começar com http:// ou https://'); return; }
+  window.open(url, '_blank');
 }
 async function saveVideoLink(id, exName){
   const inp = $('vid-'+id); if(!inp) return;
@@ -3219,4 +3325,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openMuralAdmin,onMuralFotoPicked,saveMural,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openMuralAdmin,onMuralFotoPicked,saveMural,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
