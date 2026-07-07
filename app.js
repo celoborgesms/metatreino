@@ -1,5 +1,5 @@
-// ===== MetaTreino v5.2 =====
-const APP_VERSION = 'v5.2';
+// ===== MetaTreino v5.3 =====
+const APP_VERSION = 'v5.3';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2199,6 +2199,39 @@ function importMyData(ev){
 // ---------- TIMER DE DESCANSO ----------
 let restTimerInt = null;
 let wakeLock = null;
+let restAudioCtx = null;
+let restMuted = false;
+function toggleRestMute(){ restMuted = !restMuted; toast(restMuted?'🔇 Som do timer desligado':'🔔 Som do timer ligado'); }
+// Destrava o áudio no toque que inicia o timer (navegadores exigem interação do usuário).
+// Depois disso, conseguimos tocar o beep mesmo quando o timer termina sozinho.
+function unlockRestAudio(){
+  try{
+    if(!restAudioCtx){ restAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    if(restAudioCtx.state === 'suspended') restAudioCtx.resume();
+    // toca um "silêncio" instantâneo pra confirmar o desbloqueio
+    const o = restAudioCtx.createOscillator(); const g = restAudioCtx.createGain();
+    g.gain.value = 0; o.connect(g); g.connect(restAudioCtx.destination); o.start(); o.stop(restAudioCtx.currentTime+0.01);
+  }catch(e){}
+}
+function playRestBeep(){
+  // 3 apitos ascendentes — sinal claro de fim de descanso
+  try{
+    if(!restAudioCtx) return;
+    if(restAudioCtx.state === 'suspended') restAudioCtx.resume();
+    const notes = [660, 880, 1100];
+    notes.forEach((freq, i)=>{
+      const o = restAudioCtx.createOscillator();
+      const g = restAudioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      const t0 = restAudioCtx.currentTime + i*0.22;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.35, t0+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+0.2);
+      o.connect(g); g.connect(restAudioCtx.destination);
+      o.start(t0); o.stop(t0+0.22);
+    });
+  }catch(e){}
+}
 async function requestWakeLock(){
   try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); } }catch(e){}
 }
@@ -2226,18 +2259,21 @@ function startRestTimer(seconds, exName){
   const render = ()=>{
     const m = Math.floor(left/60), s = left%60;
     el.innerHTML = `<span style="font-size:22px">⏱️</span>
-      <div style="flex:1"><div style="font-weight:800;font-size:14px">Descanso${exName?' · '+exName:''}</div><div style="font-size:12px;color:var(--text-dim)">Respira, hidrata e volta com tudo</div></div>
+      <div style="flex:1"><div style="font-weight:800;font-size:14px">Descanso${exName?' · '+exName:''}</div><div style="font-size:12px;color:var(--text-dim)">${restMuted?'🔇 Som desligado':'🔔 Apita ao acabar'}</div></div>
       <div class="mono" style="font-weight:900;font-size:24px;color:var(--primary-2)">${m}:${String(s).padStart(2,'0')}</div>
+      <button onclick="toggleRestMute()" style="background:none;border:none;color:var(--text-mute);font-size:18px;padding:4px">${restMuted?'🔇':'🔔'}</button>
       <button onclick="stopRestTimer()" style="background:none;border:none;color:var(--text-mute);font-size:18px;padding:4px">✕</button>`;
   };
   render();
   requestWakeLock(); // mantém a tela ligada durante o descanso
+  unlockRestAudio(); // destrava o som agora (no toque) pra poder apitar no fim
   restTimerInt = setInterval(()=>{
     left--;
     if(left<=0){
       stopRestTimer();
+      if(!restMuted) playRestBeep(); // som (funciona mesmo sem toque, pois foi destravado no início)
+      if(navigator.vibrate) navigator.vibrate([300,120,300,120,300]); // vibração (reforço, quando o Chrome permite)
       toast('💪 Descanso acabou — próxima série!');
-      if(navigator.vibrate) navigator.vibrate([300,120,300,120,300]); // vibração mais forte
       return;
     }
     render();
@@ -3325,4 +3361,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openMuralAdmin,onMuralFotoPicked,saveMural,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openMuralAdmin,onMuralFotoPicked,saveMural,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
