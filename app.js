@@ -1,5 +1,5 @@
-// ===== MetaTreino v5.6 =====
-const APP_VERSION = 'v5.6';
+// ===== MetaTreino v5.7 =====
+const APP_VERSION = 'v5.7';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1059,12 +1059,18 @@ function renderHome(){
         } else {
           $('missed-msg').textContent = `Faltou ${pend[0].name.split(' — ')[0]}, e hoje é dia de descanso — momento perfeito pra recuperar esse treino! Toque pra fazer agora.`;
         }
-        missed.onclick = ()=>{ goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); };
+        missed.onclick = ()=>{
+          if(state.active==='run'){ openRunLog(String(pend[0].dayIdx)); } // corrida: registro direto de km+tempo
+          else { goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); } // musculação: abre a sessão
+        };
       } else {
         // 2+ dias perdidos: NÃO sugere fazer tudo — orienta priorizar e seguir em frente
         $('missed-title').textContent = `📌 Você perdeu ${pend.length} treinos esta semana`;
         $('missed-msg').textContent = `Acontece! Não tente recuperar todos de uma vez — isso sobrecarrega e atrapalha mais que ajuda. ${isLift?'Escolha 1 treino pendente pra fazer num dia livre e siga o plano normalmente a partir de amanhã. Na próxima semana o ciclo recomeça equilibrado.':'Faça a atividade mais importante (a corrida longa) quando puder e retome o plano normalmente. Constância vale mais que perfeição.'} Toque pra ver os pendentes.`;
-        missed.onclick = ()=>{ goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); };
+        missed.onclick = ()=>{
+          if(state.active==='run'){ openRunLog(String(pend[0].dayIdx)); } // corrida: registro direto de km+tempo
+          else { goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); } // musculação: abre a sessão
+        };
       }
     } else missed.classList.add('hidden');
   }
@@ -2393,8 +2399,19 @@ const MA_SUGGESTIONS = [
   {lbl:'❤️ Me motive', key:'motiva'}
 ];
 function maInterpret(txt){
-  const t = txt.toLowerCase();
+  const t = txt.toLowerCase().trim();
   const has = (...ws)=>ws.some(w=>t.includes(w));
+  // saudações e conversa social (respostas prontas, sem depender de dados)
+  const exact = t.replace(/[!?.,]/g,'').trim();
+  if(['oi','ola','olá','eae','e ai','e aí','opa','fala','salve','hey','oii','oie'].includes(exact)) return '_oi';
+  if(has('bom dia')) return '_bomdia';
+  if(has('boa tarde')) return '_boatarde';
+  if(has('boa noite')) return '_boanoite';
+  if(has('tchau','até mais','ate mais','falou','xau','adeus','até logo','ate logo','vlw','valeu','obrigad','brigad','obg')) return '_tchau';
+  if(has('quem é você','quem e voce','o que você é','o que voce e','vc é','você é um','voce e um','é uma ia','e uma ia','é robô','e robo')) return '_quemsou';
+  if(has('como vai','tudo bem','como você está','como voce esta','de boa')) return '_comovai';
+  if(has('ajuda','o que você faz','o que voce faz','o que sabe','pode fazer','como funciona','me ajuda')) return '_ajuda';
+  // perguntas com dados
   if(has('perder','emagrec','quantos kg','quanto kg','posso perder')) return 'perder_peso';
   if(has('evolu','melhor','pior','progress','constan')) return 'evolucao';
   if(has('treino hoje','foi meu treino','como fui','treinei hoje')) return 'treino_hoje';
@@ -2411,6 +2428,18 @@ function maInterpret(txt){
   if(has('motiv','frase','ânimo','animo','desanim')) return 'motiva';
   return null;
 }
+// respostas sociais (não dependem de dados)
+const MA_SOCIAL = {
+  _oi(){ const s=maSaudacao(); return `${s}, ${maName()}! 👋 Como posso te ajudar? Você pode me perguntar sobre sua evolução, corrida, troféus, meta e mais — ou tocar numa das sugestões.`; },
+  _bomdia(){ return `Bom dia, ${maName()}! ☀️ Pronto pra mais um dia de evolução? Me pergunte algo ou toque numa sugestão.`; },
+  _boatarde(){ return `Boa tarde, ${maName()}! 💪 Como posso ajudar? Quer saber como está sua evolução?`; },
+  _boanoite(){ return `Boa noite, ${maName()}! 🌙 Bora fechar o dia com chave de ouro? Me pergunte o que quiser sobre seus treinos.`; },
+  _tchau(){ return `Até a próxima, ${maName()}! 👊 Continue firme — a constância é o que transforma. Bons treinos!`; },
+  _quemsou(){ return 'Sou o Meta Assistente 🤖 — não sou uma IA de verdade, mas analiso seus dados reais de treino pra te dar respostas úteis na hora. Pergunte sobre sua evolução, corrida, recordes, meta e muito mais!'; },
+  _comovai(){ return `Tô ótimo e pronto pra te ajudar! 😄 Mas o que importa é como VOCÊ está. Quer que eu mostre sua evolução recente, ${maName()}?`; },
+  _ajuda(){ return 'Posso te contar: 📈 sua evolução, 💪 como foi seu treino, 🏃 sua corrida, 🏆 seus troféus, 🎯 sua meta, qual músculo você treina menos, sua maior pausa, recordes, quanto tempo usa o app, peso, calorias e ainda te motivar. É só tocar numa sugestão ou digitar!'; }
+};
+function maSaudacao(){ const h=new Date().getHours(); return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'; }
 let maThread = [];
 function openAssistant(){
   maThread = [{who:'bot', txt:`👋 Olá, ${maName()}! Sou o Meta Assistente. Toque numa pergunta ou digite a sua — respondo com base nos seus treinos reais.`}];
@@ -2447,7 +2476,10 @@ function maAskText(){
   const txt=inp.value.trim(); if(!txt) return;
   maThread.push({who:'user', txt});
   const key=maInterpret(txt);
-  const answer = key && MA_ANSWERS[key] ? MA_ANSWERS[key]() : 'Hmm, não entendi bem. 🤔 Tente perguntar sobre: sua evolução, corrida, troféus, meta, recordes, peso, ou toque numa das sugestões acima.';
+  let answer;
+  if(key && MA_SOCIAL[key]) answer = MA_SOCIAL[key]();
+  else if(key && MA_ANSWERS[key]) answer = MA_ANSWERS[key]();
+  else answer = 'Hmm, não entendi bem. 🤔 Você pode perguntar sobre: sua evolução, corrida, troféus, meta, recordes, peso, calorias — ou tocar numa das sugestões acima.';
   maThread.push({who:'bot', txt:answer});
   renderAssistant();
 }
