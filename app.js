@@ -1,5 +1,5 @@
-// ===== MetaTreino v5.8 =====
-const APP_VERSION = 'v5.8';
+// ===== MetaTreino v5.9 =====
+const APP_VERSION = 'v5.9';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1043,6 +1043,19 @@ function renderHome(){
   }
 
   const cw = currentWeek(mod);
+  // aviso de modo adaptado (dor / TPM) — explica o que mudou nos treinos
+  const adaptCard = $('card-adapt');
+  if(adaptCard){
+    const a = adaptMode();
+    if(a.active){
+      adaptCard.classList.remove('hidden');
+      $('adapt-title').textContent = a.tpm && a.pain.length ? '🩹 Modo leve ativo (TPM + dor)' : a.tpm ? '💗 Modo TPM ativo' : `🩹 Modo cuidado ativo (${a.pain.join(', ')})`;
+      const adaptados = (state.modules[state.active]?.plan?.workouts||[]).filter(w=>w.adapted).length;
+      $('adapt-msg').textContent = (a.tpm && !a.pain.length)
+        ? 'Seus treinos estão mais leves (menos séries e volume reduzido). Vá no seu ritmo — treinar leve ou descansar hoje é totalmente ok. 💗'
+        : `Seus treinos foram adaptados pra proteger: ${a.pain.join(', ')}. ${adaptados?adaptados+' treino(s) ajustado(s).':''} Se a dor for forte ou persistir, procure um profissional de saúde.`;
+    } else adaptCard.classList.add('hidden');
+  }
   // treinos pendentes desta semana (perdeu um ou mais dias?)
   const missed = $('card-missed');
   if(missed){
@@ -1271,6 +1284,7 @@ function renderSessionDetail(w){
         <div class="info-cell"><div class="info-cell-icon">📅</div><div class="info-cell-lbl">DIA</div><div class="info-cell-val">${w.dayName}</div></div>
       </div>
     </div>
+    ${w.adapted ? `<div class="card card-alert card-row" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
     <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.':'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift ? (lockedToday
@@ -1557,7 +1571,9 @@ function confirmLiftWorkout(k){
     if(mins >= 5 && mins <= 240) realDuration = mins;
   }
   mod.history = mod.history || [];
-  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:realDuration, plannedDuration:w.duration, module:'lift', feel, parts:[...(w.parts||[])], exercisesDone });
+  const adaptInfo = adaptMode();
+  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:realDuration, plannedDuration:w.duration, module:'lift', feel, parts:[...(w.parts||[])], exercisesDone,
+    adaptedWith: adaptInfo.active ? adaptReasonText() : null });
   ensureStats(); state.stats.liftTotal++;
   checkTrophies();
   saveData();
@@ -1644,6 +1660,7 @@ function renderHistory(){
             <div class="hist-name">${x.name.replace(/^[🚶🚴🏃]\s*/,'')}</div>
             <div class="hist-meta"><span>🕐 ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>${meta}</div>
             ${parts.length?`<div class="hist-chips">${parts.map(p=>`<span class="hist-chip">${p}</span>`).join('')}</div>`:''}
+            ${x.adaptedWith?`<div style="margin-top:5px;font-size:11px;color:#7dd3fc">🩹 Treinou adaptado — ${x.adaptedWith}</div>`:''}
           </div>
           <div class="hist-arrow">›</div>
         </div>`;
@@ -2428,15 +2445,104 @@ function maInterpret(txt){
   if(has('motiv','frase','ânimo','animo','desanim')) return 'motiva';
   return null;
 }
+let maPending = null; // ação aguardando confirmação sim/não
+function maApplyEquip(equip){
+  const mod = state.modules.lift;
+  if(!mod){ return {done:true, msg:'Você ainda não tem plano de musculação. 😊'}; }
+  mod.setup.equip = equip;
+  regenAllPlans();
+  saveData();
+  const lbl = {academia:'academia completa', halteres:'só halteres', casa:'peso do corpo (em casa)', basico:'básico'}[equip];
+  return {done:true, msg:`✅ Pronto! Seus treinos agora usam <b>${lbl}</b>. Todos os exercícios foram regenerados — dá uma olhada na aba Sessões. 💪`};
+}
+function maApplySchedule(modName, dias){
+  const mod = state.modules[modName];
+  if(!mod || !mod.plan){ return {done:true, msg:'Plano não encontrado. 😅'}; }
+  const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+  mod.setup.days = dias.length;
+  mod.setup.selectedDays = dias;
+  // regenera o plano inteiro com os novos dias (preserva histórico e data de criação)
+  const prevHist = mod.history || [];
+  const prevCreated = mod.createdAt;
+  mod.plan = generatePlan(modName, mod.setup);
+  mod.history = prevHist;
+  mod.createdAt = prevCreated;
+  regenAllPlans();
+  saveData();
+  const nomes = dias.map(d=>dayNames[d-1]).join(', ');
+  return {done:true, msg:`✅ Cronograma atualizado! Seus treinos de <b>${modName==='run'?'corrida':'musculação'}</b> agora são em: <b>${nomes}</b>. O plano foi remontado e seu histórico está intacto. 📅`};
+}
 // ===== META ASSISTENTE: COMANDOS (executa ações por conversa) =====
 // Interpreta frases de AÇÃO e devolve {done:true, msg} se executou, ou null se não é comando.
 function maTryCommand(txt){
   const t = txt.toLowerCase().trim();
-  const num = re => { const m=t.match(re); return m?parseFloat(m[1].replace(',','.')):null; };
+  const num = re => { const mm=t.match(re); return mm?parseFloat(mm[1].replace(',','.')):null; };
+  let m;
+
+  // ---- COMO FAZER (abre vídeo do exercício) ----
+  m = t.match(/(?:como (?:fazer|faço|se faz|executa)|me mostra|v[íi]deo d[eo])\s+(?:o |a |um |uma )?(.+)/);
+  if(m){
+    const busca = m[1].replace(/[?!.]/g,'').trim();
+    let achou = null, melhor = 0;
+    EX_BANK.forEach(c=>c.items.forEach(ex=>{
+      const nome = ex.name.toLowerCase();
+      // pontuação simples: quantas palavras da busca aparecem no nome
+      const palavras = busca.split(/\s+/).filter(p=>p.length>2);
+      const score = palavras.filter(p=>nome.includes(p)).length;
+      if(score>melhor){ melhor=score; achou=ex; }
+    }));
+    if(achou && melhor>0){
+      const url = ytLink(achou.name);
+      setTimeout(()=>window.open(url,'_blank'), 400);
+      return {done:true, msg:`▶️ Abrindo o vídeo de <b>${achou.name}</b> (${achou.sub}) pra você. Preste atenção na técnica antes de aumentar a carga! 💪`};
+    }
+    return {done:true, msg:`Não achei esse exercício na biblioteca 🤔. Tenta o nome como aparece lá, ex: "como fazer supino reto" ou "como fazer agachamento".`};
+  }
+
+  // ---- MUDAR EQUIPAMENTO ----
+  if(/(n[ãa]o (?:estou|to|tô) na academia|sem academia|(?:vou |quero )?treinar em casa|estou em casa|sem equipamento|academia fechada|n[ãa]o vou (?:na|pra) academia)/.test(t)){
+    maPending = {type:'equip', value:'casa'};
+    return {done:true, msg:'Sem problema! Posso adaptar seus treinos pra <b>peso do corpo (em casa)</b>, sem nenhum equipamento. Quer que eu faça isso agora? Responda <b>sim</b> ou <b>não</b>. 🏠'};
+  }
+  if(/(voltei (?:pra|para) academia|estou na academia|to na academia|tô na academia|academia de novo|treinar na academia)/.test(t)){
+    maPending = {type:'equip', value:'academia'};
+    return {done:true, msg:'Boa! Quer que eu volte seus treinos pro modo <b>academia completa</b> (máquinas, cabos, barras)? Responda <b>sim</b> ou <b>não</b>. 🏋️'};
+  }
+  if(/(só (?:tenho|com) halteres|apenas halteres|com halteres em casa)/.test(t)){
+    maPending = {type:'equip', value:'halteres'};
+    return {done:true, msg:'Entendi! Quer que eu monte seus treinos usando <b>só halteres</b>? Responda <b>sim</b> ou <b>não</b>. 🎒'};
+  }
+
+  // ---- MUDAR CRONOGRAMA ----
+  // "quero treinar corrida segunda, quarta e sexta" / "musculação terça e quinta"
+  m = t.match(/(?:quero |vou |prefiro )?(?:treinar|fazer|correr)\s*(muscula[çc][ãa]o|corrida|for[çc]a|pesos)?\D*?((?:segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado|domingo)(?:[\s,e]+(?:segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado|domingo))*)/);
+  if(m && /segunda|terça|terca|quarta|quinta|sexta|sábado|sabado|domingo/.test(t)){
+    const modName = m[1] && /corrida|correr/.test(m[1]) ? 'run' : (m[1] && /muscula|for[çc]a|pesos/.test(m[1]) ? 'lift' : (/corrida|correr/.test(t)?'run':'lift'));
+    const dayMap = {segunda:1,'terça':2,terca:2,quarta:3,quinta:4,sexta:5,'sábado':6,sabado:6,domingo:7};
+    const dias = [];
+    Object.keys(dayMap).forEach(d=>{ if(t.includes(d) && !dias.includes(dayMap[d])) dias.push(dayMap[d]); });
+    dias.sort((a,b)=>a-b);
+    if(!dias.length) return null;
+    if(!state.modules[modName]) return {done:true, msg:`Você ainda não tem um plano de ${modName==='run'?'corrida':'musculação'} ativo. Crie um primeiro! 😊`};
+    maPending = {type:'schedule', mod:modName, days:dias};
+    const nomes = dias.map(d=>['segunda','terça','quarta','quinta','sexta','sábado','domingo'][d-1]).join(', ');
+    return {done:true, msg:`Quer que eu reorganize seus treinos de <b>${modName==='run'?'corrida':'musculação'}</b> pra <b>${nomes}</b> (${dias.length}× por semana)? Responda <b>sim</b> ou <b>não</b>. 📅`};
+  }
+
+  // ---- CONFIRMAÇÃO SIM/NÃO ----
+  if(maPending && /^(sim|s|isso|pode|manda|claro|quero|beleza|ok|confirma|aceito|yes|👍)$/i.test(t.replace(/[!.]/g,'').trim())){
+    const p = maPending; maPending = null;
+    if(p.type==='equip') return maApplyEquip(p.value);
+    if(p.type==='schedule') return maApplySchedule(p.mod, p.days);
+  }
+  if(maPending && /^(n[ãa]o|nao|n|deixa|cancela|melhor n[ãa]o|nem|👎)$/i.test(t.replace(/[!.]/g,'').trim())){
+    maPending = null;
+    return {done:true, msg:'Tudo bem, deixei como estava! 😊 Se mudar de ideia é só falar.'};
+  }
 
   // ---- PESO ----
   // "estou pesando 108", "meu peso é 90kg", "pesei 85"
-  let m = t.match(/(?:pesando|peso (?:é|e|atual|de)|pesei|estou com)\s*(\d+[.,]?\d*)\s*(?:kg|quilos?)?/);
+  m = t.match(/(?:pesando|peso (?:é|e|atual|de)|pesei|estou com)\s*(\d+[.,]?\d*)\s*(?:kg|quilos?)?/);
   if(m && !/emagrec|engord|perdi|ganhei/.test(t)){
     const kg = parseFloat(m[1].replace(',','.'));
     if(kg>=30 && kg<=300) return maSetWeight(kg);
@@ -2530,7 +2636,7 @@ function maSetPain(area, txt){
   const painArea = area ? map[area] : null;
   state.user.pain = state.user.pain||[];
   if(painArea && !state.user.pain.includes(painArea)) state.user.pain.push(painArea);
-  if(typeof regenLiftExercises==='function') regenLiftExercises();
+  if(typeof regenAllPlans==='function') regenAllPlans();
   saveData();
   const base = painArea
     ? `Entendi, você está com dor ${area==='joelho'||area==='ombro'||area==='cotovelo'||area==='punho'||area==='tornozelo'?'no':area==='costas'||area==='coluna'||area==='lombar'||area==='perna'?'na':'no'} ${area}. Já adaptei seus treinos pra proteger essa região 🩹.`
@@ -2550,14 +2656,14 @@ function maSad(){
 }
 function maTPM(){
   state.user.pain = state.user.pain||[];
-  if(!state.user.tpmMode){ state.user.tpmMode = true; if(typeof regenLiftExercises==='function') regenLiftExercises(); saveData(); }
+  if(!state.user.tpmMode){ state.user.tpmMode = true; if(typeof regenAllPlans==='function') regenAllPlans(); saveData(); }
   return {done:true, msg:'Entendi 💗. Nesses dias o corpo pede mais gentileza — deixei seus treinos mais leves. Respeite seu ritmo: treinar leve ou até descansar é perfeitamente ok. Movimento suave (caminhada, alongamento) pode ajudar com o desconforto, mas sem cobrança. Quando quiser voltar ao normal, é só dizer "voltar ao normal". 🌸'};
 }
 function maBackToNormal(){
   const tinha = (state.user.pain&&state.user.pain.length) || state.user.tpmMode;
   state.user.pain = [];
   state.user.tpmMode = false;
-  if(typeof regenLiftExercises==='function') regenLiftExercises();
+  if(typeof regenAllPlans==='function') regenAllPlans();
   saveData();
   return {done:true, msg: tinha ? '🎉 Que bom que está melhor! Seus treinos voltaram ao normal. Bora com tudo — respeitando sempre os limites do corpo! 💪' : 'Tudo certo, seus treinos já estão no modo normal! 💪'};
 }
@@ -2581,9 +2687,10 @@ function openAssistant(){
   renderAssistant();
 }
 function renderAssistant(){
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const bubbles = maThread.map(m=>m.who==='bot'
     ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:11px 14px;margin:6px 0;font-size:13.5px;line-height:1.5;max-width:88%">${m.txt}</div>`
-    : `<div style="background:var(--surface);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${m.txt}</div>`
+    : `<div style="background:var(--surface);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`
   ).join('');
   // se a pessoa está com dor ou modo TPM, mostra atalho de voltar ao normal
   const emModoLeve = (state.user && ((state.user.pain&&state.user.pain.length) || state.user.tpmMode));
@@ -2761,21 +2868,83 @@ function stopRestTimer(){
 }
 
 // ---------- DOR / ADAPTAÇÃO ----------
+// ---------- MODO ADAPTADO (dor / TPM) ----------
+// Centraliza: quando o aluno está com dor ou em TPM, os treinos mudam de verdade
+// (grupos evitados, séries reduzidas, nome do treino ajustado) e ele é avisado do porquê.
+function adaptMode(){
+  const pain = (state.user && state.user.pain) || [];
+  const tpm = !!(state.user && state.user.tpmMode);
+  return { active: pain.length>0 || tpm, pain, tpm };
+}
+function adaptReasonText(){
+  const a = adaptMode();
+  if(!a.active) return '';
+  if(a.tpm && a.pain.length) return `TPM + dor (${a.pain.join(', ')})`;
+  if(a.tpm) return 'TPM';
+  return `dor (${a.pain.join(', ')})`;
+}
+// Regenera os treinos de musculação respeitando dor e TPM, e renomeia o treino
+// pra refletir o que realmente vai ser treinado.
 function regenLiftExercises(){
   const mod = state.modules.lift;
   if(!mod || !mod.plan) return;
-  const tpm = state.user && state.user.tpmMode;
+  const a = adaptMode();
   mod.plan.workouts.forEach(w=>{
+    w.originalParts = w.originalParts || [...(w.parts||[])]; // guarda os grupos originais uma única vez
+    const blocked = painBlockedParts();
+    const kept = w.originalParts.filter(p=>!blocked.has(p));
+    const usar = kept.length ? kept : (blocked.has('Core') ? [] : ['Core']);
+    w.parts = usar.length ? usar : w.originalParts; // se bloqueou tudo, mantém (mas avisa)
     w.exercises = buildLiftExercises(w.parts, mod.setup);
-    // modo TPM: aligeira o treino (menos séries, deixa mais confortável)
-    if(tpm) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
+    // TPM: menos séries, treino mais leve
+    if(a.tpm) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
+    // dor: também reduz uma série (proteção)
+    else if(a.pain.length) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
     w.duration = estimateLiftDuration(w.exercises, mod.setup.goal);
+    // nome reflete o que será treinado de verdade
+    const base = 'Treino '+w.k;
+    w.name = w.parts.join(' + ');
+    w.adapted = a.active && (w.parts.join()!==w.originalParts.join() || a.tpm);
+    w.adaptNote = w.adapted ? `Adaptado por ${adaptReasonText()}: ${w.originalParts.filter(p=>!w.parts.includes(p)).length?`evitamos ${w.originalParts.filter(p=>!w.parts.includes(p)).join(', ')}`:'volume reduzido'}.` : '';
   });
 }
+// Adapta os treinos de corrida quando há dor de impacto ou TPM
+function regenRunPlan(){
+  const mod = state.modules.run;
+  if(!mod || !mod.plan) return;
+  const a = adaptMode();
+  const impacto = a.pain.some(p=>['Joelho','Tornozelo','Lombar'].includes(p));
+  mod.plan.workouts.forEach(w=>{
+    w.originalName = w.originalName || w.name;
+    w.originalDuration = w.originalDuration || w.duration;
+    w.originalDistance = w.originalDistance || w.distance;
+    if(impacto){
+      // troca corrida por caminhada/bike de baixo impacto
+      w.name = '🚶 Caminhada leve (adaptado)';
+      w.duration = Math.max(20, Math.round((w.originalDuration||30)*0.7));
+      const km = parseFloat(String(w.originalDistance||'').replace(/[^\d.]/g,''))||3;
+      w.distance = '~'+(Math.round(km*0.6*2)/2)+'km';
+      w.adapted = true;
+      w.adaptNote = `Adaptado por ${adaptReasonText()}: trocamos a corrida por caminhada leve pra tirar o impacto das articulações.`;
+    } else if(a.tpm){
+      w.name = w.originalName;
+      w.duration = Math.max(15, Math.round((w.originalDuration||30)*0.75));
+      w.adapted = true;
+      w.adaptNote = 'Adaptado por TPM: volume reduzido — vá no seu ritmo, sem cobrança.';
+    } else {
+      w.name = w.originalName;
+      w.duration = w.originalDuration;
+      w.distance = w.originalDistance;
+      w.adapted = false;
+      w.adaptNote = '';
+    }
+  });
+}
+function regenAllPlans(){ regenLiftExercises(); regenRunPlan(); }
 function savePain(){
   const sel = [...document.querySelectorAll('#pain-areas .opt-multi.on')].map(o=>o.dataset.val);
   state.user.pain = sel;
-  regenLiftExercises();
+  regenAllPlans();
   saveData();
   closeModal();
   toast(sel.length ? '🩹 Treinos adaptados pra proteger: '+sel.join(', ') : '✅ Sem dor registrada');
@@ -2783,7 +2952,8 @@ function savePain(){
 }
 function clearPain(){
   state.user.pain = [];
-  regenLiftExercises();
+  state.user.tpmMode = false;
+  regenAllPlans();
   saveData();
   closeModal();
   toast('✅ Que bom! Treinos de volta ao normal.');
@@ -3628,6 +3798,7 @@ function openHistoryEntry(idx){
   const d = new Date(x.at);
   const isRun = state.active==='run';
   const parts = !isRun ? partsFromEntry(x) : [];
+  const adaptBlock = x.adaptedWith ? `<div class="card card-alert card-row" style="margin-top:12px;border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado</div><div class="card-sub">Neste dia você treinou em modo adaptado por <b>${x.adaptedWith}</b> — por isso o volume foi menor. Cuidar do corpo também é treinar. 💚</div></div></div>` : '';
   const muscleBlock = parts.length ? `
     <div class="card" style="margin-top:12px">
       <div class="section-lbl" style="margin:0 0 8px">💪 Músculos trabalhados</div>
@@ -3639,6 +3810,7 @@ function openHistoryEntry(idx){
     <div style="margin-top:8px">${x.exercisesDone.map(e=>`<div style="display:flex;justify-content:space-between;padding:5px 0"><span style="font-size:13px;color:var(--text-dim)">${e.name}</span><b class="mono" style="font-size:12.5px;color:var(--primary-2)">${e.sets}× · ${e.best}</b></div>`).join('')}</div></div>` : '';
   const html = `
     <h3>📝 Detalhes do treino</h3>
+    ${adaptBlock}
     ${muscleBlock}
     ${exBlock}
     <div class="field" style="margin-top:12px"><label>Nome</label><input class="input" id="he-name" value="${x.name.replace(/"/g,'&quot;')}"></div>
@@ -3787,7 +3959,9 @@ function saveRunLog(dayIdx){
   const meta = ACTIVITY_META[type] || ACTIVITY_META.corrida;
   const name = (type==='corrida' && !livre) ? w.name : `${meta.emo} ${meta.lbl} — ${km}km`;
   mod.history = mod.history || [];
-  mod.history.push({ id:w.k, name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, module:'run', activity:type });
+  const adaptInfoRun = adaptMode();
+  mod.history.push({ id:w.k, name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, module:'run', activity:type,
+    adaptedWith: adaptInfoRun.active ? adaptReasonText() : null });
   // Os contadores vitalícios são recalculados por ensureStats (histórico + reserva do que já
   // saiu pela limpeza de 90 dias). NÃO somamos manualmente aqui pra evitar contagem dobrada.
   ensureStats();
