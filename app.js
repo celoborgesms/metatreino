@@ -1,5 +1,5 @@
-// ===== MetaTreino v5.4 =====
-const APP_VERSION = 'v5.4';
+// ===== MetaTreino v5.6 =====
+const APP_VERSION = 'v5.6';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -930,8 +930,15 @@ function missedWorkoutsThisWeek(mod){
   const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-(today-1));
   const t0 = startWk.getTime();
   const hist = mod.history||[];
+  // não considera "perdido" nenhum dia anterior à criação do plano —
+  // aluno novo que começa numa quinta não deve ver segunda/terça como treinos perdidos
+  const created = mod.createdAt || Date.now();
   return (mod.plan.workouts||[]).filter(w=>{
-    if(w.dayIdx >= today) return false; // só dias que já passaram
+    if(w.dayIdx >= today) return false; // só dias que já passaram nesta semana
+    // qual foi a data/hora desse dia da semana? se foi antes de criar o plano, ignora
+    const dayDate = t0 + (w.dayIdx-1)*86400000;
+    const endOfThatDay = dayDate + 86400000; // fim do dia
+    if(endOfThatDay <= created) return false; // o dia terminou antes de a conta/plano existir
     // registrou algo desse treino nesta semana?
     const did = hist.some(h=>{ if(h.at<t0) return false; return h.id===w.k || (h.dayIdx===w.dayIdx); });
     return !did;
@@ -1036,16 +1043,29 @@ function renderHome(){
   }
 
   const cw = currentWeek(mod);
-  // treinos pendentes desta semana (perdeu um dia?) — sugere recuperar
+  // treinos pendentes desta semana (perdeu um ou mais dias?)
   const missed = $('card-missed');
   if(missed){
     const pend = missedWorkoutsThisWeek(mod);
+    const hasToday = !!mod.plan.workouts.find(w=>w.dayIdx===getDayIdx());
     if(pend.length){
       missed.classList.remove('hidden');
-      const nomes = pend.map(w=>w.name.split(' — ')[0]).join(', ');
-      $('missed-title').textContent = pend.length===1 ? '📌 Você tem 1 treino pendente' : `📌 Você tem ${pend.length} treinos pendentes`;
-      $('missed-msg').textContent = `Faltou ${pend.length===1?'o treino':'os treinos'} de ${nomes} esta semana. Sem problema — faça o treino atrasado hoje pra não perder o ritmo. O importante é completar os ${mod.plan.workouts.length} treinos da semana, não o dia exato.`;
-      missed.onclick = ()=>{ goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); };
+      const isLift = mod.plan.type==='lift';
+      if(pend.length===1){
+        // 1 dia perdido: sugere encaixar hoje SE hoje for descanso, senão sugere no próximo descanso
+        $('missed-title').textContent = '📌 Você perdeu 1 treino esta semana';
+        if(hasToday){
+          $('missed-msg').textContent = `Faltou ${pend[0].name.split(' — ')[0]}. Como você já tem treino hoje, o ideal é seguir o de hoje e encaixar o pendente num dia de descanso ou no fim de semana — sem dobrar a carga e sobrecarregar. Toque pra ver o treino pendente.`;
+        } else {
+          $('missed-msg').textContent = `Faltou ${pend[0].name.split(' — ')[0]}, e hoje é dia de descanso — momento perfeito pra recuperar esse treino! Toque pra fazer agora.`;
+        }
+        missed.onclick = ()=>{ goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); };
+      } else {
+        // 2+ dias perdidos: NÃO sugere fazer tudo — orienta priorizar e seguir em frente
+        $('missed-title').textContent = `📌 Você perdeu ${pend.length} treinos esta semana`;
+        $('missed-msg').textContent = `Acontece! Não tente recuperar todos de uma vez — isso sobrecarrega e atrapalha mais que ajuda. ${isLift?'Escolha 1 treino pendente pra fazer num dia livre e siga o plano normalmente a partir de amanhã. Na próxima semana o ciclo recomeça equilibrado.':'Faça a atividade mais importante (a corrida longa) quando puder e retome o plano normalmente. Constância vale mais que perfeição.'} Toque pra ver os pendentes.`;
+        missed.onclick = ()=>{ goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); };
+      }
     } else missed.classList.add('hidden');
   }
   // lembrete de peso: 7+ dias sem registrar
@@ -1171,7 +1191,8 @@ function runDesc(w){
 function renderRestDay(mod){
   const isLift = mod.plan.type==='lift';
   const ws = mod.plan.workouts.slice(0,3);
-  return `<div class="rest-card"><div class="rest-emoji">😴</div><div class="rest-title">Dia de Descanso</div><div class="rest-sub">Aproveite pra recuperar. Você volta amanhã mais forte!</div><div class="rest-divider">— ou —</div><div style="font-weight:700">Quer antecipar algum treino?</div><div class="anticipate">${ws.map(w=>`<div class="antic-card" onclick="openSession('${w.k||w.dayIdx}')"><div class="antic-letter">${(w.k||'').charAt(0)||'S'}</div><div class="antic-name">${isLift?'Treino '+w.k:w.name.split(' ')[0]}</div><div class="antic-day">${w.dayName}</div></div>`).join('')}</div></div>`;
+  const freeRunBtn = state.modules.run ? `<div class="rest-divider">— ou —</div><button class="btn btn-outline btn-block" style="border-color:rgba(245,158,11,0.4);color:var(--accent-2)" onclick="openRunLog('livre')">🏃 Registrar corrida, caminhada ou bike livre</button>` : '';
+  return `<div class="rest-card"><div class="rest-emoji">😴</div><div class="rest-title">Dia de Descanso</div><div class="rest-sub">Aproveite pra recuperar. Você volta amanhã mais forte!</div><div class="rest-divider">— ou —</div><div style="font-weight:700">Quer antecipar algum treino?</div><div class="anticipate">${ws.map(w=>`<div class="antic-card" onclick="openSession('${w.k||w.dayIdx}')"><div class="antic-letter">${(w.k||'').charAt(0)||'S'}</div><div class="antic-name">${isLift?'Treino '+w.k:w.name.split(' ')[0]}</div><div class="antic-day">${w.dayName}</div></div>`).join('')}</div>${freeRunBtn}</div>`;
 }
 
 function renderWeekGrid(mod){
@@ -1949,9 +1970,32 @@ function ensureStats(){
   if(s.walkKmTotal < sumKm(walkOnly)) s.walkKmTotal = sumKm(walkOnly);
   if(s.bikeTotal < bikeOnly.length) s.bikeTotal = bikeOnly.length;
   if(s.bikeKmTotal < sumKm(bikeOnly)) s.bikeKmTotal = sumKm(bikeOnly);
+  // Auto-correção de versões antigas que contavam km em dobro: se o contador está MUITO acima
+  // do histórico visível (mais que o dobro + margem), e a conta é recente (sem limpeza de 90d
+  // ainda), reancora no valor real. Só corrige quando o histórico cabe todo na janela de 90 dias.
+  const oldestActivity = runH.length ? Math.min(...runH.map(x=>x.at)) : Date.now();
+  const semLimpeza = (Date.now() - oldestActivity) < HISTORY_RETENTION_DAYS*86400000;
+  if(semLimpeza){
+    if(s.runKmTotal > sumKm(runOnly)*1.5 + 1) s.runKmTotal = sumKm(runOnly);
+    if(s.walkKmTotal > sumKm(walkOnly)*1.5 + 1) s.walkKmTotal = sumKm(walkOnly);
+    if(s.bikeKmTotal > sumKm(bikeOnly)*1.5 + 1) s.bikeKmTotal = sumKm(bikeOnly);
+    if(s.runTotal > runOnly.length) s.runTotal = runOnly.length;
+    if(s.walkTotal > walkOnly.length) s.walkTotal = walkOnly.length;
+    if(s.bikeTotal > bikeOnly.length) s.bikeTotal = bikeOnly.length;
+  }
 }
 function checkTrophies(){
   ensureStats();
+  // Remove troféus que foram desbloqueados por engano (versões antigas com km em dobro):
+  // se o requisito não é mais atingido pelos contadores corrigidos, tranca de volta.
+  const req = {
+    run_km_10:['runKmTotal',10], run_km_50:['runKmTotal',50], run_km_100:['runKmTotal',100], run_km_500:['runKmTotal',500],
+    walk_km_10:['walkKmTotal',10], walk_km_50:['walkKmTotal',50], walk_km_100:['walkKmTotal',100],
+    bike_km_50:['bikeKmTotal',50], bike_km_100:['bikeKmTotal',100], bike_km_500:['bikeKmTotal',500],
+    bike_10:['bikeTotal',10], bike_25:['bikeTotal',25], walk_10:['walkTotal',10], walk_25:['walkTotal',25],
+    run_10:['runTotal',10], run_25:['runTotal',25], run_50:['runTotal',50]
+  };
+  state.trophies = state.trophies.filter(id=>{ const r=req[id]; return !r || state.stats[r[0]] >= r[1]; });
   // Contadores vitalícios: não zeram quando o histórico de 90 dias é limpo,
   // então troféus como "Centurião" (100 treinos) são alcançáveis de verdade.
   const liftDone = state.stats.liftTotal;
@@ -3514,22 +3558,25 @@ function doSwapExercise(oldId, newId, newName, newSub){
 // ---------- RUN LOG (km + tempo real) ----------
 function openRunLog(dayIdx){
   const mod = state.modules.run;
-  const w = mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx));
-  if(!w) return;
+  // No dia de descanso (sem treino no dayIdx) ou registro livre, usa um alvo genérico —
+  // a pessoa pode registrar corrida/caminhada/bike a qualquer momento.
+  let w = mod && mod.plan ? mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx)) : null;
+  const livre = !w;
+  if(livre) w = { k:'livre', name:'Atividade livre', dayIdx:getDayIdx(), distance:'—', duration:30 };
   const html = `
     <h3>📝 Registrar atividade</h3>
-    <p style="color:var(--text-dim);font-size:13px">${w.name} · Alvo: ${w.distance} em ${w.duration} min</p>
-    <div class="field" style="margin-top:12px"><label>O que você fez hoje?</label>
+    <p style="color:var(--text-dim);font-size:13px">${livre ? 'Registre uma corrida, caminhada ou pedalada — mesmo em dia de descanso, todo movimento conta! 💪' : `${w.name} · Alvo: ${w.distance} em ${w.duration} min`}</p>
+    <div class="field" style="margin-top:12px"><label>O que você fez?</label>
       <div class="radio-grid g3" id="rl-type"><div class="opt on" data-val="corrida">🏃 Corrida</div><div class="opt" data-val="caminhada">🚶 Caminhada</div><div class="opt" data-val="bike">🚴 Bike</div></div>
     </div>
     <div class="field"><label>Distância percorrida (km)</label><input class="input mono" type="number" step="0.1" id="rl-km" placeholder="Ex: 5.2"></div>
-    <div class="field"><label>Tempo total (minutos)</label><input class="input mono" type="number" id="rl-min" placeholder="Ex: 32" value="${w.duration}"></div>
+    <div class="field"><label>Tempo total (minutos)</label><input class="input mono" type="number" id="rl-min" placeholder="Ex: 32"${livre?'':` value="${w.duration}"`}></div>
     <div class="field"><label>Como se sentiu?</label>
       <div class="radio-grid g3" id="rl-rate"><div class="opt" data-val="1">😩 Difícil</div><div class="opt on" data-val="3">😊 Normal</div><div class="opt" data-val="5">🚀 Ótimo</div></div>
     </div>
     <div class="row" style="gap:8px;margin-top:14px">
       <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary btn-block" onclick="saveRunLog('${dayIdx}')">💾 Salvar</button>
+      <button class="btn btn-primary btn-block" onclick="saveRunLog('${w.k==='livre'?'livre':dayIdx}')">💾 Salvar</button>
     </div>`;
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');
@@ -3544,24 +3591,24 @@ function saveRunLog(dayIdx){
   if(!km || km<=0){ toast('Distância inválida'); return; }
   if(!min || min<=0){ toast('Tempo inválido'); return; }
   const mod = state.modules.run;
-  const w = mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx));
+  const livre = String(dayIdx)==='livre';
+  const w = livre ? { k:'livre', name:'Atividade livre', dayIdx:getDayIdx() } : mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx));
+  if(!w){ toast('Erro ao registrar'); return; }
   const pace = (min/km);
   const paceStr = Math.floor(pace) + ':' + String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0') + '/km';
   const meta = ACTIVITY_META[type] || ACTIVITY_META.corrida;
-  const name = type==='corrida' ? w.name : `${meta.emo} ${meta.lbl} — ${km}km`;
+  const name = (type==='corrida' && !livre) ? w.name : `${meta.emo} ${meta.lbl} — ${km}km`;
   mod.history = mod.history || [];
   mod.history.push({ id:w.k, name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, module:'run', activity:type });
+  // Os contadores vitalícios são recalculados por ensureStats (histórico + reserva do que já
+  // saiu pela limpeza de 90 dias). NÃO somamos manualmente aqui pra evitar contagem dobrada.
   ensureStats();
   if(type==='corrida'){
-    // só corrida conta pros troféus e recordes de corrida (caminhada/bike têm ritmos incomparáveis)
-    state.stats.runTotal++; state.stats.runKmTotal += km;
     checkRunEvolution(km, paceStr);
   } else if(type==='caminhada'){
-    state.stats.walkTotal++; state.stats.walkKmTotal += km;
     if(km>=3) unlockTrophy('walk_3k');
     if(km>=5) unlockTrophy('walk_5k');
   } else if(type==='bike'){
-    state.stats.bikeTotal++; state.stats.bikeKmTotal += km;
     if(km>=20) unlockTrophy('bike_20k');
     if(km>=50) unlockTrophy('bike_50k');
   }
