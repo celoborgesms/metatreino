@@ -1,5 +1,5 @@
-// ===== MetaTreino v5.7 =====
-const APP_VERSION = 'v5.7';
+// ===== MetaTreino v5.8 =====
+const APP_VERSION = 'v5.8';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2428,6 +2428,141 @@ function maInterpret(txt){
   if(has('motiv','frase','ânimo','animo','desanim')) return 'motiva';
   return null;
 }
+// ===== META ASSISTENTE: COMANDOS (executa ações por conversa) =====
+// Interpreta frases de AÇÃO e devolve {done:true, msg} se executou, ou null se não é comando.
+function maTryCommand(txt){
+  const t = txt.toLowerCase().trim();
+  const num = re => { const m=t.match(re); return m?parseFloat(m[1].replace(',','.')):null; };
+
+  // ---- PESO ----
+  // "estou pesando 108", "meu peso é 90kg", "pesei 85"
+  let m = t.match(/(?:pesando|peso (?:é|e|atual|de)|pesei|estou com)\s*(\d+[.,]?\d*)\s*(?:kg|quilos?)?/);
+  if(m && !/emagrec|engord|perdi|ganhei/.test(t)){
+    const kg = parseFloat(m[1].replace(',','.'));
+    if(kg>=30 && kg<=300) return maSetWeight(kg);
+  }
+  // "emagreci 2kg", "perdi 3 kg"
+  m = t.match(/(?:emagreci|perdi|baixei)\s*(\d+[.,]?\d*)\s*(?:kg|quilos?)?/);
+  if(m){ const d=parseFloat(m[1].replace(',','.')); const cur=latestWeight(); if(cur) return maSetWeight(Math.max(30,cur-d), `Que ótimo! Registrei sua perda de ${d}kg. `); return {done:true,msg:'Pra eu registrar sua perda de peso, primeiro me diga seu peso atual (ex: "estou pesando 90kg"). 😊'}; }
+  // "engordei 3kg", "ganhei 2 kg"
+  m = t.match(/(?:engordei|ganhei|subi)\s*(\d+[.,]?\d*)\s*(?:kg|quilos?)?/);
+  if(m && /kg|quilo|peso|engord/.test(t)){ const d=parseFloat(m[1].replace(',','.')); const cur=latestWeight(); if(cur) return maSetWeight(cur+d, `Registrei +${d}kg. Sem drama — o que importa é a constância! `); return {done:true,msg:'Pra registrar, primeiro me diga seu peso atual (ex: "estou pesando 90kg"). 😊'}; }
+
+  // ---- ATIVIDADE (corrida/caminhada/bike) ----
+  // "corri 5km em 40 minutos", "caminhei 3 km em 23 min", "pedalei 7km em 40min"
+  m = t.match(/(corri|caminhei|pedalei|andei de bike|andei de bicicleta)\D*(\d+[.,]?\d*)\s*km\D*(\d+)\s*(?:min|minuto)/);
+  if(m){
+    const verb=m[1]; const km=parseFloat(m[2].replace(',','.')); const min=parseInt(m[3]);
+    const type = /corri/.test(verb)?'corrida':/caminhei/.test(verb)?'caminhada':'bike';
+    return maLogActivity(type, km, min);
+  }
+  // sem tempo: "corri 5km", "pedalei 10 km"
+  m = t.match(/(corri|caminhei|pedalei)\D*(\d+[.,]?\d*)\s*km/);
+  if(m){
+    const type = /corri/.test(m[1])?'corrida':/caminhei/.test(m[1])?'caminhada':'bike';
+    return {done:true, msg:`Quase lá! Me diga também o tempo pra eu registrar, ex: "${m[1]} ${m[2]}km em 30 minutos". ⏱️`};
+  }
+
+  // ---- DOR ----
+  m = t.match(/dor (?:no|na|nos|nas|em|de)?\s*(ombro|lombar|coluna|costas|joelho|punho|cotovelo|tornozelo|pé|pe|pesco[çc]o|perna)/);
+  if(/dor/.test(t) && (m || /estou com dor|to com dor|tô com dor|sinto dor|machuquei/.test(t))){
+    return maSetPain(m?m[1]:null, t);
+  }
+
+  // ---- ESTADO EMOCIONAL / CANSAÇO ----
+  if(/(estou|tô|to|me sinto|sinto)\s*(muito\s*)?(cansad|exaust|sem energia|acabad|esgotad)/.test(t)) return maTired();
+  if(/(estou|tô|to|me sinto|sinto)\s*(triste|pra baixo|desanimad|sem [aâ]nimo|deprim|mal)/.test(t)) return maSad();
+  if(/(estou|tô|to)\s*(de tpm|na tpm|menstruad|naqueles dias|de chico)/.test(t) || t.includes('tpm')) return maTPM();
+
+  // ---- VOLTAR AO NORMAL ----
+  if(/(voltar ao normal|to bem agora|tô bem agora|estou bem agora|sem dor agora|passou a dor|voltar treino normal|normalizar)/.test(t)) return maBackToNormal();
+
+  // ---- MUSCULAÇÃO manual ----
+  // "fiz musculação hoje", "treinei peito", "fiz treino de costas"
+  m = t.match(/(?:fiz|treinei|malhei)\s*(?:treino de |muscula[çc][ãa]o de )?(peito|costas|ombro|b[íi]ceps|tr[íi]ceps|perna|pernas|gl[úu]teo|panturrilha|core|abd[oô]men|trap[ée]zio)?/);
+  if(m && /fiz|treinei|malhei/.test(t) && (m[1] || /muscula/.test(t))){
+    return maLogLift(m[1]||null);
+  }
+  return null;
+}
+function maSetWeight(kg, prefix){
+  kg = Math.round(kg*10)/10;
+  state.weights = state.weights||[];
+  state.weights.push({ date:Date.now(), weight:kg });
+  if(state.user.profile) state.user.profile.currentWeight = kg;
+  saveData(); if(typeof checkWeightTrophies==='function') checkWeightTrophies();
+  const imc = (()=>{ try{ const r=calcIMC(); return r?` Seu IMC agora é ${r.value} (${r.cls}).`:''; }catch(e){ return ''; } })();
+  return {done:true, msg:`${prefix||''}✅ Peso atualizado para ${kg}kg.${imc} Registrei no seu histórico corporal! 📊`};
+}
+function maLogActivity(type, km, min){
+  if(km<=0||km>200||min<=0||min>600) return {done:true, msg:'Esses números parecem estranhos 🤔. Tenta de novo, ex: "corri 5km em 30 minutos".'};
+  const mod = state.modules.run;
+  if(!mod){ return {done:true, msg:'Você ainda não tem um plano de corrida ativo. Crie um primeiro pra eu registrar suas atividades! 🏃'}; }
+  const paceNum = min/km;
+  const paceStr = Math.floor(paceNum)+':'+String(Math.round((paceNum-Math.floor(paceNum))*60)).padStart(2,'0')+'/km';
+  const meta = {corrida:{emo:'🏃',lbl:'Corrida'},caminhada:{emo:'🚶',lbl:'Caminhada'},bike:{emo:'🚴',lbl:'Bike'}}[type];
+  const name = type==='corrida' ? `${meta.emo} Corrida — ${km}km` : `${meta.emo} ${meta.lbl} — ${km}km`;
+  mod.history = mod.history||[];
+  mod.history.push({ id:'ma', name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating:3, module:'run', activity:type });
+  ensureStats();
+  if(type==='corrida' && typeof checkRunEvolution==='function') checkRunEvolution(km, paceStr);
+  else if(type==='caminhada'){ if(km>=3)unlockTrophy('walk_3k'); if(km>=5)unlockTrophy('walk_5k'); }
+  else if(type==='bike'){ if(km>=20)unlockTrophy('bike_20k'); if(km>=50)unlockTrophy('bike_50k'); }
+  if(typeof checkTrophies==='function') checkTrophies();
+  saveData();
+  return {done:true, msg:`✅ Registrei sua ${meta.lbl.toLowerCase()}: ${km}km em ${min} min (ritmo ${paceStr}). Está no seu histórico! ${meta.emo} Mandou bem!`};
+}
+function maLogLift(part){
+  const mod = state.modules.lift;
+  if(!mod){ return {done:true, msg:'Você ainda não tem um plano de musculação ativo. Crie um primeiro! 💪'}; }
+  const map = {peito:'Peito',costas:'Costas',ombro:'Ombro','bíceps':'Bíceps',biceps:'Bíceps','tríceps':'Tríceps',triceps:'Tríceps',perna:'Pernas',pernas:'Pernas','glúteo':'Glúteos',gluteo:'Glúteos',panturrilha:'Panturrilha',core:'Core','abdômen':'Core',abdomen:'Core','trapézio':'Trapézio',trapezio:'Trapézio'};
+  const grupo = part ? map[part] : null;
+  const parts = grupo ? [grupo] : ['Peito'];
+  const dur = 45;
+  mod.history = mod.history||[];
+  mod.history.push({ id:'ma', name:'Treino registrado — '+parts.join(' + '), at:Date.now(), duration:dur, module:'lift', feel:'bem', parts, exercisesDone:[] });
+  ensureStats(); if(typeof checkTrophies==='function') checkTrophies();
+  saveData();
+  return {done:true, msg:`✅ Registrei seu treino de ${parts.join(' + ').toLowerCase()} no histórico! 💪 Dica: pra acompanhar sua evolução de carga, da próxima vez registre as séries pela aba Sessões — assim eu guardo seus recordes.`};
+}
+function maSetPain(area, txt){
+  const map = {ombro:'Ombro',lombar:'Lombar',coluna:'Lombar',costas:'Lombar',joelho:'Joelho',punho:'Punho/Cotovelo',cotovelo:'Punho/Cotovelo',tornozelo:'Tornozelo','pé':'Tornozelo',pe:'Tornozelo','pescoço':'Pescoço',pescoco:'Pescoço',perna:'Joelho'};
+  const painArea = area ? map[area] : null;
+  state.user.pain = state.user.pain||[];
+  if(painArea && !state.user.pain.includes(painArea)) state.user.pain.push(painArea);
+  if(typeof regenLiftExercises==='function') regenLiftExercises();
+  saveData();
+  const base = painArea
+    ? `Entendi, você está com dor ${area==='joelho'||area==='ombro'||area==='cotovelo'||area==='punho'||area==='tornozelo'?'no':area==='costas'||area==='coluna'||area==='lombar'||area==='perna'?'na':'no'} ${area}. Já adaptei seus treinos pra proteger essa região 🩹.`
+    : 'Entendi que você está com dor. Adaptei seus treinos pra pegar leve 🩹.';
+  return {done:true, msg:`${base} Se a dor for forte ou persistir, procure um profissional de saúde — isso vem antes de qualquer treino. Quando melhorar, é só me dizer "voltar ao normal". 💚`};
+}
+function maTired(){
+  const mod = state.modules[state.active];
+  const restToday = mod && mod.plan && !mod.plan.workouts.find(w=>w.dayIdx===getDayIdx());
+  let msg = 'Cansaço faz parte — e escutar o corpo é sinal de maturidade, não de fraqueza. ';
+  if(restToday) msg += 'Hoje já é seu dia de descanso, então aproveite pra recarregar de verdade. 😴';
+  else msg += 'Se você treinou pesado ontem, um treino mais leve hoje (ou até um dia extra de descanso) é totalmente válido. Se resolver treinar, comece devagar e veja como o corpo responde. Sono e hidratação ajudam muito na recuperação. 💚';
+  return {done:true, msg};
+}
+function maSad(){
+  return {done:true, msg:`Sinto muito que você esteja assim, ${maName()}. 💙 Dias difíceis acontecem com todo mundo. O exercício pode ajudar a clarear a cabeça — que tal uma caminhada leve, sem cobrança de desempenho? Mas se você não estiver bem, tudo bem descansar hoje. E se esse sentimento persistir, conversar com alguém de confiança ou um profissional faz muita diferença. Você não está sozinho. 🤍`};
+}
+function maTPM(){
+  state.user.pain = state.user.pain||[];
+  if(!state.user.tpmMode){ state.user.tpmMode = true; if(typeof regenLiftExercises==='function') regenLiftExercises(); saveData(); }
+  return {done:true, msg:'Entendi 💗. Nesses dias o corpo pede mais gentileza — deixei seus treinos mais leves. Respeite seu ritmo: treinar leve ou até descansar é perfeitamente ok. Movimento suave (caminhada, alongamento) pode ajudar com o desconforto, mas sem cobrança. Quando quiser voltar ao normal, é só dizer "voltar ao normal". 🌸'};
+}
+function maBackToNormal(){
+  const tinha = (state.user.pain&&state.user.pain.length) || state.user.tpmMode;
+  state.user.pain = [];
+  state.user.tpmMode = false;
+  if(typeof regenLiftExercises==='function') regenLiftExercises();
+  saveData();
+  return {done:true, msg: tinha ? '🎉 Que bom que está melhor! Seus treinos voltaram ao normal. Bora com tudo — respeitando sempre os limites do corpo! 💪' : 'Tudo certo, seus treinos já estão no modo normal! 💪'};
+}
+// ===== FIM COMANDOS =====
+
 // respostas sociais (não dependem de dados)
 const MA_SOCIAL = {
   _oi(){ const s=maSaudacao(); return `${s}, ${maName()}! 👋 Como posso te ajudar? Você pode me perguntar sobre sua evolução, corrida, troféus, meta e mais — ou tocar numa das sugestões.`; },
@@ -2442,7 +2577,7 @@ const MA_SOCIAL = {
 function maSaudacao(){ const h=new Date().getHours(); return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'; }
 let maThread = [];
 function openAssistant(){
-  maThread = [{who:'bot', txt:`👋 Olá, ${maName()}! Sou o Meta Assistente. Toque numa pergunta ou digite a sua — respondo com base nos seus treinos reais.`}];
+  maThread = [{who:'bot', txt:`👋 Olá, ${maName()}! Sou o Meta Assistente. Pergunte sobre seus treinos ou me peça pra registrar coisas — ex: "corri 5km em 30 min", "estou pesando 90kg" ou "estou com dor no joelho". Toque numa sugestão ou digite. 💪`}];
   renderAssistant();
 }
 function renderAssistant(){
@@ -2450,14 +2585,19 @@ function renderAssistant(){
     ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:11px 14px;margin:6px 0;font-size:13.5px;line-height:1.5;max-width:88%">${m.txt}</div>`
     : `<div style="background:var(--surface);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${m.txt}</div>`
   ).join('');
+  // se a pessoa está com dor ou modo TPM, mostra atalho de voltar ao normal
+  const emModoLeve = (state.user && ((state.user.pain&&state.user.pain.length) || state.user.tpmMode));
+  const sugs = emModoLeve
+    ? [{lbl:'💚 Voltar treinos ao normal', key:'_normal'}, ...MA_SUGGESTIONS]
+    : MA_SUGGESTIONS;
   $('modal-inner').innerHTML = `
     <h3>🤖 Meta Assistente</h3>
     <div id="ma-thread" style="max-height:42vh;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column">${bubbles}</div>
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px">
-      ${MA_SUGGESTIONS.map(s=>`<button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;white-space:nowrap;flex-shrink:0" onclick="maAsk('${s.key}')">${s.lbl}</button>`).join('')}
+      ${sugs.map(s=>`<button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;white-space:nowrap;flex-shrink:0" onclick="maAsk('${s.key}')">${s.lbl}</button>`).join('')}
     </div>
     <div class="row" style="gap:6px">
-      <input class="input" id="ma-input" placeholder="Pergunte algo..." style="flex:1" onkeydown="if(event.key==='Enter')maAskText()">
+      <input class="input" id="ma-input" placeholder="Pergunte ou registre algo..." style="flex:1" onkeydown="if(event.key==='Enter')maAskText()">
       <button class="btn btn-primary" style="padding:11px 16px" onclick="maAskText()">➤</button>
     </div>
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
@@ -2465,6 +2605,13 @@ function renderAssistant(){
   const th=$('ma-thread'); if(th) th.scrollTop=th.scrollHeight;
 }
 function maAsk(key){
+  if(key==='_normal'){
+    maThread.push({who:'user', txt:'Voltar treinos ao normal'});
+    const r = maBackToNormal();
+    maThread.push({who:'bot', txt:r.msg});
+    renderAssistant();
+    return;
+  }
   const sug = MA_SUGGESTIONS.find(s=>s.key===key);
   maThread.push({who:'user', txt: sug?sug.lbl.replace(/^[^\s]+\s/,''):key});
   const fn = MA_ANSWERS[key];
@@ -2475,11 +2622,17 @@ function maAskText(){
   const inp=$('ma-input'); if(!inp) return;
   const txt=inp.value.trim(); if(!txt) return;
   maThread.push({who:'user', txt});
-  const key=maInterpret(txt);
   let answer;
-  if(key && MA_SOCIAL[key]) answer = MA_SOCIAL[key]();
-  else if(key && MA_ANSWERS[key]) answer = MA_ANSWERS[key]();
-  else answer = 'Hmm, não entendi bem. 🤔 Você pode perguntar sobre: sua evolução, corrida, troféus, meta, recordes, peso, calorias — ou tocar numa das sugestões acima.';
+  // 1) tenta executar como COMANDO (registrar peso, atividade, dor, etc.)
+  const cmd = maTryCommand(txt);
+  if(cmd && cmd.done){ answer = cmd.msg; }
+  else {
+    // 2) senão, interpreta como pergunta/social
+    const key = maInterpret(txt);
+    if(key && MA_SOCIAL[key]) answer = MA_SOCIAL[key]();
+    else if(key && MA_ANSWERS[key]) answer = MA_ANSWERS[key]();
+    else answer = 'Hmm, não entendi bem. 🤔 Você pode me pedir pra registrar coisas ("corri 5km em 30 min", "estou pesando 90kg", "estou com dor no joelho") ou perguntar sobre sua evolução, corrida, troféus, meta, recordes... É só falar!';
+  }
   maThread.push({who:'bot', txt:answer});
   renderAssistant();
 }
@@ -2611,8 +2764,11 @@ function stopRestTimer(){
 function regenLiftExercises(){
   const mod = state.modules.lift;
   if(!mod || !mod.plan) return;
+  const tpm = state.user && state.user.tpmMode;
   mod.plan.workouts.forEach(w=>{
     w.exercises = buildLiftExercises(w.parts, mod.setup);
+    // modo TPM: aligeira o treino (menos séries, deixa mais confortável)
+    if(tpm) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
     w.duration = estimateLiftDuration(w.exercises, mod.setup.goal);
   });
 }
