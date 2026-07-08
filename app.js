@@ -1,5 +1,5 @@
-// ===== MetaTreino v5.3 =====
-const APP_VERSION = 'v5.3';
+// ===== MetaTreino v5.4 =====
+const APP_VERSION = 'v5.4';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -922,6 +922,21 @@ function toast(msg){
   setTimeout(()=>t.remove(), 3200);
 }
 function getDayIdx(){ const d=new Date().getDay(); return d===0?7:d; }
+// Detecta treinos do plano que estavam marcados pra dias ANTERIORES desta semana
+// e não foram registrados — pra sugerir "recuperar" sem quebrar a grade fixa de dias.
+function missedWorkoutsThisWeek(mod){
+  if(!mod || !mod.plan) return [];
+  const today = getDayIdx();
+  const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-(today-1));
+  const t0 = startWk.getTime();
+  const hist = mod.history||[];
+  return (mod.plan.workouts||[]).filter(w=>{
+    if(w.dayIdx >= today) return false; // só dias que já passaram
+    // registrou algo desse treino nesta semana?
+    const did = hist.some(h=>{ if(h.at<t0) return false; return h.id===w.k || (h.dayIdx===w.dayIdx); });
+    return !did;
+  });
+}
 function greetTime(){ const h=new Date().getHours(); if(h<12) return 'Bom dia'; if(h<18) return 'Boa tarde'; return 'Boa noite'; }
 function firstName(){ const p = state.user.profile; return (p&&p.nickname) || (state.user.name||'').split(' ')[0]; }
 // ---------- VÍDEOS PERSONALIZADOS DOS EXERCÍCIOS ----------
@@ -1021,6 +1036,18 @@ function renderHome(){
   }
 
   const cw = currentWeek(mod);
+  // treinos pendentes desta semana (perdeu um dia?) — sugere recuperar
+  const missed = $('card-missed');
+  if(missed){
+    const pend = missedWorkoutsThisWeek(mod);
+    if(pend.length){
+      missed.classList.remove('hidden');
+      const nomes = pend.map(w=>w.name.split(' — ')[0]).join(', ');
+      $('missed-title').textContent = pend.length===1 ? '📌 Você tem 1 treino pendente' : `📌 Você tem ${pend.length} treinos pendentes`;
+      $('missed-msg').textContent = `Faltou ${pend.length===1?'o treino':'os treinos'} de ${nomes} esta semana. Sem problema — faça o treino atrasado hoje pra não perder o ritmo. O importante é completar os ${mod.plan.workouts.length} treinos da semana, não o dia exato.`;
+      missed.onclick = ()=>{ goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); };
+    } else missed.classList.add('hidden');
+  }
   // lembrete de peso: 7+ dias sem registrar
   const wr = $('card-weight-reminder');
   if(wr){
@@ -2163,6 +2190,225 @@ function partsFromEntry(x){
   return m ? m.split('+').map(s=>s.trim()).filter(Boolean) : [];
 }
 
+// ========== META ASSISTENTE (respostas por regras, com dados reais do aluno) ==========
+function maName(){ return (state.user && state.user.profile && state.user.profile.nickname) || (state.user && state.user.name) || 'atleta'; }
+function maAllHistory(){ return [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])].sort((a,b)=>a.at-b.at); }
+function maDaysUsing(){
+  const created = Math.min(state.modules.lift?.createdAt||Infinity, state.modules.run?.createdAt||Infinity);
+  if(!isFinite(created)) return 0;
+  return Math.max(1, Math.floor((Date.now()-created)/86400000));
+}
+const MA_ANSWERS = {
+  treino_hoje(){
+    const today = new Date(); today.setHours(0,0,0,0);
+    const done = maAllHistory().filter(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime()===today.getTime(); });
+    if(!done.length){
+      const liftT = state.modules.lift?.plan?.workouts?.find(w=>w.dayIdx===getDayIdx());
+      const runT = state.modules.run?.plan?.workouts?.find(w=>w.dayIdx===getDayIdx());
+      if(liftT||runT) return `Hoje você ainda não registrou treino. No plano tem: ${[liftT&&('💪 '+(liftT.name||'Musculação')),runT&&('🏃 '+(runT.name||'Corrida'))].filter(Boolean).join(' e ')}. Bora? 💪`;
+      return 'Hoje é dia de descanso no seu plano. Aproveite pra recuperar — descanso também é treino! 😴';
+    }
+    const lift = done.filter(x=>x.module==='lift'), run = done.filter(x=>x.module==='run');
+    let r = '';
+    if(lift.length){ const w=lift[0]; const n=(w.exercisesDone||[]).length; r += `Hoje você concluiu ${w.name}${n?` — ${n} exercícios`:''}, cerca de ${w.duration} min.${w.feel?` Você terminou se sentindo "${({otimo:'muito bem 🚀',bem:'bem 😊',cansado:'cansado 😮‍💨',exausto:'exausto 😩'})[w.feel]}".`:''} `; }
+    if(run.length){ const w=run[0]; r += `${lift.length?'E ':''}Registrou ${w.name.replace(/^[🚶🚴🏃]\s*/,'')}${w.distance?` — ${w.distance}km`:''} em ${w.duration} min${w.pace?` (${w.pace})`:''}. `; }
+    return r + 'Excelente trabalho! 👏';
+  },
+  evolucao(){
+    const h = maAllHistory();
+    if(h.length<2) return 'Ainda é cedo pra medir evolução — continue registrando seus treinos que em poucas semanas eu te mostro sua tendência. 📈';
+    const now=Date.now();
+    const last30 = h.filter(x=>x.at>=now-30*86400000).length;
+    const prev30 = h.filter(x=>x.at>=now-60*86400000 && x.at<now-30*86400000).length;
+    let r = `Nos últimos 30 dias você treinou ${last30} ${last30===1?'vez':'vezes'}.`;
+    if(prev30>0){ const dif=Math.round((last30-prev30)/prev30*100); r += dif>=0?` Isso é ${dif}% a mais que no mês anterior — constância subindo! 🔥`:` Foi ${Math.abs(dif)}% a menos que no mês anterior. Bora retomar o ritmo? 💪`; }
+    else if(last30>0) r += ' Esse é seu primeiro mês com registros — ótimo começo!';
+    const streak = calcStreak(h);
+    if(streak>=3) r += ` Sua sequência atual é de ${streak} dias. 🔥`;
+    return r;
+  },
+  perder_peso(){
+    const freq = maAllHistory().filter(x=>x.at>=Date.now()-30*86400000).length;
+    const perWeek = Math.round(freq/4.3*10)/10;
+    let base = 'Não dá pra prever com exatidão — depende de alimentação, sono e fatores individuais.';
+    if(perWeek>=4) base += ` Mas mantendo sua frequência atual (~${perWeek}x/semana) com alimentação adequada, muita gente perde entre 2 e 4 kg por mês.`;
+    else if(perWeek>=1) base += ` Treinando ~${perWeek}x/semana com boa alimentação, uma faixa comum é 1 a 3 kg por mês.`;
+    else base += ' Aumentar a frequência de treino ajuda bastante — comece com uma meta realista de 3x por semana.';
+    return base + ' Pra um plano preciso, vale conversar com um nutricionista. 🥗';
+  },
+  corrida(){
+    const runs = (state.modules.run?.history||[]).filter(r=>!r.activity||r.activity==='corrida');
+    if(!runs.length) return 'Você ainda não registrou corridas. Quando registrar algumas, eu te mostro sua evolução de distância e ritmo! 🏃';
+    const now=Date.now();
+    const kmMonth = runs.filter(r=>r.at>=now-30*86400000).reduce((s,r)=>s+(r.distance||0),0);
+    const longest = Math.max(...runs.map(r=>r.distance||0));
+    let r = `Você correu ${kmMonth.toFixed(1)}km neste último mês. Sua maior distância registrada foi ${longest}km.`;
+    const paces = runs.filter(r=>r.pace).map(r=>parsePace(r.pace));
+    if(paces.length>=4){
+      const first = paces.slice(0,Math.ceil(paces.length/2)); const last = paces.slice(-Math.ceil(paces.length/2));
+      const avg = a=>a.reduce((s,x)=>s+x,0)/a.length;
+      const fp=avg(first), lp=avg(last);
+      const fmt = sec=>Math.floor(sec/60)+':'+String(Math.round(sec%60)).padStart(2,'0');
+      if(lp<fp) r += ` Seu pace médio melhorou de ${fmt(fp)} para ${fmt(lp)} min/km. Parabéns pela evolução! ⚡`;
+      else r += ` Seu pace está estável em torno de ${fmt(lp)} min/km.`;
+    }
+    return r;
+  },
+  trofeus(){
+    const u = state.trophies.length, t = TROPHIES.length;
+    const locked = TROPHIES.filter(x=>!state.trophies.includes(x.id));
+    let closest=null, bestPct=0;
+    locked.forEach(tr=>{ const pr=trophyProgress(tr.id); if(pr&&pr[1]>0){ const pct=pr[0]/pr[1]; if(pct>bestPct&&pct<1){ bestPct=pct; closest={tr,pr}; } } });
+    let r = `Você desbloqueou ${u} de ${t} troféus (${Math.round(u/t*100)}%).`;
+    if(closest) r += ` O mais perto é "${closest.tr.name}": ${Math.floor(closest.pr[0])}/${closest.pr[1]}. Falta pouco! 🏆`;
+    return r;
+  },
+  meta(){
+    const mod = state.modules[state.active];
+    if(!mod||!mod.plan) return 'Você ainda não tem um plano ativo. Crie um pra eu acompanhar sua meta! 🎯';
+    const cw = currentWeek(mod);
+    const wkDone = (mod.history||[]).filter(x=>x.at>=Date.now()-7*86400000).length;
+    const target = mod.plan.workouts.length;
+    let r = `Sua meta é ${labelGoal(mod)} — semana ${cw.wk} de ${cw.total}. Esta semana você fez ${wkDone} de ${target} treinos.`;
+    if(wkDone>=target) r += ' Meta batida! 🎉';
+    else r += ` Faltam ${target-wkDone} pra fechar a semana. Você consegue! 💪`;
+    if(state.active==='run'){ const dr=daysToRace(); if(dr!==null&&dr>=0&&dr<400) r += ` Faltam ${dr} dias pra sua prova.`; }
+    return r;
+  },
+  musculo_menos(){
+    const now=Date.now();
+    const counts={};
+    (state.modules.lift?.history||[]).filter(x=>x.at>=now-60*86400000).forEach(x=>{ partsFromEntry(x).forEach(p=>{ counts[p]=(counts[p]||0)+1; }); });
+    const entries=Object.entries(counts);
+    if(entries.length<2) return 'Ainda não tenho treinos suficientes pra comparar grupos musculares. Continue registrando! 💪';
+    entries.sort((a,b)=>a[1]-b[1]);
+    const menos=entries[0], mais=entries[entries.length-1];
+    const resumo = entries.slice().sort((a,b)=>b[1]-a[1]).map(([p,n])=>`${p} ${n}x`).join(', ');
+    return `Nos últimos 60 dias: ${resumo}. Você treina ${mais[0].toLowerCase()} com mais frequência e ${menos[0].toLowerCase()} com menos — vale dar mais atenção a ${menos[0].toLowerCase()} pra equilibrar. ⚖️`;
+  },
+  pausa(){
+    const h = maAllHistory();
+    if(h.length<2) return 'Você mal começou — sem pausas relevantes ainda. Mantenha o ritmo! 🔥';
+    const days=[...new Set(h.map(x=>{const d=new Date(x.at);d.setHours(0,0,0,0);return d.getTime();}))].sort((a,b)=>a-b);
+    let maxGap=0; for(let i=1;i<days.length;i++) maxGap=Math.max(maxGap,(days[i]-days[i-1])/86400000);
+    const streak=calcStreak(h);
+    return `Sua maior pausa foi de ${Math.round(maxGap)} dias. ${streak>0?`Atualmente você está com ${streak} ${streak===1?'dia':'dias'} de sequência. 🔥`:'Que tal recomeçar hoje a sua sequência? 💪'}`;
+  },
+  recorde(){
+    const prs=Object.entries(state.prs||{});
+    if(!prs.length) return 'Você ainda não tem recordes registrados. Registre suas séries de musculação que eu começo a guardar seus PRs! 🏆';
+    const top=prs.map(([id,pr])=>({id,...pr})).sort((a,b)=>b.peso-a.peso).slice(0,3);
+    const nome=id=>{ for(const c of EX_BANK) for(const e of c.items) if(slug(e.name)===id) return e.name; return id; };
+    return 'Seus maiores recordes: '+top.map(p=>`${nome(p.id)} — ${p.peso}kg×${p.reps}`).join('; ')+'. 💪';
+  },
+  tempo_uso(){
+    const d=maDaysUsing();
+    const total=maAllHistory().length;
+    return `Você usa o MetaTreino há ${d} ${d===1?'dia':'dias'} e já registrou ${total} ${total===1?'atividade':'atividades'}. Obrigado por treinar com a gente! 🙌`;
+  },
+  corrida_ou_musculacao(){
+    const now=Date.now();
+    const lift=(state.modules.lift?.history||[]).filter(x=>x.at>=now-30*86400000).length;
+    const run=(state.modules.run?.history||[]).filter(x=>x.at>=now-30*86400000).length;
+    if(!lift&&!run) return 'Nenhum treino registrado neste mês ainda. Bora mudar isso? 💪';
+    if(lift>run) return `Neste mês você treinou mais musculação: ${lift} treinos de força contra ${run} de corrida/atividades. 💪`;
+    if(run>lift) return `Neste mês você foi mais pra corrida: ${run} atividades contra ${lift} de musculação. 🏃`;
+    return `Equilíbrio perfeito neste mês: ${lift} de musculação e ${run} de corrida! ⚖️`;
+  },
+  maior_peso(){
+    if(!state.weights||!state.weights.length) return 'Você ainda não registrou seu peso. Faça isso no Perfil pra acompanhar sua evolução corporal! ⚖️';
+    const pesos=state.weights.map(w=>w.weight);
+    const max=Math.max(...pesos), min=Math.min(...pesos), atual=pesos[pesos.length-1];
+    return `Seu peso atual é ${atual}kg. Máximo registrado: ${max}kg, mínimo: ${min}kg. ${atual<max?`Você já reduziu ${(max-atual).toFixed(1)}kg do seu pico! 👏`:''}`;
+  },
+  calorias(){
+    const now=Date.now();
+    const wk=maAllHistory().filter(x=>x.at>=now-7*86400000);
+    const min=wk.reduce((s,x)=>s+(x.duration||0),0);
+    const kcal=Math.round(min*7);
+    if(!min) return 'Você não registrou treinos esta semana ainda. Bora movimentar? 🔥';
+    return `Esta semana você somou ~${min} min de treino, o que representa aproximadamente ${kcal} kcal gastas. É uma estimativa grosseira — o gasto real varia com intensidade, peso e metabolismo. 🔥`;
+  },
+  motiva(){
+    return contextualQuote() || QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  }
+};
+const MA_SUGGESTIONS = [
+  {lbl:'📈 Minha evolução', key:'evolucao'},
+  {lbl:'💪 Como foi meu treino?', key:'treino_hoje'},
+  {lbl:'🏃 Minha corrida', key:'corrida'},
+  {lbl:'🏆 Meus troféus', key:'trofeus'},
+  {lbl:'🎯 Minha meta', key:'meta'},
+  {lbl:'⚖️ Que músculo treino menos?', key:'musculo_menos'},
+  {lbl:'📅 Quanto fiquei sem treinar?', key:'pausa'},
+  {lbl:'🥇 Meu recorde', key:'recorde'},
+  {lbl:'⏳ Há quanto uso o app?', key:'tempo_uso'},
+  {lbl:'🔀 Corrida ou musculação?', key:'corrida_ou_musculacao'},
+  {lbl:'⚖️ Meu peso', key:'maior_peso'},
+  {lbl:'🔥 Calorias da semana', key:'calorias'},
+  {lbl:'❤️ Me motive', key:'motiva'}
+];
+function maInterpret(txt){
+  const t = txt.toLowerCase();
+  const has = (...ws)=>ws.some(w=>t.includes(w));
+  if(has('perder','emagrec','quantos kg','quanto kg','posso perder')) return 'perder_peso';
+  if(has('evolu','melhor','pior','progress','constan')) return 'evolucao';
+  if(has('treino hoje','foi meu treino','como fui','treinei hoje')) return 'treino_hoje';
+  if(has('corrida','correr','pace','ritmo')) return 'corrida';
+  if(has('trofé','trofe','conquista','medalh')) return 'trofeus';
+  if(has('meta','objetivo','prova')) return 'meta';
+  if(has('músculo','musculo','menos')) return 'musculo_menos';
+  if(has('pausa','sem treinar','parado','sequ','streak')) return 'pausa';
+  if(has('recorde','pr ','carga máxima','peso máximo')) return 'recorde';
+  if(has('quanto tempo','há quanto','uso o app','tempo de uso')) return 'tempo_uso';
+  if(has('mais corrida','mais muscula','corrida ou')) return 'corrida_ou_musculacao';
+  if(has('caloria','kcal','gastei','queim')) return 'calorias';
+  if(has('peso','magro','gordura','quilos')) return 'maior_peso';
+  if(has('motiv','frase','ânimo','animo','desanim')) return 'motiva';
+  return null;
+}
+let maThread = [];
+function openAssistant(){
+  maThread = [{who:'bot', txt:`👋 Olá, ${maName()}! Sou o Meta Assistente. Toque numa pergunta ou digite a sua — respondo com base nos seus treinos reais.`}];
+  renderAssistant();
+}
+function renderAssistant(){
+  const bubbles = maThread.map(m=>m.who==='bot'
+    ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:11px 14px;margin:6px 0;font-size:13.5px;line-height:1.5;max-width:88%">${m.txt}</div>`
+    : `<div style="background:var(--surface);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${m.txt}</div>`
+  ).join('');
+  $('modal-inner').innerHTML = `
+    <h3>🤖 Meta Assistente</h3>
+    <div id="ma-thread" style="max-height:42vh;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column">${bubbles}</div>
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px">
+      ${MA_SUGGESTIONS.map(s=>`<button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;white-space:nowrap;flex-shrink:0" onclick="maAsk('${s.key}')">${s.lbl}</button>`).join('')}
+    </div>
+    <div class="row" style="gap:6px">
+      <input class="input" id="ma-input" placeholder="Pergunte algo..." style="flex:1" onkeydown="if(event.key==='Enter')maAskText()">
+      <button class="btn btn-primary" style="padding:11px 16px" onclick="maAskText()">➤</button>
+    </div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+  const th=$('ma-thread'); if(th) th.scrollTop=th.scrollHeight;
+}
+function maAsk(key){
+  const sug = MA_SUGGESTIONS.find(s=>s.key===key);
+  maThread.push({who:'user', txt: sug?sug.lbl.replace(/^[^\s]+\s/,''):key});
+  const fn = MA_ANSWERS[key];
+  maThread.push({who:'bot', txt: fn?fn():'Ainda não sei responder isso, mas estou aprendendo! 😊'});
+  renderAssistant();
+}
+function maAskText(){
+  const inp=$('ma-input'); if(!inp) return;
+  const txt=inp.value.trim(); if(!txt) return;
+  maThread.push({who:'user', txt});
+  const key=maInterpret(txt);
+  const answer = key && MA_ANSWERS[key] ? MA_ANSWERS[key]() : 'Hmm, não entendi bem. 🤔 Tente perguntar sobre: sua evolução, corrida, troféus, meta, recordes, peso, ou toque numa das sugestões acima.';
+  maThread.push({who:'bot', txt:answer});
+  renderAssistant();
+}
+// ========== FIM META ASSISTENTE ==========
+
 // ---------- BACKUP DO ALUNO ----------
 function exportMyData(){
   const data = { app:'MetaTreino', versao:APP_VERSION, exportadoEm:new Date().toISOString(), estado:state };
@@ -2214,21 +2460,21 @@ function unlockRestAudio(){
   }catch(e){}
 }
 function playRestBeep(){
-  // 3 apitos ascendentes — sinal claro de fim de descanso
+  // 4 apitos ascendentes, mais altos e longos — sinal forte de fim de descanso
   try{
     if(!restAudioCtx) return;
     if(restAudioCtx.state === 'suspended') restAudioCtx.resume();
-    const notes = [660, 880, 1100];
+    const notes = [700, 900, 1100, 1300];
     notes.forEach((freq, i)=>{
       const o = restAudioCtx.createOscillator();
       const g = restAudioCtx.createGain();
-      o.type = 'sine'; o.frequency.value = freq;
-      const t0 = restAudioCtx.currentTime + i*0.22;
+      o.type = 'square'; o.frequency.value = freq; // onda quadrada = mais audível/estridente
+      const t0 = restAudioCtx.currentTime + i*0.32;
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(0.35, t0+0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0+0.2);
+      g.gain.exponentialRampToValueAtTime(0.7, t0+0.03);   // volume bem mais alto
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+0.3); // cada apito mais longo
       o.connect(g); g.connect(restAudioCtx.destination);
-      o.start(t0); o.stop(t0+0.22);
+      o.start(t0); o.stop(t0+0.32);
     });
   }catch(e){}
 }
@@ -2866,7 +3112,7 @@ async function openVideoAdmin(){
         <div style="font-size:13.5px;font-weight:700">${ex.name} ${cur?'<span style="color:var(--primary-2);font-size:11px">● link próprio</span>':''}</div>
         <div class="row" style="gap:6px;margin-top:6px">
           <input class="input" id="vid-${id}" value="${cur.replace(/"/g,'&quot;')}" placeholder="Cole o link do vídeo (YouTube, Drive...)" style="flex:1;font-size:12.5px;padding:9px 12px">
-          <button class="btn btn-ghost" style="padding:9px 12px;font-size:12.5px" onclick="testVideoLink('${id}')" title="Abrir link para testar">▶</button>
+          <button class="btn btn-ghost" style="padding:9px 12px;font-size:12.5px" onclick="testVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')" title="Abrir link para testar">▶</button>
           <button class="btn btn-primary" style="padding:9px 14px;font-size:12.5px" onclick="saveVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">💾</button>
         </div>
       </div>`;
@@ -2880,10 +3126,14 @@ async function openVideoAdmin(){
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
-function testVideoLink(id){
+function testVideoLink(id, exName){
   const inp = $('vid-'+id); if(!inp) return;
   const url = inp.value.trim();
-  if(!url){ toast('Cole um link primeiro'); return; }
+  if(!url){
+    // sem link salvo: abre a mesma busca que o aluno veria no treino
+    window.open(ytLink(exName||id), '_blank');
+    return;
+  }
   if(!/^https?:\/\//i.test(url)){ toast('⚠️ O link precisa começar com http:// ou https://'); return; }
   window.open(url, '_blank');
 }
@@ -3361,4 +3611,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openMuralAdmin,onMuralFotoPicked,saveMural,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
