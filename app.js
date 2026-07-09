@@ -1,5 +1,5 @@
-// ===== MetaTreino v5.9 =====
-const APP_VERSION = 'v5.9';
+// ===== MetaTreino v6.0 =====
+const APP_VERSION = 'v6.0';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1059,7 +1059,10 @@ function renderHome(){
   // treinos pendentes desta semana (perdeu um ou mais dias?)
   const missed = $('card-missed');
   if(missed){
-    const pend = missedWorkoutsThisWeek(mod);
+    // respeita se o aluno dispensou o aviso nesta semana
+    const wkKey = (()=>{ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-(getDayIdx()-1)); return 'dismiss_'+state.active+'_'+d.getTime(); })();
+    const dismissed = state.ui && state.ui.dismissedMissed === wkKey;
+    const pend = dismissed ? [] : missedWorkoutsThisWeek(mod);
     const hasToday = !!mod.plan.workouts.find(w=>w.dayIdx===getDayIdx());
     if(pend.length){
       missed.classList.remove('hidden');
@@ -1072,19 +1075,24 @@ function renderHome(){
         } else {
           $('missed-msg').textContent = `Faltou ${pend[0].name.split(' — ')[0]}, e hoje é dia de descanso — momento perfeito pra recuperar esse treino! Toque pra fazer agora.`;
         }
-        missed.onclick = ()=>{
-          if(state.active==='run'){ openRunLog(String(pend[0].dayIdx)); } // corrida: registro direto de km+tempo
-          else { goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); } // musculação: abre a sessão
+        missed.onclick = (ev)=>{
+          if(ev.target && ev.target.id==='missed-dismiss') return;
+          if(state.active==='run'){ openRunLog(String(pend[0].dayIdx)); }
+          else { goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); }
         };
       } else {
         // 2+ dias perdidos: NÃO sugere fazer tudo — orienta priorizar e seguir em frente
         $('missed-title').textContent = `📌 Você perdeu ${pend.length} treinos esta semana`;
         $('missed-msg').textContent = `Acontece! Não tente recuperar todos de uma vez — isso sobrecarrega e atrapalha mais que ajuda. ${isLift?'Escolha 1 treino pendente pra fazer num dia livre e siga o plano normalmente a partir de amanhã. Na próxima semana o ciclo recomeça equilibrado.':'Faça a atividade mais importante (a corrida longa) quando puder e retome o plano normalmente. Constância vale mais que perfeição.'} Toque pra ver os pendentes.`;
-        missed.onclick = ()=>{
-          if(state.active==='run'){ openRunLog(String(pend[0].dayIdx)); } // corrida: registro direto de km+tempo
-          else { goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); } // musculação: abre a sessão
+        missed.onclick = (ev)=>{
+          if(ev.target && ev.target.id==='missed-dismiss') return;
+          if(state.active==='run'){ openRunLog(String(pend[0].dayIdx)); }
+          else { goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); }
         };
       }
+      // botão de dispensar o aviso até a semana seguinte
+      const dismissBtn = $('missed-dismiss');
+      if(dismissBtn) dismissBtn.onclick = (ev)=>{ ev.stopPropagation(); state.ui.dismissedMissed = wkKey; saveData(); missed.classList.add('hidden'); toast('👍 Aviso dispensado até a próxima semana'); };
     } else missed.classList.add('hidden');
   }
   // lembrete de peso: 7+ dias sem registrar
@@ -2401,6 +2409,7 @@ const MA_ANSWERS = {
   }
 };
 const MA_SUGGESTIONS = [
+  {lbl:'❓ O que posso escrever?', key:'_comandos'},
   {lbl:'📈 Minha evolução', key:'evolucao'},
   {lbl:'💪 Como foi meu treino?', key:'treino_hoje'},
   {lbl:'🏃 Minha corrida', key:'corrida'},
@@ -2427,6 +2436,7 @@ function maInterpret(txt){
   if(has('tchau','até mais','ate mais','falou','xau','adeus','até logo','ate logo','vlw','valeu','obrigad','brigad','obg')) return '_tchau';
   if(has('quem é você','quem e voce','o que você é','o que voce e','vc é','você é um','voce e um','é uma ia','e uma ia','é robô','e robo')) return '_quemsou';
   if(has('como vai','tudo bem','como você está','como voce esta','de boa')) return '_comovai';
+  if(has('o que posso escrever','o que posso falar','o que posso dizer','quais comandos','lista de comandos','comandos')) return '_comandos';
   if(has('ajuda','o que você faz','o que voce faz','o que sabe','pode fazer','como funciona','me ajuda')) return '_ajuda';
   // perguntas com dados
   if(has('perder','emagrec','quantos kg','quanto kg','posso perder')) return 'perder_peso';
@@ -2446,6 +2456,7 @@ function maInterpret(txt){
   return null;
 }
 let maPending = null; // ação aguardando confirmação sim/não
+let maRefreshUI = false; // marca que os planos mudaram e a tela precisa ser redesenhada
 function maApplyEquip(equip){
   const mod = state.modules.lift;
   if(!mod){ return {done:true, msg:'Você ainda não tem plano de musculação. 😊'}; }
@@ -2570,7 +2581,8 @@ function maTryCommand(txt){
   }
 
   // ---- DOR ----
-  m = t.match(/dor (?:no|na|nos|nas|em|de)?\s*(ombro|lombar|coluna|costas|joelho|punho|cotovelo|tornozelo|pé|pe|pesco[çc]o|perna)/);
+  // ordem importa: termos mais longos primeiro (senão "pe" captura antes de "pescoço")
+  m = t.match(/dor (?:no |na |nos |nas |em |de )?(pesco[çc]o|tornozelo|cotovelo|joelho|ombro|lombar|coluna|costas|punho|pernas?|p[ée]s?(?=$|\s|[.,!?]))/);
   if(/dor/.test(t) && (m || /estou com dor|to com dor|tô com dor|sinto dor|machuquei/.test(t))){
     return maSetPain(m?m[1]:null, t);
   }
@@ -2632,7 +2644,7 @@ function maLogLift(part){
   return {done:true, msg:`✅ Registrei seu treino de ${parts.join(' + ').toLowerCase()} no histórico! 💪 Dica: pra acompanhar sua evolução de carga, da próxima vez registre as séries pela aba Sessões — assim eu guardo seus recordes.`};
 }
 function maSetPain(area, txt){
-  const map = {ombro:'Ombro',lombar:'Lombar',coluna:'Lombar',costas:'Lombar',joelho:'Joelho',punho:'Punho/Cotovelo',cotovelo:'Punho/Cotovelo',tornozelo:'Tornozelo','pé':'Tornozelo',pe:'Tornozelo','pescoço':'Pescoço',pescoco:'Pescoço',perna:'Joelho'};
+  const map = {'pescoço':'Pescoço',pescoco:'Pescoço',tornozelo:'Tornozelo',cotovelo:'Punho/Cotovelo',joelho:'Joelho',ombro:'Ombro',lombar:'Lombar',coluna:'Lombar',costas:'Lombar',punho:'Punho/Cotovelo',perna:'Joelho',pernas:'Joelho','pé':'Tornozelo','pés':'Tornozelo',pe:'Tornozelo'};
   const painArea = area ? map[area] : null;
   state.user.pain = state.user.pain||[];
   if(painArea && !state.user.pain.includes(painArea)) state.user.pain.push(painArea);
@@ -2678,6 +2690,12 @@ const MA_SOCIAL = {
   _tchau(){ return `Até a próxima, ${maName()}! 👊 Continue firme — a constância é o que transforma. Bons treinos!`; },
   _quemsou(){ return 'Sou o Meta Assistente 🤖 — não sou uma IA de verdade, mas analiso seus dados reais de treino pra te dar respostas úteis na hora. Pergunte sobre sua evolução, corrida, recordes, meta e muito mais!'; },
   _comovai(){ return `Tô ótimo e pronto pra te ajudar! 😄 Mas o que importa é como VOCÊ está. Quer que eu mostre sua evolução recente, ${maName()}?`; },
+  _comandos(){ return `📋 <b>O que você pode me dizer:</b><br><br>
+<b>📊 Perguntar</b><br>• "minha evolução" • "como foi meu treino?"<br>• "minha corrida" • "meus troféus" • "minha meta"<br>• "qual meu recorde?" • "que músculo treino menos?"<br>• "quanto tempo fiquei sem treinar?" • "me motive"<br><br>
+<b>✍️ Registrar</b><br>• "estou pesando 90kg" • "emagreci 2kg"<br>• "corri 5km em 30 minutos"<br>• "caminhei 3km em 25 min" • "pedalei 10km em 40min"<br>• "treinei peito" / "fiz musculação"<br><br>
+<b>🩹 Como estou</b><br>• "estou com dor no joelho" (ou ombro, lombar, punho, cotovelo, tornozelo, pescoço)<br>• "estou cansado" • "estou triste" • "estou de TPM"<br>• "voltar ao normal"<br><br>
+<b>⚙️ Mudar treinos</b><br>• "não estou na academia hoje"<br>• "voltei pra academia" • "só tenho halteres"<br>• "quero treinar corrida segunda, quarta e sexta"<br><br>
+<b>▶️ Aprender</b><br>• "como fazer supino reto" (abre o vídeo)`; },
   _ajuda(){ return 'Posso te contar: 📈 sua evolução, 💪 como foi seu treino, 🏃 sua corrida, 🏆 seus troféus, 🎯 sua meta, qual músculo você treina menos, sua maior pausa, recordes, quanto tempo usa o app, peso, calorias e ainda te motivar. É só tocar numa sugestão ou digitar!'; }
 };
 function maSaudacao(){ const h=new Date().getHours(); return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'; }
@@ -2707,21 +2725,27 @@ function renderAssistant(){
       <input class="input" id="ma-input" placeholder="Pergunte ou registre algo..." style="flex:1" onkeydown="if(event.key==='Enter')maAskText()">
       <button class="btn btn-primary" style="padding:11px 16px" onclick="maAskText()">➤</button>
     </div>
-    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeAssistant()">Fechar</button>`;
   $('modal-back').classList.add('on');
   const th=$('ma-thread'); if(th) th.scrollTop=th.scrollHeight;
+}
+// Ao fechar, se algum comando alterou os planos, redesenha a tela atual pra refletir na hora
+function closeAssistant(){
+  closeModal();
+  if(maRefreshUI){ maRefreshUI = false; goTab(state.ui.tab||'home'); }
 }
 function maAsk(key){
   if(key==='_normal'){
     maThread.push({who:'user', txt:'Voltar treinos ao normal'});
     const r = maBackToNormal();
+    maRefreshUI = true;
     maThread.push({who:'bot', txt:r.msg});
     renderAssistant();
     return;
   }
   const sug = MA_SUGGESTIONS.find(s=>s.key===key);
   maThread.push({who:'user', txt: sug?sug.lbl.replace(/^[^\s]+\s/,''):key});
-  const fn = MA_ANSWERS[key];
+  const fn = MA_SOCIAL[key] || MA_ANSWERS[key];
   maThread.push({who:'bot', txt: fn?fn():'Ainda não sei responder isso, mas estou aprendendo! 😊'});
   renderAssistant();
 }
@@ -2732,7 +2756,7 @@ function maAskText(){
   let answer;
   // 1) tenta executar como COMANDO (registrar peso, atividade, dor, etc.)
   const cmd = maTryCommand(txt);
-  if(cmd && cmd.done){ answer = cmd.msg; }
+  if(cmd && cmd.done){ answer = cmd.msg; maRefreshUI = true; }
   else {
     // 2) senão, interpreta como pergunta/social
     const key = maInterpret(txt);
@@ -4020,4 +4044,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
