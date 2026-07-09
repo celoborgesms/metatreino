@@ -1,5 +1,5 @@
-// ===== MetaTreino v7.0 =====
-const APP_VERSION = 'v7.0';
+// ===== MetaTreino v7.1 =====
+const APP_VERSION = 'v7.1';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -334,9 +334,6 @@ async function afterGoogleSignIn(user){
   state.user.email = email;
   bootAfterAuth();
 }
-
-// carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp)
-loadCoachContact();
 
 fbAuth.onAuthStateChanged(function(user){
   if(user){
@@ -1375,11 +1372,12 @@ function renderExerciseCard(ex, idx){
     <div class="ex" style="${doneToday?'border-left:3px solid var(--primary);padding-left:10px':''}">
       <div class="ex-num" style="${doneToday?'background:var(--primary);color:var(--on-primary)':''}">${doneToday?'✓':idx+1}</div>
       <div style="flex:1">
-        <div class="ex-name">${ex.name} ${pr?`<span class="pr-badge">🏆 PR ${pr.peso}kg×${pr.reps}</span>`:''}</div>
+        <div class="ex-name">${ex.name} ${ex.pinned?`<span class="pr-badge" style="background:var(--tint-info);color:var(--info)">📌 fixado</span>`:''} ${pr?`<span class="pr-badge">🏆 PR ${pr.peso}kg×${pr.reps}</span>`:''}</div>
         <div class="ex-desc">${ex.sub} · Alvo: <b>${ex.sets}×${ex.reps}</b> · Descanso ${ex.rest}</div>
         ${last?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px">📊 Última: ${last.sets.map(s=>`${s.peso}kg×${s.reps}`).join(', ')}</div>`:''}
         ${doneToday?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px;font-weight:700">✅ Hoje: ${todayEntry.sets.map(s=>`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', ')}</div>`:''}
         <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
+          ${ex.pinned?`<button class="btn btn-ghost" style="padding:6px 10px;font-size:11.5px" onclick="unpinExercise('${ex.id}')">↩️ Voltar à sugestão</button>`:''}
           ${curSessionLocked
             ? `<span style="font-size:12px;color:var(--text-mute);padding:8px 4px">🔒 Concluído hoje — edite pelo Histórico</span>`
             : `<button class="btn ${doneToday?'btn-ghost':'btn-primary'}" style="padding:8px 14px;font-size:13px" onclick="openSetLog('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">${doneToday?'✏️ Editar séries':'📝 Registrar'}</button>`}
@@ -2720,7 +2718,16 @@ function maTired(){
 function maSad(){
   return {done:true, msg:`Sinto muito que você esteja assim, ${maName()}. 💙 Dias difíceis acontecem com todo mundo. O exercício pode ajudar a clarear a cabeça — que tal uma caminhada leve, sem cobrança de desempenho? Mas se você não estiver bem, tudo bem descansar hoje. E se esse sentimento persistir, conversar com alguém de confiança ou um profissional faz muita diferença. Você não está sozinho. 🤍`};
 }
+// O modo TPM só faz sentido para quem menstrua. Bloqueamos apenas o perfil masculino;
+// "Outro" continua liberado (pessoas não-binárias podem menstruar).
+function tpmAvailable(){
+  const s = state.user && state.user.profile && state.user.profile.sex;
+  return s !== 'm';
+}
 function maTPM(){
+  if(!tpmAvailable()){
+    return {done:true, msg:'O modo TPM foi pensado para o ciclo menstrual, e seu perfil está como masculino 😊. Se você quer treinos mais leves hoje por outro motivo, é só me dizer <b>"estou cansado"</b> ou <b>"estou com dor em [região]"</b> que eu adapto.'};
+  }
   state.user.pain = state.user.pain||[];
   state.user.tpmMode = true;
   regenAllPlans(); // sempre reaplica: a flag pode já estar ligada com o plano fora de sincronia
@@ -2749,7 +2756,7 @@ const MA_SOCIAL = {
   _comandos(){ return `📋 <b>O que você pode me dizer:</b><br><br>
 <b>📊 Perguntar</b><br>• "minha evolução" • "como foi meu treino?"<br>• "minha corrida" • "meus troféus" • "minha meta"<br>• "qual meu recorde?" • "que músculo treino menos?"<br>• "quanto tempo fiquei sem treinar?" • "me motive"<br><br>
 <b>✍️ Registrar</b><br>• "estou pesando 90kg" • "emagreci 2kg"<br>• "corri 5km em 30 minutos"<br>• "caminhei 3km em 25 min" • "pedalei 10km em 40min"<br>• "treinei peito" / "fiz musculação"<br><br>
-<b>🩹 Como estou</b><br>• "estou com dor no joelho" (ou ombro, lombar, punho, cotovelo, tornozelo, pescoço)<br>• "estou cansado" • "estou triste" • "estou de TPM"<br>• "voltar ao normal"<br><br>
+<b>🩹 Como estou</b><br>• "estou com dor no joelho" (ou ombro, lombar, punho, cotovelo, tornozelo, pescoço)<br>• "estou cansado" • "estou triste"${tpmAvailable()?' • "estou de TPM"':''}<br>• "voltar ao normal"<br><br>
 <b>⚙️ Mudar treinos</b><br>• "não estou na academia hoje"<br>• "voltei pra academia" • "só tenho halteres"<br>• "quero treinar corrida segunda, quarta e sexta"<br><br>
 <b>▶️ Aprender</b><br>• "como fazer supino reto" (abre o vídeo)`; },
   _ajuda(){ return 'Posso te contar: 📈 sua evolução, 💪 como foi seu treino, 🏃 sua corrida, 🏆 seus troféus, 🎯 sua meta, qual músculo você treina menos, sua maior pausa, recordes, quanto tempo usa o app, peso, calorias e ainda te motivar. É só tocar numa sugestão ou digitar!'; }
@@ -2948,12 +2955,51 @@ function stopRestTimer(){
 }
 
 // ---------- DOR / ADAPTAÇÃO ----------
+// lista de equipamentos compatíveis com a configuração do aluno
+function equipListFor(equip){
+  return equip==='basico' ? ['casa','halteres']
+       : equip==='academia' ? ['academia','halteres','casa']
+       : equip==='halteres' ? ['halteres','casa']
+       : ['casa'];
+}
+// procura um exercício do banco pelo slug
+function exBySlug(id){
+  for(const c of EX_BANK) for(const e of c.items) if(slug(e.name)===id) return e;
+  return null;
+}
+// Reaplica os exercícios que o ALUNO fixou manualmente (trocou na mão).
+// Chamado depois de qualquer regeneração, pra a escolha dele não ser perdida.
+function applyPins(w, setup){
+  if(!w.pins || !w.pins.length) return;
+  const allowed = equipListFor(setup.equip);
+  const guardados = [], aplicaveis = [];
+  w.pins.forEach(p=>{
+    const ex = exBySlug(p.id);
+    if(!ex) return;                                          // exercício não existe mais → descarta
+    if(!(ex.equip||[]).some(e=>allowed.includes(e))) return;  // equipamento mudou → descarta
+    guardados.push(p);                                       // pin continua válido
+    if(!(w.parts||[]).includes(p.part)) return;              // grupo bloqueado por dor: só não aplica AGORA
+    aplicaveis.push({p, ex});
+  });
+  w.pins = guardados;                                        // dor é temporária: não apaga o pin
+  aplicaveis.forEach(({p, ex})=>{
+    if(w.exercises.some(e=>e.id===p.id)) return;          // já está no treino
+    const idx = w.exercises.findIndex(e=>e.part===p.part && !w.pins.some(pp=>pp.id===e.id));
+    if(idx<0) return;
+    const old = w.exercises[idx];
+    w.exercises[idx] = { id:p.id, name:ex.name, sub:ex.sub, sets:old.sets, reps:old.reps, rest:old.rest, part:p.part, equip:ex.equip, pinned:true };
+  });
+  // marca os fixados que já estavam na lista
+  w.exercises.forEach(e=>{ e.pinned = w.pins.some(p=>p.id===e.id); });
+}
+
 // ---------- MODO ADAPTADO (dor / TPM) ----------
 // Centraliza: quando o aluno está com dor ou em TPM, os treinos mudam de verdade
 // (grupos evitados, séries reduzidas, nome do treino ajustado) e ele é avisado do porquê.
 function adaptMode(){
   const pain = (state.user && state.user.pain) || [];
-  const tpm = !!(state.user && state.user.tpmMode);
+  // ignora a flag de TPM em perfis masculinos (pode ter ficado ligada de versões antigas)
+  const tpm = !!(state.user && state.user.tpmMode) && tpmAvailable();
   return { active: pain.length>0 || tpm, pain, tpm };
 }
 function adaptReasonText(){
@@ -2976,6 +3022,7 @@ function regenLiftExercises(){
     const usar = kept.length ? kept : (blocked.has('Core') ? [] : ['Core']);
     w.parts = usar.length ? usar : w.originalParts; // se bloqueou tudo, mantém (mas avisa)
     w.exercises = buildLiftExercises(w.parts, mod.setup);
+    applyPins(w, mod.setup); // respeita as trocas manuais do aluno
     // TPM: menos séries, treino mais leve
     if(a.tpm) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
     // dor: também reduz uma série (proteção)
@@ -3184,10 +3231,7 @@ function quickChangeEquip(equip){
   if(!mod || !mod.plan){ toast('Crie um plano de musculação primeiro'); closeModal(); return; }
   mod.setup.equip = equip;
   // Regenera SÓ os exercícios de cada treino — dias, objetivo e nível permanecem
-  mod.plan.workouts.forEach(w=>{
-    w.exercises = buildLiftExercises(w.parts, mod.setup);
-    w.duration = estimateLiftDuration(w.exercises, mod.setup.goal);
-  });
+  regenAllPlans(); // regenera respeitando dor/TPM e reaplicando os exercícios fixados
   saveData();
   closeModal();
   const lbl = {academia:'Academia completa', halteres:'Só halteres', casa:'Peso do corpo', basico:'Básico'}[equip]||equip;
@@ -4064,6 +4108,16 @@ function openSwapExercise(exId){
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');
 }
+function unpinExercise(exId){
+  const mod = state.modules.lift;
+  const w = mod.plan.workouts.find(w=>(w.pins||[]).some(p=>p.id===exId));
+  if(!w){ toast('Este exercício não está fixado'); return; }
+  w.pins = w.pins.filter(p=>p.id!==exId);
+  regenAllPlans();
+  saveData();
+  toast('↩️ Voltando à sugestão automática do app');
+  if(state.ui.tab==='sessions') renderSessions(); else goTab('home');
+}
 function doSwapExercise(oldId, newId, newName, newSub){
   const mod = state.modules.lift;
   const w = mod.plan.workouts.find(w=>w.exercises.some(e=>e.id===oldId));
@@ -4071,9 +4125,12 @@ function doSwapExercise(oldId, newId, newName, newSub){
   const old = w.exercises[idx];
   const cat = EX_BANK.find(c=>c.items.some(x=>slug(x.name)===newId));
   const newEx = cat.items.find(x=>slug(x.name)===newId);
-  w.exercises[idx] = { id:newId, name:newName, sub:newSub, sets:old.sets, reps:old.reps, rest:old.rest, part:old.part, equip:newEx.equip };
+  w.exercises[idx] = { id:newId, name:newName, sub:newSub, sets:old.sets, reps:old.reps, rest:old.rest, part:old.part, equip:newEx.equip, pinned:true };
+  // memoriza a escolha do aluno pra ela sobreviver a regenerações (dor, TPM, troca de equipamento)
+  w.pins = (w.pins||[]).filter(p=>p.id!==oldId && p.part!==old.part);
+  w.pins.push({ part:old.part, id:newId });
   saveData();
-  toast(`✅ Trocado por ${newName}`);
+  toast(`✅ Trocado por ${newName} — ficará fixado nos próximos treinos`);
   closeModal();
   if(state.ui.tab==='sessions') renderSessions();
 }
@@ -4183,4 +4240,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
+
+// carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
+// Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
+loadCoachContact();
