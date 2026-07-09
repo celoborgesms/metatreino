@@ -1,5 +1,5 @@
-// ===== MetaTreino v6.1 =====
-const APP_VERSION = 'v6.1';
+// ===== MetaTreino v6.2 =====
+const APP_VERSION = 'v6.2';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -327,12 +327,16 @@ async function afterGoogleSignIn(user){
   state.user = { name:user.displayName||'', email, isAdmin };
   loadVideoLinks(); // não bloqueia o login; links do treinador pros vídeos
   loadCoachMural(); // logo/mensagem fixada do treinador
+  loadCoachContact(); // whatsapp/e-mail de contato do treinador
   await loadData();
   if(!state.user) state.user = { name:user.displayName||'', email, isAdmin };
   state.user.isAdmin = isAdmin;
   state.user.email = email;
   bootAfterAuth();
 }
+
+// carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp)
+loadCoachContact();
 
 fbAuth.onAuthStateChanged(function(user){
   if(user){
@@ -1060,10 +1064,14 @@ function renderHome(){
   // treinos pendentes desta semana (perdeu um ou mais dias?)
   const missed = $('card-missed');
   if(missed){
-    // respeita se o aluno dispensou o aviso nesta semana
-    const wkKey = (()=>{ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-(getDayIdx()-1)); return 'dismiss_'+state.active+'_'+d.getTime(); })();
-    const dismissed = state.ui && state.ui.dismissedMissed === wkKey;
-    const pend = dismissed ? [] : missedWorkoutsThisWeek(mod);
+    // Dispensa por QUANTIDADE e por MÓDULO: se o aluno dispensou com 1 treino perdido,
+    // o aviso só volta quando perder outro (2). Domingo zera (semana nova).
+    const wkKey = (()=>{ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-(getDayIdx()-1)); return d.getTime(); })();
+    state.ui.missedDismiss = state.ui.missedDismiss || {};
+    const rec = state.ui.missedDismiss[state.active];
+    const dismissedCount = (rec && rec.wk===wkKey) ? rec.count : 0;
+    const pendAll = missedWorkoutsThisWeek(mod);
+    const pend = pendAll.length > dismissedCount ? pendAll : [];
     const hasToday = !!mod.plan.workouts.find(w=>w.dayIdx===getDayIdx());
     if(pend.length){
       missed.classList.remove('hidden');
@@ -1093,7 +1101,12 @@ function renderHome(){
       }
       // botão de dispensar o aviso até a semana seguinte
       const dismissBtn = $('missed-dismiss');
-      if(dismissBtn) dismissBtn.onclick = (ev)=>{ ev.stopPropagation(); state.ui.dismissedMissed = wkKey; saveData(); missed.classList.add('hidden'); toast('👍 Aviso dispensado até a próxima semana'); };
+      if(dismissBtn) dismissBtn.onclick = (ev)=>{
+        ev.stopPropagation();
+        state.ui.missedDismiss[state.active] = { wk:wkKey, count:pendAll.length };
+        saveData(); missed.classList.add('hidden');
+        toast('👍 Aviso dispensado. Só volta se você perder outro treino.');
+      };
     } else missed.classList.add('hidden');
   }
   // lembrete de peso: 7+ dias sem registrar
@@ -1264,7 +1277,7 @@ function renderSessions(){
   const cwInfo = currentWeek(mod);
   $('weekly-info').textContent = `Meta: ${labelGoal(mod)} · Semana ${cwInfo.wk}/${cwInfo.total} · ${mod.plan.workouts.length}× por semana`;
 
-  const sel = state.ui.selectedSession || (mod.plan.workouts.find(w=>w.dayIdx===getDayIdx()) || mod.plan.workouts[0]);
+  const sel = currentSelectedWorkout(mod);
   $('sessions-chips').innerHTML = mod.plan.workouts.map(w=>{
     const on = String(w.k||w.dayIdx)===String(sel.k||sel.dayIdx);
     return `<div class="filter-chip ${on?'on':''}" onclick="selectSession('${w.k||w.dayIdx}')"><div style="font-size:11px;letter-spacing:1px;color:var(--text-dim);font-weight:700">${(w.dayName||'').toUpperCase()}</div><div style="font-weight:700;margin-top:2px">${isLift?'Treino '+w.k:w.name.split('(')[0].trim()}</div></div>`;
@@ -1272,9 +1285,19 @@ function renderSessions(){
   renderSessionDetail(sel);
 }
 function selectSession(id){
-  const mod = state.modules[state.active];
-  state.ui.selectedSession = mod.plan.workouts.find(w=>String(w.k||w.dayIdx)===String(id));
+  // guarda só o IDENTIFICADOR, nunca o objeto do treino.
+  // (guardar o objeto criava uma cópia congelada no estado: depois de salvar/recarregar,
+  //  a tela mostrava o treino antigo mesmo após o plano ser regenerado por dor/TPM/equipamento)
+  state.ui.selectedSession = String(id);
   saveData(); renderSessions();
+}
+// resolve o treino selecionado sempre a partir do plano vivo
+function currentSelectedWorkout(mod){
+  const id = state.ui.selectedSession;
+  let w = null;
+  if(id!=null && typeof id!=='object') w = mod.plan.workouts.find(x=>String(x.k||x.dayIdx)===String(id));
+  if(!w && id && typeof id==='object') w = mod.plan.workouts.find(x=>String(x.k||x.dayIdx)===String(id.k||id.dayIdx)); // compat: estados antigos
+  return w || mod.plan.workouts.find(x=>x.dayIdx===getDayIdx()) || mod.plan.workouts[0];
 }
 function renderSessionDetail(w){
   if(!w){ $('session-detail-slot').innerHTML=''; return; }
@@ -1391,7 +1414,7 @@ function renderRunBlocks(w){
 function openSession(id){
   const mod = state.modules[state.active];
   const w = mod.plan.workouts.find(w=>String(w.k||w.dayIdx)===String(id));
-  state.ui.selectedSession = w; saveData(); goTab('sessions');
+  state.ui.selectedSession = w ? String(w.k||w.dayIdx) : null; saveData(); goTab('sessions');
 }
 function toggleWeeklyBlock(){}
 
@@ -1522,7 +1545,8 @@ function closeSetLog(save){
   }
 }
 function nextUnloggedExercise(afterExId){
-  const w = state.ui.selectedSession || (state.modules.lift?.plan?.workouts||[]).find(x=>x.dayIdx===getDayIdx());
+  const modL = state.modules.lift;
+  const w = modL && modL.plan ? currentSelectedWorkout(modL) : null;
   if(!w || !w.exercises) return null;
   const today = new Date(); today.setHours(0,0,0,0);
   const isLogged = id => ((state.progress[id]||[]).some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime() && p.sets.length>0; }));
@@ -3471,6 +3495,64 @@ function shareWorkoutImage(histIdx){
 // ---------- MURAL DO TREINADOR ----------
 // Foto e mensagem fixada que o admin edita e todos os alunos veem na tela Hoje.
 let coachMural = null;
+
+// ---------- CONTATO DO TREINADOR (editável pelo admin) ----------
+let coachContact = { whatsapp:'', email:'metatreinooficial@gmail.com' };
+async function loadCoachContact(){
+  try{
+    const doc = await db.collection('config').doc('contato').get();
+    if(doc.exists) coachContact = Object.assign(coachContact, doc.data());
+    try{ localStorage.setItem('metatreino_contato', JSON.stringify(coachContact)); }catch(e){}
+  }catch(e){
+    try{ const c=JSON.parse(localStorage.getItem('metatreino_contato')||'null'); if(c) coachContact=c; }catch(e2){}
+  }
+  renderContactButtons();
+}
+function waLink(){
+  const n = (coachContact.whatsapp||'').replace(/\D/g,'');
+  if(!n) return null;
+  const msg = encodeURIComponent('Olá! Quero pedir um teste do MetaTreino. Meu nome: ');
+  return `https://wa.me/${n}?text=${msg}`;
+}
+function renderContactButtons(){
+  const wa = waLink();
+  ['auth-contact','blocked-contact'].forEach(id=>{
+    const el = $(id); if(!el) return;
+    const mail = coachContact.email || 'metatreinooficial@gmail.com';
+    el.innerHTML = `
+      ${wa?`<a href="${wa}" target="_blank" rel="noopener" class="btn btn-primary btn-block" style="text-decoration:none;margin-bottom:8px">💬 Pedir teste pelo WhatsApp</a>`:''}
+      <a href="mailto:${mail}?subject=Quero%20acesso%20ao%20MetaTreino" class="btn btn-ghost btn-block" style="text-decoration:none">✉️ Pedir por e-mail</a>
+      <div style="text-align:center;margin-top:8px;color:var(--text-mute);font-size:12px">${wa?(coachContact.whatsapp+' · '):''}${mail}</div>`;
+  });
+}
+function openContactAdmin(){
+  $('modal-inner').innerHTML = `
+    <h3>📞 Contato do treinador</h3>
+    <p style="color:var(--text-dim);font-size:13px">Aparece na tela de login e para alunos sem acesso liberado.</p>
+    <div class="field" style="margin-top:12px"><label>WhatsApp (com DDI e DDD)</label>
+      <input class="input mono" id="ct-wa" placeholder="5566999999999" value="${(coachContact.whatsapp||'').replace(/"/g,'&quot;')}"></div>
+    <div class="field"><label>E-mail de contato</label>
+      <input class="input" id="ct-mail" placeholder="seu@email.com" value="${(coachContact.email||'').replace(/"/g,'&quot;')}"></div>
+    <div class="row" style="gap:8px;margin-top:14px">
+      <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-block" onclick="saveCoachContact()">💾 Salvar</button>
+    </div>`;
+  $('modal-back').classList.add('on');
+}
+async function saveCoachContact(){
+  const wa = ($('ct-wa').value||'').replace(/\D/g,'');
+  const mail = ($('ct-mail').value||'').trim();
+  if(wa && (wa.length<12 || wa.length>13)) return toast('WhatsApp deve ter DDI+DDD, ex: 5566999999999');
+  if(mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return toast('E-mail inválido');
+  coachContact = { whatsapp:wa, email:mail || 'metatreinooficial@gmail.com' };
+  try{
+    await db.collection('config').doc('contato').set(coachContact);
+    try{ localStorage.setItem('metatreino_contato', JSON.stringify(coachContact)); }catch(e){}
+    renderContactButtons();
+    toast('✅ Contato atualizado!'); closeModal();
+  }catch(e){ toast('Erro ao salvar. Confira as regras do Firestore.'); }
+}
+
 async function loadCoachMural(){
   try{
     const doc = await db.collection('config').doc('mural').get();
@@ -4076,4 +4158,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});

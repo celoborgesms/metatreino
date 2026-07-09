@@ -424,12 +424,12 @@ a{color:var(--primary-2);text-decoration:none}
     </div>
 
     <button class="btn btn-primary btn-block" id="google-btn" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="doGoogleSignIn()">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v6.18h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v6.28h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
       <span id="google-btn-lbl">Entrar com Google</span>
     </button>
     <div id="auth-err" style="margin-top:10px"></div>
     <p style="text-align:center;color:var(--text-mute);font-size:12px;margin-top:20px;line-height:1.5">Acesso liberado apenas para alunos autorizados pelo treinador. Seus dados ficam salvos na nuvem, vinculados à sua conta Google.</p>
-    <a href="mailto:metatreinooficial@gmail.com?subject=Quero%20acesso%20ao%20MetaTreino&body=Ol%C3%A1!%20Quero%20pedir%20um%20teste%20ou%20contratar%20um%20plano%20do%20MetaTreino.%0A%0AMeu%20nome%3A%20%0AE-mail%20da%20minha%20conta%20Google%3A%20" style="display:block;text-align:center;margin-top:16px;padding:13px;border-radius:14px;border:1px solid rgba(16,185,129,0.35);color:var(--primary-2);font-weight:700;font-size:13.5px;text-decoration:none">✉️ Ainda não é aluno? Peça seu teste por e-mail</a>
+    <div id="auth-contact" style="margin-top:16px"></div>
   </div>
 </div>
 
@@ -441,7 +441,7 @@ a{color:var(--primary-2);text-decoration:none}
       <h1>Sem acesso liberado</h1>
       <p>Seu e-mail ainda não foi autorizado pelo treinador. Entre em contato para liberar seu acesso.</p>
     </div>
-    <div class="card"><div class="card-title" style="color:var(--accent-2);text-align:center">📞 Fale com o treinador</div><div style="text-align:center;margin-top:14px"><a href="mailto:metatreinooficial@gmail.com?subject=Solicitação%20de%20acesso%20MetaTreino" class="btn btn-primary btn-block">✉️ Enviar e-mail</a></div><div style="text-align:center;margin-top:10px;color:var(--text-dim);font-size:13px">metatreinooficial@gmail.com</div></div>
+    <div class="card"><div class="card-title" style="color:var(--accent-2);text-align:center">📞 Fale com o treinador</div><div id="blocked-contact" style="margin-top:14px"></div></div>
     <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="doLogout()">← Sair e tentar com outra conta</button>
   </div>
 </div>
@@ -511,6 +511,7 @@ a{color:var(--primary-2);text-decoration:none}
 
     <div class="section-lbl">Ferramentas</div>
     <div class="list-row" onclick="openMuralAdmin()">📢 <span>Mural e logo do app</span></div>
+    <div class="list-row" onclick="openContactAdmin()">📞 <span>Contato (WhatsApp / e-mail)</span></div>
     <div class="list-row" onclick="openVideoAdmin()">🎬 <span>Vídeos dos exercícios</span><span id="adm-video-count" style="margin-left:auto;font-size:11px;color:var(--text-dim)"></span></div>
     <div class="list-row" onclick="exportData()">📤 <span>Exportar dados (backup JSON)</span></div>
     <div class="list-row warn" onclick="openModal('broadcast')">📢 <span>Mensagem em massa (WhatsApp)</span></div>
@@ -934,7 +935,7 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="list-row" onclick="openWeekSummary()">📊 <span>Resumo da semana</span></div>
     <div class="list-row" onclick="openModal('backup')">💾 <span>Backup e restauração</span></div>
     <div class="list-row" onclick="openModal('terms')">📄 <span>Termos de uso</span></div>
-    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v6.1</div>
+    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v6.2</div>
     <div class="list-row danger" style="margin-top:14px;color:var(--accent-2);border-color:rgba(245,158,11,0.3)" onclick="openModal('restart')">🔄 <span>Começar do zero</span></div>
     <div class="list-row danger" onclick="openModal('delete-account')">🗑️ <span>Excluir minha conta</span></div>
     <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
@@ -979,9 +980,9 @@ a{color:var(--primary-2);text-decoration:none}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=6.1"></script>
+<script src="./app.js?v=6.2"></script>
 <script>
-const APP_VERSION = 'v6.1';
+const APP_VERSION = 'v6.2';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {
