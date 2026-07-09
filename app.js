@@ -1,5 +1,5 @@
-// ===== MetaTreino v6.0 =====
-const APP_VERSION = 'v6.0';
+// ===== MetaTreino v6.1 =====
+const APP_VERSION = 'v6.1';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -494,6 +494,7 @@ function finishSetup(m){
   const prev = state.modules[m];
   state.modules[m] = { setup, plan:generatePlan(m,setup), week:1, createdAt: (prev && prev.createdAt) || Date.now(), history: (prev && prev.history) || [] };
   state.active = m;
+  regenAllPlans(); // se o aluno está com dor/TPM, o plano novo já nasce adaptado
   saveData(); goTab('home'); toast(prev ? '🔄 Plano recriado! Seu histórico foi mantido.' : '🎉 Plano criado!');
 }
 function readSelectedDays(id){
@@ -2236,7 +2237,11 @@ function openModal(k){
   if(k==='add-student') bindOpts('modal-inner');
   if(k==='pain') document.querySelectorAll('#pain-areas .opt-multi').forEach(o=>{ o.onclick=()=>o.classList.toggle('on'); });
 }
-function closeModal(){ $('modal-back').classList.remove('on'); }
+function closeModal(){
+  $('modal-back').classList.remove('on');
+  // se um comando do assistente mexeu nos planos, redesenha a tela por baixo
+  if(typeof maRefreshUI!=='undefined' && maRefreshUI){ maRefreshUI=false; try{ goTab(state.ui.tab||'home'); }catch(e){} }
+}
 function saveProfileEdit(){
   const p = state.user.profile;
   p.nickname = $('ep-nick').value.trim() || p.nickname;
@@ -2540,6 +2545,16 @@ function maTryCommand(txt){
     return {done:true, msg:`Quer que eu reorganize seus treinos de <b>${modName==='run'?'corrida':'musculação'}</b> pra <b>${nomes}</b> (${dias.length}× por semana)? Responda <b>sim</b> ou <b>não</b>. 📅`};
   }
 
+  // ---- RESPOSTA A "ONDE DÓI?" ----
+  if(maPending && maPending.type==='pain_where'){
+    const areaMap = {'pescoço':'pescoço',pescoco:'pescoço',cervical:'pescoço',nuca:'pescoço',tornozelo:'tornozelo',canela:'tornozelo','pé':'pé','pes':'pé','pés':'pé',cotovelo:'cotovelo',punho:'punho','braço':'braço',braco:'braço',joelho:'joelho',perna:'perna',pernas:'perna',coxa:'coxa',ombro:'ombro',lombar:'lombar',coluna:'coluna',costas:'costas',quadril:'quadril'};
+    const achou = Object.keys(areaMap).find(k=>t.includes(k));
+    if(/peito|t[óo]rax|cora[çc][ãa]o/.test(t)){ maPending=null; return maChestPain(); }
+    if(achou){ maPending=null; return maSetPain(areaMap[achou], t); }
+    maPending=null;
+    return {done:true, msg:`Não reconheci essa região 🤔. Sei adaptar treinos para: ${PAIN_REGIONS.join(', ')}. Se a dor for em outro lugar (ou for forte), o melhor caminho é procurar um profissional de saúde. 💚`};
+  }
+
   // ---- CONFIRMAÇÃO SIM/NÃO ----
   if(maPending && /^(sim|s|isso|pode|manda|claro|quero|beleza|ok|confirma|aceito|yes|👍)$/i.test(t.replace(/[!.]/g,'').trim())){
     const p = maPending; maPending = null;
@@ -2581,8 +2596,10 @@ function maTryCommand(txt){
   }
 
   // ---- DOR ----
+  // dor no peito/coração: sinal de alerta médico, NUNCA vira ajuste de treino
+  if(/dor (?:no |em |de )?(peito|t[óo]rax|cora[çc][ãa]o)/.test(t)) return maChestPain();
   // ordem importa: termos mais longos primeiro (senão "pe" captura antes de "pescoço")
-  m = t.match(/dor (?:no |na |nos |nas |em |de )?(pesco[çc]o|tornozelo|cotovelo|joelho|ombro|lombar|coluna|costas|punho|pernas?|p[ée]s?(?=$|\s|[.,!?]))/);
+  m = t.match(/dor (?:no |na |nos |nas |em |de )?(pesco[çc]o|cervical|nuca|tornozelo|cotovelo|joelho|quadril|ombro|lombar|coluna|costas|canela|punho|coxas?|pernas?|bra[çc]o|p[ée]s?(?=$|\s|[.,!?]))/);
   if(/dor/.test(t) && (m || /estou com dor|to com dor|tô com dor|sinto dor|machuquei/.test(t))){
     return maSetPain(m?m[1]:null, t);
   }
@@ -2643,17 +2660,30 @@ function maLogLift(part){
   saveData();
   return {done:true, msg:`✅ Registrei seu treino de ${parts.join(' + ').toLowerCase()} no histórico! 💪 Dica: pra acompanhar sua evolução de carga, da próxima vez registre as séries pela aba Sessões — assim eu guardo seus recordes.`};
 }
+// Regiões oficiais de dor (as mesmas do Perfil)
+const PAIN_REGIONS = ['Ombro','Lombar','Joelho','Punho/Cotovelo','Tornozelo','Pescoço'];
 function maSetPain(area, txt){
-  const map = {'pescoço':'Pescoço',pescoco:'Pescoço',tornozelo:'Tornozelo',cotovelo:'Punho/Cotovelo',joelho:'Joelho',ombro:'Ombro',lombar:'Lombar',coluna:'Lombar',costas:'Lombar',punho:'Punho/Cotovelo',perna:'Joelho',pernas:'Joelho','pé':'Tornozelo','pés':'Tornozelo',pe:'Tornozelo'};
+  const map = {'pescoço':'Pescoço',pescoco:'Pescoço',cervical:'Pescoço',nuca:'Pescoço',
+    tornozelo:'Tornozelo',canela:'Tornozelo','pé':'Tornozelo','pés':'Tornozelo',pe:'Tornozelo',
+    cotovelo:'Punho/Cotovelo',punho:'Punho/Cotovelo','braço':'Punho/Cotovelo',braco:'Punho/Cotovelo',
+    joelho:'Joelho',perna:'Joelho',pernas:'Joelho',coxa:'Joelho',coxas:'Joelho',
+    ombro:'Ombro',
+    lombar:'Lombar',coluna:'Lombar',costas:'Lombar',quadril:'Lombar'};
   const painArea = area ? map[area] : null;
+  // Sem região identificada: NÃO ativa nada — pergunta onde dói (senão o app diria que adaptou sem adaptar)
+  if(!painArea){
+    maPending = {type:'pain_where'};
+    return {done:true, msg:`Sinto muito 😕. Pra eu adaptar o treino do jeito certo, me diga <b>onde</b> dói. As regiões que sei proteger são:<br><br>${PAIN_REGIONS.map(r=>'• '+r).join('<br>')}<br><br>É só responder, ex: <b>joelho</b>.`};
+  }
   state.user.pain = state.user.pain||[];
-  if(painArea && !state.user.pain.includes(painArea)) state.user.pain.push(painArea);
-  if(typeof regenAllPlans==='function') regenAllPlans();
+  if(!state.user.pain.includes(painArea)) state.user.pain.push(painArea);
+  regenAllPlans();
   saveData();
-  const base = painArea
-    ? `Entendi, você está com dor ${area==='joelho'||area==='ombro'||area==='cotovelo'||area==='punho'||area==='tornozelo'?'no':area==='costas'||area==='coluna'||area==='lombar'||area==='perna'?'na':'no'} ${area}. Já adaptei seus treinos pra proteger essa região 🩹.`
-    : 'Entendi que você está com dor. Adaptei seus treinos pra pegar leve 🩹.';
-  return {done:true, msg:`${base} Se a dor for forte ou persistir, procure um profissional de saúde — isso vem antes de qualquer treino. Quando melhorar, é só me dizer "voltar ao normal". 💚`};
+  return {done:true, msg:`Entendi, dor em <b>${painArea}</b>. Já adaptei seus treinos pra proteger essa região 🩹 — evitei os exercícios que sobrecarregam e reduzi o volume. Se a dor for forte ou persistir, procure um profissional de saúde: isso vem antes de qualquer treino. Quando melhorar, diga "voltar ao normal". 💚`};
+}
+// Dor no peito / no coração é sinal de alerta médico — nunca tratamos como "ajuste de treino"
+function maChestPain(){
+  return {done:true, msg:'⚠️ Dor no peito não é coisa pra adaptar treino. <b>Pare a atividade física agora</b> e procure atendimento médico — principalmente se vier com falta de ar, tontura, suor frio ou dor no braço/mandíbula. Em emergência, ligue <b>192 (SAMU)</b>. Sua segurança vem antes de qualquer plano de treino. 🤍'};
 }
 function maTired(){
   const mod = state.modules[state.active];
@@ -2668,7 +2698,9 @@ function maSad(){
 }
 function maTPM(){
   state.user.pain = state.user.pain||[];
-  if(!state.user.tpmMode){ state.user.tpmMode = true; if(typeof regenAllPlans==='function') regenAllPlans(); saveData(); }
+  state.user.tpmMode = true;
+  regenAllPlans(); // sempre reaplica: a flag pode já estar ligada com o plano fora de sincronia
+  saveData();
   return {done:true, msg:'Entendi 💗. Nesses dias o corpo pede mais gentileza — deixei seus treinos mais leves. Respeite seu ritmo: treinar leve ou até descansar é perfeitamente ok. Movimento suave (caminhada, alongamento) pode ajudar com o desconforto, mas sem cobrança. Quando quiser voltar ao normal, é só dizer "voltar ao normal". 🌸'};
 }
 function maBackToNormal(){
