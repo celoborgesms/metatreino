@@ -1,5 +1,5 @@
-// ===== MetaTreino v6.2 =====
-const APP_VERSION = 'v6.2';
+// ===== MetaTreino v7.0 =====
+const APP_VERSION = 'v7.0';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1373,7 +1373,7 @@ function renderExerciseCard(ex, idx){
   const doneToday = todayEntry && todayEntry.sets.length>0;
   return `
     <div class="ex" style="${doneToday?'border-left:3px solid var(--primary);padding-left:10px':''}">
-      <div class="ex-num" style="${doneToday?'background:var(--primary);color:#022c22':''}">${doneToday?'✓':idx+1}</div>
+      <div class="ex-num" style="${doneToday?'background:var(--primary);color:var(--on-primary)':''}">${doneToday?'✓':idx+1}</div>
       <div style="flex:1">
         <div class="ex-name">${ex.name} ${pr?`<span class="pr-badge">🏆 PR ${pr.peso}kg×${pr.reps}</span>`:''}</div>
         <div class="ex-desc">${ex.sub} · Alvo: <b>${ex.sets}×${ex.reps}</b> · Descanso ${ex.rest}</div>
@@ -1693,7 +1693,7 @@ function renderHistory(){
             <div class="hist-name">${x.name.replace(/^[🚶🚴🏃]\s*/,'')}</div>
             <div class="hist-meta"><span>🕐 ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>${meta}</div>
             ${parts.length?`<div class="hist-chips">${parts.map(p=>`<span class="hist-chip">${p}</span>`).join('')}</div>`:''}
-            ${x.adaptedWith?`<div style="margin-top:5px;font-size:11px;color:#7dd3fc">🩹 Treinou adaptado — ${x.adaptedWith}</div>`:''}
+            ${x.adaptedWith?`<div style="margin-top:5px;font-size:11px;color:var(--info-soft)">🩹 Treinou adaptado — ${x.adaptedWith}</div>`:''}
           </div>
           <div class="hist-arrow">›</div>
         </div>`;
@@ -1881,7 +1881,7 @@ function renderProfile(){
   const u = state.user, p = u.profile || {};
   renderAvatar('pf-avatar');
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
-  const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:999px;background:rgba(244,63,94,0.15);color:#fda4af;font-weight:800">${pn.join(', ')}</span>`:''; }
+  const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:999px;background:rgba(244,63,94,0.15);color:var(--danger-soft);font-weight:800">${pn.join(', ')}</span>`:''; }
   const qe = $('pf-quick-equip'); if(qe) qe.style.display = (state.active==='lift' && state.modules.lift) ? 'block' : 'none';
   const qt = $('pf-quick-terrain'); if(qt) qt.style.display = (state.active==='run' && state.modules.run) ? 'block' : 'none';
   $('pf-name').textContent = p.nickname || u.name;
@@ -2250,9 +2250,9 @@ const MODAL_CONTENT = {
   'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno (mesmo da conta Google)</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="7">🎁 Teste 7 dias</div><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
   'broadcast':`<h3>📢 Mensagem em massa (WhatsApp)</h3><p style="color:var(--text-dim);font-size:13px">Gera um link do WhatsApp Web para cada aluno com o texto abaixo. Os alunos precisam ter WhatsApp cadastrado.</p><div class="field"><label>Mensagem</label><textarea class="input" id="bc-msg" rows="4" style="resize:vertical">Olá, treinador aqui do MetaTreino! Passando pra lembrar...</textarea></div><button class="btn btn-primary btn-block" onclick="doBroadcast()">Abrir links WhatsApp</button>`,
   'restart':()=>`<h3>🔄 Começar do zero</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Apaga todo o seu progresso — treinos, séries registradas, recordes, histórico de peso e troféus — e refaz o questionário inicial.<br><br>Sua <b>conta e seu acesso continuam ativos</b> (diferente de excluir a conta).<br><br>Essa ação <b>não pode ser desfeita</b>.</p>
-    <button class="btn btn-outline btn-block" style="margin-top:16px;border-color:#f59e0b;color:var(--accent-2)" onclick="doRestart()">🔄 Sim, começar do zero</button>
+    <button class="btn btn-outline btn-block" style="margin-top:16px;border-color:var(--accent);color:var(--accent-2)" onclick="doRestart()">🔄 Sim, começar do zero</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`,
-  'delete-account':()=>{ const email=(state.user&&state.user.email)||''; return `<h3>🗑️ Excluir minha conta</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Isso apaga <b>permanentemente</b> todo o seu progresso: treinos, PRs, histórico de peso e troféus.<br><br>Seu acesso ao app continua liberado — você pode entrar de novo com a mesma conta Google (<b>${email}</b>) e começar do zero na hora.<br><br>Essa ação <b>não pode ser desfeita</b>.</p><button class="btn btn-outline btn-block" style="margin-top:16px;border-color:#ef4444;color:#ef4444" onclick="doDeleteAccount()">Sim, excluir minha conta</button><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`; },
+  'delete-account':()=>{ const email=(state.user&&state.user.email)||''; return `<h3>🗑️ Excluir minha conta</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Isso apaga <b>permanentemente</b> todo o seu progresso: treinos, PRs, histórico de peso e troféus.<br><br>Seu acesso ao app continua liberado — você pode entrar de novo com a mesma conta Google (<b>${email}</b>) e começar do zero na hora.<br><br>Essa ação <b>não pode ser desfeita</b>.</p><button class="btn btn-outline btn-block" style="margin-top:16px;border-color:var(--danger);color:var(--danger)" onclick="doDeleteAccount()">Sim, excluir minha conta</button><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`; },
 };
 function openModal(k){
   const c = MODAL_CONTENT[k];
@@ -2764,7 +2764,7 @@ function renderAssistant(){
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const bubbles = maThread.map(m=>m.who==='bot'
     ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:11px 14px;margin:6px 0;font-size:13.5px;line-height:1.5;max-width:88%">${m.txt}</div>`
-    : `<div style="background:var(--surface);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`
+    : `<div style="background:var(--surface-2);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`
   ).join('');
   // se a pessoa está com dor ou modo TPM, mostra atalho de voltar ao normal
   const emModoLeve = (state.user && ((state.user.pain&&state.user.pain.length) || state.user.tpmMode));
@@ -2915,7 +2915,7 @@ function startRestTimer(seconds, exName){
   if(!el){
     el = document.createElement('div');
     el.id = 'rest-timer-banner';
-    el.style.cssText = 'position:fixed;bottom:76px;left:14px;right:14px;z-index:350;background:linear-gradient(135deg,#0a1628,#06281f);border:1.5px solid var(--primary);border-radius:18px;padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(16,185,129,0.25)';
+    el.style.cssText = 'position:fixed;bottom:76px;left:14px;right:14px;z-index:350;background:var(--bg-2);border:1.5px solid var(--primary);border-radius:18px;padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-md)';
     document.body.appendChild(el);
   }
   const render = ()=>{
@@ -3496,6 +3496,31 @@ function shareWorkoutImage(histIdx){
 // Foto e mensagem fixada que o admin edita e todos os alunos veem na tela Hoje.
 let coachMural = null;
 
+
+// ---------- TEMA (claro / escuro) ----------
+const THEME_KEY = 'metatreino_theme';
+function currentTheme(){
+  const attr = document.documentElement.getAttribute('data-theme');
+  try{ return localStorage.getItem(THEME_KEY) || attr || 'dark'; }catch(e){ return attr || 'dark'; }
+}
+function applyTheme(t){
+  const light = t==='light';
+  document.documentElement.setAttribute('data-theme', light?'light':'dark');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', light?'#f7f8fa':'#050914');
+  try{ localStorage.setItem(THEME_KEY, light?'light':'dark'); }catch(e){}
+  const row = document.getElementById('theme-row-label');
+  if(row) row.textContent = light ? 'Tema claro' : 'Tema escuro';
+  const ico = document.getElementById('theme-row-icon');
+  if(ico) ico.textContent = light ? '☀️' : '🌙';
+}
+function toggleTheme(){
+  const next = currentTheme()==='light' ? 'dark' : 'light';
+  applyTheme(next);
+  toast(next==='light' ? '☀️ Tema claro ativado' : '🌙 Tema escuro ativado');
+}
+applyTheme(currentTheme()); // aplica imediatamente, antes de qualquer render
+
 // ---------- CONTATO DO TREINADOR (editável pelo admin) ----------
 let coachContact = { whatsapp:'', email:'metatreinooficial@gmail.com' };
 async function loadCoachContact(){
@@ -3590,7 +3615,7 @@ function openMuralAdmin(){
     <div class="field" style="margin-top:12px"><label>Mensagem fixada (vazio = sem mensagem)</label><textarea class="input" id="mural-msg" rows="3" style="resize:vertical">${(m.mensagem||'').replace(/</g,'&lt;')}</textarea></div>
     <div class="field"><label>Foto/logo temporário</label>
       <div class="row" style="gap:8px;align-items:center">
-        <div id="mural-preview" style="width:52px;height:52px;border-radius:12px;overflow:hidden;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:900;color:#022c22;flex-shrink:0">${m.foto?`<img src="${m.foto}" style="width:100%;height:100%;object-fit:cover">`:'M'}</div>
+        <div id="mural-preview" style="width:52px;height:52px;border-radius:12px;overflow:hidden;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--on-primary);flex-shrink:0">${m.foto?`<img src="${m.foto}" style="width:100%;height:100%;object-fit:cover">`:'M'}</div>
         <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('mural-foto-input').click()">📷 Escolher foto</button>
         ${m.foto?`<button class="btn btn-ghost" onclick="muralFotoTemp='REMOVE';document.getElementById('mural-preview').innerHTML='M'">🗑️</button>`:''}
       </div>
@@ -3853,7 +3878,7 @@ function openStudent(email){
 
     <div class="section-lbl">Gerenciar</div>
     <button class="btn btn-ghost btn-block" onclick="toggleStudent('${email}')">${a.active?'🔒 Bloquear acesso':'🔓 Reativar acesso'}</button>
-    <button class="btn btn-ghost btn-block danger" style="margin-top:8px;color:#fda4af;border-color:rgba(244,63,94,0.3)" onclick="removeStudent('${email}')">🗑️ Remover aluno</button>
+    <button class="btn btn-ghost btn-block danger" style="margin-top:8px;color:var(--danger-soft);border-color:rgba(244,63,94,0.3)" onclick="removeStudent('${email}')">🗑️ Remover aluno</button>
   `;
 }
 async function setLifetime(email){
@@ -3914,7 +3939,7 @@ function doBroadcast(){
   closeModal();
   const links = phones.map(p=>`https://wa.me/${p.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`);
   const w = window.open('','_blank');
-  w.document.write(`<html><head><title>Envio em massa</title><style>body{font-family:sans-serif;padding:20px;background:#050914;color:#e2e8f0}a{display:block;padding:12px 16px;background:#10b981;color:#022c22;text-decoration:none;border-radius:12px;margin:6px 0;font-weight:700}</style></head><body><h2>📢 Clique em cada link para abrir o WhatsApp:</h2>${links.map((l,i)=>`<a href="${l}" target="_blank">Aluno ${i+1} · abrir WhatsApp</a>`).join('')}</body></html>`);
+  w.document.write(`<html><head><title>Envio em massa</title><style>body{font-family:sans-serif;padding:20px;background:#050914;color:var(--text)}a{display:block;padding:12px 16px;background:#10b981;color:var(--on-primary);text-decoration:none;border-radius:12px;margin:6px 0;font-weight:700}</style></head><body><h2>📢 Clique em cada link para abrir o WhatsApp:</h2>${links.map((l,i)=>`<a href="${l}" target="_blank">Aluno ${i+1} · abrir WhatsApp</a>`).join('')}</body></html>`);
 }
 async function exportData(){
   toast('📤 Preparando backup...');
@@ -3960,7 +3985,7 @@ function openHistoryEntry(idx){
       <button class="btn btn-primary btn-block" onclick="saveHistoryEntry(${idx})">💾 Salvar</button>
     </div>
     <button class="btn btn-outline btn-block" style="margin-top:10px" onclick="shareWorkoutImage(${idx})">📤 Compartilhar como imagem</button>
-    <button class="btn btn-block" style="margin-top:8px;background:rgba(244,63,94,0.1);color:#fda4af;border:1px solid rgba(244,63,94,0.3)" onclick="deleteHistoryEntry(${idx})">🗑️ Excluir este treino</button>
+    <button class="btn btn-block" style="margin-top:8px;background:rgba(244,63,94,0.1);color:var(--danger-soft);border:1px solid rgba(244,63,94,0.3)" onclick="deleteHistoryEntry(${idx})">🗑️ Excluir este treino</button>
   `;
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');
@@ -4158,4 +4183,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
