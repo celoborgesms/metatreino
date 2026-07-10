@@ -1,5 +1,5 @@
-// ===== MetaTreino v8.3 =====
-const APP_VERSION = 'v8.3';
+// ===== MetaTreino v8.4 =====
+const APP_VERSION = 'v8.4';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2552,11 +2552,30 @@ function ensureStats(){
     if(s.bikeTotal > bikeOnly.length) s.bikeTotal = bikeOnly.length;
   }
 }
+// Ao apagar um registro, subtrai apenas a contribuição DELE dos contadores vitalícios.
+// (Zerar tudo destruiria a "reserva" de treinos que já saíram pela limpeza de 90 dias.)
+// Em seguida ensureStats() garante que o contador nunca fique abaixo do histórico real.
+function subtractFromStats(x){
+  const s = state.stats || (state.stats = {});
+  const dec = (k, v)=>{ s[k] = Math.max(0, (s[k]||0) - v); };
+  if(!x) return;
+  if(x.module === 'lift'){ dec('liftTotal', 1); }
+  else if(x.module === 'run'){
+    const km = x.distance || 0;
+    const tipo = x.activity || 'corrida';
+    if(tipo === 'corrida'){ dec('runTotal', 1); dec('runKmTotal', km); }
+    else if(tipo === 'caminhada'){ dec('walkTotal', 1); dec('walkKmTotal', km); }
+    else if(tipo === 'bike'){ dec('bikeTotal', 1); dec('bikeKmTotal', km); }
+  }
+  ensureStats(); // piso: nunca abaixo do que o histórico atual comprova
+}
 function checkTrophies(){
   ensureStats();
   checkMonthly();
-  // Remove troféus que foram desbloqueados por engano (versões antigas com km em dobro):
-  // se o requisito não é mais atingido pelos contadores corrigidos, tranca de volta.
+  // Auditoria ÚNICA: corrige troféus desbloqueados por engano pelas versões antigas
+  // (bug de contagem em dobro). Depois disso, troféu conquistado NUNCA mais é revogado —
+  // apagar um registro errado não pode custar as conquistas da pessoa.
+  if(!state._trophyAudit){
   const req = {
     run_km_10:['runKmTotal',10], run_km_50:['runKmTotal',50], run_km_100:['runKmTotal',100], run_km_500:['runKmTotal',500],
     walk_km_10:['walkKmTotal',10], walk_km_50:['walkKmTotal',50], walk_km_100:['walkKmTotal',100],
@@ -2564,7 +2583,9 @@ function checkTrophies(){
     bike_10:['bikeTotal',10], bike_25:['bikeTotal',25], walk_10:['walkTotal',10], walk_25:['walkTotal',25],
     run_10:['runTotal',10], run_25:['runTotal',25], run_50:['runTotal',50]
   };
-  state.trophies = state.trophies.filter(id=>{ const r=req[id]; return !r || state.stats[r[0]] >= r[1]; });
+    state.trophies = state.trophies.filter(id=>{ const r=req[id]; return !r || state.stats[r[0]] >= r[1]; });
+    state._trophyAudit = true;
+  }
   // Contadores vitalícios: não zeram quando o histórico de 90 dias é limpo,
   // então troféus como "Centurião" (100 treinos) são alcançáveis de verdade.
   const liftDone = state.stats.liftTotal;
@@ -4848,12 +4869,12 @@ function deleteHistoryEntry(idx){
         state.progress[id] = state.progress[id].filter(p=>{ const pd=new Date(p.date); pd.setHours(0,0,0,0); return pd.getTime()!==today.getTime(); });
         if(!state.progress[id].length) delete state.progress[id];
       });
-      // desfaz o contador vitalício deste treino
-      ensureStats();
-      if(state.stats.liftTotal>0) state.stats.liftTotal--;
     }
   }
+  const removido = mod.history[idx];
   mod.history.splice(idx, 1);
+  // desconta só o registro removido. Troféus e desafios já conquistados PERMANECEM.
+  subtractFromStats(removido);
   saveData();
   toast('🗑️ Treino excluído');
   closeModal();
