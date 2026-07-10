@@ -1,5 +1,5 @@
-// ===== MetaTreino v7.2 =====
-const APP_VERSION = 'v7.2';
+// ===== MetaTreino v7.3 =====
+const APP_VERSION = 'v7.3';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -946,6 +946,74 @@ function missedWorkoutsThisWeek(mod){
     return !did;
   });
 }
+// Linha de status inteligente sob a saudação: lê o momento do aluno e diz algo útil,
+// não uma frase genérica. Prioridade: já treinou > adaptado > prova > sequência > pendência > convite.
+// Resumo da semana passada — aparece na segunda-feira, uma vez por semana.
+function renderWeekRecap(){
+  const card = $('card-weekrecap'); if(!card) return;
+  if(getDayIdx() !== 1){ card.classList.add('hidden'); return; } // só na segunda
+  const segAtual = new Date(); segAtual.setHours(0,0,0,0);
+  const chave = segAtual.getTime();
+  if(state.ui.weekRecapSeen === chave){ card.classList.add('hidden'); return; }
+  const ini = chave - 7*86400000, fim = chave;
+  const H = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])].filter(x=>x.at>=ini && x.at<fim);
+  if(!H.length){ card.classList.add('hidden'); return; }
+  const treinos = H.length;
+  const km = H.reduce((s,x)=>s+(x.distance||0),0);
+  const exs = H.reduce((s,x)=>s+((x.exercisesDone||[]).length),0);
+  const prs = Object.values(state.prs||{}).filter(p=>p.at>=ini && p.at<fim).length;
+  const streak = calcStreak([...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])]);
+  const partes = [`${treinos} ${treinos===1?'treino':'treinos'}`];
+  if(km>0) partes.push(`${km.toFixed(1)} km`);
+  if(exs>0) partes.push(`${exs} exercícios`);
+  if(prs>0) partes.push(`${prs} ${prs===1?'recorde':'recordes'} 🏆`);
+  if(streak>=2) partes.push(`sequência de ${streak} dias 🔥`);
+  card.classList.remove('hidden');
+  card.classList.add('anim-pop');
+  $('weekrecap-msg').textContent = partes.join(' · ') + '. Toque para ver o resumo completo.';
+  card.onclick = (ev)=>{ if(ev.target && ev.target.id==='weekrecap-dismiss') return; openWeekSummary(); };
+  const btn = $('weekrecap-dismiss');
+  if(btn) btn.onclick = (ev)=>{ ev.stopPropagation(); state.ui.weekRecapSeen = chave; saveData(); card.classList.add('hidden'); };
+}
+function homeStatusLine(){
+  const mod = state.modules[state.active];
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const todosH = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
+  const hojeFeitos = todosH.filter(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime()===hoje.getTime(); });
+  const streak = calcStreak(todosH);
+  const a = adaptMode();
+
+  // 1) já treinou hoje
+  if(hojeFeitos.length){
+    const min = hojeFeitos.reduce((s,x)=>s+(x.duration||0),0);
+    if(hojeFeitos.length>1) return `Dois treinos hoje e ${min} min de trabalho. Isso é dedicação. 🔥`;
+    if(streak>=7) return `Treino de hoje: feito. ${streak} dias seguidos — você virou hábito. 🔥`;
+    return `Treino de hoje concluído em ${min} min. Agora deixa o corpo fazer a parte dele. ✅`;
+  }
+  // 2) modo adaptado
+  if(a.active){
+    if(a.pain.length) return `Hoje é dia de cuidar: treinos adaptados por dor em ${a.pain.join(', ').toLowerCase()}.`;
+    if(a.tpm) return 'Modo leve ativo. Vá no seu ritmo — hoje o corpo manda. 💗';
+    return 'Modo leve ativo. Menos volume, mesma constância. 💚';
+  }
+  // 3) prova chegando
+  if(state.active==='run'){
+    const dr = daysToRace();
+    if(dr!==null && dr>=0 && dr<=7) return dr===0 ? 'É HOJE. Confie no treino que você fez. 🏁' : `Faltam ${dr} dias pra sua prova. Últimos ajustes — nada de heroísmo agora.`;
+  }
+  // 4) tem treino hoje?
+  const w = mod && mod.plan && mod.plan.workouts.find(x=>x.dayIdx===getDayIdx());
+  if(w){
+    if(streak>=3) return `${streak} dias de sequência. Hoje tem ${w.name.toLowerCase()} — não quebre a corrente. 🔥`;
+    const ultimo = todosH.length ? todosH.reduce((x,y)=>x.at>y.at?x:y) : null;
+    const dias = ultimo ? Math.floor((Date.now()-ultimo.at)/86400000) : null;
+    if(dias!==null && dias>=5) return `Faz ${dias} dias desde o último treino. Hoje é um bom dia pra recomeçar — comece leve. 👋`;
+    return `Hoje você ainda não treinou. No plano: ${w.name.toLowerCase()}.`;
+  }
+  // 5) descanso
+  if(streak>=5) return `Dia de descanso — e você tem ${streak} dias de sequência. Descansar é parte do treino. 😴`;
+  return 'Hoje é dia de descanso. Recupere bem, amanhã tem mais. 😴';
+}
 function greetTime(){ const h=new Date().getHours(); if(h<12) return 'Bom dia'; if(h<18) return 'Boa tarde'; return 'Boa noite'; }
 function firstName(){ const p = state.user.profile; return (p&&p.nickname) || (state.user.name||'').split(' ')[0]; }
 // ---------- VÍDEOS PERSONALIZADOS DOS EXERCÍCIOS ----------
@@ -1008,7 +1076,7 @@ function renderHome(){
   const isLift = state.active==='lift';
   renderAvatar('home-avatar');
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
-  $('home-goal').textContent = 'Objetivo: ' + labelGoal(mod);
+  $('home-goal').textContent = homeStatusLine();
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
   // 40% de chance de mostrar uma frase contextual (se houver); senão, uma do dia
   const ctxQuote = Math.random() < 0.4 ? contextualQuote() : null;
@@ -1047,6 +1115,7 @@ function renderHome(){
 
   const cw = currentWeek(mod);
   renderInstallCard(); // convite pra instalar (só se fizer sentido)
+  renderWeekRecap();   // resumo da semana passada (segundas)
   // idade sempre em dia quando há data de nascimento (adolescente cresce, aniversário passa)
   const prof = state.user && state.user.profile;
   if(prof && prof.birth){ const a = ageFromBirth(prof.birth); if(a && a!==prof.age) prof.age = a; }
@@ -1391,7 +1460,7 @@ function renderExerciseCard(ex, idx){
   const doneToday = todayEntry && todayEntry.sets.length>0;
   return `
     <div class="ex" style="${doneToday?'border-left:3px solid var(--primary);padding-left:10px':''}">
-      <div class="ex-num" style="${doneToday?'background:var(--primary);color:var(--on-primary)':''}">${doneToday?'✓':idx+1}</div>
+      <div class="ex-num ${doneToday?'anim-check':''}" style="${doneToday?'background:var(--primary);color:var(--on-primary)':''}">${doneToday?'✓':idx+1}</div>
       <div style="flex:1">
         <div class="ex-name">${ex.name} ${ex.pinned?`<span class="pr-badge" style="background:var(--tint-info);color:var(--info)">📌 fixado</span>`:''} ${pr?`<span class="pr-badge">🏆 PR ${pr.peso}kg×${pr.reps}</span>`:''}</div>
         <div class="ex-desc">${ex.sub} · Alvo: <b>${ex.sets}×${ex.reps}</b> · Descanso ${ex.rest}</div>
@@ -1626,7 +1695,7 @@ function confirmLiftWorkout(k){
   const adaptInfo = adaptMode();
   mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:realDuration, plannedDuration:w.duration, module:'lift', feel, parts:[...(w.parts||[])], exercisesDone,
     adaptedWith: adaptInfo.active ? adaptReasonText() : null });
-  ensureStats(); state.stats.liftTotal++;
+  ensureStats(); // deriva liftTotal do histórico — NÃO somar manualmente (contava em dobro)
   checkTrophies();
   saveData();
   closeModal();
@@ -1634,6 +1703,9 @@ function confirmLiftWorkout(k){
   else if(feel==='otimo') toast('✅ Salvo! Se sobrou energia, considere subir a carga no próximo 📈');
   else toast('✅ Treino salvo com sucesso!');
   goTab('home');
+  // convite discreto pra compartilhar o treino recém-concluído
+  const idx = mod.history.length-1;
+  setTimeout(()=>offerShareAfterWorkout(idx), 700);
 }
 // Sugestão de auto-regulação com base nos últimos treinos de musculação
 function liftLoadSuggestion(){
@@ -1653,7 +1725,7 @@ function markRunDone(dayIdx){
   if(!w) return;
   mod.history = mod.history || [];
   mod.history.push({ id:w.k, name:w.name, at:Date.now(), duration:w.duration, module:'run' });
-  ensureStats(); state.stats.runTotal++;
+  ensureStats(); // deriva runTotal do histórico — NÃO somar manualmente (contava em dobro)
   checkTrophies();
   saveData();
   toast('✅ Corrida marcada como feita!');
@@ -1730,7 +1802,82 @@ function calcStreak(h){
 }
 
 // ---------- PERF ----------
+// ---------- CALENDÁRIO DE CONSTÂNCIA (estilo GitHub) ----------
+// 12 semanas × 7 dias. A intensidade da cor vem do "esforço" do dia
+// (minutos de musculação + km de corrida/caminhada/bike), não só de "treinou/não treinou".
+function renderHeatmap(){
+  const box = $('heatmap'); if(!box) return;
+  const H = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
+  const porDia = {};
+  H.forEach(x=>{
+    const d = new Date(x.at); d.setHours(0,0,0,0);
+    const k = d.getTime();
+    const esforco = (x.duration||0) + (x.distance||0)*6; // 1 km ≈ 6 min de esforço
+    porDia[k] = (porDia[k]||0) + esforco;
+  });
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  // começa numa segunda-feira, 12 semanas atrás
+  const inicio = new Date(hoje);
+  inicio.setDate(inicio.getDate() - (getDayIdx()-1) - 7*11);
+  const nivel = v => v<=0?0 : v<20?1 : v<40?2 : v<70?3 : 4;
+  const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  let cells = '', treinados = 0;
+  for(let s=0; s<12; s++){
+    for(let d=0; d<7; d++){
+      const dia = new Date(inicio); dia.setDate(inicio.getDate() + s*7 + d);
+      if(dia > hoje){ cells += '<span class="hm-cell" style="opacity:.25"></span>'; continue; }
+      const v = porDia[dia.getTime()] || 0;
+      if(v>0) treinados++;
+      const n = nivel(v);
+      const isHoje = dia.getTime()===hoje.getTime();
+      const label = `${String(dia.getDate()).padStart(2,'0')}/${meses[dia.getMonth()]}` + (v>0?` · ${Math.round(v)} pts`:' · sem treino');
+      cells += `<span class="hm-cell hm-${n}${isHoje?' hm-today':''}" title="${label}"></span>`;
+    }
+  }
+  box.innerHTML = `<div class="hm-grid">${cells}</div>`;
+  const sum = $('hm-summary');
+  if(sum) sum.textContent = `${treinados} ${treinados===1?'dia treinado':'dias treinados'}`;
+}
+// ---------- RECORDES (discreto, dentro de Desempenho) ----------
+function renderRecords(){
+  const card = $('card-records'); const list = $('records-list');
+  if(!card || !list) return;
+  const linhas = [];
+  const nome = id=>{ for(const c of EX_BANK) for(const e of c.items) if(slug(e.name)===id) return e.name; return id; };
+  const dt = ts => ts ? new Date(ts).toLocaleDateString('pt-BR') : '';
+  // top 3 PRs de musculação
+  Object.entries(state.prs||{})
+    .map(([id,pr])=>({id,...pr}))
+    .sort((a,b)=>b.peso-a.peso).slice(0,3)
+    .forEach(p=>linhas.push({emo:'🏋️', titulo:nome(p.id), sub:dt(p.at), val:`${p.peso}kg × ${p.reps}`}));
+  // corrida: maior distância e melhor pace
+  const runs = (state.modules.run?.history||[]).filter(r=>!r.activity || r.activity==='corrida');
+  if(runs.length){
+    const maior = runs.reduce((a,b)=>(b.distance||0)>(a.distance||0)?b:a);
+    if(maior.distance) linhas.push({emo:'🏃', titulo:'Maior distância', sub:dt(maior.at), val:`${maior.distance} km`});
+    const comPace = runs.filter(r=>r.pace);
+    if(comPace.length){
+      const best = comPace.reduce((a,b)=>parsePace(b.pace)<parsePace(a.pace)?b:a);
+      linhas.push({emo:'⚡', titulo:'Melhor ritmo', sub:dt(best.at), val:best.pace});
+    }
+  }
+  // bike / caminhada: maior distância
+  [['bike','🚴','Maior pedalada'],['caminhada','🚶','Maior caminhada']].forEach(([tipo,emo,titulo])=>{
+    const arr = (state.modules.run?.history||[]).filter(r=>r.activity===tipo && r.distance);
+    if(arr.length){ const m = arr.reduce((a,b)=>b.distance>a.distance?b:a); linhas.push({emo, titulo, sub:dt(m.at), val:`${m.distance} km`}); }
+  });
+  if(!linhas.length){ card.style.display='none'; return; }
+  card.style.display='';
+  list.innerHTML = linhas.map(l=>`
+    <div class="rec-row">
+      <span style="font-size:18px">${l.emo}</span>
+      <div><div style="font-weight:700;font-size:13.5px">${l.titulo}</div><div style="font-size:11.5px;color:var(--text-mute)">${l.sub}</div></div>
+      <div class="rec-val">${l.val}</div>
+    </div>`).join('');
+}
 function renderPerf(){
+  renderHeatmap();
+  renderRecords();
   const mod = state.modules[state.active];
   const isLift = state.active==='lift';
   const h = mod.history||[];
@@ -2024,7 +2171,23 @@ function unlockTrophy(id){
   state.trophies.push(id);
   saveData();
   const t = TROPHIES.find(x=>x.id===id);
-  if(t) setTimeout(()=>toast(`${t.emoji} Troféu desbloqueado: ${t.name}!`), 800);
+  if(!t) return;
+  setTimeout(()=>toast(`${t.emoji} Troféu desbloqueado: ${t.name}!`), 800);
+  // celebração discreta: só se nenhum outro modal estiver aberto (não atrapalha o fluxo)
+  setTimeout(()=>{
+    const back = $('modal-back');
+    if(!back || back.classList.contains('on')) return;
+    $('modal-inner').innerHTML = `
+      <div style="text-align:center">
+        <div class="anim-check" style="font-size:64px;line-height:1">${t.emoji}</div>
+        <h3 style="margin-top:6px">Troféu desbloqueado!</h3>
+        <div style="font-weight:800;color:var(--primary-2);font-size:16px">${t.name}</div>
+        <p style="color:var(--text-dim);font-size:13px;margin-top:6px">${t.desc}</p>
+      </div>
+      <button class="btn btn-primary btn-block anim-glow" style="margin-top:14px" onclick="closeModal();openTrophies()">🏆 Ver meus troféus</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+    back.classList.add('on');
+  }, 1400);
 }
 // Garante que os contadores vitalícios existem; migra dados de quem já tinha histórico
 function ensureStats(){
@@ -2054,6 +2217,7 @@ function ensureStats(){
     if(s.runKmTotal > sumKm(runOnly)*1.5 + 1) s.runKmTotal = sumKm(runOnly);
     if(s.walkKmTotal > sumKm(walkOnly)*1.5 + 1) s.walkKmTotal = sumKm(walkOnly);
     if(s.bikeKmTotal > sumKm(bikeOnly)*1.5 + 1) s.bikeKmTotal = sumKm(bikeOnly);
+    if(s.liftTotal > liftH) s.liftTotal = liftH;   // corrige contas infladas por versões antigas
     if(s.runTotal > runOnly.length) s.runTotal = runOnly.length;
     if(s.walkTotal > walkOnly.length) s.walkTotal = walkOnly.length;
     if(s.bikeTotal > bikeOnly.length) s.bikeTotal = bikeOnly.length;
@@ -3633,6 +3797,20 @@ function shareTrophiesImage(){
   });
   shareCanvas(c, 'metatreino-conquistas.png', 'Minhas conquistas no MetaTreino 🏆');
 }
+// Depois de concluir um treino, oferece (sem obrigar) compartilhar a imagem.
+function offerShareAfterWorkout(histIdx){
+  const h = (state.modules.lift?.history||[])[histIdx];
+  if(!h) return;
+  $('modal-inner').innerHTML = `
+    <div style="text-align:center">
+      <div class="anim-check" style="font-size:60px;line-height:1">✅</div>
+      <h3 style="margin-top:6px">Treino concluído!</h3>
+      <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5">${h.name}<br>${h.duration} min${(h.exercisesDone||[]).length?` · ${h.exercisesDone.length} exercícios`:''}</p>
+    </div>
+    <button class="btn btn-primary btn-block anim-glow" style="margin-top:12px" onclick="shareWorkoutImage(${histIdx})">📸 Compartilhar meu treino</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Agora não</button>`;
+  $('modal-back').classList.add('on');
+}
 function shareWorkoutImage(histIdx){
   const mod = state.modules[state.active];
   const x = (mod.history||[])[histIdx];
@@ -4455,7 +4633,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
