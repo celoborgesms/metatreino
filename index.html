@@ -113,15 +113,16 @@
 /* no tema claro o toast é escuro: seu texto precisa ser claro */
 [data-theme="light"] .toast{color:#f8fafc}
 
-/* calendário de constância (estilo GitHub) */
-.hm-grid{display:grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;gap:3px;overflow-x:auto;padding-bottom:2px}
-.hm-cell{width:13px;height:13px;border-radius:3px;background:var(--surface-2);border:1px solid var(--border);display:inline-block}
-.hm-0{background:var(--surface-2)}
-.hm-1{background:rgba(16,185,129,.28);background:color-mix(in srgb, var(--primary) 28%, transparent);border-color:transparent}
-.hm-2{background:rgba(16,185,129,.50);background:color-mix(in srgb, var(--primary) 50%, transparent);border-color:transparent}
-.hm-3{background:rgba(16,185,129,.74);background:color-mix(in srgb, var(--primary) 74%, transparent);border-color:transparent}
-.hm-4{background:var(--primary);border-color:transparent}
-.hm-today{outline:2px solid var(--accent);outline-offset:1px}
+/* calendário mensal */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-wd{text-align:center;font-size:10.5px;font-weight:700;color:var(--text-mute);padding-bottom:4px;letter-spacing:.3px}
+.cal-day{aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12.5px;font-weight:600;background:var(--surface-2);border:1px solid transparent;color:var(--text-dim)}
+.cal-day.empty{background:transparent;border-color:transparent}
+.cal-day.future{opacity:.35}
+.cal-day.done{background:var(--tint-primary);border-color:var(--border);color:var(--text)}
+.cal-day.today{border-color:var(--accent);border-width:2px;color:var(--text)}
+.cal-dots{display:flex;gap:2px;height:5px;align-items:center}
+.cal-dot{width:5px;height:5px;border-radius:50%;display:inline-block}
 .tprog{height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden}
 .tprog-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-2));border-radius:999px;transition:width .5s ease}
 .rec-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed var(--border)}
@@ -194,7 +195,7 @@ a{color:var(--primary-2);text-decoration:none}
 
 /* Hero greet */
 .greet{display:flex;align-items:center;gap:14px;margin:8px 2px 14px}
-.greet > div{min-width:0;flex:1}
+.greet > div:not(.avatar){min-width:0;flex:1;overflow-wrap:anywhere}
 .avatar{width:56px;height:56px;flex:0 0 56px;aspect-ratio:1;border-radius:50%;object-fit:cover;background:var(--surface-2);border:2px solid var(--primary);box-shadow:0 0 24px var(--primary-glow);display:grid;place-items:center;font-size:22px;color:var(--primary-2);font-weight:700}
 .greet h1{font-size:26px;font-weight:800;letter-spacing:-0.6px}
 .greet-sub{font-size:14px;color:var(--text-dim);margin-top:2px}
@@ -527,7 +528,7 @@ a{color:var(--primary-2);text-decoration:none}
     </div>
 
     <button class="btn btn-primary btn-block" id="google-btn" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="doGoogleSignIn()">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v7.68h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v7.78h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
       <span id="google-btn-lbl">Entrar com Google</span>
     </button>
     <div id="auth-err" style="margin-top:10px"></div>
@@ -904,13 +905,16 @@ a{color:var(--primary-2);text-decoration:none}
     </div>
 
     <div class="card" style="margin-top:16px">
-      <div class="section-lbl" style="margin:0 0 10px">🗓️ Sua constância · últimas 12 semanas</div>
-      <div id="heatmap"></div>
-      <div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11px;color:var(--text-mute)">
-        <span>menos</span>
-        <span class="hm-cell hm-0"></span><span class="hm-cell hm-1"></span><span class="hm-cell hm-2"></span><span class="hm-cell hm-3"></span><span class="hm-cell hm-4"></span>
-        <span>mais</span>
-        <span id="hm-summary" style="margin-left:auto;color:var(--text-dim)"></span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:14px" onclick="calMove(-1)">‹</button>
+        <div class="section-lbl" style="margin:0" id="cal-title">Calendário</div>
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:14px" onclick="calMove(1)">›</button>
+      </div>
+      <div id="calendar"></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px;font-size:11.5px;color:var(--text-mute);flex-wrap:wrap">
+        <span><span class="cal-dot" style="background:var(--lift)"></span> Musculação</span>
+        <span><span class="cal-dot" style="background:var(--run)"></span> Corrida/bike</span>
+        <span id="cal-summary" style="margin-left:auto;color:var(--text-dim)"></span>
       </div>
     </div>
 
@@ -1081,7 +1085,7 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="list-row" onclick="openModal('pain')" id="pf-pain-row">🩹 <span>Estou com dor</span><span id="pf-pain-badge" style="margin-left:auto;font-size:11px"></span></div>
     <div class="list-row" onclick="openWeekSummary()">📊 <span>Resumo da semana</span></div>
     <div class="list-row" onclick="openModal('backup')">💾 <span>Backup e restauração</span></div>
-    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v7.6</div>
+    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v7.7</div>
     <div class="list-row danger" style="margin-top:14px;color:var(--accent-2);border-color:rgba(245,158,11,0.3)" onclick="openModal('restart')">🔄 <span>Começar do zero</span></div>
     <div class="list-row danger" onclick="openModal('delete-account')">🗑️ <span>Excluir minha conta</span></div>
     <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
@@ -1126,9 +1130,9 @@ a{color:var(--primary-2);text-decoration:none}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=7.6"></script>
+<script src="./app.js?v=7.7"></script>
 <script>
-const APP_VERSION = 'v7.6';
+const APP_VERSION = 'v7.7';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {

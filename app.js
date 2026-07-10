@@ -1,5 +1,5 @@
-// ===== MetaTreino v7.6 =====
-const APP_VERSION = 'v7.6';
+// ===== MetaTreino v7.7 =====
+const APP_VERSION = 'v7.7';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1835,41 +1835,64 @@ function calcStreak(h){
 }
 
 // ---------- PERF ----------
-// ---------- CALENDÁRIO DE CONSTÂNCIA (estilo GitHub) ----------
-// 12 semanas × 7 dias. A intensidade da cor vem do "esforço" do dia
-// (minutos de musculação + km de corrida/caminhada/bike), não só de "treinou/não treinou".
-function renderHeatmap(){
-  const box = $('heatmap'); if(!box) return;
-  const H = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
+// ---------- CALENDÁRIO MENSAL ----------
+// Mostra o mês com os dias numerados. Cada dia treinado ganha fundo e pontinhos
+// indicando a modalidade (verde = musculação, âmbar = corrida/caminhada/bike).
+let calOffset = 0; // 0 = mês atual, -1 = mês anterior...
+function calMove(delta){
+  calOffset = Math.min(0, calOffset + delta); // não deixa navegar pro futuro
+  renderCalendar();
+}
+function renderCalendar(){
+  const box = $('calendar'); if(!box) return;
+  const base = new Date();
+  base.setDate(1);
+  base.setMonth(base.getMonth() + calOffset);
+  const ano = base.getFullYear(), mes = base.getMonth();
+
+  // agrupa o histórico por dia
   const porDia = {};
-  H.forEach(x=>{
+  const add = (arr, tipo) => (arr||[]).forEach(x=>{
     const d = new Date(x.at); d.setHours(0,0,0,0);
     const k = d.getTime();
-    const esforco = (x.duration||0) + (x.distance||0)*6; // 1 km ≈ 6 min de esforço
-    porDia[k] = (porDia[k]||0) + esforco;
+    porDia[k] = porDia[k] || { lift:false, run:false, min:0 };
+    porDia[k][tipo] = true;
+    porDia[k].min += (x.duration||0);
   });
+  add(state.modules.lift?.history, 'lift');
+  add(state.modules.run?.history, 'run');
+
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const t = $('cal-title'); if(t) t.textContent = `${meses[mes]} ${ano}`;
+
   const hoje = new Date(); hoje.setHours(0,0,0,0);
-  // começa numa segunda-feira, 12 semanas atrás
-  const inicio = new Date(hoje);
-  inicio.setDate(inicio.getDate() - (getDayIdx()-1) - 7*11);
-  const nivel = v => v<=0?0 : v<20?1 : v<40?2 : v<70?3 : 4;
-  const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-  let cells = '', treinados = 0;
-  for(let s=0; s<12; s++){
-    for(let d=0; d<7; d++){
-      const dia = new Date(inicio); dia.setDate(inicio.getDate() + s*7 + d);
-      if(dia > hoje){ cells += '<span class="hm-cell" style="opacity:.25"></span>'; continue; }
-      const v = porDia[dia.getTime()] || 0;
-      if(v>0) treinados++;
-      const n = nivel(v);
-      const isHoje = dia.getTime()===hoje.getTime();
-      const label = `${String(dia.getDate()).padStart(2,'0')}/${meses[dia.getMonth()]}` + (v>0?` · ${Math.round(v)} pts`:' · sem treino');
-      cells += `<span class="hm-cell hm-${n}${isHoje?' hm-today':''}" title="${label}"></span>`;
-    }
+  const primeiro = new Date(ano, mes, 1);
+  const diasNoMes = new Date(ano, mes+1, 0).getDate();
+  // segunda = 0 ... domingo = 6
+  const inicioCol = (primeiro.getDay() + 6) % 7;
+
+  let html = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(d=>`<div class="cal-wd">${d}</div>`).join('');
+  for(let i=0;i<inicioCol;i++) html += '<div class="cal-day empty"></div>';
+
+  let treinados = 0, minutos = 0;
+  for(let dia=1; dia<=diasNoMes; dia++){
+    const d = new Date(ano, mes, dia); d.setHours(0,0,0,0);
+    const info = porDia[d.getTime()];
+    const futuro = d > hoje;
+    const isHoje = d.getTime() === hoje.getTime();
+    const classes = ['cal-day'];
+    if(info) { classes.push('done'); treinados++; minutos += info.min; }
+    if(futuro) classes.push('future');
+    if(isHoje) classes.push('today');
+    const pontos = info
+      ? `<div class="cal-dots">${info.lift?'<span class="cal-dot" style="background:var(--lift)"></span>':''}${info.run?'<span class="cal-dot" style="background:var(--run)"></span>':''}</div>`
+      : '<div class="cal-dots"></div>';
+    const titulo = info ? `${dia}/${mes+1} · ${info.min} min` : `${dia}/${mes+1} · sem treino`;
+    html += `<div class="${classes.join(' ')}" title="${titulo}"><span>${dia}</span>${pontos}</div>`;
   }
-  box.innerHTML = `<div class="hm-grid">${cells}</div>`;
-  const sum = $('hm-summary');
-  if(sum) sum.textContent = `${treinados} ${treinados===1?'dia treinado':'dias treinados'}`;
+  box.innerHTML = `<div class="cal-grid">${html}</div>`;
+  const s = $('cal-summary');
+  if(s) s.textContent = treinados ? `${treinados} ${treinados===1?'dia treinado':'dias treinados'} · ${minutos} min` : 'nenhum treino neste mês';
 }
 // ---------- RECORDES (discreto, dentro de Desempenho) ----------
 function renderRecords(){
@@ -1909,7 +1932,7 @@ function renderRecords(){
     </div>`).join('');
 }
 function renderPerf(){
-  renderHeatmap();
+  renderCalendar();
   renderRecords();
   const mod = state.modules[state.active];
   const isLift = state.active==='lift';
@@ -4825,7 +4848,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,calMove,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
