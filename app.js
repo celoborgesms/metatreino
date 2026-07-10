@@ -1,5 +1,5 @@
-// ===== MetaTreino v7.8 =====
-const APP_VERSION = 'v7.8';
+// ===== MetaTreino v7.9 =====
+const APP_VERSION = 'v7.9';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -118,6 +118,17 @@ function contextualQuote(){
 }
 
 const TROPHIES = [
+  // ESPECIAIS (humor e persistência) — recompensam o que a vida real cobra
+  { id:'comeback',    emoji:'🔙', name:'A Volta por Cima',   desc:'Voltou a treinar depois de 10+ dias parado', cat:'geral' },
+  { id:'monday',      emoji:'😤', name:'Segunda Não Assusta',desc:'Treinou em 4 segundas-feiras',              cat:'geral' },
+  { id:'early_bird',  emoji:'🐓', name:'Antes do Galo',      desc:'Treinou antes das 6h da manhã',             cat:'geral' },
+  { id:'night_owl',   emoji:'🦉', name:'Coruja Fitness',     desc:'Treinou depois das 22h',                    cat:'geral' },
+  { id:'weekend',     emoji:'🛋️', name:'Sofá Que Espere',    desc:'Treinou num sábado e num domingo',          cat:'geral' },
+  { id:'rain_check',  emoji:'🌧️', name:'Nem a Preguiça',     desc:'Treinou 3 dias seguidos após relatar cansaço', cat:'geral' },
+  { id:'consistent',  emoji:'📈', name:'Sem Drama',          desc:'12 treinos sem pular uma semana inteira',   cat:'geral' },
+  { id:'century',     emoji:'💯', name:'Clube dos 100',      desc:'100 treinos registrados. Respeito.',        cat:'geral' },
+  { id:'humble',      emoji:'🧘', name:'Sabedoria',          desc:'Adaptou o treino por dor em vez de forçar', cat:'geral' },
+
   // GERAIS
   { id:'first_workout', emoji:'🥇', name:'Primeiro treino', desc:'Concluiu seu primeiro treino', cat:'geral' },
   { id:'week_goal', emoji:'🎯', name:'Meta da semana', desc:'Bateu a meta semanal', cat:'geral' },
@@ -1031,6 +1042,16 @@ function homeStatusLine(){
     if(diasParado !== null && diasParado >= 5) return `Faz ${diasParado} dias desde o último treino. Hoje é um bom dia pra recomeçar — comece leve. 👋`;
 
     const oQue = w.name.toLowerCase();
+    // 00h–03h: ninguém deveria estar treinando. Tom leve, empurrando pra cama.
+    if(h < 3){
+      const corujas = [
+        `🦉 Passou da meia-noite… O ${oQue} não vai fugir, mas seu sono, sim. Vai dormir!`,
+        `🦉 Uhu! A esta hora até a coruja já foi deitar. ${oQue.charAt(0).toUpperCase()+oQue.slice(1)} amanhã, combinado?`,
+        `🌙 Treinar agora? O único levantamento recomendado é o do cobertor. Boa noite!`,
+        `🦉 Seu corpo constrói músculo dormindo. Tecnicamente, a cama é o melhor equipamento agora.`
+      ];
+      return corujas[new Date().getDate() % corujas.length];
+    }
     if(h < 6)  return `Madrugada e você aqui? Se for treinar ${oQue}, aqueça bem — o corpo ainda está frio. 🌙`;
     if(h < 12) return streak>=3 ? `${streak} dias de sequência. Hoje tem ${oQue} — comece o dia mantendo a corrente. 🔥`
                                 : `Bom começo de dia: hoje tem ${oQue} esperando por você. ☀️`;
@@ -1042,6 +1063,7 @@ function homeStatusLine(){
   }
 
   // 6) dia de descanso neste módulo
+  if(h < 3) return '🦉 Madrugada alta e nem treino tem hoje. Aproveite: durma. É de graça e funciona.';
   if(streak>=5) return `Descanso na ${nomeAtivo} — e você tem ${streak} dias de sequência. Descansar é parte do treino. 😴`;
   if(h >= 21) return `Descanso hoje. Um sono bom vale mais que qualquer série. 😴`;
   return `Hoje é dia de descanso na ${nomeAtivo}. Recupere bem, amanhã tem mais. 😴`;
@@ -2312,7 +2334,7 @@ function checkMonthly(){
   });
   if(novos.length){
     saveData();
-    novos.forEach((c,i)=>setTimeout(()=>toast(`${c.emo} Desafio do mês concluído: ${c.nome}!`), 900 + i*1200));
+    novos.forEach(c=>queueAward({ id:'m_'+c.id, emo:c.emo, tipo:'DESAFIO DO MÊS CONCLUÍDO', nome:c.nome, desc:c.desc }));
   }
   return novos;
 }
@@ -2380,28 +2402,63 @@ function openMonthly(){
   $('modal-back').classList.add('on');
 }
 
+// ========== CELEBRAÇÕES (fila única com carrossel) ==========
+// Em vez de empilhar toasts e modais, tudo que a pessoa conquistou de uma vez
+// entra numa fila e vira um carrossel: ‹ card › com bolinhas e um X pra fechar.
+let awardQueue = [], awardIdx = 0, awardTimer = null;
+function queueAward(a){
+  if(awardQueue.some(x=>x.id===a.id)) return;
+  awardQueue.push(a);
+  clearTimeout(awardTimer);
+  awardTimer = setTimeout(showAwards, 1200);
+}
+function showAwards(){
+  if(!awardQueue.length) return;
+  const back = $('modal-back');
+  // se houver outro modal aberto (ex.: compartilhar treino), espera ele fechar
+  if(back && back.classList.contains('on')){ awardTimer = setTimeout(showAwards, 800); return; }
+  awardIdx = 0;
+  renderAward();
+}
+function renderAward(){
+  const a = awardQueue[awardIdx]; if(!a) return;
+  const n = awardQueue.length;
+  const dots = awardQueue.map((_,i)=>`<span style="width:${i===awardIdx?'18px':'6px'};height:6px;border-radius:999px;background:${i===awardIdx?'var(--primary)':'var(--surface-2)'};display:inline-block;transition:width .25s"></span>`).join('');
+  const seta = (dir,dis)=>`<button onclick="awardNav(${dir})" ${dis?'disabled':''} style="background:none;border:none;font-size:26px;color:${dis?'var(--surface-2)':'var(--text-dim)'};padding:8px 10px;cursor:${dis?'default':'pointer'}">${dir<0?'‹':'›'}</button>`;
+  $('modal-inner').innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin:-4px -4px 0 0">
+      <button onclick="closeAwards()" style="background:none;border:none;font-size:20px;color:var(--text-mute);padding:4px 8px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:4px">
+      ${n>1 ? seta(-1, awardIdx===0) : '<div style="width:44px"></div>'}
+      <div style="flex:1;text-align:center;padding:4px 0">
+        <div class="anim-check" key="${awardIdx}" style="font-size:62px;line-height:1.1">${a.emo}</div>
+        <div style="font-size:12px;color:var(--text-mute);letter-spacing:.5px;margin-top:6px">${a.tipo}</div>
+        <h3 style="margin:2px 0 0;font-size:19px">${a.nome}</h3>
+        <p style="color:var(--text-dim);font-size:13px;margin-top:6px;line-height:1.45">${a.desc}</p>
+      </div>
+      ${n>1 ? seta(1, awardIdx===n-1) : '<div style="width:44px"></div>'}
+    </div>
+    ${n>1?`<div style="display:flex;justify-content:center;gap:5px;margin:12px 0 4px">${dots}</div>
+      <div style="text-align:center;font-size:11.5px;color:var(--text-mute)">${awardIdx+1} de ${n} conquistas</div>`:''}
+    <button class="btn btn-primary btn-block anim-glow" style="margin-top:14px" onclick="closeAwards();openTrophies()">🏆 Ver meus troféus</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeAwards()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function awardNav(d){
+  const novo = awardIdx + d;
+  if(novo < 0 || novo >= awardQueue.length) return;
+  awardIdx = novo; renderAward();
+}
+function closeAwards(){ awardQueue = []; awardIdx = 0; closeModal(); }
+
 function unlockTrophy(id){
   if(state.trophies.includes(id)) return;
   state.trophies.push(id);
   saveData();
   const t = TROPHIES.find(x=>x.id===id);
   if(!t) return;
-  setTimeout(()=>toast(`${t.emoji} Troféu desbloqueado: ${t.name}!`), 800);
-  // celebração discreta: só se nenhum outro modal estiver aberto (não atrapalha o fluxo)
-  setTimeout(()=>{
-    const back = $('modal-back');
-    if(!back || back.classList.contains('on')) return;
-    $('modal-inner').innerHTML = `
-      <div style="text-align:center">
-        <div class="anim-check" style="font-size:64px;line-height:1">${t.emoji}</div>
-        <h3 style="margin-top:6px">Troféu desbloqueado!</h3>
-        <div style="font-weight:800;color:var(--primary-2);font-size:16px">${t.name}</div>
-        <p style="color:var(--text-dim);font-size:13px;margin-top:6px">${t.desc}</p>
-      </div>
-      <button class="btn btn-primary btn-block anim-glow" style="margin-top:14px" onclick="closeModal();openTrophies()">🏆 Ver meus troféus</button>
-      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
-    back.classList.add('on');
-  }, 1400);
+  queueAward({ id:'t_'+t.id, emo:t.emoji, tipo:'TROFÉU DESBLOQUEADO', nome:t.name, desc:t.desc });
 }
 // Garante que os contadores vitalícios existem; migra dados de quem já tinha histórico
 function ensureStats(){
@@ -2505,6 +2562,35 @@ function checkTrophies(){
   if(s>=7) unlockTrophy('streak_7');
   if(s>=14) unlockTrophy('streak_14');
   if(s>=30) unlockTrophy('streak_30');
+  // ----- ESPECIAIS (humor / persistência) -----
+  const total = allHist.length;
+  if(total >= 100) unlockTrophy('century');
+  // horários
+  if(allHist.some(x=>new Date(x.at).getHours() < 6)) unlockTrophy('early_bird');
+  if(allHist.some(x=>new Date(x.at).getHours() >= 22)) unlockTrophy('night_owl');
+  // segundas-feiras (dia 1 na nossa contagem)
+  const segundas = new Set(allHist.filter(x=>{ const d=new Date(x.at); return d.getDay()===1; }).map(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime(); }));
+  if(segundas.size >= 4) unlockTrophy('monday');
+  // fim de semana: um sábado E um domingo
+  const temSab = allHist.some(x=>new Date(x.at).getDay()===6);
+  const temDom = allHist.some(x=>new Date(x.at).getDay()===0);
+  if(temSab && temDom) unlockTrophy('weekend');
+  // a volta por cima: alguma pausa de 10+ dias seguida de um treino
+  const diasOrd = [...new Set(allHist.map(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime(); }))].sort((a,b)=>a-b);
+  for(let i=1;i<diasOrd.length;i++){ if((diasOrd[i]-diasOrd[i-1])/86400000 >= 10){ unlockTrophy('comeback'); break; } }
+  // sabedoria: registrou treino em modo adaptado por dor
+  if(allHist.some(x=>x.adaptedWith && /dor/i.test(x.adaptedWith))) unlockTrophy('humble');
+  // nem a preguiça: treinou 3 dias seguidos tendo terminado algum deles exausto/cansado
+  if(s>=3 && allHist.some(x=>x.feel==='cansado' || x.feel==='exausto')) unlockTrophy('rain_check');
+  // sem drama: 12 treinos e nenhuma semana vazia nas últimas 12
+  if(total>=12){
+    const semanaTem = new Set(allHist.map(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); d.setDate(d.getDate()-((d.getDay()||7)-1)); return d.getTime(); }));
+    const hj = new Date(); hj.setHours(0,0,0,0); hj.setDate(hj.getDate()-((hj.getDay()||7)-1));
+    let todas = true;
+    for(let k=0;k<4;k++){ if(!semanaTem.has(hj.getTime() - k*7*86400000)) { todas=false; break; } }
+    if(todas) unlockTrophy('consistent');
+  }
+
   // Meta semanal
   const mod = state.modules[state.active];
   if(mod && mod.plan){
@@ -4848,7 +4934,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,calMove,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,calMove,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
