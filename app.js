@@ -1,5 +1,5 @@
-// ===== MetaTreino v7.1 =====
-const APP_VERSION = 'v7.1';
+// ===== MetaTreino v7.2 =====
+const APP_VERSION = 'v7.2';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -990,6 +990,7 @@ function goTab(tab){
   $('tabbar').classList.remove('hidden');
   const map = {home:'scr-home',sessions:'scr-sessions',library:'scr-library',perf:'scr-perf',history:'scr-history',plan:'scr-plan',profile:'scr-profile'};
   showScreen(map[tab] || 'scr-home');
+  applyMuralLogo(); // a logo do treinador vale em todas as abas
   if(tab==='home') renderHome();
   else if(tab==='sessions') renderSessions();
   else if(tab==='library') renderLibrary();
@@ -1045,17 +1046,37 @@ function renderHome(){
   }
 
   const cw = currentWeek(mod);
+  renderInstallCard(); // convite pra instalar (só se fizer sentido)
+  // idade sempre em dia quando há data de nascimento (adolescente cresce, aniversário passa)
+  const prof = state.user && state.user.profile;
+  if(prof && prof.birth){ const a = ageFromBirth(prof.birth); if(a && a!==prof.age) prof.age = a; }
+  // parabéns no aniversário
+  const bday = $('card-birthday');
+  if(bday){
+    if(isBirthdayToday()){
+      bday.classList.remove('hidden');
+      const nome = (prof && prof.nickname) || (state.user && state.user.name) || 'atleta';
+      $('bday-title').textContent = `🎂 Feliz aniversário, ${nome}!`;
+      const total = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])].length;
+      $('bday-msg').textContent = total>0
+        ? `Mais um ano de vida — e ${total} ${total===1?'treino registrado':'treinos registrados'} no MetaTreino. Que o novo ciclo venha com saúde, disposição e recordes. Hoje o treino é opcional; comemorar é obrigatório! 🎉`
+        : 'Que este novo ciclo venha cheio de saúde e disposição. Seja qual for o seu objetivo, estamos juntos nessa! 🎉';
+    } else bday.classList.add('hidden');
+  }
   // aviso de modo adaptado (dor / TPM) — explica o que mudou nos treinos
   const adaptCard = $('card-adapt');
   if(adaptCard){
     const a = adaptMode();
     if(a.active){
       adaptCard.classList.remove('hidden');
-      $('adapt-title').textContent = a.tpm && a.pain.length ? '🩹 Modo leve ativo (TPM + dor)' : a.tpm ? '💗 Modo TPM ativo' : `🩹 Modo cuidado ativo (${a.pain.join(', ')})`;
+      const titulo = a.pain.length ? `🩹 Modo cuidado ativo (${a.pain.join(', ')})`
+                   : a.tpm ? '💗 Modo TPM ativo'
+                   : '💚 Modo leve ativo (cansaço)';
+      $('adapt-title').textContent = titulo;
       const adaptados = (state.modules[state.active]?.plan?.workouts||[]).filter(w=>w.adapted).length;
-      $('adapt-msg').textContent = (a.tpm && !a.pain.length)
-        ? 'Seus treinos estão mais leves (menos séries e volume reduzido). Vá no seu ritmo — treinar leve ou descansar hoje é totalmente ok. 💗'
-        : `Seus treinos foram adaptados pra proteger: ${a.pain.join(', ')}. ${adaptados?adaptados+' treino(s) ajustado(s).':''} Se a dor for forte ou persistir, procure um profissional de saúde.`;
+      $('adapt-msg').textContent = a.pain.length
+        ? `Seus treinos foram adaptados pra proteger: ${a.pain.join(', ')}. ${adaptados?adaptados+' treino(s) ajustado(s).':''} Se a dor for forte ou persistir, procure um profissional de saúde.`
+        : 'Seus treinos estão mais leves (menos séries e volume reduzido). Vá no seu ritmo — treinar leve ou descansar hoje é totalmente ok. 💚';
     } else adaptCard.classList.add('hidden');
   }
   // treinos pendentes desta semana (perdeu um ou mais dias?)
@@ -2243,7 +2264,8 @@ const MODAL_CONTENT = {
       <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Cancelar</button>`;
   },
   'faq':`<h3>❓ FAQ / Sobre</h3><p><b>MetaTreino</b> gera planos de treino inteligentes de musculação e corrida, personalizados.<br><br><b>Como funciona?</b> Escolha o módulo, responda o questionário e receba um plano progressivo.<br><br><b>Meus dados ficam salvos?</b> Sim, na nuvem, vinculados à sua conta Google — você pode entrar de qualquer aparelho. Histórico de treinos guardado por 90 dias.<br><br><b>Contato:</b> metatreinooficial@gmail.com</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
-  'edit-profile':()=>{ const p = state.user.profile||{}; return `<h3>✏️ Editar perfil</h3><div class="field"><label>Como quer ser chamado</label><input class="input" id="ep-nick" value="${p.nickname||''}"></div><div class="field"><label>Idade</label><input class="input mono" type="number" id="ep-age" value="${p.age||''}"></div><div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="ep-height" value="${p.height||''}"></div><div class="field"><label>WhatsApp</label><input class="input mono" id="ep-whats" value="${p.whatsapp||''}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveProfileEdit()">Salvar</button>`; },
+  'edit-profile':()=>{ const p = state.user.profile||{}; return `<h3>✏️ Editar perfil</h3><div class="field"><label>Como quer ser chamado</label><input class="input" id="ep-nick" value="${p.nickname||''}"></div><div class="field"><label>Data de nascimento</label><input class="input mono" type="date" id="ep-birth" value="${p.birth||''}" max="${new Date().toISOString().slice(0,10)}"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">${p.birth?`Idade: ${ageFromBirth(p.birth)} anos`:'Preencha para receber os parabéns no seu aniversário 🎂'}</div></div>
+    <div class="field"><label>Idade (usada se não informar a data)</label><input class="input mono" type="number" id="ep-age" value="${p.age||''}"></div><div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="ep-height" value="${p.height||''}"></div><div class="field"><label>WhatsApp</label><input class="input mono" id="ep-whats" value="${p.whatsapp||''}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveProfileEdit()">Salvar</button>`; },
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
   'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno (mesmo da conta Google)</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="7">🎁 Teste 7 dias</div><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
   'broadcast':`<h3>📢 Mensagem em massa (WhatsApp)</h3><p style="color:var(--text-dim);font-size:13px">Gera um link do WhatsApp Web para cada aluno com o texto abaixo. Os alunos precisam ter WhatsApp cadastrado.</p><div class="field"><label>Mensagem</label><textarea class="input" id="bc-msg" rows="4" style="resize:vertical">Olá, treinador aqui do MetaTreino! Passando pra lembrar...</textarea></div><button class="btn btn-primary btn-block" onclick="doBroadcast()">Abrir links WhatsApp</button>`,
@@ -2264,12 +2286,42 @@ function closeModal(){
   // se um comando do assistente mexeu nos planos, redesenha a tela por baixo
   if(typeof maRefreshUI!=='undefined' && maRefreshUI){ maRefreshUI=false; try{ goTab(state.ui.tab||'home'); }catch(e){} }
 }
+// idade calculada a partir da data de nascimento (AAAA-MM-DD)
+function ageFromBirth(birth){
+  if(!birth) return null;
+  const b = new Date(birth+'T00:00:00');
+  if(isNaN(b)) return null;
+  const hoje = new Date();
+  let a = hoje.getFullYear() - b.getFullYear();
+  const m = hoje.getMonth() - b.getMonth();
+  if(m < 0 || (m === 0 && hoje.getDate() < b.getDate())) a--;
+  return a;
+}
+// hoje é aniversário do aluno?
+function isBirthdayToday(){
+  const b = state.user && state.user.profile && state.user.profile.birth;
+  if(!b) return false;
+  const d = new Date(b+'T00:00:00'); if(isNaN(d)) return false;
+  const h = new Date();
+  return d.getDate()===h.getDate() && d.getMonth()===h.getMonth();
+}
 function saveProfileEdit(){
   const p = state.user.profile;
   p.nickname = $('ep-nick').value.trim() || p.nickname;
-  p.age = parseInt($('ep-age').value) || p.age;
-  p.height = parseFloat($('ep-height').value) || p.height;
+  const birth = ($('ep-birth') && $('ep-birth').value) || '';
+  if(birth){
+    const idade = ageFromBirth(birth);
+    if(idade===null || idade<10 || idade>100) return toast('Data de nascimento inválida');
+    p.birth = birth;
+    p.age = idade; // idade sempre derivada da data, e se atualiza sozinha todo ano
+  } else {
+    p.age = parseInt($('ep-age').value) || p.age;
+  }
+  const h = parseFloat($('ep-height').value);
+  if(h && (h<120 || h>230)) return toast('Altura inválida (120–230 cm)');
+  p.height = h || p.height;
   p.whatsapp = $('ep-whats').value.trim();
+  regenAllPlans(); // idade/altura afetam descanso e IMC — reaplica o plano
   saveData(); toast('✅ Perfil atualizado'); closeModal(); goTab('profile');
 }
 
@@ -2433,6 +2485,46 @@ const MA_ANSWERS = {
   },
   motiva(){
     return contextualQuote() || QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  },
+  imc(){
+    try{
+      const r = calcIMC();
+      if(!r) return 'Preencha altura e peso no Perfil pra eu calcular seu IMC. 📏';
+      return `Seu IMC é <b>${r.value}</b> (${r.cls}). Lembrando: o IMC é um indicador geral e não distingue músculo de gordura — quem treina força costuma ter IMC mais alto sem estar acima do peso. Use como referência, não como veredito. 📊`;
+    }catch(e){ return 'Preencha altura e peso no Perfil pra eu calcular seu IMC. 📏'; }
+  },
+  semana(){
+    const ini = new Date(); ini.setHours(0,0,0,0); ini.setDate(ini.getDate()-(getDayIdx()-1));
+    const feitos = maAllHistory().filter(x=>x.at>=ini.getTime()).length;
+    const mod = state.modules[state.active];
+    const alvo = mod && mod.plan ? mod.plan.workouts.length : 0;
+    if(!alvo) return `Você fez ${feitos} ${feitos===1?'treino':'treinos'} esta semana. 💪`;
+    const falta = Math.max(0, alvo-feitos);
+    return falta===0
+      ? `Você já fez ${feitos} de ${alvo} treinos desta semana — meta batida! 🎉`
+      : `Você fez ${feitos} de ${alvo} treinos desta semana. ${falta===1?'Falta 1':'Faltam '+falta} pra fechar. Você consegue! 💪`;
+  },
+  proximo(){
+    const mod = state.modules[state.active];
+    if(!mod || !mod.plan) return 'Você ainda não tem um plano ativo. 🎯';
+    const hoje = getDayIdx();
+    const dias = ['segunda','terça','quarta','quinta','sexta','sábado','domingo'];
+    const ordenados = [...mod.plan.workouts].sort((a,b)=>a.dayIdx-b.dayIdx);
+    const prox = ordenados.find(w=>w.dayIdx>hoje) || ordenados[0];
+    if(!prox) return 'Seu plano não tem treinos cadastrados. 🤔';
+    const hojeTem = mod.plan.workouts.find(w=>w.dayIdx===hoje);
+    if(hojeTem) return `Hoje tem <b>${hojeTem.name}</b>${hojeTem.duration?` (~${hojeTem.duration} min)`:''}. Depois dele, o próximo é <b>${prox.name}</b> na ${dias[prox.dayIdx-1]}. 💪`;
+    return `Hoje é descanso. Seu próximo treino é <b>${prox.name}</b> na ${dias[prox.dayIdx-1]}${prox.duration?` (~${prox.duration} min)`:''}. 😴`;
+  },
+  aniversario(){
+    const b = state.user && state.user.profile && state.user.profile.birth;
+    if(!b) return 'Você ainda não cadastrou sua data de nascimento. Vá no Perfil → Editar dados pessoais pra eu te dar os parabéns no dia! 🎂';
+    if(isBirthdayToday()) return `🎂 É HOJE! Feliz aniversário, ${maName()}! Que o novo ciclo venha com muita saúde e recordes. 🎉`;
+    const d = new Date(b+'T00:00:00'); const h = new Date();
+    let prox = new Date(h.getFullYear(), d.getMonth(), d.getDate());
+    if(prox < h) prox = new Date(h.getFullYear()+1, d.getMonth(), d.getDate());
+    const dias = Math.ceil((prox-h)/86400000);
+    return `Faltam ${dias} ${dias===1?'dia':'dias'} pro seu aniversário. Você tem ${ageFromBirth(b)} anos. 🎂`;
   }
 };
 const MA_SUGGESTIONS = [
@@ -2449,6 +2541,9 @@ const MA_SUGGESTIONS = [
   {lbl:'🔀 Corrida ou musculação?', key:'corrida_ou_musculacao'},
   {lbl:'⚖️ Meu peso', key:'maior_peso'},
   {lbl:'🔥 Calorias da semana', key:'calorias'},
+  {lbl:'📊 Meu IMC', key:'imc'},
+  {lbl:'📆 Treinos desta semana', key:'semana'},
+  {lbl:'⏭️ Meu próximo treino', key:'proximo'},
   {lbl:'❤️ Me motive', key:'motiva'}
 ];
 function maInterpret(txt){
@@ -2480,6 +2575,10 @@ function maInterpret(txt){
   if(has('caloria','kcal','gastei','queim')) return 'calorias';
   if(has('peso','magro','gordura','quilos')) return 'maior_peso';
   if(has('motiv','frase','ânimo','animo','desanim')) return 'motiva';
+  if(has('imc','massa corporal')) return 'imc';
+  if(has('essa semana','esta semana','treinos da semana','quantos treinos')) return 'semana';
+  if(has('próximo treino','proximo treino','qual o treino','treino de amanhã','o que treino')) return 'proximo';
+  if(has('aniversário','aniversario','fazer anos','meu niver')) return 'aniversario';
   return null;
 }
 let maPending = null; // ação aguardando confirmação sim/não
@@ -2582,6 +2681,7 @@ function maTryCommand(txt){
     const p = maPending; maPending = null;
     if(p.type==='equip') return maApplyEquip(p.value);
     if(p.type==='schedule') return maApplySchedule(p.mod, p.days);
+    if(p.type==='light') return maApplyLight();
   }
   if(maPending && /^(n[ãa]o|nao|n|deixa|cancela|melhor n[ãa]o|nem|👎)$/i.test(t.replace(/[!.]/g,'').trim())){
     maPending = null;
@@ -2634,6 +2734,14 @@ function maTryCommand(txt){
   // ---- VOLTAR AO NORMAL ----
   if(/(voltar ao normal|to bem agora|tô bem agora|estou bem agora|sem dor agora|passou a dor|voltar treino normal|normalizar)/.test(t)) return maBackToNormal();
 
+  // ---- TREINO EXTRA (grupo fora do plano de hoje) ----
+  m = t.match(/(?:quero|posso|gostaria de|d[áa] pra|da pra)\s*(?:treinar|fazer|malhar)\s*(peito|costas|ombros?|b[íi]ceps|tr[íi]ceps|pernas?|gl[úu]teos?|panturrilha|core|abd[oô]men|trap[ée]zio)/);
+  if(m){
+    const mapa = {peito:'Peito',costas:'Costas',ombro:'Ombro',ombros:'Ombro','bíceps':'Bíceps',biceps:'Bíceps','tríceps':'Tríceps',triceps:'Tríceps',perna:'Pernas',pernas:'Pernas','glúteo':'Glúteos','glúteos':'Glúteos',gluteo:'Glúteos',gluteos:'Glúteos',panturrilha:'Panturrilha',core:'Core','abdômen':'Core',abdomen:'Core','trapézio':'Trapézio',trapezio:'Trapézio'};
+    const p = mapa[m[1]];
+    if(p) return maExtraWorkout(p);
+  }
+
   // ---- MUSCULAÇÃO manual ----
   // "fiz musculação hoje", "treinei peito", "fiz treino de costas"
   m = t.match(/(?:fiz|treinei|malhei)\s*(?:treino de |muscula[çc][ãa]o de )?(peito|costas|ombro|b[íi]ceps|tr[íi]ceps|perna|pernas|gl[úu]teo|panturrilha|core|abd[oô]men|trap[ée]zio)?/);
@@ -2682,6 +2790,24 @@ function maLogLift(part){
   saveData();
   return {done:true, msg:`✅ Registrei seu treino de ${parts.join(' + ').toLowerCase()} no histórico! 💪 Dica: pra acompanhar sua evolução de carga, da próxima vez registre as séries pela aba Sessões — assim eu guardo seus recordes.`};
 }
+// Treino extra: o aluno quer trabalhar um grupo que não está no plano de hoje.
+// Não altera o plano — sugere um mini-treino seguro respeitando equipamento e dor.
+function maExtraWorkout(part){
+  const mod = state.modules.lift;
+  if(!mod) return {done:true, msg:'Você ainda não tem um plano de musculação ativo. Crie um primeiro! 💪'};
+  const blocked = painBlockedParts();
+  if(blocked.has(part)) return {done:true, msg:`Hoje não recomendo treinar <b>${part.toLowerCase()}</b>: essa região está ligada à dor que você me relatou. Vamos proteger primeiro e voltar mais forte. 💚`};
+  const exs = buildLiftExercises([part], mod.setup).slice(0,3);
+  if(!exs.length) return {done:true, msg:`Não encontrei exercícios de ${part.toLowerCase()} pro seu equipamento atual. 🤔`};
+  const hojeTem = (mod.plan.workouts||[]).find(w=>w.dayIdx===getDayIdx());
+  const conflito = hojeTem && (hojeTem.parts||[]).includes(part);
+  if(conflito) return {done:true, msg:`Boa notícia: <b>${part.toLowerCase()}</b> já está no seu treino de hoje! É só abrir a aba Sessões. 💪`};
+  const lista = exs.map(e=>`• ${e.name} — ${e.sets}×${e.reps} (descanso ${e.rest})`).join('<br>');
+  const aviso = hojeTem
+    ? `<br><br>⚠️ Hoje você já tem treino de <b>${(hojeTem.parts||[]).join(' + ').toLowerCase()}</b>. Somar volume extra no mesmo dia cansa mais e rende menos — se fizer, deixe o extra por último e com carga moderada.`
+    : '<br><br>Hoje é dia de descanso no seu plano. Um treino extra leve é ok, mas lembre: o músculo cresce no descanso. 😉';
+  return {done:true, msg:`Quer treinar <b>${part.toLowerCase()}</b> hoje? Sugestão rápida:<br><br>${lista}${aviso}<br><br>Depois é só me dizer <b>"treinei ${part.toLowerCase()}"</b> que eu registro.`};
+}
 // Regiões oficiais de dor (as mesmas do Perfil)
 const PAIN_REGIONS = ['Ombro','Lombar','Joelho','Punho/Cotovelo','Tornozelo','Pescoço'];
 function maSetPain(area, txt){
@@ -2710,10 +2836,20 @@ function maChestPain(){
 function maTired(){
   const mod = state.modules[state.active];
   const restToday = mod && mod.plan && !mod.plan.workouts.find(w=>w.dayIdx===getDayIdx());
-  let msg = 'Cansaço faz parte — e escutar o corpo é sinal de maturidade, não de fraqueza. ';
-  if(restToday) msg += 'Hoje já é seu dia de descanso, então aproveite pra recarregar de verdade. 😴';
-  else msg += 'Se você treinou pesado ontem, um treino mais leve hoje (ou até um dia extra de descanso) é totalmente válido. Se resolver treinar, comece devagar e veja como o corpo responde. Sono e hidratação ajudam muito na recuperação. 💚';
-  return {done:true, msg};
+  if(restToday){
+    return {done:true, msg:'Cansaço faz parte — escutar o corpo é maturidade, não fraqueza. 😴 Hoje já é seu dia de descanso, então aproveite pra recarregar de verdade. Sono e hidratação fazem metade do trabalho.'};
+  }
+  if(state.user.lightMode){
+    return {done:true, msg:'Seus treinos já estão no <b>modo leve</b> 💚. Se ainda assim o corpo pedir pausa, descansar hoje é uma escolha legítima — não é desistir, é treinar com inteligência.'};
+  }
+  maPending = {type:'light'};
+  return {done:true, msg:'Cansaço faz parte — escutar o corpo é maturidade, não fraqueza. 💚 Quer que eu deixe seus treinos <b>mais leves</b> (menos séries e volume reduzido) até você se sentir melhor? Responda <b>sim</b> ou <b>não</b>.<br><br>E se preferir simplesmente descansar hoje, isso também é válido.'};
+}
+function maApplyLight(){
+  state.user.lightMode = true;
+  regenAllPlans();
+  saveData();
+  return {done:true, msg:'✅ Pronto! Deixei seus treinos <b>mais leves</b>: menos séries na musculação e corridas mais curtas. Vá no seu ritmo. Quando estiver melhor, diga <b>"voltar ao normal"</b> e eu devolvo tudo. 💚'};
 }
 function maSad(){
   return {done:true, msg:`Sinto muito que você esteja assim, ${maName()}. 💙 Dias difíceis acontecem com todo mundo. O exercício pode ajudar a clarear a cabeça — que tal uma caminhada leve, sem cobrança de desempenho? Mas se você não estiver bem, tudo bem descansar hoje. E se esse sentimento persistir, conversar com alguém de confiança ou um profissional faz muita diferença. Você não está sozinho. 🤍`};
@@ -2735,9 +2871,10 @@ function maTPM(){
   return {done:true, msg:'Entendi 💗. Nesses dias o corpo pede mais gentileza — deixei seus treinos mais leves. Respeite seu ritmo: treinar leve ou até descansar é perfeitamente ok. Movimento suave (caminhada, alongamento) pode ajudar com o desconforto, mas sem cobrança. Quando quiser voltar ao normal, é só dizer "voltar ao normal". 🌸'};
 }
 function maBackToNormal(){
-  const tinha = (state.user.pain&&state.user.pain.length) || state.user.tpmMode;
+  const tinha = (state.user.pain&&state.user.pain.length) || state.user.tpmMode || state.user.lightMode;
   state.user.pain = [];
   state.user.tpmMode = false;
+  state.user.lightMode = false;
   if(typeof regenAllPlans==='function') regenAllPlans();
   saveData();
   return {done:true, msg: tinha ? '🎉 Que bom que está melhor! Seus treinos voltaram ao normal. Bora com tudo — respeitando sempre os limites do corpo! 💪' : 'Tudo certo, seus treinos já estão no modo normal! 💪'};
@@ -2754,10 +2891,11 @@ const MA_SOCIAL = {
   _quemsou(){ return 'Sou o Meta Assistente 🤖 — não sou uma IA de verdade, mas analiso seus dados reais de treino pra te dar respostas úteis na hora. Pergunte sobre sua evolução, corrida, recordes, meta e muito mais!'; },
   _comovai(){ return `Tô ótimo e pronto pra te ajudar! 😄 Mas o que importa é como VOCÊ está. Quer que eu mostre sua evolução recente, ${maName()}?`; },
   _comandos(){ return `📋 <b>O que você pode me dizer:</b><br><br>
-<b>📊 Perguntar</b><br>• "minha evolução" • "como foi meu treino?"<br>• "minha corrida" • "meus troféus" • "minha meta"<br>• "qual meu recorde?" • "que músculo treino menos?"<br>• "quanto tempo fiquei sem treinar?" • "me motive"<br><br>
+<b>📊 Perguntar</b><br>• "minha evolução" • "como foi meu treino?"<br>• "minha corrida" • "meus troféus" • "minha meta"<br>• "qual meu recorde?" • "que músculo treino menos?"<br>• "qual meu IMC?" • "quantos treinos essa semana?"<br>• "qual meu próximo treino?" • "quando é meu aniversário?"<br>• "quanto tempo fiquei sem treinar?" • "me motive"<br><br>
 <b>✍️ Registrar</b><br>• "estou pesando 90kg" • "emagreci 2kg"<br>• "corri 5km em 30 minutos"<br>• "caminhei 3km em 25 min" • "pedalei 10km em 40min"<br>• "treinei peito" / "fiz musculação"<br><br>
 <b>🩹 Como estou</b><br>• "estou com dor no joelho" (ou ombro, lombar, punho, cotovelo, tornozelo, pescoço)<br>• "estou cansado" • "estou triste"${tpmAvailable()?' • "estou de TPM"':''}<br>• "voltar ao normal"<br><br>
 <b>⚙️ Mudar treinos</b><br>• "não estou na academia hoje"<br>• "voltei pra academia" • "só tenho halteres"<br>• "quero treinar corrida segunda, quarta e sexta"<br><br>
+<b>💪 Treino extra</b><br>• "quero treinar peito hoje" (sugestão fora do plano)<br><br>
 <b>▶️ Aprender</b><br>• "como fazer supino reto" (abre o vídeo)`; },
   _ajuda(){ return 'Posso te contar: 📈 sua evolução, 💪 como foi seu treino, 🏃 sua corrida, 🏆 seus troféus, 🎯 sua meta, qual músculo você treina menos, sua maior pausa, recordes, quanto tempo usa o app, peso, calorias e ainda te motivar. É só tocar numa sugestão ou digitar!'; }
 };
@@ -3000,14 +3138,17 @@ function adaptMode(){
   const pain = (state.user && state.user.pain) || [];
   // ignora a flag de TPM em perfis masculinos (pode ter ficado ligada de versões antigas)
   const tpm = !!(state.user && state.user.tpmMode) && tpmAvailable();
-  return { active: pain.length>0 || tpm, pain, tpm };
+  const leve = !!(state.user && state.user.lightMode); // modo leve por cansaço (qualquer perfil)
+  return { active: pain.length>0 || tpm || leve, pain, tpm, leve };
 }
 function adaptReasonText(){
   const a = adaptMode();
   if(!a.active) return '';
-  if(a.tpm && a.pain.length) return `TPM + dor (${a.pain.join(', ')})`;
-  if(a.tpm) return 'TPM';
-  return `dor (${a.pain.join(', ')})`;
+  const partes = [];
+  if(a.tpm) partes.push('TPM');
+  if(a.leve) partes.push('cansaço');
+  if(a.pain.length) partes.push(`dor (${a.pain.join(', ')})`);
+  return partes.join(' + ');
 }
 // Regenera os treinos de musculação respeitando dor e TPM, e renomeia o treino
 // pra refletir o que realmente vai ser treinado.
@@ -3023,10 +3164,8 @@ function regenLiftExercises(){
     w.parts = usar.length ? usar : w.originalParts; // se bloqueou tudo, mantém (mas avisa)
     w.exercises = buildLiftExercises(w.parts, mod.setup);
     applyPins(w, mod.setup); // respeita as trocas manuais do aluno
-    // TPM: menos séries, treino mais leve
-    if(a.tpm) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
-    // dor: também reduz uma série (proteção)
-    else if(a.pain.length) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
+    // TPM, cansaço ou dor: reduz uma série (treino mais leve / proteção)
+    if(a.tpm || a.leve || a.pain.length) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
     w.duration = estimateLiftDuration(w.exercises, mod.setup.goal);
     // nome reflete o que será treinado de verdade
     const base = 'Treino '+w.k;
@@ -3053,11 +3192,12 @@ function regenRunPlan(){
       w.distance = '~'+(Math.round(km*0.6*2)/2)+'km';
       w.adapted = true;
       w.adaptNote = `Adaptado por ${adaptReasonText()}: trocamos a corrida por caminhada leve pra tirar o impacto das articulações.`;
-    } else if(a.tpm){
+    } else if(a.tpm || a.leve){
       w.name = w.originalName;
       w.duration = Math.max(15, Math.round((w.originalDuration||30)*0.75));
       w.adapted = true;
-      w.adaptNote = 'Adaptado por TPM: volume reduzido — vá no seu ritmo, sem cobrança.';
+      w.adaptNote = a.tpm ? 'Adaptado por TPM: volume reduzido — vá no seu ritmo, sem cobrança.'
+                          : 'Adaptado por cansaço: volume reduzido. Se o corpo pedir mais descanso, respeite.';
     } else {
       w.name = w.originalName;
       w.duration = w.originalDuration;
@@ -3080,6 +3220,7 @@ function savePain(){
 function clearPain(){
   state.user.pain = [];
   state.user.tpmMode = false;
+  state.user.lightMode = false;
   regenAllPlans();
   saveData();
   closeModal();
@@ -3541,6 +3682,67 @@ function shareWorkoutImage(histIdx){
 let coachMural = null;
 
 
+
+// ---------- INSTALAR O APP (PWA) ----------
+let deferredInstall = null;
+// já está rodando como app instalado? então nunca mostramos o convite
+function isInstalled(){
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true            // iOS
+      || document.referrer.startsWith('android-app://');
+}
+function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream; }
+function isSafari(){ return /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent); }
+function installDismissed(){
+  try{ const t = localStorage.getItem('metatreino_install_dismiss'); return t && (Date.now()-parseInt(t)) < 30*86400000; }catch(e){ return false; }
+}
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();          // impede o mini-banner padrão do Chrome
+  deferredInstall = e;
+  renderInstallCard();
+});
+window.addEventListener('appinstalled', ()=>{
+  deferredInstall = null;
+  const c = $('card-install'); if(c) c.classList.add('hidden');
+  toast('🎉 MetaTreino instalado! Abra pelo ícone na sua tela inicial.');
+});
+function renderInstallCard(){
+  const card = $('card-install');
+  if(!card) return;
+  // instalado, já dispensado, ou navegador sem suporte → não mostra nada
+  if(isInstalled() || installDismissed()){ card.classList.add('hidden'); return; }
+  const podeChrome = !!deferredInstall;
+  const podeIOS = isIOS() && isSafari();
+  if(!podeChrome && !podeIOS){ card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  const btn = $('install-go');
+  if(podeChrome){
+    $('install-msg').textContent = 'Adicione o MetaTreino à tela inicial: abre mais rápido, em tela cheia e funciona offline.';
+    btn.style.display = '';
+    btn.textContent = 'Instalar';
+    btn.onclick = async (ev)=>{
+      ev.stopPropagation();
+      if(!deferredInstall) return;
+      deferredInstall.prompt();
+      const { outcome } = await deferredInstall.userChoice;
+      deferredInstall = null;
+      if(outcome !== 'accepted') dismissInstall();
+      else card.classList.add('hidden');
+    };
+  } else {
+    // iOS não permite instalar por código: só explicamos o caminho
+    $('install-msg').innerHTML = 'Toque em <b>Compartilhar</b> (o quadradinho com a seta ↑) e escolha <b>“Adicionar à Tela de Início”</b>. O app abre em tela cheia e funciona offline.';
+    btn.style.display = 'none';
+  }
+  const dis = $('install-dismiss');
+  if(dis) dis.onclick = (ev)=>{ ev.stopPropagation(); dismissInstall(); };
+}
+function dismissInstall(){
+  try{ localStorage.setItem('metatreino_install_dismiss', String(Date.now())); }catch(e){}
+  const c = $('card-install'); if(c) c.classList.add('hidden');
+  toast('👍 Sem problema! O convite volta daqui a um mês.');
+}
+
 // ---------- TEMA (claro / escuro) ----------
 const THEME_KEY = 'metatreino_theme';
 function currentTheme(){
@@ -3622,6 +3824,26 @@ async function saveCoachContact(){
   }catch(e){ toast('Erro ao salvar. Confira as regras do Firestore.'); }
 }
 
+// Aplica a logo do treinador em todos os cabeçalhos que mostram a marca "M".
+// Os cabeçalhos com ícone próprio (⚡ do painel admin) são preservados.
+function applyMuralLogo(){
+  const foto = coachMural && coachMural.foto;
+  document.querySelectorAll('.brand-logo').forEach(el=>{
+    const jaAplicado = el.dataset.mural === '1';
+    const generico = jaAplicado || el.textContent.trim() === 'M';
+    if(!generico) return;
+    el.dataset.mural = '1';
+    if(foto){
+      el.style.background = 'none';
+      el.style.overflow = 'hidden';
+      el.innerHTML = `<img src="${foto}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+    } else {
+      el.style.background = '';
+      el.innerHTML = 'M';
+    }
+  });
+}
+
 async function loadCoachMural(){
   try{
     const doc = await db.collection('config').doc('mural').get();
@@ -3633,14 +3855,7 @@ async function loadCoachMural(){
   renderCoachMural();
 }
 function renderCoachMural(){
-  // logo personalizado no cabeçalho da Home
-  const logo = $('home-brand-logo');
-  if(logo){
-    if(coachMural && coachMural.foto){
-      logo.style.background='none';
-      logo.innerHTML = `<img src="${coachMural.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
-    } else { logo.style.background=''; logo.innerHTML = 'M'; }
-  }
+  applyMuralLogo(); // aplica a logo do treinador em TODOS os cabeçalhos (Hoje, Sessões, Biblioteca, Histórico...)
   // mensagem fixada
   const card = $('card-coach-msg');
   if(card){

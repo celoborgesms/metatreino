@@ -500,7 +500,7 @@ a{color:var(--primary-2);text-decoration:none}
     </div>
 
     <button class="btn btn-primary btn-block" id="google-btn" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="doGoogleSignIn()">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v7.18h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v7.28h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
       <span id="google-btn-lbl">Entrar com Google</span>
     </button>
     <div id="auth-err" style="margin-top:10px"></div>
@@ -589,7 +589,6 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="list-row" onclick="openMuralAdmin()">📢 <span>Mural e logo do app</span></div>
     <div class="list-row" onclick="openContactAdmin()">📞 <span>Contato (WhatsApp / e-mail)</span></div>
     <div class="list-row" onclick="openVideoAdmin()">🎬 <span>Vídeos dos exercícios</span><span id="adm-video-count" style="margin-left:auto;font-size:11px;color:var(--text-dim)"></span></div>
-    <div class="list-row" onclick="exportData()">📤 <span>Exportar dados (backup JSON)</span></div>
     <div class="list-row warn" onclick="openModal('broadcast')">📢 <span>Mensagem em massa (WhatsApp)</span></div>
   </div>
 </div>
@@ -752,6 +751,20 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="card card-alert card-row hidden" id="card-combo" style="border-color:rgba(245,158,11,0.35)">
       <div class="card-icon">🔀</div>
       <div><div class="card-title warn">Corrida + musculação hoje</div><div class="card-sub" id="combo-msg"></div></div>
+    </div>
+
+    <div class="card card-info card-row hidden" id="card-install" style="cursor:pointer">
+      <div class="card-icon">📲</div>
+      <div style="flex:1"><div class="card-title info" id="install-title">Instalar o MetaTreino</div><div class="card-sub" id="install-msg"></div>
+      <div class="row" style="gap:6px;margin-top:8px">
+        <button id="install-go" class="btn btn-primary" style="padding:7px 14px;font-size:12px">Instalar</button>
+        <button id="install-dismiss" class="btn btn-ghost" style="padding:7px 12px;font-size:12px">Agora não</button>
+      </div></div>
+    </div>
+
+    <div class="card card-alert card-row hidden" id="card-birthday" style="border-color:rgba(245,158,11,0.45)">
+      <div class="card-icon">🎂</div>
+      <div><div class="card-title warn" id="bday-title">Feliz aniversário!</div><div class="card-sub" id="bday-msg"></div></div>
     </div>
 
     <div class="card card-alert card-row hidden" id="card-adapt" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)">
@@ -1007,12 +1020,10 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="list-row" onclick="openAssistant()" style="border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.05)">🤖 <span>Meta Assistente</span><span style="margin-left:auto;font-size:10.5px;background:var(--primary);color:#022c22;padding:2px 8px;border-radius:999px;font-weight:800">NOVO</span></div>
     <div class="list-row" onclick="goTab('plan')">📋 <span>Meu plano de treino</span></div>
     <div class="list-row" onclick="openModal('edit-profile')">✏️ <span>Editar dados pessoais</span></div>
-    <div class="list-row" onclick="openTrophies()">🏆 <span>Meus troféus</span></div>
     <div class="list-row" onclick="openModal('pain')" id="pf-pain-row">🩹 <span>Estou com dor</span><span id="pf-pain-badge" style="margin-left:auto;font-size:11px"></span></div>
     <div class="list-row" onclick="openWeekSummary()">📊 <span>Resumo da semana</span></div>
     <div class="list-row" onclick="openModal('backup')">💾 <span>Backup e restauração</span></div>
-    <div class="list-row" onclick="openModal('terms')">📄 <span>Termos de uso</span></div>
-    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v7.1</div>
+    <div class="text-dim" style="text-align:center;font-size:11px;margin-top:4px" id="pf-version">MetaTreino v7.2</div>
     <div class="list-row danger" style="margin-top:14px;color:var(--accent-2);border-color:rgba(245,158,11,0.3)" onclick="openModal('restart')">🔄 <span>Começar do zero</span></div>
     <div class="list-row danger" onclick="openModal('delete-account')">🗑️ <span>Excluir minha conta</span></div>
     <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
@@ -1057,9 +1068,9 @@ a{color:var(--primary-2);text-decoration:none}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=7.1"></script>
+<script src="./app.js?v=7.2"></script>
 <script>
-const APP_VERSION = 'v7.1';
+const APP_VERSION = 'v7.2';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {
