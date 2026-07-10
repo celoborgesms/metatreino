@@ -1,5 +1,5 @@
-// ===== MetaTreino v8.2 =====
-const APP_VERSION = 'v8.2';
+// ===== MetaTreino v8.3 =====
+const APP_VERSION = 'v8.3';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -378,7 +378,8 @@ function bootAfterAuth(){
 function saveQuiz(){
   const nick = $('q-nick').value.trim();
   const sex = readOpt('q-sex');
-  const age = parseInt($('q-age').value);
+  const birth = ($('q-birth') && $('q-birth').value) || '';
+  const age = ageFromBirth(birth);
   const height = parseFloat($('q-height').value);
   const weight = parseFloat($('q-weight').value);
   const whats = $('q-whats').value.trim();
@@ -388,12 +389,13 @@ function saveQuiz(){
   err.innerHTML='';
   if(!nick){ err.innerHTML='<div class="err">Preencha como quer ser chamado.</div>'; return; }
   if(!sex){ err.innerHTML='<div class="err">Selecione o sexo.</div>'; return; }
-  if(!age || age<10 || age>99){ err.innerHTML='<div class="err">Idade inválida.</div>'; return; }
+  if(!birth){ err.innerHTML='<div class="err">Informe sua data de nascimento.</div>'; return; }
+  if(age===null || age<10 || age>100){ err.innerHTML='<div class="err">Data de nascimento inválida.</div>'; return; }
   if(!height || height<100 || height>230){ err.innerHTML='<div class="err">Altura inválida.</div>'; return; }
   if(!weight || weight<30 || weight>250){ err.innerHTML='<div class="err">Peso inválido.</div>'; return; }
   if(!goal){ err.innerHTML='<div class="err">Selecione um objetivo.</div>'; return; }
 
-  const profile = { nickname:nick, sex, age, height, currentWeight:weight, whatsapp:whats, goal, level, quiz_done:true };
+  const profile = { nickname:nick, sex, birth, age, height, currentWeight:weight, whatsapp:whats, goal, level, quiz_done:true };
   state.user.profile = profile;
   // seed weight history
   state.weights = [{ date:Date.now(), weight }];
@@ -5028,3 +5030,6 @@ Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishS
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
 loadCoachContact();
+
+// impede escolher uma data de nascimento no futuro
+(function(){ const b = document.getElementById('q-birth'); if(b) b.max = new Date().toISOString().slice(0,10); })();
