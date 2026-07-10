@@ -1,5 +1,5 @@
-// ===== MetaTreino v7.4 =====
-const APP_VERSION = 'v7.4';
+// ===== MetaTreino v7.5 =====
+const APP_VERSION = 'v7.5';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -978,42 +978,73 @@ function renderWeekRecap(){
 }
 function homeStatusLine(){
   const mod = state.modules[state.active];
+  const isLift = state.active === 'lift';
   const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const doDia = arr => (arr||[]).filter(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime()===hoje.getTime(); });
+
+  const feitosAtivo = doDia(mod && mod.history);                       // treinos de HOJE no módulo que está aberto
+  const outroMod = isLift ? state.modules.run : state.modules.lift;
+  const feitosOutro = doDia(outroMod && outroMod.history);             // treinos de HOJE no outro módulo
   const todosH = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
-  const hojeFeitos = todosH.filter(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime()===hoje.getTime(); });
   const streak = calcStreak(todosH);
   const a = adaptMode();
+  const h = new Date().getHours();
+  const w = mod && mod.plan && mod.plan.workouts.find(x=>x.dayIdx===getDayIdx());
+  const nomeOutro = isLift ? 'corrida' : 'musculação';
+  const nomeAtivo = isLift ? 'musculação' : 'corrida';
 
-  // 1) já treinou hoje
-  if(hojeFeitos.length){
-    const min = hojeFeitos.reduce((s,x)=>s+(x.duration||0),0);
-    if(hojeFeitos.length>1) return `Dois treinos hoje e ${min} min de trabalho. Isso é dedicação. 🔥`;
-    if(streak>=7) return `Treino de hoje: feito. ${streak} dias seguidos — você virou hábito. 🔥`;
-    return `Treino de hoje concluído em ${min} min. Agora deixa o corpo fazer a parte dele. ✅`;
+  // 1) já treinou hoje NESTE módulo
+  if(feitosAtivo.length){
+    const min = feitosAtivo.reduce((s,x)=>s+(x.duration||0),0);
+    if(feitosAtivo.length>1) return `Dois treinos de ${nomeAtivo} hoje, ${min} min no total. Isso é dedicação. 🔥`;
+    if(feitosOutro.length) return `${isLift?'Musculação':'Corrida'} e ${nomeOutro} no mesmo dia. Dia cheio — agora hidrate e coma bem. 💪`;
+    if(streak>=7) return `${isLift?'Treino':'Atividade'} de hoje: feito. ${streak} dias seguidos — você virou hábito. 🔥`;
+
+    return isLift
+      ? `Treino de hoje concluído em ${min} min. Agora deixa o corpo fazer a parte dele. ✅`
+      : `Atividade de hoje concluída em ${min} min. Agora deixa o corpo fazer a parte dele. ✅`;
   }
-  // 2) modo adaptado
+
+  // 2) treinou no OUTRO módulo, mas ainda não neste
+  if(feitosOutro.length){
+    if(w) return `Você já fez ${nomeOutro} hoje. Ainda tem ${w.name.toLowerCase()} no plano — se o corpo responder bem, vá com carga moderada.`;
+    return `Você já fez ${nomeOutro} hoje. Aqui na ${nomeAtivo} é dia de descanso — combinação perfeita. 😌`;
+  }
+
+  // 3) modo adaptado
   if(a.active){
     if(a.pain.length) return `Hoje é dia de cuidar: treinos adaptados por dor em ${a.pain.join(', ').toLowerCase()}.`;
     if(a.tpm) return 'Modo leve ativo. Vá no seu ritmo — hoje o corpo manda. 💗';
     return 'Modo leve ativo. Menos volume, mesma constância. 💚';
   }
-  // 3) prova chegando
-  if(state.active==='run'){
+
+  // 4) prova chegando
+  if(!isLift){
     const dr = daysToRace();
     if(dr!==null && dr>=0 && dr<=7) return dr===0 ? 'É HOJE. Confie no treino que você fez. 🏁' : `Faltam ${dr} dias pra sua prova. Últimos ajustes — nada de heroísmo agora.`;
   }
-  // 4) tem treino hoje?
-  const w = mod && mod.plan && mod.plan.workouts.find(x=>x.dayIdx===getDayIdx());
+
+  // 5) tem treino hoje e ainda não fez → mensagem conforme a HORA
   if(w){
-    if(streak>=3) return `${streak} dias de sequência. Hoje tem ${w.name.toLowerCase()} — não quebre a corrente. 🔥`;
     const ultimo = todosH.length ? todosH.reduce((x,y)=>x.at>y.at?x:y) : null;
-    const dias = ultimo ? Math.floor((Date.now()-ultimo.at)/86400000) : null;
-    if(dias!==null && dias>=5) return `Faz ${dias} dias desde o último treino. Hoje é um bom dia pra recomeçar — comece leve. 👋`;
-    return `Hoje você ainda não treinou. No plano: ${w.name.toLowerCase()}.`;
+    const diasParado = ultimo ? Math.floor((Date.now()-ultimo.at)/86400000) : null;
+    if(diasParado !== null && diasParado >= 5) return `Faz ${diasParado} dias desde o último treino. Hoje é um bom dia pra recomeçar — comece leve. 👋`;
+
+    const oQue = w.name.toLowerCase();
+    if(h < 6)  return `Madrugada e você aqui? Se for treinar ${oQue}, aqueça bem — o corpo ainda está frio. 🌙`;
+    if(h < 12) return streak>=3 ? `${streak} dias de sequência. Hoje tem ${oQue} — comece o dia mantendo a corrente. 🔥`
+                                : `Bom começo de dia: hoje tem ${oQue} esperando por você. ☀️`;
+    if(h < 18) return streak>=3 ? `${streak} dias de sequência e hoje tem ${oQue}. Não deixe pra depois. 🔥`
+                                : `Hoje você ainda não treinou. No plano: ${oQue}. A tarde rende. 💪`;
+    if(h < 21) return `Ainda dá tempo: hoje tem ${oQue}. Uma hora agora vale mais que a intenção de amanhã. 🌆`;
+    if(h < 23) return `Tarde da noite, mas ainda dá pra fazer ${oQue}. Se estiver muito cansado, dormir bem também é treino. 🌙`;
+    return `Já é quase meia-noite e hoje tinha ${oQue}. Sem culpa — durma bem e recomece amanhã com tudo. 😴`;
   }
-  // 5) descanso
-  if(streak>=5) return `Dia de descanso — e você tem ${streak} dias de sequência. Descansar é parte do treino. 😴`;
-  return 'Hoje é dia de descanso. Recupere bem, amanhã tem mais. 😴';
+
+  // 6) dia de descanso neste módulo
+  if(streak>=5) return `Descanso na ${nomeAtivo} — e você tem ${streak} dias de sequência. Descansar é parte do treino. 😴`;
+  if(h >= 21) return `Descanso hoje. Um sono bom vale mais que qualquer série. 😴`;
+  return `Hoje é dia de descanso na ${nomeAtivo}. Recupere bem, amanhã tem mais. 😴`;
 }
 function greetTime(){ const h=new Date().getHours(); if(h<12) return 'Bom dia'; if(h<18) return 'Boa tarde'; return 'Boa noite'; }
 function firstName(){ const p = state.user.profile; return (p&&p.nickname) || (state.user.name||'').split(' ')[0]; }
