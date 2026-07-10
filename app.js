@@ -1,5 +1,5 @@
-// ===== MetaTreino v8.8 =====
-const APP_VERSION = 'v8.8';
+// ===== MetaTreino v8.9 =====
+const APP_VERSION = 'v8.9';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2784,8 +2784,14 @@ function openTrophyDetail(id){
 }
 function openTrophies(){
   const catNames = { geral:'🌟 Gerais', streak:'🔥 Consistência', lift:'🏋️ Musculação', run:'🏃 Corrida', walk:'🚶 Caminhada', bike:'🚴 Bike', body:'⚖️ Corpo' };
-  const cats = ['geral','streak','lift','run','walk','bike','body'];
-  const groups = cats.map(c=>({ cat:c, name:catNames[c], items:TROPHIES.filter(t=>t.cat===c) }));
+  // Ordem pensada: primeiro o que tem progresso mensurável (modalidades e consistência),
+  // depois os gerais, e por último as secretas — que não têm meta pra perseguir.
+  const cats = ['streak','lift','run','walk','bike','body','geral'];
+  const groups = cats
+    .map(c=>({ cat:c, name:catNames[c], items:TROPHIES.filter(t=>t.cat===c && !t.secret) }))
+    .filter(g=>g.items.length);
+  const secretas = TROPHIES.filter(t=>t.secret);
+  if(secretas.length) groups.push({ cat:'secret', name:'✨ Secretas', items:secretas });
   const totalUnlocked = state.trophies.length;
   const pctAll = Math.round(totalUnlocked/TROPHIES.length*100);
   const html = `
