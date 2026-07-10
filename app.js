@@ -1,5 +1,5 @@
-// ===== MetaTreino v8.7 =====
-const APP_VERSION = 'v8.7';
+// ===== MetaTreino v8.8 =====
+const APP_VERSION = 'v8.8';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -128,6 +128,10 @@ const TROPHIES = [
   { secret:true, id:'consistent',  emoji:'📈', name:'Sem Drama',          desc:'12 treinos sem pular uma semana inteira',   cat:'geral' },
   { secret:true, id:'century',     emoji:'💯', name:'Clube dos 100',      desc:'100 treinos registrados. Respeito.',        cat:'geral' },
   { secret:true, id:'humble',      emoji:'🧘', name:'Sabedoria',          desc:'Adaptou o treino por dor em vez de forçar', cat:'geral' },
+  { secret:true, id:'bday_active', emoji:'🎂', name:'Presente Pra Si',    desc:'Treinou no dia do próprio aniversário',   cat:'geral' },
+  { secret:true, id:'first_day',   emoji:'🎆', name:'Começou Certo',      desc:'Treinou no dia 1º de um mês',            cat:'geral' },
+  { secret:true, id:'double',      emoji:'⚡', name:'Dose Dupla',         desc:'Musculação e corrida no mesmo dia',      cat:'geral' },
+  { secret:true, id:'friday13',    emoji:'🍀', name:'Azar é Não Treinar', desc:'Treinou numa sexta-feira 13',            cat:'geral' },
 
   // GERAIS
   { id:'first_workout', emoji:'🥇', name:'Primeiro treino', desc:'Concluiu seu primeiro treino', cat:'geral' },
@@ -459,6 +463,12 @@ function openSetupScreen(m){
   bindOpts('scr-setup-'+m);
   bindMultiOpts('scr-setup-'+m);
   bindDaysUpdate(m);
+  // Recriar o plano não pode apagar a prova alvo em silêncio: repõe a data já cadastrada.
+  if(m === 'run'){
+    const el = $('run-race-date');
+    const rd = state.modules.run && state.modules.run.setup && state.modules.run.setup.raceDate;
+    if(el && rd) el.value = rd;
+  }
 }
 function pickModule(m){
   state.active=m; saveData();
@@ -1929,8 +1939,13 @@ function renderCalendar(){
     const pontos = info
       ? `<div class="cal-dots">${info.lift?'<span class="cal-dot" style="background:var(--lift)"></span>':''}${info.run?'<span class="cal-dot" style="background:var(--run)"></span>':''}</div>`
       : '<div class="cal-dots"></div>';
-    const titulo = info ? `${dia}/${mes+1} · ${info.min} min` : `${dia}/${mes+1} · sem treino`;
-    html += `<div class="${classes.join(' ')}" title="${titulo}"><span>${dia}</span>${pontos}</div>`;
+    // dia da prova alvo ganha bandeira 🏁
+    const rd = state.modules.run && state.modules.run.setup && state.modules.run.setup.raceDate;
+    let ehProva = false;
+    if(rd){ const p = new Date(rd); p.setHours(0,0,0,0); ehProva = p.getTime() === d.getTime(); }
+    if(ehProva) classes.push('cal-race');
+    const titulo = ehProva ? `${dia}/${mes+1} · 🏁 DIA DA PROVA` : (info ? `${dia}/${mes+1} · ${info.min} min` : `${dia}/${mes+1} · sem treino`);
+    html += `<div class="${classes.join(' ')}" title="${titulo}"><span>${ehProva?'🏁':dia}</span>${pontos}</div>`;
   }
   box.innerHTML = `<div class="cal-grid">${html}</div>`;
   const s = $('cal-summary');
@@ -2494,11 +2509,13 @@ function renderAward(){
     </div>
     <div style="display:flex;align-items:center;gap:4px">
       ${n>1 ? seta(-1, awardIdx===0) : '<div style="width:44px"></div>'}
-      <div style="flex:1;text-align:center;padding:4px 0">
-        <div class="anim-check" key="${awardIdx}" style="font-size:62px;line-height:1.1">${a.emo}</div>
-        <div style="font-size:12px;color:var(--text-mute);letter-spacing:.5px;margin-top:6px">${a.tipo}</div>
-        <h3 style="margin:2px 0 0;font-size:19px">${a.nome}</h3>
+      <div style="flex:1;text-align:center;padding:4px 0${a.secreto?';background:radial-gradient(circle at 50% 30%, rgba(245,158,11,0.16), transparent 70%);border-radius:18px':''}">
+        ${a.secreto?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
+        <div class="anim-check" style="font-size:${a.secreto?'70px':'62px'};line-height:1.1${a.secreto?';filter:drop-shadow(0 0 18px rgba(245,158,11,0.55))':''}">${a.emo}</div>
+        <div style="font-size:12px;color:${a.secreto?'var(--accent-2)':'var(--text-mute)'};letter-spacing:.5px;margin-top:6px;font-weight:${a.secreto?'800':'400'}">${a.tipo}</div>
+        <h3 style="margin:2px 0 0;font-size:${a.secreto?'21px':'19px'}">${a.nome}</h3>
         <p style="color:var(--text-dim);font-size:13px;margin-top:6px;line-height:1.45">${a.desc}</p>
+        ${a.secreto?'<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;font-style:italic">Ninguém te contou essa. Você descobriu.</div>':''}
       </div>
       ${n>1 ? seta(1, awardIdx===n-1) : '<div style="width:44px"></div>'}
     </div>
@@ -2523,7 +2540,7 @@ function unlockTrophy(id){
   saveData();
   const t = TROPHIES.find(x=>x.id===id);
   if(!t) return;
-  queueAward({ id:'t_'+t.id, emo:t.emoji, tipo:'TROFÉU DESBLOQUEADO', nome:t.name, desc:t.desc });
+  queueAward({ id:'t_'+t.id, emo:t.emoji, tipo: t.secret ? 'SEGREDO REVELADO' : 'TROFÉU DESBLOQUEADO', nome:t.name, desc:t.desc, secreto: !!t.secret });
 }
 // Garante que os contadores vitalícios existem; migra dados de quem já tinha histórico
 function ensureStats(){
@@ -2579,15 +2596,7 @@ function subtractFromStats(x){
 function checkTrophies(){
   ensureStats();
   checkMonthly();
-  // Corrige troféus que não se sustentam mais nos contadores (ex.: registro apagado/editado).
-  const req = {
-    run_km_10:['runKmTotal',10], run_km_50:['runKmTotal',50], run_km_100:['runKmTotal',100], run_km_500:['runKmTotal',500],
-    walk_km_10:['walkKmTotal',10], walk_km_50:['walkKmTotal',50], walk_km_100:['walkKmTotal',100],
-    bike_km_50:['bikeKmTotal',50], bike_km_100:['bikeKmTotal',100], bike_km_500:['bikeKmTotal',500],
-    bike_10:['bikeTotal',10], bike_25:['bikeTotal',25], walk_10:['walkTotal',10], walk_25:['walkTotal',25],
-    run_10:['runTotal',10], run_25:['runTotal',25], run_50:['runTotal',50]
-  };
-  state.trophies = state.trophies.filter(id=>{ const r=req[id]; return !r || state.stats[r[0]] >= r[1]; });
+  // (A revogação de troféus acontece só no recálculo explícito — ver recomputeAchievements.)
   // Contadores vitalícios: não zeram quando o histórico de 90 dias é limpo,
   // então troféus como "Centurião" (100 treinos) são alcançáveis de verdade.
   const liftDone = state.stats.liftTotal;
@@ -2672,6 +2681,17 @@ function checkTrophies(){
   for(let i=1;i<diasOrd.length;i++){ if((diasOrd[i]-diasOrd[i-1])/86400000 >= 10){ unlockTrophy('comeback'); break; } }
   // sabedoria: registrou treino em modo adaptado por dor
   if(allHist.some(x=>x.adaptedWith && /dor/i.test(x.adaptedWith))) unlockTrophy('humble');
+  // treinou no próprio aniversário
+  const nasc = state.user && state.user.profile && state.user.profile.birth;
+  if(nasc){
+    const b = new Date(nasc+'T00:00:00');
+    if(!isNaN(b) && allHist.some(x=>{ const d=new Date(x.at); return d.getDate()===b.getDate() && d.getMonth()===b.getMonth(); })) unlockTrophy('bday_active');
+  }
+  if(allHist.some(x=>new Date(x.at).getDate()===1)) unlockTrophy('first_day');
+  if(allHist.some(x=>{ const d=new Date(x.at); return d.getDay()===5 && d.getDate()===13; })) unlockTrophy('friday13');
+  const diaDe = x => { const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime(); };
+  const diasLift = new Set((state.modules.lift?.history||[]).map(diaDe));
+  if((state.modules.run?.history||[]).some(x=>diasLift.has(diaDe(x)))) unlockTrophy('double');
   // nem a preguiça: treinou 3 dias seguidos tendo terminado algum deles exausto/cansado
   if(s>=3 && allHist.some(x=>x.feel==='cansado' || x.feel==='exausto')) unlockTrophy('rain_check');
   // sem drama: 12 treinos e nenhuma semana vazia nas últimas 12
@@ -2714,6 +2734,26 @@ function trophyProgress(id){
   return map[id]||null;
 }
 // Detalhe de um troféu conquistado: quando foi, quantos já tem, e um empurrãozinho.
+// Compartilha um único troféu (o aluno escolhe qual, em vez de despejar todos).
+function shareTrophyImage(id){
+  const t = TROPHIES.find(x=>x.id===id); if(!t) return;
+  const quando = (state.trophyDates||{})[id];
+  const dataStr = quando ? new Date(quando).toLocaleDateString('pt-BR') : '';
+  const c = buildShareCanvas({
+    title: t.secret ? 'Conquista secreta revelada' : 'Troféu desbloqueado',
+    subtitle: t.emoji + '  ' + t.name,
+    stats: [
+      {rotulo:'Conquistado em', valor: dataStr || '—'},
+      {rotulo:'Coleção', valor: state.trophies.length + '/' + TROPHIES.length},
+      {rotulo:'Categoria', valor: ({geral:'Geral',lift:'Musculação',run:'Corrida',walk:'Caminhada',bike:'Bike',streak:'Sequência',body:'Corpo'})[t.cat] || t.cat},
+      {rotulo:'Raridade', valor: t.secret ? 'Secreta ✨' : 'Normal'}
+    ],
+    listaTitulo: 'Como conquistei',
+    lista: [t.desc],
+    destaque: t.secret ? 'Ninguém me contou. Eu descobri. ✨' : 'Mais um degrau no MetaTreino 🏆'
+  });
+  shareCanvas(c, 'metatreino-'+id+'.png', `${t.emoji} Desbloqueei "${t.name}" no MetaTreino!`);
+}
 function openTrophyDetail(id){
   const t = TROPHIES.find(x=>x.id===id); if(!t) return;
   const quando = (state.trophyDates||{})[id];
@@ -2727,7 +2767,8 @@ function openTrophyDetail(id){
       <button onclick="closeModal();openTrophies()" style="background:none;border:none;font-size:20px;color:var(--text-mute);padding:4px 8px;cursor:pointer">✕</button>
     </div>
     <div style="text-align:center">
-      <div class="anim-check" style="font-size:66px;line-height:1.1">${t.emoji}</div>
+      ${t.secret?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
+      <div class="anim-check" style="font-size:66px;line-height:1.1${t.secret?';filter:drop-shadow(0 0 18px rgba(245,158,11,0.5))':''}">${t.emoji}</div>
       <h3 style="margin:8px 0 2px">${t.name}</h3>
       <div style="color:var(--text-dim);font-size:13.5px;line-height:1.5">${t.desc}</div>
     </div>
@@ -2736,8 +2777,9 @@ function openTrophyDetail(id){
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--border)"><span style="color:var(--text-dim);font-size:13px">🏷️ Categoria</span><b style="font-size:13px">${catNome} (${naCat}/${mesmaCat.length})</b></div>
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--border)"><span style="color:var(--text-dim);font-size:13px">🏆 Coleção</span><b style="font-size:13px">${tenho} de ${total} troféus</b></div>
     </div>
-    <button class="btn btn-outline btn-block" style="margin-top:12px;border-color:rgba(16,185,129,0.4)" onclick="closeModal();shareTrophiesImage()">📤 Compartilhar conquistas</button>
-    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal();openTrophies()">← Voltar aos troféus</button>`;
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();shareTrophyImage('${t.id}')">📤 Compartilhar esta conquista</button>
+    <button class="btn btn-outline btn-block" style="margin-top:8px;border-color:rgba(16,185,129,0.4)" onclick="closeModal();shareTrophiesImage()">🏆 Compartilhar coleção inteira</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();openTrophies()">← Voltar aos troféus</button>`;
   $('modal-back').classList.add('on');
 }
 function openTrophies(){
@@ -2749,6 +2791,8 @@ function openTrophies(){
   const html = `
     <h3>🏆 Suas conquistas</h3>
     <p style="color:var(--text-dim);font-size:13px;margin-top:2px">${totalUnlocked} de ${TROPHIES.length} desbloqueados</p>
+    ${(()=>{ const sec=TROPHIES.filter(t=>t.secret); const rev=sec.filter(t=>state.trophies.includes(t.id)).length;
+      return `<p style="color:var(--accent-2);font-size:12px;margin-top:4px">✨ ${rev} de ${sec.length} conquistas secretas reveladas — elas aparecem sozinhas quando você as merece</p>`; })()}
     <div style="height:8px;border-radius:99px;background:rgba(148,163,184,0.15);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pctAll}%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:99px"></div></div>
     ${groups.map(g=>{
       const u = g.items.filter(t=>state.trophies.includes(t.id)).length;
@@ -4866,7 +4910,7 @@ function saveHistoryEntry(idx){
   // corrigiu a distância? os contadores vitalícios precisam acompanhar,
   // senão um erro de digitação (50km em vez de 30km) fica inflando os km pra sempre.
   if((x.distance||0) !== kmAntes) adjustKmStats(x, kmAntes, x.distance||0);
-  recomputeAchievements(); // se a edição derruba um requisito, a conquista sai junto
+  if(isRecentEntry(x.at)) recomputeAchievements(); // edição recente reajusta as conquistas
   saveData();
   toast('✅ Treino atualizado');
   closeModal();
@@ -4885,6 +4929,14 @@ function adjustKmStats(x, kmAntes, kmDepois){
 // Recalcula o recorde de um exercício depois que séries foram apagadas.
 // Só mexe se o PR atual tiver sido feito no dia removido — PRs de outros dias
 // (e os que já saíram da janela de 90 dias) permanecem intactos.
+// Conquistas só são recalculadas quando o aluno mexe num registro RECENTE.
+// Corrigir um erro de hoje/ontem deve refletir na hora; apagar um treino de semanas
+// atrás não pode desfazer uma conquista que ele viveu e comemorou lá atrás.
+const REVOKE_WINDOW_DAYS = 3;
+function isRecentEntry(ts){
+  if(!ts) return true;
+  return (Date.now() - ts) < REVOKE_WINDOW_DAYS * 86400000;
+}
 // ---------- RECÁLCULO DE CONQUISTAS ----------
 // Chamado quando o aluno APAGA ou EDITA um registro do histórico.
 // As conquistas passam a refletir exatamente o que está registrado: o que não
@@ -4953,7 +5005,8 @@ function deleteHistoryEntry(idx){
   mod.history.splice(idx, 1);
   // desconta só o registro removido. Troféus e desafios já conquistados PERMANECEM.
   subtractFromStats(removido);
-  recomputeAchievements(); // conquistas passam a refletir só o que ainda está registrado
+  // registro recente → conquistas recalculadas; registro antigo → conquistas preservadas
+  if(isRecentEntry(removido && removido.at)) recomputeAchievements();
   saveData();
   toast('🗑️ Treino excluído');
   closeModal();
@@ -5125,7 +5178,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,calMove,openTrophyDetail,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
