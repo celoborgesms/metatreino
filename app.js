@@ -1,5 +1,5 @@
-// ===== MetaTreino v8.6 =====
-const APP_VERSION = 'v8.6';
+// ===== MetaTreino v8.7 =====
+const APP_VERSION = 'v8.7';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -504,9 +504,14 @@ function finishSetup(m){
     selectedDays: readSelectedDays('run-week-days'),
     raceDate: $('run-race-date') ? $('run-race-date').value : null
   };
-  // validate day count matches
-  if(setup.selectedDays && setup.selectedDays.length !== setup.days){
-    toast(`Selecione exatamente ${setup.days} dia${setup.days>1?'s':''} da semana`);
+  // Exige escolher os dias da semana. (Antes, readSelectedDays devolvia null quando nada
+  // estava marcado e a validação era pulada — o aluno novo criava o plano sem escolher.)
+  if(!setup.days){ toast('Escolha quantos dias por semana você vai treinar'); return; }
+  if(!setup.selectedDays || setup.selectedDays.length !== setup.days){
+    const faltam = setup.days - ((setup.selectedDays||[]).length);
+    toast(faltam === setup.days
+      ? `Escolha os ${setup.days} dias da semana em que você vai treinar`
+      : `Selecione exatamente ${setup.days} dia${setup.days>1?'s':''} da semana`);
     return;
   }
   // preserva histórico e data de início ao RECRIAR um plano (não zera o progresso do aluno)
@@ -2462,7 +2467,9 @@ function openMonthly(){
 // Em vez de empilhar toasts e modais, tudo que a pessoa conquistou de uma vez
 // entra numa fila e vira um carrossel: ‹ card › com bolinhas e um X pra fechar.
 let awardQueue = [], awardIdx = 0, awardTimer = null;
+let silentAwards = false; // durante um recálculo não celebramos nada
 function queueAward(a){
+  if(silentAwards) return;
   if(awardQueue.some(x=>x.id===a.id)) return;
   awardQueue.push(a);
   clearTimeout(awardTimer);
@@ -2572,10 +2579,7 @@ function subtractFromStats(x){
 function checkTrophies(){
   ensureStats();
   checkMonthly();
-  // Auditoria ÚNICA: corrige troféus desbloqueados por engano pelas versões antigas
-  // (bug de contagem em dobro). Depois disso, troféu conquistado NUNCA mais é revogado —
-  // apagar um registro errado não pode custar as conquistas da pessoa.
-  if(!state._trophyAudit){
+  // Corrige troféus que não se sustentam mais nos contadores (ex.: registro apagado/editado).
   const req = {
     run_km_10:['runKmTotal',10], run_km_50:['runKmTotal',50], run_km_100:['runKmTotal',100], run_km_500:['runKmTotal',500],
     walk_km_10:['walkKmTotal',10], walk_km_50:['walkKmTotal',50], walk_km_100:['walkKmTotal',100],
@@ -2583,9 +2587,7 @@ function checkTrophies(){
     bike_10:['bikeTotal',10], bike_25:['bikeTotal',25], walk_10:['walkTotal',10], walk_25:['walkTotal',25],
     run_10:['runTotal',10], run_25:['runTotal',25], run_50:['runTotal',50]
   };
-    state.trophies = state.trophies.filter(id=>{ const r=req[id]; return !r || state.stats[r[0]] >= r[1]; });
-    state._trophyAudit = true;
-  }
+  state.trophies = state.trophies.filter(id=>{ const r=req[id]; return !r || state.stats[r[0]] >= r[1]; });
   // Contadores vitalícios: não zeram quando o histórico de 90 dias é limpo,
   // então troféus como "Centurião" (100 treinos) são alcançáveis de verdade.
   const liftDone = state.stats.liftTotal;
@@ -2634,6 +2636,17 @@ function checkTrophies(){
   if(bestKm>=10) unlockTrophy('run_10k_run');
   if(bestKm>=21) unlockTrophy('run_21k_run');
   if(bestKm>=42) unlockTrophy('run_42k_run');
+  // Troféus que antes só eram dados no momento do evento — agora derivados do histórico,
+  // pra sobreviverem a um recálculo (apagar/editar registro).
+  if(Object.keys(state.prs||{}).length > 0) unlockTrophy('first_pr');
+  const runH = state.modules.run?.history || [];
+  const maxDe = tipo => Math.max(0, ...runH.filter(r=>r.activity===tipo).map(r=>r.distance||0));
+  const maxWalk = maxDe('caminhada'), maxBike = maxDe('bike');
+  if(maxWalk>=3) unlockTrophy('walk_3k');
+  if(maxWalk>=5) unlockTrophy('walk_5k');
+  if(maxBike>=20) unlockTrophy('bike_20k');
+  if(maxBike>=50) unlockTrophy('bike_50k');
+
   // Streaks (combinado)
   const allHist = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
   const s = calcStreak(allHist);
@@ -2676,7 +2689,8 @@ function checkTrophies(){
     const wkTarget = mod.plan.workouts.length;
     const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-6);
     const done7d = (mod.history||[]).filter(h=>h.at>=startWk.getTime()).length;
-    if(done7d >= wkTarget) unlockTrophy('week_goal');
+    // precisa existir meta E treinos de verdade (senão 0 >= 0 desbloquearia sem treinar)
+    if(wkTarget > 0 && done7d > 0 && done7d >= wkTarget) unlockTrophy('week_goal');
   }
 }
 // Progresso atual rumo a cada troféu contável (pra barra de progresso)
@@ -4852,6 +4866,7 @@ function saveHistoryEntry(idx){
   // corrigiu a distância? os contadores vitalícios precisam acompanhar,
   // senão um erro de digitação (50km em vez de 30km) fica inflando os km pra sempre.
   if((x.distance||0) !== kmAntes) adjustKmStats(x, kmAntes, x.distance||0);
+  recomputeAchievements(); // se a edição derruba um requisito, a conquista sai junto
   saveData();
   toast('✅ Treino atualizado');
   closeModal();
@@ -4870,6 +4885,34 @@ function adjustKmStats(x, kmAntes, kmDepois){
 // Recalcula o recorde de um exercício depois que séries foram apagadas.
 // Só mexe se o PR atual tiver sido feito no dia removido — PRs de outros dias
 // (e os que já saíram da janela de 90 dias) permanecem intactos.
+// ---------- RECÁLCULO DE CONQUISTAS ----------
+// Chamado quando o aluno APAGA ou EDITA um registro do histórico.
+// As conquistas passam a refletir exatamente o que está registrado: o que não
+// se sustenta mais é removido; o que continua verdadeiro é mantido (com a data original).
+function recomputeAchievements(){
+  silentAwards = true;
+  const datasAntigas = Object.assign({}, state.trophyDates || {});
+
+  // zera e reconstrói os troféus a partir dos dados atuais
+  state.trophies = [];
+  state.trophyDates = {};
+  // desafios do MÊS CORRENTE também são recalculados (medalhas de meses passados ficam)
+  ensureMonthly();
+  const doneAtAntigo = Object.assign({}, state.monthly.doneAt || {});
+  state.monthly.done = [];
+  state.monthly.doneAt = {};
+
+  try{
+    checkTrophies();                                        // troféus de treino/km/sequência/PR
+    if(typeof checkWeightTrophies === 'function') checkWeightTrophies(); // troféus de peso
+  }catch(e){ console.log('recompute trophies:', e); }
+
+  // preserva a data original de quem continua conquistado
+  state.trophies.forEach(id=>{ if(datasAntigas[id]) state.trophyDates[id] = datasAntigas[id]; });
+  state.monthly.done.forEach(id=>{ if(doneAtAntigo[id]) state.monthly.doneAt[id] = doneAtAntigo[id]; });
+
+  silentAwards = false;
+}
 function recomputePR(exId, diaRemovidoTs){
   const pr = (state.prs||{})[exId];
   if(!pr) return;
@@ -4910,6 +4953,7 @@ function deleteHistoryEntry(idx){
   mod.history.splice(idx, 1);
   // desconta só o registro removido. Troféus e desafios já conquistados PERMANECEM.
   subtractFromStats(removido);
+  recomputeAchievements(); // conquistas passam a refletir só o que ainda está registrado
   saveData();
   toast('🗑️ Treino excluído');
   closeModal();
