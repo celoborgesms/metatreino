@@ -1,5 +1,5 @@
-// ===== MetaTreino v7.3 =====
-const APP_VERSION = 'v7.3';
+// ===== MetaTreino v7.4 =====
+const APP_VERSION = 'v7.4';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -538,11 +538,12 @@ function generatePlan(module, setup){
     const splitMap = {
       3:[{k:'A',name:'Peito + Tríceps',parts:['Peito','Tríceps']},{k:'B',name:'Costas + Bíceps',parts:['Costas','Bíceps']},{k:'C',name:'Pernas + Ombro',parts:['Pernas','Ombro','Core']}],
       4:[{k:'A',name:'Peito + Tríceps',parts:['Peito','Tríceps','Core']},{k:'B',name:'Costas + Bíceps',parts:['Costas','Bíceps']},{k:'C',name:'Pernas + Glúteos',parts:['Pernas','Glúteos','Panturrilha']},{k:'D',name:'Ombro + Trapézio',parts:['Ombro','Trapézio','Core']}],
-      5:[{k:'A',name:'Peito',parts:['Peito','Tríceps']},{k:'B',name:'Costas',parts:['Costas','Bíceps']},{k:'C',name:'Pernas',parts:['Pernas','Panturrilha']},{k:'D',name:'Ombro + Braços',parts:['Ombro','Bíceps','Tríceps']},{k:'E',name:'Glúteos + Core',parts:['Glúteos','Core']}]
+      5:[{k:'A',name:'Peito',parts:['Peito','Tríceps']},{k:'B',name:'Costas',parts:['Costas','Bíceps']},{k:'C',name:'Pernas',parts:['Pernas','Panturrilha']},{k:'D',name:'Ombro + Braços',parts:['Ombro','Bíceps','Tríceps']},{k:'E',name:'Glúteos + Core',parts:['Glúteos','Core']}],
+      6:[{k:'A',name:'Peito + Tríceps',parts:['Peito','Tríceps']},{k:'B',name:'Costas + Bíceps',parts:['Costas','Bíceps']},{k:'C',name:'Pernas + Panturrilha',parts:['Pernas','Panturrilha']},{k:'D',name:'Ombro + Core',parts:['Ombro','Core']},{k:'E',name:'Peito + Costas',parts:['Peito','Costas']},{k:'F',name:'Glúteos + Pernas',parts:['Glúteos','Pernas']}]
     };
     const split = splitMap[days] || splitMap[4];
     // Use user-selected days if available, otherwise defaults
-    const wkDays = (setup.selectedDays && setup.selectedDays.length===days) ? setup.selectedDays : ({ 3:[1,3,5], 4:[1,2,4,5], 5:[1,2,3,5,6] }[days] || [1,2,4,5]);
+    const wkDays = (setup.selectedDays && setup.selectedDays.length===days) ? setup.selectedDays : ({ 3:[1,3,5], 4:[1,2,4,5], 5:[1,2,3,5,6], 6:[1,2,3,4,5,6] }[days] || [1,2,4,5]);
     const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
     const workouts = split.map((s,i)=>{
       const exercises = buildLiftExercises(s.parts,setup);
@@ -556,7 +557,7 @@ function generatePlan(module, setup){
   } else {
     const goal = setup.goal || '5km';
     const totalWeeks = {'5km':8,'10km':10,'21km':12,'42km':16}[goal];
-    const wkDays = (setup.selectedDays && setup.selectedDays.length===setup.days) ? setup.selectedDays : ({ 3:[2,4,6], 4:[1,3,5,7], 5:[1,2,4,5,7] }[setup.days] || [1,3,5,7]);
+    const wkDays = (setup.selectedDays && setup.selectedDays.length===setup.days) ? setup.selectedDays : ({ 3:[2,4,6], 4:[1,3,5,7], 5:[1,2,4,5,7], 6:[1,2,3,4,5,6] }[setup.days] || [1,3,5,7]);
     const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
     const types = ['Corrida Leve','Intervalado','Corrida Longa','Ritmo Constante'];
     // distância base = a da prova; escala pelo nível (avançado corre mais no dia a dia)
@@ -1116,6 +1117,7 @@ function renderHome(){
   const cw = currentWeek(mod);
   renderInstallCard(); // convite pra instalar (só se fizer sentido)
   renderWeekRecap();   // resumo da semana passada (segundas)
+  renderMonthlyCard(); // desafios do mês (zeram todo dia 1º)
   // idade sempre em dia quando há data de nascimento (adolescente cresce, aniversário passa)
   const prof = state.user && state.user.profile;
   if(prof && prof.birth){ const a = ageFromBirth(prof.birth); if(a && a!==prof.age) prof.age = a; }
@@ -2166,6 +2168,164 @@ function checkWeightTrophies(){
 }
 
 // ---------- TROPHIES ----------
+// ========== DESAFIOS DO MÊS (zeram todo dia 1º) ==========
+function monthKey(d){ const x = d || new Date(); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'); }
+function monthStartTs(){ const d=new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); }
+function monthName(key){
+  const [y,m] = key.split('-').map(Number);
+  return ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][m-1]+'/'+y;
+}
+function daysLeftInMonth(){
+  const d=new Date();
+  const fim = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  return fim - d.getDate();
+}
+// histórico apenas do mês corrente
+function monthHistory(){
+  const ini = monthStartTs();
+  return [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])].filter(x=>x.at>=ini);
+}
+// dias distintos com atividade neste mês
+function monthActiveDays(){
+  const set = new Set();
+  monthHistory().forEach(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); set.add(d.getTime()); });
+  return set;
+}
+// maior sequência de dias seguidos DENTRO do mês
+function monthBestStreak(){
+  const dias = [...monthActiveDays()].sort((a,b)=>a-b);
+  let best=0, cur=0, prev=null;
+  dias.forEach(d=>{ cur = (prev!==null && d-prev===86400000) ? cur+1 : 1; best=Math.max(best,cur); prev=d; });
+  return best;
+}
+const somaKm = (arr)=>arr.reduce((s,x)=>s+(x.distance||0),0);
+
+// Cada desafio: progresso() retorna [atual, alvo]. cat filtra por modalidade.
+const MONTH_CHALLENGES = [
+  { id:'m_lift_8',  emo:'🏋️', cat:'lift',  nome:'Ferro em Brasa',       desc:'8 treinos de musculação no mês',
+    prog:()=>[ (state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs()).length, 8 ] },
+  { id:'m_lift_pr', emo:'💥', cat:'lift',  nome:'Quebrador de Limites',  desc:'Bata 2 recordes pessoais no mês',
+    prog:()=>[ Object.values(state.prs||{}).filter(p=>p.at>=monthStartTs()).length, 2 ] },
+  { id:'m_lift_leg',emo:'🦵', cat:'lift',  nome:'Não Pulou o Dia de Perna', desc:'3 treinos com pernas ou glúteos',
+    prog:()=>[ (state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs() && (x.parts||[]).some(p=>['Pernas','Glúteos','Panturrilha'].includes(p))).length, 3 ] },
+  { id:'m_run_30',  emo:'🏃', cat:'run',   nome:'Maratonista do Mês',    desc:'Corra 30 km somados no mês',
+    prog:()=>[ +somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && (!x.activity||x.activity==='corrida'))).toFixed(1), 30 ] },
+  { id:'m_run_long',emo:'🎯', cat:'run',   nome:'Longão do Mês',         desc:'Uma corrida de 8 km ou mais',
+    prog:()=>{ const r=(state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && (!x.activity||x.activity==='corrida')); return [ Math.min(8, r.length?Math.max(...r.map(x=>x.distance||0)):0), 8 ]; } },
+  { id:'m_bike_50', emo:'🚴', cat:'run',   nome:'Pedal do Mês',          desc:'50 km de bike no mês',
+    prog:()=>[ +somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && x.activity==='bike')).toFixed(1), 50 ] },
+  { id:'m_walk_25', emo:'🚶', cat:'run',   nome:'Andarilho',             desc:'25 km de caminhada no mês',
+    prog:()=>[ +somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && x.activity==='caminhada')).toFixed(1), 25 ] },
+  { id:'m_streak5', emo:'🔥', cat:'geral', nome:'Constância de Aço',     desc:'5 dias seguidos de atividade',
+    prog:()=>[ monthBestStreak(), 5 ] },
+  { id:'m_days12',  emo:'📅', cat:'geral', nome:'Presença Confirmada',   desc:'Ative-se em 12 dias diferentes',
+    prog:()=>[ monthActiveDays().size, 12 ] },
+  { id:'m_min500',  emo:'⏱️', cat:'geral', nome:'Meia Centena de Horas', desc:'500 minutos de treino no mês',
+    prog:()=>[ monthHistory().reduce((s,x)=>s+(x.duration||0),0), 500 ] },
+  { id:'m_mix',     emo:'🔀', cat:'geral', nome:'Atleta Completo',       desc:'Musculação + corrida no mesmo mês',
+    prog:()=>{ const ini=monthStartTs(); const l=(state.modules.lift?.history||[]).some(x=>x.at>=ini); const r=(state.modules.run?.history||[]).some(x=>x.at>=ini); return [ (l?1:0)+(r?1:0), 2 ]; } },
+  { id:'m_early',   emo:'🌅', cat:'geral', nome:'Clube da Madrugada',    desc:'3 treinos antes das 7h',
+    prog:()=>[ monthHistory().filter(x=>new Date(x.at).getHours()<7).length, 3 ] }
+];
+
+// desafios visíveis: os da modalidade ativa + os gerais
+function visibleChallenges(){
+  const temLift = !!state.modules.lift, temRun = !!state.modules.run;
+  return MONTH_CHALLENGES.filter(c=>c.cat==='geral' || (c.cat==='lift'&&temLift) || (c.cat==='run'&&temRun));
+}
+// garante o objeto do mês; ao virar o mês, arquiva as medalhas e zera
+function ensureMonthly(){
+  const k = monthKey();
+  state.medals = state.medals || [];
+  if(!state.monthly || state.monthly.key !== k){
+    // arquiva o que foi conquistado no mês que acabou
+    if(state.monthly && (state.monthly.done||[]).length){
+      state.monthly.done.forEach(id=>{
+        if(!state.medals.some(m=>m.id===id && m.month===state.monthly.key)) state.medals.push({ id, month:state.monthly.key });
+      });
+    }
+    state.monthly = { key:k, done:[] };
+  }
+}
+// verifica e desbloqueia; retorna os ids recém-conquistados
+function checkMonthly(){
+  ensureMonthly();
+  const novos = [];
+  visibleChallenges().forEach(c=>{
+    if(state.monthly.done.includes(c.id)) return;
+    const [a, alvo] = c.prog();
+    if(a >= alvo){ state.monthly.done.push(c.id); novos.push(c); }
+  });
+  if(novos.length){
+    saveData();
+    novos.forEach((c,i)=>setTimeout(()=>toast(`${c.emo} Desafio do mês concluído: ${c.nome}!`), 900 + i*1200));
+  }
+  return novos;
+}
+// card na Home
+function renderMonthlyCard(){
+  const card = $('card-monthly'); if(!card) return;
+  ensureMonthly();
+  const lista = visibleChallenges();
+  const feitos = lista.filter(c=>state.monthly.done.includes(c.id)).length;
+  const restam = daysLeftInMonth();
+  card.classList.remove('hidden');
+  $('monthly-title').textContent = `🎖️ Desafios de ${monthName(state.monthly.key)}`;
+  $('monthly-sub').textContent = `${feitos} de ${lista.length} concluídos · ${restam===0?'último dia!':`${restam} ${restam===1?'dia restante':'dias restantes'}`}`;
+  // mostra os 3 mais próximos de fechar (ainda não concluídos)
+  const pendentes = lista.filter(c=>!state.monthly.done.includes(c.id))
+    .map(c=>{ const [a,alvo]=c.prog(); return {c, a, alvo, pct:Math.min(1, a/alvo)}; })
+    .sort((x,y)=>y.pct-x.pct).slice(0,3);
+  $('monthly-bars').innerHTML = pendentes.length ? pendentes.map(({c,a,alvo,pct})=>`
+    <div style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span>${c.emo} ${c.nome}</span><span class="mono" style="color:var(--text-dim)">${a}/${alvo}</span>
+      </div>
+      <div class="tprog"><div class="tprog-fill" style="width:${Math.round(pct*100)}%"></div></div>
+    </div>`).join('')
+    : `<div style="margin-top:8px;color:var(--primary-2);font-weight:700;font-size:13px">🎉 Todos os desafios do mês concluídos! Você é fera.</div>`;
+}
+// tela completa
+function openMonthly(){
+  ensureMonthly();
+  const lista = visibleChallenges();
+  const restam = daysLeftInMonth();
+  const linhas = lista.map(c=>{
+    const feito = state.monthly.done.includes(c.id);
+    const [a,alvo] = c.prog();
+    const pct = Math.min(100, Math.round(a/alvo*100));
+    return `<div class="trophy ${feito?'unlock':''}" style="text-align:left;padding:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">${c.emo}</span>
+        <div style="flex:1">
+          <div style="font-weight:800;font-size:13.5px">${c.nome} ${feito?'✅':''}</div>
+          <div style="font-size:11.5px;color:var(--text-mute)">${c.desc}</div>
+        </div>
+        <span class="mono" style="font-size:12px;color:${feito?'var(--primary-2)':'var(--text-dim)'}">${a}/${alvo}</span>
+      </div>
+      ${feito?'':`<div class="tprog" style="margin-top:8px"><div class="tprog-fill" style="width:${pct}%"></div></div>`}
+    </div>`;
+  }).join('');
+  // medalhas de meses anteriores
+  const porMes = {};
+  (state.medals||[]).forEach(m=>{ (porMes[m.month]=porMes[m.month]||[]).push(m.id); });
+  const mesesAnt = Object.keys(porMes).sort().reverse().slice(0,6);
+  const hist = mesesAnt.length ? `
+    <div class="section-lbl" style="margin:18px 0 8px">🏅 Medalhas conquistadas</div>
+    ${mesesAnt.map(mk=>{
+      const emos = porMes[mk].map(id=>{ const c=MONTH_CHALLENGES.find(x=>x.id===id); return c?c.emo:'🎖️'; }).join(' ');
+      return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border)">
+        <span style="font-size:13px">${monthName(mk)}</span><span style="font-size:16px">${emos}</span></div>`;
+    }).join('')}` : '';
+  $('modal-inner').innerHTML = `
+    <h3>🎖️ Desafios do mês</h3>
+    <p style="color:var(--text-dim);font-size:13px">${monthName(state.monthly.key)} · ${restam===0?'último dia!':`faltam ${restam} dias`}. Todo dia 1º os desafios zeram e as medalhas ficam guardadas.</p>
+    <div style="max-height:52vh;overflow-y:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px">${linhas}</div>
+    ${hist}
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+
 function unlockTrophy(id){
   if(state.trophies.includes(id)) return;
   state.trophies.push(id);
@@ -2225,6 +2385,7 @@ function ensureStats(){
 }
 function checkTrophies(){
   ensureStats();
+  checkMonthly();
   // Remove troféus que foram desbloqueados por engano (versões antigas com km em dobro):
   // se o requisito não é mais atingido pelos contadores corrigidos, tranca de volta.
   const req = {
@@ -4633,7 +4794,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
