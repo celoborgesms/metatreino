@@ -1,5 +1,5 @@
-// ===== MetaTreino v8.9 =====
-const APP_VERSION = 'v8.9';
+// ===== MetaTreino v9.0 =====
+const APP_VERSION = 'v9.0';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1139,7 +1139,7 @@ function goTab(tab){
   else if(tab==='sessions') renderSessions();
   else if(tab==='library') renderLibrary();
   else if(tab==='perf') renderPerf();
-  else if(tab==='history') renderHistory();
+  else if(tab==='history'){ histLimit = HIST_PAGE; renderHistory(); }
   else if(tab==='plan') renderPlan();
   else if(tab==='profile') renderProfile();
 }
@@ -1818,6 +1818,8 @@ function markRunDone(dayIdx){
 }
 
 // ---------- HISTORY ----------
+const HIST_PAGE = 14;      // dias carregados por vez
+let histLimit = HIST_PAGE;
 function renderHistory(){
   const mod = state.modules[state.active];
   const isLift = state.active==='lift';
@@ -1851,7 +1853,11 @@ function renderHistory(){
     });
     const todayKey = new Date().toDateString();
     const yestKey = new Date(Date.now()-86400000).toDateString();
-    $('history-list').innerHTML = groups.map(g=>{
+    // Só desenha os dias mais recentes. Com meses de treino, renderizar tudo de uma vez
+    // deixa a aba lenta no celular — o resto entra sob demanda no "Carregar mais".
+    const totalDias = groups.length;
+    const visiveis = groups.slice(0, histLimit);
+    $('history-list').innerHTML = visiveis.map(g=>{
       const lbl = g.key===todayKey ? 'Hoje' : g.key===yestKey ? 'Ontem' : g.date.toLocaleDateString('pt-BR',{weekday:'long', day:'2-digit', month:'2-digit'});
       const cards = g.items.map(x=>{
         const d = new Date(x.at);
@@ -1875,9 +1881,12 @@ function renderHistory(){
         </div>`;
       }).join('');
       return `<div class="hist-day-lbl">${lbl}</div>${cards}`;
-    }).join('');
+    }).join('') + (totalDias > histLimit
+      ? `<button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="histShowMore()">⌄ Carregar mais (${totalDias - histLimit} ${totalDias-histLimit===1?'dia':'dias'} antes)</button>`
+      : (totalDias > HIST_PAGE ? `<div style="text-align:center;color:var(--text-mute);font-size:12px;margin-top:12px">Fim do histórico · ${totalDias} dias</div>` : ''));
   }
 }
+function histShowMore(){ histLimit += HIST_PAGE; renderHistory(); }
 function calcStreak(h){
   if(!h||!h.length) return 0;
   const days = new Set(h.map(x=>new Date(x.at).toDateString()));
@@ -2453,7 +2462,15 @@ function openMonthly(){
   ensureMonthly();
   const lista = visibleChallenges();
   const restam = daysLeftInMonth();
-  const linhas = lista.map(c=>{
+  // concluídos no topo; depois os mais perto de fechar
+  const ordenada = [...lista].sort((x,y)=>{
+    const fx = state.monthly.done.includes(x.id), fy = state.monthly.done.includes(y.id);
+    if(fx !== fy) return fx ? -1 : 1;
+    const px = Math.min(1, x.prog()[0]/x.prog()[1]);
+    const py = Math.min(1, y.prog()[0]/y.prog()[1]);
+    return py - px;
+  });
+  const linhas = ordenada.map(c=>{
     const feito = state.monthly.done.includes(c.id);
     const [a,alvo] = c.prog();
     const pct = Math.min(100, Math.round(a/alvo*100));
@@ -2782,6 +2799,22 @@ function openTrophyDetail(id){
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();openTrophies()">← Voltar aos troféus</button>`;
   $('modal-back').classList.add('on');
 }
+// Ordena os troféus de um grupo: os conquistados sobem pro topo (mais recentes primeiro),
+// depois vêm os bloqueados ordenados pelo quanto falta — quem está a 90% aparece antes de quem está a 0%.
+function ordenarTrofeus(items){
+  const pct = t => {
+    const pr = trophyProgress(t.id);
+    if(!pr || !pr[1]) return -1;              // sem barra: sem progresso mensurável
+    return Math.min(1, pr[0] / pr[1]);
+  };
+  const datas = state.trophyDates || {};
+  return [...items].sort((a,b)=>{
+    const ua = state.trophies.includes(a.id), ub = state.trophies.includes(b.id);
+    if(ua !== ub) return ua ? -1 : 1;                       // conquistado primeiro
+    if(ua && ub) return (datas[b.id]||0) - (datas[a.id]||0); // mais recente no topo
+    return pct(b) - pct(a);                                  // bloqueados: mais perto primeiro
+  });
+}
 function openTrophies(){
   const catNames = { geral:'🌟 Gerais', streak:'🔥 Consistência', lift:'🏋️ Musculação', run:'🏃 Corrida', walk:'🚶 Caminhada', bike:'🚴 Bike', body:'⚖️ Corpo' };
   // Ordem pensada: primeiro o que tem progresso mensurável (modalidades e consistência),
@@ -2803,7 +2836,7 @@ function openTrophies(){
     ${groups.map(g=>{
       const u = g.items.filter(t=>state.trophies.includes(t.id)).length;
       return `<div style="margin-top:18px"><div class="section-lbl" style="margin:0 0 8px">${g.name} · ${u}/${g.items.length}</div>
-        <div class="trophy-grid">${g.items.map(t=>{
+        <div class="trophy-grid">${ordenarTrofeus(g.items).map(t=>{
           const ul = state.trophies.includes(t.id);
           let bar = '';
           if(!ul){
@@ -5184,7 +5217,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
