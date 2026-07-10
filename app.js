@@ -1,5 +1,5 @@
-// ===== MetaTreino v8.1 =====
-const APP_VERSION = 'v8.1';
+// ===== MetaTreino v8.2 =====
+const APP_VERSION = 'v8.2';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -450,12 +450,17 @@ function cleanupOldHistory(){
 }
 
 // ---------- MODULE PICK / SETUP ----------
-function pickModule(m){
-  state.active=m; saveData();
+// Abre a tela de configuração de um módulo com TODOS os bindings necessários.
+// (Existiam três lugares chamando bindings diferentes — um deles esquecia os dias da semana.)
+function openSetupScreen(m){
   showScreen('scr-setup-'+m);
   bindOpts('scr-setup-'+m);
   bindMultiOpts('scr-setup-'+m);
   bindDaysUpdate(m);
+}
+function pickModule(m){
+  state.active=m; saveData();
+  openSetupScreen(m);
   prefillSetupFromQuiz(m);
 }
 // Usa as respostas do questionário inicial pra já deixar o plano pré-selecionado
@@ -1099,7 +1104,7 @@ function renderModToggle(){
   el.innerHTML = `<div class="mod-cur ${cur.cls}"><span style="font-size:20px">${cur.emo}</span><span>${cur.name}</span></div><button class="mod-switch" onclick="switchModule('${other.to}')">⇄ Ir para <span style="font-size:16px">${other.emo}</span> ${other.name}</button>`;
 }
 function switchModule(to){
-  if(!state.modules[to]){ state.active=to; saveData(); showScreen('scr-setup-'+to); bindOpts('scr-setup-'+to); return; }
+  if(!state.modules[to]){ state.active=to; saveData(); openSetupScreen(to); prefillSetupFromQuiz(to); return; }
   state.active = to; saveData(); goTab('home'); toast('Trocado para '+(to==='lift'?'🏋️ Musculação':'🏃 Corrida'));
 }
 function switchModuleUI(){ switchModule(state.active==='lift'?'run':'lift'); }
@@ -2126,7 +2131,7 @@ function renderPlan(){
   $('pl-access').textContent = days>=999999 ? '♾️ Acesso vitalício' : days>0?'Acesso ativo':'Acesso expirado';
   $('pl-days').textContent = accessLabel(days);
 }
-function regenPlan(){ showScreen('scr-setup-'+state.active); bindOpts('scr-setup-'+state.active); bindMultiOpts('scr-setup-'+state.active); bindDaysUpdate(state.active); }
+function regenPlan(){ openSetupScreen(state.active); }
 
 // ---------- PROFILE ----------
 function renderProfile(){
