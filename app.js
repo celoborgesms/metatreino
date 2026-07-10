@@ -1,5 +1,5 @@
-// ===== MetaTreino v8.4 =====
-const APP_VERSION = 'v8.4';
+// ===== MetaTreino v8.6 =====
+const APP_VERSION = 'v8.6';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -4843,15 +4843,47 @@ function openHistoryEntry(idx){
 function saveHistoryEntry(idx){
   const mod = state.modules[state.active];
   const x = (mod.history||[])[idx]; if(!x) return;
+  const kmAntes = x.distance || 0;   // guarda o valor antigo pra ajustar os contadores
   x.name = $('he-name').value.trim() || x.name;
   const dv = $('he-date').value;
   if(dv){ const nd = new Date(dv); if(!isNaN(nd)) x.at = nd.getTime(); }
   x.duration = parseInt($('he-dur').value) || x.duration;
   const kmEl = $('he-km'); if(kmEl){ const km = parseFloat(kmEl.value); if(km>0){ x.distance = km; if(x.duration) { const pace = x.duration/km; x.pace = Math.floor(pace)+':'+String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0')+'/km'; } } }
+  // corrigiu a distância? os contadores vitalícios precisam acompanhar,
+  // senão um erro de digitação (50km em vez de 30km) fica inflando os km pra sempre.
+  if((x.distance||0) !== kmAntes) adjustKmStats(x, kmAntes, x.distance||0);
   saveData();
   toast('✅ Treino atualizado');
   closeModal();
   renderHistory();
+}
+// Aplica a diferença de km de um registro editado nos contadores vitalícios.
+// Troféus e desafios já conquistados NÃO são revogados — corrigir um erro não pode punir.
+function adjustKmStats(x, kmAntes, kmDepois){
+  if(x.module !== 'run') return;
+  const s = state.stats || (state.stats = {});
+  const campo = { corrida:'runKmTotal', caminhada:'walkKmTotal', bike:'bikeKmTotal' }[x.activity || 'corrida'];
+  if(!campo) return;
+  s[campo] = Math.max(0, (s[campo]||0) - kmAntes + kmDepois);
+  ensureStats(); // piso: nunca abaixo do que o histórico comprova
+}
+// Recalcula o recorde de um exercício depois que séries foram apagadas.
+// Só mexe se o PR atual tiver sido feito no dia removido — PRs de outros dias
+// (e os que já saíram da janela de 90 dias) permanecem intactos.
+function recomputePR(exId, diaRemovidoTs){
+  const pr = (state.prs||{})[exId];
+  if(!pr) return;
+  const prDia = new Date(pr.at || 0); prDia.setHours(0,0,0,0);
+  if(prDia.getTime() !== diaRemovidoTs) return; // o PR é de outro dia: não toca
+  const logs = state.progress[exId] || [];
+  let melhor = null;
+  logs.forEach(p=>(p.sets||[]).forEach(s=>{
+    if(!melhor || s.peso > melhor.peso || (s.peso === melhor.peso && s.reps > melhor.reps)){
+      melhor = { peso:s.peso, reps:s.reps, at:p.date };
+    }
+  }));
+  if(melhor) state.prs[exId] = melhor;
+  else delete state.prs[exId];
 }
 function deleteHistoryEntry(idx){
   if(!confirm('Excluir este treino do histórico? Não pode ser desfeito.')) return;
@@ -4869,6 +4901,9 @@ function deleteHistoryEntry(idx){
         state.progress[id] = state.progress[id].filter(p=>{ const pd=new Date(p.date); pd.setHours(0,0,0,0); return pd.getTime()!==today.getTime(); });
         if(!state.progress[id].length) delete state.progress[id];
       });
+      // Se o recorde (PR) veio justamente das séries apagadas, ele não pode ficar.
+      // Recalcula a partir do que sobrou; se não sobrou nada, remove o PR.
+      ids.forEach(id=>recomputePR(id, today.getTime()));
     }
   }
   const removido = mod.history[idx];
