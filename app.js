@@ -1,5 +1,5 @@
-// ===== MetaTreino v8.0 =====
-const APP_VERSION = 'v8.0';
+// ===== MetaTreino v8.1 =====
+const APP_VERSION = 'v8.1';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2322,14 +2322,18 @@ function ensureMonthly(){
   const k = monthKey();
   state.medals = state.medals || [];
   if(!state.monthly || state.monthly.key !== k){
-    // arquiva o que foi conquistado no mês que acabou
+    // vira o mês: arquiva as conquistas como MEDALHAS permanentes (com a data em que caíram)
     if(state.monthly && (state.monthly.done||[]).length){
+      const datas = state.monthly.doneAt || {};
       state.monthly.done.forEach(id=>{
-        if(!state.medals.some(m=>m.id===id && m.month===state.monthly.key)) state.medals.push({ id, month:state.monthly.key });
+        if(!state.medals.some(m=>m.id===id && m.month===state.monthly.key)){
+          state.medals.push({ id, month:state.monthly.key, at: datas[id] || null });
+        }
       });
     }
-    state.monthly = { key:k, done:[] };
+    state.monthly = { key:k, done:[], doneAt:{} };
   }
+  state.monthly.doneAt = state.monthly.doneAt || {};
 }
 // verifica e desbloqueia; retorna os ids recém-conquistados
 function checkMonthly(){
@@ -2338,13 +2342,61 @@ function checkMonthly(){
   visibleChallenges().forEach(c=>{
     if(state.monthly.done.includes(c.id)) return;
     const [a, alvo] = c.prog();
-    if(a >= alvo){ state.monthly.done.push(c.id); novos.push(c); }
+    if(a >= alvo){ state.monthly.done.push(c.id); state.monthly.doneAt[c.id] = Date.now(); novos.push(c); }
   });
   if(novos.length){
     saveData();
     novos.forEach(c=>queueAward({ id:'m_'+c.id, emo:c.emo, tipo:'DESAFIO DO MÊS CONCLUÍDO', nome:c.nome, desc:c.desc }));
   }
   return novos;
+}
+// ---------- ARQUIVO DE MEDALHAS ----------
+// Tudo que a pessoa conquistou nos desafios de meses passados fica guardado aqui pra sempre.
+function openMedals(){
+  ensureMonthly();
+  const porMes = {};
+  (state.medals||[]).forEach(m=>{ (porMes[m.month] = porMes[m.month]||[]).push(m); });
+  // inclui o mês corrente (ainda em andamento) no topo, marcado como tal
+  const atuais = (state.monthly.done||[]).map(id=>({ id, month:state.monthly.key, at:(state.monthly.doneAt||{})[id] }));
+  if(atuais.length) porMes[state.monthly.key] = atuais;
+
+  const meses = Object.keys(porMes).sort().reverse();
+  const totalMedalhas = Object.values(porMes).reduce((s,a)=>s+a.length,0);
+
+  const corpo = meses.length ? meses.map(mk=>{
+    const emAndamento = mk === state.monthly.key;
+    const itens = porMes[mk].map(m=>{
+      const c = MONTH_CHALLENGES.find(x=>x.id===m.id);
+      const dt = m.at ? new Date(m.at).toLocaleDateString('pt-BR') : '';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px dashed var(--border)">
+        <span style="font-size:20px">${c?c.emo:'🎖️'}</span>
+        <div style="flex:1"><div style="font-weight:700;font-size:13px">${c?c.nome:m.id}</div>
+        <div style="font-size:11px;color:var(--text-mute)">${c?c.desc:''}</div></div>
+        ${dt?`<span class="mono" style="font-size:11px;color:var(--text-dim)">${dt}</span>`:''}
+      </div>`;
+    }).join('');
+    return `<div class="card" style="padding:14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:800;font-size:14px">${monthName(mk)}${emAndamento?' <span style="font-size:10.5px;color:var(--accent);font-weight:700">em andamento</span>':''}</div>
+        <span style="font-size:12px;color:var(--primary-2);font-weight:700">${porMes[mk].length} 🎖️</span>
+      </div>
+      ${itens}
+    </div>`;
+  }).join('') : `<div class="card" style="text-align:center;padding:24px">
+      <div style="font-size:40px">🎖️</div>
+      <div style="font-weight:700;margin-top:8px">Nenhuma medalha ainda</div>
+      <div style="color:var(--text-dim);font-size:13px;margin-top:4px">Conclua desafios do mês e eles ficam guardados aqui pra sempre — mesmo depois que o mês virar.</div>
+    </div>`;
+
+  $('modal-inner').innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin:-4px -4px 0 0">
+      <button onclick="closeModal()" style="background:none;border:none;font-size:20px;color:var(--text-mute);padding:4px 8px;cursor:pointer">✕</button>
+    </div>
+    <h3>🏅 Minhas medalhas</h3>
+    <p style="color:var(--text-dim);font-size:13px">${totalMedalhas} ${totalMedalhas===1?'medalha conquistada':'medalhas conquistadas'} em ${meses.length} ${meses.length===1?'mês':'meses'}. Os desafios zeram todo dia 1º, mas as medalhas ficam.</p>
+    <div style="max-height:56vh;overflow-y:auto;margin-top:12px">${corpo}</div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
 }
 // card na Home
 function renderMonthlyCard(){
@@ -2390,23 +2442,12 @@ function openMonthly(){
       ${feito?'':`<div class="tprog" style="margin-top:8px"><div class="tprog-fill" style="width:${pct}%"></div></div>`}
     </div>`;
   }).join('');
-  // medalhas de meses anteriores
-  const porMes = {};
-  (state.medals||[]).forEach(m=>{ (porMes[m.month]=porMes[m.month]||[]).push(m.id); });
-  const mesesAnt = Object.keys(porMes).sort().reverse().slice(0,6);
-  const hist = mesesAnt.length ? `
-    <div class="section-lbl" style="margin:18px 0 8px">🏅 Medalhas conquistadas</div>
-    ${mesesAnt.map(mk=>{
-      const emos = porMes[mk].map(id=>{ const c=MONTH_CHALLENGES.find(x=>x.id===id); return c?c.emo:'🎖️'; }).join(' ');
-      return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border)">
-        <span style="font-size:13px">${monthName(mk)}</span><span style="font-size:16px">${emos}</span></div>`;
-    }).join('')}` : '';
   $('modal-inner').innerHTML = `
     <h3>🎖️ Desafios do mês</h3>
     <p style="color:var(--text-dim);font-size:13px">${monthName(state.monthly.key)} · ${restam===0?'último dia!':`faltam ${restam} dias`}. Todo dia 1º os desafios zeram e as medalhas ficam guardadas.</p>
     <div style="max-height:52vh;overflow-y:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px">${linhas}</div>
-    ${hist}
-    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
+    <button class="btn btn-outline btn-block" style="margin-top:14px;border-color:rgba(245,158,11,0.4)" onclick="closeModal();openMedals()">🏅 Ver minhas medalhas de meses anteriores</button>
+    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
 
@@ -4977,7 +5018,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,calMove,openTrophyDetail,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,calMove,openTrophyDetail,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
