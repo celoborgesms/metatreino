@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.2 =====
-const APP_VERSION = 'v9.2';
+// ===== MetaTreino v9.3 =====
+const APP_VERSION = 'v9.3';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2014,7 +2014,7 @@ function renderPerf(){
   $('s1-val').innerHTML = `${weekDone}<small>/${wkTarget}</small>`;
   $('s1-note').textContent = Math.round(weekDone/wkTarget*100)+'% da meta';
   // volume/km com variação REAL vs semana anterior
-  $('s2-lbl').textContent = isLift?'Volume 7d':'Km 7d';
+  $('s2-lbl').textContent = isLift?'Volume 7d':'Distância 7d';
   let cur, prev;
   if(isLift){
     cur = calcVolumeBetween(start, now); prev = calcVolumeBetween(prevStart, start);
@@ -2032,31 +2032,17 @@ function renderPerf(){
     $('s3-val').textContent = Object.keys(state.prs||{}).length;
     $('s3-note').textContent = 'exercícios com PR';
   } else {
-    $('s3-lbl').textContent = 'Km na vida';
+    $('s3-lbl').textContent = 'Km de corrida';
     $('s3-val').textContent = state.stats.runKmTotal.toFixed(0);
-    $('s3-note').textContent = 'km de corrida acumulados';
+    $('s3-note').textContent = 'só corrida, acumulado';
   }
   $('m-streak').textContent = calcStreak(h);
-  $('m-wk').innerHTML = `${weekDone}<small>/${wkTarget}</small>`;
   const totalMin = h.reduce((s,x)=>s+(x.duration||0),0);
   $('m-total').textContent = totalMin<60?totalMin+'min':(totalMin/60).toFixed(1)+'h';
   // melhor sequência REAL (calculada do histórico + memória vitalícia)
   const best = calcBestStreak(h);
   if(!state.stats.bestStreak || best > state.stats.bestStreak){ state.stats.bestStreak = best; saveData(); }
   $('m-best').textContent = Math.max(best, state.stats.bestStreak||0) + 'd';
-  // card extra real: peso atual (musculação) ou melhor pace (corrida)
-  if(isLift){
-    const w = latestWeight();
-    $('m-extra-emo').textContent = '⚖️';
-    $('m-extra').textContent = w ? w+'kg' : '—';
-    $('m-extra-lbl').textContent = 'Peso atual';
-  } else {
-    const paces = h.filter(r=>(!r.activity||r.activity==='corrida') && r.pace).map(r=>({p:parsePace(r.pace), s:r.pace}));
-    const bp = paces.length ? paces.reduce((b,x)=>x.p<b.p?x:b) : null;
-    $('m-extra-emo').textContent = '⚡';
-    $('m-extra').textContent = bp ? bp.s.replace('/km','') : '—';
-    $('m-extra-lbl').textContent = 'Melhor pace (/km)';
-  }
   // constância 4 semanas (dados reais do histórico)
   const line = $('perf-line'), dots = $('perf-dots');
   if(line){
