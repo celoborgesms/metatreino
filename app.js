@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.4 =====
-const APP_VERSION = 'v9.4';
+// ===== MetaTreino v9.5 =====
+const APP_VERSION = 'v9.5';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -133,7 +133,7 @@ const TROPHIES = [
   { secret:true, id:'double',      emoji:'⚡', name:'Dose Dupla',         desc:'Musculação e corrida no mesmo dia',      cat:'geral' },
   { secret:true, id:'friday13',    emoji:'🍀', name:'Azar é Não Treinar', desc:'Treinou numa sexta-feira 13',            cat:'geral' },
   { secret:true, id:'christmas',   emoji:'🎄', name:'Espírito Natalino',  desc:'Treinou no dia de Natal (25/12)',        cat:'geral' },
-  { secret:true, id:'versatile',   emoji:'🌈', name:'Faz-Tudo',           desc:'Registrou musculação, corrida, caminhada e bike', cat:'geral' },
+  { secret:true, id:'versatile',   emoji:'🤹', name:'Faz-Tudo',           desc:'Registrou 3 modalidades diferentes (musculação, corrida, caminhada ou bike)', cat:'geral' },
 
   // GERAIS
   { id:'first_workout', emoji:'🥇', name:'Primeiro treino', desc:'Concluiu seu primeiro treino', cat:'geral' },
@@ -1532,9 +1532,9 @@ function renderLiftBlocks(w){
         <div class="block-head-txt"><div class="block-name">${g}${prontos[i]?' <span style="font-size:11px;color:var(--primary-2);font-weight:700">concluído</span>':''}</div><div class="block-sub">${exs.filter(exFeito).length}/${exs.length} ${exs.length===1?'exercício':'exercícios'}</div></div>
         <div class="block-chev">▾</div>
       </div>
-      <div class="block-body">
+      <div class="block-body"><div class="block-inner">
         ${exs.map((ex,j)=>renderExerciseCard(ex,j)).join('')}
-      </div>
+      </div></div>
     </div>
   `).join('');
 }
@@ -1583,7 +1583,7 @@ function renderRunBlocks(w){
         <div class="block-head-txt"><div class="block-name">${b.name}</div><div class="block-sub">${b.exs.reduce((s,e)=>s+e.min,0)} min</div></div>
         <div class="block-chev">▾</div>
       </div>
-      <div class="block-body">${b.exs.map((ex,j)=>`<div class="ex"><div class="ex-num">${j+1}</div><div style="flex:1"><div class="ex-name">${ex.name}</div><div class="ex-desc">${ex.desc}</div></div><div class="ex-meta">${ex.min} min</div></div>`).join('')}</div>
+      <div class="block-body"><div class="block-inner">${b.exs.map((ex,j)=>`<div class="ex"><div class="ex-num">${j+1}</div><div style="flex:1"><div class="ex-name">${ex.name}</div><div class="ex-desc">${ex.desc}</div></div><div class="ex-meta">${ex.min} min</div></div>`).join('')}</div></div>
     </div>`).join('');
 }
 
@@ -2699,10 +2699,12 @@ function checkTrophies(){
   if(allHist.some(x=>{ const d=new Date(x.at); return d.getDay()===5 && d.getDate()===13; })) unlockTrophy('friday13');
   // espírito natalino: treino no dia 25 de dezembro
   if(allHist.some(x=>{ const d=new Date(x.at); return d.getDate()===25 && d.getMonth()===11; })) unlockTrophy('christmas');
-  // faz-tudo: já registrou as 4 modalidades (musculação, corrida, caminhada e bike)
-  const temLift = (state.modules.lift?.history||[]).length > 0;
+  // faz-tudo: já registrou pelo menos 3 modalidades diferentes (musculação, corrida, caminhada, bike)
+  let nModalidades = 0;
+  if((state.modules.lift?.history||[]).length > 0) nModalidades++;
   const tiposRun = new Set((state.modules.run?.history||[]).map(r=>r.activity||'corrida'));
-  if(temLift && tiposRun.has('corrida') && tiposRun.has('caminhada') && tiposRun.has('bike')) unlockTrophy('versatile');
+  ['corrida','caminhada','bike'].forEach(t=>{ if(tiposRun.has(t)) nModalidades++; });
+  if(nModalidades >= 3) unlockTrophy('versatile');
   const diaDe = x => { const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime(); };
   const diasLift = new Set((state.modules.lift?.history||[]).map(diaDe));
   if((state.modules.run?.history||[]).some(x=>diasLift.has(diaDe(x)))) unlockTrophy('double');
