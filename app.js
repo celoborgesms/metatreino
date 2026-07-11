@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.4 =====
-const APP_VERSION = 'v9.4';
+// ===== MetaTreino v9.3 =====
+const APP_VERSION = 'v9.3';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1136,7 +1136,6 @@ function goTab(tab){
   $('tabbar').classList.remove('hidden');
   const map = {home:'scr-home',sessions:'scr-sessions',library:'scr-library',perf:'scr-perf',history:'scr-history',plan:'scr-plan',profile:'scr-profile'};
   showScreen(map[tab] || 'scr-home');
-  updateDeco(tab);
   applyMuralLogo(); // a logo do treinador vale em todas as abas
   if(tab==='home') renderHome();
   else if(tab==='sessions') renderSessions();
@@ -2157,7 +2156,6 @@ function regenPlan(){ openSetupScreen(state.active); }
 function renderProfile(){
   const u = state.user, p = u.profile || {};
   const vEl = $('pf-version'); if(vEl) vEl.textContent = APP_VERSION;
-  const dEl = $('deco-row-label'); if(dEl) dEl.textContent = decoEnabled() ? 'Fundo decorativo' : 'Fundo decorativo (desligado)';
   renderAvatar('pf-avatar');
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
   const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:999px;background:rgba(244,63,94,0.15);color:var(--danger-soft);font-weight:800">${pn.join(', ')}</span>`:''; }
@@ -4517,35 +4515,6 @@ function toggleTheme(){
   applyTheme(next);
   toast(next==='light' ? '☀️ Tema claro ativado' : '🌙 Tema escuro ativado');
 }
-
-// ---------- FUNDO DECORATIVO (motivo em linha, discreto, por aba) ----------
-// SVGs vetoriais leves, herdam a cor do tema (var(--text)) com opacidade baixa.
-const DECO_SVG = {
-  dumbbell:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="30" y1="50" x2="70" y2="50"/><rect x="18" y="37" width="11" height="26" rx="3"/><rect x="9" y="43" width="8" height="14" rx="3"/><rect x="71" y="37" width="11" height="26" rx="3"/><rect x="83" y="43" width="8" height="14" rx="3"/></svg>`,
-  stopwatch:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="58" r="30"/><line x1="50" y1="58" x2="50" y2="40"/><line x1="50" y1="58" x2="63" y2="62"/><line x1="42" y1="16" x2="58" y2="16"/><line x1="50" y1="16" x2="50" y2="24"/><line x1="76" y1="30" x2="82" y2="24"/></svg>`,
-  chart:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="24" y1="82" x2="82" y2="82"/><rect x="30" y="54" width="11" height="28" rx="2"/><rect x="47" y="42" width="11" height="40" rx="2"/><rect x="64" y="30" width="11" height="52" rx="2"/></svg>`,
-  clock:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="52" r="30"/><path d="M50 34 v18 l12 8"/><path d="M22 30 l-1 -11 11 2"/></svg>`,
-  calendar:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="26" width="60" height="54" rx="7"/><line x1="20" y1="42" x2="80" y2="42"/><line x1="36" y1="18" x2="36" y2="32"/><line x1="64" y1="18" x2="64" y2="32"/><path d="M40 60 l7 7 14 -15"/></svg>`,
-  grid:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="24" y="24" width="22" height="22" rx="5"/><rect x="54" y="24" width="22" height="22" rx="5"/><rect x="24" y="54" width="22" height="22" rx="5"/><rect x="54" y="54" width="22" height="22" rx="5"/></svg>`,
-  person:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="38" r="16"/><path d="M22 82 a28 26 0 0 1 56 0"/></svg>`
-};
-function decoModuleGlyph(){ return state.active==='run' ? DECO_SVG.stopwatch : DECO_SVG.dumbbell; }
-function decoEnabled(){ try{ return localStorage.getItem('metatreino_deco') !== '0'; }catch(e){ return true; } }
-function updateDeco(tab){
-  const el = document.getElementById('app-deco'); if(!el) return;
-  const on = decoEnabled();
-  document.body.classList.toggle('no-deco', !on);
-  if(!on){ el.innerHTML = ''; return; }
-  const map = { library:DECO_SVG.grid, perf:DECO_SVG.chart, history:DECO_SVG.clock, plan:DECO_SVG.calendar, profile:DECO_SVG.person };
-  el.innerHTML = (tab==='home'||tab==='sessions') ? decoModuleGlyph() : (map[tab] || decoModuleGlyph());
-}
-function toggleDeco(){
-  const next = !decoEnabled();
-  try{ localStorage.setItem('metatreino_deco', next ? '1' : '0'); }catch(e){}
-  updateDeco(state.ui.tab || 'home');
-  const lbl = document.getElementById('deco-row-label'); if(lbl) lbl.textContent = next ? 'Fundo decorativo' : 'Fundo decorativo (desligado)';
-  toast(next ? '🎨 Fundo decorativo ativado' : 'Fundo decorativo desativado');
-}
 applyTheme(currentTheme()); // aplica imediatamente, antes de qualquer render
 
 // ---------- CONTATO DO TREINADOR (editável pelo admin) ----------
@@ -5332,7 +5301,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
