@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.1 =====
-const APP_VERSION = 'v9.1';
+// ===== MetaTreino v9.2 =====
+const APP_VERSION = 'v9.2';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2071,7 +2071,6 @@ function renderPerf(){
     if(dots) dots.innerHTML = pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#10b981"/>`).join('');
   }
   renderDistDonut();
-  renderConsistencyHeatmap();
   // metas semanal e mensal (reais)
   const gb = $('goals-box');
   if(gb){
@@ -2135,52 +2134,6 @@ function renderDistDonut(){
     return seg;
   }).join('') + `<text x="60" y="66" text-anchor="middle" fill="#e2e8f0" font-size="16" font-weight="800">${total}</text>`;
   legend.innerHTML = cats.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${c.color};margin-right:6px"></span>${c.lbl}</span><b>${Math.round(c.n/total*100)}%</b></div>`).join('');
-}
-// Mapa de constância estilo "contribuições": 12 semanas × 7 dias.
-// Cada quadradinho é um dia; quanto mais verde, mais atividades naquele dia.
-function renderConsistencyHeatmap(){
-  const box = $('perf-heatmap'); if(!box) return;
-  const all = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
-  const counts = {};
-  all.forEach(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); const k=d.getTime(); counts[k]=(counts[k]||0)+1; });
-  const today = new Date(); today.setHours(0,0,0,0);
-  const monThis = new Date(today); const dow=(monThis.getDay()||7); monThis.setDate(monThis.getDate()-(dow-1)); // segunda desta semana
-  const WEEKS = 12;
-  const start = new Date(monThis); start.setDate(start.getDate()-(WEEKS-1)*7);
-  const cell=12, gap=3, step=cell+gap, leftPad=24, topPad=18;
-  const W = leftPad + WEEKS*step, H = topPad + 7*step;
-  const color = (n, future)=> future ? 'rgba(148,163,184,0.05)' : n<=0 ? 'rgba(148,163,184,0.14)' : n===1 ? 'rgba(16,185,129,0.38)' : n===2 ? 'rgba(16,185,129,0.62)' : 'rgba(16,185,129,0.92)';
-  let cells='', monthLabels='', prevMonth=-1, totalWin=0, activeDays=0;
-  const dowCount=[0,0,0,0,0,0,0]; // seg..dom
-  for(let w=0; w<WEEKS; w++){
-    for(let r=0; r<7; r++){
-      const d = new Date(start); d.setDate(d.getDate()+w*7+r);
-      const k = d.getTime();
-      const future = k>today.getTime();
-      const n = counts[k]||0;
-      if(!future && n>0){ totalWin+=n; activeDays++; dowCount[r]+=n; }
-      const x = leftPad + w*step, y = topPad + r*step;
-      const isToday = k===today.getTime();
-      cells += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2.5" fill="${color(n,future)}"${isToday?' stroke="#f59e0b" stroke-width="1.6"':''}/>`;
-    }
-    const colMon = new Date(start); colMon.setDate(colMon.getDate()+w*7);
-    if(colMon.getMonth()!==prevMonth){
-      prevMonth = colMon.getMonth();
-      const nome = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][prevMonth];
-      monthLabels += `<text x="${leftPad + w*step}" y="12" fill="#94a3b8" font-size="9" font-weight="600">${nome}</text>`;
-    }
-  }
-  const dayLbls = [[0,'Seg'],[2,'Qua'],[4,'Sex']].map(([r,txt])=>`<text x="0" y="${topPad + r*step + cell-2}" fill="#94a3b8" font-size="8.5">${txt}</text>`).join('');
-  const nomesDow=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
-  let best=-1, bestI=0; dowCount.forEach((c,i)=>{ if(c>best){best=c;bestI=i;} });
-  const insight = activeDays ? `📌 <b>${activeDays}</b> dias ativos em 12 semanas · seu dia mais forte é <b>${nomesDow[bestI]}</b>` : 'Registre treinos e este mapa vai pintando de verde. 🌱';
-  const swatch = a=>`<span style="display:inline-block;width:11px;height:11px;border-radius:2.5px;background:rgba(${a===0.14?'148,163,184':'16,185,129'},${a})"></span>`;
-  box.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${Math.round(W*1.8)}px;overflow:visible">${monthLabels}${dayLbls}${cells}</svg>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:10px">
-      <div class="text-dim" style="font-size:11.5px">${insight}</div>
-      <div style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text-mute)">menos ${swatch(0.14)}${swatch(0.38)}${swatch(0.62)}${swatch(0.92)} mais</div>
-    </div>`;
 }
 function calcTotalVolume(prog){
   const cutoff = Date.now() - 7*86400000;
