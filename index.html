@@ -529,7 +529,7 @@ a{color:var(--primary-2);text-decoration:none}
     </div>
 
     <button class="btn btn-primary btn-block" id="google-btn" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="doGoogleSignIn()">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v9.08h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v9.18h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
       <span id="google-btn-lbl">Entrar com Google</span>
     </button>
     <div id="auth-err" style="margin-top:10px"></div>
@@ -604,8 +604,14 @@ a{color:var(--primary-2);text-decoration:none}
 
     <button class="btn btn-primary btn-block" style="margin:14px 0" onclick="openModal('add-student')">➕ Liberar acesso a novo aluno</button>
 
-    <div class="section-head"><h2>Alunos</h2><span class="text-dim" style="font-size:13px" id="adm-list-count">0</span></div>
-    <input class="search" placeholder="🔍 Buscar por e-mail ou nome..." id="adm-search" oninput="renderAdminList()">
+    <div class="section-lbl">Ferramentas</div>
+    <div class="list-row" onclick="openMuralAdmin()">📢 <span>Mural e logo do app</span></div>
+    <div class="list-row" onclick="openContactAdmin()">📞 <span>Contato (WhatsApp / e-mail)</span></div>
+    <div class="list-row" onclick="openVideoAdmin()">🎬 <span>Vídeos dos exercícios</span><span id="adm-video-count" style="margin-left:auto;font-size:11px;color:var(--text-dim)"></span></div>
+    <div class="list-row warn" onclick="openModal('broadcast')">📢 <span>Mensagem em massa (WhatsApp)</span></div>
+
+    <div class="section-head" style="margin-top:22px"><h2>Alunos</h2><span class="text-dim" style="font-size:13px" id="adm-list-count">0</span></div>
+    <input class="search" placeholder="🔍 Buscar por e-mail ou nome..." id="adm-search" oninput="admPage=0;renderAdminList()">
     <div class="chips-row" id="adm-filter-chips" style="margin:12px 0">
       <div class="filter-chip on" data-f="all" onclick="setAdminFilter('all')">Todos</div>
       <div class="filter-chip" data-f="active" onclick="setAdminFilter('active')">Ativos</div>
@@ -613,12 +619,7 @@ a{color:var(--primary-2);text-decoration:none}
       <div class="filter-chip" data-f="expired" onclick="setAdminFilter('expired')">Vencidos</div>
     </div>
     <div id="adm-list"></div>
-
-    <div class="section-lbl">Ferramentas</div>
-    <div class="list-row" onclick="openMuralAdmin()">📢 <span>Mural e logo do app</span></div>
-    <div class="list-row" onclick="openContactAdmin()">📞 <span>Contato (WhatsApp / e-mail)</span></div>
-    <div class="list-row" onclick="openVideoAdmin()">🎬 <span>Vídeos dos exercícios</span><span id="adm-video-count" style="margin-left:auto;font-size:11px;color:var(--text-dim)"></span></div>
-    <div class="list-row warn" onclick="openModal('broadcast')">📢 <span>Mensagem em massa (WhatsApp)</span></div>
+    <div id="adm-pager"></div>
   </div>
 </div>
 
@@ -949,6 +950,11 @@ a{color:var(--primary-2);text-decoration:none}
         </div>
       </div>
     </div>
+
+    <div class="chart-card">
+      <div class="chart-title" style="margin-bottom:12px">🗓️ Mapa de constância <span style="font-weight:400;color:var(--text-dim);font-size:12px">· últimas 12 semanas</span></div>
+      <div id="perf-heatmap"></div>
+    </div>
   </div>
 </div>
 
@@ -1069,6 +1075,11 @@ a{color:var(--primary-2);text-decoration:none}
     <div class="list-row danger" style="margin-top:14px;color:var(--accent-2);border-color:rgba(245,158,11,0.3)" onclick="openModal('restart')">🔄 <span>Começar do zero</span></div>
     <div class="list-row danger" onclick="openModal('delete-account')">🗑️ <span>Excluir minha conta</span></div>
     <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
+
+    <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px;line-height:1.6">
+      MetaTreino <span id="pf-version" style="font-weight:700">v9.1</span><br>
+      Feito com 💚 em Sorriso-MT
+    </div>
   </div>
 </div>
 
@@ -1110,9 +1121,9 @@ a{color:var(--primary-2);text-decoration:none}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=9.0"></script>
+<script src="./app.js?v=9.1"></script>
 <script>
-const APP_VERSION = 'v9.0';
+const APP_VERSION = 'v9.1';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {

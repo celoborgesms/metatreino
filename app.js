@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.0 =====
-const APP_VERSION = 'v9.0';
+// ===== MetaTreino v9.1 =====
+const APP_VERSION = 'v9.1';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -132,6 +132,8 @@ const TROPHIES = [
   { secret:true, id:'first_day',   emoji:'🎆', name:'Começou Certo',      desc:'Treinou no dia 1º de um mês',            cat:'geral' },
   { secret:true, id:'double',      emoji:'⚡', name:'Dose Dupla',         desc:'Musculação e corrida no mesmo dia',      cat:'geral' },
   { secret:true, id:'friday13',    emoji:'🍀', name:'Azar é Não Treinar', desc:'Treinou numa sexta-feira 13',            cat:'geral' },
+  { secret:true, id:'christmas',   emoji:'🎄', name:'Espírito Natalino',  desc:'Treinou no dia de Natal (25/12)',        cat:'geral' },
+  { secret:true, id:'versatile',   emoji:'🌈', name:'Faz-Tudo',           desc:'Registrou musculação, corrida, caminhada e bike', cat:'geral' },
 
   // GERAIS
   { id:'first_workout', emoji:'🥇', name:'Primeiro treino', desc:'Concluiu seu primeiro treino', cat:'geral' },
@@ -2069,6 +2071,7 @@ function renderPerf(){
     if(dots) dots.innerHTML = pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#10b981"/>`).join('');
   }
   renderDistDonut();
+  renderConsistencyHeatmap();
   // metas semanal e mensal (reais)
   const gb = $('goals-box');
   if(gb){
@@ -2133,6 +2136,52 @@ function renderDistDonut(){
   }).join('') + `<text x="60" y="66" text-anchor="middle" fill="#e2e8f0" font-size="16" font-weight="800">${total}</text>`;
   legend.innerHTML = cats.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${c.color};margin-right:6px"></span>${c.lbl}</span><b>${Math.round(c.n/total*100)}%</b></div>`).join('');
 }
+// Mapa de constância estilo "contribuições": 12 semanas × 7 dias.
+// Cada quadradinho é um dia; quanto mais verde, mais atividades naquele dia.
+function renderConsistencyHeatmap(){
+  const box = $('perf-heatmap'); if(!box) return;
+  const all = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
+  const counts = {};
+  all.forEach(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); const k=d.getTime(); counts[k]=(counts[k]||0)+1; });
+  const today = new Date(); today.setHours(0,0,0,0);
+  const monThis = new Date(today); const dow=(monThis.getDay()||7); monThis.setDate(monThis.getDate()-(dow-1)); // segunda desta semana
+  const WEEKS = 12;
+  const start = new Date(monThis); start.setDate(start.getDate()-(WEEKS-1)*7);
+  const cell=12, gap=3, step=cell+gap, leftPad=24, topPad=18;
+  const W = leftPad + WEEKS*step, H = topPad + 7*step;
+  const color = (n, future)=> future ? 'rgba(148,163,184,0.05)' : n<=0 ? 'rgba(148,163,184,0.14)' : n===1 ? 'rgba(16,185,129,0.38)' : n===2 ? 'rgba(16,185,129,0.62)' : 'rgba(16,185,129,0.92)';
+  let cells='', monthLabels='', prevMonth=-1, totalWin=0, activeDays=0;
+  const dowCount=[0,0,0,0,0,0,0]; // seg..dom
+  for(let w=0; w<WEEKS; w++){
+    for(let r=0; r<7; r++){
+      const d = new Date(start); d.setDate(d.getDate()+w*7+r);
+      const k = d.getTime();
+      const future = k>today.getTime();
+      const n = counts[k]||0;
+      if(!future && n>0){ totalWin+=n; activeDays++; dowCount[r]+=n; }
+      const x = leftPad + w*step, y = topPad + r*step;
+      const isToday = k===today.getTime();
+      cells += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2.5" fill="${color(n,future)}"${isToday?' stroke="#f59e0b" stroke-width="1.6"':''}/>`;
+    }
+    const colMon = new Date(start); colMon.setDate(colMon.getDate()+w*7);
+    if(colMon.getMonth()!==prevMonth){
+      prevMonth = colMon.getMonth();
+      const nome = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][prevMonth];
+      monthLabels += `<text x="${leftPad + w*step}" y="12" fill="#94a3b8" font-size="9" font-weight="600">${nome}</text>`;
+    }
+  }
+  const dayLbls = [[0,'Seg'],[2,'Qua'],[4,'Sex']].map(([r,txt])=>`<text x="0" y="${topPad + r*step + cell-2}" fill="#94a3b8" font-size="8.5">${txt}</text>`).join('');
+  const nomesDow=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+  let best=-1, bestI=0; dowCount.forEach((c,i)=>{ if(c>best){best=c;bestI=i;} });
+  const insight = activeDays ? `📌 <b>${activeDays}</b> dias ativos em 12 semanas · seu dia mais forte é <b>${nomesDow[bestI]}</b>` : 'Registre treinos e este mapa vai pintando de verde. 🌱';
+  const swatch = a=>`<span style="display:inline-block;width:11px;height:11px;border-radius:2.5px;background:rgba(${a===0.14?'148,163,184':'16,185,129'},${a})"></span>`;
+  box.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${Math.round(W*1.8)}px;overflow:visible">${monthLabels}${dayLbls}${cells}</svg>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:10px">
+      <div class="text-dim" style="font-size:11.5px">${insight}</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text-mute)">menos ${swatch(0.14)}${swatch(0.38)}${swatch(0.62)}${swatch(0.92)} mais</div>
+    </div>`;
+}
 function calcTotalVolume(prog){
   const cutoff = Date.now() - 7*86400000;
   let t=0;
@@ -2167,6 +2216,7 @@ function regenPlan(){ openSetupScreen(state.active); }
 // ---------- PROFILE ----------
 function renderProfile(){
   const u = state.user, p = u.profile || {};
+  const vEl = $('pf-version'); if(vEl) vEl.textContent = APP_VERSION;
   renderAvatar('pf-avatar');
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
   const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:999px;background:rgba(244,63,94,0.15);color:var(--danger-soft);font-weight:800">${pn.join(', ')}</span>`:''; }
@@ -2706,6 +2756,12 @@ function checkTrophies(){
   }
   if(allHist.some(x=>new Date(x.at).getDate()===1)) unlockTrophy('first_day');
   if(allHist.some(x=>{ const d=new Date(x.at); return d.getDay()===5 && d.getDate()===13; })) unlockTrophy('friday13');
+  // espírito natalino: treino no dia 25 de dezembro
+  if(allHist.some(x=>{ const d=new Date(x.at); return d.getDate()===25 && d.getMonth()===11; })) unlockTrophy('christmas');
+  // faz-tudo: já registrou as 4 modalidades (musculação, corrida, caminhada e bike)
+  const temLift = (state.modules.lift?.history||[]).length > 0;
+  const tiposRun = new Set((state.modules.run?.history||[]).map(r=>r.activity||'corrida'));
+  if(temLift && tiposRun.has('corrida') && tiposRun.has('caminhada') && tiposRun.has('bike')) unlockTrophy('versatile');
   const diaDe = x => { const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime(); };
   const diasLift = new Set((state.modules.lift?.history||[]).map(diaDe));
   if((state.modules.run?.history||[]).some(x=>diasLift.has(diaDe(x)))) unlockTrophy('double');
@@ -3091,6 +3147,22 @@ const MA_ANSWERS = {
     if(closest) r += ` O mais perto é "${closest.tr.name}": ${Math.floor(closest.pr[0])}/${closest.pr[1]}. Falta pouco! 🏆`;
     return r;
   },
+  prova(){
+    if(state.active!=='run' && !state.modules.run) return 'As provas fazem parte do módulo de <b>corrida</b> 🏃. Crie um plano de corrida e me diga a data da sua prova (ex: "minha prova é dia 15/08") que eu monto sua contagem regressiva!';
+    const dr = daysToRace();
+    if(dr===null) return 'Você ainda não cadastrou nenhuma prova. 🏁 Me diga quando é assim: <b>"minha prova é dia 15/08"</b> — aí eu faço a contagem regressiva e vou ajustando as dicas conforme o dia chega!';
+    if(dr<0) return 'A última prova que você cadastrou já passou 🏅. Como foi? Se tiver outra marcada, me diga a data (ex: "minha prova é dia 20/10") que eu atualizo pra você!';
+    const rd = state.modules.run.setup.raceDate;
+    const dataFmt = new Date(rd+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+    if(dr===0) return `🏁 É HOJE, ${maName()}! Sua prova é hoje (${dataFmt}). Confie no treino que você fez, comece devagar e aproveite cada km. Boa prova! 🎉`;
+    let dica;
+    if(dr<=3) dica='Reta final: só trotes leves, hidrate bem e durma cedo. 😴';
+    else if(dr<=7) dica='Semana de prova: reduza o volume e foque na recuperação. O trabalho duro já foi feito! 💪';
+    else if(dr<=14) dica='Taper chegando: em breve a intensidade cai e você chega afiado. 🔥';
+    else if(dr<=30) dica='Menos de um mês! Seus treinos-chave são agora — cada um conta muito. 🎯';
+    else dica='Tem tempo pra construir uma preparação sólida. Constância é o que define o resultado. 🚀';
+    return `🏁 Faltam <b>${dr} dias</b> pra sua prova (${dataFmt}), ${maName()}! ${dica}`;
+  },
   meta(){
     const mod = state.modules[state.active];
     if(!mod||!mod.plan) return 'Você ainda não tem um plano ativo. Crie um pra eu acompanhar sua meta! 🎯';
@@ -3206,6 +3278,7 @@ const MA_SUGGESTIONS = [
   {lbl:'📈 Minha evolução', key:'evolucao'},
   {lbl:'💪 Como foi meu treino?', key:'treino_hoje'},
   {lbl:'🏃 Minha corrida', key:'corrida'},
+  {lbl:'🏁 Quando é minha prova?', key:'prova'},
   {lbl:'🏆 Meus troféus', key:'trofeus'},
   {lbl:'🎯 Minha meta', key:'meta'},
   {lbl:'⚖️ Que músculo treino menos?', key:'musculo_menos'},
@@ -3240,7 +3313,8 @@ function maInterpret(txt){
   if(has('treino hoje','foi meu treino','como fui','treinei hoje')) return 'treino_hoje';
   if(has('corrida','correr','pace','ritmo')) return 'corrida';
   if(has('trofé','trofe','conquista','medalh')) return 'trofeus';
-  if(has('meta','objetivo','prova')) return 'meta';
+  if(has('prova','contagem regressiva','quando corro','quando é a corrida','quando e a corrida','data da corrida','quantos dias faltam')) return 'prova';
+  if(has('meta','objetivo')) return 'meta';
   if(has('músculo','musculo','menos')) return 'musculo_menos';
   if(has('pausa','sem treinar','parado','sequ','streak')) return 'pausa';
   if(has('recorde','pr ','carga máxima','peso máximo')) return 'recorde';
@@ -3338,6 +3412,19 @@ function maTryCommand(txt){
     maPending = {type:'schedule', mod:modName, days:dias};
     const nomes = dias.map(d=>['segunda','terça','quarta','quinta','sexta','sábado','domingo'][d-1]).join(', ');
     return {done:true, msg:`Quer que eu reorganize seus treinos de <b>${modName==='run'?'corrida':'musculação'}</b> pra <b>${nomes}</b> (${dias.length}× por semana)? Responda <b>sim</b> ou <b>não</b>. 📅`};
+  }
+
+  // ---- DATA DA PROVA / CORRIDA FUTURA ----
+  // remover uma prova já cadastrada
+  if(/(n[ãa]o tenho (?:mais )?(?:prova|corrida)|cancela(?:r)? (?:a |minha )?(?:prova|corrida)|apaga(?:r)? (?:a )?(?:data d[ao] )?(?:prova|corrida)|remover? (?:a )?(?:data d[ao] )?(?:prova|corrida)|sem prova(?: nenhuma)?)/.test(t)){
+    const mod = state.modules.run;
+    if(mod && mod.setup && mod.setup.raceDate){ mod.setup.raceDate = null; saveData(); return {done:true, msg:'🗑️ Removi a data da sua prova. Quando marcar outra, é só me avisar — ex: "minha prova é dia 12/10". 🏁'}; }
+    return {done:true, msg:'Você não tinha nenhuma prova cadastrada 😊. Se quiser marcar uma, me diga a data assim: "minha prova é dia 15/08". 🏁'};
+  }
+  // cadastrar a data da prova (só tenta se falar de prova/corrida E tiver algum número)
+  if(/(prova|corrida|maratona|meia\s*maratona|competi[çc][ãa]o|percurso|\b5k\b|\b10k\b|\b21k\b|\b42k\b)/.test(t) && /\d/.test(t)){
+    const d = maParseRaceDate(t);
+    if(d) return maSetRaceDate(d);
   }
 
   // ---- RESPOSTA A "ONDE DÓI?" ----
@@ -3482,6 +3569,42 @@ function maExtraWorkout(part){
     : '<br><br>Hoje é dia de descanso no seu plano. Um treino extra leve é ok, mas lembre: o músculo cresce no descanso. 😉';
   return {done:true, msg:`Quer treinar <b>${part.toLowerCase()}</b> hoje? Sugestão rápida:<br><br>${lista}${aviso}<br><br>Depois é só me dizer <b>"treinei ${part.toLowerCase()}"</b> que eu registro.`};
 }
+// Lê uma data escrita em linguagem natural (dd/mm, dd/mm/aaaa, "15 de agosto"...).
+// Se o ano não for dito e a data já tiver passado este ano, assume o ano que vem.
+function maParseRaceDate(t){
+  const meses = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+  let dia, mes, ano=null, m;
+  m = t.match(/\b(\d{1,2})[\/\.\-](\d{1,2})(?:[\/\.\-](\d{2,4}))?\b/);
+  if(m){ dia=+m[1]; mes=+m[2]; ano=m[3]?+m[3]:null; }
+  else {
+    m = t.match(/\b(\d{1,2})\s*(?:de\s*)?(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s*(?:de\s*)?(\d{4}))?/);
+    if(m){ dia=+m[1]; mes=meses[m[2].replace('ç','c')]; ano=m[3]?+m[3]:null; }
+  }
+  if(!dia || !mes || dia<1 || dia>31 || mes<1 || mes>12) return null;
+  if(ano && ano<100) ano += 2000;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  if(!ano){ ano = hoje.getFullYear(); if(new Date(ano, mes-1, dia) < hoje) ano += 1; }
+  const d = new Date(ano, mes-1, dia);
+  if(isNaN(d) || d.getDate()!==dia || d.getMonth()!==mes-1) return null; // rejeita datas inexistentes (ex: 31/02)
+  return d;
+}
+function maSetRaceDate(d){
+  const mod = state.modules.run;
+  if(!mod){ return {done:true, msg:'Pra cadastrar uma prova eu preciso que você tenha um plano de <b>corrida</b> ativo. Crie um primeiro (é rapidinho!) e depois me diga a data. 🏃'}; }
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const dias = Math.ceil((d - hoje)/86400000);
+  if(dias < 0) return {done:true, msg:'Essa data já passou 🤔. Me diga a data da sua <b>próxima</b> prova, ex: "minha prova é dia 15/08".'};
+  mod.setup = mod.setup || {};
+  mod.setup.raceDate = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  saveData();
+  const dataFmt = d.toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'});
+  let extra;
+  if(dias===0) extra = 'É <b>hoje</b>! 🏁 Confie no seu treino e aproveite cada km.';
+  else if(dias<=7) extra = `Faltam só <b>${dias} dia${dias>1?'s':''}</b>! Semana de prova: reduza o volume e capriche no sono. 💪`;
+  else if(dias<=30) extra = `Faltam <b>${dias} dias</b>. Reta de preparação — cada treino-chave conta muito agora. 🔥`;
+  else extra = `Faltam <b>${dias} dias</b>. Dá pra construir uma baita preparação até lá — constância é o segredo. 🚀`;
+  return {done:true, msg:`🏁 Prontinho! Marquei sua prova para <b>${dataFmt}</b>. ${extra}<br><br>A contagem regressiva já aparece na tela inicial e no calendário (com bandeira 🏁), e vou ajustando as dicas conforme o dia se aproxima. Bons treinos! 🏃`};
+}
 // Regiões oficiais de dor (as mesmas do Perfil)
 const PAIN_REGIONS = ['Ombro','Lombar','Joelho','Punho/Cotovelo','Tornozelo','Pescoço'];
 function maSetPain(area, txt){
@@ -3565,8 +3688,8 @@ const MA_SOCIAL = {
   _quemsou(){ return 'Sou o Meta Assistente 🤖 — não sou uma IA de verdade, mas analiso seus dados reais de treino pra te dar respostas úteis na hora. Pergunte sobre sua evolução, corrida, recordes, meta e muito mais!'; },
   _comovai(){ return `Tô ótimo e pronto pra te ajudar! 😄 Mas o que importa é como VOCÊ está. Quer que eu mostre sua evolução recente, ${maName()}?`; },
   _comandos(){ return `📋 <b>O que você pode me dizer:</b><br><br>
-<b>📊 Perguntar</b><br>• "minha evolução" • "como foi meu treino?"<br>• "minha corrida" • "meus troféus" • "minha meta"<br>• "qual meu recorde?" • "que músculo treino menos?"<br>• "qual meu IMC?" • "quantos treinos essa semana?"<br>• "qual meu próximo treino?" • "quando é meu aniversário?"<br>• "quanto tempo fiquei sem treinar?" • "me motive"<br><br>
-<b>✍️ Registrar</b><br>• "estou pesando 90kg" • "emagreci 2kg"<br>• "corri 5km em 30 minutos"<br>• "caminhei 3km em 25 min" • "pedalei 10km em 40min"<br>• "treinei peito" / "fiz musculação"<br><br>
+<b>📊 Perguntar</b><br>• "minha evolução" • "como foi meu treino?"<br>• "minha corrida" • "meus troféus" • "minha meta"<br>• "quando é minha prova?" • "qual meu recorde?"<br>• "que músculo treino menos?" • "qual meu IMC?"<br>• "quantos treinos essa semana?"<br>• "qual meu próximo treino?" • "quando é meu aniversário?"<br>• "quanto tempo fiquei sem treinar?" • "me motive"<br><br>
+<b>✍️ Registrar</b><br>• "estou pesando 90kg" • "emagreci 2kg"<br>• "corri 5km em 30 minutos"<br>• "caminhei 3km em 25 min" • "pedalei 10km em 40min"<br>• "minha prova é dia 15/08" 🏁 (contagem regressiva)<br>• "treinei peito" / "fiz musculação"<br><br>
 <b>🩹 Como estou</b><br>• "estou com dor no joelho" (ou ombro, lombar, punho, cotovelo, tornozelo, pescoço)<br>• "estou cansado" • "estou triste"${tpmAvailable()?' • "estou de TPM"':''}<br>• "voltar ao normal"<br><br>
 <b>⚙️ Mudar treinos</b><br>• "não estou na academia hoje"<br>• "voltei pra academia" • "só tenho halteres"<br>• "quero treinar corrida segunda, quarta e sexta"<br><br>
 <b>💪 Treino extra</b><br>• "quero treinar peito hoje" (sugestão fora do plano)<br><br>
@@ -4704,6 +4827,7 @@ async function goAdmin(){
   $('adm-hi').textContent = 'Olá, '+((p&&p.nickname)||'Marcelo')+'!';
   $('adm-list').innerHTML = `<div class="rest-card"><div style="font-size:34px">⏳</div><div class="rest-sub">Carregando alunos...</div></div>`;
   await loadAdminData();
+  admPage = 0;
   renderAdminStats();
   renderVideoCount();
   renderAdminList();
@@ -4719,7 +4843,10 @@ function renderAdminStats(){
   $('adm-total').textContent = list.length;
   $('adm-vencidos').textContent = expired;
 }
-function setAdminFilter(f){ admFilter=f; document.querySelectorAll('#adm-filter-chips .filter-chip').forEach(c=>c.classList.toggle('on', c.dataset.f===f)); renderAdminList(); }
+function setAdminFilter(f){ admFilter=f; admPage=0; document.querySelectorAll('#adm-filter-chips .filter-chip').forEach(c=>c.classList.toggle('on', c.dataset.f===f)); renderAdminList(); }
+let admPage = 0;               // página atual da lista de alunos
+const ADM_PAGE_SIZE = 8;       // quantos alunos por página
+function admGoPage(n){ admPage = n; renderAdminList(); const el=$('adm-list'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }
 function renderAdminList(){
   const now = Date.now();
   const q = ($('adm-search').value||'').toLowerCase();
@@ -4736,8 +4863,14 @@ function renderAdminList(){
   });
   items.sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
   $('adm-list-count').textContent = items.length + ' aluno' + (items.length===1?'':'s');
+  const pager = $('adm-pager'); if(pager) pager.innerHTML = '';
   if(!items.length){ $('adm-list').innerHTML = `<div class="rest-card"><div style="font-size:44px">👥</div><div class="rest-title">Nenhum aluno</div><div class="rest-sub">Clique em "Liberar acesso" pra começar.</div></div>`; return; }
-  $('adm-list').innerHTML = items.map(x=>{
+  // paginação: mostra ADM_PAGE_SIZE por vez pra lista não empurrar o resto da tela
+  const totalPages = Math.max(1, Math.ceil(items.length/ADM_PAGE_SIZE));
+  if(admPage > totalPages-1) admPage = totalPages-1;
+  if(admPage < 0) admPage = 0;
+  const pageItems = items.slice(admPage*ADM_PAGE_SIZE, admPage*ADM_PAGE_SIZE + ADM_PAGE_SIZE);
+  $('adm-list').innerHTML = pageItems.map(x=>{
     const days = x.expiresAt ? Math.ceil((x.expiresAt-now)/86400000) : 9999;
     const isActive = x.active && days>0;
     const cls = !isActive?'off':days<7?'warn':'on';
@@ -4747,6 +4880,18 @@ function renderAdminList(){
       <div class="stud-meta">${x.phone?`<span>📱 <b>${x.phone}</b></span>`:''}${x.notes?`<span>📝 ${x.notes}</span>`:''}${x.expiresAt && (x.expiresAt-x.addedAt)<=8*86400000?`<span>🎁 <b>teste</b></span>`:''}</div>
     </div>`;
   }).join('');
+  // controles de página (só aparecem quando há mais de 1 página)
+  if(pager){
+    if(totalPages > 1){
+      const de = admPage*ADM_PAGE_SIZE + 1;
+      const ate = Math.min(items.length, admPage*ADM_PAGE_SIZE + ADM_PAGE_SIZE);
+      pager.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center;margin-top:12px;gap:8px">
+        <button class="btn btn-ghost" style="padding:8px 14px" onclick="admGoPage(${admPage-1})" ${admPage===0?'disabled style="padding:8px 14px;opacity:.4"':''}>‹ Anterior</button>
+        <span class="text-dim" style="font-size:12.5px;white-space:nowrap">${de}–${ate} de ${items.length} · pág. ${admPage+1}/${totalPages}</span>
+        <button class="btn btn-ghost" style="padding:8px 14px" onclick="admGoPage(${admPage+1})" ${admPage>=totalPages-1?'disabled style="padding:8px 14px;opacity:.4"':''}>Próximo ›</button>
+      </div>`;
+    } else { pager.innerHTML = ''; }
+  }
 }
 async function doAddStudent(){
   const email = $('as-email').value.trim().toLowerCase();
@@ -5217,7 +5362,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
