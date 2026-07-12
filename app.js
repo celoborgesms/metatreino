@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.8 =====
-const APP_VERSION = 'v9.8';
+// ===== MetaTreino v9.9 =====
+const APP_VERSION = 'v9.9';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1098,15 +1098,18 @@ function firstName(){ const p = state.user.profile; return (p&&p.nickname) || (s
 // O treinador cadastra links no painel admin (coleção videosExercicios).
 // "Ver como fazer" usa o link do treinador; sem link cadastrado, cai na busca do YouTube.
 let videoLinks = {};
+let videoCredits = {}; // crédito por exercício (link do perfil de quem gravou — qualquer rede)
 async function loadVideoLinks(){
   try{
     const snap = await db.collection('videosExercicios').get();
-    videoLinks = {};
-    snap.forEach(doc=>{ const d=doc.data(); if(d.url) videoLinks[doc.id] = d.url; });
+    videoLinks = {}; videoCredits = {};
+    snap.forEach(doc=>{ const d=doc.data(); if(d.url) videoLinks[doc.id]=d.url; if(d.credito) videoCredits[doc.id]=d.credito; });
     try{ localStorage.setItem('metatreino_videos', JSON.stringify(videoLinks)); }catch(e){}
+    try{ localStorage.setItem('metatreino_video_credits', JSON.stringify(videoCredits)); }catch(e){}
   }catch(e){
     // offline: usa o cache
     try{ videoLinks = JSON.parse(localStorage.getItem('metatreino_videos')||'{}'); }catch(e2){ videoLinks={}; }
+    try{ videoCredits = JSON.parse(localStorage.getItem('metatreino_video_credits')||'{}'); }catch(e2){ videoCredits={}; }
   }
 }
 function ytLink(ex){
@@ -1121,6 +1124,17 @@ function ytVideoId(url){
   return m ? m[1] : null;
 }
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// detecta a rede social a partir do link do perfil (funciona com qualquer uma)
+function socialInfo(url){
+  if(!url) return null;
+  const u = String(url).trim(); let m;
+  if(/instagram\.com/i.test(u)){ m=u.match(/instagram\.com\/([^\/?#]+)/i); return {icon:'📸', handle: m&&m[1]?'@'+m[1].replace(/^@/,''):'Instagram'}; }
+  if(/tiktok\.com/i.test(u)){ m=u.match(/tiktok\.com\/@?([^\/?#]+)/i); return {icon:'🎵', handle: m&&m[1]?'@'+m[1].replace(/^@/,''):'TikTok'}; }
+  if(/(youtube\.com|youtu\.be)/i.test(u)){ m=u.match(/youtube\.com\/@([^\/?#]+)/i); return {icon:'▶️', handle: m&&m[1]?'@'+m[1]:'YouTube'}; }
+  if(/(twitter\.com|x\.com)/i.test(u)){ m=u.match(/(?:twitter|x)\.com\/([^\/?#]+)/i); return {icon:'𝕏', handle: m&&m[1]?'@'+m[1].replace(/^@/,''):'X'}; }
+  if(/facebook\.com/i.test(u)){ m=u.match(/facebook\.com\/([^\/?#]+)/i); return {icon:'📘', handle: m&&m[1]?m[1]:'Facebook'}; }
+  return {icon:'🔗', handle:'ver perfil'};
+}
 // "Ver como fazer": se o treinador cadastrou um link de VÍDEO, toca dentro do app (embed).
 // Sem link (ou link que não seja um vídeo do YouTube), mantém a busca abrindo no YouTube.
 function playExercise(name){
@@ -1132,9 +1146,15 @@ function playExercise(name){
     $('modal-inner').classList.add('modal-video');
     if(isShort) $('modal-inner').classList.add('short');
     $('modal-back').classList.add('video-open');
+    const cred = videoCredits[slug(name)];
+    const info = cred ? socialInfo(cred) : null;
+    const creditLine = info
+      ? `<a href="${escHtml(cred)}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;color:var(--text-dim);font-size:12px;text-decoration:none">🎥 Demonstração por <b style="color:var(--primary-2)">${escHtml(info.handle)}</b> <span>${info.icon}</span></a>`
+      : '';
     $('modal-inner').innerHTML = `
       <div class="mv-head"><span style="font-size:20px">🎬</span><div class="mv-title">${escHtml(name)}</div></div>
       <div class="mv-frame${isShort?' short':''}"><iframe src="${embed}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
+      ${creditLine}
       <div class="mv-tip">💡 Observe a execução e a amplitude do movimento antes de aumentar a carga. Toque no vídeo pra ver em tela cheia.</div>
       <div class="mv-actions">
         <a href="${escHtml(url)}" target="_blank" rel="noopener" style="color:var(--text-dim);font-size:12.5px;text-decoration:none">Abrir no YouTube ↗</a>
@@ -4750,11 +4770,15 @@ async function openVideoAdmin(){
     const items = cat.items.map(ex=>{
       const id = slug(ex.name);
       const cur = videoLinks[id]||'';
+      const curCred = videoCredits[id]||'';
       return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="font-size:13.5px;font-weight:700">${ex.name} ${cur?'<span style="color:var(--primary-2);font-size:11px">● link próprio</span>':''}</div>
         <div class="row" style="gap:6px;margin-top:6px">
-          <input class="input" id="vid-${id}" value="${cur.replace(/"/g,'&quot;')}" placeholder="Cole o link do vídeo (YouTube, Drive...)" style="flex:1;font-size:12.5px;padding:9px 12px">
+          <input class="input" id="vid-${id}" value="${cur.replace(/"/g,'&quot;')}" placeholder="Link do vídeo (YouTube, Shorts, Drive...)" style="flex:1;font-size:12.5px;padding:9px 12px">
           <button class="btn btn-ghost" style="padding:9px 12px;font-size:12.5px" onclick="testVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')" title="Abrir link para testar">▶</button>
+        </div>
+        <div class="row" style="gap:6px;margin-top:6px">
+          <input class="input" id="vidc-${id}" value="${curCred.replace(/"/g,'&quot;')}" placeholder="Perfil de quem gravou — Instagram, YouTube, TikTok... (opcional)" style="flex:1;font-size:12.5px;padding:9px 12px">
           <button class="btn btn-primary" style="padding:9px 14px;font-size:12.5px" onclick="saveVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">💾</button>
         </div>
       </div>`;
@@ -4763,7 +4787,7 @@ async function openVideoAdmin(){
   }).join('');
   $('modal-inner').innerHTML = `
     <h3>🎬 Vídeos dos exercícios</h3>
-    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cole o link do vídeo do YouTube pra cada exercício. Quando o aluno tocar em "Ver como fazer", o vídeo abre <b>dentro do app</b>, sem sair pro YouTube. Links de <b>Shorts</b> tocam no formato vertical (maior). Sem link cadastrado, abre a busca do YouTube normalmente. Deixe vazio e salve pra remover.</p>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cole o link do vídeo do YouTube pra cada exercício. O vídeo abre <b>dentro do app</b>; Shorts tocam em vertical. No 2º campo você pode colocar o <b>perfil de quem gravou</b> (Instagram, YouTube, TikTok...) — aparece um crédito discreto embaixo do vídeo. É por exercício, então dá pra creditar pessoas diferentes. Deixe o link do vídeo vazio e salve pra remover tudo.</p>
     <div style="max-height:56vh;overflow-y:auto;margin-top:6px">${groups}</div>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
@@ -4782,18 +4806,25 @@ function testVideoLink(id, exName){
 async function saveVideoLink(id, exName){
   const inp = $('vid-'+id); if(!inp) return;
   const url = inp.value.trim();
-  if(url && !/^https?:\/\//i.test(url)){ toast('⚠️ O link precisa começar com http:// ou https://'); return; }
+  const cinp = $('vidc-'+id);
+  const credito = cinp ? cinp.value.trim() : '';
+  if(url && !/^https?:\/\//i.test(url)){ toast('⚠️ O link do vídeo precisa começar com http:// ou https://'); return; }
+  if(credito && !/^https?:\/\//i.test(credito)){ toast('⚠️ O link do perfil precisa começar com http:// ou https://'); return; }
   try{
     if(url){
-      await db.collection('videosExercicios').doc(id).set({ nome:exName, url, atualizadoEm:Date.now() });
+      const data = { nome:exName, url, atualizadoEm:Date.now() };
+      if(credito) data.credito = credito;
+      await db.collection('videosExercicios').doc(id).set(data);
       videoLinks[id] = url;
+      if(credito) videoCredits[id] = credito; else delete videoCredits[id];
       toast('✅ Vídeo salvo: '+exName);
     } else {
       await db.collection('videosExercicios').doc(id).delete();
-      delete videoLinks[id];
+      delete videoLinks[id]; delete videoCredits[id];
       toast('🗑️ Link removido: '+exName);
     }
     try{ localStorage.setItem('metatreino_videos', JSON.stringify(videoLinks)); }catch(e){}
+    try{ localStorage.setItem('metatreino_video_credits', JSON.stringify(videoCredits)); }catch(e){}
     renderVideoCount();
   }catch(e){
     console.log('Erro ao salvar vídeo:', e);
