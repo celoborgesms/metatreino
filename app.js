@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.6 =====
-const APP_VERSION = 'v9.6';
+// ===== MetaTreino v9.7 =====
+const APP_VERSION = 'v9.7';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1127,15 +1127,18 @@ function playExercise(name){
   const url = videoLinks[slug(name)];
   const id = url ? ytVideoId(url) : null;
   if(id){
+    const isShort = /\/shorts\//.test(String(url));
     const embed = `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
+    $('modal-inner').classList.add('modal-video');
+    if(isShort) $('modal-inner').classList.add('short');
+    $('modal-back').classList.add('video-open');
     $('modal-inner').innerHTML = `
-      <h3 style="margin-bottom:14px">🎬 ${escHtml(name)}</h3>
-      <div style="position:relative;width:100%;padding-bottom:56.25%;border-radius:14px;overflow:hidden;background:#000">
-        <iframe src="${embed}" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
-      </div>
-      <div class="row" style="justify-content:space-between;align-items:center;margin-top:14px;gap:10px">
+      <div class="mv-head"><span style="font-size:20px">🎬</span><div class="mv-title">${escHtml(name)}</div></div>
+      <div class="mv-frame${isShort?' short':''}"><iframe src="${embed}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
+      <div class="mv-tip">💡 Observe a execução e a amplitude do movimento antes de aumentar a carga. Toque no vídeo pra ver em tela cheia.</div>
+      <div class="mv-actions">
         <a href="${escHtml(url)}" target="_blank" rel="noopener" style="color:var(--text-dim);font-size:12.5px;text-decoration:none">Abrir no YouTube ↗</a>
-        <button class="btn btn-primary" style="padding:9px 18px" onclick="closeModal()">Fechar</button>
+        <button class="btn btn-primary" style="padding:9px 20px" onclick="closeModal()">Fechar</button>
       </div>`;
     $('modal-back').classList.add('on');
   } else {
@@ -2977,6 +2980,8 @@ const MODAL_CONTENT = {
 };
 function openModal(k){
   const c = MODAL_CONTENT[k];
+  $('modal-inner').classList.remove('modal-video');
+  $('modal-back').classList.remove('video-open');
   $('modal-inner').innerHTML = typeof c==='function' ? c() : c;
   $('modal-back').classList.add('on');
   if(k==='add-student') bindOpts('modal-inner');
@@ -2984,7 +2989,8 @@ function openModal(k){
 }
 function closeModal(){
   const mi = $('modal-inner'); if(mi && mi.querySelector('iframe')) mi.innerHTML=''; // para o vídeo ao fechar
-  $('modal-back').classList.remove('on');
+  if(mi) mi.classList.remove('modal-video','short');
+  $('modal-back').classList.remove('on','video-open');
   // se um comando do assistente mexeu nos planos, redesenha a tela por baixo
   if(typeof maRefreshUI!=='undefined' && maRefreshUI){ maRefreshUI=false; try{ goTab(state.ui.tab||'home'); }catch(e){} }
 }
@@ -4757,7 +4763,7 @@ async function openVideoAdmin(){
   }).join('');
   $('modal-inner').innerHTML = `
     <h3>🎬 Vídeos dos exercícios</h3>
-    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cole o link do vídeo do YouTube pra cada exercício. Quando o aluno tocar em "Ver como fazer", o vídeo abre <b>dentro do app</b>, sem sair pro YouTube. Sem link cadastrado, abre a busca do YouTube normalmente. Deixe vazio e salve pra remover.</p>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cole o link do vídeo do YouTube pra cada exercício. Quando o aluno tocar em "Ver como fazer", o vídeo abre <b>dentro do app</b>, sem sair pro YouTube. Links de <b>Shorts</b> tocam no formato vertical (maior). Sem link cadastrado, abre a busca do YouTube normalmente. Deixe vazio e salve pra remover.</p>
     <div style="max-height:56vh;overflow-y:auto;margin-top:6px">${groups}</div>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
