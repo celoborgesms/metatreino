@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.9 =====
-const APP_VERSION = 'v9.9';
+// ===== MetaTreino v9.10 =====
+const APP_VERSION = 'v9.10';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1155,7 +1155,7 @@ function playExercise(name){
       <div class="mv-head"><span style="font-size:20px">🎬</span><div class="mv-title">${escHtml(name)}</div></div>
       <div class="mv-frame${isShort?' short':''}"><iframe src="${embed}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
       ${creditLine}
-      <div class="mv-tip">💡 Observe a execução e a amplitude do movimento antes de aumentar a carga. Toque no vídeo pra ver em tela cheia.</div>
+      <div class="mv-tip">💡 Toque no vídeo pra ver em tela cheia.</div>
       <div class="mv-actions">
         <a href="${escHtml(url)}" target="_blank" rel="noopener" style="color:var(--text-dim);font-size:12.5px;text-decoration:none">Abrir no YouTube ↗</a>
         <button class="btn btn-primary" style="padding:9px 20px" onclick="closeModal()">Fechar</button>
@@ -2980,8 +2980,7 @@ const MODAL_CONTENT = {
     const opts = [
       {v:'academia', emo:'🏋️', t:'Academia completa', s:'Máquinas, cabos, halteres, barras'},
       {v:'halteres', emo:'🎒', t:'Só halteres', s:'Halteres e barras em casa'},
-      {v:'casa', emo:'🏠', t:'Peso do corpo', s:'Sem equipamentos'},
-      {v:'basico', emo:'💪', t:'Básico', s:'Peso do corpo + halteres leves'}
+      {v:'casa', emo:'🏠', t:'Peso do corpo', s:'Sem equipamentos'}
     ];
     return `<h3>🏋️ Troca rápida de equipamento</h3><p style="color:var(--text-dim);font-size:13px">Seus treinos são regenerados na hora com o novo equipamento — objetivo, dias e nível continuam os mesmos.</p>
       ${opts.map(o=>`<div class="list-row" style="${o.v===cur?'border:1px solid var(--primary);border-radius:14px':''}" onclick="quickChangeEquip('${o.v}')">${o.emo} <span><b>${o.t}</b>${o.v===cur?' ✓ atual':''}<br><span style="font-size:12px;color:var(--text-dim)">${o.s}</span></span></div>`).join('')}
