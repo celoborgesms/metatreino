@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.5 =====
-const APP_VERSION = 'v9.5';
+// ===== MetaTreino v9.6 =====
+const APP_VERSION = 'v9.6';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1114,6 +1114,34 @@ function ytLink(ex){
   if(custom) return custom;
   return 'https://www.youtube.com/results?search_query=' + encodeURIComponent('como fazer '+ex+' técnica correta');
 }
+// extrai o ID de 11 caracteres de qualquer formato de link do YouTube
+function ytVideoId(url){
+  if(!url) return null;
+  const m = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/))([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// "Ver como fazer": se o treinador cadastrou um link de VÍDEO, toca dentro do app (embed).
+// Sem link (ou link que não seja um vídeo do YouTube), mantém a busca abrindo no YouTube.
+function playExercise(name){
+  const url = videoLinks[slug(name)];
+  const id = url ? ytVideoId(url) : null;
+  if(id){
+    const embed = `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
+    $('modal-inner').innerHTML = `
+      <h3 style="margin-bottom:14px">🎬 ${escHtml(name)}</h3>
+      <div style="position:relative;width:100%;padding-bottom:56.25%;border-radius:14px;overflow:hidden;background:#000">
+        <iframe src="${embed}" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+      </div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:14px;gap:10px">
+        <a href="${escHtml(url)}" target="_blank" rel="noopener" style="color:var(--text-dim);font-size:12.5px;text-decoration:none">Abrir no YouTube ↗</a>
+        <button class="btn btn-primary" style="padding:9px 18px" onclick="closeModal()">Fechar</button>
+      </div>`;
+    $('modal-back').classList.add('on');
+  } else {
+    window.open(ytLink(name), '_blank');
+  }
+}
 
 // ---------- MODULE TOGGLE ----------
 function renderModToggle(){
@@ -1559,7 +1587,7 @@ function renderExerciseCard(ex, idx){
           ${curSessionLocked
             ? `<span style="font-size:12px;color:var(--text-mute);padding:8px 4px">🔒 Concluído hoje — edite pelo Histórico</span>`
             : `<button class="btn ${doneToday?'btn-ghost':'btn-primary'}" style="padding:8px 14px;font-size:13px" onclick="openSetLog('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">${doneToday?'✏️ Editar séries':'📝 Registrar'}</button>`}
-          <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="window.open('${ytLink(ex.name)}','_blank')">▶ Ver como fazer</button>
+          <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="playExercise('${ex.name.replace(/'/g,"\\'")}')">▶ Ver como fazer</button>
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="openSwapExercise('${ex.id}')">🔄 Trocar</button>
         </div>
       </div>
@@ -2879,7 +2907,7 @@ function renderLibrary(){
 }
 function setLibFilter(c){ libFilter=c; renderLibrary(); }
 function filterLib(){ renderLibrary(); }
-function openExercise(name){ window.open(ytLink(name), '_blank'); }
+function openExercise(name){ playExercise(name); }
 
 // ---------- MODALS ----------
 const MODAL_CONTENT = {
@@ -2955,6 +2983,7 @@ function openModal(k){
   if(k==='pain') document.querySelectorAll('#pain-areas .opt-multi').forEach(o=>{ o.onclick=()=>o.classList.toggle('on'); });
 }
 function closeModal(){
+  const mi = $('modal-inner'); if(mi && mi.querySelector('iframe')) mi.innerHTML=''; // para o vídeo ao fechar
   $('modal-back').classList.remove('on');
   // se um comando do assistente mexeu nos planos, redesenha a tela por baixo
   if(typeof maRefreshUI!=='undefined' && maRefreshUI){ maRefreshUI=false; try{ goTab(state.ui.tab||'home'); }catch(e){} }
@@ -4728,7 +4757,7 @@ async function openVideoAdmin(){
   }).join('');
   $('modal-inner').innerHTML = `
     <h3>🎬 Vídeos dos exercícios</h3>
-    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cole o link do SEU vídeo pra cada exercício. Quando o aluno tocar em "Ver como fazer", abre o seu vídeo. Sem link cadastrado, abre a busca do YouTube. Deixe vazio e salve pra remover.</p>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cole o link do vídeo do YouTube pra cada exercício. Quando o aluno tocar em "Ver como fazer", o vídeo abre <b>dentro do app</b>, sem sair pro YouTube. Sem link cadastrado, abre a busca do YouTube normalmente. Deixe vazio e salve pra remover.</p>
     <div style="max-height:56vh;overflow-y:auto;margin-top:6px">${groups}</div>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
@@ -5334,7 +5363,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
