@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.10 =====
-const APP_VERSION = 'v9.10';
+// ===== MetaTreino v9.11 =====
+const APP_VERSION = 'v9.11';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1517,6 +1517,9 @@ function currentSelectedWorkout(mod){
   if(!w && id && typeof id==='object') w = mod.plan.workouts.find(x=>String(x.k||x.dayIdx)===String(id.k||id.dayIdx)); // compat: estados antigos
   return w || mod.plan.workouts.find(x=>x.dayIdx===getDayIdx()) || mod.plan.workouts[0];
 }
+function cardioFinisherCard(){
+  return `<div class="card card-info card-row" style="margin-top:14px;border-color:rgba(245,158,11,0.35);background:rgba(245,158,11,0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:#f59e0b">Bônus cardio (opcional)</div><div class="card-sub">Treino mais curto hoje? Se quiser turbinar, finalize com ~8 min: <b>2 a 3 voltas</b> de 30s em cada — polichinelo, corrida no lugar (joelho alto), mountain climber e agachamento com salto. 30s de descanso entre as voltas, no seu ritmo. 💪</div></div></div>`;
+}
 function renderSessionDetail(w){
   if(!w){ $('session-detail-slot').innerHTML=''; return; }
   const isLift = state.active==='lift';
@@ -1537,6 +1540,7 @@ function renderSessionDetail(w){
     ${w.adapted ? `<div class="card card-alert card-row" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
     <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.':'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
+    ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
     ${isLift ? (lockedToday
       ? `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído hoje</div><div class="card-sub">Pra ajustar algo, edite pelo Histórico. Amanhã a sessão libera de novo.</div></div>`
       : `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>`) : (runDoneToday(w)
@@ -2190,7 +2194,7 @@ function renderPlan(){
   $('plan-title').textContent = `💎 Plano · ${isLift?'Musculação':'Corrida'}`;
   const rows = isLift ? [
     ['Objetivo', labelGoal(mod)], ['Dias de treino', s.days+' dias/semana'],
-    ['Equipamento', {academia:'🏋️ Academia completa',halteres:'🎒 Só halteres',casa:'🏠 Peso do corpo',basico:'💪 Básico'}[s.equip]],
+    ['Equipamento', {academia:'🏋️ Academia completa',halteres:'💪 Só halteres',casa:'🤸 Peso do corpo',basico:'💪 Halteres'}[s.equip]],
     ['Nível', s.level.charAt(0).toUpperCase()+s.level.slice(1)], ['Duração', mod.plan.totalWeeks+' semanas']
   ] : [
     ['Objetivo', labelGoal(mod)], ['Duração', mod.plan.totalWeeks+' semanas'],
@@ -2251,7 +2255,7 @@ function renderProfile(){
   $('pf-mod').innerHTML = `<div class="icon">${isLift?'🏋️':'🏃'}</div><div style="flex:1"><div class="name">${isLift?'Musculação':'Corrida'}</div><div class="goal">Objetivo: ${labelGoal(mod)}</div></div><button class="btn btn-outline" onclick="switchModuleUI()">→ ${isLift?'🏃 Corrida':'🏋️ Musculação'}</button>`;
   $('pf-plan-lbl').textContent = `Plano de ${isLift?'Musculação':'Corrida'}`;
   const s = mod.setup;
-  const rows = isLift ? [['Objetivo',labelGoal(mod)],['Dias',s.days+'/semana'],['Equipamento',{academia:'🏋️ Academia',halteres:'🎒 Halteres',casa:'🏠 Peso corpo',basico:'💪 Básico'}[s.equip]]] : [['Objetivo',labelGoal(mod)],['Duração',mod.plan.totalWeeks+' semanas'],['Sessões',s.days+'/semana'],['Terreno',{asfalto:'🛣️ Asfalto',esteira:'🏃 Esteira',trilha:'⛰️ Trilha',pista:'🏟️ Pista'}[s.terrain]]];
+  const rows = isLift ? [['Objetivo',labelGoal(mod)],['Dias',s.days+'/semana'],['Equipamento',{academia:'🏋️ Academia',halteres:'💪 Halteres',casa:'🤸 Peso corpo',basico:'💪 Halteres'}[s.equip]]] : [['Objetivo',labelGoal(mod)],['Duração',mod.plan.totalWeeks+' semanas'],['Sessões',s.days+'/semana'],['Terreno',{asfalto:'🛣️ Asfalto',esteira:'🏃 Esteira',trilha:'⛰️ Trilha',pista:'🏟️ Pista'}[s.terrain]]];
   $('pf-plan-card').innerHTML = rows.map(r=>`<div style="display:flex;justify-content:space-between;padding:8px 0"><span class="text-dim">${r[0]}</span><b>${r[1]}</b></div>`).join('');
 }
 
@@ -2979,8 +2983,8 @@ const MODAL_CONTENT = {
     const cur = state.modules.lift?.setup?.equip || 'academia';
     const opts = [
       {v:'academia', emo:'🏋️', t:'Academia completa', s:'Máquinas, cabos, halteres, barras'},
-      {v:'halteres', emo:'🎒', t:'Só halteres', s:'Halteres e barras em casa'},
-      {v:'casa', emo:'🏠', t:'Peso do corpo', s:'Sem equipamentos'}
+      {v:'halteres', emo:'💪', t:'Só halteres', s:'Halteres e barras em casa'},
+      {v:'casa', emo:'🤸', t:'Peso do corpo', s:'Sem equipamentos'}
     ];
     return `<h3>🏋️ Troca rápida de equipamento</h3><p style="color:var(--text-dim);font-size:13px">Seus treinos são regenerados na hora com o novo equipamento — objetivo, dias e nível continuam os mesmos.</p>
       ${opts.map(o=>`<div class="list-row" style="${o.v===cur?'border:1px solid var(--primary);border-radius:14px':''}" onclick="quickChangeEquip('${o.v}')">${o.emo} <span><b>${o.t}</b>${o.v===cur?' ✓ atual':''}<br><span style="font-size:12px;color:var(--text-dim)">${o.s}</span></span></div>`).join('')}
