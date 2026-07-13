@@ -1,5 +1,5 @@
-// ===== MetaTreino v9.11 =====
-const APP_VERSION = 'v9.11';
+// ===== MetaTreino v10.0 =====
+const APP_VERSION = 'v10.0';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1188,6 +1188,7 @@ function goTab(tab){
   const map = {home:'scr-home',sessions:'scr-sessions',library:'scr-library',perf:'scr-perf',history:'scr-history',plan:'scr-plan',profile:'scr-profile'};
   showScreen(map[tab] || 'scr-home');
   updateDeco(tab);
+  updateFab(tab);
   applyMuralLogo(); // a logo do treinador vale em todas as abas
   if(tab==='home') renderHome();
   else if(tab==='sessions') renderSessions();
@@ -3272,26 +3273,110 @@ const MA_ANSWERS = {
     if(prox < h) prox = new Date(h.getFullYear()+1, d.getMonth(), d.getDate());
     const dias = Math.ceil((prox-h)/86400000);
     return `Faltam ${dias} ${dias===1?'dia':'dias'} pro seu aniversário. Você tem ${ageFromBirth(b)} anos. 🎂`;
+  },
+  // ---- NOVAS RESPOSTAS (v10) ----
+  faltei(){
+    const mod = state.modules[state.active];
+    const miss = missedWorkoutsThisWeek(mod);
+    if(!miss.length) return `👏 Você não faltou nenhum treino esta semana, ${maName()}! Constância em dia — continue assim. 💪`;
+    const nomes = miss.map(w=>state.active==='lift'?('Treino '+w.k):(w.name||'').split(' ')[0]).join(', ');
+    return `Esta semana você tem <b>${miss.length}</b> treino${miss.length>1?'s':''} pendente${miss.length>1?'s':''} (${nomes}). Sem culpa — encaixe o mais importante num dia livre e siga o plano. A constância vale mais que a perfeição. 🙂`;
+  },
+  peso_mudanca(){
+    const f = firstWeight(), l = latestWeight();
+    if(!f || !l || (state.weights||[]).length<2) return `Ainda não tenho registros suficientes do seu peso pra comparar. Diga "estou pesando XX kg" algumas vezes que eu acompanho a evolução. ⚖️`;
+    const diff = +(l - f).toFixed(1);
+    if(diff===0) return `Seu peso está igual ao primeiro registro (${l} kg). Lembre: a balança não conta tudo — força e medidas também evoluem. 💪`;
+    const perdeu = diff<0;
+    return `Do primeiro registro (${f} kg) até agora (${l} kg), você ${perdeu?'perdeu':'ganhou'} <b>${Math.abs(diff)} kg</b>. ${perdeu?'Mandou bem no processo! 🔥':'Se o objetivo é massa, ótimo sinal — senão, vale ajustar a rotina. 💪'}`;
+  },
+  trocar_ex(){ return `Sim! 🔀 Na aba <b>Sessões</b>, cada exercício tem o botão <b>"Trocar"</b> — ele substitui por outro do mesmo grupo muscular, mantendo o foco do treino (vale só pra aquele dia). E o botão <b>"Ver como fazer"</b> abre o vídeo da execução. 💪`; },
+  proximo_trofeu(){
+    const unlocked = (state.trophies||[]).length, total = TROPHIES.length;
+    const falta = TROPHIES.filter(t=>!t.secret && !(state.trophies||[]).includes(t.id));
+    if(!falta.length) return `🏆 Você já desbloqueou todos os troféus visíveis (${unlocked}/${total})! Ainda há secretos escondidos por aí... 🤫`;
+    const alvo = falta[0];
+    return `Você tem <b>${unlocked}/${total}</b> troféus. Um ao seu alcance: <b>${alvo.emoji} ${alvo.name}</b> — ${alvo.desc}. E ainda há conquistas secretas pra descobrir treinando! 🤫`;
+  },
+  agua(){
+    const w = latestWeight();
+    if(!w) return `A referência geral é ~<b>35 ml de água por kg</b> de peso por dia. Registre seu peso ("estou pesando XX kg") que eu calculo pra você. Em dias de treino/calor, beba mais. 💧`;
+    const l = (w*35/1000).toFixed(1);
+    return `Pro seu peso (${w} kg), uma referência geral é ~<b>${l} L de água por dia</b> (35 ml/kg). Em treino ou calor, aumente um pouco. É orientação geral, não regra médica. 💧`;
+  },
+  proteina(){
+    const w = latestWeight();
+    const base = w ? `Pro seu peso (${w} kg), fica em torno de <b>${Math.round(w*1.6)}–${Math.round(w*2.2)} g/dia</b>. ` : '';
+    return `Pra quem treina buscando músculo, a faixa geral é <b>1,6 a 2,2 g de proteína por kg</b> de peso por dia. ${base}São referências de educação física — pra um plano individual, o ideal é um nutricionista. 🍗`;
+  },
+  comer_treino(){ return `🥗 <b>Antes</b> (1-2h): um carboidrato pra energia + um pouco de proteína (fruta + iogurte, pão + ovo). Evite muita gordura.<br><br>🍗 <b>Depois</b>: proteína pra recuperar + carboidrato pra repor (frango + arroz, ovos + batata, shake + fruta). O que mais importa é a alimentação do dia todo. Pra dieta individual, procure um nutricionista.`; },
+  importancia_proteina(){ return `🍗 A proteína é o material de construção do músculo: após o treino, ela repara e fortalece as fibras. Sem proteína suficiente, o corpo não constrói massa mesmo treinando bem — e ela ainda ajuda na saciedade. Fontes: ovos, frango, carne, peixe, leite/iogurte, feijão. 💪`; },
+  deficit(){ return `📚 <b>Déficit calórico</b> é consumir menos calorias do que você gasta — é o que leva à perda de gordura. O contrário (superávit) favorece ganho de massa. Pra emagrecer com saúde, o déficit deve ser moderado, mantendo proteína e treino de força pra preservar músculo. Pra números individuais, um nutricionista ajuda. 🥗`; },
+  aumentar_carga(){ return `📈 A regra prática: quando você faz <b>todas as séries no topo da faixa de repetições com boa técnica</b> (ex.: 3×12 num alvo de 8-12), é hora de subir um pouco a carga na próxima vez (~2,5 a 5%). Isso é a <b>sobrecarga progressiva</b> — o que faz o corpo evoluir. 💪`; },
+  o_que_hipertrofia(){ return `📚 <b>Hipertrofia</b> é o aumento do tamanho dos músculos. Acontece com estímulo (treino de força) + descanso + boa alimentação: o músculo se reconstrói maior e mais forte. Chaves: sobrecarga progressiva, volume adequado, boa técnica, sono e proteína. 💪`; },
+  sobrecarga(){ return `📚 <b>Sobrecarga progressiva</b> é aumentar aos poucos o desafio do treino ao longo do tempo — mais carga, mais repetições, mais séries ou melhor execução. É o princípio nº 1 pra continuar evoluindo: se o treino nunca fica mais difícil, o corpo para de se adaptar. 📈`; },
+  falha_muscular(){ return `📚 <b>Falha muscular</b> é chegar ao ponto de não conseguir mais nenhuma repetição com boa técnica. Treinar perto da falha dá bom estímulo, mas ir até a falha sempre atrapalha a recuperação. Pra maioria, deixar 1-2 repetições "na reserva" é o ideal. 💪`; },
+  zona2(){ return `📚 <b>Cardio zona 2</b> é o ritmo leve em que você consegue conversar sem ofegar (~60-70% da FC máxima). Parece fácil, mas é ótimo pra base aeróbica, saúde do coração e queima de gordura. Na corrida, é o trote confortável. ❤️`; },
+  condicionamento(){ return `🫁 Pra melhorar o condicionamento: cardio de forma constante (a maior parte leve/"zona 2" + um pouco de intervalado), regularidade (3-5x/semana) e progressão gradual na duração/intensidade. Dormir bem e hidratar também contam. Constância vence intensidade isolada. 🏃`; },
+  aquecer(){ return `🔥 Aquecimento (5-10 min): comece leve pra elevar a temperatura (caminhada, polichinelo, bike) e depois faça movimentos parecidos com o treino do dia com pouca ou nenhuma carga. Na musculação, 1-2 séries leves do primeiro exercício já preparam bem. Reduz risco de lesão e melhora o rendimento. 💪`; },
+  descanso_series(){
+    const g = state.modules.lift?.setup?.goal;
+    const map = {hipertrofia:'60-90 segundos', forca:'2-3 minutos', emagrecimento:'30-45 segundos', resistencia:'~30 segundos'};
+    const base = g&&map[g] ? `No seu objetivo, o recomendado é <b>${map[g]}</b> entre as séries. ` : '';
+    return `⏱️ ${base}Regra geral: força pede descanso maior (2-3 min); hipertrofia fica no meio (60-90s); resistência/emagrecimento usa descansos curtos (30-45s) pra manter a intensidade. 💪`;
+  },
+  sono(){ return `😴 A recomendação geral pra adultos é <b>7 a 9 horas</b> por noite. É dormindo que o músculo se recupera e cresce, os hormônios se regulam e a energia volta. Dormir mal atrapalha o rendimento tanto quanto um treino ruim. Priorize o sono! 🌙`; },
+  gripado(){ return `🤒 Regra geral do "pescoço pra cima": sintomas leves e acima do pescoço (nariz levemente entupido), um treino leve costuma ser ok. Com <b>febre, dores no corpo, tosse ou muito cansaço</b>, o certo é <b>descansar</b> — treinar assim atrapalha a recuperação. Hidrate-se e, na dúvida ou se persistir, procure um médico. Não sou médico, é orientação geral. 💙`; },
+  dor_muscular(){ return `💥 A dor muscular tardia (1-2 dias depois) é normal, ainda mais no começo — você pode treinar outro grupo tranquilo. Se o mesmo grupo estiver bem dolorido, dê mais 1 dia ou faça algo leve. Já dor <b>aguda, em articulação ou "estranha"</b> não é normal: pare e descanse. Movimento leve e hidratação ajudam a passar. 💪`; },
+  semana_plano(){
+    const mod = state.modules[state.active];
+    if(!mod||!mod.plan) return 'Você ainda não tem um plano ativo. Crie um que eu acompanho sua semana! 🎯';
+    const wk = Math.floor((Date.now()-(mod.createdAt||Date.now()))/(7*86400000))+1;
+    const total = mod.plan.totalWeeks||12;
+    return `📅 Você está na <b>semana ${Math.min(wk,total)}</b> de <b>${total}</b> do plano. ${wk>=total?'Reta final — mandou muito bem chegando até aqui! 🎉':'Continue firme, cada semana te deixa mais forte. 💪'}`;
+  },
+  termina_plano(){
+    const mod = state.modules[state.active];
+    if(!mod||!mod.plan) return 'Crie um plano que eu te digo quando ele termina! 🎯';
+    const total = mod.plan.totalWeeks||12;
+    const fim = new Date((mod.createdAt||Date.now()) + total*7*86400000);
+    const faltamSem = Math.max(0, Math.ceil((fim-Date.now())/(7*86400000)));
+    return `🏁 Seu plano tem <b>${total} semanas</b> e termina por volta de <b>${fim.toLocaleDateString('pt-BR')}</b> (~${faltamSem} semana${faltamSem!==1?'s':''} restante${faltamSem!==1?'s':''}). No fim dá pra renovar com novos estímulos! 💪`;
+  },
+  treinos_faltam(){
+    const mod = state.modules[state.active];
+    if(!mod||!mod.plan) return 'Crie um plano que eu conto os treinos! 🎯';
+    const total = (mod.plan.workouts||[]).length*(mod.plan.totalWeeks||12);
+    const feitos = (mod.history||[]).length;
+    return `📋 Você já fez <b>${feitos}</b> e faltam <b>${Math.max(0,total-feitos)}</b> de <b>${total}</b> treinos do plano. ${total-feitos<=0?'Plano completo — que orgulho! 🎉':'Um de cada vez, você chega lá. 💪'}`;
+  },
+  dias_descanso(){
+    const mod = state.modules[state.active];
+    if(!mod||!mod.plan) return 'Crie um plano que eu te mostro os dias de descanso! 🎯';
+    const treino = (mod.plan.workouts||[]).length;
+    return `🗓️ Seu plano tem <b>${treino}</b> dias de treino e <b>${7-treino}</b> de descanso por semana. Descanso não é preguiça — é quando o corpo se reconstrói mais forte. 😴`;
   }
 };
 const MA_SUGGESTIONS = [
-  {lbl:'❓ O que posso escrever?', key:'_comandos'},
-  {lbl:'📈 Minha evolução', key:'evolucao'},
   {lbl:'💪 Como foi meu treino?', key:'treino_hoje'},
-  {lbl:'🏃 Minha corrida', key:'corrida'},
+  {lbl:'📅 Quantos dias faltei?', key:'faltei'},
+  {lbl:'⏭️ Quando é meu próximo treino?', key:'proximo'},
+  {lbl:'⚖️ Quanto peso perdi?', key:'peso_mudanca'},
+  {lbl:'🔀 Posso trocar um exercício?', key:'trocar_ex'},
+  {lbl:'📈 Minha evolução', key:'evolucao'},
+  {lbl:'🏆 Próximo troféu', key:'proximo_trofeu'},
   {lbl:'🏁 Quando é minha prova?', key:'prova'},
-  {lbl:'🏆 Meus troféus', key:'trofeus'},
-  {lbl:'🎯 Minha meta', key:'meta'},
-  {lbl:'⚖️ Que músculo treino menos?', key:'musculo_menos'},
-  {lbl:'📅 Quanto fiquei sem treinar?', key:'pausa'},
-  {lbl:'🥇 Meu recorde', key:'recorde'},
-  {lbl:'⏳ Há quanto uso o app?', key:'tempo_uso'},
-  {lbl:'🔀 Corrida ou musculação?', key:'corrida_ou_musculacao'},
-  {lbl:'⚖️ Meu peso', key:'maior_peso'},
-  {lbl:'🔥 Calorias da semana', key:'calorias'},
+  {lbl:'💧 Quanta água beber?', key:'agua'},
+  {lbl:'🍗 Quanta proteína por dia?', key:'proteina'},
+  {lbl:'🥗 O que comer antes/depois?', key:'comer_treino'},
+  {lbl:'📈 Quando aumentar a carga?', key:'aumentar_carga'},
+  {lbl:'📚 O que é hipertrofia?', key:'o_que_hipertrofia'},
+  {lbl:'📚 Sobrecarga progressiva?', key:'sobrecarga'},
+  {lbl:'😴 Quantas horas dormir?', key:'sono'},
+  {lbl:'🤒 Posso treinar gripado?', key:'gripado'},
+  {lbl:'💥 Devo treinar com dor muscular?', key:'dor_muscular'},
   {lbl:'📊 Meu IMC', key:'imc'},
-  {lbl:'📆 Treinos desta semana', key:'semana'},
-  {lbl:'⏭️ Meu próximo treino', key:'proximo'},
+  {lbl:'❓ O que mais posso perguntar?', key:'_comandos'},
   {lbl:'❤️ Me motive', key:'motiva'}
 ];
 function maInterpret(txt){
@@ -3308,6 +3393,30 @@ function maInterpret(txt){
   if(has('como vai','tudo bem','como você está','como voce esta','de boa')) return '_comovai';
   if(has('o que posso escrever','o que posso falar','o que posso dizer','quais comandos','lista de comandos','comandos')) return '_comandos';
   if(has('ajuda','o que você faz','o que voce faz','o que sabe','pode fazer','como funciona','me ajuda')) return '_ajuda';
+  // --- v10: novas intenções (conceitos / saúde / planejamento) — específicas primeiro ---
+  if(has('faltei','faltas','dias faltei','treinos pendentes','faltando treino','quantos dias falt')) return 'faltei';
+  if(has('quanto peso perdi','peso perdi','perdi peso','peso ganhei','ganhei peso','quanto emagreci','quanto engordei','mudança de peso','mudanca de peso','quanto peso ganhei')) return 'peso_mudanca';
+  if(has('trocar exerc','trocar um exerc','posso trocar','substituir exerc','trocar o exerc')) return 'trocar_ex';
+  if(has('próximo trof','proximo trof','perto de desbloquear','falta pra conquista','falta para conquista','qual troféu falta','qual trofeu falta','próxima conquista','proxima conquista','troféu mais perto','trofeu mais perto','perto de um trof','mais perto de desbloquear')) return 'proximo_trofeu';
+  if(has('água','agua','hidrat','beber')) return 'agua';
+  if(has('proteína','proteina')){ if(has('importância','importancia','pra que serve','por que','importante')) return 'importancia_proteina'; return 'proteina'; }
+  if(has('antes do treino','depois do treino','o que comer','comer antes','comer depois','pré-treino','pre treino','pós-treino','pos treino','o que como')) return 'comer_treino';
+  if(has('déficit','deficit calór','deficit calor')) return 'deficit';
+  if(has('aumentar a carga','aumentar carga','quando aumentar','subir a carga','subir carga','progredir')) return 'aumentar_carga';
+  if(has('hipertrofia')) return 'o_que_hipertrofia';
+  if(has('sobrecarga')) return 'sobrecarga';
+  if(has('falha muscular','até a falha','ate a falha')) return 'falha_muscular';
+  if(has('zona 2','zona dois','cardio zona')) return 'zona2';
+  if(has('condicionamento','fôlego','folego','aeróbic','aerobic')) return 'condicionamento';
+  if(has('aquec','warm-up','warmup')) return 'aquecer';
+  if(has('descanso entre','intervalo entre','intervalo de descanso','quanto descansar','descanso das séries','descanso entre séries')) return 'descanso_series';
+  if(has('dormir','sono','horas de sono')) return 'sono';
+  if(has('gripado','gripe','resfriado','doente','febre','treinar doente')) return 'gripado';
+  if(has('dor muscular','dor no músculo','dor no musculo','dor pós-treino','dor pos treino','dores musculares','dolorido')) return 'dor_muscular';
+  if(has('semana do plano','que semana','qual semana','em que semana')) return 'semana_plano';
+  if(has('termina meu plano','quando termina','acaba o plano','fim do plano','termina o plano')) return 'termina_plano';
+  if(has('treinos faltam','faltam treinos','quantos treinos faltam','quantos faltam')) return 'treinos_faltam';
+  if(has('dias de descanso','descanso na semana','dias de folga','quantos dias de descanso')) return 'dias_descanso';
   // perguntas com dados
   if(has('perder','emagrec','quantos kg','quanto kg','posso perder')) return 'perder_peso';
   if(has('evolu','melhor','pior','progress','constan')) return 'evolucao';
@@ -3686,7 +3795,7 @@ const MA_SOCIAL = {
   _boatarde(){ return `Boa tarde, ${maName()}! 💪 Como posso ajudar? Quer saber como está sua evolução?`; },
   _boanoite(){ return `Boa noite, ${maName()}! 🌙 Bora fechar o dia com chave de ouro? Me pergunte o que quiser sobre seus treinos.`; },
   _tchau(){ return `Até a próxima, ${maName()}! 👊 Continue firme — a constância é o que transforma. Bons treinos!`; },
-  _quemsou(){ return 'Sou o Meta Assistente 🤖 — não sou uma IA de verdade, mas analiso seus dados reais de treino pra te dar respostas úteis na hora. Pergunte sobre sua evolução, corrida, recordes, meta e muito mais!'; },
+  _quemsou(){ return 'Sou o Meta Assistente 🧠 — seu apoio dentro do MetaTreino. Não sou uma IA da internet: eu leio seus dados reais de treino e um bom conhecimento de treino/saúde pra te responder na hora, de graça e até offline. Pergunte sobre sua evolução, treinos, nutrição, conceitos, sua meta e muito mais! 💪'; },
   _comovai(){ return `Tô ótimo e pronto pra te ajudar! 😄 Mas o que importa é como VOCÊ está. Quer que eu mostre sua evolução recente, ${maName()}?`; },
   _comandos(){ return `📋 <b>O que você pode me dizer:</b><br><br>
 <b>📊 Perguntar</b><br>• "minha evolução" • "como foi meu treino?"<br>• "minha corrida" • "meus troféus" • "minha meta"<br>• "quando é minha prova?" • "qual meu recorde?"<br>• "que músculo treino menos?" • "qual meu IMC?"<br>• "quantos treinos essa semana?"<br>• "qual meu próximo treino?" • "quando é meu aniversário?"<br>• "quanto tempo fiquei sem treinar?" • "me motive"<br><br>
@@ -3699,8 +3808,60 @@ const MA_SOCIAL = {
 };
 function maSaudacao(){ const h=new Date().getHours(); return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'; }
 let maThread = [];
+function maNextWorkout(){
+  const mod = state.modules[state.active];
+  if(!mod || !mod.plan) return null;
+  const today = getDayIdx();
+  const ws = [...(mod.plan.workouts||[])].sort((a,b)=>a.dayIdx-b.dayIdx);
+  if(!ws.length) return null;
+  const nx = ws.find(w=>w.dayIdx>today) || ws[0];
+  return state.active==='lift' ? ('Treino '+nx.k+' — '+nx.name+' ('+nx.dayName+')') : (nx.name+' ('+nx.dayName+')');
+}
+function maGentleNudge(){
+  try{
+    const miss = missedWorkoutsThisWeek(state.modules[state.active]);
+    if(miss && miss.length>=3) return `🔴 Você tem ${miss.length} treinos pendentes esta semana. Sem culpa — faça o mais importante quando puder e retome. Quer treinos mais leves? Diga "estou cansado".`;
+    const ws = state.weights||[];
+    if(ws.length){ const last = ws[ws.length-1].date||0; const d = Math.floor((Date.now()-last)/86400000); if(d>=7) return `🟢 Faz ${d} dias que você não registra o peso. Quer atualizar? Diga "estou pesando XX kg".`; }
+    if(miss && miss.length>=1) return `🟡 Você tem ${miss.length} treino pendente esta semana. Encaixe num dia livre e siga o plano.`;
+  }catch(e){}
+  return null;
+}
+function maOpeningSummary(){
+  try{
+    const nome = maName(), saud = maSaudacao();
+    const mod = state.modules[state.active];
+    const allHist = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
+    const L = [`${saud}, <b>${nome}</b>! 👋`];
+    if(mod && mod.plan){
+      const today = getDayIdx();
+      const wToday = (mod.plan.workouts||[]).find(w=>w.dayIdx===today);
+      if(wToday){
+        const doneToday = state.active==='lift' ? liftDoneToday(wToday) : runDoneToday(wToday);
+        if(doneToday) L.push('✅ Você já treinou hoje — mandou bem!');
+        else L.push(`💪 Hoje é dia de treino: <b>${state.active==='lift'?('Treino '+wToday.k+' — '+wToday.name):wToday.name}</b>.`);
+      } else L.push('😴 Hoje é seu dia de descanso.');
+      const totalPlanned = (mod.plan.workouts||[]).length * (mod.plan.totalWeeks||12);
+      const doneCount = (mod.history||[]).length;
+      if(totalPlanned) L.push(`📋 Já concluiu <b>${doneCount}</b> de <b>${totalPlanned}</b> treinos do plano.`);
+    }
+    const created = (state.modules.lift?.createdAt) || (state.modules.run?.createdAt);
+    if(created){ const d = Math.max(1, Math.floor((Date.now()-created)/86400000)); L.push(`📆 Está no MetaTreino há <b>${d}</b> dia${d>1?'s':''}.`); }
+    const streak = calcStreak(allHist);
+    if(streak>0) L.push(`🔥 Sequência atual: <b>${streak}</b> dia${streak>1?'s':''} sem faltar.`);
+    const nx = maNextWorkout();
+    if(nx) L.push(`⏭️ Próximo treino: <b>${nx}</b>.`);
+    const nudge = maGentleNudge();
+    if(nudge){ L.push(''); L.push(nudge); }
+    L.push('');
+    L.push('É só perguntar ou tocar numa sugestão abaixo. 💪');
+    return L.join('<br>');
+  }catch(e){
+    return `${maSaudacao()}, ${maName()}! 👋 Como posso te ajudar? Pergunte sobre seus treinos, evolução, meta e mais — ou toque numa sugestão.`;
+  }
+}
 function openAssistant(){
-  maThread = [{who:'bot', txt:`👋 Olá, ${maName()}! Sou o Meta Assistente. Pergunte sobre seus treinos ou me peça pra registrar coisas — ex: "corri 5km em 30 min", "estou pesando 90kg" ou "estou com dor no joelho". Toque numa sugestão ou digite. 💪`}];
+  maThread = [{who:'bot', txt: maOpeningSummary()}];
   renderAssistant();
 }
 function renderAssistant(){
@@ -3715,7 +3876,7 @@ function renderAssistant(){
     ? [{lbl:'💚 Voltar treinos ao normal', key:'_normal'}, ...MA_SUGGESTIONS]
     : MA_SUGGESTIONS;
   $('modal-inner').innerHTML = `
-    <h3>🤖 Meta Assistente</h3>
+    <h3>🧠 Meta Assistente</h3>
     <div id="ma-thread" style="max-height:42vh;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column">${bubbles}</div>
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px">
       ${sugs.map(s=>`<button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;white-space:nowrap;flex-shrink:0" onclick="maAsk('${s.key}')">${s.lbl}</button>`).join('')}
@@ -4599,6 +4760,12 @@ function updateDeco(tab){
   const map = { library:DECO_SVG.grid, perf:DECO_SVG.chart, history:DECO_SVG.clock, plan:DECO_SVG.calendar, profile:DECO_SVG.person };
   el.innerHTML = (tab==='home'||tab==='sessions') ? decoModuleGlyph() : (map[tab] || decoModuleGlyph());
 }
+function updateFab(tab){
+  const fab = document.getElementById('ma-fab'); if(!fab) return;
+  // fica escondido na aba de treino (Sessões) pra não tirar o foco do treino
+  const hide = (tab === 'sessions');
+  fab.classList.toggle('hidden', hide);
+}
 function toggleDeco(){
   const next = !decoEnabled();
   try{ localStorage.setItem('metatreino_deco', next ? '1' : '0'); }catch(e){}
@@ -5403,7 +5570,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
