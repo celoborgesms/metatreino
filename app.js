@@ -1,5 +1,5 @@
-// ===== MetaTreino v10.1 =====
-const APP_VERSION = 'v10.1';
+// ===== MetaTreino v10.2 =====
+const APP_VERSION = 'v10.2';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -3012,11 +3012,21 @@ function openModal(k){
   if(k==='pain') document.querySelectorAll('#pain-areas .opt-multi').forEach(o=>{ o.onclick=()=>o.classList.toggle('on'); });
 }
 function closeModal(){
-  const mi = $('modal-inner'); if(mi && mi.querySelector('iframe')) mi.innerHTML=''; // para o vídeo ao fechar
+  const mi = $('modal-inner'); const hadVideo = mi && mi.querySelector('iframe');
+  if(hadVideo) mi.innerHTML=''; // para o vídeo ao fechar
   if(mi) mi.classList.remove('modal-video','short');
   $('modal-back').classList.remove('on','video-open');
+  // vídeo aberto DE DENTRO do assistente → volta pro assistente ao fechar
+  if(hadVideo && typeof maVideoReturn!=='undefined' && maVideoReturn){ maVideoReturn=false; setTimeout(()=>{ try{ renderAssistant(); }catch(e){} }, 60); return; }
   // se um comando do assistente mexeu nos planos, redesenha a tela por baixo
   if(typeof maRefreshUI!=='undefined' && maRefreshUI){ maRefreshUI=false; try{ goTab(state.ui.tab||'home'); }catch(e){} }
+}
+let maVideoReturn = false;
+// abre o vídeo do exercício DENTRO do app a partir do assistente (embed se houver link; senão busca no YouTube)
+function playExerciseFromMA(name){
+  const url = videoLinks[slug(name)];
+  maVideoReturn = !!(url && ytVideoId(url)); // só volta ao assistente se abriu o player embutido
+  playExercise(name);
 }
 // idade calculada a partir da data de nascimento (AAAA-MM-DD)
 function ageFromBirth(birth){
@@ -3530,9 +3540,8 @@ function maTryCommand(txt){
       if(score>melhor){ melhor=score; achou=ex; }
     }));
     if(achou && melhor>0){
-      const url = ytLink(achou.name);
-      setTimeout(()=>window.open(url,'_blank'), 400);
-      return {done:true, msg:`▶️ Abrindo o vídeo de <b>${achou.name}</b> (${achou.sub}) pra você. Preste atenção na técnica antes de aumentar a carga! 💪`};
+      setTimeout(()=>playExerciseFromMA(achou.name), 400);
+      return {done:true, msg:`▶️ Abrindo o vídeo de <b>${achou.name}</b> (${achou.sub}) aqui no app. Preste atenção na técnica antes de aumentar a carga! 💪`};
     }
     return {done:true, msg:`Não achei esse exercício na biblioteca 🤔. Tenta o nome como aparece lá, ex: "como fazer supino reto" ou "como fazer agachamento".`};
   }
