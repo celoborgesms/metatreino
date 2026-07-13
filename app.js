@@ -1,5 +1,5 @@
-// ===== MetaTreino v10.4 =====
-const APP_VERSION = 'v10.4';
+// ===== MetaTreino v10.5 =====
+const APP_VERSION = 'v10.5';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1931,7 +1931,7 @@ function renderHistory(){
         return `<div class="hist-card ${isRunEntry?'run':''}" onclick="openHistoryEntry(${x._idx})">
           <div class="hist-emo">${emo}</div>
           <div style="flex:1;min-width:0">
-            <div class="hist-name">${x.name.replace(/^[🚶🚴🏃]\s*/,'')}</div>
+            <div class="hist-name">${x.name.replace(/^[🚶🚴🏃]\s*/u,'')}</div>
             <div class="hist-meta"><span>🕐 ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>${meta}</div>
             ${parts.length?`<div class="hist-chips">${parts.map(p=>`<span class="hist-chip">${p}</span>`).join('')}</div>`:''}
             ${x.adaptedWith?`<div style="margin-top:5px;font-size:11px;color:var(--info-soft)">🩹 Treinou adaptado — ${x.adaptedWith}</div>`:''}
@@ -2369,28 +2369,28 @@ const somaKm = (arr)=>arr.reduce((s,x)=>s+(x.distance||0),0);
 
 // Cada desafio: progresso() retorna [atual, alvo]. cat filtra por modalidade.
 const MONTH_CHALLENGES = [
-  { id:'m_lift_8',  emo:'🏋️', cat:'lift',  nome:'Ferro em Brasa',       desc:'8 treinos de musculação no mês',
-    prog:()=>[ (state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs()).length, 8 ] },
-  { id:'m_lift_pr', emo:'💥', cat:'lift',  nome:'Quebrador de Limites',  desc:'Bata 2 recordes pessoais no mês',
-    prog:()=>[ Object.values(state.prs||{}).filter(p=>p.at>=monthStartTs()).length, 2 ] },
-  { id:'m_lift_leg',emo:'🦵', cat:'lift',  nome:'Não Pulou o Dia de Perna', desc:'3 treinos com pernas ou glúteos',
-    prog:()=>[ (state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs() && (x.parts||[]).some(p=>['Pernas','Glúteos','Panturrilha'].includes(p))).length, 3 ] },
-  { id:'m_run_30',  emo:'🏃', cat:'run',   nome:'Maratonista do Mês',    desc:'Corra 30 km somados no mês',
-    prog:()=>[ +somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && (!x.activity||x.activity==='corrida'))).toFixed(1), 30 ] },
-  { id:'m_run_long',emo:'🎯', cat:'run',   nome:'Longão do Mês',         desc:'Uma corrida de 8 km ou mais',
-    prog:()=>{ const r=(state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && (!x.activity||x.activity==='corrida')); return [ Math.min(8, r.length?Math.max(...r.map(x=>x.distance||0)):0), 8 ]; } },
-  { id:'m_bike_50', emo:'🚴', cat:'run',   nome:'Pedal do Mês',          desc:'50 km de bike no mês',
-    prog:()=>[ +somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && x.activity==='bike')).toFixed(1), 50 ] },
-  { id:'m_walk_25', emo:'🚶', cat:'run',   nome:'Andarilho',             desc:'25 km de caminhada no mês',
-    prog:()=>[ +somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && x.activity==='caminhada')).toFixed(1), 25 ] },
+  { id:'m_lift_8',  emo:'🏋️', cat:'lift',  nome:'Ferro em Brasa',       desc:'12 treinos de musculação no mês',
+    prog:()=>[ (state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs()).length, 12 ] },
+  { id:'m_lift_pr', emo:'💥', cat:'lift',  nome:'Quebrador de Limites',  desc:'Bata 3 recordes pessoais no mês',
+    prog:()=>[ Object.values(state.prs||{}).filter(p=>p.at>=monthStartTs()).length, 3 ] },
+  { id:'m_lift_leg',emo:'🦵', cat:'lift',  nome:'Não Pulou o Dia de Perna', desc:'4 treinos com pernas ou glúteos',
+    prog:()=>[ (state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs() && (x.parts||[]).some(p=>['Pernas','Glúteos','Panturrilha'].includes(p))).length, 4 ] },
+  { id:'m_run_30',  emo:'🏃', cat:'run',   nome:'Maratonista do Mês',    desc:'Corra 40 km somados no mês',
+    prog:()=>[ +somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && (!x.activity||x.activity==='corrida'))).toFixed(1), 40 ] },
+  { id:'m_run_long',emo:'🎯', cat:'run',   nome:'Longão do Mês',         desc:'Uma corrida de 10 km ou mais',
+    prog:()=>{ const r=(state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && (!x.activity||x.activity==='corrida')); return [ Math.min(10, r.length?Math.max(...r.map(x=>x.distance||0)):0), 10 ]; } },
+  { id:'m_bike_50', emo:'🚴', cat:'run',   nome:'Pedal do Mês',          desc:'120 km de bike no mês',
+    prog:()=>[ +somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && x.activity==='bike')).toFixed(1), 120 ] },
+  { id:'m_walk_25', emo:'🚶', cat:'run',   nome:'Andarilho',             desc:'40 km de caminhada no mês',
+    prog:()=>[ +somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && x.activity==='caminhada')).toFixed(1), 40 ] },
   { id:'m_streak5', emo:'🔥', cat:'geral', nome:'Constância de Aço',     desc:'5 dias seguidos de atividade',
     prog:()=>[ monthBestStreak(), 5 ] },
   { id:'m_days12',  emo:'📅', cat:'geral', nome:'Presença Confirmada',   desc:'Ative-se em 12 dias diferentes',
     prog:()=>[ monthActiveDays().size, 12 ] },
-  { id:'m_min500',  emo:'⏱️', cat:'geral', nome:'Meia Centena de Horas', desc:'500 minutos de treino no mês',
-    prog:()=>[ monthHistory().reduce((s,x)=>s+(x.duration||0),0), 500 ] },
-  { id:'m_mix',     emo:'🔀', cat:'geral', nome:'Atleta Completo',       desc:'Musculação + corrida no mesmo mês',
-    prog:()=>{ const ini=monthStartTs(); const l=(state.modules.lift?.history||[]).some(x=>x.at>=ini); const r=(state.modules.run?.history||[]).some(x=>x.at>=ini); return [ (l?1:0)+(r?1:0), 2 ]; } },
+  { id:'m_min500',  emo:'⏱️', cat:'geral', nome:'Dez Horas Suadas',      desc:'600 minutos (10h) de treino no mês',
+    prog:()=>[ monthHistory().reduce((s,x)=>s+(x.duration||0),0), 600 ] },
+  { id:'m_mix',     emo:'🔀', cat:'geral', nome:'Atleta Completo',       desc:'4 treinos de musculação + 4 de cardio (corrida, bike ou caminhada)',
+    prog:()=>{ const ini=monthStartTs(); const l=(state.modules.lift?.history||[]).filter(x=>x.at>=ini).length; const r=(state.modules.run?.history||[]).filter(x=>x.at>=ini).length; return [ Math.min(l,4)+Math.min(r,4), 8 ]; } },
   { id:'m_early',   emo:'🌅', cat:'geral', nome:'Clube da Madrugada',    desc:'3 treinos antes das 7h',
     prog:()=>[ monthHistory().filter(x=>new Date(x.at).getHours()<7).length, 3 ] }
 ];
@@ -2429,7 +2429,7 @@ function checkMonthly(){
   });
   if(novos.length){
     saveData();
-    novos.forEach(c=>queueAward({ id:'m_'+c.id, emo:c.emo, tipo:'DESAFIO DO MÊS CONCLUÍDO', nome:c.nome, desc:c.desc }));
+    novos.forEach(c=>queueAward({ id:'m_'+c.id, emo:c.emo, tipo:'DESAFIO DO MÊS CONCLUÍDO', nome:c.nome, desc:c.desc, medalha:true }));
   }
   return novos;
 }
@@ -2573,13 +2573,15 @@ function renderAward(){
     </div>
     <div style="display:flex;align-items:center;gap:4px">
       ${n>1 ? seta(-1, awardIdx===0) : '<div style="width:44px"></div>'}
-      <div style="flex:1;text-align:center;padding:4px 0${a.secreto?';background:radial-gradient(circle at 50% 30%, rgba(245,158,11,0.16), transparent 70%);border-radius:18px':''}">
+      <div style="flex:1;text-align:center;padding:4px 0${a.secreto?';background:radial-gradient(circle at 50% 30%, rgba(245,158,11,0.16), transparent 70%);border-radius:18px':a.medalha?';background:radial-gradient(circle at 50% 30%, rgba(16,185,129,0.18), transparent 70%);border-radius:18px':''}">
         ${a.secreto?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
-        <div class="anim-check" style="font-size:${a.secreto?'70px':'62px'};line-height:1.1${a.secreto?';filter:drop-shadow(0 0 18px rgba(245,158,11,0.55))':''}">${a.emo}</div>
-        <div style="font-size:12px;color:${a.secreto?'var(--accent-2)':'var(--text-mute)'};letter-spacing:.5px;margin-top:6px;font-weight:${a.secreto?'800':'400'}">${a.tipo}</div>
-        <h3 style="margin:2px 0 0;font-size:${a.secreto?'21px':'19px'}">${a.nome}</h3>
+        ${a.medalha?'<div style="font-size:11px;letter-spacing:2px;color:var(--primary-2);font-weight:800">🎖️ MEDALHA DO MÊS 🎖️</div>':''}
+        <div class="anim-check" style="font-size:${a.secreto||a.medalha?'70px':'62px'};line-height:1.1${a.secreto?';filter:drop-shadow(0 0 18px rgba(245,158,11,0.55))':a.medalha?';filter:drop-shadow(0 0 18px rgba(16,185,129,0.55))':''}">${a.emo}</div>
+        <div style="font-size:12px;color:${a.secreto?'var(--accent-2)':a.medalha?'var(--primary-2)':'var(--text-mute)'};letter-spacing:.5px;margin-top:6px;font-weight:${a.secreto||a.medalha?'800':'400'}">${a.tipo}</div>
+        <h3 style="margin:2px 0 0;font-size:${a.secreto||a.medalha?'21px':'19px'}">${a.nome}</h3>
         <p style="color:var(--text-dim);font-size:13px;margin-top:6px;line-height:1.45">${a.desc}</p>
         ${a.secreto?'<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;font-style:italic">Ninguém te contou essa. Você descobriu.</div>':''}
+        ${a.medalha?'<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;font-style:italic">🏅 Guardada nas suas medalhas pra sempre.</div>':''}
       </div>
       ${n>1 ? seta(1, awardIdx===n-1) : '<div style="width:44px"></div>'}
     </div>
@@ -3112,7 +3114,7 @@ const MA_ANSWERS = {
     const lift = done.filter(x=>x.module==='lift'), run = done.filter(x=>x.module==='run');
     let r = '';
     if(lift.length){ const w=lift[0]; const n=(w.exercisesDone||[]).length; r += `Hoje você concluiu ${w.name}${n?` — ${n} exercícios`:''}, cerca de ${w.duration} min.${w.feel?` Você terminou se sentindo "${({otimo:'muito bem 🚀',bem:'bem 😊',cansado:'cansado 😮‍💨',exausto:'exausto 😩'})[w.feel]}".`:''} `; }
-    if(run.length){ const w=run[0]; r += `${lift.length?'E ':''}Registrou ${w.name.replace(/^[🚶🚴🏃]\s*/,'')}${w.distance?` — ${w.distance}km`:''} em ${w.duration} min${w.pace?` (${w.pace})`:''}. `; }
+    if(run.length){ const w=run[0]; r += `${lift.length?'E ':''}Registrou ${w.name.replace(/^[🚶🚴🏃]\s*/u,'')}${w.distance?` — ${w.distance}km`:''} em ${w.duration} min${w.pace?` (${w.pace})`:''}. `; }
     return r + 'Excelente trabalho! 👏';
   },
   evolucao(){
@@ -4679,7 +4681,7 @@ function shareWorkoutImage(histIdx){
         {rotulo:'Sensação', valor:x.rating>=5?'Ótimo 🚀':x.rating<=1?'Difícil 😩':'Normal 😊'}
       ],
       listaTitulo:'Atividade',
-      lista:[x.name.replace(/^[🚶🚴🏃]\\s*/,'')],
+      lista:[x.name.replace(/^[🚶🚴🏃]\\s*/u,'')],
       destaque:'Treinei hoje com MetaTreino 💪'
     });
     shareCanvas(c, 'metatreino-atividade.png', `${atv} concluída no MetaTreino ${emo}`);
