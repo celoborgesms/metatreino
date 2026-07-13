@@ -1,5 +1,5 @@
-// ===== MetaTreino v10.6 =====
-const APP_VERSION = 'v10.6';
+// ===== MetaTreino v10.8 =====
+const APP_VERSION = 'v10.8';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -964,10 +964,13 @@ function getDayIdx(){ const d=new Date().getDay(); return d===0?7:d; }
 // e não foram registrados — pra sugerir "recuperar" sem quebrar a grade fixa de dias.
 function missedWorkoutsThisWeek(mod){
   if(!mod || !mod.plan) return [];
+  if(vacationActive()) return []; // em férias não existe treino "perdido"
   const today = getDayIdx();
   const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-(today-1));
   const t0 = startWk.getTime();
   const hist = mod.history||[];
+  const modKey = (mod===state.modules.lift)?'lift':(mod===state.modules.run)?'run':null;
+  const skips = (state.skips||[]).filter(s=>s.at>=t0 && (!modKey || s.module===modKey));
   // não considera "perdido" nenhum dia anterior à criação do plano —
   // aluno novo que começa numa quinta não deve ver segunda/terça como treinos perdidos
   const created = mod.createdAt || Date.now();
@@ -977,6 +980,8 @@ function missedWorkoutsThisWeek(mod){
     const dayDate = t0 + (w.dayIdx-1)*86400000;
     const endOfThatDay = dayDate + 86400000; // fim do dia
     if(endOfThatDay <= created) return false; // o dia terminou antes de a conta/plano existir
+    // pulou de propósito esse treino nesta semana? então não é "falta"
+    if(skips.some(s=>s.k===w.k || s.dayIdx===w.dayIdx)) return false;
     // registrou algo desse treino nesta semana?
     const did = hist.some(h=>{ if(h.at<t0) return false; return h.id===w.k || (h.dayIdx===w.dayIdx); });
     return !did;
@@ -1547,6 +1552,7 @@ function renderSessionDetail(w){
       : `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>`) : (runDoneToday(w)
       ? `<div class="card card-ok" style="margin-top:14px;text-align:center;padding:12px"><div style="color:var(--primary-2);font-weight:800">✅ Atividade registrada hoje</div><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar outra atividade</button></div>`
       : `<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar atividade (km + tempo)</button>`)}
+    ${((isLift && !lockedToday) || (!isLift && !runDoneToday(w))) ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--text-dim);font-weight:600" onclick="skipWorkout('${isLift?w.k:w.dayIdx}')">🌗 Não vou treinar hoje (pular)</button>` : ''}
   `;
   $('session-detail-slot').innerHTML = html;
 }
@@ -1946,11 +1952,24 @@ function renderHistory(){
   }
 }
 function histShowMore(){ histLimit += HIST_PAGE; renderHistory(); }
+// ===== MODO FÉRIAS (pausa cobranças e preserva a sequência) =====
+function vacationActive(){ return !!(state.vacation && state.vacation.active); }
+function isVacationDay(date){
+  const t = new Date(date); t.setHours(0,0,0,0); const tt = t.getTime();
+  const v = state.vacation; if(!v) return false;
+  if(v.active && v.startedAt!=null && tt>=v.startedAt && tt<=Date.now()) return true;
+  return (v.periods||[]).some(p=>tt>=p.start && tt<=p.end);
+}
 function calcStreak(h){
   if(!h||!h.length) return 0;
   const days = new Set(h.map(x=>new Date(x.at).toDateString()));
-  let s=0, cur=new Date();
-  while(days.has(cur.toDateString())){ s++; cur.setDate(cur.getDate()-1); }
+  let s=0, cur=new Date(), guard=0;
+  while(guard++ < 3650){
+    const ds = cur.toDateString();
+    if(days.has(ds)){ s++; cur.setDate(cur.getDate()-1); continue; }
+    if(isVacationDay(cur)){ cur.setDate(cur.getDate()-1); continue; } // dia de férias: pula sem quebrar a sequência
+    break;
+  }
   return s;
 }
 
@@ -2214,6 +2233,7 @@ function renderProfile(){
   const u = state.user, p = u.profile || {};
   const vEl = $('pf-version'); if(vEl) vEl.textContent = APP_VERSION;
   const dEl = $('deco-row-label'); if(dEl) dEl.textContent = decoEnabled() ? 'Fundo decorativo' : 'Fundo decorativo (desligado)';
+  const vEl2 = $('vac-row-label'); if(vEl2) vEl2.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias';
   renderAvatar('pf-avatar');
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
   const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:999px;background:rgba(244,63,94,0.15);color:var(--danger-soft);font-weight:800">${pn.join(', ')}</span>`:''; }
@@ -3913,6 +3933,7 @@ function maNextWorkout(){
 }
 function maGentleNudge(){
   try{
+    if(vacationActive()) return null; // em férias não cobramos nada
     const miss = missedWorkoutsThisWeek(state.modules[state.active]);
     if(miss && miss.length>=3) return `🔴 Você tem ${miss.length} treinos pendentes esta semana. Sem culpa — faça o mais importante quando puder e retome. Quer treinos mais leves? Diga "estou cansado".`;
     const ws = state.weights||[];
@@ -3927,6 +3948,7 @@ function daysSinceLastWorkoutMA(){
   return Math.floor((Date.now()-Math.max(...all.map(x=>x.at)))/86400000);
 }
 function maComeback(){
+  if(vacationActive()) return `🌴 Modo Férias ativo — aproveite o descanso, ${maName()}! Sua sequência está guardada. Quando voltar, é só desligar o modo no Perfil.`;
   const d=daysSinceLastWorkoutMA();
   if(d===null) return null;
   if(d>=14) return `Que bom te ver de volta, ${maName()}! 💙 Faz ${d} dias — mas recomeçar é o que importa. Não precisa compensar nada: bora com um treino leve hoje pra reaquecer o hábito.`;
@@ -4907,6 +4929,44 @@ function toggleDeco(){
   const lbl = document.getElementById('deco-row-label'); if(lbl) lbl.textContent = next ? 'Fundo decorativo' : 'Fundo decorativo (desligado)';
   toast(next ? '🎨 Fundo decorativo ativado' : 'Fundo decorativo desativado');
 }
+// Liga/desliga o Modo Férias. Ao ligar: pausa cobranças e começa a "congelar" a sequência.
+// Ao desligar: fecha o período de férias (pra sequência voltar de onde parou).
+function toggleVacation(){
+  state.vacation = state.vacation || { active:false, startedAt:null, periods:[] };
+  const d = new Date(); d.setHours(0,0,0,0);
+  if(state.vacation.active){
+    // desligando: fecha o período
+    if(state.vacation.startedAt!=null){
+      state.vacation.periods = state.vacation.periods || [];
+      state.vacation.periods.push({ start: state.vacation.startedAt, end: d.getTime() });
+      if(state.vacation.periods.length>24) state.vacation.periods = state.vacation.periods.slice(-24);
+    }
+    state.vacation.active = false; state.vacation.startedAt = null;
+    saveData();
+    toast('☀️ Modo Férias desligado. Bom te ter de volta — sua sequência continua de onde parou! 💪');
+  } else {
+    state.vacation.active = true; state.vacation.startedAt = d.getTime();
+    saveData();
+    toast('🌴 Modo Férias ativado. Relaxa — nada de cobrança, e sua sequência fica guardada.');
+  }
+  const lbl = document.getElementById('vac-row-label'); if(lbl) lbl.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias';
+}
+// Pular o treino do dia de propósito (não conta como falta, não cobra).
+function skipWorkout(k){
+  const mod = state.modules[state.active];
+  const w = (mod && mod.plan && mod.plan.workouts||[]).find(x=>String(x.k)===String(k) || String(x.dayIdx)===String(k));
+  const d = new Date(); d.setHours(0,0,0,0);
+  state.skips = state.skips || [];
+  const kk = w ? w.k : k, di = w ? w.dayIdx : getDayIdx();
+  if(!state.skips.some(s=>s.at===d.getTime() && s.module===state.active && s.k===kk)){
+    state.skips.push({ at:d.getTime(), module:state.active, k:kk, dayIdx:di });
+    if(state.skips.length>120) state.skips = state.skips.slice(-120);
+    saveData();
+  }
+  closeModal();
+  toast('🌗 Treino pulado. Descansar quando o corpo pede é escolha inteligente — te vejo no próximo! 💚');
+  goTab('home');
+}
 applyTheme(currentTheme()); // aplica imediatamente, antes de qualquer render
 
 // ---------- CONTATO DO TREINADOR (editável pelo admin) ----------
@@ -5704,7 +5764,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
