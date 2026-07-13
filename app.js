@@ -1,5 +1,5 @@
-// ===== MetaTreino v10.5 =====
-const APP_VERSION = 'v10.5';
+// ===== MetaTreino v10.6 =====
+const APP_VERSION = 'v10.6';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2573,15 +2573,17 @@ function renderAward(){
     </div>
     <div style="display:flex;align-items:center;gap:4px">
       ${n>1 ? seta(-1, awardIdx===0) : '<div style="width:44px"></div>'}
-      <div style="flex:1;text-align:center;padding:4px 0${a.secreto?';background:radial-gradient(circle at 50% 30%, rgba(245,158,11,0.16), transparent 70%);border-radius:18px':a.medalha?';background:radial-gradient(circle at 50% 30%, rgba(16,185,129,0.18), transparent 70%);border-radius:18px':''}">
+      <div style="flex:1;text-align:center;padding:4px 0${a.secreto?';background:radial-gradient(circle at 50% 30%, rgba(245,158,11,0.16), transparent 70%);border-radius:18px':a.medalha?';background:radial-gradient(circle at 50% 30%, rgba(16,185,129,0.18), transparent 70%);border-radius:18px':a.marco?';background:radial-gradient(circle at 50% 30%, rgba(167,139,250,0.20), transparent 70%);border-radius:18px':''}">
         ${a.secreto?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
         ${a.medalha?'<div style="font-size:11px;letter-spacing:2px;color:var(--primary-2);font-weight:800">🎖️ MEDALHA DO MÊS 🎖️</div>':''}
-        <div class="anim-check" style="font-size:${a.secreto||a.medalha?'70px':'62px'};line-height:1.1${a.secreto?';filter:drop-shadow(0 0 18px rgba(245,158,11,0.55))':a.medalha?';filter:drop-shadow(0 0 18px rgba(16,185,129,0.55))':''}">${a.emo}</div>
-        <div style="font-size:12px;color:${a.secreto?'var(--accent-2)':a.medalha?'var(--primary-2)':'var(--text-mute)'};letter-spacing:.5px;margin-top:6px;font-weight:${a.secreto||a.medalha?'800':'400'}">${a.tipo}</div>
-        <h3 style="margin:2px 0 0;font-size:${a.secreto||a.medalha?'21px':'19px'}">${a.nome}</h3>
+        ${a.marco?'<div style="font-size:11px;letter-spacing:2px;color:#a78bfa;font-weight:800">🎉 MARCO ALCANÇADO 🎉</div>':''}
+        <div class="anim-check" style="font-size:${a.secreto||a.medalha||a.marco?'70px':'62px'};line-height:1.1${a.secreto?';filter:drop-shadow(0 0 18px rgba(245,158,11,0.55))':a.medalha?';filter:drop-shadow(0 0 18px rgba(16,185,129,0.55))':a.marco?';filter:drop-shadow(0 0 18px rgba(167,139,250,0.6))':''}">${a.emo}</div>
+        <div style="font-size:12px;color:${a.secreto?'var(--accent-2)':a.medalha?'var(--primary-2)':a.marco?'#a78bfa':'var(--text-mute)'};letter-spacing:.5px;margin-top:6px;font-weight:${a.secreto||a.medalha||a.marco?'800':'400'}">${a.tipo}</div>
+        <h3 style="margin:2px 0 0;font-size:${a.secreto||a.medalha||a.marco?'21px':'19px'}">${a.nome}</h3>
         <p style="color:var(--text-dim);font-size:13px;margin-top:6px;line-height:1.45">${a.desc}</p>
         ${a.secreto?'<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;font-style:italic">Ninguém te contou essa. Você descobriu.</div>':''}
         ${a.medalha?'<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;font-style:italic">🏅 Guardada nas suas medalhas pra sempre.</div>':''}
+        ${a.marco?'<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;font-style:italic">🚀 Mais um capítulo da sua jornada.</div>':''}
       </div>
       ${n>1 ? seta(1, awardIdx===n-1) : '<div style="width:44px"></div>'}
     </div>
@@ -2786,8 +2788,43 @@ function checkTrophies(){
     // precisa existir meta E treinos de verdade (senão 0 >= 0 desbloquearia sem treinar)
     if(wkTarget > 0 && done7d > 0 && done7d >= wkTarget) unlockTrophy('week_goal');
   }
+  checkMilestones();
 }
-// Progresso atual rumo a cada troféu contável (pra barra de progresso)
+// ===== MARCOS (treinador celebra números redondos: 10º, 50º, 100º treino...) =====
+const MILESTONES = [1,10,25,50,100,150,200,250,300,365,500,750,1000];
+function milestoneEmo(m){ return m>=500?'💎':m>=200?'👑':m>=100?'🏆':m>=50?'⭐':m>=25?'💪':m>=10?'🔥':'🎉'; }
+function milestoneMsg(m){
+  const nome = (typeof maName==='function') ? maName() : 'você';
+  const msgs = {
+    1:`Seu primeiro treino registrado! Todo mundo começa por aqui — o mais difícil (começar) você já fez. 🎉`,
+    10:`10 treinos! O hábito está nascendo. Continue e ele vira parte de quem você é. 🔥`,
+    25:`25 treinos concluídos! Isso já não é sorte, é rotina. 💪`,
+    50:`50 treinos! Metade do caminho pro clube dos 100. Sua constância está falando por si. ⭐`,
+    100:`Lembra quando começou, ${nome}? Hoje você concluiu seu <b>100º treino</b>. Isso é fruto de pura constância — poucos chegam aqui. 🏆`,
+    150:`150 treinos! Você virou referência de disciplina. 👑`,
+    200:`200 treinos! Que jornada. O MetaTreino tem orgulho de te acompanhar. 👑`,
+    250:`250 treinos — nível raro de comprometimento. 💎`,
+    300:`300 treinos! Você é a prova viva de que constância vence tudo. 💎`,
+    365:`365 treinos! Um por dia daria um ano inteiro. Simplesmente fora de série. 💎`,
+    500:`500 treinos!!! Não tenho nem palavras — só respeito. 💎`
+  };
+  return msgs[m] || `<b>${m}º treino</b> concluído! Sua constância é impressionante, ${nome}. 🔥`;
+}
+function checkMilestones(){
+  state.stats = state.stats || {};
+  const total = (state.modules.lift?.history||[]).length + (state.modules.run?.history||[]).length;
+  if(state.stats.lastMilestone === undefined){ // seed silencioso (não celebra marcos passados)
+    state.stats.lastMilestone = Math.max(0, ...MILESTONES.filter(m=>m<=total));
+    saveData(); return;
+  }
+  const hit = MILESTONES.filter(m=>m<=total && m>state.stats.lastMilestone);
+  if(hit.length){
+    const m = Math.max(...hit);
+    state.stats.lastMilestone = m;
+    saveData();
+    queueAward({ id:'milestone_'+m, emo:milestoneEmo(m), tipo:'MARCO ALCANÇADO', nome:`${m}º treino!`, desc:milestoneMsg(m), marco:true });
+  }
+}
 function trophyProgress(id){
   ensureStats();
   const s = state.stats, h = state.modules[state.active]?.history||[];
@@ -3408,10 +3445,12 @@ const MA_ANSWERS = {
     L.push('');
     L.push(nota>=8?`Semana excelente, ${maName()}! Continue assim. 🔥`:nota>=6?'Boa semana! Dá pra subir mais um degrau. 💪':'Toda semana é um recomeço — bora fazer a próxima melhor. 👊');
     return L.join('<br>');
-  }
+  },
+  insight(){ return (typeof maInsight==='function') ? maInsight() : 'Continue treinando que eu te trago observações! 💪'; }
 };
 const MA_SUGGESTIONS = [
   {lbl:'📈 Análise da semana', key:'analise_semana'},
+  {lbl:'💡 Um insight sobre meus treinos', key:'insight'},
   {lbl:'💪 Como foi meu treino?', key:'treino_hoje'},
   {lbl:'📅 Quantos dias faltei?', key:'faltei'},
   {lbl:'⏭️ Quando é meu próximo treino?', key:'proximo'},
@@ -3448,6 +3487,7 @@ function maInterpret(txt){
   if(has('o que posso escrever','o que posso falar','o que posso dizer','quais comandos','lista de comandos','comandos')) return '_comandos';
   if(has('ajuda','o que você faz','o que voce faz','o que sabe','pode fazer','como funciona','me ajuda')) return '_ajuda';
   if(has('análise da semana','analise da semana','análise semanal','analise semanal','resumo da semana','como foi minha semana','relatório','relatorio','minha semana')) return 'analise_semana';
+  if(has('insight','padrão','padrao','padrões','padroes','observação','observacao','o que você percebe','o que voce percebe','me surpreenda')) return 'insight';
   // --- v10: novas intenções (conceitos / saúde / planejamento) — específicas primeiro ---
   if(has('faltei','faltas','dias faltei','treinos pendentes','faltando treino','quantos dias falt')) return 'faltei';
   if(has('quanto peso perdi','peso perdi','perdi peso','peso ganhei','ganhei peso','quanto emagreci','quanto engordei','mudança de peso','mudanca de peso','quanto peso ganhei')) return 'peso_mudanca';
@@ -3881,6 +3921,37 @@ function maGentleNudge(){
   }catch(e){}
   return null;
 }
+function daysSinceLastWorkoutMA(){
+  const all=[...(state.modules.lift?.history||[]),...(state.modules.run?.history||[])];
+  if(!all.length) return null;
+  return Math.floor((Date.now()-Math.max(...all.map(x=>x.at)))/86400000);
+}
+function maComeback(){
+  const d=daysSinceLastWorkoutMA();
+  if(d===null) return null;
+  if(d>=14) return `Que bom te ver de volta, ${maName()}! 💙 Faz ${d} dias — mas recomeçar é o que importa. Não precisa compensar nada: bora com um treino leve hoje pra reaquecer o hábito.`;
+  if(d>=6) return `Senti sua falta, ${maName()}! 💙 ${d} dias sem treinar acontece com todo mundo. Não precisa compensar tudo de uma vez — que tal recomeçar leve hoje?`;
+  return null;
+}
+function maInsight(){
+  const all=[...(state.modules.lift?.history||[]),...(state.modules.run?.history||[])].sort((a,b)=>a.at-b.at);
+  if(all.length < 6) return `Ainda estou aprendendo seus padrões, ${maName()} 🙂 — com mais alguns treinos registrados eu te trago observações afiadas. Continue firme!`;
+  const dias=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  const porDia=[0,0,0,0,0,0,0]; all.forEach(x=>porDia[new Date(x.at).getDay()]++);
+  const maxDia=porDia.indexOf(Math.max(...porDia));
+  let manha=0,noite=0; all.forEach(x=>{ const h=new Date(x.at).getHours(); if(h<12)manha++; else if(h>=18)noite++; });
+  const prs=Object.values(state.prs||{}).map(p=>p.at).filter(Boolean).sort((a,b)=>a-b);
+  const semPr = prs.length?Math.floor((Date.now()-prs[prs.length-1])/86400000):999;
+  const ins=[];
+  if(state.active==='lift'){
+    if(prs.length>=2 && semPr<=14) ins.push(`📈 Você vem batendo recordes com regularidade — a sobrecarga progressiva está funcionando. Continue subindo aos poucos!`);
+    else if(prs.length>=1 && semPr>=21) ins.push(`📈 Faz ${semPr} dias que você não bate um recorde. Se as séries saem fáceis no topo das repetições, talvez seja hora de subir a carga. 💪`);
+  }
+  if(Math.max(...porDia)>=3) ins.push(`📅 Seu dia mais consistente é <b>${dias[maxDia]}</b>. Ancorar os treinos nos dias que já funcionam é uma baita estratégia.`);
+  if(manha+noite>=5){ if(manha>noite*1.5) ins.push(`🌅 Você treina mais de manhã — treino cedo tem uma vantagem: ninguém "rouba" seu horário durante o dia.`); else if(noite>manha*1.5) ins.push(`🌙 Você é mais de treinar à noite. Só evite treinos muito intensos perto da hora de dormir.`); }
+  if(!ins.length) return `Você está com uma boa constância, ${maName()}! Continue registrando que logo te trago padrões mais detalhados. 💪`;
+  return ins[Math.floor(Date.now()/86400000) % ins.length];
+}
 function maOpeningSummary(){
   try{
     const nome = maName(), saud = maSaudacao();
@@ -3906,8 +3977,16 @@ function maOpeningSummary(){
     const nx = maNextWorkout();
     if(nx) L.push(`⏭️ Próximo treino: <b>${nx}</b>.`);
     if(new Date().getDay()===0){ L.push(''); L.push('📈 É domingo — fechamento de semana! Toque em <b>"📈 Análise da semana"</b> pra ver seu resumo e a nota.'); }
-    const nudge = maGentleNudge();
-    if(nudge){ L.push(''); L.push(nudge); }
+    const comeback = maComeback();
+    if(comeback){ L.push(''); L.push(comeback); }
+    else {
+      const nudge = maGentleNudge();
+      if(nudge){ L.push(''); L.push(nudge); }
+      else if(allHist.length>=8 && Math.floor(Date.now()/86400000)%2===0){
+        const ins = maInsight();
+        if(ins && /^[📈📅🌅🌙]/.test(ins)){ L.push(''); L.push(ins); }
+      }
+    }
     L.push('');
     L.push('É só perguntar ou tocar numa sugestão abaixo. 💪');
     return L.join('<br>');
