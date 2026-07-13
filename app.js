@@ -1,5 +1,5 @@
-// ===== MetaTreino v10.8 =====
-const APP_VERSION = 'v10.8';
+// ===== MetaTreino v10.9 =====
+const APP_VERSION = 'v10.9';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1285,6 +1285,9 @@ function renderHome(){
         : 'Seus treinos estão mais leves (menos séries e volume reduzido). Vá no seu ritmo — treinar leve ou descansar hoje é totalmente ok. 💚';
     } else adaptCard.classList.add('hidden');
   }
+  // aviso de Modo Férias ativo (pra pessoa lembrar de desligar quando voltar)
+  const vacCard = $('card-vacation');
+  if(vacCard) vacCard.classList.toggle('hidden', !vacationActive());
   // treinos pendentes desta semana (perdeu um ou mais dias?)
   const missed = $('card-missed');
   if(missed){
@@ -4950,6 +4953,7 @@ function toggleVacation(){
     toast('🌴 Modo Férias ativado. Relaxa — nada de cobrança, e sua sequência fica guardada.');
   }
   const lbl = document.getElementById('vac-row-label'); if(lbl) lbl.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias';
+  const vc = document.getElementById('card-vacation'); if(vc) vc.classList.toggle('hidden', !vacationActive());
 }
 // Pular o treino do dia de propósito (não conta como falta, não cobra).
 function skipWorkout(k){
