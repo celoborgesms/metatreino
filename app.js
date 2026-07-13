@@ -1,5 +1,5 @@
-// ===== MetaTreino v10.0 =====
-const APP_VERSION = 'v10.0';
+// ===== MetaTreino v10.1 =====
+const APP_VERSION = 'v10.1';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -3091,8 +3091,13 @@ const MA_ANSWERS = {
     if(!done.length){
       const liftT = state.modules.lift?.plan?.workouts?.find(w=>w.dayIdx===getDayIdx());
       const runT = state.modules.run?.plan?.workouts?.find(w=>w.dayIdx===getDayIdx());
-      if(liftT||runT) return `Hoje você ainda não registrou treino. No plano tem: ${[liftT&&('💪 '+(liftT.name||'Musculação')),runT&&('🏃 '+(runT.name||'Corrida'))].filter(Boolean).join(' e ')}. Bora? 💪`;
-      return 'Hoje é dia de descanso no seu plano. Aproveite pra recuperar — descanso também é treino! 😴';
+      if(liftT||runT){
+        const partes = [];
+        if(liftT) partes.push(`💪 <b>${liftT.name||'Musculação'}</b>${liftT.duration?` (~${liftT.duration} min)`:''}`);
+        if(runT) partes.push(`🏃 <b>${runT.name||'Corrida'}</b>`);
+        return `Bora, ${maName()}! Hoje é dia de ${partes.join(' e ')}. Cada treino te deixa mais perto da sua meta — depois desse, a sensação de dever cumprido é ótima. Vamos nessa? 💪`;
+      }
+      return 'Hoje é dia de descanso no seu plano. Aproveite pra recuperar — descanso também é treino, é nele que o corpo se reconstrói mais forte! 😴';
     }
     const lift = done.filter(x=>x.module==='lift'), run = done.filter(x=>x.module==='run');
     let r = '';
@@ -3355,9 +3360,46 @@ const MA_ANSWERS = {
     if(!mod||!mod.plan) return 'Crie um plano que eu te mostro os dias de descanso! 🎯';
     const treino = (mod.plan.workouts||[]).length;
     return `🗓️ Seu plano tem <b>${treino}</b> dias de treino e <b>${7-treino}</b> de descanso por semana. Descanso não é preguiça — é quando o corpo se reconstrói mais forte. 😴`;
+  },
+  analise_semana(){
+    const now = Date.now();
+    const seg = new Date(); seg.setHours(0,0,0,0); seg.setDate(seg.getDate()-((seg.getDay()||7)-1));
+    const t0 = seg.getTime();
+    const H = maAllHistory().filter(x=>x.at>=t0 && x.at<=now);
+    if(!H.length) return `📈 <b>Sua análise da semana</b><br><br>Você ainda não registrou treinos nesta semana, ${maName()}. Que tal começar hoje? Um treino já muda o rumo da semana. 💪`;
+    const treinos = H.length;
+    const minutos = H.reduce((s,x)=>s+(x.duration||0),0);
+    const planejados = (((state.modules.lift?.plan?.workouts?.length)||0) + ((state.modules.run?.plan?.workouts?.length)||0)) || treinos;
+    const missL = missedWorkoutsThisWeek(state.modules.lift)||[], missR = missedWorkoutsThisWeek(state.modules.run)||[];
+    const faltas = missL.length + missR.length;
+    const prs = Object.values(state.prs||{}).filter(p=>p&&p.at>=t0).length;
+    const partCount = {};
+    H.forEach(x=>(x.parts||[]).forEach(p=>{ partCount[p]=(partCount[p]||0)+1; }));
+    const foco = Object.entries(partCount).sort((a,b)=>b[1]-a[1]).slice(0,2).map(e=>e[0]);
+    const aderencia = Math.min(1, treinos/Math.max(1,planejados));
+    let nota = 5 + aderencia*4 + (faltas===0?1:0) + (prs>0?0.5:0);
+    nota = Math.max(3, Math.min(10, nota));
+    const notaStr = (Math.round(nota*10)/10).toString().replace('.',',');
+    let sugestao;
+    if(faltas>0) sugestao = 'Na próxima semana, tente não deixar treino pra trás — a constância é o que mais move o ponteiro.';
+    else if(prs===0) sugestao = 'Você manteve firme! Se as séries saem fáceis no topo das repetições, experimente subir um pouco a carga.';
+    else sugestao = 'Ótimo aumento de carga! Mantenha a técnica impecável e o descanso entre séries dentro do recomendado.';
+    const L = ['📈 <b>Sua análise da semana</b>',''];
+    L.push(`• Treinos: <b>${treinos}</b> de ${planejados} planejados ${treinos>=planejados?'✅':''}`);
+    L.push(`• Tempo treinado: <b>${minutos>=60?(minutos/60).toFixed(1).replace('.',',')+'h':minutos+' min'}</b>`);
+    L.push(`• Faltas: <b>${faltas===0?'nenhuma 🎯':faltas}</b>`);
+    if(prs>0) L.push(`• Aumento de carga em <b>${prs}</b> exercício${prs>1?'s':''} 💪`);
+    if(foco.length) L.push(`• Foco: <b>${foco.join(' e ')}</b>`);
+    L.push(`• Nota da semana: <b>${notaStr}/10</b>`);
+    L.push('');
+    L.push(`💡 ${sugestao}`);
+    L.push('');
+    L.push(nota>=8?`Semana excelente, ${maName()}! Continue assim. 🔥`:nota>=6?'Boa semana! Dá pra subir mais um degrau. 💪':'Toda semana é um recomeço — bora fazer a próxima melhor. 👊');
+    return L.join('<br>');
   }
 };
 const MA_SUGGESTIONS = [
+  {lbl:'📈 Análise da semana', key:'analise_semana'},
   {lbl:'💪 Como foi meu treino?', key:'treino_hoje'},
   {lbl:'📅 Quantos dias faltei?', key:'faltei'},
   {lbl:'⏭️ Quando é meu próximo treino?', key:'proximo'},
@@ -3393,6 +3435,7 @@ function maInterpret(txt){
   if(has('como vai','tudo bem','como você está','como voce esta','de boa')) return '_comovai';
   if(has('o que posso escrever','o que posso falar','o que posso dizer','quais comandos','lista de comandos','comandos')) return '_comandos';
   if(has('ajuda','o que você faz','o que voce faz','o que sabe','pode fazer','como funciona','me ajuda')) return '_ajuda';
+  if(has('análise da semana','analise da semana','análise semanal','analise semanal','resumo da semana','como foi minha semana','relatório','relatorio','minha semana')) return 'analise_semana';
   // --- v10: novas intenções (conceitos / saúde / planejamento) — específicas primeiro ---
   if(has('faltei','faltas','dias faltei','treinos pendentes','faltando treino','quantos dias falt')) return 'faltei';
   if(has('quanto peso perdi','peso perdi','perdi peso','peso ganhei','ganhei peso','quanto emagreci','quanto engordei','mudança de peso','mudanca de peso','quanto peso ganhei')) return 'peso_mudanca';
@@ -3795,7 +3838,7 @@ const MA_SOCIAL = {
   _boatarde(){ return `Boa tarde, ${maName()}! 💪 Como posso ajudar? Quer saber como está sua evolução?`; },
   _boanoite(){ return `Boa noite, ${maName()}! 🌙 Bora fechar o dia com chave de ouro? Me pergunte o que quiser sobre seus treinos.`; },
   _tchau(){ return `Até a próxima, ${maName()}! 👊 Continue firme — a constância é o que transforma. Bons treinos!`; },
-  _quemsou(){ return 'Sou o Meta Assistente 🧠 — seu apoio dentro do MetaTreino. Não sou uma IA da internet: eu leio seus dados reais de treino e um bom conhecimento de treino/saúde pra te responder na hora, de graça e até offline. Pergunte sobre sua evolução, treinos, nutrição, conceitos, sua meta e muito mais! 💪'; },
+  _quemsou(){ return 'Sou o Meta Assistente 💬 — seu apoio dentro do MetaTreino. Não sou uma IA da internet: eu leio seus dados reais de treino e um bom conhecimento de treino/saúde pra te responder na hora, de graça e até offline. Pergunte sobre sua evolução, treinos, nutrição, conceitos, sua meta e muito mais! 💪'; },
   _comovai(){ return `Tô ótimo e pronto pra te ajudar! 😄 Mas o que importa é como VOCÊ está. Quer que eu mostre sua evolução recente, ${maName()}?`; },
   _comandos(){ return `📋 <b>O que você pode me dizer:</b><br><br>
 <b>📊 Perguntar</b><br>• "minha evolução" • "como foi meu treino?"<br>• "minha corrida" • "meus troféus" • "minha meta"<br>• "quando é minha prova?" • "qual meu recorde?"<br>• "que músculo treino menos?" • "qual meu IMC?"<br>• "quantos treinos essa semana?"<br>• "qual meu próximo treino?" • "quando é meu aniversário?"<br>• "quanto tempo fiquei sem treinar?" • "me motive"<br><br>
@@ -3851,6 +3894,7 @@ function maOpeningSummary(){
     if(streak>0) L.push(`🔥 Sequência atual: <b>${streak}</b> dia${streak>1?'s':''} sem faltar.`);
     const nx = maNextWorkout();
     if(nx) L.push(`⏭️ Próximo treino: <b>${nx}</b>.`);
+    if(new Date().getDay()===0){ L.push(''); L.push('📈 É domingo — fechamento de semana! Toque em <b>"📈 Análise da semana"</b> pra ver seu resumo e a nota.'); }
     const nudge = maGentleNudge();
     if(nudge){ L.push(''); L.push(nudge); }
     L.push('');
@@ -3876,7 +3920,7 @@ function renderAssistant(){
     ? [{lbl:'💚 Voltar treinos ao normal', key:'_normal'}, ...MA_SUGGESTIONS]
     : MA_SUGGESTIONS;
   $('modal-inner').innerHTML = `
-    <h3>🧠 Meta Assistente</h3>
+    <h3>💬 Meta Assistente</h3>
     <div id="ma-thread" style="max-height:42vh;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column">${bubbles}</div>
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px">
       ${sugs.map(s=>`<button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;white-space:nowrap;flex-shrink:0" onclick="maAsk('${s.key}')">${s.lbl}</button>`).join('')}
