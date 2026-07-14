@@ -1,5 +1,5 @@
-// ===== MetaTreino v10.9 =====
-const APP_VERSION = 'v10.9';
+// ===== MetaTreino v11.0 =====
+const APP_VERSION = 'v11.0';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -224,10 +224,14 @@ function syncToCloud(){
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') syncToCloud(); });
 window.addEventListener('pagehide', ()=>syncToCloud());
 
+// corre uma promessa da nuvem contra um timeout, pra nada travar o app offline/rede lenta
+function fbTimeout(promise, ms){
+  return Promise.race([ promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), ms||5000)) ]);
+}
 async function loadData(){
   let cloud = null, local = null;
   try{
-    const doc = await db.collection('usuarios').doc(fbUser.uid).get();
+    const doc = await fbTimeout(db.collection('usuarios').doc(fbUser.uid).get(), 5000);
     if(doc.exists && doc.data().estadoApp) cloud = doc.data().estadoApp;
   }catch(e){ console.log('Sem conexão com a nuvem agora, usando cache local:', e); }
   try{ local = JSON.parse(localStorage.getItem(localCacheKey(fbUser.uid))||'null'); }catch(e){}
@@ -304,23 +308,27 @@ async function afterGoogleSignIn(user){
   const accessCacheKey = 'metatreino_access_'+email;
 
   let isAdmin = false, allowData = null, checkedOnline = false;
-  try{
-    const adminDoc = await db.collection('admins').doc(email).get();
-    isAdmin = adminDoc.exists && adminDoc.data().ativo === true;
-    const allowDoc = await db.collection('usuariosAutorizados').doc(email).get();
-    if(allowDoc.exists) allowData = allowDoc.data();
-    checkedOnline = true;
-    // guarda a verificação pra permitir uso offline por até 7 dias
-    try{ localStorage.setItem(accessCacheKey, JSON.stringify({isAdmin, allowData, at:Date.now()})); }catch(e){}
-  }catch(e){
-    console.log('Sem conexão pra verificar acesso — tentando cache offline:', e);
+  const cached = (()=>{ try{ return JSON.parse(localStorage.getItem(accessCacheKey)||'null'); }catch(e){ return null; } })();
+  const cacheValid = cached && (Date.now()-cached.at) < 7*86400000;
+  if(navigator.onLine === false && cacheValid){
+    // offline logo na entrada: usa o cache na hora, sem esperar a nuvem travar
+    isAdmin = cached.isAdmin; allowData = cached.allowData;
+    toast('📴 Modo offline — seus treinos funcionam normal e sincronizam depois. Só os vídeos precisam de internet.');
+  } else {
     try{
-      const cached = JSON.parse(localStorage.getItem(accessCacheKey)||'null');
-      if(cached && (Date.now()-cached.at) < 7*86400000){
+      const adminDoc = await fbTimeout(db.collection('admins').doc(email).get(), 4500);
+      isAdmin = adminDoc.exists && adminDoc.data().ativo === true;
+      const allowDoc = await fbTimeout(db.collection('usuariosAutorizados').doc(email).get(), 4500);
+      if(allowDoc.exists) allowData = allowDoc.data();
+      checkedOnline = true;
+      try{ localStorage.setItem(accessCacheKey, JSON.stringify({isAdmin, allowData, at:Date.now()})); }catch(e){}
+    }catch(e){
+      console.log('Sem conexão/timeout pra verificar acesso — usando cache offline:', e);
+      if(cacheValid){
         isAdmin = cached.isAdmin; allowData = cached.allowData;
-        toast('📴 Modo offline — treinos serão sincronizados quando a internet voltar');
+        toast('📴 Modo offline — seus treinos funcionam normal e sincronizam depois. Só os vídeos precisam de internet.');
       }
-    }catch(e2){}
+    }
   }
 
   const now = Date.now();
@@ -682,7 +690,7 @@ function buildLiftExercises(parts, setup){
   parts.forEach(p=>{
     if(blocked.has(p)) return; // pula grupos que sobrecarregam a região dolorida
     const cat = EX_BANK.find(c=>c.name===p); if(!cat) return;
-    let compat = cat.items.filter(ex => (ex.equip||[]).some(e => equipFilter.includes(e)));
+    let compat = cat.items.filter(ex => (ex.equip||[]).some(e => equipFilter.includes(e)) && (equip==='casa' || !ex.improv));
     if(!compat.length) return;
     // Força prioriza exercícios compostos/pesados (os primeiros do banco em cada grupo
     // são os básicos de academia); emagrecimento/resistência rotacionam a lista pra
@@ -709,10 +717,11 @@ function buildLiftExercises(parts, setup){
 // duração estimada calculada do volume real: (tempo da série + descanso) × séries × exercícios + aquecimento
 function estimateLiftDuration(exercises, goal){
   const restSec = {hipertrofia:75, forca:150, emagrecimento:40, resistencia:30}[goal||'hipertrofia'] || 75;
-  const workSec = 40; // tempo médio executando uma série
+  const workSec = 45; // tempo médio executando uma série
   const totalSets = exercises.reduce((s,ex)=>s+(ex.sets||3),0);
-  const mins = Math.round((totalSets*(workSec+restSec))/60) + 8; // +8 min aquecimento/transições
-  return Math.max(25, Math.min(90, mins));
+  // tempo das séries + transição/ajuste por exercício (troca de máquina, anilhas) + aquecimento
+  const mins = Math.round((totalSets*(workSec+restSec))/60 + (exercises.length||0)*1.5 + 5);
+  return Math.max(20, Math.min(100, mins));
 }
 function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
 
@@ -841,7 +850,7 @@ const EX_BANK = [
     // CASA
     {name:'Barra Fixa',sub:'Dorsais / Bíceps',equip:['academia','casa']},
     {name:'Remada Invertida (mesa/barra baixa)',sub:'Costas (horizontal)',equip:['casa','academia']},
-    {name:'Remada com Toalha na Porta',sub:'Costas',equip:['casa']},
+    {name:'Remada com Toalha na Porta',sub:'Costas',equip:['casa'],improv:true},
     {name:'Superman',sub:'Lombar / Costas Baixa',equip:['casa','halteres','academia']}
   ]},
   {name:'Ombro',emo:'🙆',color:'',items:[
@@ -857,8 +866,8 @@ const EX_BANK = [
     {name:'Elevação Posterior Curvado',sub:'Ombro Posterior',equip:['academia','halteres']},
     // CASA
     {name:'Pike Push-up',sub:'Ombro',equip:['casa','halteres','academia']},
-    {name:'Elevação Lateral com Garrafas',sub:'Ombro Lateral',equip:['casa']},
-    {name:'Elevação Frontal com Garrafas',sub:'Ombro Frontal',equip:['casa']},
+    {name:'Elevação Lateral com Garrafas',sub:'Ombro Lateral',equip:['casa'],improv:true},
+    {name:'Elevação Frontal com Garrafas',sub:'Ombro Frontal',equip:['casa'],improv:true},
     {name:'Flexão Pike Elevada',sub:'Ombro (avançado)',equip:['casa','academia']}
   ]},
   {name:'Bíceps',emo:'💪',color:'',items:[
@@ -872,9 +881,9 @@ const EX_BANK = [
     {name:'Rosca Concentrada',sub:'Bíceps (pico)',equip:['academia','halteres']},
     // CASA
     {name:'Chin-up (barra pegada supinada)',sub:'Bíceps / Costas',equip:['academia','casa']},
-    {name:'Rosca com Mochila/Bolsa',sub:'Bíceps',equip:['casa']},
-    {name:'Rosca Martelo com Garrafas',sub:'Braquial / Antebraço',equip:['casa']},
-    {name:'Rosca Isométrica com Toalha',sub:'Bíceps (isometria)',equip:['casa']}
+    {name:'Rosca com Mochila/Bolsa',sub:'Bíceps',equip:['casa'],improv:true},
+    {name:'Rosca Martelo com Garrafas',sub:'Braquial / Antebraço',equip:['casa'],improv:true},
+    {name:'Rosca Isométrica com Toalha',sub:'Bíceps (isometria)',equip:['casa'],improv:true}
   ]},
   {name:'Tríceps',emo:'🦾',color:'orange',items:[
     // ACADEMIA
@@ -888,7 +897,7 @@ const EX_BANK = [
     {name:'Mergulho no Banco/Cadeira',sub:'Tríceps',equip:['casa','halteres','academia']},
     {name:'Mergulho nas Paralelas',sub:'Tríceps / Peito',equip:['academia','casa']},
     {name:'Flexão Fechada (diamante)',sub:'Tríceps',equip:['casa','halteres','academia']},
-    {name:'Tríceps Testa com Garrafa',sub:'Tríceps',equip:['casa']}
+    {name:'Tríceps Testa com Garrafa',sub:'Tríceps',equip:['casa'],improv:true}
   ]},
   {name:'Pernas',emo:'🦵',color:'orange',items:[
     // ACADEMIA
@@ -937,7 +946,7 @@ const EX_BANK = [
   {name:'Trapézio',emo:'🤷',color:'',items:[
     {name:'Encolhimento com Barra',sub:'Trapézio',equip:['academia']},
     {name:'Encolhimento com Halteres',sub:'Trapézio',equip:['academia','halteres']},
-    {name:'Encolhimento com Mochila/Bolsa',sub:'Trapézio',equip:['casa']}
+    {name:'Encolhimento com Mochila/Bolsa',sub:'Trapézio',equip:['casa'],improv:true}
   ]},
   {name:'Core',emo:'🧱',color:'',items:[
     {name:'Prancha (Plank)',sub:'Core (estabilidade)',equip:['casa','halteres','academia']},
@@ -1288,6 +1297,16 @@ function renderHome(){
   // aviso de Modo Férias ativo (pra pessoa lembrar de desligar quando voltar)
   const vacCard = $('card-vacation');
   if(vacCard) vacCard.classList.toggle('hidden', !vacationActive());
+  // aviso de treino de hoje pulado (com opção de voltar atrás)
+  const skipCard = $('card-skipped');
+  if(skipCard){
+    const m2 = state.modules[state.active];
+    const wToday = (m2 && m2.plan) ? (m2.plan.workouts||[]).find(x=>x.dayIdx===getDayIdx()) : null;
+    if(wToday && isSkippedToday(wToday)){
+      skipCard.classList.remove('hidden');
+      const btn = $('skip-undo-btn'); if(btn) btn.setAttribute('onclick', `unskipWorkout('${wToday.k}')`);
+    } else skipCard.classList.add('hidden');
+  }
   // treinos pendentes desta semana (perdeu um ou mais dias?)
   const missed = $('card-missed');
   if(missed){
@@ -1550,12 +1569,14 @@ function renderSessionDetail(w){
     <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.':'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
-    ${isLift ? (lockedToday
+    ${isSkippedToday(w)
+      ? `<div class="card card-alert card-row" style="margin-top:14px;border-color:rgba(148,163,184,0.45)"><div class="card-icon">😴</div><div style="flex:1"><div class="card-title">Treino pulado hoje</div><div class="card-sub">Você escolheu descansar hoje — sem cobrança. Mudou de ideia?</div><button class="btn btn-primary" style="margin-top:10px;padding:8px 16px;font-size:13px" onclick="unskipWorkout('${isLift?w.k:w.dayIdx}')">💪 Voltar atrás (quero treinar)</button></div></div>`
+      : `${isLift ? (lockedToday
       ? `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído hoje</div><div class="card-sub">Pra ajustar algo, edite pelo Histórico. Amanhã a sessão libera de novo.</div></div>`
       : `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>`) : (runDoneToday(w)
       ? `<div class="card card-ok" style="margin-top:14px;text-align:center;padding:12px"><div style="color:var(--primary-2);font-weight:800">✅ Atividade registrada hoje</div><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar outra atividade</button></div>`
       : `<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar atividade (km + tempo)</button>`)}
-    ${((isLift && !lockedToday) || (!isLift && !runDoneToday(w))) ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--text-dim);font-weight:600" onclick="skipWorkout('${isLift?w.k:w.dayIdx}')">🌗 Não vou treinar hoje (pular)</button>` : ''}
+    ${((isLift && !lockedToday) || (!isLift && !runDoneToday(w))) ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--text-dim);font-weight:600" onclick="skipWorkout('${isLift?w.k:w.dayIdx}')">😴 Não vou treinar hoje (pular)</button>` : ''}`}
   `;
   $('session-detail-slot').innerHTML = html;
 }
@@ -1662,6 +1683,7 @@ function toggleWeeklyBlock(){}
 // ---------- SET LOGGER ----------
 let curLog = null;
 function openSetLog(exId, exName){
+  requestWakeLock(); // mantém a tela ligada enquanto registra o exercício
   const today = new Date(); today.setHours(0,0,0,0);
   const logs = state.progress[exId]||[];
   let entry = logs.find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime(); });
@@ -1737,7 +1759,7 @@ function renderSetLogModal(){
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="addSet()">+ Nova série</button>
     <button class="btn btn-outline btn-block" style="margin-top:8px;border-color:rgba(16,185,129,0.4)" onclick="startRestFor('${exId}','${exName.replace(/'/g,"\\'")}')">⏱️ Iniciar descanso</button>
     <div class="row" style="gap:8px;margin-top:14px">
-      <button class="btn btn-ghost btn-block" onclick="closeSetLog(false)">Cancelar</button>
+      <button class="btn btn-ghost btn-block" onclick="closeSetLog(false)">Voltar</button>
       <button class="btn btn-primary btn-block" onclick="closeSetLog(true)">Salvar</button>
     </div>
   `;
@@ -1765,8 +1787,8 @@ function closeSetLog(save){
       const pr = state.prs[curLog.exId];
       if(!pr || s.peso > pr.peso || (s.peso===pr.peso && s.reps > pr.reps)){
         state.prs[curLog.exId] = { peso:s.peso, reps:s.reps, at:Date.now() };
-        if(!pr){ unlockTrophy('first_pr'); toast('🏆 Primeiro Recorde Pessoal!'); }
-        else toast(`🏆 Novo recorde em ${curLog.exName}!`);
+        // registra o recorde agora, mas o TROFÉU só é celebrado ao salvar o treino completo
+        if(pr) toast(`🏆 Novo recorde em ${curLog.exName}!`);
       }
     });
     // clean empty entries
@@ -1779,6 +1801,7 @@ function closeSetLog(save){
   }
   curLog = null;
   closeModal();
+  if(typeof restTimerInt==='undefined' || !restTimerInt) releaseWakeLock(); // solta a tela se não há descanso rodando
   // Sem avanço automático: a pessoa escolhe manualmente o próximo exercício
   if(save && savedExId){
     const next = nextUnloggedExercise(savedExId);
@@ -4956,6 +4979,21 @@ function toggleVacation(){
   const vc = document.getElementById('card-vacation'); if(vc) vc.classList.toggle('hidden', !vacationActive());
 }
 // Pular o treino do dia de propósito (não conta como falta, não cobra).
+function isSkippedToday(w){
+  const d=new Date(); d.setHours(0,0,0,0);
+  return (state.skips||[]).some(s=>s.at===d.getTime() && s.module===state.active && (s.k===(w&&w.k) || s.dayIdx===(w&&w.dayIdx)));
+}
+function unskipWorkout(k){
+  const mod = state.modules[state.active];
+  const w = (mod && mod.plan && mod.plan.workouts||[]).find(x=>String(x.k)===String(k) || String(x.dayIdx)===String(k));
+  const d = new Date(); d.setHours(0,0,0,0);
+  const kk = w?w.k:k, di = w?w.dayIdx:getDayIdx();
+  state.skips = (state.skips||[]).filter(s=>!(s.at===d.getTime() && s.module===state.active && (s.k===kk || s.dayIdx===di)));
+  saveData();
+  toast('💪 Treino reativado! Bora treinar.');
+  if(state.ui.tab==='sessions') renderSessions();
+  else goTab(state.ui.tab||'home');
+}
 function skipWorkout(k){
   const mod = state.modules[state.active];
   const w = (mod && mod.plan && mod.plan.workouts||[]).find(x=>String(x.k)===String(k) || String(x.dayIdx)===String(k));
@@ -4968,8 +5006,8 @@ function skipWorkout(k){
     saveData();
   }
   closeModal();
-  toast('🌗 Treino pulado. Descansar quando o corpo pede é escolha inteligente — te vejo no próximo! 💚');
-  goTab('home');
+  toast('😴 Treino pulado. Descansar quando o corpo pede é escolha inteligente — te vejo no próximo! 💚');
+  if(state.ui.tab==='sessions') renderSessions(); else goTab('home');
 }
 applyTheme(currentTheme()); // aplica imediatamente, antes de qualquer render
 
@@ -5768,7 +5806,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
