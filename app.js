@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.1 =====
-const APP_VERSION = 'v11.1';
+// ===== MetaTreino v11.2 =====
+const APP_VERSION = 'v11.2';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1213,11 +1213,22 @@ function goTab(tab){
   else if(tab==='profile') renderProfile();
 }
 
+// tela de escolha quando o módulo de corrida existe só como registro de atividades (sem plano)
+function renderRunLogScreen(){
+  renderModToggle();
+  const mod = state.modules.run;
+  const n = (mod && mod.history) ? mod.history.length : 0;
+  const sub = document.getElementById('runlog-sub');
+  if(sub) sub.textContent = n>0
+    ? `Você tem ${n} atividade${n>1?'s':''} registrada${n>1?'s':''}. Monte um plano completo ou continue só registrando.`
+    : 'Você ainda não montou um plano de corrida. Monte um plano completo ou registre atividades avulsas (bike, caminhada, corrida).';
+}
 // ---------- HOME ----------
 function renderHome(){
   renderModToggle();
   const mod = state.modules[state.active];
   if(!mod){ showScreen('scr-pick'); return; }
+  if(!mod.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; } // corrida em modo registro (sem plano)
   const isLift = state.active==='lift';
   renderAvatar('home-avatar');
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
@@ -1517,6 +1528,7 @@ function renderYourList(mod){
 // ---------- SESSIONS ----------
 function renderSessions(){
   const mod = state.modules[state.active];
+  if(mod && !mod.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; }
   const isLift = state.active==='lift';
   $('sess-mod-icon').textContent = isLift?'🏋️':'🏃';
   $('sessions-title').innerHTML = `${isLift?'🏋️':'🏃'} Sessões`;
@@ -2103,6 +2115,8 @@ function renderRecords(){
     </div>`).join('');
 }
 function renderPerf(){
+  const _pm = state.modules[state.active];
+  if(_pm && !_pm.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; }
   renderCalendar();
   renderRecords();
   const mod = state.modules[state.active];
@@ -5861,7 +5875,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
