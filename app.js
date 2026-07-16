@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.3 =====
-const APP_VERSION = 'v11.3';
+// ===== MetaTreino v11.4 =====
+const APP_VERSION = 'v11.4';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1502,13 +1502,19 @@ function renderWeekGrid(mod){
   const days = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
   const today = getDayIdx();
   const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-(today-1));
-  // Mescla os dois módulos: se a pessoa tem musculação E corrida, a semana mostra os dois
+  // Mescla os módulos: o ATIVO mostra o plano completo; o outro mostra só dias JÁ passados (histórico/plano),
+  // nunca hoje/futuro — e ignora módulos sem plano (modo só-registro) pra não quebrar a tela.
   const sources = [];
-  if(state.modules.lift) sources.push({mod:state.modules.lift, emo:'💪'});
-  if(state.modules.run) sources.push({mod:state.modules.run, emo:'🏃'});
+  const activeMod = state.modules[state.active];
+  const otherMod = state.active==='lift' ? state.modules.run : state.modules.lift;
+  const activeEmo = state.active==='lift' ? '💪' : '🏃';
+  const otherEmo = state.active==='lift' ? '🏃' : '💪';
+  if(activeMod && activeMod.plan) sources.push({mod:activeMod, emo:activeEmo, isActive:true});
+  if(otherMod && otherMod.plan) sources.push({mod:otherMod, emo:otherEmo, isActive:false});
   const dayInfo = {}; // idx -> {emos:[], done:bool}
-  sources.forEach(({mod:m, emo})=>{
-    m.plan.workouts.forEach(w=>{
+  sources.forEach(({mod:m, emo, isActive})=>{
+    (m.plan.workouts||[]).forEach(w=>{
+      if(!isActive && w.dayIdx >= today) return; // outro módulo: só passado
       dayInfo[w.dayIdx] = dayInfo[w.dayIdx] || {emos:[], done:false};
       if(!dayInfo[w.dayIdx].emos.includes(emo)) dayInfo[w.dayIdx].emos.push(emo);
     });
@@ -1525,7 +1531,8 @@ function renderWeekGrid(mod){
 }
 
 function renderYourList(mod){
-  const isLift = mod.plan.type==='lift';
+  const isLift = state.active==='lift';
+  if(!mod || !mod.plan){ $('your-list').innerHTML=''; return; }
   $('your-list').innerHTML = mod.plan.workouts.map(w=>`<div class="list-item" onclick="openSession('${w.k||w.dayIdx}')">${isLift?`<div class="list-badge">${w.k}</div>`:`<div class="list-dot"></div>`}<div class="list-info"><div class="list-tag">${(w.dayName||'').toUpperCase()}</div><div class="list-name">${isLift?'Treino '+w.k+' — '+w.name:w.name}</div></div><div class="list-right"><span class="mono">~${w.duration}min</span> ›</div></div>`).join('');
 }
 
@@ -2965,10 +2972,13 @@ function openTrophyDetail(id){
     ? `<button onclick="openTrophyDetail('${tid}')" style="background:none;border:none;font-size:26px;color:var(--text-dim);padding:6px 10px;cursor:pointer">${ch}</button>`
     : `<div style="width:42px"></div>`;
   $('modal-inner').innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin:-4px -4px 2px 0">
+    <div style="display:flex;justify-content:flex-end;margin:-4px -4px 0 0">
+      <button onclick="closeModal();openTrophies()" style="background:none;border:none;font-size:20px;color:var(--text-mute);padding:4px 8px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;justify-content:center;align-items:center;gap:20px;margin:-6px 0 2px">
       ${navArrow(prevId,'‹')}
-      <div style="font-size:11.5px;color:var(--text-mute)">${uIdx>=0?(uIdx+1)+' de '+unlocked.length:''}</div>
-      <div style="display:flex;align-items:center">${navArrow(nextId,'›')}<button onclick="closeModal();openTrophies()" style="background:none;border:none;font-size:20px;color:var(--text-mute);padding:4px 8px;cursor:pointer">✕</button></div>
+      <div style="font-size:11.5px;color:var(--text-mute);min-width:46px;text-align:center">${uIdx>=0?(uIdx+1)+' de '+unlocked.length:''}</div>
+      ${navArrow(nextId,'›')}
     </div>
     <div style="text-align:center">
       ${t.secret?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
