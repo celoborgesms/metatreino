@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.0 =====
-const APP_VERSION = 'v11.0';
+// ===== MetaTreino v11.3 =====
+const APP_VERSION = 'v11.3';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1188,6 +1188,10 @@ function renderModToggle(){
   el.innerHTML = `<div class="mod-cur ${cur.cls}"><span style="font-size:20px">${cur.emo}</span><span>${cur.name}</span></div><button class="mod-switch" onclick="switchModule('${other.to}')">⇄ Ir para <span style="font-size:16px">${other.emo}</span> ${other.name}</button>`;
 }
 function switchModule(to){
+  // Corrida sem plano (com ou sem registros) → abre a tela de escolha, não o setup direto
+  if(to==='run' && (!state.modules.run || !state.modules.run.plan)){
+    ensureActivityLog(); state.active='run'; saveData(); goTab('home'); return;
+  }
   if(!state.modules[to]){ state.active=to; saveData(); openSetupScreen(to); prefillSetupFromQuiz(to); return; }
   state.active = to; saveData(); goTab('home'); toast('Trocado para '+(to==='lift'?'🏋️ Musculação':'🏃 Corrida'));
 }
@@ -1213,11 +1217,22 @@ function goTab(tab){
   else if(tab==='profile') renderProfile();
 }
 
+// tela de escolha quando o módulo de corrida existe só como registro de atividades (sem plano)
+function renderRunLogScreen(){
+  renderModToggle();
+  const mod = state.modules.run;
+  const n = (mod && mod.history) ? mod.history.length : 0;
+  const sub = document.getElementById('runlog-sub');
+  if(sub) sub.textContent = n>0
+    ? `Você tem ${n} atividade${n>1?'s':''} registrada${n>1?'s':''}. Monte um plano completo ou continue só registrando.`
+    : 'Você ainda não montou um plano de corrida. Monte um plano completo ou registre atividades avulsas (bike, caminhada, corrida).';
+}
 // ---------- HOME ----------
 function renderHome(){
   renderModToggle();
   const mod = state.modules[state.active];
   if(!mod){ showScreen('scr-pick'); return; }
+  if(!mod.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; } // corrida em modo registro (sem plano)
   const isLift = state.active==='lift';
   renderAvatar('home-avatar');
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
@@ -1285,6 +1300,7 @@ function renderHome(){
     if(a.active){
       adaptCard.classList.remove('hidden');
       const titulo = a.pain.length ? `🩹 Modo cuidado ativo (${a.pain.join(', ')})`
+                   : a.cramp ? '💗 Modo cólica ativo'
                    : a.tpm ? '💗 Modo TPM ativo'
                    : '💚 Modo leve ativo (cansaço)';
       $('adapt-title').textContent = titulo;
@@ -1516,6 +1532,7 @@ function renderYourList(mod){
 // ---------- SESSIONS ----------
 function renderSessions(){
   const mod = state.modules[state.active];
+  if(mod && !mod.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; }
   const isLift = state.active==='lift';
   $('sess-mod-icon').textContent = isLift?'🏋️':'🏃';
   $('sessions-title').innerHTML = `${isLift?'🏋️':'🏃'} Sessões`;
@@ -2102,6 +2119,8 @@ function renderRecords(){
     </div>`).join('');
 }
 function renderPerf(){
+  const _pm = state.modules[state.active];
+  if(_pm && !_pm.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; }
   renderCalendar();
   renderRecords();
   const mod = state.modules[state.active];
@@ -2253,6 +2272,17 @@ function renderPlan(){
   $('pl-days').textContent = accessLabel(days);
 }
 function regenPlan(){ openSetupScreen(state.active); }
+// Cancela o plano de corrida mantendo os registros (volta pro modo "só atividades").
+function cancelRunPlan(){
+  const run = state.modules.run;
+  if(!run || !run.plan){ toast('Você não tem um plano de corrida ativo.'); return; }
+  if(!confirm('Cancelar seu plano de corrida?\n\nSeus registros e conquistas de bike/caminhada/corrida são mantidos — você volta pro modo de só registrar atividades. Pode montar um novo plano quando quiser.')) return;
+  run.plan = null;
+  run.setup = { ...(run.setup||{}), logOnly:true };
+  saveData();
+  toast('✅ Plano de corrida cancelado. Seus registros foram mantidos. 💚');
+  if(state.active==='run') goTab('home'); else renderProfile();
+}
 
 // ---------- PROFILE ----------
 function renderProfile(){
@@ -2301,9 +2331,17 @@ function renderProfile(){
   const isLift = state.active==='lift';
   $('pf-mod').innerHTML = `<div class="icon">${isLift?'🏋️':'🏃'}</div><div style="flex:1"><div class="name">${isLift?'Musculação':'Corrida'}</div><div class="goal">Objetivo: ${labelGoal(mod)}</div></div><button class="btn btn-outline" onclick="switchModuleUI()">→ ${isLift?'🏃 Corrida':'🏋️ Musculação'}</button>`;
   $('pf-plan-lbl').textContent = `Plano de ${isLift?'Musculação':'Corrida'}`;
-  const s = mod.setup;
-  const rows = isLift ? [['Objetivo',labelGoal(mod)],['Dias',s.days+'/semana'],['Equipamento',{academia:'🏋️ Academia',halteres:'💪 Halteres',casa:'🤸 Peso corpo',basico:'💪 Halteres'}[s.equip]]] : [['Objetivo',labelGoal(mod)],['Duração',mod.plan.totalWeeks+' semanas'],['Sessões',s.days+'/semana'],['Terreno',{asfalto:'🛣️ Asfalto',esteira:'🏃 Esteira',trilha:'⛰️ Trilha',pista:'🏟️ Pista'}[s.terrain]]];
+  const s = mod.setup || {};
+  const hasPlan = !!mod.plan;
+  let rows;
+  if(isLift) rows = [['Objetivo',labelGoal(mod)],['Dias',s.days+'/semana'],['Equipamento',{academia:'🏋️ Academia',halteres:'💪 Halteres',casa:'🤸 Peso corpo',basico:'💪 Halteres'}[s.equip]]];
+  else if(hasPlan) rows = [['Objetivo',labelGoal(mod)],['Duração',mod.plan.totalWeeks+' semanas'],['Sessões',s.days+'/semana'],['Terreno',{asfalto:'🛣️ Asfalto',esteira:'🏃 Esteira',trilha:'⛰️ Trilha',pista:'🏟️ Pista'}[s.terrain]]];
+  else rows = [['Status','📋 Modo registro (sem plano)'],['Atividades', (mod.history||[]).length+' registradas']];
   $('pf-plan-card').innerHTML = rows.map(r=>`<div style="display:flex;justify-content:space-between;padding:8px 0"><span class="text-dim">${r[0]}</span><b>${r[1]}</b></div>`).join('');
+  // botão "cancelar plano de corrida" só aparece em Corrida COM plano
+  const cancelBtn = $('pf-cancel-run'); if(cancelBtn) cancelBtn.classList.toggle('hidden', !(!isLift && hasPlan));
+  // troca rápida de terreno e "trocar plano" não fazem sentido sem plano de corrida
+  const qtBtn = $('pf-quick-terrain'); if(qtBtn && !isLift) qtBtn.style.display = hasPlan ? '' : 'none';
 }
 
 function renderWeightChart(){
@@ -2919,9 +2957,18 @@ function openTrophyDetail(id){
   const mesmaCat = TROPHIES.filter(x=>x.cat===t.cat);
   const naCat = mesmaCat.filter(x=>state.trophies.includes(x.id)).length;
   const catNome = {geral:'Gerais', lift:'Musculação', run:'Corrida', walk:'Caminhada', bike:'Bike', streak:'Sequência', body:'Corpo'}[t.cat] || t.cat;
+  const unlocked = TROPHIES.filter(x=>state.trophies.includes(x.id));
+  const uIdx = unlocked.findIndex(x=>x.id===id);
+  const prevId = uIdx>0 ? unlocked[uIdx-1].id : null;
+  const nextId = (uIdx>=0 && uIdx<unlocked.length-1) ? unlocked[uIdx+1].id : null;
+  const navArrow = (tid,ch)=> tid
+    ? `<button onclick="openTrophyDetail('${tid}')" style="background:none;border:none;font-size:26px;color:var(--text-dim);padding:6px 10px;cursor:pointer">${ch}</button>`
+    : `<div style="width:42px"></div>`;
   $('modal-inner').innerHTML = `
-    <div style="display:flex;justify-content:flex-end;margin:-4px -4px 0 0">
-      <button onclick="closeModal();openTrophies()" style="background:none;border:none;font-size:20px;color:var(--text-mute);padding:4px 8px;cursor:pointer">✕</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:-4px -4px 2px 0">
+      ${navArrow(prevId,'‹')}
+      <div style="font-size:11.5px;color:var(--text-mute)">${uIdx>=0?(uIdx+1)+' de '+unlocked.length:''}</div>
+      <div style="display:flex;align-items:center">${navArrow(nextId,'›')}<button onclick="closeModal();openTrophies()" style="background:none;border:none;font-size:20px;color:var(--text-mute);padding:4px 8px;cursor:pointer">✕</button></div>
     </div>
     <div style="text-align:center">
       ${t.secret?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
@@ -3740,6 +3787,7 @@ function maTryCommand(txt){
   // ---- ESTADO EMOCIONAL / CANSAÇO ----
   if(/(estou|tô|to|me sinto|sinto)\s*(muito\s*)?(cansad|exaust|sem energia|acabad|esgotad)/.test(t)) return maTired();
   if(/(estou|tô|to|me sinto|sinto)\s*(triste|pra baixo|desanimad|sem [aâ]nimo|deprim|mal)/.test(t)) return maSad();
+  if(/c[óo]lica/.test(t)) return maCramp();
   if(/(estou|tô|to)\s*(de tpm|na tpm|menstruad|naqueles dias|de chico)/.test(t) || t.includes('tpm')) return maTPM();
 
   // ---- VOLTAR AO NORMAL ----
@@ -3770,10 +3818,42 @@ function maSetWeight(kg, prefix){
   const imc = (()=>{ try{ const r=calcIMC(); return r?` Seu IMC agora é ${r.value} (${r.cls}).`:''; }catch(e){ return ''; } })();
   return {done:true, msg:`${prefix||''}✅ Peso atualizado para ${kg}kg.${imc} Registrei no seu histórico corporal! 📊`};
 }
+// cria um "log de atividades" leve no módulo de corrida pra registrar bike/caminhada/corrida
+// avulsa sem precisar montar um plano de corrida (não atrapalha o modo musculação).
+function ensureActivityLog(){
+  if(!state.modules.run) state.modules.run = { setup:{ logOnly:true }, plan:null, history:[], createdAt:Date.now() };
+  state.modules.run.history = state.modules.run.history || [];
+  return state.modules.run;
+}
+let actLogType = 'bike';
+function openActivityLog(){
+  actLogType = 'bike';
+  const opt = (v,emo,lbl)=>`<div class="opt${actLogType===v?' on':''}" data-actlog="${v}" onclick="setActLogType('${v}')" style="flex:1;text-align:center">${emo} ${lbl}</div>`;
+  $('modal-inner').innerHTML = `
+    <h3>➕ Registrar atividade</h3>
+    <p style="color:var(--text-dim);font-size:13px;margin:6px 0 12px">Fez um cardio extra (tipo uma bike na academia)? Registre aqui — conta pras conquistas e estatísticas, sem precisar de plano de corrida.</p>
+    <div class="row" style="gap:6px;margin-bottom:12px">${opt('corrida','🏃','Corrida')}${opt('caminhada','🚶','Caminhada')}${opt('bike','🚴','Bike')}</div>
+    <div class="row" style="gap:10px">
+      <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Distância (km)</label><input class="input" id="act-km" inputmode="decimal" placeholder="ex: 8" style="margin-top:4px"></div>
+      <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Tempo (min)</label><input class="input" id="act-min" inputmode="numeric" placeholder="ex: 30" style="margin-top:4px"></div>
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="saveActivityLog()">✅ Registrar</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Voltar</button>`;
+  $('modal-back').classList.add('on');
+}
+function setActLogType(v){ actLogType=v; document.querySelectorAll('[data-actlog]').forEach(o=>o.classList.toggle('on', o.dataset.actlog===v)); }
+function saveActivityLog(){
+  const km = parseFloat(($('act-km').value||'').replace(',','.'));
+  const min = parseInt($('act-min').value||'');
+  if(!km || km<=0 || km>200 || !min || min<=0 || min>600){ toast('⚠️ Confira a distância e o tempo.'); return; }
+  const r = maLogActivity(actLogType, km, min);
+  closeModal();
+  toast(r && r.msg ? r.msg.replace(/<[^>]+>/g,'') : '✅ Atividade registrada!');
+  if(state.ui.tab) goTab(state.ui.tab);
+}
 function maLogActivity(type, km, min){
   if(km<=0||km>200||min<=0||min>600) return {done:true, msg:'Esses números parecem estranhos 🤔. Tenta de novo, ex: "corri 5km em 30 minutos".'};
-  const mod = state.modules.run;
-  if(!mod){ return {done:true, msg:'Você ainda não tem um plano de corrida ativo. Crie um primeiro pra eu registrar suas atividades! 🏃'}; }
+  const mod = ensureActivityLog();
   const paceNum = min/km;
   const paceStr = Math.floor(paceNum)+':'+String(Math.round((paceNum-Math.floor(paceNum))*60)).padStart(2,'0')+'/km';
   const meta = {corrida:{emo:'🏃',lbl:'Corrida'},caminhada:{emo:'🚶',lbl:'Caminhada'},bike:{emo:'🚴',lbl:'Bike'}}[type];
@@ -3917,10 +3997,21 @@ function maTPM(){
   saveData();
   return {done:true, msg:'Entendi 💗. Nesses dias o corpo pede mais gentileza — deixei seus treinos mais leves. Respeite seu ritmo: treinar leve ou até descansar é perfeitamente ok. Movimento suave (caminhada, alongamento) pode ajudar com o desconforto, mas sem cobrança. Quando quiser voltar ao normal, é só dizer "voltar ao normal". 🌸'};
 }
+function maCramp(){
+  if(!tpmAvailable()){
+    return {done:true, msg:'O modo cólica foi pensado para o ciclo menstrual 😊. Se quer treinos mais leves por outro motivo, diga <b>"estou cansado"</b> ou <b>"estou com dor em [região]"</b> que eu adapto.'};
+  }
+  state.user.pain = state.user.pain||[];
+  state.user.crampMode = true;
+  regenAllPlans();
+  saveData();
+  return {done:true, msg:'Entendi 💗. Cólica pede gentileza — deixei seus treinos mais leves. Dica: movimento suave (caminhada leve, alongamento) e calor costumam aliviar as cólicas, mas evite forçar o abdômen. Descansar também é totalmente válido. Quando melhorar, diga "voltar ao normal". 🌸'};
+}
 function maBackToNormal(){
-  const tinha = (state.user.pain&&state.user.pain.length) || state.user.tpmMode || state.user.lightMode;
+  const tinha = (state.user.pain&&state.user.pain.length) || state.user.tpmMode || state.user.crampMode || state.user.lightMode;
   state.user.pain = [];
   state.user.tpmMode = false;
+  state.user.crampMode = false;
   state.user.lightMode = false;
   if(typeof regenAllPlans==='function') regenAllPlans();
   saveData();
@@ -4053,7 +4144,7 @@ function renderAssistant(){
     : `<div style="background:var(--surface-2);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`
   ).join('');
   // se a pessoa está com dor ou modo TPM, mostra atalho de voltar ao normal
-  const emModoLeve = (state.user && ((state.user.pain&&state.user.pain.length) || state.user.tpmMode));
+  const emModoLeve = (state.user && ((state.user.pain&&state.user.pain.length) || state.user.tpmMode || state.user.crampMode));
   const sugs = emModoLeve
     ? [{lbl:'💚 Voltar treinos ao normal', key:'_normal'}, ...MA_SUGGESTIONS]
     : MA_SUGGESTIONS;
@@ -4279,14 +4370,15 @@ function adaptMode(){
   const pain = (state.user && state.user.pain) || [];
   // ignora a flag de TPM em perfis masculinos (pode ter ficado ligada de versões antigas)
   const tpm = !!(state.user && state.user.tpmMode) && tpmAvailable();
+  const cramp = !!(state.user && state.user.crampMode) && tpmAvailable();
   const leve = !!(state.user && state.user.lightMode); // modo leve por cansaço (qualquer perfil)
-  return { active: pain.length>0 || tpm || leve, pain, tpm, leve };
+  return { active: pain.length>0 || tpm || cramp || leve, pain, tpm, cramp, leve };
 }
 function adaptReasonText(){
   const a = adaptMode();
   if(!a.active) return '';
   const partes = [];
-  if(a.tpm) partes.push('TPM');
+  if(a.tpm) partes.push('TPM'); if(a.cramp) partes.push('cólica');
   if(a.leve) partes.push('cansaço');
   if(a.pain.length) partes.push(`dor (${a.pain.join(', ')})`);
   return partes.join(' + ');
@@ -4306,12 +4398,12 @@ function regenLiftExercises(){
     w.exercises = buildLiftExercises(w.parts, mod.setup);
     applyPins(w, mod.setup); // respeita as trocas manuais do aluno
     // TPM, cansaço ou dor: reduz uma série (treino mais leve / proteção)
-    if(a.tpm || a.leve || a.pain.length) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
+    if(a.tpm || a.cramp || a.leve || a.pain.length) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
     w.duration = estimateLiftDuration(w.exercises, mod.setup.goal);
     // nome reflete o que será treinado de verdade
     const base = 'Treino '+w.k;
     w.name = w.parts.join(' + ');
-    w.adapted = a.active && (w.parts.join()!==w.originalParts.join() || a.tpm);
+    w.adapted = a.active && (w.parts.join()!==w.originalParts.join() || a.tpm || a.cramp);
     w.adaptNote = w.adapted ? `Adaptado por ${adaptReasonText()}: ${w.originalParts.filter(p=>!w.parts.includes(p)).length?`evitamos ${w.originalParts.filter(p=>!w.parts.includes(p)).join(', ')}`:'volume reduzido'}.` : '';
   });
 }
@@ -5806,7 +5898,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
