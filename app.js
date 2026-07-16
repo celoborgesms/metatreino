@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.4 =====
-const APP_VERSION = 'v11.4';
+// ===== MetaTreino v11.5 =====
+const APP_VERSION = 'v11.5';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -273,31 +273,45 @@ function doLogout(){
   const btn=$('google-btn'); if(btn) btn.style.opacity='1';
   const lbl=$('google-btn-lbl'); if(lbl) lbl.textContent='Entrar com Google';
 }
+function appConfirm(msg, onOk, opts){
+  opts = opts||{};
+  document.getElementById('modal-inner').innerHTML = `
+    <div style="text-align:center;padding:2px 0">
+      <div style="font-size:40px">${opts.emo||'⚠️'}</div>
+      <h3 style="margin:8px 0 6px">${opts.title||'Tem certeza?'}</h3>
+      <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5;white-space:pre-line">${msg}</p>
+    </div>
+    <button class="btn btn-primary btn-block" id="appconfirm-ok" style="margin-top:16px${opts.danger?';background:#ef4444;box-shadow:none':''}">${opts.okLabel||'Confirmar'}</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+  document.getElementById('modal-back').classList.add('on');
+  const ok = document.getElementById('appconfirm-ok');
+  if(ok) ok.onclick = ()=>{ closeModal(); setTimeout(()=>{ try{ onOk&&onOk(); }catch(e){ console.log('appConfirm:',e); } }, 60); };
+}
 function doRestart(){
   if(!state.user || !fbUser) return;
-  if(!confirm('Tem certeza? Todo o progresso será apagado, mas sua conta e acesso continuam.')) return;
-  const keep = { name:state.user.name, email:state.user.email, isAdmin:state.user.isAdmin };
-  state = { user:keep, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
-  saveData(); syncToCloud();
-  closeModal();
-  $('tabbar').classList.add('hidden');
-  toast('🔄 Recomeçando! Preencha o questionário de novo.');
-  showScreen('scr-quiz'); bindOpts('scr-quiz');
+  appConfirm('Todo o progresso será apagado (treinos, séries e conquistas), mas sua conta e acesso continuam.', ()=>{
+    const keep = { name:state.user.name, email:state.user.email, isAdmin:state.user.isAdmin };
+    state = { user:keep, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
+    saveData(); syncToCloud();
+    $('tabbar').classList.add('hidden');
+    toast('🔄 Recomeçando! Preencha o questionário de novo.');
+    showScreen('scr-quiz'); bindOpts('scr-quiz');
+  }, {title:'Começar do zero?', emo:'🔄', okLabel:'Sim, apagar progresso', danger:true});
 }
 function doDeleteAccount(){
   if(!state.user || !fbUser) return;
   const email = fbUser.email;
   if(email === ADMIN_EMAIL){ toast('⚠️ A conta de administrador não pode ser excluída por aqui.'); closeModal(); return; }
-  if(!confirm('Tem certeza? Todo o seu progresso será apagado para sempre.')) return;
-  const uid = fbUser.uid;
-  db.collection('usuarios').doc(uid).delete().catch(e=>console.log('Erro ao excluir na nuvem:', e));
-  try{ localStorage.removeItem(localCacheKey(uid)); }catch(e){}
-  fbAuth.signOut().catch(()=>{});
-  fbUser = null;
-  state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], ui:{tab:'home',selectedSession:null} };
-  closeModal();
-  showScreen('scr-auth');
-  toast('✅ Conta excluída. Comece do zero quando quiser.');
+  appConfirm('Todo o seu progresso será apagado para sempre e você sairá da conta.', ()=>{
+    const uid = fbUser.uid;
+    db.collection('usuarios').doc(uid).delete().catch(e=>console.log('Erro ao excluir na nuvem:', e));
+    try{ localStorage.removeItem(localCacheKey(uid)); }catch(e){}
+    fbAuth.signOut().catch(()=>{});
+    fbUser = null;
+    state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], ui:{tab:'home',selectedSession:null} };
+    showScreen('scr-auth');
+    toast('✅ Conta excluída. Comece do zero quando quiser.');
+  }, {title:'Excluir conta?', emo:'🗑️', okLabel:'Sim, excluir conta', danger:true});
 }
 
 async function afterGoogleSignIn(user){
@@ -1502,19 +1516,14 @@ function renderWeekGrid(mod){
   const days = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
   const today = getDayIdx();
   const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-(today-1));
-  // Mescla os módulos: o ATIVO mostra o plano completo; o outro mostra só dias JÁ passados (histórico/plano),
-  // nunca hoje/futuro — e ignora módulos sem plano (modo só-registro) pra não quebrar a tela.
+  // Mostra os dois módulos juntos quando ambos têm plano (mesmo dia = os dois emojis).
+  // Módulo sem plano (corrida cancelada / modo só-registro) não aparece — sem quebrar a tela.
   const sources = [];
-  const activeMod = state.modules[state.active];
-  const otherMod = state.active==='lift' ? state.modules.run : state.modules.lift;
-  const activeEmo = state.active==='lift' ? '💪' : '🏃';
-  const otherEmo = state.active==='lift' ? '🏃' : '💪';
-  if(activeMod && activeMod.plan) sources.push({mod:activeMod, emo:activeEmo, isActive:true});
-  if(otherMod && otherMod.plan) sources.push({mod:otherMod, emo:otherEmo, isActive:false});
+  if(state.modules.lift && state.modules.lift.plan) sources.push({mod:state.modules.lift, emo:'💪'});
+  if(state.modules.run && state.modules.run.plan) sources.push({mod:state.modules.run, emo:'🏃'});
   const dayInfo = {}; // idx -> {emos:[], done:bool}
-  sources.forEach(({mod:m, emo, isActive})=>{
+  sources.forEach(({mod:m, emo})=>{
     (m.plan.workouts||[]).forEach(w=>{
-      if(!isActive && w.dayIdx >= today) return; // outro módulo: só passado
       dayInfo[w.dayIdx] = dayInfo[w.dayIdx] || {emos:[], done:false};
       if(!dayInfo[w.dayIdx].emos.includes(emo)) dayInfo[w.dayIdx].emos.push(emo);
     });
@@ -2283,12 +2292,13 @@ function regenPlan(){ openSetupScreen(state.active); }
 function cancelRunPlan(){
   const run = state.modules.run;
   if(!run || !run.plan){ toast('Você não tem um plano de corrida ativo.'); return; }
-  if(!confirm('Cancelar seu plano de corrida?\n\nSeus registros e conquistas de bike/caminhada/corrida são mantidos — você volta pro modo de só registrar atividades. Pode montar um novo plano quando quiser.')) return;
-  run.plan = null;
-  run.setup = { ...(run.setup||{}), logOnly:true };
-  saveData();
-  toast('✅ Plano de corrida cancelado. Seus registros foram mantidos. 💚');
-  if(state.active==='run') goTab('home'); else renderProfile();
+  appConfirm('Seus registros e conquistas de bike/caminhada/corrida são mantidos — você volta pro modo de só registrar atividades. Pode montar um novo plano quando quiser.', ()=>{
+    run.plan = null;
+    run.setup = { ...(run.setup||{}), logOnly:true };
+    saveData();
+    toast('✅ Plano de corrida cancelado. Seus registros foram mantidos. 💚');
+    if(state.active==='run') goTab('home'); else renderProfile();
+  }, {title:'Cancelar plano de corrida?', emo:'🏃', okLabel:'Sim, cancelar plano', danger:true});
 }
 
 // ---------- PROFILE ----------
