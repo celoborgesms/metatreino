@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.5 =====
-const APP_VERSION = 'v11.5';
+// ===== MetaTreino v11.6 =====
+const APP_VERSION = 'v11.6';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -282,10 +282,12 @@ function appConfirm(msg, onOk, opts){
       <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5;white-space:pre-line">${msg}</p>
     </div>
     <button class="btn btn-primary btn-block" id="appconfirm-ok" style="margin-top:16px${opts.danger?';background:#ef4444;box-shadow:none':''}">${opts.okLabel||'Confirmar'}</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+    <button class="btn btn-ghost btn-block" id="appconfirm-cancel" style="margin-top:8px">${opts.cancelLabel||'Cancelar'}</button>`;
   document.getElementById('modal-back').classList.add('on');
   const ok = document.getElementById('appconfirm-ok');
   if(ok) ok.onclick = ()=>{ closeModal(); setTimeout(()=>{ try{ onOk&&onOk(); }catch(e){ console.log('appConfirm:',e); } }, 60); };
+  const cc = document.getElementById('appconfirm-cancel');
+  if(cc) cc.onclick = ()=>{ closeModal(); if(opts.onCancel) setTimeout(()=>{ try{ opts.onCancel(); }catch(e){} }, 60); };
 }
 function doRestart(){
   if(!state.user || !fbUser) return;
@@ -4241,14 +4243,12 @@ function importMyData(ev){
       const data = JSON.parse(reader.result);
       const est = data.estado || data; // aceita o arquivo completo ou só o estado
       if(!est || !est.user){ toast('⚠️ Arquivo inválido — não parece um backup do MetaTreino'); return; }
-      if(!confirm('Restaurar este backup? Seus dados atuais serão SUBSTITUÍDOS pelos do arquivo.')) return;
-      const keepUser = { ...est.user, email: state.user.email, isAdmin: state.user.isAdmin }; // conta logada manda
-      state = {...state, ...est, user:keepUser, ui:{tab:'home',selectedSession:null}};
-      ensureStats();
-      saveData(); syncToCloud();
-      closeModal();
-      toast('✅ Backup restaurado com sucesso!');
-      goTab('home');
+      appConfirm('Seus dados atuais serão SUBSTITUÍDOS pelos do arquivo.', ()=>{
+        const keepUser = { ...est.user, email: state.user.email, isAdmin: state.user.isAdmin };
+        state = {...state, ...est, user:keepUser, ui:{tab:'home',selectedSession:null}};
+        ensureStats(); saveData(); syncToCloud();
+        toast('✅ Backup restaurado com sucesso!'); goTab('home');
+      }, {title:'Restaurar backup?', emo:'📥', okLabel:'Sim, restaurar', danger:true});
     }catch(e){ toast('⚠️ Não foi possível ler o arquivo'); }
   };
   reader.readAsText(file);
@@ -4636,11 +4636,12 @@ function quickChangeEquip(equip){
 // ---------- FOTO DE PERFIL ----------
 function removePhoto(){
   if(!state.user || !state.user.profile || !state.user.profile.photo) return;
-  if(!confirm('Remover sua foto de perfil?')) return;
-  state.user.profile.photo = null; // null sobrescreve na nuvem (delete não propagava)
-  saveData(); syncToCloud();
-  toast('🗑️ Foto removida');
-  goTab('profile');
+  appConfirm('Quer remover sua foto de perfil?', ()=>{
+    state.user.profile.photo = null;
+    saveData(); syncToCloud();
+    toast('🗑️ Foto removida');
+    goTab('profile');
+  }, {title:'Remover foto?', emo:'🗑️', okLabel:'Sim, remover', danger:true});
 }
 
 // ---------- RESUMO DA SEMANA + COMPARTILHAMENTO ----------
@@ -5573,12 +5574,13 @@ async function toggleStudent(email){
   }catch(e){ console.log('Erro ao bloquear/reativar aluno:', e); toast('⚠️ Não foi possível salvar. Confira as permissões do Firestore.'); }
 }
 async function removeStudent(email){
-  if(!confirm('Remover este aluno da lista? A conta dele será mantida mas ele perderá o acesso.')) return;
-  try{
-    await db.collection('usuariosAutorizados').doc(email).delete();
-    delete allowCache[email];
-    toast('🗑️ Aluno removido'); goAdmin();
-  }catch(e){ console.log('Erro ao remover aluno:', e); toast('⚠️ Não foi possível remover. Confira as permissões do Firestore.'); }
+  appConfirm('A conta dele será mantida, mas ele perderá o acesso ao app.', async ()=>{
+    try{
+      await db.collection('usuariosAutorizados').doc(email).delete();
+      delete allowCache[email];
+      toast('🗑️ Aluno removido'); goAdmin();
+    }catch(e){ console.log('Erro ao remover aluno:', e); toast('⚠️ Não foi possível remover. Confira as permissões do Firestore.'); }
+  }, {title:'Remover aluno?', emo:'🗑️', okLabel:'Sim, remover', danger:true});
 }
 function doBroadcast(){
   const msg = $('bc-msg').value;
@@ -5721,36 +5723,40 @@ function recomputePR(exId, diaRemovidoTs){
   else delete state.prs[exId];
 }
 function deleteHistoryEntry(idx){
-  if(!confirm('Excluir este treino do histórico? Não pode ser desfeito.')) return;
   const mod = state.modules[state.active];
   const x = mod.history[idx];
-  // se for treino de musculação DE HOJE, oferece limpar também as séries registradas —
-  // assim a sessão volta ao estado "pra fazer" e pode ser registrada de novo
-  if(x && x.module==='lift'){
-    const d = new Date(x.at); d.setHours(0,0,0,0);
-    const today = new Date(); today.setHours(0,0,0,0);
-    if(d.getTime()===today.getTime() && confirm('Limpar também as séries registradas hoje nesses exercícios? (Assim você pode registrar o treino de novo do zero)')){
+  const doDelete = (clearSets)=>{
+    if(clearSets && x && x.module==='lift'){
+      const today = new Date(); today.setHours(0,0,0,0);
       const ids = (x.exercisesDone||[]).map(e=>e.id || slug(e.name));
       ids.forEach(id=>{
         if(!state.progress[id]) return;
-        state.progress[id] = state.progress[id].filter(p=>{ const pd=new Date(p.date); pd.setHours(0,0,0,0); return pd.getTime()!==today.getTime(); });
+        state.progress[id] = state.progress[id].filter(pp=>{ const pd=new Date(pp.date); pd.setHours(0,0,0,0); return pd.getTime()!==today.getTime(); });
         if(!state.progress[id].length) delete state.progress[id];
       });
-      // Se o recorde (PR) veio justamente das séries apagadas, ele não pode ficar.
-      // Recalcula a partir do que sobrou; se não sobrou nada, remove o PR.
       ids.forEach(id=>recomputePR(id, today.getTime()));
     }
-  }
-  const removido = mod.history[idx];
-  mod.history.splice(idx, 1);
-  // desconta só o registro removido. Troféus e desafios já conquistados PERMANECEM.
-  subtractFromStats(removido);
-  // registro recente → conquistas recalculadas; registro antigo → conquistas preservadas
-  if(isRecentEntry(removido && removido.at)) recomputeAchievements();
-  saveData();
-  toast('🗑️ Treino excluído');
-  closeModal();
-  renderHistory();
+    const removido = mod.history[idx];
+    mod.history.splice(idx, 1);
+    subtractFromStats(removido);
+    if(isRecentEntry(removido && removido.at)) recomputeAchievements();
+    saveData();
+    toast('🗑️ Treino excluído');
+    renderHistory();
+  };
+  appConfirm('Não pode ser desfeito.', ()=>{
+    // treino de musculação DE HOJE: pergunta se limpa também as séries (pra poder registrar de novo)
+    if(x && x.module==='lift'){
+      const d = new Date(x.at); d.setHours(0,0,0,0);
+      const today = new Date(); today.setHours(0,0,0,0);
+      if(d.getTime()===today.getTime()){
+        appConfirm('Limpar também as séries registradas hoje nesses exercícios? Assim você pode registrar o treino de novo do zero.', ()=>doDelete(true),
+          {title:'Limpar séries de hoje?', emo:'🧹', okLabel:'Sim, limpar séries', cancelLabel:'Não, manter séries', onCancel:()=>doDelete(false)});
+        return;
+      }
+    }
+    doDelete(false);
+  }, {title:'Excluir treino?', emo:'🗑️', okLabel:'Sim, excluir', danger:true});
 }
 
 // ---------- SWAP EXERCISE ----------
