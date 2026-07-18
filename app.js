@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.6 =====
-const APP_VERSION = 'v11.6';
+// ===== MetaTreino v11.8 =====
+const APP_VERSION = 'v11.8';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -618,10 +618,14 @@ function generatePlan(module, setup){
     const totalWeeks = {'5km':8,'10km':10,'21km':12,'42km':16}[goal];
     const wkDays = (setup.selectedDays && setup.selectedDays.length===setup.days) ? setup.selectedDays : ({ 3:[2,4,6], 4:[1,3,5,7], 5:[1,2,4,5,7], 6:[1,2,3,4,5,6] }[setup.days] || [1,3,5,7]);
     const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
-    const types = ['Corrida Leve','Intervalado','Corrida Longa','Ritmo Constante'];
     // distância base = a da prova; escala pelo nível (avançado corre mais no dia a dia)
     const raceKm = parseFloat(String(goal).replace(/[^\d.]/g,'')) || 5;
     const level = setup.level || 'iniciante';
+    // Iniciante NÃO recebe tiros (intervalado): só corridas leves e longas, pra criar o hábito
+    // sem sofrer e sem desistir. Intermediário ganha ritmo; avançado ganha o intervalado.
+    const types = level==='iniciante' ? ['Corrida Leve','Corrida Longa']
+      : level==='intermediario' ? ['Corrida Leve','Ritmo Constante','Corrida Longa']
+      : ['Corrida Leve','Intervalado','Corrida Longa','Ritmo Constante'];
     // a "corrida longa" chega perto da distância da prova conforme o nível
     const longMult = { iniciante:0.6, intermediario:0.8, avancado:1.0 }[level];
     // fatores de cada tipo de treino em relação à corrida longa
@@ -1537,7 +1541,15 @@ function renderWeekGrid(mod){
   });
   $('week-grid').innerHTML = days.map((n,i)=>{
     const idx=i+1, info=dayInfo[idx], has=!!(info&&info.emos.length), done=!!(info&&info.done), isT=idx===today;
-    return `<div class="day ${isT?'today':''} ${!has?'rest':''}"><div class="day-name">${n.slice(0,3)}</div><div class="day-dot ${done?'done':has?'plan':''}"></div><div class="day-emoji" style="${has&&info.emos.length>1?'font-size:11px;letter-spacing:-2px':''}">${has?info.emos.join(''):'·'}</div></div>`;
+    const cd=new Date(startWk); cd.setDate(startWk.getDate()+i);
+    const dateStr=String(cd.getDate()).padStart(2,'0')+'/'+String(cd.getMonth()+1).padStart(2,'0');
+    const status = done?'✅':(isT?'🟡':(has?'⚪':''));
+    return `<div class="day ${isT?'today':''} ${!has?'rest':''}">
+      <div class="day-name">${n.slice(0,3)}</div>
+      <div style="font-size:9.5px;color:var(--text-mute);margin-top:1px;line-height:1">${dateStr}</div>
+      <div class="day-emoji" style="margin-top:4px;${has&&info.emos.length>1?'font-size:11px;letter-spacing:-2px':''}">${has?info.emos.join(''):'·'}</div>
+      <div style="font-size:11px;line-height:1;margin-top:3px;min-height:13px">${status}</div>
+    </div>`;
   }).join('');
 }
 
@@ -1592,7 +1604,7 @@ function renderSessionDetail(w){
   const html = `
     <div class="detail-hero">
       <h2>${isLift?`Treino ${w.k} — ${w.name}`:w.name}</h2>
-      <div style="margin-top:8px"><span class="plan-badge">${isLift?'Foco':'Fácil'}</span></div>
+      <div style="margin-top:8px"><span class="plan-badge">${isLift?'Foco':'Fácil'}</span>${isLift && isCustomized(w) ? '<span class="plan-badge" style="margin-left:6px;background:rgba(167,139,250,0.15);color:#a78bfa;border-color:rgba(167,139,250,0.4)">✨ Personalizado</span>' : ''}</div>
       <div class="today-desc" style="margin-top:14px">${isLift?liftDesc(w):runDesc(w)}</div>
       <div class="info-grid">
         <div class="info-cell"><div class="info-cell-icon">⏱️</div><div class="info-cell-lbl">DURAÇÃO</div><div class="info-cell-val mono">${w.duration} min</div></div>
@@ -1602,6 +1614,7 @@ function renderSessionDetail(w){
     </div>
     ${w.adapted ? `<div class="card card-alert card-row" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
     <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.':'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
+    ${isLift && isCustomized(w) ? `<div class="card card-row" style="border-color:rgba(167,139,250,0.35);background:rgba(167,139,250,0.06)"><div class="card-icon">✨</div><div style="flex:1"><div class="card-title" style="color:#a78bfa">Treino personalizado</div><div class="card-sub">Você trocou ${w.pins.length} exercício${w.pins.length>1?'s':''} neste treino. As trocas ficam salvas nos próximos treinos.</div><button class="btn btn-ghost" style="margin-top:8px;padding:6px 12px;font-size:12px" onclick="restoreWorkout('${w.k}')">↩️ Restaurar treino original</button></div></div>` : ''}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
     ${isSkippedToday(w)
@@ -1993,7 +2006,7 @@ function renderHistory(){
         const parts = !isRunEntry ? partsFromEntry(x) : [];
         const nExs = (x.exercisesDone||[]).length;
         const meta = isRunEntry
-          ? `<span>⏱️ <b>${x.duration}min</b></span>${x.distance?`<span>📍 <b>${x.distance}km</b></span>`:''}${x.pace?`<span>⚡ <b>${x.pace}</b></span>`:''}`
+          ? `<span>⏱️ <b>${fmtDur(x.duration)}</b></span>${x.distance?`<span>📍 <b>${x.distance}km</b></span>`:''}${x.pace?`<span>⚡ <b>${x.pace}</b></span>`:''}`
           : `<span>⏱️ <b>${x.duration}min</b></span>${nExs?`<span>🏋️ <b>${nExs} exercícios</b></span>`:''}${feelEmo?`<span>${feelEmo}</span>`:''}`;
         return `<div class="hist-card ${isRunEntry?'run':''}" onclick="openHistoryEntry(${x._idx})">
           <div class="hist-emo">${emo}</div>
@@ -3857,7 +3870,7 @@ function openActivityLog(){
     <div class="row" style="gap:6px;margin-bottom:12px">${opt('corrida','🏃','Corrida')}${opt('caminhada','🚶','Caminhada')}${opt('bike','🚴','Bike')}</div>
     <div class="row" style="gap:10px">
       <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Distância (km)</label><input class="input" id="act-km" inputmode="decimal" placeholder="ex: 8" style="margin-top:4px"></div>
-      <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Tempo (min)</label><input class="input" id="act-min" inputmode="numeric" placeholder="ex: 30" style="margin-top:4px"></div>
+      <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Tempo (min:seg)</label><input class="input" id="act-min" inputmode="text" placeholder="ex: 30:45" style="margin-top:4px"></div>
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="saveActivityLog()">✅ Registrar</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Voltar</button>`;
@@ -3866,7 +3879,7 @@ function openActivityLog(){
 function setActLogType(v){ actLogType=v; document.querySelectorAll('[data-actlog]').forEach(o=>o.classList.toggle('on', o.dataset.actlog===v)); }
 function saveActivityLog(){
   const km = parseFloat(($('act-km').value||'').replace(',','.'));
-  const min = parseInt($('act-min').value||'');
+  const min = parseTimeToMin($('act-min').value||'');
   if(!km || km<=0 || km>200 || !min || min<=0 || min>600){ toast('⚠️ Confira a distância e o tempo.'); return; }
   const r = maLogActivity(actLogType, km, min);
   closeModal();
@@ -5760,6 +5773,20 @@ function deleteHistoryEntry(idx){
 }
 
 // ---------- SWAP EXERCISE ----------
+function isCustomized(w){ return !!(w && w.pins && w.pins.length>0); }
+function restoreWorkout(k){
+  const mod = state.modules.lift;
+  const w = (mod.plan.workouts||[]).find(x=>x.k===k);
+  if(!w || !w.pins || !w.pins.length) return;
+  appConfirm('Isso volta os exercícios deste treino aos originais gerados pelo app. Suas trocas serão desfeitas (os outros treinos não mudam).', ()=>{
+    w.pins = [];
+    w.exercises = buildLiftExercises(w.originalParts || w.parts, mod.setup);
+    w.duration = estimateLiftDuration(w.exercises, mod.setup.goal);
+    saveData();
+    toast('↩️ Treino restaurado ao original!');
+    if(state.ui.tab==='sessions') renderSessions(); else goTab(state.ui.tab||'home');
+  }, {title:'Restaurar treino original?', emo:'↩️', okLabel:'Sim, restaurar'});
+}
 function openSwapExercise(exId){
   const mod = state.modules.lift;
   const w = mod.plan.workouts.find(w=>w.exercises.some(e=>e.id===exId));
@@ -5820,6 +5847,27 @@ function doSwapExercise(oldId, newId, newName, newSub){
 }
 
 // ---------- RUN LOG (km + tempo real) ----------
+// Aceita "32" (min), "45:30" (min:seg) ou "1:30:00" (h:min:seg) -> minutos (com fração)
+function parseTimeToMin(str){
+  str = String(str||'').trim().replace(/\s/g,'');
+  if(!str) return 0;
+  if(str.includes(':')){
+    const p = str.split(':').map(x=>parseInt(x,10)||0);
+    let h=0,m=0,sec=0;
+    if(p.length>=3){ h=p[0]; m=p[1]; sec=p[2]; }
+    else { m=p[0]; sec=p[1]; }
+    return h*60 + m + sec/60;
+  }
+  return parseFloat(str.replace(',','.'))||0;
+}
+// minutos (fração) -> "1h30m", "32min 45s" ou "32 min"
+function fmtDur(min){
+  const totalSec = Math.round((min||0)*60);
+  const h=Math.floor(totalSec/3600), m=Math.floor((totalSec%3600)/60), sec=totalSec%60;
+  if(h>0) return h+'h'+String(m).padStart(2,'0')+(sec?'m'+String(sec).padStart(2,'0')+'s':'m');
+  if(sec>0) return m+'min '+String(sec).padStart(2,'0')+'s';
+  return m+' min';
+}
 function openRunLog(dayIdx){
   const mod = state.modules.run;
   // No dia de descanso (sem treino no dayIdx) ou registro livre, usa um alvo genérico —
@@ -5834,7 +5882,7 @@ function openRunLog(dayIdx){
       <div class="radio-grid g3" id="rl-type"><div class="opt on" data-val="corrida">🏃 Corrida</div><div class="opt" data-val="caminhada">🚶 Caminhada</div><div class="opt" data-val="bike">🚴 Bike</div></div>
     </div>
     <div class="field"><label>Distância percorrida (km)</label><input class="input mono" type="number" step="0.1" id="rl-km" placeholder="Ex: 5.2"></div>
-    <div class="field"><label>Tempo total (minutos)</label><input class="input mono" type="number" id="rl-min" placeholder="Ex: 32"${livre?'':` value="${w.duration}"`}></div>
+    <div class="field"><label>Tempo total (min:seg ou h:min:seg)</label><input class="input mono" type="text" inputmode="numeric" id="rl-min" placeholder="Ex: 32:45 ou 1:30:00"${livre?'':` value="${w.duration}"`}></div>
     <div class="field"><label>Como se sentiu?</label>
       <div class="radio-grid g3" id="rl-rate"><div class="opt" data-val="1">😩 Difícil</div><div class="opt on" data-val="3">😊 Normal</div><div class="opt" data-val="5">🚀 Ótimo</div></div>
     </div>
@@ -5849,7 +5897,7 @@ function openRunLog(dayIdx){
 const ACTIVITY_META = { corrida:{emo:'🏃',lbl:'Corrida'}, caminhada:{emo:'🚶',lbl:'Caminhada'}, bike:{emo:'🚴',lbl:'Bike'} };
 function saveRunLog(dayIdx){
   const km = parseFloat($('rl-km').value);
-  const min = parseInt($('rl-min').value);
+  const min = parseTimeToMin($('rl-min').value);
   const rate = parseInt(readOpt('rl-rate')) || 3;
   const type = readOpt('rl-type') || 'corrida';
   if(!km || km<=0){ toast('Distância inválida'); return; }
@@ -5924,7 +5972,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
