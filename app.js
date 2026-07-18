@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.8 =====
-const APP_VERSION = 'v11.8';
+// ===== MetaTreino v11.9 =====
+const APP_VERSION = 'v11.9';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1527,23 +1527,27 @@ function renderWeekGrid(mod){
   const sources = [];
   if(state.modules.lift && state.modules.lift.plan) sources.push({mod:state.modules.lift, emo:'💪'});
   if(state.modules.run && state.modules.run.plan) sources.push({mod:state.modules.run, emo:'🏃'});
-  const dayInfo = {}; // idx -> {emos:[], done:bool}
+  const dayInfo = {}; // idx -> {emos:[], planned:0, done:0}
   sources.forEach(({mod:m, emo})=>{
     (m.plan.workouts||[]).forEach(w=>{
-      dayInfo[w.dayIdx] = dayInfo[w.dayIdx] || {emos:[], done:false};
+      dayInfo[w.dayIdx] = dayInfo[w.dayIdx] || {emos:[], planned:0, done:0};
       if(!dayInfo[w.dayIdx].emos.includes(emo)) dayInfo[w.dayIdx].emos.push(emo);
+      dayInfo[w.dayIdx].planned++;
     });
     (m.history||[]).filter(h=>h.at>=startWk.getTime()).forEach(h=>{
       const d=new Date(h.at); const idx = d.getDay()===0?7:d.getDay();
-      dayInfo[idx] = dayInfo[idx] || {emos:[], done:false};
-      dayInfo[idx].done = true;
+      dayInfo[idx] = dayInfo[idx] || {emos:[], planned:0, done:0};
+      dayInfo[idx].done++;
     });
   });
   $('week-grid').innerHTML = days.map((n,i)=>{
-    const idx=i+1, info=dayInfo[idx], has=!!(info&&info.emos.length), done=!!(info&&info.done), isT=idx===today;
+    const idx=i+1, info=dayInfo[idx], has=!!(info&&info.emos.length), isT=idx===today;
+    const planned=info?info.planned:0, doneN=info?info.done:0;
+    const fullDone = doneN>0 && doneN>=planned;       // tudo que estava planejado foi feito
+    const partial  = doneN>0 && !fullDone;            // fez parte (ex: correu mas falta a musculação)
     const cd=new Date(startWk); cd.setDate(startWk.getDate()+i);
     const dateStr=String(cd.getDate()).padStart(2,'0')+'/'+String(cd.getMonth()+1).padStart(2,'0');
-    const status = done?'✅':(isT?'🟡':(has?'⚪':''));
+    const status = fullDone?'✅':(isT?'🟡':(partial?'🟢':(has?'⚪':'')));
     return `<div class="day ${isT?'today':''} ${!has?'rest':''}">
       <div class="day-name">${n.slice(0,3)}</div>
       <div style="font-size:9.5px;color:var(--text-mute);margin-top:1px;line-height:1">${dateStr}</div>
@@ -3870,7 +3874,7 @@ function openActivityLog(){
     <div class="row" style="gap:6px;margin-bottom:12px">${opt('corrida','🏃','Corrida')}${opt('caminhada','🚶','Caminhada')}${opt('bike','🚴','Bike')}</div>
     <div class="row" style="gap:10px">
       <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Distância (km)</label><input class="input" id="act-km" inputmode="decimal" placeholder="ex: 8" style="margin-top:4px"></div>
-      <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Tempo (min:seg)</label><input class="input" id="act-min" inputmode="text" placeholder="ex: 30:45" style="margin-top:4px"></div>
+      <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Tempo (min:seg)</label><input class="input" id="act-min" inputmode="text" placeholder="ex: 30:45 ou 30.45" style="margin-top:4px"></div>
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="saveActivityLog()">✅ Registrar</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Voltar</button>`;
@@ -5847,18 +5851,17 @@ function doSwapExercise(oldId, newId, newName, newSub){
 }
 
 // ---------- RUN LOG (km + tempo real) ----------
-// Aceita "32" (min), "45:30" (min:seg) ou "1:30:00" (h:min:seg) -> minutos (com fração)
+// Aceita "44" (min), "44:30"/"44.30"/"44,30" (min:seg) ou "1:30:00"/"1.30.00" (h:min:seg) -> minutos (fração).
+// O teclado numérico do Android não tem ":", então também aceitamos . e , como separador.
 function parseTimeToMin(str){
   str = String(str||'').trim().replace(/\s/g,'');
   if(!str) return 0;
-  if(str.includes(':')){
-    const p = str.split(':').map(x=>parseInt(x,10)||0);
-    let h=0,m=0,sec=0;
-    if(p.length>=3){ h=p[0]; m=p[1]; sec=p[2]; }
-    else { m=p[0]; sec=p[1]; }
-    return h*60 + m + sec/60;
-  }
-  return parseFloat(str.replace(',','.'))||0;
+  const parts = str.split(/[:.,]/).map(x=>parseInt(x,10)||0);
+  if(parts.length===1) return parts[0]; // só minutos
+  let h=0,m=0,sec=0;
+  if(parts.length>=3){ h=parts[0]; m=parts[1]; sec=parts[2]; }
+  else { m=parts[0]; sec=parts[1]; }
+  return h*60 + m + sec/60;
 }
 // minutos (fração) -> "1h30m", "32min 45s" ou "32 min"
 function fmtDur(min){
@@ -5882,7 +5885,7 @@ function openRunLog(dayIdx){
       <div class="radio-grid g3" id="rl-type"><div class="opt on" data-val="corrida">🏃 Corrida</div><div class="opt" data-val="caminhada">🚶 Caminhada</div><div class="opt" data-val="bike">🚴 Bike</div></div>
     </div>
     <div class="field"><label>Distância percorrida (km)</label><input class="input mono" type="number" step="0.1" id="rl-km" placeholder="Ex: 5.2"></div>
-    <div class="field"><label>Tempo total (min:seg ou h:min:seg)</label><input class="input mono" type="text" inputmode="numeric" id="rl-min" placeholder="Ex: 32:45 ou 1:30:00"${livre?'':` value="${w.duration}"`}></div>
+    <div class="field"><label>Tempo total (min:seg ou h:min:seg)</label><input class="input mono" type="text" inputmode="numeric" id="rl-min" placeholder="Ex: 44:30 ou 44.30 (min seg)"${livre?'':` value="${w.duration}"`}></div>
     <div class="field"><label>Como se sentiu?</label>
       <div class="radio-grid g3" id="rl-rate"><div class="opt" data-val="1">😩 Difícil</div><div class="opt on" data-val="3">😊 Normal</div><div class="opt" data-val="5">🚀 Ótimo</div></div>
     </div>
