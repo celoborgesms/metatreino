@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.9 =====
-const APP_VERSION = 'v11.9';
+// ===== MetaTreino v11.10 =====
+const APP_VERSION = 'v11.10';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1547,7 +1547,17 @@ function renderWeekGrid(mod){
     const partial  = doneN>0 && !fullDone;            // fez parte (ex: correu mas falta a musculação)
     const cd=new Date(startWk); cd.setDate(startWk.getDate()+i);
     const dateStr=String(cd.getDate()).padStart(2,'0')+'/'+String(cd.getMonth()+1).padStart(2,'0');
-    const status = fullDone?'✅':(isT?'🟡':(partial?'🟢':(has?'⚪':'')));
+    const isPast = idx < today;
+    const daySkipped = (state.skips||[]).some(s=>s.dayIdx===idx && s.at>=startWk.getTime());
+    const dayVac = (typeof isVacationDay==='function') && isVacationDay(cd);
+    // prioridade: tudo feito > parcial > hoje > faltou (passado planejado e não feito) > planejado
+    let status;
+    if(fullDone) status='✅';
+    else if(partial) status='🟢';
+    else if(isT) status='🟡';
+    else if(isPast && planned>0 && !daySkipped && !dayVac) status='❌';
+    else if(has) status='⚪';
+    else status='';
     return `<div class="day ${isT?'today':''} ${!has?'rest':''}">
       <div class="day-name">${n.slice(0,3)}</div>
       <div style="font-size:9.5px;color:var(--text-mute);margin-top:1px;line-height:1">${dateStr}</div>
