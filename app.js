@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.10 =====
-const APP_VERSION = 'v11.10';
+// ===== MetaTreino v11.11 =====
+const APP_VERSION = 'v11.11';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1555,7 +1555,7 @@ function renderWeekGrid(mod){
     if(fullDone) status='✅';
     else if(partial) status='🟢';
     else if(isT) status='🟡';
-    else if(isPast && planned>0 && !daySkipped && !dayVac) status='❌';
+    else if(isPast && planned>0 && !daySkipped && !dayVac) status='<span style="color:var(--text-mute);font-weight:700">–</span>';
     else if(has) status='⚪';
     else status='';
     return `<div class="day ${isT?'today':''} ${!has?'rest':''}">
