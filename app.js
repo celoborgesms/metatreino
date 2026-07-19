@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.18 =====
-const APP_VERSION = 'v11.18';
+// ===== MetaTreino v11.20 =====
+const APP_VERSION = 'v11.20';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -368,12 +368,12 @@ async function afterGoogleSignIn(user){
   state.user = { name:user.displayName||'', email, isAdmin };
   loadVideoLinks(); // não bloqueia o login; links do treinador pros vídeos
   loadCoachMural(); // logo/mensagem fixada do treinador
-  loadSpecialAward(); // conquista especial (por e-mail, data marcada)
   loadCoachContact(); // whatsapp/e-mail de contato do treinador
   await loadData();
   if(!state.user) state.user = { name:user.displayName||'', email, isAdmin };
   state.user.isAdmin = isAdmin;
   state.user.email = email;
+  loadSpecialAward(); // depois de carregar os dados: reconcilia/mostra a conquista especial
   bootAfterAuth();
 }
 
@@ -2998,6 +2998,7 @@ function shareTrophyImage(id){
   shareCanvas(c, 'metatreino-'+id+'.png', `${t.emoji} Desbloqueei "${t.name}" no MetaTreino!`);
 }
 function openTrophyDetail(id){
+  document.getElementById('modal-back').classList.remove('award-dark'); // fundo preto só na celebração de desbloqueio
   const t = TROPHIES.find(x=>x.id===id); if(!t) return;
   const quando = (state.trophyDates||{})[id];
   const dataStr = quando ? new Date(quando).toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'}) : 'antes do app registrar datas';
@@ -3054,6 +3055,7 @@ function ordenarTrofeus(items){
   });
 }
 function openTrophies(){
+  document.getElementById('modal-back').classList.remove('award-dark'); // lista de conquistas com fundo normal
   const catNames = { geral:'🌟 Gerais', streak:'🔥 Consistência', lift:'🏋️ Musculação', run:'🏃 Corrida', walk:'🚶 Caminhada', bike:'🚴 Bike', body:'⚖️ Corpo' };
   // Ordem pensada: primeiro o que tem progresso mensurável (modalidades e consistência),
   // depois os gerais, e por último as secretas — que não têm meta pra perseguir.
