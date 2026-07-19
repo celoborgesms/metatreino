@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.13 =====
-const APP_VERSION = 'v11.13';
+// ===== MetaTreino v11.15 =====
+const APP_VERSION = 'v11.15';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2722,14 +2722,14 @@ function renderAward(){
       <div style="text-align:center;font-size:11.5px;color:var(--text-mute)">${awardIdx+1} de ${n} conquistas</div>`:''}
     <button class="btn btn-primary btn-block anim-glow" style="margin-top:14px" onclick="closeAwards();openTrophies()">🏆 Ver meus troféus</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeAwards()">Fechar</button>`;
-  $('modal-back').classList.add('on');
+  $('modal-back').classList.add('on','award-dark');
 }
 function awardNav(d){
   const novo = awardIdx + d;
   if(novo < 0 || novo >= awardQueue.length) return;
   awardIdx = novo; renderAward();
 }
-function closeAwards(){ awardQueue = []; awardIdx = 0; closeModal(); }
+function closeAwards(){ awardQueue = []; awardIdx = 0; document.getElementById('modal-back').classList.remove('award-dark'); closeModal(); }
 
 function unlockTrophy(id){
   if(state.trophies.includes(id)) return;
@@ -2920,6 +2920,7 @@ function checkTrophies(){
     if(wkTarget > 0 && done7d > 0 && done7d >= wkTarget) unlockTrophy('week_goal');
   }
   checkMilestones();
+  if(typeof checkSpecialAward==='function') checkSpecialAward('workout'); // conquista especial após terminar um treino
 }
 // ===== MARCOS (treinador celebra números redondos: 10º, 50º, 100º treino...) =====
 const MILESTONES = [1,10,25,50,100,150,200,250,300,365,500,750,1000];
@@ -3070,6 +3071,13 @@ function openTrophies(){
     ${(()=>{ const sec=TROPHIES.filter(t=>t.secret); const rev=sec.filter(t=>state.trophies.includes(t.id)).length;
       return `<p style="color:var(--accent-2);font-size:12px;margin-top:4px">✨ ${rev} de ${sec.length} conquistas secretas reveladas — elas aparecem sozinhas quando você as merece</p>`; })()}
     <div style="height:8px;border-radius:99px;background:rgba(148,163,184,0.15);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pctAll}%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:99px"></div></div>
+    ${state.specialTrophy ? `<div onclick="showSpecialReveal(state.specialTrophy)" style="margin-top:18px;padding:18px;border-radius:16px;background:radial-gradient(circle at 50% 0%, rgba(244,114,182,0.20), rgba(244,114,182,0.04));border:1px solid rgba(244,114,182,0.45);text-align:center;cursor:pointer">
+      <div style="font-size:46px;filter:drop-shadow(0 0 14px rgba(244,114,182,.55))">${state.specialTrophy.emo||'💍'}</div>
+      <div style="font-size:10.5px;letter-spacing:2px;color:#f472b6;font-weight:800;margin-top:4px">💗 CONQUISTA ETERNA</div>
+      <div style="font-weight:800;font-size:17px;margin-top:2px">${(state.specialTrophy.titulo||'').replace(/</g,'&lt;')}</div>
+      <div style="color:var(--text-dim);font-size:12.5px;line-height:1.55;margin-top:6px;white-space:pre-line">${(state.specialTrophy.descricao||'').replace(/</g,'&lt;')}</div>
+      <div style="font-size:11px;color:var(--text-mute);margin-top:8px;font-style:italic">Toque para reviver este momento ❤️</div>
+    </div>` : ''}
     ${groups.map(g=>{
       const u = g.items.filter(t=>state.trophies.includes(t.id)).length;
       return `<div style="margin-top:18px"><div class="section-lbl" style="margin:0 0 8px">${g.name} · ${u}/${g.items.length}</div>
@@ -5320,20 +5328,28 @@ async function loadSpecialAward(){
   }catch(e){
     try{ specialAward = JSON.parse(localStorage.getItem('metatreino_special')||'null'); }catch(e2){ specialAward=null; }
   }
-  checkSpecialAward();
+  checkSpecialAward('open');
 }
-function checkSpecialAward(){
+function checkSpecialAward(trigger){
   const sa = specialAward;
   if(!sa || !sa.email || !sa.titulo) return;
   const myEmail = ((fbUser && fbUser.email) || (state.user && state.user.email) || '').toLowerCase();
   if(myEmail !== String(sa.email).toLowerCase()) return;
   const reached = !!sa.liberarAgora || (sa.data && new Date() >= new Date(sa.data+'T00:00:00'));
   if(!reached) return;
+  // modo "após treino": só revela quando ela terminar um treino (não na abertura do app)
+  if(sa.aoTreinar && trigger!=='workout') return;
+  if(!sa.aoTreinar && trigger==='workout') return;
   const shownKey = 'metatreino_special_shown_'+(sa.data||'now')+'_'+(sa.atualizadoEm||'');
   try{ if(localStorage.getItem(shownKey)) return; localStorage.setItem(shownKey,'1'); }catch(e){}
-  setTimeout(()=>showSpecialReveal(sa), 1000); // deixa a Home aparecer antes
+  setTimeout(()=>showSpecialReveal(sa), sa.aoTreinar ? 1400 : 1000); // deixa a tela assentar antes
 }
 function showSpecialReveal(sa){
+  // eterniza a conquista na conta dela (sincroniza na nuvem) — fica salva pra sempre
+  try{
+    state.specialTrophy = { emo: sa.emo||'💍', titulo: sa.titulo||'', descricao: sa.descricao||'', at: (state.specialTrophy && state.specialTrophy.at) || Date.now() };
+    saveData();
+  }catch(e){}
   const frases = (sa.frases && sa.frases.length) ? sa.frases : [
     'Toda jornada é melhor quando compartilhada...',
     'E existem pessoas que transformam a nossa vida...',
@@ -5378,30 +5394,42 @@ function startHearts(ov){
     box.appendChild(h);
   }
 }
+function isoToBr(iso){ if(!iso) return ''; const p=String(iso).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso; }
 function openSpecialAwardAdmin(){
   const s = specialAward||{};
   $('modal-inner').innerHTML = `
     <h3>💍 Conquista especial</h3>
-    <p style="color:var(--text-dim);font-size:12.5px;line-height:1.5">Uma conquista única, só pra um e-mail, revelada numa tela especial (fundo escuro, frases surgindo, corações) na data escolhida — ou na hora, com "Liberar agora". Aparece só uma vez.</p>
+    <p style="color:var(--text-dim);font-size:12.5px;line-height:1.5">Uma conquista única, só pra um e-mail, revelada numa tela especial (fundo escuro, frases surgindo, corações). Aparece só uma vez.</p>
     <div class="field" style="margin-top:10px"><label>E-mail da pessoa</label><input class="input" id="sa-email" placeholder="email@exemplo.com" value="${(s.email||'').replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Título da conquista</label><input class="input" id="sa-titulo" placeholder="Para Sempre" value="${(s.titulo||'').replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Descrição</label><textarea class="input" id="sa-desc" rows="3" style="resize:vertical">${(s.descricao||'').replace(/</g,'&lt;')}</textarea></div>
     <div class="row" style="gap:10px">
       <div class="field" style="flex:1"><label>Emoji</label><input class="input" id="sa-emo" placeholder="💍" value="${(s.emo||'💍').replace(/"/g,'&quot;')}"></div>
-      <div class="field" style="flex:1.5"><label>Data (aaaa-mm-dd)</label><input class="input" id="sa-data" placeholder="2026-08-15" value="${s.data||''}"></div>
+      <div class="field" style="flex:1.5"><label>Data (dd/mm/aaaa)</label><input class="input" id="sa-data" inputmode="numeric" placeholder="15/08/2026" value="${isoToBr(s.data)}"></div>
     </div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0 6px"><input type="checkbox" id="sa-agora" ${s.liberarAgora?'checked':''}> Liberar agora (ignora a data)</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0"><input type="checkbox" id="sa-treinar" ${s.aoTreinar?'checked':''}> 🏋️ Revelar quando ela terminar um treino (não na abertura)</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:2px 0 6px"><input type="checkbox" id="sa-agora" ${s.liberarAgora?'checked':''}> ⚡ Liberar agora (ignora a data)</label>
     <button class="btn btn-primary btn-block" style="margin-top:8px;background:#f472b6;box-shadow:none;color:#fff" onclick="saveSpecialAward()">💾 Salvar conquista especial</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
   $('modal-back').classList.add('on');
 }
 async function saveSpecialAward(){
+  // aceita dd/mm/aaaa (ou aaaa-mm-dd) e guarda internamente como aaaa-mm-dd
+  let dataRaw = ($('sa-data').value||'').trim(); let dataISO='';
+  if(dataRaw){
+    const p = dataRaw.split(/[\/\-.]/).map(x=>x.trim());
+    if(p.length===3){
+      if(p[0].length===4) dataISO = `${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
+      else dataISO = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+    }
+  }
   const data = {
     email: ($('sa-email').value||'').trim().toLowerCase(),
     titulo: ($('sa-titulo').value||'').trim(),
     descricao: ($('sa-desc').value||'').trim(),
     emo: ($('sa-emo').value||'💍').trim() || '💍',
-    data: ($('sa-data').value||'').trim(),
+    data: dataISO,
+    aoTreinar: !!$('sa-treinar').checked,
     liberarAgora: !!$('sa-agora').checked,
     atualizadoEm: Date.now()
   };
@@ -5411,7 +5439,7 @@ async function saveSpecialAward(){
     specialAward = data;
     try{ localStorage.setItem('metatreino_special', JSON.stringify(data)); }catch(e){}
     closeModal();
-    toast('💍 Conquista especial salva! Ela verá na data (ou já, se "liberar agora").');
+    toast(data.aoTreinar ? '💍 Salva! Ela verá ao terminar um treino.' : '💍 Conquista especial salva!');
   }catch(e){ console.log('Erro conquista especial:', e); toast('⚠️ Não foi possível salvar. Confira as regras do Firestore (config).'); }
 }
 
