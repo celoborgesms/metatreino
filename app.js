@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.17 =====
-const APP_VERSION = 'v11.17';
+// ===== MetaTreino v11.18 =====
+const APP_VERSION = 'v11.18';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -3071,13 +3071,6 @@ function openTrophies(){
     ${(()=>{ const sec=TROPHIES.filter(t=>t.secret); const rev=sec.filter(t=>state.trophies.includes(t.id)).length;
       return `<p style="color:var(--accent-2);font-size:12px;margin-top:4px">✨ ${rev} de ${sec.length} conquistas secretas reveladas — elas aparecem sozinhas quando você as merece</p>`; })()}
     <div style="height:8px;border-radius:99px;background:rgba(148,163,184,0.15);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pctAll}%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:99px"></div></div>
-    ${state.specialTrophy ? `<div onclick="showSpecialReveal(state.specialTrophy)" style="margin-top:18px;padding:18px;border-radius:16px;background:radial-gradient(circle at 50% 0%, rgba(244,114,182,0.20), rgba(244,114,182,0.04));border:1px solid rgba(244,114,182,0.45);text-align:center;cursor:pointer">
-      <div style="font-size:46px;filter:drop-shadow(0 0 14px rgba(244,114,182,.55))">${state.specialTrophy.emo||'💍'}</div>
-      <div style="font-size:10.5px;letter-spacing:2px;color:#f472b6;font-weight:800;margin-top:4px">💗 CONQUISTA ETERNA</div>
-      <div style="font-weight:800;font-size:17px;margin-top:2px">${(state.specialTrophy.titulo||'').replace(/</g,'&lt;')}</div>
-      <div style="color:var(--text-dim);font-size:12.5px;line-height:1.55;margin-top:6px;white-space:pre-line">${(state.specialTrophy.descricao||'').replace(/</g,'&lt;')}</div>
-      <div style="font-size:11px;color:var(--text-mute);margin-top:8px;font-style:italic">Toque para reviver este momento ❤️</div>
-    </div>` : ''}
     ${groups.map(g=>{
       const u = g.items.filter(t=>state.trophies.includes(t.id)).length;
       return `<div style="margin-top:18px"><div class="section-lbl" style="margin:0 0 8px">${g.name} · ${u}/${g.items.length}</div>
@@ -3100,6 +3093,13 @@ function openTrophies(){
           return `<div class="trophy ${ul?'unlock':''}"${clique}><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div>${bar}</div>`;
         }).join('')}</div></div>`;
     }).join('')}
+    ${state.specialTrophy ? `<div onclick="showSpecialReveal(state.specialTrophy)" style="margin-top:20px;padding:18px;border-radius:16px;background:rgba(167,139,250,0.07);border:1px solid rgba(167,139,250,0.30);text-align:center;cursor:pointer">
+      <div style="font-size:44px;filter:drop-shadow(0 0 10px rgba(167,139,250,.38))">${state.specialTrophy.emo||'💍'}</div>
+      <div style="font-size:10.5px;letter-spacing:2px;color:#a78bfa;font-weight:700;margin-top:4px">CONQUISTA ETERNA</div>
+      <div style="font-weight:800;font-size:16px;margin-top:2px">${(state.specialTrophy.titulo||'').replace(/</g,'&lt;')}</div>
+      <div style="color:var(--text-dim);font-size:12.5px;line-height:1.55;margin-top:6px;white-space:pre-line">${(state.specialTrophy.descricao||'').replace(/</g,'&lt;')}</div>
+      <div style="font-size:11px;color:var(--text-mute);margin-top:8px;font-style:italic">Toque para reviver este momento</div>
+    </div>` : ''}
     <button class="btn btn-outline btn-block" style="margin-top:14px;border-color:rgba(16,185,129,0.4)" onclick="shareTrophiesImage()">📤 Compartilhar minhas conquistas</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-inner').innerHTML = html;
@@ -3924,7 +3924,7 @@ function maLogActivity(type, km, min){
   else if(type==='bike'){ if(km>=20)unlockTrophy('bike_20k'); if(km>=50)unlockTrophy('bike_50k'); }
   if(typeof checkTrophies==='function') checkTrophies();
   saveData();
-  return {done:true, msg:`✅ Registrei sua ${meta.lbl.toLowerCase()}: ${km}km em ${min} min (ritmo ${paceStr}). Está no seu histórico! ${meta.emo} Mandou bem!`};
+  return {done:true, msg:`✅ Registrei sua ${meta.lbl.toLowerCase()}: ${km}km em ${fmtDur(min)} (ritmo ${paceStr}). Está no seu histórico! ${meta.emo} Mandou bem!`};
 }
 function maLogLift(part){
   const mod = state.modules.lift;
@@ -5321,12 +5321,24 @@ async function saveMural(){
 // ---------- CONQUISTA ESPECIAL (única, por e-mail, revelação cinematográfica) ----------
 let specialAward = null;
 async function loadSpecialAward(){
+  let loaded = false;
   try{
     const doc = await fbTimeout(db.collection('config').doc('specialAward').get(), 4000);
     specialAward = doc.exists ? doc.data() : null;
+    loaded = true;
     try{ localStorage.setItem('metatreino_special', JSON.stringify(specialAward)); }catch(e){}
   }catch(e){
     try{ specialAward = JSON.parse(localStorage.getItem('metatreino_special')||'null'); }catch(e2){ specialAward=null; }
+  }
+  // Reconciliação (só quando carregou do servidor): se a config não aponta mais pra esta conta
+  // (e-mail removido ou trocado), remove a conquista eterna desta conta.
+  if(loaded){
+    const alvo = String((specialAward && specialAward.email) || '').toLowerCase();
+    const meu = ((fbUser && fbUser.email) || (state.user && state.user.email) || '').toLowerCase();
+    if(state.specialTrophy && (!alvo || meu !== alvo)){
+      delete state.specialTrophy;
+      saveData();
+    }
   }
   checkSpecialAward('open');
 }
@@ -5363,11 +5375,11 @@ function showSpecialReveal(sa){
     <div id="sr-hearts" style="position:absolute;inset:0;overflow:hidden;pointer-events:none"></div>
     <div id="sr-phrase" style="font-size:19px;line-height:1.6;color:#e8ecf4;max-width:340px;min-height:130px;opacity:0;transition:opacity 1s;position:relative;z-index:2"></div>
     <div id="sr-award" style="opacity:0;transition:opacity 1.4s,transform 1.4s;transform:scale(.8);position:relative;z-index:2">
-      <div style="font-size:80px;filter:drop-shadow(0 0 24px rgba(244,114,182,.6))">${emo}</div>
-      <div style="font-size:12px;letter-spacing:3px;color:#f472b6;font-weight:800;margin-top:10px">CONQUISTA DESBLOQUEADA</div>
+      <div style="font-size:80px;filter:drop-shadow(0 0 24px rgba(167,139,250,.6))">${emo}</div>
+      <div style="font-size:12px;letter-spacing:3px;color:#a78bfa;font-weight:800;margin-top:10px">CONQUISTA DESBLOQUEADA</div>
       <h2 style="margin:6px 0 12px;color:#fff;font-size:26px">${(sa.titulo||'').replace(/</g,'&lt;')}</h2>
       <p style="color:#c7cfdd;font-size:14.5px;line-height:1.65;max-width:320px;margin:0 auto;white-space:pre-line">${(sa.descricao||'').replace(/</g,'&lt;')}</p>
-      <button class="btn btn-primary" style="margin-top:26px;background:#f472b6;box-shadow:none;padding:12px 30px;color:#fff" onclick="var e=document.getElementById('special-reveal');if(e){e.style.opacity='0';setTimeout(function(){e.remove()},800)}">Continuar ❤️</button>
+      <button class="btn btn-primary" style="margin-top:26px;background:#a78bfa;box-shadow:none;padding:12px 30px;color:#fff" onclick="var e=document.getElementById('special-reveal');if(e){e.style.opacity='0';setTimeout(function(){e.remove()},800)}">Continuar ❤️</button>
     </div>`;
   document.body.appendChild(ov);
   requestAnimationFrame(()=>{ ov.style.opacity='1'; });
@@ -5409,7 +5421,7 @@ function openSpecialAwardAdmin(){
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0"><input type="checkbox" id="sa-treinar" ${s.aoTreinar?'checked':''}> 🏋️ Revelar quando ela terminar um treino (não na abertura)</label>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:2px 0 6px"><input type="checkbox" id="sa-agora" ${s.liberarAgora?'checked':''}> ⚡ Liberar agora (ignora a data)</label>
-    <button class="btn btn-primary btn-block" style="margin-top:8px;background:#f472b6;box-shadow:none;color:#fff" onclick="saveSpecialAward()">💾 Salvar conquista especial</button>
+    <button class="btn btn-primary btn-block" style="margin-top:8px;background:#a78bfa;box-shadow:none;color:#fff" onclick="saveSpecialAward()">💾 Salvar conquista especial</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
   $('modal-back').classList.add('on');
 }
@@ -5782,7 +5794,7 @@ function openHistoryEntry(idx){
     ${exBlock}
     <div class="field" style="margin-top:12px"><label>Nome</label><input class="input" id="he-name" value="${x.name.replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Data</label><input class="input" type="datetime-local" id="he-date" value="${d.toISOString().slice(0,16)}" style="color-scheme:dark"></div>
-    <div class="field"><label>Duração (min)</label><input class="input mono" type="number" id="he-dur" value="${x.duration||0}"></div>
+    <div class="field"><label>Duração (min:seg)</label><input class="input mono" type="text" inputmode="numeric" id="he-dur" value="${durToEdit(x.duration||0)}"></div>
     ${isRun?`<div class="field"><label>Distância (km)</label><input class="input mono" type="number" step="0.1" id="he-km" value="${x.distance||''}"></div>`:''}
     <div class="row" style="gap:8px;margin-top:14px">
       <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
@@ -5801,7 +5813,7 @@ function saveHistoryEntry(idx){
   x.name = $('he-name').value.trim() || x.name;
   const dv = $('he-date').value;
   if(dv){ const nd = new Date(dv); if(!isNaN(nd)) x.at = nd.getTime(); }
-  x.duration = parseInt($('he-dur').value) || x.duration;
+  x.duration = parseTimeToMin($('he-dur').value) || x.duration;
   const kmEl = $('he-km'); if(kmEl){ const km = parseFloat(kmEl.value); if(km>0){ x.distance = km; if(x.duration) { const pace = x.duration/km; x.pace = Math.floor(pace)+':'+String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0')+'/km'; } } }
   // corrigiu a distância? os contadores vitalícios precisam acompanhar,
   // senão um erro de digitação (50km em vez de 30km) fica inflando os km pra sempre.
@@ -6019,6 +6031,12 @@ function fmtDur(min){
   if(sec>0) return m+'min '+String(sec).padStart(2,'0')+'s';
   return m+' min';
 }
+// formato editável (mm:ss ou h:mm:ss) que o parseTimeToMin consegue reler
+function durToEdit(min){
+  const t=Math.round((min||0)*60); const h=Math.floor(t/3600),m=Math.floor((t%3600)/60),sec=t%60;
+  if(h>0) return h+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+  return m+':'+String(sec).padStart(2,'0');
+}
 function openRunLog(dayIdx){
   const mod = state.modules.run;
   // No dia de descanso (sem treino no dayIdx) ou registro livre, usa um alvo genérico —
@@ -6080,7 +6098,7 @@ function saveRunLog(dayIdx){
   checkTrophies();
   recalibrateRunPlan(); // os próximos treinos se ajustam ao que você registrou
   saveData();
-  toast(`${meta.emo} ${meta.lbl} salva: ${km}km em ${min}min (${paceStr})`);
+  toast(`${meta.emo} ${meta.lbl} salva: ${km}km em ${fmtDur(min)} (${paceStr})`);
   closeModal();
   goTab('home');
 }
