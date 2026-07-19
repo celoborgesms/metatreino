@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.11 =====
-const APP_VERSION = 'v11.11';
+// ===== MetaTreino v11.13 =====
+const APP_VERSION = 'v11.13';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -368,6 +368,7 @@ async function afterGoogleSignIn(user){
   state.user = { name:user.displayName||'', email, isAdmin };
   loadVideoLinks(); // não bloqueia o login; links do treinador pros vídeos
   loadCoachMural(); // logo/mensagem fixada do treinador
+  loadSpecialAward(); // conquista especial (por e-mail, data marcada)
   loadCoachContact(); // whatsapp/e-mail de contato do treinador
   await loadData();
   if(!state.user) state.user = { name:user.displayName||'', email, isAdmin };
@@ -1628,7 +1629,7 @@ function renderSessionDetail(w){
     </div>
     ${w.adapted ? `<div class="card card-alert card-row" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
     <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.':'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
-    ${isLift && isCustomized(w) ? `<div class="card card-row" style="border-color:rgba(167,139,250,0.35);background:rgba(167,139,250,0.06)"><div class="card-icon">✨</div><div style="flex:1"><div class="card-title" style="color:#a78bfa">Treino personalizado</div><div class="card-sub">Você trocou ${w.pins.length} exercício${w.pins.length>1?'s':''} neste treino. As trocas ficam salvas nos próximos treinos.</div><button class="btn btn-ghost" style="margin-top:8px;padding:6px 12px;font-size:12px" onclick="restoreWorkout('${w.k}')">↩️ Restaurar treino original</button></div></div>` : ''}
+    ${isLift && isCustomized(w) ? `<div class="card card-row" style="border-color:rgba(167,139,250,0.35);background:rgba(167,139,250,0.06)"><div class="card-icon">✨</div><div style="flex:1"><div class="card-title" style="color:#a78bfa">Treino personalizado</div><div class="card-sub">Você trocou ${w.pins.length} exercício${w.pins.length>1?'s':''} neste treino. As trocas ficam salvas nos próximos treinos. Pra desfazer, use "Voltar à sugestão" em cada exercício.</div></div></div>` : ''}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
     ${isSkippedToday(w)
@@ -5309,6 +5310,111 @@ async function saveMural(){
   }
 }
 
+// ---------- CONQUISTA ESPECIAL (única, por e-mail, revelação cinematográfica) ----------
+let specialAward = null;
+async function loadSpecialAward(){
+  try{
+    const doc = await fbTimeout(db.collection('config').doc('specialAward').get(), 4000);
+    specialAward = doc.exists ? doc.data() : null;
+    try{ localStorage.setItem('metatreino_special', JSON.stringify(specialAward)); }catch(e){}
+  }catch(e){
+    try{ specialAward = JSON.parse(localStorage.getItem('metatreino_special')||'null'); }catch(e2){ specialAward=null; }
+  }
+  checkSpecialAward();
+}
+function checkSpecialAward(){
+  const sa = specialAward;
+  if(!sa || !sa.email || !sa.titulo) return;
+  const myEmail = ((fbUser && fbUser.email) || (state.user && state.user.email) || '').toLowerCase();
+  if(myEmail !== String(sa.email).toLowerCase()) return;
+  const reached = !!sa.liberarAgora || (sa.data && new Date() >= new Date(sa.data+'T00:00:00'));
+  if(!reached) return;
+  const shownKey = 'metatreino_special_shown_'+(sa.data||'now')+'_'+(sa.atualizadoEm||'');
+  try{ if(localStorage.getItem(shownKey)) return; localStorage.setItem(shownKey,'1'); }catch(e){}
+  setTimeout(()=>showSpecialReveal(sa), 1000); // deixa a Home aparecer antes
+}
+function showSpecialReveal(sa){
+  const frases = (sa.frases && sa.frases.length) ? sa.frases : [
+    'Toda jornada é melhor quando compartilhada...',
+    'E existem pessoas que transformam a nossa vida...',
+    'Hoje você desbloqueou a conquista mais importante de todas...'
+  ];
+  const emo = sa.emo || '💍';
+  const ov = document.createElement('div');
+  ov.id = 'special-reveal';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#05070d;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px;opacity:0;transition:opacity 1.2s';
+  ov.innerHTML = `
+    <div id="sr-hearts" style="position:absolute;inset:0;overflow:hidden;pointer-events:none"></div>
+    <div id="sr-phrase" style="font-size:19px;line-height:1.6;color:#e8ecf4;max-width:340px;min-height:130px;opacity:0;transition:opacity 1s;position:relative;z-index:2"></div>
+    <div id="sr-award" style="opacity:0;transition:opacity 1.4s,transform 1.4s;transform:scale(.8);position:relative;z-index:2">
+      <div style="font-size:80px;filter:drop-shadow(0 0 24px rgba(244,114,182,.6))">${emo}</div>
+      <div style="font-size:12px;letter-spacing:3px;color:#f472b6;font-weight:800;margin-top:10px">CONQUISTA DESBLOQUEADA</div>
+      <h2 style="margin:6px 0 12px;color:#fff;font-size:26px">${(sa.titulo||'').replace(/</g,'&lt;')}</h2>
+      <p style="color:#c7cfdd;font-size:14.5px;line-height:1.65;max-width:320px;margin:0 auto;white-space:pre-line">${(sa.descricao||'').replace(/</g,'&lt;')}</p>
+      <button class="btn btn-primary" style="margin-top:26px;background:#f472b6;box-shadow:none;padding:12px 30px;color:#fff" onclick="var e=document.getElementById('special-reveal');if(e){e.style.opacity='0';setTimeout(function(){e.remove()},800)}">Continuar ❤️</button>
+    </div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(()=>{ ov.style.opacity='1'; });
+  const ph = ov.querySelector('#sr-phrase');
+  let i=0;
+  const showNext = ()=>{
+    if(!document.getElementById('special-reveal')) return;
+    if(i < frases.length){
+      ph.style.opacity='0';
+      setTimeout(()=>{ ph.textContent = frases[i]; ph.style.opacity='1'; i++; setTimeout(showNext, 3400); }, 700);
+    } else {
+      ph.style.opacity='0';
+      setTimeout(()=>{ ph.style.display='none'; const aw=ov.querySelector('#sr-award'); if(aw){ aw.style.opacity='1'; aw.style.transform='scale(1)'; } startHearts(ov); }, 800);
+    }
+  };
+  setTimeout(showNext, 1500);
+}
+function startHearts(ov){
+  const box = ov.querySelector('#sr-hearts'); if(!box) return;
+  for(let k=0;k<20;k++){
+    const h=document.createElement('div');
+    h.textContent = ['❤️','💕','💗','💖'][k%4];
+    h.style.cssText = `position:absolute;left:${Math.random()*100}%;bottom:-40px;font-size:${14+Math.random()*18}px;animation:sr-float ${4+Math.random()*4}s linear ${Math.random()*3}s infinite`;
+    box.appendChild(h);
+  }
+}
+function openSpecialAwardAdmin(){
+  const s = specialAward||{};
+  $('modal-inner').innerHTML = `
+    <h3>💍 Conquista especial</h3>
+    <p style="color:var(--text-dim);font-size:12.5px;line-height:1.5">Uma conquista única, só pra um e-mail, revelada numa tela especial (fundo escuro, frases surgindo, corações) na data escolhida — ou na hora, com "Liberar agora". Aparece só uma vez.</p>
+    <div class="field" style="margin-top:10px"><label>E-mail da pessoa</label><input class="input" id="sa-email" placeholder="email@exemplo.com" value="${(s.email||'').replace(/"/g,'&quot;')}"></div>
+    <div class="field"><label>Título da conquista</label><input class="input" id="sa-titulo" placeholder="Para Sempre" value="${(s.titulo||'').replace(/"/g,'&quot;')}"></div>
+    <div class="field"><label>Descrição</label><textarea class="input" id="sa-desc" rows="3" style="resize:vertical">${(s.descricao||'').replace(/</g,'&lt;')}</textarea></div>
+    <div class="row" style="gap:10px">
+      <div class="field" style="flex:1"><label>Emoji</label><input class="input" id="sa-emo" placeholder="💍" value="${(s.emo||'💍').replace(/"/g,'&quot;')}"></div>
+      <div class="field" style="flex:1.5"><label>Data (aaaa-mm-dd)</label><input class="input" id="sa-data" placeholder="2026-08-15" value="${s.data||''}"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0 6px"><input type="checkbox" id="sa-agora" ${s.liberarAgora?'checked':''}> Liberar agora (ignora a data)</label>
+    <button class="btn btn-primary btn-block" style="margin-top:8px;background:#f472b6;box-shadow:none;color:#fff" onclick="saveSpecialAward()">💾 Salvar conquista especial</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+}
+async function saveSpecialAward(){
+  const data = {
+    email: ($('sa-email').value||'').trim().toLowerCase(),
+    titulo: ($('sa-titulo').value||'').trim(),
+    descricao: ($('sa-desc').value||'').trim(),
+    emo: ($('sa-emo').value||'💍').trim() || '💍',
+    data: ($('sa-data').value||'').trim(),
+    liberarAgora: !!$('sa-agora').checked,
+    atualizadoEm: Date.now()
+  };
+  if(!data.email || !data.titulo){ toast('⚠️ Preencha ao menos o e-mail e o título.'); return; }
+  try{
+    await db.collection('config').doc('specialAward').set(data);
+    specialAward = data;
+    try{ localStorage.setItem('metatreino_special', JSON.stringify(data)); }catch(e){}
+    closeModal();
+    toast('💍 Conquista especial salva! Ela verá na data (ou já, se "liberar agora").');
+  }catch(e){ console.log('Erro conquista especial:', e); toast('⚠️ Não foi possível salvar. Confira as regras do Firestore (config).'); }
+}
+
 // ---------- PAINEL DE VÍDEOS (ADMIN) ----------
 async function openVideoAdmin(){
   await loadVideoLinks(); // garante a lista mais atual
@@ -5837,10 +5943,18 @@ function unpinExercise(exId){
   const mod = state.modules.lift;
   const w = mod.plan.workouts.find(w=>(w.pins||[]).some(p=>p.id===exId));
   if(!w){ toast('Este exercício não está fixado'); return; }
+  const pin = w.pins.find(p=>p.id===exId);
+  const idx = w.exercises.findIndex(e=>e.id===exId);
+  const origId = (pin && pin.origId) || exId;
+  const cat = EX_BANK.find(c=>c.items.some(x=>slug(x.name)===origId));
+  const origEx = cat && cat.items.find(x=>slug(x.name)===origId);
+  if(origEx && idx>=0){
+    const cur = w.exercises[idx];
+    w.exercises[idx] = { id:origId, name:origEx.name, sub:origEx.sub, sets:cur.sets, reps:cur.reps, rest:cur.rest, part:cur.part, equip:origEx.equip, pinned:false };
+  }
   w.pins = w.pins.filter(p=>p.id!==exId);
-  regenAllPlans();
   saveData();
-  toast('↩️ Voltando à sugestão automática do app');
+  toast('↩️ Voltou ao exercício sugerido');
   if(state.ui.tab==='sessions') renderSessions(); else goTab('home');
 }
 function doSwapExercise(oldId, newId, newName, newSub){
@@ -5850,10 +5964,13 @@ function doSwapExercise(oldId, newId, newName, newSub){
   const old = w.exercises[idx];
   const cat = EX_BANK.find(c=>c.items.some(x=>slug(x.name)===newId));
   const newEx = cat.items.find(x=>slug(x.name)===newId);
+  // se este slot já tinha sido trocado antes, mantém o exercício ORIGINAL rastreado
+  const existingPin = (w.pins||[]).find(p=>p.id===oldId);
+  const origId = existingPin ? existingPin.origId : oldId;
   w.exercises[idx] = { id:newId, name:newName, sub:newSub, sets:old.sets, reps:old.reps, rest:old.rest, part:old.part, equip:newEx.equip, pinned:true };
-  // memoriza a escolha do aluno pra ela sobreviver a regenerações (dor, TPM, troca de equipamento)
-  w.pins = (w.pins||[]).filter(p=>p.id!==oldId && p.part!==old.part);
-  w.pins.push({ part:old.part, id:newId });
+  // remove SÓ o pin deste exercício (antes removia todos do mesmo grupo → colisão/contador travado)
+  w.pins = (w.pins||[]).filter(p=>p.id!==oldId);
+  w.pins.push({ part:old.part, id:newId, origId });
   saveData();
   toast(`✅ Trocado por ${newName} — ficará fixado nos próximos treinos`);
   closeModal();
@@ -5985,7 +6102,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.

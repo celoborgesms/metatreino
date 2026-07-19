@@ -131,6 +131,7 @@
 .rec-val{margin-left:auto;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--primary-2)}
 
 /* animações discretas (respeitam quem prefere menos movimento) */
+@keyframes sr-float{to{transform:translateY(-115vh) rotate(40deg);opacity:0}}
 @keyframes pop-in{0%{transform:scale(.85);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
 @keyframes check-pop{0%{transform:scale(0) rotate(-18deg)}70%{transform:scale(1.18) rotate(4deg)}100%{transform:scale(1) rotate(0)}}
 @keyframes glow-pulse{0%,100%{box-shadow:0 0 0 0 var(--primary-glow)}50%{box-shadow:0 0 0 10px transparent}}
@@ -554,7 +555,7 @@ body.no-deco #app-deco{display:none}
     </div>
 
     <button class="btn btn-primary btn-block" id="google-btn" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="doGoogleSignIn()">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v11.118h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v11.138h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
       <span id="google-btn-lbl">Entrar com Google</span>
     </button>
     <div id="auth-err" style="margin-top:10px"></div>
@@ -631,6 +632,7 @@ body.no-deco #app-deco{display:none}
 
     <div class="section-lbl">Ferramentas</div>
     <div class="list-row" onclick="openMuralAdmin()">📢 <span>Mural e logo do app</span></div>
+    <div class="list-row" onclick="openSpecialAwardAdmin()">💍 <span>Conquista especial</span></div>
     <div class="list-row" onclick="openContactAdmin()">📞 <span>Contato (WhatsApp / e-mail)</span></div>
     <div class="list-row" onclick="openVideoAdmin()">🎬 <span>Vídeos dos exercícios</span><span id="adm-video-count" style="margin-left:auto;font-size:11px;color:var(--text-dim)"></span></div>
     <div class="list-row warn" onclick="openModal('broadcast')">📢 <span>Mensagem em massa (WhatsApp)</span></div>
@@ -821,7 +823,7 @@ body.no-deco #app-deco{display:none}
     </div>
     <div class="card card-info card-row hidden" id="card-coach-msg" style="border-color:rgba(16,185,129,0.35)">
       <div class="card-icon">📢</div>
-      <div><div class="card-title info">Recado do treinador</div><div class="card-sub" id="coach-msg-text"></div></div>
+      <div><div class="card-title info">Recado do administrador</div><div class="card-sub" id="coach-msg-text" style="white-space:pre-line"></div></div>
     </div>
     <div class="card card-alert card-row hidden" id="card-adapt" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)">
       <div class="card-icon">🩹</div>
@@ -1130,7 +1132,7 @@ body.no-deco #app-deco{display:none}
     <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">v11.11</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">v11.13</span>
     </div>
   </div>
 </div>
@@ -1173,9 +1175,9 @@ body.no-deco #app-deco{display:none}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=11.11"></script>
+<script src="./app.js?v=11.13"></script>
 <script>
-const APP_VERSION = 'v11.11';
+const APP_VERSION = 'v11.13';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {
