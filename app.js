@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.20 =====
-const APP_VERSION = 'v11.20';
+// ===== MetaTreino v11.21 =====
+const APP_VERSION = 'v11.21';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -369,6 +369,7 @@ async function afterGoogleSignIn(user){
   loadVideoLinks(); // não bloqueia o login; links do treinador pros vídeos
   loadCoachMural(); // logo/mensagem fixada do treinador
   loadCoachContact(); // whatsapp/e-mail de contato do treinador
+  loadWeather(); // clima (só mostra dica quando for notável)
   await loadData();
   if(!state.user) state.user = { name:user.displayName||'', email, isAdmin };
   state.user.isAdmin = isAdmin;
@@ -4151,6 +4152,44 @@ function maInsight(){
   if(!ins.length) return `Você está com uma boa constância, ${maName()}! Continue registrando que logo te trago padrões mais detalhados. 💪`;
   return ins[Math.floor(Date.now()/86400000) % ins.length];
 }
+// ===== CLIMA (Open-Meteo, grátis, sem chave) — só uma LINHA separada, e só quando é notável =====
+let weatherData = null;
+function loadWeather(){
+  try{
+    // usa cache recente (< 2h) pra não pedir localização toda hora
+    try{ const c = JSON.parse(localStorage.getItem('metatreino_weather')||'null'); if(c && Date.now()-c.at < 2*3600000){ weatherData = c; return; } }catch(e){}
+    if(!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function(pos){
+      try{
+        const lat = pos.coords.latitude, lon = pos.coords.longitude;
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m`)
+          .then(r=>r.json())
+          .then(j=>{
+            const cur = j.current || {};
+            weatherData = { temp: cur.temperature_2m, code: cur.weather_code, wind: cur.wind_speed_10m, at: Date.now() };
+            try{ localStorage.setItem('metatreino_weather', JSON.stringify(weatherData)); }catch(e){}
+          }).catch(e=>console.log('clima:', e));
+      }catch(e){ console.log('clima:', e); }
+    }, function(err){ console.log('sem localização p/ clima:', err && err.message); }, { timeout:8000, maximumAge:3600000, enableHighAccuracy:false });
+  }catch(e){}
+}
+// retorna UMA mensagem só quando o clima é notável (chuva/tempestade/calor/frio/neblina/vento). Senão null.
+function weatherTip(){
+  const w = weatherData; if(!w || w.temp==null) return null;
+  const code = w.code, temp = Math.round(w.temp), wind = w.wind||0;
+  const tempestade = code>=95;
+  const chuva = (code>=51 && code<=67) || (code>=80 && code<=82);
+  const neve = code>=71 && code<=77;
+  const neblina = code===45 || code===48;
+  if(tempestade) return '⛈️ Tempestade na sua região agora. Melhor um treino indoor hoje — segurança em primeiro lugar.';
+  if(chuva) return '🌧️ Chovendo por aí? Boa hora pra um treino indoor. Se hoje era corrida, uma esteira ou uma musculação resolvem.';
+  if(neve) return '❄️ Neve/gelo na área. Se for treinar na rua, redobre o cuidado com o piso.';
+  if(temp >= 33) return `🔥 Está bem quente hoje (${temp}°C). Capriche na hidratação e, se der, evite treinar ao ar livre no pico do calor.`;
+  if(temp <= 10) return `🥶 Frio hoje (${temp}°C). Faça um aquecimento caprichado antes de começar.`;
+  if(neblina) return '🌫️ Neblina forte. Se for correr na rua, escolha um trajeto seguro e bem iluminado.';
+  if(wind >= 40) return '💨 Vento forte hoje. Se for correr ao ar livre, cuidado com as rajadas e prefira um percurso protegido.';
+  return null; // clima normal → não mostra nada (evita virar mensagem repetitiva)
+}
 function maOpeningSummary(){
   try{
     const nome = maName(), saud = maSaudacao();
@@ -4186,6 +4225,8 @@ function maOpeningSummary(){
         if(ins && /^[📈📅🌅🌙]/.test(ins)){ L.push(''); L.push(ins); }
       }
     }
+    const wtip = (typeof weatherTip==='function') ? weatherTip() : null;
+    if(wtip){ L.push(''); L.push(wtip); }
     L.push('');
     L.push('É só perguntar ou tocar numa sugestão abaixo. 💪');
     return L.join('<br>');
