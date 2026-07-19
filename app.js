@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.22 =====
-const APP_VERSION = 'v11.22';
+// ===== MetaTreino v11.23 =====
+const APP_VERSION = 'v11.23';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1259,7 +1259,7 @@ function renderHome(){
   renderAvatar('home-avatar');
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
   const _wl = (typeof weatherHomeLine==='function') ? weatherHomeLine() : null;
-  $('home-goal').innerHTML = homeStatusLine() + (_wl ? `<br><span style="opacity:.92">${_wl}</span>` : '');
+  $('home-goal').innerHTML = homeStatusLine() + (_wl ? `<br><span style="opacity:.6;font-size:.9em">${_wl}</span>` : '');
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
   // 40% de chance de mostrar uma frase contextual (se houver); senão, uma do dia
   const ctxQuote = Math.random() < 0.4 ? contextualQuote() : null;
@@ -4209,17 +4209,17 @@ function weatherHomeLine(){
   const desc = wmoDesc(code);
   const tempestade = code>=95, chuva=(code>=61&&code<=67)||(code>=80&&code<=82), garoa=code>=51&&code<=57, neve=code>=71&&code<=77, neblina=code===45||code===48;
   let tip;
-  if(tempestade) tip = 'melhor um treino indoor — segurança primeiro.';
-  else if(chuva) tip = 'se hoje era corrida, uma esteira ou musculação caem bem.';
-  else if(neve) tip = 'cuidado com o piso se for treinar na rua.';
-  else if(temp>=32) tip = 'hidrate bastante e evite o pico do calor. ☀️';
-  else if(temp<=12) tip = 'capriche no aquecimento antes de começar. 🧣';
-  else if(garoa) tip = 'uma garoa não impede — mas leve um corta-vento se for pra rua.';
-  else if(neblina) tip = 'se for correr na rua, escolha um trajeto seguro e visível.';
-  else if(wind>=35) tip = 'vento forte — prefira um percurso protegido se for correr.';
-  else if(temp>=27) tip = 'calor agradável, mas mantenha a garrafinha por perto. 💧';
-  else tip = 'clima bom pra treinar. Bora! 💪';
-  return `🌡️ Agora: ${temp}°C, ${desc} — ${tip}`;
+  if(tempestade) tip = 'treino indoor hoje';
+  else if(chuva) tip = 'vale esteira ou musculação';
+  else if(neve) tip = 'cuidado com o piso';
+  else if(temp>=32) tip = 'hidrate bem ☀️';
+  else if(temp<=12) tip = 'aqueça bem antes 🧣';
+  else if(garoa) tip = 'leve um corta-vento';
+  else if(neblina) tip = 'trajeto seguro se for correr';
+  else if(wind>=35) tip = 'vento forte lá fora';
+  else if(temp>=27) tip = 'mantenha a água por perto 💧';
+  else tip = 'clima bom pra treinar 💪';
+  return `🌡️ ${temp}°C, ${desc} · ${tip}`;
 }
 function maOpeningSummary(){
   try{
