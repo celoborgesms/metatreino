@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.15 =====
-const APP_VERSION = 'v11.15';
+// ===== MetaTreino v11.17 =====
+const APP_VERSION = 'v11.17';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5405,7 +5405,7 @@ function openSpecialAwardAdmin(){
     <div class="field"><label>Descrição</label><textarea class="input" id="sa-desc" rows="3" style="resize:vertical">${(s.descricao||'').replace(/</g,'&lt;')}</textarea></div>
     <div class="row" style="gap:10px">
       <div class="field" style="flex:1"><label>Emoji</label><input class="input" id="sa-emo" placeholder="💍" value="${(s.emo||'💍').replace(/"/g,'&quot;')}"></div>
-      <div class="field" style="flex:1.5"><label>Data (dd/mm/aaaa)</label><input class="input" id="sa-data" inputmode="numeric" placeholder="15/08/2026" value="${isoToBr(s.data)}"></div>
+      <div class="field" style="flex:1.5"><label>Data</label><input class="input" type="date" id="sa-data" value="${s.data||''}"></div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0"><input type="checkbox" id="sa-treinar" ${s.aoTreinar?'checked':''}> 🏋️ Revelar quando ela terminar um treino (não na abertura)</label>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:2px 0 6px"><input type="checkbox" id="sa-agora" ${s.liberarAgora?'checked':''}> ⚡ Liberar agora (ignora a data)</label>
@@ -5414,32 +5414,25 @@ function openSpecialAwardAdmin(){
   $('modal-back').classList.add('on');
 }
 async function saveSpecialAward(){
-  // aceita dd/mm/aaaa (ou aaaa-mm-dd) e guarda internamente como aaaa-mm-dd
-  let dataRaw = ($('sa-data').value||'').trim(); let dataISO='';
-  if(dataRaw){
-    const p = dataRaw.split(/[\/\-.]/).map(x=>x.trim());
-    if(p.length===3){
-      if(p[0].length===4) dataISO = `${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
-      else dataISO = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-    }
-  }
   const data = {
     email: ($('sa-email').value||'').trim().toLowerCase(),
     titulo: ($('sa-titulo').value||'').trim(),
     descricao: ($('sa-desc').value||'').trim(),
     emo: ($('sa-emo').value||'💍').trim() || '💍',
-    data: dataISO,
+    data: ($('sa-data').value||'').trim(), // seletor nativo já entrega YYYY-MM-DD
     aoTreinar: !!$('sa-treinar').checked,
     liberarAgora: !!$('sa-agora').checked,
     atualizadoEm: Date.now()
   };
-  if(!data.email || !data.titulo){ toast('⚠️ Preencha ao menos o e-mail e o título.'); return; }
+  // e-mail pode ficar vazio (desativa a conquista / facilita testes). Só avisa se tiver e-mail mas faltar título.
+  if(data.email && !data.titulo){ toast('⚠️ Preencha o título da conquista.'); return; }
   try{
     await db.collection('config').doc('specialAward').set(data);
     specialAward = data;
     try{ localStorage.setItem('metatreino_special', JSON.stringify(data)); }catch(e){}
     closeModal();
-    toast(data.aoTreinar ? '💍 Salva! Ela verá ao terminar um treino.' : '💍 Conquista especial salva!');
+    if(!data.email) toast('✅ Salvo (sem e-mail = conquista desativada).');
+    else toast(data.aoTreinar ? `💍 Salva! ${data.data?'Na data '+data.data.split('-').reverse().join('/'):(data.liberarAgora?'liberada — ':'')} ela verá ao terminar um treino.` : '💍 Conquista especial salva!');
   }catch(e){ console.log('Erro conquista especial:', e); toast('⚠️ Não foi possível salvar. Confira as regras do Firestore (config).'); }
 }
 
