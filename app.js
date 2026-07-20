@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.27 =====
-const APP_VERSION = 'v11.27';
+// ===== MetaTreino v11.28 =====
+const APP_VERSION = 'v11.28';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1047,6 +1047,7 @@ function renderWeekRecap(){
   const btn = $('weekrecap-dismiss');
   if(btn) btn.onclick = (ev)=>{ ev.stopPropagation(); state.ui.weekRecapSeen = chave; saveData(); card.classList.add('hidden'); };
 }
+function pickDay(arr){ return arr[new Date().getDate() % arr.length]; }
 function homeStatusLine(){
   const mod = state.modules[state.active];
   const isLift = state.active === 'lift';
@@ -1071,9 +1072,13 @@ function homeStatusLine(){
     if(feitosOutro.length) return `${isLift?'Musculação':'Corrida'} e ${nomeOutro} no mesmo dia. Dia cheio — agora hidrate e coma bem. 💪`;
     if(streak>=7) return `${isLift?'Treino':'Atividade'} de hoje: feito. ${streak} dias seguidos — você virou hábito. 🔥`;
 
-    return isLift
-      ? `Treino de hoje concluído em ${min} min. Agora deixa o corpo fazer a parte dele. ✅`
-      : `Atividade de hoje concluída em ${min} min. Agora deixa o corpo fazer a parte dele. ✅`;
+    const alvo = isLift ? 'Treino' : 'Atividade';
+    return pickDay([
+      `${alvo} de hoje concluíd${isLift?'o':'a'} em ${min} min. Agora deixa o corpo fazer a parte dele. ✅`,
+      `${min} min no bolso hoje. Recuperação também é treino — descanse bem. 💪`,
+      `Missão de hoje cumprida em ${min} min. Amanhã a gente continua. 🔥`,
+      `Feito! ${min} min hoje. O progresso é a soma dos dias como esse. 👏`
+    ]);
   }
 
   // 2) treinou no OUTRO módulo, mas ainda não neste
@@ -1114,10 +1119,25 @@ function homeStatusLine(){
     // retorno após dias parado — só em horário de treinar (6h–21h), pra não empurrar treino de madrugada/noite
     if(diasParado !== null && diasParado >= 5 && h < 21) return `Faz ${diasParado} dias desde o último treino. Hoje é um bom dia pra recomeçar — comece leve. 👋`;
     if(h < 12) return streak>=3 ? `${streak} dias de sequência. Hoje tem ${oQue} — comece o dia mantendo a corrente. 🔥`
-                                : `Bom começo de dia: hoje tem ${oQue} esperando por você. ☀️`;
+                                : pickDay([
+                                    `Bom começo de dia: hoje tem ${oQue} esperando por você. ☀️`,
+                                    `Manhã perfeita pra ${oQue}. Comece o dia já mais forte. ☀️`,
+                                    `Hoje tem ${oQue} no plano. Que tal já tirar essa da frente? 💪`,
+                                    `Cedo é o melhor horário: ninguém rouba seu treino de ${oQue} de manhã. 🌅`
+                                  ]);
     if(h < 18) return streak>=3 ? `${streak} dias de sequência e hoje tem ${oQue}. Não deixe pra depois. 🔥`
-                                : `Hoje você ainda não treinou. No plano: ${oQue}. A tarde rende. 💪`;
-    if(h < 21) return `Ainda dá tempo: hoje tem ${oQue}. Uma hora agora vale mais que a intenção de amanhã. 🌆`;
+                                : pickDay([
+                                    `Hoje você ainda não treinou. No plano: ${oQue}. A tarde rende. 💪`,
+                                    `A tarde é sua: ${oQue} te espera. Bora aproveitar? 🌤️`,
+                                    `Ainda dá tempo de encaixar ${oQue} hoje. Depois é só orgulho. 😎`,
+                                    `No plano de hoje: ${oQue}. Um passo de cada vez, começando agora. 💪`
+                                  ]);
+    if(h < 21) return pickDay([
+      `Ainda dá tempo: hoje tem ${oQue}. Uma hora agora vale mais que a intenção de amanhã. 🌆`,
+      `Fim de tarde é ótimo pra ${oQue}. Fecha o dia com chave de ouro. 🌆`,
+      `Depois do dia corrido, nada como descarregar tudo no ${oQue}. 💪`,
+      `Hoje tem ${oQue}. Você no fim do dia vai agradecer por ter ido. 🙌`
+    ]);
     if(h < 23) return `Tarde da noite, mas ainda dá pra fazer ${oQue}. Se estiver muito cansado, dormir bem também é treino. 🌙`;
     return `Já é quase meia-noite e hoje tinha ${oQue}. Sem culpa — durma bem e recomece amanhã com tudo. 😴`;
   }
@@ -1125,8 +1145,17 @@ function homeStatusLine(){
   // 6) dia de descanso neste módulo
   if(h < 3) return '🦉 Madrugada alta e nem treino tem hoje. Aproveite: durma. É de graça e funciona.';
   if(streak>=5) return `Descanso na ${nomeAtivo} — e você tem ${streak} dias de sequência. Descansar é parte do treino. 😴`;
-  if(h >= 21) return `Descanso hoje. Um sono bom vale mais que qualquer série. 😴`;
-  return `Hoje é dia de descanso na ${nomeAtivo}. Recupere bem, amanhã tem mais. 😴`;
+  if(h >= 21) return pickDay([
+    `Descanso hoje. Um sono bom vale mais que qualquer série. 😴`,
+    `Nada de treino hoje. Um sono de qualidade é o melhor suplemento. 😴`,
+    `Descanso merecido. Recupere bem que amanhã o corpo agradece. 🌙`
+  ]);
+  return pickDay([
+    `Hoje é dia de descanso na ${nomeAtivo}. Recupere bem, amanhã tem mais. 😴`,
+    `Folga na ${nomeAtivo} hoje. Músculo cresce no repouso — aproveite. 🌱`,
+    `Dia de recarregar as energias. Descanso também constrói resultado. 🔋`,
+    `Sem treino de ${nomeAtivo} hoje. Curta o descanso, você merece. 😌`
+  ]);
 }
 function greetTime(){ const h=new Date().getHours(); if(h<5) return 'Boa noite'; if(h<12) return 'Bom dia'; if(h<18) return 'Boa tarde'; return 'Boa noite'; }
 function firstName(){ const p = state.user.profile; return (p&&p.nickname) || (state.user.name||'').split(' ')[0]; }
@@ -4216,16 +4245,16 @@ function weatherHomeLine(){
   if(tempestade) tip = noite ? 'tempestade lá fora — fica no aconchego' : 'melhor um treino indoor hoje';
   else if(chuva) tip = noite ? 'chuva boa pra dormir 🌧️' : 'vale esteira ou musculação';
   else if(neve) tip = 'cuidado com o piso';
-  else if(temp>=32) tip = 'hidrate bem ☀️';
+  else if(temp>=32) tip = pickDay(['hidrate bem ☀️','calorão — beba muita água 🥵','muito quente, capriche na hidratação ☀️']);
   else if(temp<=12) tip = noite ? 'noite fria — se agasalhe 🧣' : 'aqueça bem antes 🧣';
   else if(garoa) tip = 'uma garoa fina caindo';
   else if(neblina) tip = 'tá com neblina por aí';
   else if(wind>=35) tip = 'vento forte lá fora';
   // clima agradável: adapta ao contexto pra NÃO contradizer a saudação
-  else if(noite) tip = 'noite agradável 🌙';
-  else if(!treinaHoje) tip = 'tempo bom lá fora 🙂';
-  else if(temp>=27) tip = 'mantenha a água por perto 💧';
-  else tip = 'clima bom pra treinar 💪';
+  else if(noite) tip = pickDay(['noite agradável 🌙','céu tranquilo lá fora 🌙','boa noite pra descansar 🌙']);
+  else if(!treinaHoje) tip = pickDay(['tempo bom lá fora 🙂','dia agradável hoje 🙂','clima tranquilo por aí ☀️']);
+  else if(temp>=27) tip = pickDay(['mantenha a água por perto 💧','calor gostoso — beba água 💧','dia quente, hidrate-se ☀️']);
+  else tip = pickDay(['clima bom pra treinar 💪','tempo perfeito pra treinar 💪','dia ótimo pra suar a camisa 💦']);
   return `🌡️ ${temp}°C, ${desc} · ${tip}`;
 }
 function maOpeningSummary(){
