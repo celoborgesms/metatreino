@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.29 =====
-const APP_VERSION = 'v11.29';
+// ===== MetaTreino v11.30 =====
+const APP_VERSION = 'v11.30';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2175,11 +2175,48 @@ function renderCalendar(){
     if(rd){ const p = new Date(rd); p.setHours(0,0,0,0); ehProva = p.getTime() === d.getTime(); }
     if(ehProva) classes.push('cal-race');
     const titulo = ehProva ? `${dia}/${mes+1} · 🏁 DIA DA PROVA` : (info ? `${dia}/${mes+1} · ${info.min} min` : `${dia}/${mes+1} · sem treino`);
-    html += `<div class="${classes.join(' ')}" title="${titulo}"><span>${ehProva?'🏁':dia}</span>${pontos}</div>`;
+    const temNota = !!((state.dayNotes||{})[d.getTime()]);
+    const notaMark = temNota ? '<span style="position:absolute;top:1px;right:2px;font-size:8px;line-height:1">📝</span>' : '';
+    const clic = futuro ? '' : `onclick="openDayDetail(${d.getTime()})" style="cursor:pointer;position:relative"`;
+    html += `<div class="${classes.join(' ')}" title="${titulo}" ${clic}><span>${ehProva?'🏁':dia}</span>${pontos}${notaMark}</div>`;
   }
   box.innerHTML = `<div class="cal-grid">${html}</div>`;
   const s = $('cal-summary');
   if(s) s.textContent = treinados ? `${treinados} ${treinados===1?'dia treinado':'dias treinados'} · ${minutos} min` : 'nenhum treino neste mês';
+}
+// Detalhe do dia no calendário: resumo do(s) treino(s) + anotação pessoal (diário de treino)
+function openDayDetail(ts){
+  const d = new Date(ts); d.setHours(0,0,0,0);
+  const dd=String(d.getDate()).padStart(2,'0'), mm=String(d.getMonth()+1).padStart(2,'0'), yy=d.getFullYear();
+  const doDia = arr => (arr||[]).filter(x=>{ const t=new Date(x.at); t.setHours(0,0,0,0); return t.getTime()===d.getTime(); });
+  const lifts = doDia(state.modules.lift&&state.modules.lift.history);
+  const runs  = doDia(state.modules.run&&state.modules.run.history);
+  let resumo;
+  if(lifts.length || runs.length){
+    resumo = '<div class="card" style="padding:12px;margin-top:10px">';
+    lifts.forEach(x=> resumo += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13.5px"><span>💪 ${(x.title||x.name||'Musculação').replace(/</g,'&lt;')}</span><span class="mono" style="color:var(--text-dim)">${x.duration?fmtDur(x.duration):''}</span></div>`);
+    runs.forEach(x=> resumo += `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13.5px"><span>${x.activity==='bike'?'🚴':x.activity==='caminhada'?'🚶':'🏃'} ${x.distance?x.distance+'km':(x.activity||'Corrida')}</span><span class="mono" style="color:var(--text-dim)">${x.duration?fmtDur(x.duration):''}</span></div>`);
+    resumo += '</div>';
+  } else {
+    resumo = '<div class="card-sub" style="margin-top:8px;color:var(--text-dim)">Nenhum treino registrado neste dia.</div>';
+  }
+  const nota = (state.dayNotes||{})[ts] || '';
+  $('modal-inner').innerHTML = `
+    <h3>📅 ${dd}/${mm}/${yy}</h3>
+    ${resumo}
+    <div class="field" style="margin-top:12px"><label>📝 Anotação do dia</label><textarea class="input" id="day-note" rows="4" style="resize:vertical" placeholder="Ex: subi o supino pra 25kg 💪 · dormi mal, rendeu pouco · joelho incomodou · primeiro 5km sem parar 🎉">${nota.replace(/</g,'&lt;')}</textarea></div>
+    <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="saveDayNote(${ts})">💾 Salvar anotação</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function saveDayNote(ts){
+  const val = ($('day-note').value||'').trim();
+  state.dayNotes = state.dayNotes || {};
+  if(val) state.dayNotes[ts] = val; else delete state.dayNotes[ts];
+  saveData();
+  closeModal();
+  toast(val ? '📝 Anotação salva!' : 'Anotação removida');
+  renderCalendar();
 }
 // ---------- RECORDES (discreto, dentro de Desempenho) ----------
 function renderRecords(){
@@ -6279,7 +6316,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
