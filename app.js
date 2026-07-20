@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.25 =====
-const APP_VERSION = 'v11.25';
+// ===== MetaTreino v11.26 =====
+const APP_VERSION = 'v11.26';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -4208,15 +4208,22 @@ function weatherHomeLine(){
   const temp = Math.round(w.temp), code = w.code, wind = w.wind||0;
   const desc = wmoDesc(code);
   const tempestade = code>=95, chuva=(code>=61&&code<=67)||(code>=80&&code<=82), garoa=code>=51&&code<=57, neve=code>=71&&code<=77, neblina=code===45||code===48;
+  const hora = new Date().getHours();
+  const noite = hora>=20 || hora<5;
+  const mod = state.modules[state.active];
+  const treinaHoje = !!(mod && mod.plan && (mod.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx()));
   let tip;
-  if(tempestade) tip = 'treino indoor hoje';
-  else if(chuva) tip = 'vale esteira ou musculação';
+  if(tempestade) tip = noite ? 'tempestade lá fora — fica no aconchego' : 'melhor um treino indoor hoje';
+  else if(chuva) tip = noite ? 'chuva boa pra dormir 🌧️' : 'vale esteira ou musculação';
   else if(neve) tip = 'cuidado com o piso';
   else if(temp>=32) tip = 'hidrate bem ☀️';
-  else if(temp<=12) tip = 'aqueça bem antes 🧣';
-  else if(garoa) tip = 'leve um corta-vento';
-  else if(neblina) tip = 'trajeto seguro se for correr';
+  else if(temp<=12) tip = noite ? 'noite fria — se agasalhe 🧣' : 'aqueça bem antes 🧣';
+  else if(garoa) tip = 'uma garoa fina caindo';
+  else if(neblina) tip = 'tá com neblina por aí';
   else if(wind>=35) tip = 'vento forte lá fora';
+  // clima agradável: adapta ao contexto pra NÃO contradizer a saudação
+  else if(noite) tip = 'noite agradável 🌙';
+  else if(!treinaHoje) tip = 'tempo bom lá fora 🙂';
   else if(temp>=27) tip = 'mantenha a água por perto 💧';
   else tip = 'clima bom pra treinar 💪';
   return `🌡️ ${temp}°C, ${desc} · ${tip}`;
