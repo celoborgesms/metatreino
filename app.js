@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.30 =====
-const APP_VERSION = 'v11.30';
+// ===== MetaTreino v11.31 =====
+const APP_VERSION = 'v11.31';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2125,6 +2125,11 @@ function calMove(delta){
   calOffset = Math.min(0, calOffset + delta); // não deixa navegar pro futuro
   renderCalendar();
 }
+function moodEmoji(x){
+  if(x && x.feel){ return ({otimo:'🚀', bem:'😊', cansado:'😮‍💨', exausto:'😩'})[x.feel] || ''; }
+  if(x && x.rating!=null){ return x.rating>=5?'🚀':(x.rating<=1?'😩':'😊'); }
+  return '';
+}
 function renderCalendar(){
   const box = $('calendar'); if(!box) return;
   const base = new Date();
@@ -2137,9 +2142,10 @@ function renderCalendar(){
   const add = (arr, tipo) => (arr||[]).forEach(x=>{
     const d = new Date(x.at); d.setHours(0,0,0,0);
     const k = d.getTime();
-    porDia[k] = porDia[k] || { lift:false, run:false, min:0 };
+    porDia[k] = porDia[k] || { lift:false, run:false, min:0, mood:'' };
     porDia[k][tipo] = true;
     porDia[k].min += (x.duration||0);
+    if(!porDia[k].mood){ porDia[k].mood = moodEmoji(x); }
   });
   add(state.modules.lift?.history, 'lift');
   add(state.modules.run?.history, 'run');
@@ -2178,7 +2184,8 @@ function renderCalendar(){
     const temNota = !!((state.dayNotes||{})[d.getTime()]);
     const notaMark = temNota ? '<span style="position:absolute;top:1px;right:2px;font-size:8px;line-height:1">📝</span>' : '';
     const clic = futuro ? '' : `onclick="openDayDetail(${d.getTime()})" style="cursor:pointer;position:relative"`;
-    html += `<div class="${classes.join(' ')}" title="${titulo}" ${clic}><span>${ehProva?'🏁':dia}</span>${pontos}${notaMark}</div>`;
+    const moodMark = (info && info.mood) ? `<span style="position:absolute;bottom:0;right:2px;font-size:9px;line-height:1">${info.mood}</span>` : '';
+    html += `<div class="${classes.join(' ')}" title="${titulo}" ${clic}><span>${ehProva?'🏁':dia}</span>${pontos}${notaMark}${moodMark}</div>`;
   }
   box.innerHTML = `<div class="cal-grid">${html}</div>`;
   const s = $('cal-summary');
