@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.28 =====
-const APP_VERSION = 'v11.28';
+// ===== MetaTreino v11.29 =====
+const APP_VERSION = 'v11.29';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -93,7 +93,28 @@ const QUOTES = [
   '🏅 O troféu é secundário. A pessoa que você vira é o prêmio.',
   '🌊 Fluir é treinar sem guerra contra si mesmo.',
   '🔆 Brilhe pelo esforço, não pela comparação.',
-  '🌰 Toda árvore forte já foi uma semente que insistiu.'
+  '🌰 Toda árvore forte já foi uma semente que insistiu.',
+  '😅 Ninguém termina um treino pensando "que pena que treinei".',
+  '🍕 Você não perde treino, só adia o sofrimento (e come a pizza em paz).',
+  '🏋️ Levantar peso é caro? Não levantar sai mais caro lá na frente.',
+  '🏃 Correr é de graça e ainda vem com terapia inclusa.',
+  '💤 Dormir é oficialmente parte do treino. Aproveite a desculpa.',
+  '🦵 Nunca pule o dia de perna. Ninguém respeita um pombo. 🐦',
+  '😤 O agachamento não pergunta se você está com preguiça.',
+  '🥵 Se foi fácil demais, talvez você não tenha feito direito.',
+  '🧠 Treino é 10% físico e 90% "vou amanhã" que vira hoje.',
+  '🚴 Bike, corrida ou musculação: o melhor esporte é o que você não abandona.',
+  '💧 Água, sono e constância batem qualquer suplemento caro.',
+  '🎯 Meta sem ação é só desejo de roupa de treino.',
+  '🔥 Você não precisa estar em chamas, só não pode se apagar.',
+  '🐌 Ir devagar ainda é bem mais rápido que ficar parado.',
+  '🏆 Comparar seu capítulo 1 com o capítulo 20 dos outros é injusto com você.',
+  '💪 O espelho daqui a 3 meses depende do que você faz hoje.',
+  '🎽 Não é sobre ser o mais rápido. É sobre não desistir.',
+  '☕ Café + treino = combustível oficial de quem não desiste.',
+  '🌙 O corpo que você quer é construído nos dias que ninguém viu.',
+  '🤝 Seu único adversário de verdade é o você de ontem.',
+  '⚙️ Não espere vontade. Crie o hábito e a vontade vem junto.'
 ];
 // Frases contextuais, com base no histórico recente do aluno (têm prioridade quando fazem sentido)
 function contextualQuote(){
@@ -1048,6 +1069,7 @@ function renderWeekRecap(){
   if(btn) btn.onclick = (ev)=>{ ev.stopPropagation(); state.ui.weekRecapSeen = chave; saveData(); card.classList.add('hidden'); };
 }
 function pickDay(arr){ return arr[new Date().getDate() % arr.length]; }
+function hashStr(str){ let h=0; str=String(str||'x'); for(let i=0;i<str.length;i++){ h=(h*31 + str.charCodeAt(i))|0; } return Math.abs(h); }
 function homeStatusLine(){
   const mod = state.modules[state.active];
   const isLift = state.active === 'lift';
@@ -1292,7 +1314,8 @@ function renderHome(){
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
   // 40% de chance de mostrar uma frase contextual (se houver); senão, uma do dia
   const ctxQuote = Math.random() < 0.4 ? contextualQuote() : null;
-  $('daily-quote').textContent = ctxQuote || QUOTES[doy % QUOTES.length];
+  const qSeed = doy + hashStr((state.user && state.user.email) || 'x'); // cada pessoa tem a SUA frase no mesmo dia
+  $('daily-quote').textContent = ctxQuote || QUOTES[qSeed % QUOTES.length];
   renderCoachMural();
 
   const days = accessDaysLeft();
