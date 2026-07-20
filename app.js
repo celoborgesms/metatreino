@@ -149,6 +149,15 @@ const TROPHIES = [
   { secret:true, id:'consistent',  emoji:'📈', name:'Sem Drama',          desc:'12 treinos sem pular uma semana inteira',   cat:'geral' },
   { secret:true, id:'century',     emoji:'💯', name:'Clube dos 100',      desc:'100 treinos registrados. Respeito.',        cat:'geral' },
   { secret:true, id:'humble',      emoji:'🧘', name:'Sabedoria',          desc:'Adaptou o treino por dor em vez de forçar', cat:'geral' },
+  { secret:true, id:'marathon_time', emoji:'🐢', name:'Sem Pressa',        desc:'Registrou um treino/atividade de mais de 2 horas', cat:'geral' },
+  { secret:true, id:'turbo',       emoji:'⚡', name:'Modo Turbo',          desc:'Registrou um treino relâmpago de menos de 15 min', cat:'geral' },
+  { secret:true, id:'insomnia',    emoji:'🌙', name:'Insone',              desc:'Abriu o app entre a meia-noite e as 4h',    cat:'geral' },
+  { secret:true, id:'rooster',     emoji:'🐔', name:'O Galo Nem Cantou',   desc:'Abriu o app exatamente às 4h44',            cat:'geral' },
+  { secret:true, id:'capicua',     emoji:'🎰', name:'Hora Capicua',        desc:'Abriu o app às 07:07, 11:11 ou 22:22',      cat:'geral' },
+  { secret:true, id:'halloween',   emoji:'🎃', name:'Noite das Bruxas',    desc:'Abriu o app no dia 31 de outubro',          cat:'geral' },
+  { secret:true, id:'santa',       emoji:'🎅', name:'Ho Ho Ho',            desc:'Abriu o app no dia de Natal',               cat:'geral' },
+  { secret:true, id:'newyear',     emoji:'🎆', name:'Ano Novo, Corpo Novo',desc:'Registrou um treino em 1º de janeiro',      cat:'geral' },
+  { secret:true, id:'curious',     emoji:'🕵️', name:'Curioso',             desc:'Descobriu que dá pra tocar no app… várias vezes', cat:'geral' },
   { secret:true, id:'bday_active', emoji:'🎂', name:'Presente Pra Si',    desc:'Treinou no dia do próprio aniversário',   cat:'geral' },
   { secret:true, id:'first_day',   emoji:'🎆', name:'Começou Certo',      desc:'Treinou no dia 1º de um mês',            cat:'geral' },
   { secret:true, id:'double',      emoji:'⚡', name:'Dose Dupla',         desc:'Musculação e corrida no mesmo dia',      cat:'geral' },
@@ -396,6 +405,7 @@ async function afterGoogleSignIn(user){
   state.user.isAdmin = isAdmin;
   state.user.email = email;
   loadSpecialAward(); // depois de carregar os dados: reconcilia/mostra a conquista especial
+  setTimeout(function(){ if(typeof checkTimeEasterEggs==="function") checkTimeEasterEggs(); }, 2500);
   bootAfterAuth();
 }
 
@@ -2829,6 +2839,23 @@ function awardNav(d){
 }
 function closeAwards(){ awardQueue = []; awardIdx = 0; document.getElementById('modal-back').classList.remove('award-dark'); closeModal(); }
 
+let _logoTaps = 0, _logoTapT = 0;
+function tapLogo(){
+  const now = Date.now();
+  if(now - _logoTapT > 3000) _logoTaps = 0; // se demorar muito entre toques, recomeça
+  _logoTapT = now; _logoTaps++;
+  if(_logoTaps >= 7){ _logoTaps = 0; if(!state.trophies.includes('curious')) unlockTrophy('curious'); }
+}
+function checkTimeEasterEggs(){
+  try{
+    const now = new Date(), h = now.getHours(), m = now.getMinutes();
+    if(h >= 0 && h < 4) unlockTrophy('insomnia');
+    if(h === 4 && m === 44) unlockTrophy('rooster');
+    if((h===7&&m===7)||(h===11&&m===11)||(h===22&&m===22)) unlockTrophy('capicua');
+    if(now.getMonth()===9 && now.getDate()===31) unlockTrophy('halloween');
+    if(now.getMonth()===11 && now.getDate()===25) unlockTrophy('santa');
+  }catch(e){}
+}
 function unlockTrophy(id){
   if(state.trophies.includes(id)) return;
   state.trophies.push(id);
@@ -2966,6 +2993,9 @@ function checkTrophies(){
   // horários
   if(allHist.some(x=>new Date(x.at).getHours() < 6)) unlockTrophy('early_bird');
   if(allHist.some(x=>new Date(x.at).getHours() >= 22)) unlockTrophy('night_owl');
+  if(allHist.some(x=>x.duration>=120)) unlockTrophy('marathon_time');
+  if(allHist.some(x=>x.duration>0 && x.duration<15)) unlockTrophy('turbo');
+  if(allHist.some(x=>{ const d=new Date(x.at); return d.getMonth()===0 && d.getDate()===1; })) unlockTrophy('newyear');
   // segundas-feiras (dia 1 na nossa contagem)
   const segundas = new Set(allHist.filter(x=>{ const d=new Date(x.at); return d.getDay()===1; }).map(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime(); }));
   if(segundas.size >= 4) unlockTrophy('monday');
@@ -6339,7 +6369,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,tapLogo,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
