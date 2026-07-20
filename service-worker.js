@@ -1,4 +1,4 @@
-const APP_VERSION = 'v11.24';
+const APP_VERSION = 'v4.5';
 const CACHE = 'metatreino-' + APP_VERSION;
 const CRITICAL = ['./index.html', './app.js']; // network-first (updates first)
 const STATIC = ['./manifest.json', './icon.svg', './icon-512.png']; // cache-first
