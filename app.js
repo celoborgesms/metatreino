@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.31 =====
-const APP_VERSION = 'v11.31';
+// ===== MetaTreino v11.32 =====
+const APP_VERSION = 'v11.32';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -3562,12 +3562,28 @@ const MA_ANSWERS = {
     if(!mod || !mod.plan) return 'Você ainda não tem um plano ativo. 🎯';
     const hoje = getDayIdx();
     const dias = ['segunda','terça','quarta','quinta','sexta','sábado','domingo'];
+    const hojeD = new Date(); hojeD.setHours(0,0,0,0);
+    const feitoEm = m => !!(m && (m.history||[]).some(x=>{ const t=new Date(x.at); t.setHours(0,0,0,0); return t.getTime()===hojeD.getTime(); }));
+    const temHoje = m => (m && m.plan && (m.plan.workouts||[]).find(w=>w.dayIdx===hoje)) || null;
     const ordenados = [...mod.plan.workouts].sort((a,b)=>a.dayIdx-b.dayIdx);
     const prox = ordenados.find(w=>w.dayIdx>hoje) || ordenados[0];
     if(!prox) return 'Seu plano não tem treinos cadastrados. 🤔';
-    const hojeTem = mod.plan.workouts.find(w=>w.dayIdx===hoje);
-    if(hojeTem) return `Hoje tem <b>${hojeTem.name}</b>${hojeTem.duration?` (~${hojeTem.duration} min)`:''}. Depois dele, o próximo é <b>${prox.name}</b> na ${dias[prox.dayIdx-1]}. 💪`;
-    return `Hoje é descanso. Seu próximo treino é <b>${prox.name}</b> na ${dias[prox.dayIdx-1]}${prox.duration?` (~${prox.duration} min)`:''}. 😴`;
+    const quandoProx = `<b>${prox.name}</b> na ${dias[prox.dayIdx-1]}${prox.duration?` (~${prox.duration} min)`:''}`;
+    const hojeTem = temHoje(mod), feitoAtivo = feitoEm(mod);
+    // olha também o outro módulo (musculação ⇄ corrida) pra saber se falta algo hoje
+    const outroK = state.active==='lift' ? 'run' : 'lift';
+    const outroHoje = temHoje(state.modules[outroK]);
+    const outroFeito = feitoEm(state.modules[outroK]);
+    const outroNome = outroK==='lift' ? 'a musculação' : 'a corrida';
+    // 1) ainda falta o treino de hoje neste módulo
+    if(hojeTem && !feitoAtivo) return `Hoje ainda tem <b>${hojeTem.name}</b>${hojeTem.duration?` (~${hojeTem.duration} min)`:''}. Depois dele, o próximo é ${quandoProx}. 💪`;
+    // 2) já treinou aqui, mas falta o outro módulo hoje
+    if(feitoAtivo && outroHoje && !outroFeito) return `Você já treinou hoje ✅, mas ainda falta <b>${outroHoje.name}</b> em ${outroNome}. Depois de fechar o dia, o próximo é ${quandoProx}. 💪`;
+    // 3) já treinou hoje (tudo feito)
+    if(feitoAtivo) return `Você já treinou hoje ✅${outroHoje&&outroFeito?' (os dois módulos, mandou bem!)':''}. O próximo é ${quandoProx}. 💪`;
+    // 4) hoje é descanso neste módulo
+    if(outroHoje && !outroFeito) return `Hoje é descanso na ${state.active==='lift'?'musculação':'corrida'}, mas você tem <b>${outroHoje.name}</b> em ${outroNome} hoje. Depois, o próximo aqui é ${quandoProx}. 🙂`;
+    return `Hoje é descanso na ${state.active==='lift'?'musculação':'corrida'}. Seu próximo treino é ${quandoProx}. 😴`;
   },
   aniversario(){
     const b = state.user && state.user.profile && state.user.profile.birth;
