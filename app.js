@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.24 =====
-const APP_VERSION = 'v11.24';
+// ===== MetaTreino v11.25 =====
+const APP_VERSION = 'v11.25';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5429,9 +5429,14 @@ function checkSpecialAward(trigger){
   setTimeout(()=>showSpecialReveal(sa), sa.aoTreinar ? 1400 : 1000); // deixa a tela assentar antes
 }
 function showSpecialReveal(sa){
-  // eterniza a conquista na conta dela (sincroniza na nuvem) — fica salva pra sempre
+  if(typeof requestWakeLock==='function') try{ requestWakeLock(); }catch(e){} // mantém a tela acesa durante toda a revelação
+  // eterniza a conquista na conta dela (sincroniza na nuvem) — fica salva pra sempre (com as frases!)
   try{
-    state.specialTrophy = { emo: sa.emo||'💍', titulo: sa.titulo||'', descricao: sa.descricao||'', at: (state.specialTrophy && state.specialTrophy.at) || Date.now() };
+    state.specialTrophy = {
+      emo: sa.emo||'💍', titulo: sa.titulo||'', descricao: sa.descricao||'',
+      frases: (sa.frases && sa.frases.length) ? sa.frases.slice() : ((state.specialTrophy && state.specialTrophy.frases) || []),
+      at: (state.specialTrophy && state.specialTrophy.at) || Date.now()
+    };
     saveData();
   }catch(e){}
   const frases = (sa.frases && sa.frases.length) ? sa.frases : [
@@ -5451,7 +5456,7 @@ function showSpecialReveal(sa){
       <div style="font-size:12px;letter-spacing:3px;color:#a78bfa;font-weight:800;margin-top:10px">CONQUISTA DESBLOQUEADA</div>
       <h2 style="margin:6px 0 12px;color:#fff;font-size:26px">${(sa.titulo||'').replace(/</g,'&lt;')}</h2>
       <p style="color:#c7cfdd;font-size:14.5px;line-height:1.65;max-width:320px;margin:0 auto;white-space:pre-line">${(sa.descricao||'').replace(/</g,'&lt;')}</p>
-      <button class="btn btn-primary" style="margin-top:26px;background:#a78bfa;box-shadow:none;padding:12px 30px;color:#fff" onclick="var e=document.getElementById('special-reveal');if(e){e.style.opacity='0';setTimeout(function(){e.remove()},800)}">Continuar ❤️</button>
+      <button class="btn btn-primary" style="margin-top:26px;background:#a78bfa;box-shadow:none;padding:12px 30px;color:#fff" onclick="if(typeof releaseWakeLock==='function')releaseWakeLock();var e=document.getElementById('special-reveal');if(e){e.style.opacity='0';setTimeout(function(){e.remove()},800)}">Continuar ❤️</button>
     </div>`;
   document.body.appendChild(ov);
   requestAnimationFrame(()=>{ ov.style.opacity='1'; });
@@ -5461,7 +5466,7 @@ function showSpecialReveal(sa){
     if(!document.getElementById('special-reveal')) return;
     if(i < frases.length){
       ph.style.opacity='0';
-      setTimeout(()=>{ ph.textContent = frases[i]; ph.style.opacity='1'; i++; setTimeout(showNext, 3400); }, 700);
+      setTimeout(()=>{ ph.textContent = frases[i]; ph.style.opacity='1'; const dwell = Math.min(9000, Math.max(3000, (frases[i]||'').length*90)); i++; setTimeout(showNext, dwell); }, 700);
     } else {
       ph.style.opacity='0';
       setTimeout(()=>{ ph.style.display='none'; const aw=ov.querySelector('#sr-award'); if(aw){ aw.style.opacity='1'; aw.style.transform='scale(1)'; } startHearts(ov); }, 800);
