@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.23 =====
-const APP_VERSION = 'v11.23';
+// ===== MetaTreino v11.24 =====
+const APP_VERSION = 'v11.24';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5487,6 +5487,7 @@ function openSpecialAwardAdmin(){
     <div class="field" style="margin-top:10px"><label>E-mail da pessoa</label><input class="input" id="sa-email" placeholder="email@exemplo.com" value="${(s.email||'').replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Título da conquista</label><input class="input" id="sa-titulo" placeholder="Para Sempre" value="${(s.titulo||'').replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Descrição</label><textarea class="input" id="sa-desc" rows="3" style="resize:vertical">${(s.descricao||'').replace(/</g,'&lt;')}</textarea></div>
+    <div class="field"><label>Frases da revelação (uma por linha — deixe vazio pro texto padrão)</label><textarea class="input" id="sa-frases" rows="4" style="resize:vertical" placeholder="Alguns anos atrás, eu estava perdido...&#10;Então a vida me levou até você...&#10;Hoje eu quero te fazer uma pergunta...">${((s.frases&&s.frases.length)?s.frases.join('\n'):'').replace(/</g,'&lt;')}</textarea></div>
     <div class="row" style="gap:10px">
       <div class="field" style="flex:1"><label>Emoji</label><input class="input" id="sa-emo" placeholder="💍" value="${(s.emo||'💍').replace(/"/g,'&quot;')}"></div>
       <div class="field" style="flex:1.5"><label>Data</label><input class="input" type="date" id="sa-data" value="${s.data||''}"></div>
@@ -5502,6 +5503,7 @@ async function saveSpecialAward(){
     email: ($('sa-email').value||'').trim().toLowerCase(),
     titulo: ($('sa-titulo').value||'').trim(),
     descricao: ($('sa-desc').value||'').trim(),
+    frases: (($('sa-frases')&&$('sa-frases').value)||'').split('\n').map(x=>x.trim()).filter(Boolean),
     emo: ($('sa-emo').value||'💍').trim() || '💍',
     data: ($('sa-data').value||'').trim(), // seletor nativo já entrega YYYY-MM-DD
     aoTreinar: !!$('sa-treinar').checked,
