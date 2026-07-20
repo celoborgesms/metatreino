@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.26 =====
-const APP_VERSION = 'v11.26';
+// ===== MetaTreino v11.27 =====
+const APP_VERSION = 'v11.27';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1095,14 +1095,12 @@ function homeStatusLine(){
     if(dr!==null && dr>=0 && dr<=7) return dr===0 ? 'É HOJE. Confie no treino que você fez. 🏁' : `Faltam ${dr} dias pra sua prova. Últimos ajustes — nada de heroísmo agora.`;
   }
 
-  // 5) tem treino hoje e ainda não fez → mensagem conforme a HORA
+  // 5) tem treino hoje e ainda não fez → mensagem conforme a HORA (o horário/corpo tem prioridade)
   if(w){
     const ultimo = todosH.length ? todosH.reduce((x,y)=>x.at>y.at?x:y) : null;
     const diasParado = ultimo ? Math.floor((Date.now()-ultimo.at)/86400000) : null;
-    if(diasParado !== null && diasParado >= 5) return `Faz ${diasParado} dias desde o último treino. Hoje é um bom dia pra recomeçar — comece leve. 👋`;
-
     const oQue = w.name.toLowerCase();
-    // 00h–03h: ninguém deveria estar treinando. Tom leve, empurrando pra cama.
+    // 00h–03h: ninguém deveria estar treinando. Tom leve, empurrando pra cama (vem ANTES do "recomeçar").
     if(h < 3){
       const corujas = [
         `🦉 Passou da meia-noite… O ${oQue} não vai fugir, mas seu sono, sim. Vai dormir!`,
@@ -1113,6 +1111,8 @@ function homeStatusLine(){
       return corujas[new Date().getDate() % corujas.length];
     }
     if(h < 6)  return `Madrugada e você aqui? Se for treinar ${oQue}, aqueça bem — o corpo ainda está frio. 🌙`;
+    // retorno após dias parado — só em horário de treinar (6h–21h), pra não empurrar treino de madrugada/noite
+    if(diasParado !== null && diasParado >= 5 && h < 21) return `Faz ${diasParado} dias desde o último treino. Hoje é um bom dia pra recomeçar — comece leve. 👋`;
     if(h < 12) return streak>=3 ? `${streak} dias de sequência. Hoje tem ${oQue} — comece o dia mantendo a corrente. 🔥`
                                 : `Bom começo de dia: hoje tem ${oQue} esperando por você. ☀️`;
     if(h < 18) return streak>=3 ? `${streak} dias de sequência e hoje tem ${oQue}. Não deixe pra depois. 🔥`
@@ -1128,7 +1128,7 @@ function homeStatusLine(){
   if(h >= 21) return `Descanso hoje. Um sono bom vale mais que qualquer série. 😴`;
   return `Hoje é dia de descanso na ${nomeAtivo}. Recupere bem, amanhã tem mais. 😴`;
 }
-function greetTime(){ const h=new Date().getHours(); if(h<12) return 'Bom dia'; if(h<18) return 'Boa tarde'; return 'Boa noite'; }
+function greetTime(){ const h=new Date().getHours(); if(h<5) return 'Boa noite'; if(h<12) return 'Bom dia'; if(h<18) return 'Boa tarde'; return 'Boa noite'; }
 function firstName(){ const p = state.user.profile; return (p&&p.nickname) || (state.user.name||'').split(' ')[0]; }
 // ---------- VÍDEOS PERSONALIZADOS DOS EXERCÍCIOS ----------
 // O treinador cadastra links no painel admin (coleção videosExercicios).
