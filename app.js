@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.36 =====
-const APP_VERSION = 'v11.36';
+// ===== MetaTreino v11.37 =====
+const APP_VERSION = 'v11.37';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -872,6 +872,7 @@ const EX_BANK = [
     {name:'Crucifixo no Voador (Peck Deck)',sub:'Peito (isolador)',equip:['academia']},
     {name:'Crossover no Cabo (alto)',sub:'Peito Inferior',equip:['academia']},
     {name:'Crossover no Cabo (baixo)',sub:'Peito Superior',equip:['academia']},
+    {name:'Supino na Máquina Inclinado',sub:'Peito Superior',equip:['academia']},
     // HALTERES
     {name:'Supino Reto com Halteres',sub:'Peito',equip:['academia','halteres']},
     {name:'Supino Inclinado com Halteres',sub:'Peito Superior',equip:['academia','halteres']},
@@ -891,6 +892,8 @@ const EX_BANK = [
     {name:'Remada Baixa no Cabo',sub:'Costas Média (espessura)',equip:['academia']},
     {name:'Remada Cavalinho (T-Bar)',sub:'Costas Média',equip:['academia']},
     {name:'Remada na Máquina (Hammer)',sub:'Costas Média',equip:['academia']},
+    {name:'Remada Articulada Sentada',sub:'Costas Média',equip:['academia']},
+    {name:'Puxada Aberta (Pulldown)',sub:'Dorsais (largura)',equip:['academia']},
     {name:'Pullover na Polia',sub:'Dorsais (isolador)',equip:['academia']},
     {name:'Levantamento Terra',sub:'Cadeia posterior (força)',equip:['academia']},
     // HALTERES
@@ -907,6 +910,7 @@ const EX_BANK = [
     {name:'Desenvolvimento com Barra',sub:'Ombro (força)',equip:['academia']},
     {name:'Desenvolvimento na Máquina',sub:'Ombro',equip:['academia']},
     {name:'Elevação Lateral na Polia',sub:'Ombro Lateral',equip:['academia']},
+    {name:'Elevação Lateral na Máquina',sub:'Ombro Lateral (isolador)',equip:['academia']},
     {name:'Face Pull no Cabo',sub:'Ombro Posterior / Postura',equip:['academia']},
     // HALTERES
     {name:'Desenvolvimento com Halteres',sub:'Ombro',equip:['academia','halteres']},
@@ -924,6 +928,7 @@ const EX_BANK = [
     {name:'Rosca Direta com Barra',sub:'Bíceps',equip:['academia']},
     {name:'Rosca Scott (banco)',sub:'Bíceps (pico)',equip:['academia']},
     {name:'Rosca no Cabo',sub:'Bíceps (tensão contínua)',equip:['academia']},
+    {name:'Rosca Scott na Máquina',sub:'Bíceps (pico)',equip:['academia']},
     // HALTERES
     {name:'Rosca Alternada com Halteres',sub:'Bíceps',equip:['academia','halteres']},
     {name:'Rosca Martelo com Halteres',sub:'Braquial / Antebraço',equip:['academia','halteres']},
@@ -939,6 +944,7 @@ const EX_BANK = [
     {name:'Tríceps na Polia (barra)',sub:'Tríceps',equip:['academia']},
     {name:'Tríceps Corda no Cabo',sub:'Tríceps (cabeça lateral)',equip:['academia']},
     {name:'Tríceps Testa (barra EZ)',sub:'Tríceps (cabeça longa)',equip:['academia']},
+    {name:'Tríceps na Máquina (Mergulho)',sub:'Tríceps (isolador)',equip:['academia']},
     // HALTERES
     {name:'Tríceps Francês com Halteres',sub:'Tríceps (cabeça longa)',equip:['academia','halteres']},
     {name:'Tríceps Coice com Haltere',sub:'Tríceps',equip:['academia','halteres']},
@@ -958,6 +964,8 @@ const EX_BANK = [
     {name:'Mesa Flexora',sub:'Posterior de Coxa (isolador)',equip:['academia']},
     {name:'Cadeira Adutora',sub:'Adutores',equip:['academia']},
     {name:'Cadeira Abdutora',sub:'Abdutores / Glúteo Médio',equip:['academia']},
+    {name:'Cadeira Flexora Sentada',sub:'Posterior de Coxa (isolador)',equip:['academia']},
+    {name:'Leg Press Horizontal',sub:'Quadríceps / Glúteos',equip:['academia']},
     // HALTERES
     {name:'Agachamento Búlgaro',sub:'Quadríceps / Glúteos (unilateral)',equip:['academia','halteres','casa']},
     {name:'Afundo com Halteres',sub:'Quadríceps / Glúteos',equip:['academia','halteres']},
@@ -976,6 +984,7 @@ const EX_BANK = [
     // ACADEMIA
     {name:'Elevação Pélvica (Hip Thrust)',sub:'Glúteos (força)',equip:['academia','halteres']},
     {name:'Coice na Polia (Glúteo no Cabo)',sub:'Glúteo Máximo',equip:['academia']},
+    {name:'Glúteo na Máquina (Kickback)',sub:'Glúteo Máximo',equip:['academia']},
     {name:'Cadeira Abdutora (foco glúteo)',sub:'Glúteo Médio',equip:['academia']},
     // HALTERES + CASA
     {name:'Ponte de Glúteo',sub:'Glúteos',equip:['casa','halteres','academia']},
@@ -6229,7 +6238,7 @@ function openSwapExercise(exId){
   // — usada pra não sugerir algo que treina exatamente o mesmo que outro exercício já no treino
   const stim = s => (s||'').toLowerCase().replace(/[()]/g,'').trim();
   const usedStims = new Set(w.exercises.filter(e=>e.id!==exId).map(e=>stim(e.sub)));
-  const compat = cat.items.filter(ex => !usedIds.has(slug(ex.name)) && (ex.equip||[]).some(e=>equipFilter.includes(e)));
+  const compat = cat.items.filter(ex => !usedIds.has(slug(ex.name)) && (ex.equip||[]).some(e=>equipFilter.includes(e)) && (equip==='casa' || !ex.improv));
   if(!compat.length){ toast('Sem alternativas disponíveis pro seu equipamento'); return; }
   // separa em "recomendadas" (estímulo diferente do que já tem no treino) e "similares"
   const recomendadas = compat.filter(ex => !usedStims.has(stim(ex.sub)));
