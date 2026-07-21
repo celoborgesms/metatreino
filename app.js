@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.34 =====
-const APP_VERSION = 'v11.34';
+// ===== MetaTreino v11.35 =====
+const APP_VERSION = 'v11.35';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -4281,6 +4281,13 @@ function maInsight(){
   }
   if(Math.max(...porDia)>=3) ins.push(`📅 Seu dia mais consistente é <b>${dias[maxDia]}</b>. Ancorar os treinos nos dias que já funcionam é uma baita estratégia.`);
   if(manha+noite>=5){ if(manha>noite*1.5) ins.push(`🌅 Você treina mais de manhã — treino cedo tem uma vantagem: ninguém "rouba" seu horário durante o dia.`); else if(noite>manha*1.5) ins.push(`🌙 Você é mais de treinar à noite. Só evite treinos muito intensos perto da hora de dormir.`); }
+  const dias1 = Math.floor((Date.now()-all[0].at)/86400000);
+  if(dias1>=30) ins.push(`🗓️ Faz <b>${dias1} dias</b> que você começou no MetaTreino — e já são <b>${all.length}</b> sessões registradas. Cada uma construiu a próxima.`);
+  if(state.active==='lift'){
+    const ult = state.modules.lift && state.modules.lift.planCriadoEm;
+    const semFicha = ult ? Math.floor((Date.now()-ult)/86400000) : null;
+    if(semFicha!==null && semFicha>=75) ins.push(`🔄 Faz uns <b>${Math.round(semFicha/30)} meses</b> que sua ficha é a mesma. Trocar alguns exercícios agora pode reacender o estímulo. 💪`);
+  }
   if(!ins.length) return `Você está com uma boa constância, ${maName()}! Continue registrando que logo te trago padrões mais detalhados. 💪`;
   return ins[Math.floor(Date.now()/86400000) % ins.length];
 }
@@ -4394,6 +4401,10 @@ function maOpeningSummary(){
         if(ins && /^[📈📅🌅🌙]/.test(ins)){ L.push(''); L.push(ins); }
       }
     }
+    try{
+      const _all=[...((state.modules.lift&&state.modules.lift.history)||[]),...((state.modules.run&&state.modules.run.history)||[])];
+      if(_all.length>=6 && !(typeof vacationActive==='function'&&vacationActive()) && (new Date().getDate()%2===0)){ L.push(''); L.push(maInsight()); }
+    }catch(e){}
     L.push('');
     L.push('É só perguntar ou tocar numa sugestão abaixo. 💪');
     return L.join('<br>');
@@ -4402,16 +4413,32 @@ function maOpeningSummary(){
   }
 }
 // Motivo REAL pra chamar a atenção (nunca inventa nada — só fala quando tem algo de verdade)
+// Motivo REAL pra chamar (nunca inventa) + NÍVEL de cor conforme a importância
 function maNudge(){
   try{
-    if((state.ui&&state.ui.nudgeSeen) === new Date().toDateString()) return null; // já viu hoje
-    const total = ((((state.modules.lift||{}).history)||[]).length) + ((((state.modules.run||{}).history)||[]).length);
-    const streak = (typeof calcStreak==='function') ? calcStreak() : 0;
-    const MARCOS = [1,10,25,50,100,200,365];
-    const prox = MARCOS.find(m=>m>total);
-    if(prox && total>0 && (prox-total)<=2) return { text:`🎯 Falta ${prox-total===1?'1 treino':(prox-total)+' treinos'} pro seu ${prox}º! Quer ver?` };
-    if(streak>=5) return { text:`🔥 ${streak} dias seguidos! Dei uma olhada no seu ritmo.` };
-    if(streak>=3) return { text:`👀 ${streak} dias seguidos. Tenho um resuminho pra você.` };
+    if((state.ui&&state.ui.nudgeSeen) === new Date().toDateString()) return null; // no máx. 1x/dia
+    const lift=state.modules.lift, run=state.modules.run;
+    const all=[...((lift&&lift.history)||[]),...((run&&run.history)||[])].sort((a,b)=>a.at-b.at);
+    const total=all.length;
+    const streak=(typeof calcStreak==='function')?calcStreak():0;
+    const vac=(typeof vacationActive==='function')&&vacationActive();
+    const hoje=new Date(); hoje.setHours(0,0,0,0);
+    // ❤️ VERMELHO — extremamente especial
+    if(total>0){
+      const dias1=Math.floor((Date.now()-all[0].at)/86400000);
+      if(dias1>0 && dias1%365===0) return {text:`❤️ Hoje faz ${dias1/365} ano${dias1/365>1?'s':''} da sua primeira sessão no MetaTreino. Que jornada...`, tone:'special'};
+      if(total===1000) return {text:`❤️ 1000 treinos. Eu acompanho isso faz tempo. Parabéns de verdade. 🥹`, tone:'special'};
+    }
+    // 🟣 ROXO — raro
+    if([100,200,365].includes(total)) return {text:`🟣 Você chegou no seu ${total}º treino! Pouquíssima gente chega aqui. Bora comemorar?`, tone:'rare'};
+    // 🟠 LARANJA — importante
+    const prs=Object.values(state.prs||{}).map(x=>x&&x.at).filter(Boolean);
+    if(prs.some(t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()===hoje.getTime();})) return {text:`🏆 Você bateu um recorde hoje! Quer ver sua evolução?`, tone:'important'};
+    const prox=[10,25,50,100,200,365].find(m=>m>total);
+    if(prox && total>0 && (prox-total)<=2) return {text:`🎯 Falta ${prox-total===1?'1 treino':(prox-total)+' treinos'} pro seu ${prox}º! Quer ver?`, tone:'important'};
+    if(streak>=7) return {text:`🔥 ${streak} dias seguidos — sua melhor fase! Dá uma olhada no ritmo.`, tone:'important'};
+    // 🟢 VERDE — curiosidade/insight (em férias não puxa, pra não parecer cobrança)
+    if(!vac && total>=6 && streak>=2) return {text:`💡 Descobri um padrão nos seus treinos. Posso te mostrar?`, tone:'curio'};
     return null;
   }catch(e){ return null; }
 }
@@ -4419,21 +4446,21 @@ function updateFabNudge(){
   const fab = document.getElementById('ma-fab'); if(!fab) return;
   let bubble = document.getElementById('fab-bubble');
   const n = maNudge();
+  fab.classList.remove('fab-curio','fab-important','fab-rare','fab-special','fab-alert');
   if(n){
-    fab.classList.add('fab-alert');
+    fab.classList.add('fab-alert','fab-'+(n.tone||'important'));
     if(!bubble){ bubble = document.createElement('div'); bubble.id='fab-bubble'; document.body.appendChild(bubble); bubble.onclick=function(){ openAssistant(); }; }
     bubble.textContent = n.text; bubble.style.display='block';
     clearTimeout(window._fabBubbleT);
     window._fabBubbleT = setTimeout(function(){ const b=document.getElementById('fab-bubble'); if(b) b.style.display='none'; }, 8000); // some, mas o botão fica colorido
   } else {
-    fab.classList.remove('fab-alert');
     if(bubble) bubble.style.display='none';
   }
 }
 function openAssistant(){
   state.ui = state.ui || {}; state.ui.nudgeSeen = new Date().toDateString();
   try{ saveData(); }catch(e){}
-  const fab=document.getElementById('ma-fab'); if(fab) fab.classList.remove('fab-alert');
+  const fab=document.getElementById('ma-fab'); if(fab) fab.classList.remove('fab-alert','fab-curio','fab-important','fab-rare','fab-special');
   const b=document.getElementById('fab-bubble'); if(b) b.style.display='none';
   maThread = [{who:'bot', txt: maOpeningSummary()}];
   renderAssistant();
