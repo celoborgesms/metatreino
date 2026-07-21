@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.33 =====
-const APP_VERSION = 'v11.33';
+// ===== MetaTreino v11.34 =====
+const APP_VERSION = 'v11.34';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -151,8 +151,6 @@ const TROPHIES = [
   { secret:true, id:'humble',      emoji:'🧘', name:'Sabedoria',          desc:'Adaptou o treino por dor em vez de forçar', cat:'geral' },
   { secret:true, id:'marathon_time', emoji:'🐢', name:'Sem Pressa',        desc:'Registrou um treino/atividade de mais de 2 horas', cat:'geral' },
   { secret:true, id:'turbo',       emoji:'⚡', name:'Modo Turbo',          desc:'Registrou um treino relâmpago de menos de 15 min', cat:'geral' },
-  { secret:true, id:'insomnia',    emoji:'🌙', name:'Insone',              desc:'Abriu o app entre a meia-noite e as 4h',    cat:'geral' },
-  { secret:true, id:'rooster',     emoji:'🐔', name:'O Galo Nem Cantou',   desc:'Abriu o app exatamente às 4h44',            cat:'geral' },
   { secret:true, id:'capicua',     emoji:'🎰', name:'Hora Capicua',        desc:'Abriu o app às 07:07, 11:11 ou 22:22',      cat:'geral' },
   { secret:true, id:'halloween',   emoji:'🎃', name:'Noite das Bruxas',    desc:'Abriu o app no dia 31 de outubro',          cat:'geral' },
   { secret:true, id:'santa',       emoji:'🎅', name:'Ho Ho Ho',            desc:'Abriu o app no dia de Natal',               cat:'geral' },
@@ -1317,6 +1315,7 @@ function renderHome(){
   if(!mod.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; } // corrida em modo registro (sem plano)
   const isLift = state.active==='lift';
   renderAvatar('home-avatar');
+  if(typeof updateFabNudge==='function') updateFabNudge();
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
   const _wl = (typeof weatherHomeLine==='function') ? weatherHomeLine() : null;
   $('home-goal').innerHTML = homeStatusLine() + (_wl ? `<br><span style="opacity:.6;font-size:.9em">${_wl}</span>` : '');
@@ -2841,8 +2840,6 @@ function closeAwards(){ awardQueue = []; awardIdx = 0; document.getElementById('
 function checkTimeEasterEggs(){
   try{
     const now = new Date(), h = now.getHours(), m = now.getMinutes();
-    if(h >= 0 && h < 4) unlockTrophy('insomnia');
-    if(h === 4 && m === 44) unlockTrophy('rooster');
     if((h===7&&m===7)||(h===11&&m===11)||(h===22&&m===22)) unlockTrophy('capicua');
     if(now.getMonth()===9 && now.getDate()===31) unlockTrophy('halloween');
     if(now.getMonth()===11 && now.getDate()===25) unlockTrophy('santa');
@@ -4404,7 +4401,40 @@ function maOpeningSummary(){
     return `${maSaudacao()}, ${maName()}! 👋 Como posso te ajudar? Pergunte sobre seus treinos, evolução, meta e mais — ou toque numa sugestão.`;
   }
 }
+// Motivo REAL pra chamar a atenção (nunca inventa nada — só fala quando tem algo de verdade)
+function maNudge(){
+  try{
+    if((state.ui&&state.ui.nudgeSeen) === new Date().toDateString()) return null; // já viu hoje
+    const total = ((((state.modules.lift||{}).history)||[]).length) + ((((state.modules.run||{}).history)||[]).length);
+    const streak = (typeof calcStreak==='function') ? calcStreak() : 0;
+    const MARCOS = [1,10,25,50,100,200,365];
+    const prox = MARCOS.find(m=>m>total);
+    if(prox && total>0 && (prox-total)<=2) return { text:`🎯 Falta ${prox-total===1?'1 treino':(prox-total)+' treinos'} pro seu ${prox}º! Quer ver?` };
+    if(streak>=5) return { text:`🔥 ${streak} dias seguidos! Dei uma olhada no seu ritmo.` };
+    if(streak>=3) return { text:`👀 ${streak} dias seguidos. Tenho um resuminho pra você.` };
+    return null;
+  }catch(e){ return null; }
+}
+function updateFabNudge(){
+  const fab = document.getElementById('ma-fab'); if(!fab) return;
+  let bubble = document.getElementById('fab-bubble');
+  const n = maNudge();
+  if(n){
+    fab.classList.add('fab-alert');
+    if(!bubble){ bubble = document.createElement('div'); bubble.id='fab-bubble'; document.body.appendChild(bubble); bubble.onclick=function(){ openAssistant(); }; }
+    bubble.textContent = n.text; bubble.style.display='block';
+    clearTimeout(window._fabBubbleT);
+    window._fabBubbleT = setTimeout(function(){ const b=document.getElementById('fab-bubble'); if(b) b.style.display='none'; }, 8000); // some, mas o botão fica colorido
+  } else {
+    fab.classList.remove('fab-alert');
+    if(bubble) bubble.style.display='none';
+  }
+}
 function openAssistant(){
+  state.ui = state.ui || {}; state.ui.nudgeSeen = new Date().toDateString();
+  try{ saveData(); }catch(e){}
+  const fab=document.getElementById('ma-fab'); if(fab) fab.classList.remove('fab-alert');
+  const b=document.getElementById('fab-bubble'); if(b) b.style.display='none';
   maThread = [{who:'bot', txt: maOpeningSummary()}];
   renderAssistant();
 }
