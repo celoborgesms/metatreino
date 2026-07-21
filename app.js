@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.35 =====
-const APP_VERSION = 'v11.35';
+// ===== MetaTreino v11.36 =====
+const APP_VERSION = 'v11.36';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -153,7 +153,6 @@ const TROPHIES = [
   { secret:true, id:'turbo',       emoji:'⚡', name:'Modo Turbo',          desc:'Registrou um treino relâmpago de menos de 15 min', cat:'geral' },
   { secret:true, id:'capicua',     emoji:'🎰', name:'Hora Capicua',        desc:'Abriu o app às 07:07, 11:11 ou 22:22',      cat:'geral' },
   { secret:true, id:'halloween',   emoji:'🎃', name:'Noite das Bruxas',    desc:'Abriu o app no dia 31 de outubro',          cat:'geral' },
-  { secret:true, id:'santa',       emoji:'🎅', name:'Ho Ho Ho',            desc:'Abriu o app no dia de Natal',               cat:'geral' },
   { secret:true, id:'newyear',     emoji:'🎆', name:'Ano Novo, Corpo Novo',desc:'Registrou um treino em 1º de janeiro',      cat:'geral' },
   { secret:true, id:'bday_active', emoji:'🎂', name:'Presente Pra Si',    desc:'Treinou no dia do próprio aniversário',   cat:'geral' },
   { secret:true, id:'first_day',   emoji:'🎆', name:'Começou Certo',      desc:'Treinou no dia 1º de um mês',            cat:'geral' },
@@ -2842,7 +2841,6 @@ function checkTimeEasterEggs(){
     const now = new Date(), h = now.getHours(), m = now.getMinutes();
     if((h===7&&m===7)||(h===11&&m===11)||(h===22&&m===22)) unlockTrophy('capicua');
     if(now.getMonth()===9 && now.getDate()===31) unlockTrophy('halloween');
-    if(now.getMonth()===11 && now.getDate()===25) unlockTrophy('santa');
   }catch(e){}
 }
 function unlockTrophy(id){
