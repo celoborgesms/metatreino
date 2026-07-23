@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.37 =====
-const APP_VERSION = 'v11.37';
+// ===== MetaTreino v11.38 =====
+const APP_VERSION = 'v11.38';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1316,6 +1316,12 @@ function renderRunLogScreen(){
     : 'Você ainda não montou um plano de corrida. Monte um plano completo ou registre atividades avulsas (bike, caminhada, corrida).';
 }
 // ---------- HOME ----------
+// Fonte ÚNICA da verdade sobre "treinou hoje" (usada pelo card, saudação e assistente)
+function entriesHoje(mod){
+  const h=new Date(); h.setHours(0,0,0,0);
+  return ((mod&&mod.history)||[]).filter(x=>{ const t=new Date(x.at); t.setHours(0,0,0,0); return t.getTime()===h.getTime(); });
+}
+function treinouHoje(mod){ return entriesHoje(mod).length>0; }
 function renderHome(){
   renderModToggle();
   const mod = state.modules[state.active];
@@ -1518,7 +1524,13 @@ function renderHome(){
   const today = getDayIdx();
   const todayWk = mod.plan.workouts.find(w=>w.dayIdx===today);
   const slot = $('today-slot');
-  slot.innerHTML = todayWk ? renderTodayWorkout(todayWk,isLift) : renderRestDay(mod);
+  if(typeof vacationActive==='function' && vacationActive()){
+    slot.innerHTML = todayWk ? renderVacationToday(todayWk,isLift) : renderRestDay(mod);
+  } else if(todayWk && treinouHoje(mod)){
+    slot.innerHTML = renderDoneToday(todayWk, mod, isLift);
+  } else {
+    slot.innerHTML = todayWk ? renderTodayWorkout(todayWk,isLift) : renderRestDay(mod);
+  }
 
   renderWeekGrid(mod);
   renderYourList(mod);
@@ -1557,6 +1569,47 @@ function renderTodayWorkout(w, isLift){
       <button class="btn btn-primary" onclick="openSession('${w.k||w.dayIdx}')">▶ Ver sessão</button>
       <button class="btn btn-ghost" onclick="${isLift?`openSession('${w.k}')`:`openRunLog('${w.dayIdx}')`}">${isLift?'📝 Registrar treino':'📝 Registrar corrida'}</button>
     </div>
+  </div>`;
+}
+// Estado PÓS-TREINO: resumo + recuperação adaptada à avaliação + próximo treino
+function renderDoneToday(w, mod, isLift){
+  const es = entriesHoje(mod); const h = es[es.length-1] || {};
+  const feel = h.feel || (h.rating!=null ? (h.rating>=5?'otimo':(h.rating<=1?'exausto':'bem')) : 'bem');
+  const feelLbl = ({otimo:'🚀 Ótimo', bem:'😊 Bem', cansado:'😮‍💨 Cansado', exausto:'😩 Exausto'})[feel] || '😊 Bem';
+  const rec = feel==='exausto' ? '😴 Foi pesado hoje. Prioriza um sono de qualidade, hidratação e uma refeição com proteína. Se amanhã ainda estiver moído, um dia extra de descanso vale ouro.'
+    : feel==='cansado' ? '💧 Hidrate-se bem nas próximas horas e capriche na proteína. O músculo cresce agora, na recuperação — não no espelho da academia.'
+    : feel==='otimo' ? '🔥 Sobrou energia! Bom sinal: dá pra progredir um pouco a carga na próxima sessão. Por hoje: descanso e boa alimentação.'
+    : '👏 Bom trabalho. Hidrate-se, coma bem e deixa o corpo fazer a parte dele.';
+  const hoje = getDayIdx(); const ord=[...((mod.plan&&mod.plan.workouts)||[])].sort((a,b)=>a.dayIdx-b.dayIdx);
+  const prox = ord.find(x=>x.dayIdx>hoje) || ord[0];
+  const dias=['segunda','terça','quarta','quinta','sexta','sábado','domingo'];
+  const proxTxt = (prox && ord.length>0) ? `${isLift&&prox.k?('Treino '+prox.k+' — '):''}${prox.name} · ${dias[prox.dayIdx-1]}` : '';
+  const totMin = Math.round(es.reduce((a,x)=>a+(x.duration||0),0));
+  const exN = isLift ? ((h.exercisesDone||[]).length || null) : null;
+  return `<div class="today" style="border-color:rgba(16,185,129,.45)">
+    <div class="today-label" style="color:var(--primary-2)">✅ TREINO CONCLUÍDO</div>
+    <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:(h.name||w.name)}</div>
+    <div class="today-meta" style="margin-top:10px">
+      <span class="chip mono">⏱️ ${fmtDur(totMin)}</span>
+      ${exN?`<span class="chip">💪 ${exN} exercícios</span>`:''}
+      ${h.distance?`<span class="chip mono">📍 ${h.distance}km</span>`:''}
+      <span class="chip">${feelLbl}</span>
+    </div>
+    <div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.25);font-size:13px;line-height:1.5">${rec}</div>
+    ${proxTxt?`<div style="margin-top:10px;font-size:12.5px;color:var(--text-dim)">📅 Próximo: <b style="color:var(--text)">${proxTxt}</b></div>`:''}
+    <div class="today-actions">
+      <button class="btn btn-ghost" onclick="openSession('${w.k||w.dayIdx}')">Ver detalhes</button>
+      ${!isLift?`<button class="btn btn-ghost" onclick="openRunLog('${w.dayIdx}')">📝 Registrar outra</button>`:''}
+    </div>
+  </div>`;
+}
+// Estado FÉRIAS: sem call-to-action forte (cobranças pausadas de verdade)
+function renderVacationToday(w, isLift){
+  return `<div class="today" style="opacity:.78">
+    <div class="today-label">🌴 MODO FÉRIAS</div>
+    <div class="today-title" style="font-size:18px">${isLift?`Treino ${w.k} — ${w.name}`:w.name}</div>
+    <div class="today-desc" style="margin-top:6px">Cobranças pausadas. Se bater vontade, o treino está aqui — mas hoje a prioridade é descansar. 😌</div>
+    <div class="today-actions"><button class="btn btn-ghost" onclick="openSession('${w.k||w.dayIdx}')">Ver treino mesmo assim</button></div>
   </div>`;
 }
 const PART_CUES = {
@@ -1629,7 +1682,8 @@ function renderWeekGrid(mod){
     else if(isPast && planned>0 && !daySkipped && !dayVac) status='<span style="color:var(--text-mute);font-weight:700">–</span>';
     else if(has) status='⚪';
     else status='';
-    return `<div class="day ${isT?'today':''} ${!has?'rest':''}">
+    const clicavel = idx<=today ? `onclick="openDayDetail(${cd.getTime()})" style="cursor:pointer"` : '';
+    return `<div class="day ${isT?'today':''} ${!has?'rest':''}" ${clicavel}>
       <div class="day-name">${n.slice(0,3)}</div>
       <div style="font-size:9.5px;color:var(--text-mute);margin-top:1px;line-height:1">${dateStr}</div>
       <div class="day-emoji" style="margin-top:4px;${has&&info.emos.length>1?'font-size:11px;letter-spacing:-2px':''}">${has?info.emos.join(''):'·'}</div>
@@ -1641,7 +1695,13 @@ function renderWeekGrid(mod){
 function renderYourList(mod){
   const isLift = state.active==='lift';
   if(!mod || !mod.plan){ $('your-list').innerHTML=''; return; }
-  $('your-list').innerHTML = mod.plan.workouts.map(w=>`<div class="list-item" onclick="openSession('${w.k||w.dayIdx}')">${isLift?`<div class="list-badge">${w.k}</div>`:`<div class="list-dot"></div>`}<div class="list-info"><div class="list-tag">${(w.dayName||'').toUpperCase()}</div><div class="list-name">${isLift?'Treino '+w.k+' — '+w.name:w.name}</div></div><div class="list-right"><span class="mono">~${w.duration}min</span> ›</div></div>`).join('');
+  const hoje = getDayIdx();
+  const ord = [...mod.plan.workouts].sort((a,b)=>a.dayIdx-b.dayIdx);
+  // começa em hoje e segue a semana (dá a volta), mostrando só os 3 mais relevantes
+  const emOrdem = [...ord.filter(w=>w.dayIdx>=hoje), ...ord.filter(w=>w.dayIdx<hoje)];
+  const shown = emOrdem.slice(0,3);
+  const item = w=>`<div class="list-item" onclick="openSession('${w.k||w.dayIdx}')">${isLift?`<div class="list-badge">${w.k}</div>`:`<div class="list-dot"></div>`}<div class="list-info"><div class="list-tag">${(w.dayName||'').toUpperCase()}</div><div class="list-name">${isLift?'Treino '+w.k+' — '+w.name:w.name}</div></div><div class="list-right"><span class="mono">~${w.duration}min</span> ›</div></div>`;
+  $('your-list').innerHTML = shown.map(item).join('') + (ord.length>3?`<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="goTab('sessions')">Ver todos os ${ord.length} treinos →</button>`:'');
 }
 
 // ---------- SESSIONS ----------
@@ -4055,7 +4115,7 @@ function maLogActivity(type, km, min){
   if(km<=0||km>200||min<=0||min>600) return {done:true, msg:'Esses números parecem estranhos 🤔. Tenta de novo, ex: "corri 5km em 30 minutos".'};
   const mod = ensureActivityLog();
   const paceNum = min/km;
-  const paceStr = Math.floor(paceNum)+':'+String(Math.round((paceNum-Math.floor(paceNum))*60)).padStart(2,'0')+'/km';
+  const paceStr = type==='bike' ? (km/(min/60)).toFixed(1)+' km/h' : Math.floor(paceNum)+':'+String(Math.round((paceNum-Math.floor(paceNum))*60)).padStart(2,'0')+'/km';
   const meta = {corrida:{emo:'🏃',lbl:'Corrida'},caminhada:{emo:'🚶',lbl:'Caminhada'},bike:{emo:'🚴',lbl:'Bike'}}[type];
   const name = type==='corrida' ? `${meta.emo} Corrida — ${km}km` : `${meta.emo} ${meta.lbl} — ${km}km`;
   mod.history = mod.history||[];
@@ -6360,7 +6420,7 @@ function saveRunLog(dayIdx){
   const w = livre ? { k:'livre', name:'Atividade livre', dayIdx:getDayIdx() } : mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx));
   if(!w){ toast('Erro ao registrar'); return; }
   const pace = (min/km);
-  const paceStr = Math.floor(pace) + ':' + String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0') + '/km';
+  const paceStr = type==='bike' ? (km/(min/60)).toFixed(1)+' km/h' : Math.floor(pace) + ':' + String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0') + '/km';
   const meta = ACTIVITY_META[type] || ACTIVITY_META.corrida;
   const name = (type==='corrida' && !livre) ? w.name : `${meta.emo} ${meta.lbl} — ${km}km`;
   mod.history = mod.history || [];
