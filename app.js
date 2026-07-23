@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.42 =====
-const APP_VERSION = 'v11.42';
+// ===== MetaTreino v11.43 =====
+const APP_VERSION = 'v11.43';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1382,8 +1382,9 @@ function renderHome(){
   renderAvatar('home-avatar');
   if(typeof updateFabNudge==='function') updateFabNudge();
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
+  const _glue = t => String(t||'').replace(/ (?=[^ ]*$)/, '\u00A0'); // cola o emoji final na última palavra
   const _wl = (typeof weatherHomeLine==='function') ? weatherHomeLine() : null;
-  $('home-goal').innerHTML = homeStatusLine() + (_wl ? `<br><span style="opacity:.6;font-size:.9em">${_wl}</span>` : '');
+  $('home-goal').innerHTML = _glue(homeStatusLine()) + (_wl ? `<br><span style="opacity:.6;font-size:.9em">${_glue(_wl)}</span>` : '');
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
   // 40% de chance de mostrar uma frase contextual (se houver); senão, uma do dia
   const ctxQuote = Math.random() < 0.4 ? contextualQuote() : null;
@@ -1544,7 +1545,7 @@ function renderHome(){
       const hardRun = /Intervalado|Longa/.test(runToday.name||'');
       const partsLbl = parts.join(' + ').toLowerCase();
       let msgC;
-      if(heavyLeg && hardRun) msgC = `Hoje tem treino de ${partsLbl} e corrida forte. Escolha um pra valer: ou encurta a corrida (metade da distância, ritmo leve) ou reduz as séries de perna em ~30%. Fazer os dois no talo cobra a conta amanhã.`;
+      if(heavyLeg && hardRun && !treinouHoje(state.modules.lift) && !treinouHoje(state.modules.run)) msgC = `Hoje tem treino de ${partsLbl} e corrida forte. Escolha um pra valer: ou encurta a corrida (metade da distância, ritmo leve) ou reduz as séries de perna em ~30%. Fazer os dois no talo cobra a conta amanhã.`;
       else if(heavyLeg) msgC = `${partsLbl.charAt(0).toUpperCase()+partsLbl.slice(1)} + corrida no mesmo dia: corra ANTES do treino de força se a corrida é sua prioridade, ou depois (bem leve) se a musculação vem primeiro.`;
       else if(gluteDay && hardRun) msgC = `Hoje tem ${partsLbl} e corrida forte. O glúteo é o motor da passada, então dá pra fazer os dois — mas deixe um espaço de algumas horas entre eles, ou reduza um pouco o volume de um dos dois se sentir as pernas pesadas.`;
       else if(gluteDay) msgC = `${partsLbl.charAt(0).toUpperCase()+partsLbl.slice(1)} + corrida leve combinam bem hoje. Só evite falhar as séries de glúteo se ainda for correr depois.`;
