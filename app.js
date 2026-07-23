@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.46 =====
-const APP_VERSION = 'v11.46';
+// ===== MetaTreino v11.47 =====
+const APP_VERSION = 'v11.47';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -144,7 +144,6 @@ const TROPHIES = [
   { secret:true, id:'monday',      emoji:'😤', name:'Segunda Não Assusta',desc:'Treinou em 4 segundas-feiras',              cat:'geral' },
   { secret:true, id:'early_bird',  emoji:'🐓', name:'Antes do Galo',      desc:'Treinou antes das 6h da manhã',             cat:'geral' },
   { secret:true, id:'night_owl',   emoji:'🦉', name:'Coruja Fitness',     desc:'Treinou depois das 22h',                    cat:'geral' },
-  { secret:true, id:'birthday',    emoji:'🎂', name:'Hoje é Meu Dia',      desc:'Treinou no dia do seu aniversário',         cat:'geral' },
   { secret:true, id:'weekend',     emoji:'🛋️', name:'Sofá Que Espere',    desc:'Treinou num sábado e num domingo',          cat:'geral' },
   { secret:true, id:'rain_check',  emoji:'🌧️', name:'Nem a Preguiça',     desc:'Treinou 3 dias seguidos após relatar cansaço', cat:'geral' },
   { secret:true, id:'consistent',  emoji:'📈', name:'Sem Drama',          desc:'12 treinos sem pular uma semana inteira',   cat:'geral' },
@@ -763,7 +762,6 @@ function buildLiftExercises(parts, setup){
     // guarda: isoladores nunca lideram o grupo (rotação continua, mas entre os principais)
     const isIso = e => /isolador|isolad/.test((e.sub||'').toLowerCase()) || exPattern(e.name)==='isolador';
     compat = [...compat].sort((a,b)=>(isIso(a)?1:0)-(isIso(b)?1:0));
-    const _fat = (typeof fatigueOf==='function') ? fatigueOf(p) : 0; // fadiga do grupo (invisível)
     const need = (p==='Core'||p==='Panturrilha'||p==='Trapézio') ? needSmall : needBig;
     // escolhe exercícios com estímulos VARIADOS (evita 2 isoladores ou 2 "superior" no mesmo grupo):
     // percorre a lista e só adiciona se a assinatura do sub ainda não foi usada; completa se faltar
@@ -772,9 +770,7 @@ function buildLiftExercises(parts, setup){
     const patCap = pat => pat==='isolador' ? (goal==='forca'?1:2) : 1; // máx 1 por padrão (isoladores até 2; força limita a 1)
     compat.forEach(ex => { const pat=exPattern(ex.name); if(pick.length<need && !usedStim.has(stim(ex.sub)) && (usedPat[pat]||0)<patCap(pat)){ pick.push(ex); usedStim.add(stim(ex.sub)); usedPat[pat]=(usedPat[pat]||0)+1; } });
     if(pick.length<need){ compat.forEach(ex => { if(pick.length<need && !pick.includes(ex)) pick.push(ex); }); }
-    // fadiga alta nesse grupo → 1 série a menos (ajusta, nunca bloqueia)
-    const _setsFinal = (_fat>=70) ? Math.max(2, (parseInt(sets)||3)-1) : sets;
-    pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets:_setsFinal, reps, rest, part:p, equip:ex.equip }); });
+    pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps, rest, part:p, equip:ex.equip }); });
   });
   // dor: se algum grupo foi bloqueado, completa com sinergistas seguros — o treino continua útil
   const blockedCount = parts.filter(p=>blocked.has(p)).length;
@@ -1428,7 +1424,6 @@ function renderHome(){
   renderAvatar('home-avatar');
   if(typeof updateFabNudge==='function') updateFabNudge();
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
-  try{ const _b=state.user&&state.user.profile&&state.user.profile.birth; if(_b){ const pb=_b.split('-').map(Number); const nn=new Date(); if(nn.getMonth()+1===pb[1]&&nn.getDate()===pb[2]) $('home-hi').textContent = `🎂 Feliz aniversário, ${firstName()}!`; } }catch(e){}
   const _glue = t => String(t||'').replace(/ (?=[^ ]*$)/, '\u00A0'); // cola o emoji final na última palavra
   const _wl = (typeof weatherHomeLine==='function') ? weatherHomeLine() : null;
   $('home-goal').innerHTML = _glue(homeStatusLine()) + (_wl ? `<br><span style="opacity:.6;font-size:.9em">${_glue(_wl)}</span>` : '');
@@ -1669,7 +1664,7 @@ function renderTodayWorkout(w, isLift){
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:w.name}</div>
     ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:999px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
     <div class="today-desc">${desc}</div>
-    ${(isLift && typeof fatigueOf==='function' && (w.parts||[]).some(pp=>fatigueOf(pp)>=70)) ? `<div style="margin-top:8px;font-size:12px;color:var(--accent-2)">🟡 ${(w.parts||[]).filter(pp=>fatigueOf(pp)>=70)[0]} ainda em recuperação — hoje vale caprichar na execução em vez de subir carga.</div>` : ''}
+    ${(isLift && typeof fatigueOf==='function' && (w.parts||[]).some(pp=>fatigueOf(pp)>=70)) ? `<div style="margin-top:8px;font-size:12px;color:var(--accent-2)">🟡 ${(w.parts||[]).filter(pp=>fatigueOf(pp)>=70)[0]} ainda em recuperação. Se sentir queda de rendimento, vale tirar uma série hoje — quem manda é você.</div>` : ''}
     ${(isLift && typeof cicloAtual==='function' && cicloAtual()) ? (c=>`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">${c.emo} Ciclo: <b style="color:var(--text)">${c.nome}</b> · semana ${c.sem}</div>`)(cicloAtual()) : ''}
     ${sug?`<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);font-size:13px;line-height:1.45">${sug.emo} <b>Sugestão de hoje:</b> ${sug.txt}</div>`:''}
     <div class="today-meta">
@@ -3212,8 +3207,6 @@ function checkTrophies(){
   if(total >= 100) unlockTrophy('century');
   // horários
   if(allHist.some(x=>{ const hh=new Date(x.at).getHours(); return hh>=4 && hh<6; })) unlockTrophy('early_bird');
-  const _bd = state.user && state.user.profile && state.user.profile.birth;
-  if(_bd){ const pb=_bd.split('-').map(Number); if(pb[1]&&pb[2]&&allHist.some(x=>{const dd=new Date(x.at);return dd.getMonth()+1===pb[1]&&dd.getDate()===pb[2];})) unlockTrophy('birthday'); }
   if(allHist.some(x=>new Date(x.at).getHours() >= 22)) unlockTrophy('night_owl');
   if(allHist.some(x=>x.duration>=120)) unlockTrophy('marathon_time');
   if(allHist.some(x=>x.duration>0 && x.duration<15)) unlockTrophy('turbo');
@@ -4698,7 +4691,7 @@ function maNudge(){
     if(prox && total>0 && (prox-total)<=2) return {text:`🎯 Falta ${prox-total===1?'1 treino':(prox-total)+' treinos'} pro seu ${prox}º! Quer ver?`, tone:'important'};
     if(streak>=7) return {text:`🔥 ${streak} dias seguidos — sua melhor fase! Dá uma olhada no ritmo.`, tone:'important'};
     // 🟢 VERDE — curiosidade/insight (em férias não puxa, pra não parecer cobrança)
-    if(!vac && typeof fatigueInsight==='function' && fatigueInsight() && total>=4) return {text:`🧠 Olhei sua recuperação — tenho uma dica pra hoje.`, tone:'curio'};
+    if(!vac && typeof fatigueInsight==='function' && fatigueInsight() && total>=4) return {text:`🧠 Dei uma olhada na sua recuperação — tenho uma dica pra hoje.`, tone:'curio'};
     if(!vac && total>=6 && streak>=2) return {text:`💡 Descobri um padrão nos seus treinos. Posso te mostrar?`, tone:'curio'};
     return null;
   }catch(e){ return null; }
@@ -4967,9 +4960,19 @@ const SYNERGY = {
   'Trapézio':{'Ombro':.25}
 };
 function fatigueFromEntry(x){
-  if(x.module==='run'){ const r=x.rating; return r>=5?35:(r<=1?85:55); }
-  return ({otimo:30, bem:45, cansado:65, exausto:85})[x.feel] || 45;
+  // cálculo misto: sensação (base) × duração × volume — 40min "exausto" ≠ 2h "bem"
+  let base;
+  if(x.module==='run'){ const r=x.rating; base = r>=5?35:(r<=1?85:55); }
+  else base = ({otimo:30, bem:45, cansado:65, exausto:85})[x.feel] || 45;
+  const min = x.duration||0;
+  const fDur = min<=0 ? 1 : (min<30 ? 0.8 : (min>75 ? 1.2 : 1));
+  const nEx = (x.exercisesDone||[]).length;
+  const fVol = nEx<=0 ? 1 : (nEx<=3 ? 0.9 : (nEx>=7 ? 1.15 : 1));
+  return Math.min(100, Math.round(base * fDur * fVol));
 }
+// recuperação por grupo: panturrilha/braços recuperam rápido; pernas/costas demoram mais
+const RECOVERY_RATE = { 'Panturrilha':32, 'Core':32, 'Bíceps':30, 'Tríceps':30, 'Ombro':28, 'Trapézio':28, 'Peito':25, 'Glúteos':23, 'Pernas':22, 'Costas':22 };
+function recoveryRate(g){ return RECOVERY_RATE[g] || 25; }
 // mapa {grupo: 0..100+} considerando os últimos dias
 function fatigueMap(){
   const map = {};
@@ -4978,15 +4981,15 @@ function fatigueMap(){
   const agora = Date.now();
   todos.forEach(x=>{
     const dias = Math.floor((agora - x.at)/86400000);
-    if(dias<0 || dias>4) return;                      // depois de ~4 dias já zerou
-    const bruto = fatigueFromEntry(x) - (dias*25);    // decaimento diário
-    if(bruto<=0) return;
-    if(x.module==='run'){ add('Pernas', bruto*0.6); add('Panturrilha', bruto*0.4); add('Core', bruto*0.15); return; }
+    if(dias<0 || dias>5) return;
+    const pts = fatigueFromEntry(x);
+    const cred = g => Math.max(0, pts - dias*recoveryRate(g)); // cada grupo recupera no seu ritmo
+    if(x.module==='run'){ add('Pernas', cred('Pernas')*0.6); add('Panturrilha', cred('Panturrilha')*0.4); add('Core', cred('Core')*0.15); return; }
     const parts = x.parts && x.parts.length ? x.parts : [];
     parts.forEach(p=>{
-      add(p, bruto);
+      add(p, cred(p));
       const syn = SYNERGY[p] || {};
-      Object.keys(syn).forEach(sg=>add(sg, bruto*syn[sg]));
+      Object.keys(syn).forEach(sg=>add(sg, cred(sg)*syn[sg]));
     });
   });
   Object.keys(map).forEach(k=>map[k]=Math.round(map[k]));
@@ -4998,8 +5001,10 @@ function fatigueLevel(v){ return v>=70?'alta' : v>=35?'parcial' : 'ok'; }
 function fatigueInsight(){
   try{
     const map = fatigueMap();
+    const cic = (typeof cicloAtual==='function') ? cicloAtual() : null;
+    if(cic && cic.nome==='Deload') return `😌 Você entrou na <b>semana de recuperação</b> (deload). É normal bater vontade de pegar pesado — mas é justamente nesta fase que o corpo consolida os ganhos. Segura a mão que semana que vem você volta mais forte.`;
     const alta = Object.keys(map).filter(k=>map[k]>=70).sort((a,b)=>map[b]-map[a]);
-    if(alta.length) return `🔴 <b>${alta[0]}</b> ainda está em recuperação do treino recente. Se for treinar esse grupo hoje, foque na execução — não é dia de subir carga.`;
+    if(alta.length) return `💪 Seu <b>${alta[0].toLowerCase()}</b> ainda está se recuperando do treino intenso recente. Se notar queda de força hoje, priorize uma boa execução em vez de aumentar a carga — recuperação também é treino.`;
     // grupo esquecido há tempo
     const lifts = (((state.modules.lift||{}).history)||[]);
     if(lifts.length>=4){
