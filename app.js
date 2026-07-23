@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.38 =====
-const APP_VERSION = 'v11.38';
+// ===== MetaTreino v11.39 =====
+const APP_VERSION = 'v11.39';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1104,7 +1104,7 @@ function homeStatusLine(){
 
   // 1) já treinou hoje NESTE módulo
   if(feitosAtivo.length){
-    const min = feitosAtivo.reduce((s,x)=>s+(x.duration||0),0);
+    const min = Math.round(feitosAtivo.reduce((s,x)=>s+(x.duration||0),0));
     if(feitosAtivo.length>1) return `Dois treinos de ${nomeAtivo} hoje, ${min} min no total. Isso é dedicação. 🔥`;
     if(feitosOutro.length) return `${isLift?'Musculação':'Corrida'} e ${nomeOutro} no mesmo dia. Dia cheio — agora hidrate e coma bem. 💪`;
     if(streak>=7) return `${isLift?'Treino':'Atividade'} de hoje: feito. ${streak} dias seguidos — você virou hábito. 🔥`;
@@ -1536,6 +1536,17 @@ function renderHome(){
   renderYourList(mod);
 }
 
+function exportMyData(){
+  try{
+    const data = JSON.parse(JSON.stringify(state));
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'metatreino-dados-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('📦 Seus dados foram exportados!');
+  }catch(e){ toast('⚠️ Não foi possível exportar.'); }
+}
 function renderAvatar(id){
   const el = $(id); if(!el) return;
   const p = state.user.profile;
@@ -1701,7 +1712,7 @@ function renderYourList(mod){
   const emOrdem = [...ord.filter(w=>w.dayIdx>=hoje), ...ord.filter(w=>w.dayIdx<hoje)];
   const shown = emOrdem.slice(0,3);
   const item = w=>`<div class="list-item" onclick="openSession('${w.k||w.dayIdx}')">${isLift?`<div class="list-badge">${w.k}</div>`:`<div class="list-dot"></div>`}<div class="list-info"><div class="list-tag">${(w.dayName||'').toUpperCase()}</div><div class="list-name">${isLift?'Treino '+w.k+' — '+w.name:w.name}</div></div><div class="list-right"><span class="mono">~${w.duration}min</span> ›</div></div>`;
-  $('your-list').innerHTML = shown.map(item).join('') + (ord.length>3?`<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="goTab('sessions')">Ver todos os ${ord.length} treinos →</button>`:'');
+  $('your-list').innerHTML = shown.map(item).join('');
 }
 
 // ---------- SESSIONS ----------
@@ -2220,7 +2231,7 @@ function renderCalendar(){
     const k = d.getTime();
     porDia[k] = porDia[k] || { lift:false, run:false, min:0, mood:'' };
     porDia[k][tipo] = true;
-    porDia[k].min += (x.duration||0);
+    porDia[k].min += Math.round(x.duration||0);
     if(!porDia[k].mood){ porDia[k].mood = moodEmoji(x); }
   });
   add(state.modules.lift?.history, 'lift');
@@ -2378,7 +2389,7 @@ function renderPerf(){
     $('s3-note').textContent = 'só corrida, acumulado';
   }
   $('m-streak').textContent = calcStreak(h);
-  const totalMin = h.reduce((s,x)=>s+(x.duration||0),0);
+  const totalMin = Math.round(h.reduce((s,x)=>s+(x.duration||0),0));
   $('m-total').textContent = totalMin<60?totalMin+'min':(totalMin/60).toFixed(1)+'h';
   // melhor sequência REAL (calculada do histórico + memória vitalícia)
   const best = calcBestStreak(h);
@@ -2693,7 +2704,7 @@ const MONTH_CHALLENGES = [
   { id:'m_days12',  emo:'📅', cat:'geral', nome:'Presença Confirmada',   desc:'Ative-se em 12 dias diferentes',
     prog:()=>[ monthActiveDays().size, 12 ] },
   { id:'m_min500',  emo:'⏱️', cat:'geral', nome:'Dez Horas Suadas',      desc:'600 minutos (10h) de treino no mês',
-    prog:()=>[ monthHistory().reduce((s,x)=>s+(x.duration||0),0), 600 ] },
+    prog:()=>[ Math.round(monthHistory().reduce((s,x)=>s+(x.duration||0),0)), 600 ] },
   { id:'m_mix',     emo:'🔀', cat:'geral', nome:'Atleta Completo',       desc:'4 treinos de musculação + 4 de cardio (corrida, bike ou caminhada)',
     prog:()=>{ const ini=monthStartTs(); const l=(state.modules.lift?.history||[]).filter(x=>x.at>=ini).length; const r=(state.modules.run?.history||[]).filter(x=>x.at>=ini).length; return [ Math.min(l,4)+Math.min(r,4), 8 ]; } },
   { id:'m_early',   emo:'🌅', cat:'geral', nome:'Clube da Madrugada',    desc:'3 treinos antes das 7h',
@@ -3259,6 +3270,14 @@ function openTrophies(){
     <div style="height:8px;border-radius:99px;background:rgba(148,163,184,0.15);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pctAll}%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:99px"></div></div>
     ${groups.map(g=>{
       const u = g.items.filter(t=>state.trophies.includes(t.id)).length;
+      if(g.cat==='secret'){
+        return `<details style="margin-top:18px"><summary class="section-lbl" style="margin:0 0 8px;cursor:pointer;list-style:none">🤫 Segredos · ${u}/${g.items.length} <span style="font-weight:400;color:var(--text-mute)">(toque para ${u<g.items.length?'espiar':'ver'})</span></summary>
+        <div class="trophy-grid">${ordenarTrofeus(g.items).map(t=>{
+          const ul = state.trophies.includes(t.id);
+          return ul ? `<div class="trophy unlocked" onclick="openTrophyDetail('${t.id}')"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div></div>`
+                    : `<div class="trophy" style="opacity:.55"><div class="trophy-emoji" style="filter:grayscale(1)">🔒</div><div class="trophy-name">Conquista secreta</div><div class="trophy-desc">Descubra treinando 😉</div></div>`;
+        }).join('')}</div></details>`;
+      }
       return `<div style="margin-top:18px"><div class="section-lbl" style="margin:0 0 8px">${g.name} · ${u}/${g.items.length}</div>
         <div class="trophy-grid">${ordenarTrofeus(g.items).map(t=>{
           const ul = state.trophies.includes(t.id);
@@ -3617,7 +3636,7 @@ const MA_ANSWERS = {
   calorias(){
     const now=Date.now();
     const wk=maAllHistory().filter(x=>x.at>=now-7*86400000);
-    const min=wk.reduce((s,x)=>s+(x.duration||0),0);
+    const min=Math.round(wk.reduce((s,x)=>s+(x.duration||0),0));
     const kcal=Math.round(min*7);
     if(!min) return 'Você não registrou treinos esta semana ainda. Bora movimentar? 🔥';
     return `Esta semana você somou ~${min} min de treino, o que representa aproximadamente ${kcal} kcal gastas. É uma estimativa grosseira — o gasto real varia com intensidade, peso e metabolismo. 🔥`;
@@ -3770,7 +3789,7 @@ const MA_ANSWERS = {
     const H = maAllHistory().filter(x=>x.at>=t0 && x.at<=now);
     if(!H.length) return `📈 <b>Sua análise da semana</b><br><br>Você ainda não registrou treinos nesta semana, ${maName()}. Que tal começar hoje? Um treino já muda o rumo da semana. 💪`;
     const treinos = H.length;
-    const minutos = H.reduce((s,x)=>s+(x.duration||0),0);
+    const minutos = Math.round(H.reduce((s,x)=>s+(x.duration||0),0));
     const planejados = (((state.modules.lift?.plan?.workouts?.length)||0) + ((state.modules.run?.plan?.workouts?.length)||0)) || treinos;
     const missL = missedWorkoutsThisWeek(state.modules.lift)||[], missR = missedWorkoutsThisWeek(state.modules.run)||[];
     const faltas = missL.length + missR.length;
@@ -5025,7 +5044,7 @@ function weekStats(){
   const liftH = (state.modules.lift?.history||[]).filter(h=>h.at>=t0);
   const runH = (state.modules.run?.history||[]).filter(h=>h.at>=t0);
   const kmBy = type => runH.filter(r=>type==='corrida' ? (!r.activity||r.activity==='corrida') : r.activity===type).reduce((s,r)=>s+(r.distance||0),0);
-  const totalMin = [...liftH,...runH].reduce((s,x)=>s+(x.duration||0),0);
+  const totalMin = Math.round([...liftH,...runH].reduce((s,x)=>s+(x.duration||0),0));
   return { lift:liftH.length, runs:runH.filter(r=>!r.activity||r.activity==='corrida').length,
     walks:runH.filter(r=>r.activity==='caminhada').length, bikes:runH.filter(r=>r.activity==='bike').length,
     kmRun:kmBy('corrida'), kmWalk:kmBy('caminhada'), kmBike:kmBy('bike'), totalMin, total:liftH.length+runH.length };
@@ -5781,6 +5800,7 @@ async function saveSpecialAward(){
     atualizadoEm: Date.now()
   };
   // e-mail pode ficar vazio (desativa a conquista / facilita testes). Só avisa se tiver e-mail mas faltar título.
+  if(data.email && !/^\S+@\S+\.\S+$/.test(data.email)){ toast('⚠️ Esse e-mail não parece válido. Confere?'); return; }
   if(data.email && !data.titulo){ toast('⚠️ Preencha o título da conquista.'); return; }
   try{
     await db.collection('config').doc('specialAward').set(data);
@@ -6485,7 +6505,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,exportMyData,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,exportMyData,openDayDetail,saveDayNote,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
