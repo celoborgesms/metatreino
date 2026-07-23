@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.45 =====
-const APP_VERSION = 'v11.45';
+// ===== MetaTreino v11.46 =====
+const APP_VERSION = 'v11.46';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -763,6 +763,7 @@ function buildLiftExercises(parts, setup){
     // guarda: isoladores nunca lideram o grupo (rotação continua, mas entre os principais)
     const isIso = e => /isolador|isolad/.test((e.sub||'').toLowerCase()) || exPattern(e.name)==='isolador';
     compat = [...compat].sort((a,b)=>(isIso(a)?1:0)-(isIso(b)?1:0));
+    const _fat = (typeof fatigueOf==='function') ? fatigueOf(p) : 0; // fadiga do grupo (invisível)
     const need = (p==='Core'||p==='Panturrilha'||p==='Trapézio') ? needSmall : needBig;
     // escolhe exercícios com estímulos VARIADOS (evita 2 isoladores ou 2 "superior" no mesmo grupo):
     // percorre a lista e só adiciona se a assinatura do sub ainda não foi usada; completa se faltar
@@ -771,7 +772,9 @@ function buildLiftExercises(parts, setup){
     const patCap = pat => pat==='isolador' ? (goal==='forca'?1:2) : 1; // máx 1 por padrão (isoladores até 2; força limita a 1)
     compat.forEach(ex => { const pat=exPattern(ex.name); if(pick.length<need && !usedStim.has(stim(ex.sub)) && (usedPat[pat]||0)<patCap(pat)){ pick.push(ex); usedStim.add(stim(ex.sub)); usedPat[pat]=(usedPat[pat]||0)+1; } });
     if(pick.length<need){ compat.forEach(ex => { if(pick.length<need && !pick.includes(ex)) pick.push(ex); }); }
-    pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps, rest, part:p, equip:ex.equip }); });
+    // fadiga alta nesse grupo → 1 série a menos (ajusta, nunca bloqueia)
+    const _setsFinal = (_fat>=70) ? Math.max(2, (parseInt(sets)||3)-1) : sets;
+    pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets:_setsFinal, reps, rest, part:p, equip:ex.equip }); });
   });
   // dor: se algum grupo foi bloqueado, completa com sinergistas seguros — o treino continua útil
   const blockedCount = parts.filter(p=>blocked.has(p)).length;
@@ -1601,6 +1604,15 @@ function renderHome(){
       if(msgC) $('combo-msg').textContent = msgC; else combo.classList.add('hidden');
     } else combo.classList.add('hidden');
   }
+  // pernas ainda se recuperando + corrida hoje → sugere pegar leve (nunca bloqueia)
+  try{
+    if(state.active==='run' && typeof fatigueOf==='function' && fatigueOf('Pernas')>=70 && $('card-plan-alert') && $('card-plan-alert').classList.contains('hidden')){
+      const ac=$('card-plan-alert');
+      ac.classList.remove('hidden');
+      if($('plan-alert-title')) $('plan-alert-title').textContent='Pernas ainda em recuperação';
+      if($('plan-alert-msg')) $('plan-alert-msg').textContent='Você treinou pernas forte há pouco. Se sentir peso na passada, faça hoje em ritmo leve ou troque por uma caminhada — a corrida rende mais com as pernas descansadas.';
+    }
+  }catch(e){}
   // aviso de dor: corrida com dor em perna/joelho/tornozelo → sugerir caminhada ou bike
   const pains = (state.user&&state.user.pain)||[];
   const legPain = pains.some(p=>['Joelho','Tornozelo','Lombar'].includes(p));
@@ -1657,6 +1669,7 @@ function renderTodayWorkout(w, isLift){
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:w.name}</div>
     ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:999px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
     <div class="today-desc">${desc}</div>
+    ${(isLift && typeof fatigueOf==='function' && (w.parts||[]).some(pp=>fatigueOf(pp)>=70)) ? `<div style="margin-top:8px;font-size:12px;color:var(--accent-2)">🟡 ${(w.parts||[]).filter(pp=>fatigueOf(pp)>=70)[0]} ainda em recuperação — hoje vale caprichar na execução em vez de subir carga.</div>` : ''}
     ${(isLift && typeof cicloAtual==='function' && cicloAtual()) ? (c=>`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">${c.emo} Ciclo: <b style="color:var(--text)">${c.nome}</b> · semana ${c.sem}</div>`)(cicloAtual()) : ''}
     ${sug?`<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);font-size:13px;line-height:1.45">${sug.emo} <b>Sugestão de hoje:</b> ${sug.txt}</div>`:''}
     <div class="today-meta">
@@ -4496,6 +4509,8 @@ function maComeback(){
   return null;
 }
 function maInsight(){
+  const _fi = (typeof fatigueInsight==='function') ? fatigueInsight() : null;
+  if(_fi) return _fi;
   const all=[...(state.modules.lift?.history||[]),...(state.modules.run?.history||[])].sort((a,b)=>a.at-b.at);
   if(all.length < 6) return `Ainda estou aprendendo seus padrões, ${maName()} 🙂 — com mais alguns treinos registrados eu te trago observações afiadas. Continue firme!`;
   const dias=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -4683,6 +4698,7 @@ function maNudge(){
     if(prox && total>0 && (prox-total)<=2) return {text:`🎯 Falta ${prox-total===1?'1 treino':(prox-total)+' treinos'} pro seu ${prox}º! Quer ver?`, tone:'important'};
     if(streak>=7) return {text:`🔥 ${streak} dias seguidos — sua melhor fase! Dá uma olhada no ritmo.`, tone:'important'};
     // 🟢 VERDE — curiosidade/insight (em férias não puxa, pra não parecer cobrança)
+    if(!vac && typeof fatigueInsight==='function' && fatigueInsight() && total>=4) return {text:`🧠 Olhei sua recuperação — tenho uma dica pra hoje.`, tone:'curio'};
     if(!vac && total>=6 && streak>=2) return {text:`💡 Descobri um padrão nos seus treinos. Posso te mostrar?`, tone:'curio'};
     return null;
   }catch(e){ return null; }
@@ -4937,6 +4953,68 @@ function applyPins(w, setup){
 // ---------- MODO ADAPTADO (dor / TPM) ----------
 // Centraliza: quando o aluno está com dor ou em TPM, os treinos mudam de verdade
 // (grupos evitados, séries reduzidas, nome do treino ajustado) e ele é avisado do porquê.
+// ---------- FADIGA ACUMULADA (invisível: só deixa as recomendações mais espertas) ----------
+// Cada treino soma fadiga ao grupo trabalhado e um resíduo aos sinergistas. Decai 25/dia.
+const SYNERGY = {
+  'Peito':{'Ombro':.40,'Tríceps':.40},
+  'Ombro':{'Tríceps':.30,'Trapézio':.30},
+  'Costas':{'Bíceps':.40,'Trapézio':.30,'Core':.20},
+  'Pernas':{'Glúteos':.50,'Panturrilha':.30,'Core':.20},
+  'Glúteos':{'Pernas':.50,'Core':.20},
+  'Tríceps':{'Peito':.20},
+  'Bíceps':{'Costas':.20},
+  'Panturrilha':{'Pernas':.20},
+  'Trapézio':{'Ombro':.25}
+};
+function fatigueFromEntry(x){
+  if(x.module==='run'){ const r=x.rating; return r>=5?35:(r<=1?85:55); }
+  return ({otimo:30, bem:45, cansado:65, exausto:85})[x.feel] || 45;
+}
+// mapa {grupo: 0..100+} considerando os últimos dias
+function fatigueMap(){
+  const map = {};
+  const add = (g,v)=>{ if(!g||v<=0) return; map[g]=(map[g]||0)+v; };
+  const todos = [...(((state.modules.lift||{}).history)||[]), ...(((state.modules.run||{}).history)||[])];
+  const agora = Date.now();
+  todos.forEach(x=>{
+    const dias = Math.floor((agora - x.at)/86400000);
+    if(dias<0 || dias>4) return;                      // depois de ~4 dias já zerou
+    const bruto = fatigueFromEntry(x) - (dias*25);    // decaimento diário
+    if(bruto<=0) return;
+    if(x.module==='run'){ add('Pernas', bruto*0.6); add('Panturrilha', bruto*0.4); add('Core', bruto*0.15); return; }
+    const parts = x.parts && x.parts.length ? x.parts : [];
+    parts.forEach(p=>{
+      add(p, bruto);
+      const syn = SYNERGY[p] || {};
+      Object.keys(syn).forEach(sg=>add(sg, bruto*syn[sg]));
+    });
+  });
+  Object.keys(map).forEach(k=>map[k]=Math.round(map[k]));
+  return map;
+}
+function fatigueOf(part){ return (fatigueMap()[part])||0; }
+function fatigueLevel(v){ return v>=70?'alta' : v>=35?'parcial' : 'ok'; }
+// grupos mais e menos descansados (pro assistente falar como treinador)
+function fatigueInsight(){
+  try{
+    const map = fatigueMap();
+    const alta = Object.keys(map).filter(k=>map[k]>=70).sort((a,b)=>map[b]-map[a]);
+    if(alta.length) return `🔴 <b>${alta[0]}</b> ainda está em recuperação do treino recente. Se for treinar esse grupo hoje, foque na execução — não é dia de subir carga.`;
+    // grupo esquecido há tempo
+    const lifts = (((state.modules.lift||{}).history)||[]);
+    if(lifts.length>=4){
+      const ultimo = {};
+      lifts.forEach(x=>(x.parts||[]).forEach(p=>{ ultimo[p]=Math.max(ultimo[p]||0, x.at); }));
+      const alvo = Object.keys(ultimo).map(p=>({p, dias:Math.floor((Date.now()-ultimo[p])/86400000)})).sort((a,b)=>b.dias-a.dias)[0];
+      if(alvo && alvo.dias>=6) return `📌 Faz <b>${alvo.dias} dias</b> que você não treina <b>${alvo.p}</b>. Vale encaixar esse grupo nos próximos dias pra manter o equilíbrio.`;
+    }
+    // 3 treinos intensos seguidos
+    const recentes = lifts.filter(x=>Date.now()-x.at < 4*86400000).slice(-3);
+    if(recentes.length===3 && recentes.every(x=>['cansado','exausto'].includes(x.feel)))
+      return `😮‍💨 Foram <b>3 treinos intensos seguidos</b>. Dormir bem hoje vai render mais que qualquer série extra — o corpo cresce na recuperação.`;
+    return null;
+  }catch(e){ return null; }
+}
 function adaptMode(){
   const pain = (state.user && state.user.pain) || [];
   // ignora a flag de TPM em perfis masculinos (pode ter ficado ligada de versões antigas)
