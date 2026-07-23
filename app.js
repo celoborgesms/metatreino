@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.48 =====
-const APP_VERSION = 'v11.48';
+// ===== MetaTreino v11.49 =====
+const APP_VERSION = 'v11.49';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5431,7 +5431,7 @@ function buildShareCanvas(opts){
   x.fillText('MetaTreino App', 115, 1268);
   return c;
 }
-// Arte estilo Strava: a FOTO da pessoa é o fundo; as infos entram discretas por cima
+// Modo Foto: a FOTO da pessoa é o fundo; as infos entram discretas por cima
 function buildPhotoShareCanvas(img, opts){
   const W=1080, H=1350;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
@@ -5456,7 +5456,7 @@ function buildPhotoShareCanvas(img, opts){
   x.fillText(cutTxt(x, opts.title||'Treino concluído 💪', 960), 60, H-360);
   x.fillStyle='#a7f3d0'; x.font='800 33px Arial, sans-serif';
   x.fillText(cutTxt(x, opts.subtitle||'', 960), 60, H-306);
-  // stats na horizontal, estilo Strava (valor grande, rótulo pequeno)
+  // stats na horizontal (valor grande, rótulo pequeno)
   const st=(opts.stats||[]).slice(0,3);
   let bx=60;
   st.forEach(item=>{
@@ -5517,7 +5517,7 @@ async function shareCanvas(canvas, filename, shareText){
       <img src="${URL.createObjectURL(blob)}" style="width:100%;border-radius:14px;margin:12px 0;border:1px solid var(--border)">
       <button class="btn btn-primary btn-block" onclick="doShareNow('${shareText.replace(/'/g,"\\'")}')">📲 Compartilhar agora</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="doSaveToDevice()">💾 Salvar no celular</button>
-      ${_lastPhotoOpts?`<button class="btn btn-outline btn-block" style="margin-top:8px;border-color:rgba(16,185,129,0.45)" onclick="pickSharePhoto()">📷 Estilo Strava — usar minha foto de fundo</button>
+      ${_lastPhotoOpts?`<button class="btn btn-outline btn-block" style="margin-top:8px;border-color:rgba(16,185,129,0.45)" onclick="pickSharePhoto()">📷 Usar minha foto de fundo</button>
       <input type="file" id="share-photo-input" accept="image/*" style="display:none" onchange="onSharePhotoPicked(event)">`:''}
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
     $('modal-back').classList.add('on');
