@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.43 =====
-const APP_VERSION = 'v11.43';
+// ===== MetaTreino v11.44 =====
+const APP_VERSION = 'v11.44';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -741,6 +741,9 @@ function buildLiftExercises(parts, setup){
     const cat = EX_BANK.find(c=>c.name===p); if(!cat) return;
     let compat = cat.items.filter(ex => (ex.equip||[]).some(e => equipFilter.includes(e)) && (equip==='casa' || !ex.improv));
     if(!compat.length) return;
+    // VARIAÇÃO SEMANAL: gira as opções a cada semana — mesmo estímulo, exercício diferente (Supino barra → halteres → máquina → volta)
+    const wkSeed = Math.floor(Date.now()/(7*86400000)) % 4;
+    if(compat.length>3 && wkSeed>0) compat = [...compat.slice(wkSeed), ...compat.slice(0,wkSeed)];
     // Força prioriza exercícios compostos/pesados (os primeiros do banco em cada grupo
     // são os básicos de academia); emagrecimento/resistência rotacionam a lista pra
     // priorizar variações mais dinâmicas.
@@ -755,6 +758,9 @@ function buildLiftExercises(parts, setup){
     } else if(goalOffset>0 && compat.length>3){
       compat = [...compat.slice(goalOffset), ...compat.slice(0,goalOffset)];
     }
+    // guarda: isoladores nunca lideram o grupo (rotação continua, mas entre os principais)
+    const isIso = e => /isolador|isolad/.test((e.sub||'').toLowerCase()) || exPattern(e.name)==='isolador';
+    compat = [...compat].sort((a,b)=>(isIso(a)?1:0)-(isIso(b)?1:0));
     const need = (p==='Core'||p==='Panturrilha'||p==='Trapézio') ? needSmall : needBig;
     // escolhe exercícios com estímulos VARIADOS (evita 2 isoladores ou 2 "superior" no mesmo grupo):
     // percorre a lista e só adiciona se a assinatura do sub ainda não foi usada; completa se faltar
@@ -1377,6 +1383,16 @@ function renderHome(){
   renderModToggle();
   const mod = state.modules[state.active];
   if(!mod){ showScreen('scr-pick'); return; }
+  // Semana nova → varia os exercícios (trocas fixadas do aluno são mantidas pelo applyPins)
+  try{
+    const _wkNow = Math.floor(Date.now()/(7*86400000));
+    if(state.lastVarWeek !== _wkNow){
+      const tinhaPlano = !!(state.modules.lift && state.modules.lift.plan);
+      state.lastVarWeek = _wkNow;
+      if(tinhaPlano){ regenLiftExercises(); toast('🔄 Semana nova: variei alguns exercícios (suas trocas fixadas continuam). '); }
+      saveData();
+    }
+  }catch(e){}
   if(!mod.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; } // corrida em modo registro (sem plano)
   const isLift = state.active==='lift';
   renderAvatar('home-avatar');
