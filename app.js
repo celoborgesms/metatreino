@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.39 =====
-const APP_VERSION = 'v11.39';
+// ===== MetaTreino v11.40 =====
+const APP_VERSION = 'v11.40';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -744,18 +744,38 @@ function buildLiftExercises(parts, setup){
     // Força prioriza exercícios compostos/pesados (os primeiros do banco em cada grupo
     // são os básicos de academia); emagrecimento/resistência rotacionam a lista pra
     // priorizar variações mais dinâmicas.
-    if(goal!=='forca' && goalOffset>0 && compat.length>3){
+    if(goal==='forca'){
+      // FORÇA: prioriza os grandes compostos e empurra isoladores pro fim
+      compat = [...compat].sort((a,b)=>forcaRank(a)-forcaRank(b));
+    } else if(goal==='emagrecimento'){
+      // EMAGRECIMENTO: multiarticulares primeiro (mais músculo trabalhando = mais gasto)
+      const comp = compat.filter(e=>exPattern(e.name)!=='isolador');
+      const iso  = compat.filter(e=>exPattern(e.name)==='isolador');
+      if(comp.length) compat = [...comp, ...iso];
+    } else if(goalOffset>0 && compat.length>3){
       compat = [...compat.slice(goalOffset), ...compat.slice(0,goalOffset)];
     }
     const need = (p==='Core'||p==='Panturrilha'||p==='Trapézio') ? needSmall : needBig;
     // escolhe exercícios com estímulos VARIADOS (evita 2 isoladores ou 2 "superior" no mesmo grupo):
     // percorre a lista e só adiciona se a assinatura do sub ainda não foi usada; completa se faltar
     const stim = s => (s||'').toLowerCase().replace(/[()]/g,'').trim();
-    const pick = [], usedStim = new Set();
-    compat.forEach(ex => { if(pick.length<need && !usedStim.has(stim(ex.sub))){ pick.push(ex); usedStim.add(stim(ex.sub)); } });
+    const pick = [], usedStim = new Set(), usedPat = {};
+    const patCap = pat => pat==='isolador' ? (goal==='forca'?1:2) : 1; // máx 1 por padrão (isoladores até 2; força limita a 1)
+    compat.forEach(ex => { const pat=exPattern(ex.name); if(pick.length<need && !usedStim.has(stim(ex.sub)) && (usedPat[pat]||0)<patCap(pat)){ pick.push(ex); usedStim.add(stim(ex.sub)); usedPat[pat]=(usedPat[pat]||0)+1; } });
     if(pick.length<need){ compat.forEach(ex => { if(pick.length<need && !pick.includes(ex)) pick.push(ex); }); }
     pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps, rest, part:p, equip:ex.equip }); });
   });
+  // dor: se algum grupo foi bloqueado, completa com sinergistas seguros — o treino continua útil
+  const blockedCount = parts.filter(p=>blocked.has(p)).length;
+  if(blockedCount>0 && list.length){
+    let added=0;
+    ['Core','Panturrilha'].forEach(cn=>{
+      if(added>=Math.min(2,blockedCount) || blocked.has(cn)) return; // não adiciona sinergista que a própria dor bloqueia
+      const cat=EX_BANK.find(c=>c.name===cn); if(!cat) return;
+      const ex=cat.items.find(e=>(e.equip||[]).some(q=>equipFilter.includes(q)) && (equip==='casa'||!e.improv) && !list.some(l=>l.id===slug(e.name)));
+      if(ex){ list.push({ id:slug(ex.name), name:ex.name, sub:ex.sub, sets:2, reps:'12-15', rest:'45s', part:cn, equip:ex.equip }); added++; }
+    });
+  }
   // se a dor bloqueou todos os grupos do dia, entrega ao menos um treino leve de Core
   if(!list.length && !blocked.has('Core')){
     const core = EX_BANK.find(c=>c.name==='Core');
@@ -1017,6 +1037,26 @@ const EX_BANK = [
     {name:'Mountain Climber',sub:'Core / Cardio',equip:['casa','halteres','academia']}
   ]}
 ];// ---------- HELPERS ----------
+// Padrão de movimento do exercício (pra variar estímulos de verdade, não só o nome)
+function exPattern(name){
+  const n = (name||'').toLowerCase();
+  if(/terra|stiff|elevação pélvica|hip thrust|ponte|nordic/.test(n)) return 'dobradica';
+  if(/agach|leg press|hack|búlgaro|afundo|extensora|step|belt squat|cadeira contra/.test(n)) return 'agachar';
+  if(/supino|flexão|crossover|crucifixo|paralela|mergulho|peck/.test(n)) return 'empurrar_h';
+  if(/desenvolvimento|pike|militar|arnold|cuban/.test(n)) return 'empurrar_v';
+  if(/puxada|barra fixa|chin|pulldown|pullover/.test(n)) return 'puxar_v';
+  if(/remada|face pull|superman/.test(n)) return 'puxar_h';
+  if(/rosca|tríceps|elevação lateral|elevação frontal|elevação posterior|elevação y|encolhimento|panturrilha|coice|concha|abdução|extensão acima/.test(n)) return 'isolador';
+  return 'outro';
+}
+// Grandes compostos que definem um treino de FORÇA de verdade
+const FORCA_PRIORITY = /agachamento livre|levantamento terra|supino reto|desenvolvimento com barra|barra fixa|remada curvada|leg press|hip thrust|elevação pélvica/;
+function forcaRank(ex){
+  const n=(ex.name||'').toLowerCase();
+  if(FORCA_PRIORITY.test(n)) return 0;                 // compostos pesados primeiro
+  if(exPattern(ex.name)==='isolador') return 2;        // isoladores por último
+  return 1;
+}
 function $(id){ return document.getElementById(id); }
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); window.scrollTo({top:0,behavior:'instant'}); }
 function toast(msg){
@@ -1769,7 +1809,7 @@ function renderSessionDetail(w){
       </div>
     </div>
     ${w.adapted ? `<div class="card card-alert card-row" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
-    <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.':'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
+    <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
     ${isLift && isCustomized(w) ? `<div class="card card-row" style="border-color:rgba(167,139,250,0.35);background:rgba(167,139,250,0.06)"><div class="card-icon">✨</div><div style="flex:1"><div class="card-title" style="color:#a78bfa">Treino personalizado</div><div class="card-sub">Você trocou ${w.pins.length} exercício${w.pins.length>1?'s':''} neste treino. As trocas ficam salvas nos próximos treinos. Pra desfazer, use "Voltar à sugestão" em cada exercício.</div></div></div>` : ''}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
@@ -3058,7 +3098,7 @@ function checkTrophies(){
   const total = allHist.length;
   if(total >= 100) unlockTrophy('century');
   // horários
-  if(allHist.some(x=>new Date(x.at).getHours() < 6)) unlockTrophy('early_bird');
+  if(allHist.some(x=>{ const hh=new Date(x.at).getHours(); return hh>=4 && hh<6; })) unlockTrophy('early_bird');
   if(allHist.some(x=>new Date(x.at).getHours() >= 22)) unlockTrophy('night_owl');
   if(allHist.some(x=>x.duration>=120)) unlockTrophy('marathon_time');
   if(allHist.some(x=>x.duration>0 && x.duration<15)) unlockTrophy('turbo');
