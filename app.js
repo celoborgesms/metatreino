@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.40 =====
-const APP_VERSION = 'v11.40';
+// ===== MetaTreino v11.41 =====
+const APP_VERSION = 'v11.41';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1610,6 +1610,7 @@ function renderTodayWorkout(w, isLift){
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:w.name}</div>
     ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:999px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
     <div class="today-desc">${desc}</div>
+    ${(isLift && typeof cicloAtual==='function' && cicloAtual()) ? (c=>`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">${c.emo} Ciclo: <b style="color:var(--text)">${c.nome}</b> · semana ${c.sem}</div>`)(cicloAtual()) : ''}
     ${sug?`<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);font-size:13px;line-height:1.45">${sug.emo} <b>Sugestão de hoje:</b> ${sug.txt}</div>`:''}
     <div class="today-meta">
       <span class="chip mono">⏱️ ${w.duration} min</span>
@@ -2128,6 +2129,45 @@ function confirmLiftWorkout(k){
   setTimeout(()=>offerShareAfterWorkout(idx), 700);
 }
 // Sugestão de auto-regulação com base nos últimos treinos de musculação
+// Ciclo de treino (Adaptação → Volume → Sobrecarga → Deload, 4 semanas rodando)
+function cicloAtual(){
+  try{
+    const mod = state.modules.lift; if(!mod) return null;
+    const h = (mod.history||[]);
+    const t0 = mod.planCriadoEm || (mod.plan && mod.plan.criadoEm) || (h.length ? h[0].at : null);
+    if(!t0) return null;
+    const wk = Math.max(0, Math.floor((Date.now()-t0)/(7*86400000)));
+    const fases = [
+      {nome:'Adaptação',  emo:'🌱', dica:'Semana de adaptação: foco total na técnica e em completar as séries com conforto.'},
+      {nome:'Volume',     emo:'📦', dica:'Semana de volume: mantenha a carga e busque completar todas as repetições com boa forma.'},
+      {nome:'Sobrecarga', emo:'🔥', dica:'Semana de sobrecarga: se as séries saírem bem, suba um pouco a carga (2-5%).'},
+      {nome:'Deload',     emo:'😌', dica:'Semana leve (deload): reduza a carga em ~40% ou tire 1 série de cada exercício. É agora que o corpo consolida os ganhos.'}
+    ];
+    return { sem: wk+1, ...fases[wk % 4] };
+  }catch(e){ return null; }
+}
+// Progressão REAL: fechou todas as séries no topo das reps com a MESMA carga nas 2 últimas sessões → sugere +2-5%
+function progressionTip(){
+  try{
+    const mod = state.modules.lift; if(!mod || !mod.plan) return null;
+    const hoje = getDayIdx();
+    const w = (mod.plan.workouts||[]).find(x=>x.dayIdx===hoje); if(!w) return null;
+    for(const ex of (w.exercises||[])){
+      const logs = (state.progress[ex.id]||[]).filter(p=>p.sets && p.sets.length).sort((a,b)=>a.date-b.date).slice(-2);
+      if(logs.length < 2) continue;
+      const top = parseInt(String(ex.reps||'').split('-').pop()) || 12;
+      const pesoDe = sess => Math.max(...sess.sets.map(x=>+x.peso||0));
+      const fechou = sess => { const w0=pesoDe(sess); return w0>0 && sess.sets.every(x=>(+x.peso||0)===w0 && (+x.reps||0)>=top); };
+      if(!fechou(logs[0]) || !fechou(logs[1])) continue;
+      if(pesoDe(logs[0]) !== pesoDe(logs[1])) continue;
+      const atual = pesoDe(logs[1]);
+      const novo = Math.round(atual*1.04*2)/2;
+      if(novo<=atual) continue;
+      return { emo:'📈', txt:`No <b>${ex.name}</b> você fechou todas as séries com ${atual}kg nas últimas 2 sessões. Hora de progredir: tente <b>${novo}kg</b> hoje (+2-5%). 💪` };
+    }
+    return null;
+  }catch(e){ return null; }
+}
 function liftLoadSuggestion(){
   const h = (state.modules.lift?.history||[]).filter(x=>x.feel).slice(-2);
   if(!h.length) return null;
@@ -2136,6 +2176,10 @@ function liftLoadSuggestion(){
   if(lastTwo) return {emo:'🛑', txt:'Seus 2 últimos treinos terminaram em exaustão. Hoje reduza a carga em ~20% e priorize a técnica — recuperar também é evoluir.'};
   if(last.feel==='exausto') return {emo:'😌', txt:'Último treino foi pesado demais. Sugestão: reduza a carga em ~10% hoje e capriche na execução.'};
   if(last.feel==='cansado') return {emo:'⚖️', txt:'Último treino foi puxado. Mantenha a mesma carga hoje e foque em completar todas as séries com boa forma.'};
+  const cic = cicloAtual();
+  if(cic && cic.nome==='Deload') return {emo:cic.emo, txt:cic.dica};
+  const prog = progressionTip();
+  if(prog) return prog;
   if(last.feel==='otimo') return {emo:'📈', txt:'Você terminou o último treino com energia sobrando — boa hora pra subir a carga em ~5% ou adicionar 1-2 repetições.'};
   return null;
 }
@@ -3311,12 +3355,12 @@ function openTrophies(){
     ${groups.map(g=>{
       const u = g.items.filter(t=>state.trophies.includes(t.id)).length;
       if(g.cat==='secret'){
-        return `<details style="margin-top:18px"><summary class="section-lbl" style="margin:0 0 8px;cursor:pointer;list-style:none">🤫 Segredos · ${u}/${g.items.length} <span style="font-weight:400;color:var(--text-mute)">(toque para ${u<g.items.length?'espiar':'ver'})</span></summary>
-        <div class="trophy-grid">${ordenarTrofeus(g.items).map(t=>{
-          const ul = state.trophies.includes(t.id);
-          return ul ? `<div class="trophy unlocked" onclick="openTrophyDetail('${t.id}')"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div></div>`
-                    : `<div class="trophy" style="opacity:.55"><div class="trophy-emoji" style="filter:grayscale(1)">🔒</div><div class="trophy-name">Conquista secreta</div><div class="trophy-desc">Descubra treinando 😉</div></div>`;
-        }).join('')}</div></details>`;
+        const revealed = ordenarTrofeus(g.items.filter(t=>state.trophies.includes(t.id)));
+        const lockedN = g.items.length - revealed.length;
+        return `<div style="margin-top:18px"><div class="section-lbl" style="margin:0 0 8px">✨ Secretas reveladas · ${revealed.length}/${g.items.length}</div>
+          ${revealed.length?`<div class="trophy-grid">${revealed.map(t=>`<div class="trophy unlocked" onclick="openTrophyDetail('${t.id}')"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div></div>`).join('')}</div>`:`<div style="font-size:12.5px;color:var(--text-dim)">Nenhuma revelada ainda… elas aparecem sozinhas quando você as merece.</div>`}
+          ${lockedN?`<div style="margin-top:10px;text-align:center;font-size:12.5px;color:var(--text-mute)">🔒 Ainda restam <b>${lockedN}</b> segredos por descobrir… continue treinando 😉</div>`:''}
+        </div>`;
       }
       return `<div style="margin-top:18px"><div class="section-lbl" style="margin:0 0 8px">${g.name} · ${u}/${g.items.length}</div>
         <div class="trophy-grid">${ordenarTrofeus(g.items).map(t=>{
