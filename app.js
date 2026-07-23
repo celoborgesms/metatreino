@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.49 =====
-const APP_VERSION = 'v11.49';
+// ===== MetaTreino v11.50 =====
+const APP_VERSION = 'v11.50';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1786,7 +1786,7 @@ function renderWeekGrid(mod){
     if(fullDone) status='✅';
     else if(partial) status='🟢';
     else if(isT) status='🟡';
-    else if(isPast && planned>0 && !daySkipped && !dayVac) status='<span style="color:var(--text-mute);font-weight:700">–</span>';
+    else if(isPast && planned>0 && !daySkipped && !dayVac && !(typeof isBirthday==='function' && isBirthday(cd))) status='<span style="color:var(--text-mute);font-weight:700">–</span>';
     else if(has) status='⚪';
     else status='';
     const clicavel = idx<=today ? `onclick="openDayDetail(${cd.getTime()})" style="cursor:pointer"` : '';
@@ -2329,6 +2329,15 @@ function isVacationDay(date){
   if(v.active && v.startedAt!=null && tt>=v.startedAt && tt<=Date.now()) return true;
   return (v.periods||[]).some(p=>tt>=p.start && tt<=p.end);
 }
+// Aniversário é dia livre de verdade: não marca falta e não quebra a sequência
+function isBirthday(date){
+  try{
+    const b = state.user && state.user.profile && state.user.profile.birth; if(!b) return false;
+    const p = String(b).split('-').map(Number); if(!p[1]||!p[2]) return false;
+    const d = date ? new Date(date) : new Date();
+    return (d.getMonth()+1)===p[1] && d.getDate()===p[2];
+  }catch(e){ return false; }
+}
 function calcStreak(h){
   if(!h||!h.length) return 0;
   const days = new Set(h.map(x=>new Date(x.at).toDateString()));
@@ -2336,7 +2345,7 @@ function calcStreak(h){
   while(guard++ < 3650){
     const ds = cur.toDateString();
     if(days.has(ds)){ s++; cur.setDate(cur.getDate()-1); continue; }
-    if(isVacationDay(cur)){ cur.setDate(cur.getDate()-1); continue; } // dia de férias: pula sem quebrar a sequência
+    if(isVacationDay(cur) || isBirthday(cur)){ cur.setDate(cur.getDate()-1); continue; } // férias/aniversário: pula sem quebrar a sequência
     break;
   }
   return s;
