@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.47 =====
-const APP_VERSION = 'v11.47';
+// ===== MetaTreino v11.48 =====
+const APP_VERSION = 'v11.48';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5409,8 +5409,14 @@ function buildShareCanvas(opts){
   vis.forEach((item,i)=>{
     let t = '• ' + item;
     if(i===5 && lista.length>6) t = '• +' + (lista.length-5) + ' registro(s)';
-    x.fillText(cutTxt(x, t, 790), 145, yL);
-    yL += 38;
+    if(x.measureText(t).width <= 790){ x.fillText(t, 145, yL); yL += 38; }
+    else {
+      // quebra em 2 linhas em vez de cortar com "..."
+      const words = t.split(' '); let l1='', k=0;
+      while(k<words.length && x.measureText(l1+words[k]+' ').width<=790){ l1+=words[k]+' '; k++; }
+      x.fillText(l1.trim(), 145, yL); yL += 34;
+      x.fillText(cutTxt(x, '   '+words.slice(k).join(' '), 760), 145, yL); yL += 38;
+    }
   });
   x.restore();
   // destaque e rodapé
@@ -5424,6 +5430,66 @@ function buildShareCanvas(opts){
   x.font = '700 21px Arial, sans-serif';
   x.fillText('MetaTreino App', 115, 1268);
   return c;
+}
+// Arte estilo Strava: a FOTO da pessoa é o fundo; as infos entram discretas por cima
+function buildPhotoShareCanvas(img, opts){
+  const W=1080, H=1350;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const x=c.getContext('2d');
+  // foto em modo "cover" (preenche sem distorcer)
+  const ir=img.width/img.height, cr=W/H;
+  let sw,sh,sx,sy;
+  if(ir>cr){ sh=img.height; sw=sh*cr; sx=(img.width-sw)/2; sy=0; }
+  else { sw=img.width; sh=sw/cr; sx=0; sy=(img.height-sh)/2; }
+  x.drawImage(img, sx,sy,sw,sh, 0,0,W,H);
+  // gradientes suaves só onde tem texto (topo e base)
+  let g=x.createLinearGradient(0,0,0,300); g.addColorStop(0,'rgba(0,0,0,.55)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g; x.fillRect(0,0,W,300);
+  g=x.createLinearGradient(0,H-560,0,H); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.45,'rgba(0,0,0,.55)'); g.addColorStop(1,'rgba(0,0,0,.88)');
+  x.fillStyle=g; x.fillRect(0,H-560,W,560);
+  // marca pequena no topo
+  x.textAlign='left';
+  x.fillStyle='#10b981'; x.font='900 40px Arial, sans-serif'; x.fillText('Meta',60,100);
+  x.fillStyle='#ffffff'; x.fillText('Treino',60+x.measureText('Meta').width+4,100);
+  // bloco inferior discreto
+  x.fillStyle='#ffffff'; x.font='900 60px Arial, sans-serif';
+  x.fillText(cutTxt(x, opts.title||'Treino concluído 💪', 960), 60, H-360);
+  x.fillStyle='#a7f3d0'; x.font='800 33px Arial, sans-serif';
+  x.fillText(cutTxt(x, opts.subtitle||'', 960), 60, H-306);
+  // stats na horizontal, estilo Strava (valor grande, rótulo pequeno)
+  const st=(opts.stats||[]).slice(0,3);
+  let bx=60;
+  st.forEach(item=>{
+    x.fillStyle='rgba(255,255,255,.65)'; x.font='800 23px Arial, sans-serif';
+    x.fillText(String(item.rotulo||''), bx, H-226);
+    x.fillStyle='#ffffff'; x.font='900 45px Arial, sans-serif';
+    const v=String(item.valor||'');
+    x.fillText(v, bx, H-172);
+    bx += Math.max(x.measureText(v).width, 120) + 70;
+  });
+  // linha discreta (grupos do treino)
+  if(opts.linhaDiscreta){
+    x.fillStyle='rgba(255,255,255,.85)'; x.font='700 26px Arial, sans-serif';
+    x.fillText(cutTxt(x, opts.linhaDiscreta, 960), 60, H-106);
+  }
+  x.fillStyle='#34d399'; x.font='700 22px Arial, sans-serif';
+  x.fillText('metatreino.app', 60, H-56);
+  return c;
+}
+let _lastPhotoOpts = null;
+function pickSharePhoto(){ const i=document.getElementById('share-photo-input'); if(i) i.click(); }
+function onSharePhotoPicked(ev){
+  const f = ev.target.files && ev.target.files[0]; if(!f || !_lastPhotoOpts) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const c = buildPhotoShareCanvas(img, _lastPhotoOpts);
+      shareCanvas(c, _lastPhotoOpts.filename||'metatreino-foto.png', _lastPhotoOpts.shareText||'Treinei hoje com MetaTreino 💪');
+    };
+    img.src = r.result;
+  };
+  r.readAsDataURL(f);
 }
 function cutTxt(x, txt, maxW){
   if(x.measureText(txt).width <= maxW) return txt;
@@ -5451,6 +5517,8 @@ async function shareCanvas(canvas, filename, shareText){
       <img src="${URL.createObjectURL(blob)}" style="width:100%;border-radius:14px;margin:12px 0;border:1px solid var(--border)">
       <button class="btn btn-primary btn-block" onclick="doShareNow('${shareText.replace(/'/g,"\\'")}')">📲 Compartilhar agora</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="doSaveToDevice()">💾 Salvar no celular</button>
+      ${_lastPhotoOpts?`<button class="btn btn-outline btn-block" style="margin-top:8px;border-color:rgba(16,185,129,0.45)" onclick="pickSharePhoto()">📷 Estilo Strava — usar minha foto de fundo</button>
+      <input type="file" id="share-photo-input" accept="image/*" style="display:none" onchange="onSharePhotoPicked(event)">`:''}
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
     $('modal-back').classList.add('on');
   }, 'image/png');
@@ -5475,7 +5543,7 @@ function groupByPart(exercisesDone){
   const map = {};
   (exercisesDone||[]).forEach(e=>{
     const p = e.part||'Outros';
-    (map[p] = map[p]||[]).push(e.name);
+    (map[p] = map[p]||[]).push(String(e.name||'').replace(/\s*\([^)]*\)/g,''));
   });
   return Object.entries(map).map(([part,names])=>`${part}: ${names.join(', ')}`);
 }
@@ -5558,6 +5626,9 @@ function shareWorkoutImage(histIdx){
       lista:[x.name.replace(/^[🚶🚴🏃]\\s*/u,'')],
       destaque:'Treinei hoje com MetaTreino 💪'
     });
+    _lastPhotoOpts = { title:`${atv} concluída ${emo}`, subtitle:d.toLocaleDateString('pt-BR'),
+      stats:[{rotulo:'DISTÂNCIA', valor:(x.distance||0)+' km'},{rotulo:'TEMPO', valor:fmtDur(x.duration)},{rotulo:'RITMO', valor:x.pace||'—'}],
+      linhaDiscreta:null, filename:'metatreino-atividade.png', shareText:`${atv} concluída no MetaTreino ${emo}` };
     shareCanvas(c, 'metatreino-atividade.png', `${atv} concluída no MetaTreino ${emo}`);
     return;
   }
@@ -5576,6 +5647,9 @@ function shareWorkoutImage(histIdx){
     lista,
     destaque:'Treinei hoje com MetaTreino 💪'
   });
+  _lastPhotoOpts = { title:'Treino concluído 💪', subtitle:x.name,
+    stats:[{rotulo:'DURAÇÃO', valor:fmtDur(x.duration)},{rotulo:'EXERCÍCIOS', valor:String((x.exercisesDone||[]).length||'—')},{rotulo:'SENSAÇÃO', valor:(feelLbl||'').replace('Muito bem','Ótimo')}],
+    linhaDiscreta: parts.join(' · ')||null, filename:'metatreino-treino.png', shareText:'Treino concluído no MetaTreino 💪' };
   shareCanvas(c, 'metatreino-treino.png', 'Treino concluído no MetaTreino 💪');
 }
 
@@ -6747,7 +6821,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
