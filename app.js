@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.44 =====
-const APP_VERSION = 'v11.44';
+// ===== MetaTreino v11.45 =====
+const APP_VERSION = 'v11.45';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -144,6 +144,7 @@ const TROPHIES = [
   { secret:true, id:'monday',      emoji:'😤', name:'Segunda Não Assusta',desc:'Treinou em 4 segundas-feiras',              cat:'geral' },
   { secret:true, id:'early_bird',  emoji:'🐓', name:'Antes do Galo',      desc:'Treinou antes das 6h da manhã',             cat:'geral' },
   { secret:true, id:'night_owl',   emoji:'🦉', name:'Coruja Fitness',     desc:'Treinou depois das 22h',                    cat:'geral' },
+  { secret:true, id:'birthday',    emoji:'🎂', name:'Hoje é Meu Dia',      desc:'Treinou no dia do seu aniversário',         cat:'geral' },
   { secret:true, id:'weekend',     emoji:'🛋️', name:'Sofá Que Espere',    desc:'Treinou num sábado e num domingo',          cat:'geral' },
   { secret:true, id:'rain_check',  emoji:'🌧️', name:'Nem a Preguiça',     desc:'Treinou 3 dias seguidos após relatar cansaço', cat:'geral' },
   { secret:true, id:'consistent',  emoji:'📈', name:'Sem Drama',          desc:'12 treinos sem pular uma semana inteira',   cat:'geral' },
@@ -400,6 +401,7 @@ async function afterGoogleSignIn(user){
   if(!state.user) state.user = { name:user.displayName||'', email, isAdmin };
   state.user.isAdmin = isAdmin;
   state.user.email = email;
+  migrateExerciseIds(); // renomeações: move histórico/PRs/pins pros ids novos
   loadSpecialAward(); // depois de carregar os dados: reconcilia/mostra a conquista especial
   setTimeout(function(){ if(typeof checkTimeEasterEggs==="function") checkTimeEasterEggs(); }, 2500);
   bootAfterAuth();
@@ -954,7 +956,7 @@ const EX_BANK = [
   {name:'Bíceps',emo:'💪',color:'',items:[
     // ACADEMIA
     {name:'Rosca Direta com Barra',sub:'Bíceps',equip:['academia']},
-    {name:'Rosca Scott (banco)',sub:'Bíceps (pico)',equip:['academia']},
+    {name:'Rosca Scott no Banco',sub:'Bíceps (pico)',equip:['academia']},
     {name:'Rosca no Cabo',sub:'Bíceps (tensão contínua)',equip:['academia']},
     {name:'Rosca Scott na Máquina',sub:'Bíceps (pico)',equip:['academia']},
     {name:'Rosca Spider (banco inclinado)',sub:'Bíceps (pico, sem roubo)',equip:['academia','halteres']},
@@ -970,7 +972,7 @@ const EX_BANK = [
   ]},
   {name:'Tríceps',emo:'🦾',color:'orange',items:[
     // ACADEMIA
-    {name:'Tríceps na Polia (barra)',sub:'Tríceps',equip:['academia']},
+    {name:'Tríceps na Polia com Barra',sub:'Tríceps',equip:['academia']},
     {name:'Tríceps Corda no Cabo',sub:'Tríceps (cabeça lateral)',equip:['academia']},
     {name:'Tríceps Testa (barra EZ)',sub:'Tríceps (cabeça longa)',equip:['academia']},
     {name:'Tríceps na Máquina (Mergulho)',sub:'Tríceps (isolador)',equip:['academia']},
@@ -980,7 +982,7 @@ const EX_BANK = [
     {name:'Tríceps Francês com Halteres',sub:'Tríceps (cabeça longa)',equip:['academia','halteres']},
     {name:'Tríceps Coice com Haltere',sub:'Tríceps',equip:['academia','halteres']},
     // CASA
-    {name:'Mergulho no Banco/Cadeira',sub:'Tríceps',equip:['casa','halteres','academia']},
+    {name:'Mergulho no Banco',sub:'Tríceps',equip:['casa','halteres','academia']},
     {name:'Mergulho nas Paralelas',sub:'Tríceps / Peito',equip:['academia','casa']},
     {name:'Flexão Fechada (diamante)',sub:'Tríceps',equip:['casa','halteres','academia']},
     {name:'Tríceps Testa com Garrafa',sub:'Tríceps',equip:['casa'],improv:true}
@@ -1008,7 +1010,7 @@ const EX_BANK = [
     {name:'Agachamento Livre (peso corporal)',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
     {name:'Afundo Alternado',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
     {name:'Agachamento Sumô',sub:'Adutores / Glúteos',equip:['casa','halteres','academia']},
-    {name:'Step-up em banco/degrau',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
+    {name:'Step-up no Banco',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
     {name:'Stiff Unilateral (peso corporal)',sub:'Posterior de Coxa',equip:['casa','halteres','academia']},
     {name:'Cadeira contra parede (isométrico)',sub:'Quadríceps (resistência)',equip:['casa','halteres','academia']},
     {name:'Agachamento Jump',sub:'Quadríceps (explosão)',equip:['casa','halteres','academia']}
@@ -1028,8 +1030,8 @@ const EX_BANK = [
     {name:'Agachamento Sumô com Pausa',sub:'Glúteos / Adutores',equip:['casa','halteres','academia']}
   ]},
   {name:'Panturrilha',emo:'🦶',color:'teal',items:[
-    {name:'Panturrilha em Pé (máquina/Smith)',sub:'Panturrilha (gastrocnêmio)',equip:['academia']},
-    {name:'Panturrilha Sentado',sub:'Panturrilha (sóleo)',equip:['academia']},
+    {name:'Panturrilha em Pé na Máquina',sub:'Panturrilha (gastrocnêmio)',equip:['academia']},
+    {name:'Panturrilha Sentada',sub:'Panturrilha (sóleo)',equip:['academia']},
     {name:'Panturrilha no Leg Press',sub:'Panturrilha',equip:['academia']},
     {name:'Panturrilha Donkey',sub:'Panturrilha (alongada)',equip:['academia']},
     {name:'Panturrilha em pé (peso corporal)',sub:'Panturrilha',equip:['casa','halteres','academia']},
@@ -1054,6 +1056,31 @@ const EX_BANK = [
     {name:'Mountain Climber',sub:'Core / Cardio',equip:['casa','halteres','academia']}
   ]}
 ];// ---------- HELPERS ----------
+// Nomes antigos → padronizados. A migração move progresso/PRs/pins pro id novo (nada se perde).
+const EX_RENAMES = [
+  ['Mergulho no Banco/Cadeira','Mergulho no Banco'],
+  ['Tríceps na Polia (barra)','Tríceps na Polia com Barra'],
+  ['Rosca Scott (banco)','Rosca Scott no Banco'],
+  ['Panturrilha em Pé (máquina/Smith)','Panturrilha em Pé na Máquina'],
+  ['Panturrilha Sentado','Panturrilha Sentada'],
+  ['Step-up em banco/degrau','Step-up no Banco']
+];
+function migrateExerciseIds(){
+  try{
+    let changed=false;
+    EX_RENAMES.forEach(([oldN,newN])=>{
+      const o=slug(oldN), n=slug(newN); if(o===n) return;
+      if(state.progress && state.progress[o]){ state.progress[n]=(state.progress[n]||[]).concat(state.progress[o]); delete state.progress[o]; changed=true; }
+      if(state.prs && state.prs[o]){ if(!state.prs[n]) state.prs[n]=state.prs[o]; delete state.prs[o]; changed=true; }
+      const mod=state.modules && state.modules.lift;
+      ((mod&&mod.plan&&mod.plan.workouts)||[]).forEach(w=>{
+        (w.pins||[]).forEach(pn=>{ if(pn.id===o){pn.id=n;changed=true;} if(pn.origId===o){pn.origId=n;changed=true;} });
+        (w.exercises||[]).forEach(e=>{ if(e.id===o){ e.id=n; e.name=newN; changed=true; } });
+      });
+    });
+    if(changed) saveData();
+  }catch(e){}
+}
 // Padrão de movimento do exercício (pra variar estímulos de verdade, não só o nome)
 function exPattern(name){
   const n = (name||'').toLowerCase();
@@ -1398,6 +1425,7 @@ function renderHome(){
   renderAvatar('home-avatar');
   if(typeof updateFabNudge==='function') updateFabNudge();
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
+  try{ const _b=state.user&&state.user.profile&&state.user.profile.birth; if(_b){ const pb=_b.split('-').map(Number); const nn=new Date(); if(nn.getMonth()+1===pb[1]&&nn.getDate()===pb[2]) $('home-hi').textContent = `🎂 Feliz aniversário, ${firstName()}!`; } }catch(e){}
   const _glue = t => String(t||'').replace(/ (?=[^ ]*$)/, '\u00A0'); // cola o emoji final na última palavra
   const _wl = (typeof weatherHomeLine==='function') ? weatherHomeLine() : null;
   $('home-goal').innerHTML = _glue(homeStatusLine()) + (_wl ? `<br><span style="opacity:.6;font-size:.9em">${_glue(_wl)}</span>` : '');
@@ -1561,14 +1589,16 @@ function renderHome(){
       const hardRun = /Intervalado|Longa/.test(runToday.name||'');
       const partsLbl = parts.join(' + ').toLowerCase();
       let msgC;
-      if(heavyLeg && hardRun && !treinouHoje(state.modules.lift) && !treinouHoje(state.modules.run)) msgC = `Hoje tem treino de ${partsLbl} e corrida forte. Escolha um pra valer: ou encurta a corrida (metade da distância, ritmo leve) ou reduz as séries de perna em ~30%. Fazer os dois no talo cobra a conta amanhã.`;
+      const _diaJaResolvido = treinouHoje(state.modules.lift) || treinouHoje(state.modules.run);
+      if(_diaJaResolvido){ combo.classList.add('hidden'); msgC = null; }
+      else if(heavyLeg && hardRun) msgC = `Hoje tem treino de ${partsLbl} e corrida forte. Escolha um pra valer: ou encurta a corrida (metade da distância, ritmo leve) ou reduz as séries de perna em ~30%. Fazer os dois no talo cobra a conta amanhã.`;
       else if(heavyLeg) msgC = `${partsLbl.charAt(0).toUpperCase()+partsLbl.slice(1)} + corrida no mesmo dia: corra ANTES do treino de força se a corrida é sua prioridade, ou depois (bem leve) se a musculação vem primeiro.`;
       else if(gluteDay && hardRun) msgC = `Hoje tem ${partsLbl} e corrida forte. O glúteo é o motor da passada, então dá pra fazer os dois — mas deixe um espaço de algumas horas entre eles, ou reduza um pouco o volume de um dos dois se sentir as pernas pesadas.`;
       else if(gluteDay) msgC = `${partsLbl.charAt(0).toUpperCase()+partsLbl.slice(1)} + corrida leve combinam bem hoje. Só evite falhar as séries de glúteo se ainda for correr depois.`;
       else if(calfOnly && hardRun) msgC = `Panturrilha + corrida forte no mesmo dia: a panturrilha trabalha muito na corrida — treine-a DEPOIS de correr, nunca antes.`;
       else if(hardRun) msgC = `Corrida forte + ${partsLbl} hoje: faça a corrida primeiro e deixe a musculação mais controlada — evite falhar séries.`;
       else msgC = `Dois treinos hoje (${partsLbl} + corrida leve)! Combinação tranquila: só garanta boa alimentação e hidratação entre eles.`;
-      $('combo-msg').textContent = msgC;
+      if(msgC) $('combo-msg').textContent = msgC; else combo.classList.add('hidden');
     } else combo.classList.add('hidden');
   }
   // aviso de dor: corrida com dor em perna/joelho/tornozelo → sugerir caminhada ou bike
@@ -2906,7 +2936,8 @@ function renderMonthlyCard(){
   const feitos = lista.filter(c=>state.monthly.done.includes(c.id)).length;
   const restam = daysLeftInMonth();
   card.classList.remove('hidden');
-  $('monthly-title').textContent = `🎖️ Desafios de ${monthName(state.monthly.key)}`;
+  const _ev = (typeof seasonalEvent==='function') ? seasonalEvent() : null;
+  $('monthly-title').textContent = `🎖️ Desafios de ${monthName(state.monthly.key)}` + (_ev ? ` · ${_ev.emo} ${_ev.nome}` : '');
   $('monthly-sub').textContent = `${feitos} de ${lista.length} concluídos · ${restam===0?'último dia!':`${restam} ${restam===1?'dia restante':'dias restantes'}`}`;
   // mostra os 3 mais próximos de fechar (ainda não concluídos)
   const pendentes = lista.filter(c=>!state.monthly.done.includes(c.id))
@@ -3017,6 +3048,14 @@ function awardNav(d){
 }
 function closeAwards(){ awardQueue = []; awardIdx = 0; document.getElementById('modal-back').classList.remove('award-dark'); closeModal(); }
 
+// Evento sazonal ativo (janelas fixas, tom sóbrio — sem infantilizar)
+function seasonalEvent(){
+  const n=new Date(), m=n.getMonth()+1, d=n.getDate();
+  if(m===10 && d>=25) return {emo:'🎃', nome:'Especial de Halloween'};
+  if(m===12 && d>=20) return {emo:'🎄', nome:'Reta Final do Ano'};
+  if(m===1 && d<=7)  return {emo:'🎆', nome:'Semana do Recomeço'};
+  return null;
+}
 function checkTimeEasterEggs(){
   try{
     const now = new Date(), h = now.getHours(), m = now.getMinutes();
@@ -3160,6 +3199,8 @@ function checkTrophies(){
   if(total >= 100) unlockTrophy('century');
   // horários
   if(allHist.some(x=>{ const hh=new Date(x.at).getHours(); return hh>=4 && hh<6; })) unlockTrophy('early_bird');
+  const _bd = state.user && state.user.profile && state.user.profile.birth;
+  if(_bd){ const pb=_bd.split('-').map(Number); if(pb[1]&&pb[2]&&allHist.some(x=>{const dd=new Date(x.at);return dd.getMonth()+1===pb[1]&&dd.getDate()===pb[2];})) unlockTrophy('birthday'); }
   if(allHist.some(x=>new Date(x.at).getHours() >= 22)) unlockTrophy('night_owl');
   if(allHist.some(x=>x.duration>=120)) unlockTrophy('marathon_time');
   if(allHist.some(x=>x.duration>0 && x.duration<15)) unlockTrophy('turbo');
