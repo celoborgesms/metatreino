@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.41 =====
-const APP_VERSION = 'v11.41';
+// ===== MetaTreino v11.42 =====
+const APP_VERSION = 'v11.42';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -914,6 +914,7 @@ const EX_BANK = [
     {name:'Remada na Máquina (Hammer)',sub:'Costas Média',equip:['academia']},
     {name:'Remada Articulada Sentada',sub:'Costas Média',equip:['academia']},
     {name:'Puxada Aberta (Pulldown)',sub:'Dorsais (largura)',equip:['academia']},
+    {name:'Barra Fixa Pegada Neutra',sub:'Dorsais / Braquial',equip:['academia','casa']},
     {name:'Pullover na Polia',sub:'Dorsais (isolador)',equip:['academia']},
     {name:'Levantamento Terra',sub:'Cadeia posterior (força)',equip:['academia']},
     // HALTERES
@@ -931,6 +932,7 @@ const EX_BANK = [
     {name:'Desenvolvimento na Máquina',sub:'Ombro',equip:['academia']},
     {name:'Elevação Lateral na Polia',sub:'Ombro Lateral',equip:['academia']},
     {name:'Elevação Lateral na Máquina',sub:'Ombro Lateral (isolador)',equip:['academia']},
+    {name:'Elevação Y (halteres leves)',sub:'Trapézio Inferior / Saúde do Ombro',equip:['academia','halteres']},
     {name:'Face Pull no Cabo',sub:'Ombro Posterior / Postura',equip:['academia']},
     // HALTERES
     {name:'Desenvolvimento com Halteres',sub:'Ombro',equip:['academia','halteres']},
@@ -949,6 +951,7 @@ const EX_BANK = [
     {name:'Rosca Scott (banco)',sub:'Bíceps (pico)',equip:['academia']},
     {name:'Rosca no Cabo',sub:'Bíceps (tensão contínua)',equip:['academia']},
     {name:'Rosca Scott na Máquina',sub:'Bíceps (pico)',equip:['academia']},
+    {name:'Rosca Spider (banco inclinado)',sub:'Bíceps (pico, sem roubo)',equip:['academia','halteres']},
     // HALTERES
     {name:'Rosca Alternada com Halteres',sub:'Bíceps',equip:['academia','halteres']},
     {name:'Rosca Martelo com Halteres',sub:'Braquial / Antebraço',equip:['academia','halteres']},
@@ -965,6 +968,8 @@ const EX_BANK = [
     {name:'Tríceps Corda no Cabo',sub:'Tríceps (cabeça lateral)',equip:['academia']},
     {name:'Tríceps Testa (barra EZ)',sub:'Tríceps (cabeça longa)',equip:['academia']},
     {name:'Tríceps na Máquina (Mergulho)',sub:'Tríceps (isolador)',equip:['academia']},
+    {name:'Supino Pegada Fechada',sub:'Tríceps / Peito (composto)',equip:['academia']},
+    {name:'Extensão de Tríceps Acima da Cabeça (polia)',sub:'Tríceps (cabeça longa, alongado)',equip:['academia']},
     // HALTERES
     {name:'Tríceps Francês com Halteres',sub:'Tríceps (cabeça longa)',equip:['academia','halteres']},
     {name:'Tríceps Coice com Haltere',sub:'Tríceps',equip:['academia','halteres']},
@@ -985,6 +990,8 @@ const EX_BANK = [
     {name:'Cadeira Adutora',sub:'Adutores',equip:['academia']},
     {name:'Cadeira Abdutora',sub:'Abdutores / Glúteo Médio',equip:['academia']},
     {name:'Cadeira Flexora Sentada',sub:'Posterior de Coxa (isolador)',equip:['academia']},
+    {name:'Agachamento Búlgaro no Smith',sub:'Quadríceps / Glúteos (unilateral)',equip:['academia']},
+    {name:'Nordic Curl',sub:'Posterior de Coxa (avançado)',equip:['casa','academia']},
     {name:'Leg Press Horizontal',sub:'Quadríceps / Glúteos',equip:['academia']},
     // HALTERES
     {name:'Agachamento Búlgaro',sub:'Quadríceps / Glúteos (unilateral)',equip:['academia','halteres','casa']},
@@ -1018,6 +1025,7 @@ const EX_BANK = [
     {name:'Panturrilha em Pé (máquina/Smith)',sub:'Panturrilha (gastrocnêmio)',equip:['academia']},
     {name:'Panturrilha Sentado',sub:'Panturrilha (sóleo)',equip:['academia']},
     {name:'Panturrilha no Leg Press',sub:'Panturrilha',equip:['academia']},
+    {name:'Panturrilha Donkey',sub:'Panturrilha (alongada)',equip:['academia']},
     {name:'Panturrilha em pé (peso corporal)',sub:'Panturrilha',equip:['casa','halteres','academia']},
     {name:'Panturrilha unilateral em degrau',sub:'Panturrilha (unilateral)',equip:['casa','halteres','academia']}
   ]},
@@ -1034,6 +1042,9 @@ const EX_BANK = [
     {name:'Elevação de Pernas',sub:'Abdômen Inferior',equip:['casa','halteres','academia']},
     {name:'Russian Twist',sub:'Oblíquos (rotação)',equip:['casa','halteres','academia']},
     {name:'Dead Bug',sub:'Core Profundo (anti-extensão)',equip:['casa','halteres','academia']},
+    {name:'Pallof Press (anti-rotação)',sub:'Core (anti-rotação)',equip:['academia']},
+    {name:'Hollow Hold',sub:'Core (isometria avançada)',equip:['casa','halteres','academia']},
+    {name:'Farmer Walk (caminhada carregada)',sub:'Core / Pegada',equip:['academia','halteres']},
     {name:'Mountain Climber',sub:'Core / Cardio',equip:['casa','halteres','academia']}
   ]}
 ];// ---------- HELPERS ----------
@@ -1576,17 +1587,6 @@ function renderHome(){
   renderYourList(mod);
 }
 
-function exportMyData(){
-  try{
-    const data = JSON.parse(JSON.stringify(state));
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'metatreino-dados-'+new Date().toISOString().slice(0,10)+'.json';
-    document.body.appendChild(a); a.click(); a.remove();
-    toast('📦 Seus dados foram exportados!');
-  }catch(e){ toast('⚠️ Não foi possível exportar.'); }
-}
 function renderAvatar(id){
   const el = $(id); if(!el) return;
   const p = state.user.profile;
@@ -3276,7 +3276,9 @@ function shareTrophyImage(id){
   });
   shareCanvas(c, 'metatreino-'+id+'.png', `${t.emoji} Desbloqueei "${t.name}" no MetaTreino!`);
 }
+function openTrophiesKeepScroll(){ const sc=window._trophyScroll||0; openTrophies(); try{ document.getElementById('modal-inner').scrollTop=sc; }catch(e){} }
 function openTrophyDetail(id){
+  try{ window._trophyScroll = (document.getElementById('modal-inner')||{}).scrollTop||0; }catch(e){}
   document.getElementById('modal-back').classList.remove('award-dark'); // fundo preto só na celebração de desbloqueio
   const t = TROPHIES.find(x=>x.id===id); if(!t) return;
   const quando = (state.trophyDates||{})[id];
@@ -3294,7 +3296,7 @@ function openTrophyDetail(id){
     : `<div style="width:42px"></div>`;
   $('modal-inner').innerHTML = `
     <div style="display:flex;justify-content:flex-end;margin:-4px -4px 0 0">
-      <button onclick="closeModal();openTrophies()" style="background:none;border:none;font-size:20px;color:var(--text-mute);padding:4px 8px;cursor:pointer">✕</button>
+      <button onclick="closeModal();openTrophiesKeepScroll()" style="background:none;border:none;font-size:20px;color:var(--text-mute);padding:4px 8px;cursor:pointer">✕</button>
     </div>
     <div style="display:flex;justify-content:center;align-items:center;gap:20px;margin:-6px 0 2px">
       ${navArrow(prevId,'‹')}
@@ -3314,7 +3316,7 @@ function openTrophyDetail(id){
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();shareTrophyImage('${t.id}')">📤 Compartilhar esta conquista</button>
     <button class="btn btn-outline btn-block" style="margin-top:8px;border-color:rgba(16,185,129,0.4)" onclick="closeModal();shareTrophiesImage()">🏆 Compartilhar coleção inteira</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();openTrophies()">← Voltar aos troféus</button>`;
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();openTrophiesKeepScroll()">← Voltar aos troféus</button>`;
   $('modal-back').classList.add('on');
 }
 // Ordena os troféus de um grupo: os conquistados sobem pro topo (mais recentes primeiro),
@@ -3358,7 +3360,7 @@ function openTrophies(){
         const revealed = ordenarTrofeus(g.items.filter(t=>state.trophies.includes(t.id)));
         const lockedN = g.items.length - revealed.length;
         return `<div style="margin-top:18px"><div class="section-lbl" style="margin:0 0 8px">✨ Secretas reveladas · ${revealed.length}/${g.items.length}</div>
-          ${revealed.length?`<div class="trophy-grid">${revealed.map(t=>`<div class="trophy unlocked" onclick="openTrophyDetail('${t.id}')"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div></div>`).join('')}</div>`:`<div style="font-size:12.5px;color:var(--text-dim)">Nenhuma revelada ainda… elas aparecem sozinhas quando você as merece.</div>`}
+          ${revealed.length?`<div class="trophy-grid">${revealed.map(t=>`<div class="trophy unlock" onclick="openTrophyDetail('${t.id}')"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div></div>`).join('')}</div>`:`<div style="font-size:12.5px;color:var(--text-dim)">Nenhuma revelada ainda… elas aparecem sozinhas quando você as merece.</div>`}
           ${lockedN?`<div style="margin-top:10px;text-align:center;font-size:12.5px;color:var(--text-mute)">🔒 Ainda restam <b>${lockedN}</b> segredos por descobrir… continue treinando 😉</div>`:''}
         </div>`;
       }
@@ -4458,6 +4460,21 @@ function maInsight(){
     const semFicha = ult ? Math.floor((Date.now()-ult)/86400000) : null;
     if(semFicha!==null && semFicha>=75) ins.push(`🔄 Faz uns <b>${Math.round(semFicha/30)} meses</b> que sua ficha é a mesma. Trocar alguns exercícios agora pode reacender o estímulo. 💪`);
   }
+  // previsão de corrida: tendência do ritmo nas últimas corridas
+  try{
+    const runs = ((state.modules.run||{}).history||[]).filter(x=>x.activity==='corrida'&&x.distance>=2&&x.duration>0).slice(-8);
+    if(runs.length>=4){
+      const paceOf = r => r.duration/r.distance;
+      const half = Math.floor(runs.length/2);
+      const p1 = runs.slice(0,half).reduce((a,r)=>a+paceOf(r),0)/half;
+      const p2 = runs.slice(half).reduce((a,r)=>a+paceOf(r),0)/(runs.length-half);
+      const ganhoSeg = Math.round((p1-p2)*60);
+      if(ganhoSeg>=5){
+        const alvo5k = p2*5; const mm=Math.floor(alvo5k), ss=String(Math.round((alvo5k-mm)*60)).padStart(2,'0');
+        ins.push(`🏃 Seu ritmo melhorou <b>${ganhoSeg}s/km</b> nas últimas corridas. No pace atual, seus 5km saem em ~<b>${mm}:${ss}</b> — e a tendência é cair mais. 📉`);
+      }
+    }
+  }catch(e){}
   if(!ins.length) return `Você está com uma boa constância, ${maName()}! Continue registrando que logo te trago padrões mais detalhados. 💪`;
   return ins[Math.floor(Date.now()/86400000) % ins.length];
 }
@@ -4573,7 +4590,7 @@ function maOpeningSummary(){
     }
     try{
       const _all=[...((state.modules.lift&&state.modules.lift.history)||[]),...((state.modules.run&&state.modules.run.history)||[])];
-      if(_all.length>=6 && !(typeof vacationActive==='function'&&vacationActive()) && (new Date().getDate()%2===0)){ L.push(''); L.push(maInsight()); }
+      if(_all.length>=6 && !(typeof vacationActive==='function'&&vacationActive())){ L.push(''); L.push('🔎 <b>Percebi isso sobre você:</b>'); L.push(maInsight()); }
     }catch(e){}
     L.push('');
     L.push('É só perguntar ou tocar numa sugestão abaixo. 💪');
@@ -6589,7 +6606,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,exportMyData,openDayDetail,saveDayNote,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
