@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.50 =====
-const APP_VERSION = 'v11.50';
+// ===== MetaTreino v11.51 =====
+const APP_VERSION = 'v11.51';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5056,7 +5056,24 @@ function regenLiftExercises(){
     w.originalParts = w.originalParts || [...(w.parts||[])]; // guarda os grupos originais uma única vez
     const blocked = painBlockedParts();
     const kept = w.originalParts.filter(p=>!blocked.has(p));
-    const usar = kept.length ? kept : (blocked.has('Core') ? [] : ['Core']);
+    let usar = kept.length ? [...kept] : (blocked.has('Core') ? [] : ['Core']);
+    // A dor tirou grupos? Em vez de entregar um treino curto, completa com grupos SEGUROS
+    // (os mais recuperados primeiro, priorizando grupos grandes) — mantém o volume do dia.
+    const perdidos = w.originalParts.length - kept.length;
+    if(perdidos > 0){
+      const GRANDES = ['Costas','Pernas','Peito','Glúteos','Ombro'];
+      // segurança extra: grupos que, embora liberados, exigem indiretamente a região dolorida
+      const EVITAR_REFORCO = { 'Ombro':['Costas'], 'Punho/Cotovelo':['Costas'], 'Lombar':['Pernas'], 'Pescoço':['Costas'] };
+      const evitar = new Set(); ((state.user&&state.user.pain)||[]).forEach(d=>(EVITAR_REFORCO[d]||[]).forEach(g=>evitar.add(g)));
+      const jaUsados = new Set([...usar, ...w.originalParts]);
+      const candidatos = EX_BANK.map(c=>c.name)
+        .filter(g=>!blocked.has(g) && !jaUsados.has(g) && !evitar.has(g))
+        .map(g=>({ g, score: ((typeof fatigueOf==='function')?fatigueOf(g):0) - (GRANDES.includes(g)?12:0) }))
+        .sort((a,b)=>a.score-b.score);
+      const reforco = candidatos.slice(0, perdidos).map(c=>c.g);
+      usar = [...usar, ...reforco];
+      w.reforcoParts = reforco;
+    } else { w.reforcoParts = []; }
     w.parts = usar.length ? usar : w.originalParts; // se bloqueou tudo, mantém (mas avisa)
     w.exercises = buildLiftExercises(w.parts, mod.setup);
     applyPins(w, mod.setup); // respeita as trocas manuais do aluno
@@ -5067,7 +5084,11 @@ function regenLiftExercises(){
     const base = 'Treino '+w.k;
     w.name = w.parts.join(' + ');
     w.adapted = a.active && (w.parts.join()!==w.originalParts.join() || a.tpm || a.cramp);
-    w.adaptNote = w.adapted ? `Adaptado por ${adaptReasonText()}: ${w.originalParts.filter(p=>!w.parts.includes(p)).length?`evitamos ${w.originalParts.filter(p=>!w.parts.includes(p)).join(', ')}`:'volume reduzido'}.` : '';
+    const _evit = w.originalParts.filter(p=>!w.parts.includes(p));
+    w.adaptNote = w.adapted
+      ? `Adaptado por ${adaptReasonText()}: ${_evit.length?`evitamos ${_evit.join(', ')}`:'volume reduzido'}.`
+        + ((w.reforcoParts&&w.reforcoParts.length)?` Pra você não perder o dia, incluí ${w.reforcoParts.join(' e ')} — grupos seguros e bem descansados.`:'')
+      : '';
   });
 }
 // Adapta os treinos de corrida quando há dor de impacto ou TPM
@@ -5088,6 +5109,13 @@ function regenRunPlan(){
       w.distance = '~'+(Math.round(km*0.6*2)/2)+'km';
       w.adapted = true;
       w.adaptNote = `Adaptado por ${adaptReasonText()}: trocamos a corrida por caminhada leve pra tirar o impacto das articulações.`;
+    } else if(a.pain.length && !impacto){
+      // dor de membro superior (ombro, punho, pescoço): a corrida segue normal, só um lembrete
+      w.name = w.originalName;
+      w.duration = w.originalDuration;
+      w.distance = w.originalDistance;
+      w.adapted = true;
+      w.adaptNote = `Sua dor (${a.pain.join(', ')}) não atrapalha a passada — mantivemos a corrida normal. Só evite tensionar a região e, se incomodar, encurte o treino.`;
     } else if(a.tpm || a.leve){
       w.name = w.originalName;
       w.duration = Math.max(15, Math.round((w.originalDuration||30)*0.75));
