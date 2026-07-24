@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.52 =====
-const APP_VERSION = 'v11.52';
+// ===== MetaTreino v11.53 =====
+const APP_VERSION = 'v11.53';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1781,7 +1781,7 @@ function runDesc(w){
 function renderRestDay(mod){
   const isLift = mod.plan.type==='lift';
   const ws = mod.plan.workouts.slice(0,3);
-  const freeRunBtn = state.modules.run ? `<div class="rest-divider">— ou —</div><button class="btn btn-outline btn-block" style="border-color:rgba(245,158,11,0.4);color:var(--accent-2)" onclick="openRunLog('livre')">🏃 Registrar corrida, caminhada ou bike livre</button>` : '';
+  const freeRunBtn = (state.active==='run' && state.modules.run) ? `<div class="rest-divider">— ou —</div><button class="btn btn-outline btn-block" style="border-color:rgba(245,158,11,0.4);color:var(--accent-2)" onclick="openRunLog('livre')">🏃 Registrar corrida, caminhada ou bike livre</button>` : '';
   return `<div class="rest-card"><div class="rest-emoji">😴</div><div class="rest-title">Dia de Descanso</div><div class="rest-sub">Aproveite pra recuperar. Você volta amanhã mais forte!</div><div class="rest-divider">— ou —</div><div style="font-weight:700">Quer antecipar algum treino?</div><div class="anticipate">${ws.map(w=>`<div class="antic-card" onclick="openSession('${w.k||w.dayIdx}')"><div class="antic-letter">${(w.k||'').charAt(0)||'S'}</div><div class="antic-name">${isLift?'Treino '+w.k:w.name.split(' ')[0]}</div><div class="antic-day">${w.dayName}</div></div>`).join('')}</div>${freeRunBtn}</div>`;
 }
 
@@ -2715,8 +2715,8 @@ function renderProfile(){
   renderAvatar('pf-avatar');
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
   const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:999px;background:rgba(244,63,94,0.15);color:var(--danger-soft);font-weight:800">${pn.join(', ')}</span>`:''; }
-  const qe = $('pf-quick-equip'); if(qe) qe.style.display = (state.active==='lift' && state.modules.lift) ? 'block' : 'none';
-  const qt = $('pf-quick-terrain'); if(qt) qt.style.display = (state.active==='run' && state.modules.run) ? 'block' : 'none';
+  const qe = $('pf-quick-equip'); if(qe) qe.style.display = (state.active==='lift' && state.modules.lift && state.modules.lift.plan) ? 'block' : 'none';
+  const qt = $('pf-quick-terrain'); if(qt) qt.style.display = (state.active==='run' && state.modules.run && state.modules.run.plan) ? 'block' : 'none';
   $('pf-name').textContent = p.nickname || u.name;
   $('pf-email').textContent = u.email;
   // Show admin button if admin (by email — fonte da verdade)
@@ -2751,6 +2751,20 @@ function renderProfile(){
   // Module
   const mod = state.modules[state.active];
   const isLift = state.active==='lift';
+  // Módulo ativo AINDA SEM PLANO: mostra o estado real e não trava a tela
+  // (antes, labelGoal(undefined) dava erro e o card ficava com o conteúdo antigo do outro módulo)
+  if(!mod || !mod.plan){
+    $('pf-mod').innerHTML = `<div class="icon">${isLift?'🏋️':'🏃'}</div><div style="flex:1"><div class="name">${isLift?'Musculação':'Corrida'}</div><div class="goal">Plano ainda não criado</div></div><button class="btn btn-outline" onclick="switchModuleUI()">→ ${isLift?'🏃 Corrida':'🏋️ Musculação'}</button>`;
+    $('pf-plan-lbl').textContent = `Plano de ${isLift?'Musculação':'Corrida'}`;
+    const box = $('plan-details');
+    if(box) box.innerHTML = `<div style="padding:14px;text-align:center;color:var(--text-dim);font-size:13px">Você ainda não tem um plano de ${isLift?'musculação':'corrida'}.</div>
+      <button class="btn btn-primary btn-block" style="margin-top:6px" onclick="openSetupScreen('${state.active}')">${isLift?'🏋️':'🏃'} Criar plano de ${isLift?'musculação':'corrida'}</button>`;
+    const qe2=$('pf-quick-equip'); if(qe2) qe2.style.display='none';
+    const qt2=$('pf-quick-terrain'); if(qt2) qt2.style.display='none';
+    const rp=document.querySelector('[onclick="regenPlan()"]'); if(rp) rp.style.display='none';
+    return;
+  }
+  { const rp2=document.querySelector('[onclick="regenPlan()"]'); if(rp2) rp2.style.display=''; }
   $('pf-mod').innerHTML = `<div class="icon">${isLift?'🏋️':'🏃'}</div><div style="flex:1"><div class="name">${isLift?'Musculação':'Corrida'}</div><div class="goal">Objetivo: ${labelGoal(mod)}</div></div><button class="btn btn-outline" onclick="switchModuleUI()">→ ${isLift?'🏃 Corrida':'🏋️ Musculação'}</button>`;
   $('pf-plan-lbl').textContent = `Plano de ${isLift?'Musculação':'Corrida'}`;
   const s = mod.setup || {};
@@ -6224,6 +6238,7 @@ async function openVideoAdmin(){
         <div class="row" style="gap:6px;margin-top:6px">
           <input class="input" id="vidc-${id}" value="${curCred.replace(/"/g,'&quot;')}" placeholder="Perfil de quem gravou — Instagram, YouTube, TikTok... (opcional)" style="flex:1;font-size:12.5px;padding:9px 12px">
           <button class="btn btn-primary" style="padding:9px 14px;font-size:12.5px" onclick="saveVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">💾</button>
+          ${cur?`<button class="btn btn-ghost" style="padding:9px 12px;font-size:12.5px;color:var(--danger);border-color:rgba(244,63,94,.35)" onclick="clearVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">🗑️</button>`:''}
         </div>
       </div>`;
     }).join('');
@@ -6246,6 +6261,18 @@ function testVideoLink(id, exName){
   }
   if(!/^https?:\/\//i.test(url)){ toast('⚠️ O link precisa começar com http:// ou https://'); return; }
   window.open(url, '_blank');
+}
+async function clearVideoLink(id, exName){
+  appConfirm(`O vídeo de "${exName}" volta a ser buscado automaticamente pelo app.`, async ()=>{
+    try{
+      await db.collection('videosExercicios').doc(id).delete();
+      delete videoLinks[id];
+      const inp=$('vid-'+id); if(inp) inp.value='';
+      const cinp=$('vidc-'+id); if(cinp) cinp.value='';
+      toast('🗑️ Link removido');
+      if(typeof openVideoAdmin==='function') openVideoAdmin();
+    }catch(e){ console.log('Erro ao remover vídeo:', e); toast('⚠️ Não foi possível remover. Confira as permissões do Firestore.'); }
+  }, {title:'Remover link do vídeo?', emo:'🗑️', okLabel:'Sim, remover', danger:true});
 }
 async function saveVideoLink(id, exName){
   const inp = $('vid-'+id); if(!inp) return;
@@ -6492,6 +6519,8 @@ async function toggleStudent(email){
   const a = allowCache[email]; if(!a) return;
   const novoAtivo = !a.active;
   try{
+    const _meu = ((fbUser&&fbUser.email)||(state.user&&state.user.email)||'').toLowerCase();
+    if(String(email).toLowerCase() === _meu && !novoAtivo){ toast('🛡️ Você não pode bloquear a sua própria conta de administrador.'); return; }
     await db.collection('usuariosAutorizados').doc(email).update({ active:novoAtivo });
     a.active = novoAtivo;
     toast(a.active?'🔓 Aluno reativado':'🔒 Aluno bloqueado');
@@ -6499,6 +6528,8 @@ async function toggleStudent(email){
   }catch(e){ console.log('Erro ao bloquear/reativar aluno:', e); toast('⚠️ Não foi possível salvar. Confira as permissões do Firestore.'); }
 }
 async function removeStudent(email){
+  const meu = ((fbUser&&fbUser.email)||(state.user&&state.user.email)||'').toLowerCase();
+  if(String(email).toLowerCase() === meu){ toast('🛡️ Você não pode remover o seu próprio acesso de administrador.'); return; }
   appConfirm('A conta dele será mantida, mas ele perderá o acesso ao app.', async ()=>{
     try{
       await db.collection('usuariosAutorizados').doc(email).delete();
@@ -6905,7 +6936,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,clearVideoLink,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
