@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.51 =====
-const APP_VERSION = 'v11.51';
+// ===== MetaTreino v11.52 =====
+const APP_VERSION = 'v11.52';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -519,6 +519,24 @@ function openSetupScreen(m){
   bindOpts('scr-setup-'+m);
   bindMultiOpts('scr-setup-'+m);
   bindDaysUpdate(m);
+  // Pré-preenche com o plano ATUAL (antes abria tudo em branco e parecia que nada foi selecionado)
+  try{
+    const st = state.modules[m] && state.modules[m].setup;
+    if(st){
+      const setOn = (gid,val)=>{ const g=$(gid); if(!g||val==null) return; const t=g.querySelector(`.opt[data-val="${val}"]`); if(!t) return; g.querySelectorAll('.opt').forEach(o=>o.classList.remove('on')); t.classList.add('on'); };
+      if(m==='lift'){ setOn('lift-goal',st.goal); setOn('lift-days',st.days); setOn('lift-equip',st.equip); setOn('lift-level',st.level); }
+      else { setOn('run-goal',st.goal); setOn('run-level',st.level); setOn('run-days',st.days); setOn('run-terrain',st.terrain); }
+      const wd = $(m+'-week-days');
+      if(wd && st.selectedDays && st.selectedDays.length){
+        wd.querySelectorAll('.opt').forEach(o=>o.classList.toggle('on', st.selectedDays.includes(parseInt(o.dataset.val))));
+      }
+      if(typeof bindDaysUpdate==='function') bindDaysUpdate(m);
+    }
+    if(m==='lift'){
+      ['lift-level','lift-goal','lift-days'].forEach(gid=>{ const g=$(gid); if(g && !g._hintBound){ g._hintBound=true; g.addEventListener('click', ()=>setTimeout(updateLevelHint,30)); } });
+      setTimeout(updateLevelHint, 60);
+    }
+  }catch(e){}
   // Recriar o plano não pode apagar a prova alvo em silêncio: repõe a data já cadastrada.
   if(m === 'run'){
     const el = $('run-race-date');
@@ -559,6 +577,19 @@ function bindOpts(scrId){
 }
 function readOpt(id){ const on = document.querySelector('#'+id+' .opt.on'); return on?on.dataset.val:null; }
 
+// Estimativa de duração por nível — alinha a expectativa antes de confirmar
+function updateLevelHint(){
+  const el = document.getElementById('lift-level-hint'); if(!el) return;
+  const lvl = (typeof readOpt==='function') ? readOpt('lift-level') : 'iniciante';
+  const goal = (typeof readOpt==='function') ? readOpt('lift-goal') : 'hipertrofia';
+  const dias = parseInt((typeof readOpt==='function') ? readOpt('lift-days') : 3) || 3;
+  const exPorDia = ({iniciante:4, intermediario:6, avancado:8})[lvl] || 5;
+  const setsMed = goal==='forca' ? 4 : (goal==='resistencia' ? 3 : 3.5);
+  const descanso = goal==='forca' ? 2.4 : (goal==='resistencia' ? 0.9 : 1.5);
+  const min = Math.round(exPorDia * setsMed * (0.9 + descanso)) + 8;
+  const lbl = ({iniciante:'Iniciante', intermediario:'Intermediário', avancado:'Avançado'})[lvl] || '';
+  el.innerHTML = `⏱️ <b>${lbl}</b>: ~${Math.max(25,min-8)}-${min+7} min por treino · cerca de ${exPorDia} exercícios · ${dias}x na semana`;
+}
 function finishSetup(m){
   const setup = m==='lift' ? {
     goal:readOpt('lift-goal'), days:parseInt(readOpt('lift-days')),
@@ -581,8 +612,12 @@ function finishSetup(m){
     return;
   }
   // preserva histórico e data de início ao RECRIAR um plano (não zera o progresso do aluno)
+  // data de início escolhida (ou hoje) — dias antes disso não contam falta
+  const _si = document.getElementById(m+'-start-date');
+  let startAt = Date.now();
+  if(_si && _si.value){ const dS=new Date(_si.value+'T00:00:00'); if(!isNaN(dS)) startAt = dS.getTime(); }
   const prev = state.modules[m];
-  state.modules[m] = { setup, plan:generatePlan(m,setup), week:1, createdAt: (prev && prev.createdAt) || Date.now(), history: (prev && prev.history) || [] };
+  state.modules[m] = { setup, plan:generatePlan(m,setup), week:1, createdAt: (prev && prev.createdAt) || Date.now(), startAt, history: (prev && prev.history) || [] };
   state.active = m;
   regenAllPlans(); // se o aluno está com dor/TPM, o plano novo já nasce adaptado
   saveData(); goTab('home'); toast(prev ? '🔄 Plano recriado! Seu histórico foi mantido.' : '🎉 Plano criado!');
@@ -1363,7 +1398,8 @@ function switchModule(to){
   if(to==='run' && (!state.modules.run || !state.modules.run.plan)){
     ensureActivityLog(); state.active='run'; saveData(); goTab('home'); return;
   }
-  if(!state.modules[to]){ state.active=to; saveData(); openSetupScreen(to); prefillSetupFromQuiz(to); return; }
+  // destino sem MÓDULO ou sem PLANO → leva pro setup (antes dizia "trocado" e a tela não mudava)
+  if(!state.modules[to] || !state.modules[to].plan){ state.active=to; saveData(); openSetupScreen(to); prefillSetupFromQuiz(to); return; }
   state.active = to; saveData(); goTab('home'); toast('Trocado para '+(to==='lift'?'🏋️ Musculação':'🏃 Corrida'));
 }
 function switchModuleUI(){ switchModule(state.active==='lift'?'run':'lift'); }
@@ -1786,7 +1822,7 @@ function renderWeekGrid(mod){
     if(fullDone) status='✅';
     else if(partial) status='🟢';
     else if(isT) status='🟡';
-    else if(isPast && planned>0 && !daySkipped && !dayVac && !(typeof isBirthday==='function' && isBirthday(cd))) status='<span style="color:var(--text-mute);font-weight:700">–</span>';
+    else if(isPast && planned>0 && !daySkipped && !dayVac && !(typeof isBirthday==='function' && isBirthday(cd)) && cd.getTime() >= new Date(new Date(planStartTs()).setHours(0,0,0,0)).getTime()) status='<span style="color:var(--text-mute);font-weight:700">–</span>';
     else if(has) status='⚪';
     else status='';
     const clicavel = idx<=today ? `onclick="openDayDetail(${cd.getTime()})" style="cursor:pointer"` : '';
@@ -2337,6 +2373,12 @@ function isBirthday(date){
     const d = date ? new Date(date) : new Date();
     return (d.getMonth()+1)===p[1] && d.getDate()===p[2];
   }catch(e){ return false; }
+}
+// início real do plano (escolhido pelo aluno ou criação) — antes disso não existe "falta"
+function planStartTs(mod){
+  const m = mod || state.modules[state.active];
+  if(!m) return 0;
+  return m.startAt || m.createdAt || (m.history && m.history.length ? m.history[0].at : 0) || 0;
 }
 function calcStreak(h){
   if(!h||!h.length) return 0;
@@ -5655,7 +5697,7 @@ function shareWorkoutImage(histIdx){
       subtitle:d.toLocaleDateString('pt-BR'),
       stats:[
         {rotulo:'Distância', valor:(x.distance||0)+' km'},
-        {rotulo:'Tempo', valor:x.duration+' min'},
+        {rotulo:'Tempo', valor:fmtDur(x.duration)},
         {rotulo:'Ritmo médio', valor:x.pace||'—'},
         {rotulo:'Sensação', valor:x.rating>=5?'Ótimo 🚀':x.rating<=1?'Difícil 😩':'Normal 😊'}
       ],
@@ -6510,7 +6552,7 @@ function openHistoryEntry(idx){
     ${muscleBlock}
     ${exBlock}
     <div class="field" style="margin-top:12px"><label>Nome</label><input class="input" id="he-name" value="${x.name.replace(/"/g,'&quot;')}"></div>
-    <div class="field"><label>Data</label><input class="input" type="datetime-local" id="he-date" value="${d.toISOString().slice(0,16)}" style="color-scheme:dark"></div>
+    <div class="field"><label>Data</label><input class="input" type="datetime-local" id="he-date" value="${toLocalDT(d)}" style="color-scheme:dark"></div>
     <div class="field"><label>Duração (min:seg)</label><input class="input mono" type="text" inputmode="numeric" id="he-dur" value="${durToEdit(x.duration||0)}"></div>
     ${isRun?`<div class="field"><label>Distância (km)</label><input class="input mono" type="number" step="0.1" id="he-km" value="${x.distance||''}"></div>`:''}
     <div class="row" style="gap:8px;margin-top:14px">
@@ -6741,6 +6783,11 @@ function parseTimeToMin(str){
   return h*60 + m + sec/60;
 }
 // minutos (fração) -> "1h30m", "32min 45s" ou "32 min"
+// datetime-local precisa de horário LOCAL (toISOString devolve UTC e adiantava a data/hora)
+function toLocalDT(d){
+  const dt = new Date(d); const p = n => String(n).padStart(2,'0');
+  return dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+'T'+p(dt.getHours())+':'+p(dt.getMinutes());
+}
 function fmtDur(min){
   const totalSec = Math.round((min||0)*60);
   const h=Math.floor(totalSec/3600), m=Math.floor((totalSec%3600)/60), sec=totalSec%60;
@@ -6858,7 +6905,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,toggleWeeklyBlock,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
