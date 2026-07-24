@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.53 =====
-const APP_VERSION = 'v11.53';
+// ===== MetaTreino v11.55 =====
+const APP_VERSION = 'v11.55';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1158,7 +1158,7 @@ function missedWorkoutsThisWeek(mod){
   const skips = (state.skips||[]).filter(s=>s.at>=t0 && (!modKey || s.module===modKey));
   // não considera "perdido" nenhum dia anterior à criação do plano —
   // aluno novo que começa numa quinta não deve ver segunda/terça como treinos perdidos
-  const created = mod.createdAt || Date.now();
+  const created = (typeof planStartTs==='function' ? planStartTs(mod) : 0) || mod.createdAt || Date.now();
   return (mod.plan.workouts||[]).filter(w=>{
     if(w.dayIdx >= today) return false; // só dias que já passaram nesta semana
     // qual foi a data/hora desse dia da semana? se foi antes de criar o plano, ignora
@@ -1660,6 +1660,17 @@ function renderHome(){
   const phase = wk<=Math.floor(total*0.6)?'BUILD':wk<=Math.floor(total*0.85)?'PEAK':'TAPER';
   $('plan-phase').textContent = phase;
   const isLiftPlan = mod.plan.type==='lift';
+  // plano com início programado pra frente: avisa em vez de fingir que já começou
+  try{
+    const _st = (typeof planStartTs==='function') ? planStartTs(mod) : 0;
+    const _h0 = new Date(); _h0.setHours(0,0,0,0);
+    if(_st && _st > _h0.getTime()){
+      const dias = Math.ceil((_st - _h0.getTime())/86400000);
+      const nomeDia = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'][new Date(_st).getDay()];
+      $('plan-foot').textContent = `▶️ Seu plano começa ${dias===1?'amanhã':'em '+dias+' dias'} (${nomeDia}). Até lá, sem cobranças — aproveite pra descansar. 😌`;
+      return;
+    }
+  }catch(e){}
   $('plan-foot').textContent = cw.done ? '🏁 Programa concluído! Toque em "Trocar plano" pra começar um novo ciclo.' : phase==='BUILD'?`🏗️ Fase de construção · ${isLiftPlan?'Ganhando base muscular':'Aumentando base aeróbica'}. ${total-wk} semanas até o pico.`:phase==='PEAK'?`🚀 Fase de pico · Alta intensidade. ${total-wk} semanas restantes.`:isLiftPlan?`🎯 Fase de consolidação · Na semana ${total} o ciclo recomeça renovado.`:`🎯 Fase de taper · Recuperação e afinação final.`;
 
   const today = getDayIdx();
@@ -2225,7 +2236,7 @@ function cicloAtual(){
   try{
     const mod = state.modules.lift; if(!mod) return null;
     const h = (mod.history||[]);
-    const t0 = mod.planCriadoEm || (mod.plan && mod.plan.criadoEm) || (h.length ? h[0].at : null);
+    const t0 = (typeof planStartTs==='function' ? planStartTs(mod) : 0) || mod.planCriadoEm || (mod.plan && mod.plan.criadoEm) || (h.length ? h[0].at : null);
     if(!t0) return null;
     const wk = Math.max(0, Math.floor((Date.now()-t0)/(7*86400000)));
     const fases = [
@@ -3682,8 +3693,8 @@ function saveProfileEdit(){
 function currentWeek(mod){
   if(!mod || !mod.plan) return {wk:1, total:12, cycle:1};
   const total = mod.plan.totalWeeks || 12;
-  const created = mod.createdAt || Date.now();
-  const elapsed = Math.floor((Date.now() - created) / (7*86400000)); // semanas completas
+  const created = (typeof planStartTs==='function' ? planStartTs(mod) : 0) || mod.createdAt || Date.now();
+  const elapsed = Math.max(0, Math.floor((Date.now() - created) / (7*86400000))); // semanas completas (0 antes de começar)
   if(mod.plan.type === 'lift'){
     return { wk:(elapsed % total)+1, total, cycle:Math.floor(elapsed/total)+1 };
   }
@@ -6457,7 +6468,9 @@ function openStudent(email){
     <div class="row" style="gap:6px;margin-top:8px">
       ${a.expiresAt
         ? `<button class="btn btn-outline btn-block" style="border-color:rgba(16,185,129,0.4)" onclick="setLifetime('${email}')">♾️ Tornar vitalício</button>`
-        : `<button class="btn btn-ghost btn-block" onclick="unsetLifetime('${email}')">📅 Remover vitalício (definir 30 dias)</button>`}
+        : (String(email).toLowerCase()===(((fbUser&&fbUser.email)||(state.user&&state.user.email)||'').toLowerCase())
+            ? `<div style="text-align:center;font-size:12.5px;color:var(--text-mute);padding:6px 0">🛡️ Sua conta de administrador tem acesso permanente protegido</div>`
+            : `<button class="btn btn-ghost btn-block" onclick="unsetLifetime('${email}')">📅 Remover vitalício (definir 30 dias)</button>`)}
     </div>
 
     ${p?`
@@ -6492,6 +6505,8 @@ async function setLifetime(email){
   }catch(e){ console.log('Erro ao definir vitalício:', e); toast('⚠️ Não foi possível salvar. Confira as permissões do Firestore.'); }
 }
 async function unsetLifetime(email){
+  const _meu = ((fbUser&&fbUser.email)||(state.user&&state.user.email)||'').toLowerCase();
+  if(String(email).toLowerCase() === _meu){ toast('🛡️ Seu acesso de administrador é permanente — não dá pra limitar a si mesmo.'); return; }
   const a = allowCache[email]; if(!a) return;
   const novoExpira = Date.now() + 30*86400000;
   try{
