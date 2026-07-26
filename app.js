@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.70 =====
-const APP_VERSION = 'v11.70';
+// ===== MetaTreino v11.71 =====
+const APP_VERSION = 'v11.71';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -890,6 +890,66 @@ function generatePlan(module, setup){
 }
 // Ritmo REAL do aluno (mediana das últimas corridas) — base pra tudo ficar adaptativo
 // Avaliação da corrida recém-registrada, comparando com o histórico do próprio aluno
+// ===== INTELIGÊNCIA DE CORRIDA =====
+// 1) Previsão de tempo por distância (fórmula de Riegel, usada por treinadores há décadas)
+function racePrediction(alvoKm){
+  try{
+    const h = (((state.modules.run||{}).history)||[])
+      .filter(r=>(!r.activity||r.activity==='corrida') && (r.distance||0)>=2 && (r.duration||0)>0)
+      .slice(-10);
+    if(h.length < 3) return null;
+    // usa a melhor performance recente como referência (menor ritmo com distância decente)
+    const base = h.reduce((best,r)=>{
+      const pace = r.duration/r.distance;
+      const bp = best ? best.duration/best.distance : 9999;
+      // dá preferência a distâncias maiores em caso de empate de ritmo
+      return (pace < bp - 0.05 || (Math.abs(pace-bp)<=0.05 && r.distance>best.distance)) ? r : best;
+    }, null);
+    if(!base) return null;
+    const T2 = base.duration * Math.pow(alvoKm/base.distance, 1.06);
+    return { min:T2, base, paceAlvo:T2/alvoKm };
+  }catch(e){ return null; }
+}
+// 2) Volume subindo rápido demais? (referência clássica: até ~10% por semana)
+function volumeAlert(){
+  try{
+    const h = (((state.modules.run||{}).history)||[]).filter(r=>(r.distance||0)>0);
+    if(h.length < 6) return null;
+    const semanaKm = (offset)=>{
+      const fim = Date.now() - offset*7*86400000;
+      const ini = fim - 7*86400000;
+      return h.filter(r=>r.at>ini && r.at<=fim).reduce((a,r)=>a+(r.distance||0),0);
+    };
+    const atual = semanaKm(0);
+    const ant = [semanaKm(1), semanaKm(2), semanaKm(3)].filter(v=>v>0);
+    if(!ant.length || atual<=0) return null;
+    const media = ant.reduce((a,b)=>a+b,0)/ant.length;
+    if(media < 5 || atual < 8) return null;          // volumes pequenos: a % vira ruído, não informação
+    const alta = (atual/media - 1) * 100;
+    if(alta >= 50) return { nivel:'alto', alta:Math.round(alta), atual:Math.round(atual*10)/10, media:Math.round(media*10)/10 };
+    if(alta >= 30) return { nivel:'medio', alta:Math.round(alta), atual:Math.round(atual*10)/10, media:Math.round(media*10)/10 };
+    return null;
+  }catch(e){ return null; }
+}
+// 3) Este mês x mês passado
+function monthlyRunCompare(){
+  try{
+    const h = (((state.modules.run||{}).history)||[]).filter(r=>(r.distance||0)>0);
+    if(h.length < 4) return null;
+    const agora = new Date();
+    const ini = (y,m)=>new Date(y,m,1).getTime();
+    const iniEste = ini(agora.getFullYear(), agora.getMonth());
+    const iniAnt = ini(agora.getFullYear(), agora.getMonth()-1);
+    const este = h.filter(r=>r.at>=iniEste);
+    const ant = h.filter(r=>r.at>=iniAnt && r.at<iniEste);
+    if(!este.length || ant.length < 2) return null;
+    const soma = a=>a.reduce((x,r)=>x+(r.distance||0),0);
+    const paceMed = a=>{ const c=a.filter(r=>(!r.activity||r.activity==='corrida')&&r.duration>0&&r.distance>=1);
+      return c.length ? c.reduce((x,r)=>x+r.duration/r.distance,0)/c.length : null; };
+    return { kmEste:Math.round(soma(este)*10)/10, kmAnt:Math.round(soma(ant)*10)/10,
+             nEste:este.length, nAnt:ant.length, paceEste:paceMed(este), paceAnt:paceMed(ant) };
+  }catch(e){ return null; }
+}
 function runFeedback(km, min, type, ehProva){
   try{
     if(type!=='corrida') return null;
@@ -1748,6 +1808,16 @@ function renderHome(){
     alertCard.classList.remove('hidden');
     alertCard.querySelector('.card-icon').textContent = '🏁';
     alertCard.querySelector('.card-title').textContent = daysToR===0 ? 'É HOJE! 🎉' : `${daysToR} dia${daysToR>1?'s':''} para sua prova`;
+    // previsão de tempo no ritmo atual (Riegel) — só com histórico suficiente
+    var _prev = '';
+    try{
+      const alvoKm = { '5km':5, '10km':10, '21km':21.1, '42km':42.2 }[(state.modules.run.setup||{}).goal];
+      const pr = alvoKm ? racePrediction(alvoKm) : null;
+      if(pr){
+        const mm = Math.floor(pr.min), ss = String(Math.round((pr.min-mm)*60)).padStart(2,'0');
+        _prev = `<br><br>🔮 <b>No seu ritmo atual</b>, seus ${alvoKm}km sairiam em ~<b>${mm}min${ss!=='00'?ss:''}</b> (${fmtPaceMin(pr.paceAlvo)}). Estimativa baseada nas suas corridas — treinar mais tende a melhorar isso.`;
+      }
+    }catch(e){}
     let msg;
     if(daysToR===0) msg = 'Confie no seu treino, comece devagar e aproveite cada km. Você se preparou pra isso!';
     else if(daysToR===1) msg = 'Véspera: nada de treino forte. Separe a roupa, hidrate bem e durma cedo. Amanhã é seu dia! 😴';
@@ -1757,8 +1827,9 @@ function renderHome(){
     else if(daysToR<=30) msg = 'Menos de um mês! Seus treinos-chave estão acontecendo agora — cada um deles conta muito.';
     else if(daysToR<=60) msg = 'Você está no meio da preparação. Constância nas próximas semanas é o que define seu resultado.';
     else msg = 'Prova no radar! Construa a base com calma — quem chega longe é quem não pula etapas.';
+    msg = msg + _prev;
     const personal = raceSmartTip(daysToR);
-    alertCard.querySelector('.card-sub').textContent = personal ? msg+' '+personal : msg;
+    alertCard.querySelector('.card-sub').innerHTML = personal ? msg+' '+personal : msg;
   } else {
     alertCard.classList.add('hidden');
   }
@@ -1983,6 +2054,7 @@ function renderTodayWorkout(w, isLift){
     ${(isLift && typeof fatigueOf==='function' && (w.parts||[]).some(pp=>fatigueOf(pp)>=70)) ? `<div style="margin-top:8px;font-size:12px;color:var(--accent-2)">🟡 ${(w.parts||[]).filter(pp=>fatigueOf(pp)>=70)[0]} ainda em recuperação. Se sentir queda de rendimento, vale tirar uma série hoje — quem manda é você.</div>` : ''}
     ${(isLift && typeof cicloAtual==='function' && cicloAtual()) ? (c=>`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">${c.emo} Ciclo: <b style="color:var(--text)">${c.nome}</b> · semana ${c.sem}</div>`)(cicloAtual()) : ''}
     ${sug?`<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);font-size:13px;line-height:1.45">${sug.emo} <b>Sugestão de hoje:</b> ${sug.txt}</div>`:''}
+    ${(!isLift && typeof volumeAlert==='function') ? (v=>v&&v.nivel==='alto'?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(244,63,94,0.07);border:1px solid rgba(244,63,94,0.3);font-size:12.5px;line-height:1.5;color:var(--text-dim)"><b style="color:#fda4af">⚠️ Cuidado com o volume</b><br>Você correu ${v.atual}km nesta semana, ${v.alta>=100?'mais que o dobro':v.alta+'% acima'} da sua média (${v.media}km). Subir rápido demais é a maior causa de lesão em corrida — se sentir dor nova, pegue leve.</div>`:'')(volumeAlert()) : ''}
     ${(!isLift && typeof runWeatherTips==='function') ? (t=>t?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.25);font-size:12.5px;line-height:1.5">
         <div style="color:#7dd3fc;font-weight:800;margin-bottom:5px">${t.titulo}</div>
         ${t.dicas.map(d=>`<div style="color:var(--text-dim);margin:3px 0">• ${d}</div>`).join('')}
@@ -4973,6 +5045,32 @@ function maInsight(){
     const semFicha = ult ? Math.floor((Date.now()-ult)/86400000) : null;
     if(semFicha!==null && semFicha>=75) ins.push(`🔄 Faz uns <b>${Math.round(semFicha/30)} meses</b> que sua ficha é a mesma. Trocar alguns exercícios agora pode reacender o estímulo. 💪`);
   }
+  // volume subindo rápido demais (risco de lesão)
+  try{
+    const va = (typeof volumeAlert==='function') ? volumeAlert() : null;
+    if(va){
+      const quanto = va.alta >= 100 ? 'mais que o <b>dobro</b>' : `<b>${va.alta}% acima</b>`;
+      ins.push(va.nivel==='alto'
+        ? `⚠️ Você correu <b>${va.atual}km</b> nesta semana — ${quanto} da sua média recente (${va.media}km). Subir volume rápido é a principal causa de lesão em corrida. Se aparecer dor nova, alivie sem culpa.`
+        : `📊 Sua semana está ${quanto} da média recente (${va.atual}km vs ${va.media}km). Nada alarmante — só fique atento a dores novas. A regra de ouro é subir uns 10% por semana.`);
+    }
+  }catch(e){}
+  // comparativo com o mês passado
+  try{
+    const mc = (typeof monthlyRunCompare==='function') ? monthlyRunCompare() : null;
+    if(mc){
+      const dKm = mc.kmEste - mc.kmAnt;
+      if(Math.abs(dKm) >= 3){
+        ins.push(dKm > 0
+          ? `📅 Este mês você já fez <b>${mc.kmEste}km</b> em ${mc.nEste} atividades — <b>${Math.round(dKm)}km a mais</b> que o mês passado inteiro (${mc.kmAnt}km). Evolução real. 📈`
+          : `📅 Este mês estão <b>${mc.kmEste}km</b> contra ${mc.kmAnt}km do mês passado. Sem culpa: mês tem altos e baixos — só bom saber onde você está.`);
+      }
+      if(mc.paceEste && mc.paceAnt){
+        const gs = Math.round((mc.paceAnt - mc.paceEste)*60);
+        if(gs >= 8) ins.push(`⏱️ Seu ritmo médio melhorou <b>${gs}s/km</b> em relação ao mês passado (${fmtPaceMin(mc.paceAnt)} → <b>${fmtPaceMin(mc.paceEste)}</b>). 🔥`);
+      }
+    }
+  }catch(e){}
   // previsão de corrida: tendência do ritmo nas últimas corridas
   try{
     const runs = ((state.modules.run||{}).history||[]).filter(x=>x.activity==='corrida'&&x.distance>=2&&x.duration>0).slice(-8);
