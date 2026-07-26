@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.57 =====
-const APP_VERSION = 'v11.57';
+// ===== MetaTreino v11.58 =====
+const APP_VERSION = 'v11.58';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -639,32 +639,56 @@ function buildingSteps(m, setup, prev){
   return steps;
 }
 function runBuildingScreen(m, steps, done){
+  // Autossuficiente: aplica os estilos por JS pra funcionar mesmo se o CSS estiver em cache antigo
+  try{
+    if(!document.getElementById('bld-style')){
+      const st = document.createElement('style'); st.id='bld-style';
+      st.textContent = '@keyframes bldspin{to{transform:rotate(360deg)}}@keyframes bldin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
+      document.head.appendChild(st);
+    }
+  }catch(e){}
   let ov = document.getElementById('building-ov');
   if(!ov){ ov = document.createElement('div'); ov.id='building-ov'; document.body.appendChild(ov); }
+  ov.setAttribute('style',
+    'position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:99999;'+
+    'display:flex;align-items:center;justify-content:center;padding:26px;box-sizing:border-box;'+
+    'background:#070d16;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);'+
+    'opacity:0;transition:opacity .3s ease');
   const titulo = m==='lift' ? '🧠 Montando seu treino' : '🧠 Montando seu plano de corrida';
-  ov.innerHTML = `<div class="bld-box">
-      <div class="bld-ring"><div class="bld-ring-i"></div></div>
-      <div class="bld-title">${titulo}</div>
-      <div class="bld-sub">Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.</div>
-      <div class="bld-steps" id="bld-steps"></div>
-      <div class="bld-bar"><div class="bld-bar-i" id="bld-bar-i"></div></div>
-    </div>`;
-  ov.classList.add('on');
+  ov.innerHTML =
+    '<div style="width:100%;max-width:430px;text-align:center">'+
+      '<div style="width:66px;height:66px;margin:0 auto 20px;border-radius:50%;border:3px solid rgba(16,185,129,.18);border-top-color:#10b981;animation:bldspin .9s linear infinite;position:relative">'+
+        '<div style="position:absolute;top:9px;left:9px;right:9px;bottom:9px;border-radius:50%;border:2px solid rgba(16,185,129,.12);border-bottom-color:rgba(16,185,129,.55);animation:bldspin 1.5s linear infinite reverse"></div>'+
+      '</div>'+
+      '<div style="font-size:22px;font-weight:800;letter-spacing:-.3px;color:#fff;margin-bottom:7px">'+titulo+'</div>'+
+      '<div style="font-size:12.5px;color:#8fa0b5;line-height:1.5;margin:0 auto 22px;max-width:330px">Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.</div>'+
+      '<div id="bld-steps" style="text-align:left;min-height:196px;display:flex;flex-direction:column;justify-content:flex-end;gap:9px;margin-bottom:20px"></div>'+
+      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);transition:width .5s ease"></div></div>'+
+    '</div>';
+  requestAnimationFrame(()=>{ ov.style.opacity='1'; });
   const box = document.getElementById('bld-steps');
   const bar = document.getElementById('bld-bar-i');
   let i = 0;
-  const passo = 400; // ~2,4s com 6 etapas — dá pra ler sem cansar
+  const passo = 640; // tempo confortável pra ler cada etapa
   const tick = ()=>{
     if(i >= steps.length){
-      setTimeout(()=>{ ov.classList.remove('on'); setTimeout(()=>{ ov.innerHTML=''; }, 260); if(typeof done==='function') done(); }, 520);
+      setTimeout(()=>{
+        ov.style.opacity='0';
+        setTimeout(()=>{ ov.setAttribute('style','display:none'); ov.innerHTML=''; if(typeof done==='function') done(); }, 320);
+      }, 780);
       return;
     }
     const st = steps[i];
+    const ultimo = (i === steps.length-1);
     const el = document.createElement('div');
-    el.className = 'bld-step' + (i===steps.length-1 ? ' bld-done' : '');
-    el.innerHTML = `<span class="bld-emo">${st.emo}</span><span>${st.txt}</span>`;
+    el.setAttribute('style',
+      'display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;box-sizing:border-box;'+
+      'border-radius:13px;padding:11px 13px;animation:bldin .34s ease both;'+
+      (ultimo
+        ? 'color:#34d399;background:rgba(16,185,129,.11);border:1px solid rgba(16,185,129,.42)'
+        : 'color:#9fb0c4;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)'));
+    el.innerHTML = '<span style="flex-shrink:0">'+st.emo+'</span><span>'+String(st.txt).replace(/<b>/g, ultimo?'<b style="color:#34d399">':'<b style="color:#fff">')+'</span>';
     box.appendChild(el);
-    // mantém sempre as últimas visíveis
     while(box.children.length > 5) box.removeChild(box.firstChild);
     if(bar) bar.style.width = Math.round(((i+1)/steps.length)*100) + '%';
     i++;
@@ -5426,14 +5450,22 @@ function raceSmartTip(daysToR){
 function quickChangeEquip(equip){
   const mod = state.modules.lift;
   if(!mod || !mod.plan){ toast('Crie um plano de musculação primeiro'); closeModal(); return; }
+  if(mod.setup.equip === equip){ toast('Esse já é o seu equipamento atual 🙂'); closeModal(); return; }
+  // guarda os nomes antigos pra mostrar ao aluno QUANTOS exercícios realmente mudaram
+  const antes = new Set();
+  (mod.plan.workouts||[]).forEach(w=>(w.exercises||[]).forEach(e=>antes.add(e.id)));
   mod.setup.equip = equip;
   // Regenera SÓ os exercícios de cada treino — dias, objetivo e nível permanecem
   regenAllPlans(); // regenera respeitando dor/TPM e reaplicando os exercícios fixados
   saveData();
   closeModal();
-  const lbl = {academia:'Academia completa', halteres:'Só halteres', casa:'Peso do corpo', basico:'Básico'}[equip]||equip;
-  toast(`🏋️ Treinos regenerados para: ${lbl}`);
-  goTab('profile');
+  let mudou = 0, total = 0;
+  (mod.plan.workouts||[]).forEach(w=>(w.exercises||[]).forEach(e=>{ total++; if(!antes.has(e.id)) mudou++; }));
+  const lbl = {academia:'Academia completa', halteres:'Só halteres', casa:'Peso do corpo', basico:'Academia básica'}[equip]||equip;
+  toast(mudou
+    ? `🏋️ ${lbl}: ${mudou} de ${total} exercícios foram trocados`
+    : `🏋️ ${lbl}: seus exercícios já serviam pro novo equipamento`);
+  goTab('sessions'); // leva pra onde dá pra VER a mudança
 }
 
 // ---------- FOTO DE PERFIL ----------
