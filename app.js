@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.63 =====
-const APP_VERSION = 'v11.63';
+// ===== MetaTreino v11.65 =====
+const APP_VERSION = 'v11.65';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -544,6 +544,16 @@ function openSetupScreen(m){
       }
       if(typeof bindDaysUpdate==='function') bindDaysUpdate(m);
     }
+    // "quando você começa" só faz sentido pra quem ainda não treinou nesse módulo
+    try{
+      const si = $(m+'-start-date');
+      if(si){
+        const temHist = !!(state.modules[m] && ((state.modules[m].history)||[]).length);
+        const campo = si.closest ? si.closest('.field') : null;
+        if(campo) campo.style.display = temHist ? 'none' : '';
+        if(temHist) si.value = '';
+      }
+    }catch(e){}
     if(m==='lift'){
       ['lift-level','lift-goal','lift-days'].forEach(gid=>{ const g=$(gid); if(g && !g._hintBound){ g._hintBound=true; g.addEventListener('click', ()=>setTimeout(updateLevelHint,30)); } });
       setTimeout(updateLevelHint, 60);
@@ -647,6 +657,17 @@ function buildingSteps(m, setup, prev){
     if(dores.length) steps.push({emo:'🩹', pri:1, txt:`Considerando sua dor: <b>${dores.join(', ')}</b>`});
   }
   if(prev) steps.push({emo:'🧩', pri:1, txt:`Preservando seu <b>histórico</b> e suas <b>trocas fixadas</b>`});
+  // início agendado pra frente: essa é a informação mais importante da tela
+  try{
+    const _st = (state.modules[m]||{}).startAt;
+    const _h0 = new Date(); _h0.setHours(0,0,0,0);
+    if(_st && _st > _h0.getTime()){
+      const d = new Date(_st);
+      const q = Math.ceil((_st-_h0.getTime())/86400000);
+      const fmt = d.toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'});
+      steps.push({emo:'📆', pri:1, txt:`Começa <b>${fmt}</b> (${q===1?'amanhã':'em '+q+' dias'}) — até lá, <b>sem cobranças</b>`});
+    }
+  }catch(e){}
   steps.push({emo:'✅', pri:1, txt:m==='lift' ? `<b>Seu plano de musculação está pronto!</b>` : `<b>Seu plano de corrida está pronto!</b>`});
   return steps;
 }
@@ -2013,7 +2034,11 @@ function renderSessions(){
   $('sessions-title').innerHTML = `${isLift?'🏋️':'🏃'} Sessões`;
   $('sessions-tag').textContent = `Sessões · ${isLift?'Musculação':'Corrida'}`;
   const cwInfo = currentWeek(mod);
-  $('weekly-info').textContent = `Meta: ${labelGoal(mod)} · Semana ${cwInfo.wk}/${cwInfo.total} · ${mod.plan.workouts.length}× por semana`;
+  const _stS = (typeof planStartTs==='function') ? planStartTs(mod) : 0;
+  const _h0S = new Date(); _h0S.setHours(0,0,0,0);
+  const _preStart = _stS && _stS > _h0S.getTime();
+  $('weekly-info').innerHTML = `Meta: ${labelGoal(mod)} · Semana ${cwInfo.wk}/${cwInfo.total} · ${mod.plan.workouts.length}× por semana`
+    + (_preStart ? `<div style="margin-top:8px;padding:9px 11px;border-radius:11px;border:1px solid rgba(56,189,248,.35);background:rgba(56,189,248,.07);color:#7dd3fc;font-size:12.5px;line-height:1.45">▶️ Seu plano começa <b>${new Date(_stS).toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'})}</b>. Dá uma olhada no que vem por aí — e se quiser começar antes, é só treinar: eu ajusto a data. 😉</div>` : '');
 
   const sel = currentSelectedWorkout(mod);
   $('sessions-chips').innerHTML = mod.plan.workouts.map(w=>{
@@ -2362,6 +2387,7 @@ function confirmLiftWorkout(k){
   }
   mod.history = mod.history || [];
   const adaptInfo = adaptMode();
+  const _antecipou = adjustStartIfEarly(mod);
   mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:realDuration, plannedDuration:w.duration, module:'lift', feel, parts:[...(w.parts||[])], exercisesDone,
     adaptedWith: adaptInfo.active ? adaptReasonText() : null });
   ensureStats(); // deriva liftTotal do histórico — NÃO somar manualmente (contava em dobro)
@@ -2371,6 +2397,7 @@ function confirmLiftWorkout(k){
   if(feel==='exausto') toast('✅ Salvo! Vou sugerir pegar mais leve no próximo treino 😌');
   else if(feel==='otimo') toast('✅ Salvo! Se sobrou energia, considere subir a carga no próximo 📈');
   else toast('✅ Treino salvo com sucesso!');
+  if(_antecipou) setTimeout(()=>toast('🚀 Você começou antes do combinado! Ajustei o início do plano pra hoje.'), 1400);
   goTab('home');
   // convite discreto pra compartilhar o treino recém-concluído
   const idx = mod.history.length-1;
@@ -2436,7 +2463,9 @@ function markRunDone(dayIdx){
   const w = mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx));
   if(!w) return;
   mod.history = mod.history || [];
+  const _antecipouR = adjustStartIfEarly(mod);
   mod.history.push({ id:w.k, name:w.name, at:Date.now(), duration:w.duration, module:'run' });
+  if(_antecipouR) setTimeout(()=>toast('🚀 Você começou antes do combinado! Ajustei o início do plano pra hoje.'), 1400);
   ensureStats(); // deriva runTotal do histórico — NÃO somar manualmente (contava em dobro)
   checkTrophies();
   saveData();
@@ -2536,6 +2565,19 @@ function planStartTs(mod){
   const m = mod || state.modules[state.active];
   if(!m) return 0;
   return m.startAt || m.createdAt || (m.history && m.history.length ? m.history[0].at : 0) || 0;
+}
+// Se a pessoa treinar antes da data agendada, o plano passa a valer HOJE
+// (evita o estado estranho de "não começou" com treino já registrado)
+function adjustStartIfEarly(mod){
+  try{
+    if(!mod) return false;
+    const h0 = new Date(); h0.setHours(0,0,0,0);
+    if(mod.startAt && mod.startAt > h0.getTime()){
+      mod.startAt = h0.getTime();
+      return true;
+    }
+  }catch(e){}
+  return false;
 }
 function calcStreak(h){
   if(!h||!h.length) return 0;
@@ -4358,15 +4400,15 @@ function maTryCommand(txt){
   // ---- MUDAR EQUIPAMENTO ----
   if(/(n[ãa]o (?:estou|to|tô) na academia|sem academia|(?:vou |quero )?treinar em casa|estou em casa|sem equipamento|academia fechada|n[ãa]o vou (?:na|pra) academia)/.test(t)){
     maPending = {type:'equip', value:'casa'};
-    return {done:true, msg:'Sem problema! Posso adaptar seus treinos pra <b>peso do corpo (em casa)</b>, sem nenhum equipamento. Quer que eu faça isso agora? Responda <b>sim</b> ou <b>não</b>. 🏠'};
+    return {done:true, msg:'Sem problema! Posso adaptar seus treinos pra <b>peso do corpo (em casa)</b>, sem nenhum equipamento. Quer que eu faça isso agora? 🏠'};
   }
   if(/(voltei (?:pra|para) academia|estou na academia|to na academia|tô na academia|academia de novo|treinar na academia)/.test(t)){
     maPending = {type:'equip', value:'academia'};
-    return {done:true, msg:'Boa! Quer que eu volte seus treinos pro modo <b>academia completa</b> (máquinas, cabos, barras)? Responda <b>sim</b> ou <b>não</b>. 🏋️'};
+    return {done:true, msg:'Boa! Quer que eu volte seus treinos pro modo <b>academia completa</b> (máquinas, cabos, barras)? 🏋️'};
   }
   if(/(só (?:tenho|com) halteres|apenas halteres|com halteres em casa)/.test(t)){
     maPending = {type:'equip', value:'halteres'};
-    return {done:true, msg:'Entendi! Quer que eu monte seus treinos usando <b>só halteres</b>? Responda <b>sim</b> ou <b>não</b>. 🎒'};
+    return {done:true, msg:'Entendi! Quer que eu monte seus treinos usando <b>só halteres</b>? 🎒'};
   }
 
   // ---- MUDAR CRONOGRAMA ----
@@ -4382,7 +4424,7 @@ function maTryCommand(txt){
     if(!state.modules[modName]) return {done:true, msg:`Você ainda não tem um plano de ${modName==='run'?'corrida':'musculação'} ativo. Crie um primeiro! 😊`};
     maPending = {type:'schedule', mod:modName, days:dias};
     const nomes = dias.map(d=>['segunda','terça','quarta','quinta','sexta','sábado','domingo'][d-1]).join(', ');
-    return {done:true, msg:`Quer que eu reorganize seus treinos de <b>${modName==='run'?'corrida':'musculação'}</b> pra <b>${nomes}</b> (${dias.length}× por semana)? Responda <b>sim</b> ou <b>não</b>. 📅`};
+    return {done:true, msg:`Quer que eu reorganize seus treinos de <b>${modName==='run'?'corrida':'musculação'}</b> pra <b>${nomes}</b> (${dias.length}× por semana)? 📅`};
   }
 
   // ---- DATA DA PROVA / CORRIDA FUTURA ----
@@ -4414,9 +4456,15 @@ function maTryCommand(txt){
     if(p.type==='equip') return maApplyEquip(p.value);
     if(p.type==='schedule') return maApplySchedule(p.mod, p.days);
     if(p.type==='light') return maApplyLight();
+    if(p.type==='pain') return maApplyPain(p.area);
+    if(p.type==='tpm') return maApplyTPM();
+    if(p.type==='cramp') return maApplyCramp();
   }
   if(maPending && /^(n[ãa]o|nao|n|deixa|cancela|melhor n[ãa]o|nem|👎)$/i.test(t.replace(/[!.]/g,'').trim())){
-    maPending = null;
+    const p = maPending; maPending = null;
+    if(p.type==='pain') return {done:true, msg:`Tudo bem, deixei seu treino como estava 🙂. Mas se a dor incomodar durante o treino, <b>pare</b> — não vale forçar. Quando quiser que eu adapte, é só falar. 💚`};
+    if(p.type==='tpm' || p.type==='cramp') return {done:true, msg:'Tudo bem 💗. Deixei seus treinos como estavam. Se durante o dia bater o cansaço, me chama que eu alivio na hora — ou simplesmente descanse, também é válido.'};
+    if(p.type==='light') return {done:true, msg:'Beleza, mantive seus treinos normais 💪. Se pesar no meio do caminho, me avisa que eu alivio.'};
     return {done:true, msg:'Tudo bem, deixei como estava! 😊 Se mudar de ideia é só falar.'};
   }
 
@@ -4624,11 +4672,17 @@ function maSetPain(area, txt){
     maPending = {type:'pain_where'};
     return {done:true, msg:`Sinto muito 😕. Pra eu adaptar o treino do jeito certo, me diga <b>onde</b> dói. As regiões que sei proteger são:<br><br>${PAIN_REGIONS.map(r=>'• '+r).join('<br>')}<br><br>É só responder, ex: <b>joelho</b>.`};
   }
+  // pergunta antes de mexer no treino — quem decide é a pessoa
+  maPending = {type:'pain', area:painArea};
+  return {done:true, msg:`Ah não, dor em <b>${painArea}</b>… sinto muito 😔. Quer que eu <b>adapte seu treino</b> pra proteger essa região? Eu troco o que sobrecarrega e completo com grupos seguros, sem você perder o dia.`};
+}
+function maApplyPain(painArea){
   state.user.pain = state.user.pain||[];
   if(!state.user.pain.includes(painArea)) state.user.pain.push(painArea);
   regenAllPlans();
   saveData();
-  return {done:true, msg:`Entendi, dor em <b>${painArea}</b>. Já adaptei seus treinos pra proteger essa região 🩹 — evitei os exercícios que sobrecarregam e reduzi o volume. Se a dor for forte ou persistir, procure um profissional de saúde: isso vem antes de qualquer treino. Quando melhorar, diga "voltar ao normal". 💚`};
+  maRefreshUI = true;
+  return {done:true, work:'Adaptando seus treinos', msg:`Feito 🩹 — treinos adaptados pra proteger <b>${painArea}</b>. Evitei o que sobrecarrega e completei com grupos seguros. Se a dor for forte ou persistir, procure um profissional de saúde: isso vem antes de qualquer treino. Quando melhorar, diga <b>"voltar ao normal"</b>. 💚`};
 }
 // Dor no peito / no coração é sinal de alerta médico — nunca tratamos como "ajuste de treino"
 function maChestPain(){
@@ -4644,13 +4698,14 @@ function maTired(){
     return {done:true, msg:'Seus treinos já estão no <b>modo leve</b> 💚. Se ainda assim o corpo pedir pausa, descansar hoje é uma escolha legítima — não é desistir, é treinar com inteligência.'};
   }
   maPending = {type:'light'};
-  return {done:true, msg:'Cansaço faz parte — escutar o corpo é maturidade, não fraqueza. 💚 Quer que eu deixe seus treinos <b>mais leves</b> (menos séries e volume reduzido) até você se sentir melhor? Responda <b>sim</b> ou <b>não</b>.<br><br>E se preferir simplesmente descansar hoje, isso também é válido.'};
+  return {done:true, msg:'Cansaço faz parte — escutar o corpo é maturidade, não fraqueza. 💚 Quer que eu deixe seus treinos <b>mais leves</b> (menos séries e volume reduzido) até você se sentir melhor?<br><br>E se preferir simplesmente descansar hoje, isso também é válido.'};
 }
 function maApplyLight(){
   state.user.lightMode = true;
   regenAllPlans();
   saveData();
-  return {done:true, msg:'✅ Pronto! Deixei seus treinos <b>mais leves</b>: menos séries na musculação e corridas mais curtas. Vá no seu ritmo. Quando estiver melhor, diga <b>"voltar ao normal"</b> e eu devolvo tudo. 💚'};
+  maRefreshUI = true;
+  return {done:true, work:'Deixando seus treinos mais leves', msg:'✅ Pronto! Deixei seus treinos <b>mais leves</b>: menos séries na musculação e corridas mais curtas. Vá no seu ritmo. Quando estiver melhor, diga <b>"voltar ao normal"</b> e eu devolvo tudo. 💚'};
 }
 function maSad(){
   return {done:true, msg:`Sinto muito que você esteja assim, ${maName()}. 💙 Dias difíceis acontecem com todo mundo. O exercício pode ajudar a clarear a cabeça — que tal uma caminhada leve, sem cobrança de desempenho? Mas se você não estiver bem, tudo bem descansar hoje. E se esse sentimento persistir, conversar com alguém de confiança ou um profissional faz muita diferença. Você não está sozinho. 🤍`};
@@ -4665,21 +4720,31 @@ function maTPM(){
   if(!tpmAvailable()){
     return {done:true, msg:'O modo TPM foi pensado para o ciclo menstrual, e seu perfil está como masculino 😊. Se você quer treinos mais leves hoje por outro motivo, é só me dizer <b>"estou cansado"</b> ou <b>"estou com dor em [região]"</b> que eu adapto.'};
   }
+  maPending = {type:'tpm'};
+  return {done:true, msg:'Entendi 💗. Nesses dias o corpo pede mais gentileza. Quer que eu deixe seus <b>treinos mais leves</b> por enquanto?'};
+}
+function maApplyTPM(){
   state.user.pain = state.user.pain||[];
   state.user.tpmMode = true;
   regenAllPlans(); // sempre reaplica: a flag pode já estar ligada com o plano fora de sincronia
   saveData();
-  return {done:true, msg:'Entendi 💗. Nesses dias o corpo pede mais gentileza — deixei seus treinos mais leves. Respeite seu ritmo: treinar leve ou até descansar é perfeitamente ok. Movimento suave (caminhada, alongamento) pode ajudar com o desconforto, mas sem cobrança. Quando quiser voltar ao normal, é só dizer "voltar ao normal". 🌸'};
+  maRefreshUI = true;
+  return {done:true, work:'Deixando seus treinos mais leves', msg:'Prontinho 💗. Nesses dias o corpo pede mais gentileza — deixei seus treinos mais leves. Respeite seu ritmo: treinar leve ou até descansar é perfeitamente ok. Movimento suave (caminhada, alongamento) pode ajudar com o desconforto, mas sem cobrança. Quando quiser voltar ao normal, é só dizer "voltar ao normal". 🌸'};
 }
 function maCramp(){
   if(!tpmAvailable()){
     return {done:true, msg:'O modo cólica foi pensado para o ciclo menstrual 😊. Se quer treinos mais leves por outro motivo, diga <b>"estou cansado"</b> ou <b>"estou com dor em [região]"</b> que eu adapto.'};
   }
+  maPending = {type:'cramp'};
+  return {done:true, msg:'Imagino como você está 💗. Cólica pede gentileza. Quer que eu deixe seus <b>treinos mais leves</b> hoje?'};
+}
+function maApplyCramp(){
   state.user.pain = state.user.pain||[];
   state.user.crampMode = true;
   regenAllPlans();
   saveData();
-  return {done:true, msg:'Entendi 💗. Cólica pede gentileza — deixei seus treinos mais leves. Dica: movimento suave (caminhada leve, alongamento) e calor costumam aliviar as cólicas, mas evite forçar o abdômen. Descansar também é totalmente válido. Quando melhorar, diga "voltar ao normal". 🌸'};
+  maRefreshUI = true;
+  return {done:true, work:'Deixando seus treinos mais leves', msg:'Feito 💗. Cólica pede gentileza — deixei seus treinos mais leves. Dica: movimento suave (caminhada leve, alongamento) e calor costumam aliviar as cólicas, mas evite forçar o abdômen. Descansar também é totalmente válido. Quando melhorar, diga "voltar ao normal". 🌸'};
 }
 function maBackToNormal(){
   const tinha = (state.user.pain&&state.user.pain.length) || state.user.tpmMode || state.user.crampMode || state.user.lightMode;
@@ -4956,15 +5021,21 @@ function renderAssistant(){
         <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .18s infinite"></span>
         <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .36s infinite"></span>
       </div>`
+    : m.working
+    ? `<div style="background:rgba(56,189,248,0.09);border:1px solid rgba(56,189,248,0.28);border-radius:16px 16px 16px 4px;padding:11px 14px;margin:6px 0;font-size:13px;color:#7dd3fc;max-width:88%;display:flex;gap:8px;align-items:center">
+        <span style="display:inline-block;animation:maspin 1.1s linear infinite">⚙️</span><span>${m.working}…</span>
+      </div>`
     : m.who==='bot'
     ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:11px 14px;margin:6px 0;font-size:13.5px;line-height:1.5;max-width:88%">${m.txt}</div>`
     : `<div style="background:var(--surface-2);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`
   ).join('');
   // se a pessoa está com dor ou modo TPM, mostra atalho de voltar ao normal
   const emModoLeve = (state.user && ((state.user.pain&&state.user.pain.length) || state.user.tpmMode || state.user.crampMode));
-  const sugs = emModoLeve
+  let sugs = emModoLeve
     ? [{lbl:'💚 Voltar treinos ao normal', key:'_normal'}, ...MA_SUGGESTIONS]
     : MA_SUGGESTIONS;
+  // com pergunta pendente, os atalhos viram a resposta (mais fácil que digitar no celular)
+  if(maPending) sugs = [{lbl:'✅ Sim, por favor', key:'_yes'}, {lbl:'🙂 Não, deixa assim', key:'_no'}];
   $('modal-inner').innerHTML = `
     <h3>💬 Meta Assistente</h3>
     <div id="ma-thread" style="max-height:42vh;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column">${bubbles}</div>
@@ -4981,33 +5052,42 @@ function renderAssistant(){
 }
 // Ao fechar, se algum comando alterou os planos, redesenha a tela atual pra refletir na hora
 function closeAssistant(){
-  try{ clearTimeout(maTypingT); maThread = maThread.filter(m=>!m.typing); }catch(e){}
+  try{ clearTimeout(maTypingT); maThread = maThread.filter(m=>!m.typing && !m.working); }catch(e){}
   closeModal();
   if(maRefreshUI){ maRefreshUI = false; goTab(state.ui.tab||'home'); }
 }
 // Responde como uma pessoa: mostra "digitando" e leva um tempinho — mais em respostas longas
 let maTypingT = null;
-function maReply(txt){
+function maReply(txt, work){
   try{
     if(!document.getElementById('ma-type-style')){
       const st=document.createElement('style'); st.id='ma-type-style';
-      st.textContent='@keyframes matype{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-4px);opacity:1}}';
+      st.textContent='@keyframes matype{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-4px);opacity:1}}@keyframes maspin{to{transform:rotate(360deg)}}';
       document.head.appendChild(st);
     }
   }catch(e){}
   clearTimeout(maTypingT);
-  maThread = maThread.filter(m=>!m.typing);       // nunca dois "digitando" ao mesmo tempo
-  maThread.push({who:'bot', typing:true});
+  maThread = maThread.filter(m=>!m.typing && !m.working);   // nunca dois indicadores ao mesmo tempo
+  maThread.push(work ? {who:'bot', working:work} : {who:'bot', typing:true});
   renderAssistant();
   const puro = String(txt).replace(/<[^>]+>/g,'');
-  const espera = Math.max(520, Math.min(2000, 420 + puro.length*6)); // resposta longa = pensa um pouco mais
+  // um pouco mais de tempo: dá impressão de alguém realmente escrevendo (respostas longas pensam mais)
+  const espera = work ? 1900 : Math.max(750, Math.min(2600, 620 + puro.length*8));
   maTypingT = setTimeout(()=>{
-    maThread = maThread.filter(m=>!m.typing);
+    maThread = maThread.filter(m=>!m.typing && !m.working);
     maThread.push({who:'bot', txt});
     renderAssistant();
   }, espera);
 }
 function maAsk(key){
+  if(key==='_yes' || key==='_no'){
+    const resposta = key==='_yes' ? 'sim' : 'não';
+    maThread.push({who:'user', txt: key==='_yes' ? 'Sim, por favor' : 'Não, deixa assim'});
+    const r = maTryCommand(resposta);
+    renderAssistant();
+    maReply((r&&r.msg) || 'Tudo bem! 😊', (r&&r.work)||null);
+    return;
+  }
   if(key==='_normal'){
     maThread.push({who:'user', txt:'Voltar treinos ao normal'});
     const r = maBackToNormal();
@@ -5025,10 +5105,10 @@ function maAskText(){
   const inp=$('ma-input'); if(!inp) return;
   const txt=inp.value.trim(); if(!txt) return;
   maThread.push({who:'user', txt});
-  let answer;
+  let answer, workLabel = null;
   // 1) tenta executar como COMANDO (registrar peso, atividade, dor, etc.)
   const cmd = maTryCommand(txt);
-  if(cmd && cmd.done){ answer = cmd.msg; maRefreshUI = true; }
+  if(cmd && cmd.done){ answer = cmd.msg; maRefreshUI = true; if(cmd.work) workLabel = cmd.work; }
   else {
     // 2) senão, interpreta como pergunta/social
     const key = maInterpret(txt);
@@ -5036,7 +5116,7 @@ function maAskText(){
     else if(key && MA_ANSWERS[key]) answer = MA_ANSWERS[key]();
     else answer = 'Hmm, não entendi bem. 🤔 Você pode me pedir pra registrar coisas ("corri 5km em 30 min", "estou pesando 90kg", "estou com dor no joelho") ou perguntar sobre sua evolução, corrida, troféus, meta, recordes... É só falar!';
   }
-  maReply(answer);
+  maReply(answer, workLabel);
 }
 // ========== FIM META ASSISTENTE ==========
 
