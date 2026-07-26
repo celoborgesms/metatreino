@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.74 =====
-const APP_VERSION = 'v11.74';
+// ===== MetaTreino v11.76 =====
+const APP_VERSION = 'v11.76';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -4585,6 +4585,99 @@ function maApplySchedule(modName, dias){
 }
 // ===== META ASSISTENTE: COMANDOS (executa ações por conversa) =====
 // Interpreta frases de AÇÃO e devolve {done:true, msg} se executou, ou null se não é comando.
+// ===== MEMÓRIA DE CONTEXTO DA CONVERSA =====
+// Guarda o que o aluno contou (sono, tempo, ânimo...) por algumas horas e usa nas respostas.
+function maCtxSet(chave, valor, horas){
+  try{
+    state.ui = state.ui || {}; state.ui.maCtx = state.ui.maCtx || {};
+    state.ui.maCtx[chave] = { v:valor, exp: Date.now() + (horas||10)*3600000 };
+    saveData();
+  }catch(e){}
+}
+function maCtxGet(chave){
+  try{
+    const c = state.ui && state.ui.maCtx && state.ui.maCtx[chave];
+    if(!c) return null;
+    if(Date.now() > c.exp){ delete state.ui.maCtx[chave]; return null; }
+    return c.v;
+  }catch(e){ return null; }
+}
+// Detecta fatos ditos de passagem. Devolve confirmações curtas do que anotou.
+function maDetectContext(t){
+  const anotou = [];
+  let m = t.match(/dormi\s*(?:s[óo]\s*)?(\d{1,2})\s*(?:h|horas?)/);
+  if(m){ const h=+m[1]; if(h>=0&&h<=14){ maCtxSet('sono', h, 14); anotou.push(h<=5?`Anotei: <b>${h}h de sono</b> — vou levar isso em conta hoje.`:`Anotei: <b>${h}h de sono</b>.`); } }
+  else if(/(dormi mal|n[ãa]o dormi|noite mal dormida|mal dormi|virei a noite|ins[ôo]nia)/.test(t)){ maCtxSet('sono', 4, 14); anotou.push('Anotei que você <b>dormiu mal</b> — considero isso nas orientações de hoje.'); }
+  m = t.match(/(?:s[óo]\s*)?tenho\s*(\d{1,3})\s*min/);
+  if(m){ const min=+m[1]; if(min>=5&&min<=240){ maCtxSet('tempo', min, 8); anotou.push(`Anotei: <b>${min} minutos</b> disponíveis hoje.`); } }
+  else if(/(pouco tempo|estou sem tempo|t[ôo] sem tempo)/.test(t)){ maCtxSet('tempo', 30, 8); anotou.push('Anotei que hoje o <b>tempo é curto</b>.'); }
+  if(/(desanimad|sem vontade|sem motiva|desmotivad|pregui[çc]a)/.test(t)){ maCtxSet('animo', 'baixo', 10); }
+  if(/(n[ãa]o almocei|n[ãa]o comi|n[ãa]o jantei|est[ôo]mago vazio|em jejum)/.test(t)){ maCtxSet('comeu', false, 6); anotou.push('Anotei que você <b>ainda não comeu</b>.'); }
+  if(/(academia (?:est[áa] )?(?:lotada|cheia)|muita gente na academia)/.test(t)){ maCtxSet('lotada', true, 6); anotou.push('Anotei que a <b>academia está cheia</b> — considero isso nas trocas de exercício.'); }
+  if(/(vou viajar|estou viajando)/.test(t)){ maCtxSet('viagem', true, 72); }
+  if(/(ventou|muito vento|vento forte)/.test(t)){ maCtxSet('vento', true, 10); }
+  return anotou;
+}
+// Observação contextual pra colar no fim de respostas sobre treinar/intensidade hoje
+function maCtxNota(){
+  const sono = maCtxGet('sono'), tempo = maCtxGet('tempo'), comeu = maCtxGet('comeu'), animo = maCtxGet('animo'), lotada = maCtxGet('lotada');
+  const notas = [];
+  if(sono!==null && sono<=5) notas.push(`Você comentou que dormiu <b>${sono}h</b> — com sono curto o corpo aceita bem o treino, mas costuma render menos em carga máxima. Hoje eu priorizaria execução em vez de recorde.`);
+  if(tempo!==null && tempo<=35) notas.push(`Como hoje você tem <b>${tempo} min</b>, foque nos compostos primeiro — eles entregam mais resultado por minuto.`);
+  if(comeu===false) notas.push(`Você disse que ainda não comeu: dá pra treinar, mas o rendimento cai. Uma fruta ou um pão 30 min antes já ajuda bastante.`);
+  if(lotada) notas.push(`Com a academia cheia, use a <b>troca de exercício</b> (🔄) pra pegar o que estiver livre — o estímulo importa mais que o aparelho exato.`);
+  if(animo==='baixo') notas.push(`E sobre o desânimo que você comentou: começar já é a parte mais difícil. Se render pouco hoje, tudo bem — presença vale mais que perfeição. 💚`);
+  return notas.length ? notas.slice(0,2).join('<br><br>') : null;  // no máximo 2: mais que isso vira sermão
+}
+// ===== MELHOR HORÁRIO PRA TREINAR (usa dados que o app JÁ tem: hora + sensação) =====
+function bestTrainingTime(){
+  try{
+    const lift = (((state.modules.lift||{}).history)||[]).filter(x=>x.feel);
+    const run  = (((state.modules.run ||{}).history)||[]).filter(x=>x.rating);
+    const itens = [
+      ...lift.map(x=>({at:x.at, bom:['otimo','bem'].includes(x.feel)})),
+      ...run.map(x=>({at:x.at, bom:(x.rating||3)>=4}))
+    ];
+    if(itens.length < 8) return null;
+    const faixa = h => h<5 ? 'madrugada' : h<12 ? 'manhã' : h<18 ? 'tarde' : 'noite';
+    const g = {};
+    itens.forEach(i=>{ const f=faixa(new Date(i.at).getHours()); (g[f]=g[f]||{n:0,b:0}); g[f].n++; if(i.bom) g[f].b++; });
+    const validos = Object.entries(g).filter(([,v])=>v.n>=3).map(([k,v])=>({faixa:k, n:v.n, pct:Math.round(v.b/v.n*100)}));
+    if(validos.length < 2) return null;
+    validos.sort((a,b)=>b.pct-a.pct);
+    const melhor = validos[0], pior = validos[validos.length-1];
+    if(melhor.pct - pior.pct < 20) return null;   // diferença pequena: não afirma nada
+    return { melhor, pior, total:itens.length };
+  }catch(e){ return null; }
+}
+// ===== PERFIL DE RECUPERAÇÃO (sem pedir nada ao aluno) =====
+// Cruza o DESCANSO entre treinos com a sensação registrada — descobre quanto descanso
+// o corpo DESTA pessoa precisa. Só afirma com base suficiente.
+function recoveryPatternInsight(){
+  try{
+    const todos = [
+      ...(((state.modules.lift||{}).history)||[]).filter(x=>x.feel).map(x=>({at:x.at, bom:['otimo','bem'].includes(x.feel)})),
+      ...(((state.modules.run ||{}).history)||[]).filter(x=>x.rating).map(x=>({at:x.at, bom:(x.rating||3)>=4}))
+    ].sort((a,b)=>a.at-b.at);
+    if(todos.length < 10) return null;
+    const d0 = t => { const d=new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+    const grupos = { seguido:{n:0,b:0}, um:{n:0,b:0}, dois:{n:0,b:0} };
+    for(let i=1;i<todos.length;i++){
+      const gap = Math.round((d0(todos[i].at) - d0(todos[i-1].at))/86400000);
+      if(gap<=0) continue;                       // mesmo dia: não conta como descanso
+      const k = gap===1 ? 'seguido' : gap===2 ? 'um' : 'dois';
+      grupos[k].n++; if(todos[i].bom) grupos[k].b++;
+    }
+    const nome = { seguido:'sem dia de descanso', um:'com 1 dia de descanso', dois:'com 2+ dias de descanso' };
+    const validos = Object.entries(grupos).filter(([,v])=>v.n>=3)
+      .map(([k,v])=>({k, nome:nome[k], n:v.n, pct:Math.round(v.b/v.n*100)}));
+    if(validos.length < 2) return null;
+    validos.sort((a,b)=>b.pct-a.pct);
+    const melhor = validos[0], pior = validos[validos.length-1];
+    if(melhor.pct - pior.pct < 20) return null;  // diferença pequena: não afirma nada
+    return { melhor, pior, base: todos.length };
+  }catch(e){ return null; }
+}
 function maTryCommand(txt){
   const t = txt.toLowerCase().trim();
   const num = re => { const mm=t.match(re); return mm?parseFloat(mm[1].replace(',','.')):null; };
@@ -5078,6 +5171,16 @@ function maInsight(){
     const semFicha = ult ? Math.floor((Date.now()-ult)/86400000) : null;
     if(semFicha!==null && semFicha>=75) ins.push(`🔄 Faz uns <b>${Math.round(semFicha/30)} meses</b> que sua ficha é a mesma. Trocar alguns exercícios agora pode reacender o estímulo. 💪`);
   }
+  // melhor horário pra treinar — descoberto nos dados que o app já tinha
+  try{
+    const bt = (typeof bestTrainingTime==='function') ? bestTrainingTime() : null;
+    if(bt) ins.push(`🕐 Reparei um padrão nos seus <b>${bt.total} treinos</b>: à <b>${bt.melhor.faixa}</b> você termina se sentindo bem em <b>${bt.melhor.pct}%</b> das vezes, contra ${bt.pior.pct}% à ${bt.pior.faixa}. Se der pra escolher, a ${bt.melhor.faixa} parece ser o seu melhor horário.`);
+  }catch(e){}
+  // quanto descanso ESTE corpo precisa (descoberto, não presumido)
+  try{
+    const rp = (typeof recoveryPatternInsight==='function') ? recoveryPatternInsight() : null;
+    if(rp) ins.push(`😴 Olhando seus <b>${rp.base} treinos</b>: quando você treina <b>${rp.melhor.nome}</b>, termina se sentindo bem em <b>${rp.melhor.pct}%</b> das vezes — contra ${rp.pior.pct}% ${rp.pior.nome}. Seu corpo parece responder melhor a esse espaçamento.`);
+  }catch(e){}
   // volume subindo rápido demais (risco de lesão)
   try{
     const va = (typeof volumeAlert==='function') ? volumeAlert() : null;
@@ -5445,6 +5548,10 @@ function maAskText(){
   const txt=inp.value.trim(); if(!txt) return;
   maThread.push({who:'user', txt});
   let answer, workLabel = null;
+  const _low = txt.toLowerCase();
+  // 0) anota o que o aluno contou de passagem (sono, tempo, ânimo, fome...)
+  let _anotacoes = [];
+  try{ _anotacoes = maDetectContext(_low) || []; }catch(e){}
   // 1) tenta executar como COMANDO (registrar peso, atividade, dor, etc.)
   const cmd = maTryCommand(txt);
   if(cmd && cmd.done){ answer = cmd.msg; maRefreshUI = true; if(cmd.work) workLabel = cmd.work; }
@@ -5453,8 +5560,25 @@ function maAskText(){
     const key = maInterpret(txt);
     if(key && MA_SOCIAL[key]) answer = MA_SOCIAL[key]();
     else if(key && MA_ANSWERS[key]) answer = MA_ANSWERS[key]();
-    else answer = 'Hmm, não entendi bem. 🤔 Você pode me pedir pra registrar coisas ("corri 5km em 30 min", "estou pesando 90kg", "estou com dor no joelho") ou perguntar sobre sua evolução, corrida, troféus, meta, recordes... É só falar!';
+    else if(_anotacoes.length) answer = _anotacoes.join('<br>') + '<br><br>Quer que eu ajuste alguma coisa por causa disso? É só falar. 😊';
+    else {
+      // fallback honesto — assume que não sabe, sem despejar manual de instruções
+      const alt = [
+        'Essa me pegou de surpresa. 😅<br><br>Ainda não sei responder sobre isso, mas estou aprendendo aos poucos. Se essa função for útil pra você, manda uma sugestão pelo suporte que a gente avalia. 💚',
+        'Essa eu não sei responder ainda. 🤔<br><br>Anotado como sugestão! Enquanto isso, posso te ajudar com treinos, corrida, recuperação, peso e conquistas.',
+        'Boa pergunta — e eu ainda não tenho essa resposta. 😅<br><br>Estou sempre ganhando funções novas. Se isso for importante pro seu treino, avisa o suporte que ajuda a priorizar!'
+      ];
+      answer = alt[Math.floor(Math.random()*alt.length)];
+    }
   }
+  // 3) contexto da conversa entra em perguntas sobre treinar/intensidade hoje
+  try{
+    if(/(posso|devo|vale|consigo).*(treinar|correr|pegar pesado|aumentar|recorde|carga|forçar)|treino de hoje|bora treinar|vou treinar/.test(_low)){
+      const nota = maCtxNota();
+      if(nota) answer += '<br><br>' + nota;
+    }
+    if(_anotacoes.length && cmd && cmd.done) answer += '<br><br>' + _anotacoes.join('<br>');
+  }catch(e){}
   maReply(answer, workLabel);
 }
 // ========== FIM META ASSISTENTE ==========
