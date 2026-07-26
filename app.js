@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.71 =====
-const APP_VERSION = 'v11.71';
+// ===== MetaTreino v11.72 =====
+const APP_VERSION = 'v11.72';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1782,18 +1782,19 @@ function renderHome(){
   // DIA DA PROVA: antes da largada = checklist; depois da largada = "como foi?"
   if(_ri && _ri.hoje){
     alertCard.classList.remove('hidden');
-    alertCard.querySelector('.card-icon').textContent = '🏁';
+    // texto longo: esconde a coluna do ícone pra não roubar largura (o emoji fica no título)
+    const _ic = alertCard.querySelector('.card-icon'); if(_ic) _ic.style.display = 'none';
     if(_ri.depoisDaLargada){
       const jaRegistrou = raceEntryToday();
       if(jaRegistrou){
-        alertCard.querySelector('.card-title').textContent = 'Prova concluída! 🏅';
+        alertCard.querySelector('.card-title').textContent = '🏅 Prova concluída!';
         alertCard.querySelector('.card-sub').innerHTML = `Registrada: <b>${jaRegistrou.distance||'—'}km</b> em <b>${fmtDur(jaRegistrou.duration||0)}</b>${jaRegistrou.pace?' · '+jaRegistrou.pace:''}. Aproveite o dia — você merece. 🎉`;
       } else {
-        alertCard.querySelector('.card-title').textContent = 'E aí, como foi a prova? 🎉';
+        alertCard.querySelector('.card-title').textContent = '🏁 E aí, como foi a prova? 🎉';
         alertCard.querySelector('.card-sub').innerHTML = 'Você chegou lá! Registra a corrida que eu comparo com seu histórico e te digo o que achei. 👇<br><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="openRunLog(\'livre\')">🏅 Registrar minha prova</button>';
       }
     } else {
-      alertCard.querySelector('.card-title').textContent = _ri.horaFmt ? `É HOJE! Largada às ${_ri.horaFmt} 🎉` : 'É HOJE! 🎉';
+      alertCard.querySelector('.card-title').textContent = _ri.horaFmt ? `🏁 É HOJE! Largada às ${_ri.horaFmt}` : '🏁 É HOJE!';
       alertCard.querySelector('.card-sub').innerHTML =
         'Confie no treino que você fez. Checklist rápido:<br>' +
         '• ☕ Coma leve 2-3h antes (nada novo hoje)<br>' +
@@ -1801,12 +1802,12 @@ function renderHome(){
         '• ⏰ Chegue cedo e aqueça 10 min com trote leve<br>' +
         '• 🐢 Largue mais devagar do que a empolgação pede<br>' +
         '• 💧 Beba água nos postos, mesmo sem sede' +
-        ((t=>t&&t.dicas&&t.dicas.length ? `<br><br><b style="color:#7dd3fc">${t.titulo}</b><br>${t.dicas.map(d=>'• '+d).join('<br>')}` : '')(typeof runWeatherTips==='function'?runWeatherTips():null));
+        ((t=>t&&t.dicas&&t.dicas.length ? `<br><br><b style="color:#7dd3fc">${t.titulo}</b><br>${t.dicas.map(d=>'• '+d).join('<br>')}` : '')(typeof runWeatherTips==='function'?runWeatherTips(_ri.hora?_ri.largada:null):null));
     }
   }
   else if(daysToR !== null && daysToR >= 0 && daysToR < 365){
     alertCard.classList.remove('hidden');
-    alertCard.querySelector('.card-icon').textContent = '🏁';
+    const _ic2 = alertCard.querySelector('.card-icon'); if(_ic2){ _ic2.style.display=''; _ic2.textContent = '🏁'; }
     alertCard.querySelector('.card-title').textContent = daysToR===0 ? 'É HOJE! 🎉' : `${daysToR} dia${daysToR>1?'s':''} para sua prova`;
     // previsão de tempo no ritmo atual (Riegel) — só com histórico suficiente
     var _prev = '';
@@ -1974,6 +1975,7 @@ function renderHome(){
     if(state.active==='run' && typeof fatigueOf==='function' && fatigueOf('Pernas')>=70 && $('card-plan-alert') && $('card-plan-alert').classList.contains('hidden')){
       const ac=$('card-plan-alert');
       ac.classList.remove('hidden');
+      const _icA=ac.querySelector('.card-icon'); if(_icA) _icA.style.display='';
       if($('plan-alert-title')) $('plan-alert-title').textContent='Pernas ainda em recuperação';
       if($('plan-alert-msg')) $('plan-alert-msg').textContent='Você treinou pernas forte há pouco. Se sentir peso na passada, faça hoje em ritmo leve ou troque por uma caminhada — a corrida rende mais com as pernas descansadas.';
     }
@@ -1984,6 +1986,7 @@ function renderHome(){
   if(state.active==='run' && legPain && $('card-plan-alert') && $('card-plan-alert').classList.contains('hidden')){
     const ac = $('card-plan-alert');
     ac.classList.remove('hidden');
+    const _icB=ac.querySelector('.card-icon'); if(_icB) _icB.style.display='';
     ac.querySelector('.card-icon').textContent = '🩹';
     ac.querySelector('.card-title').textContent = 'Dor registrada: '+pains.join(', ');
     ac.querySelector('.card-sub').textContent = 'Hoje troque a corrida por caminhada leve ou bike (menos impacto). Fortalecer com musculação leve de core e quadril também ajuda a proteger a região. Dor persistindo, procure um profissional de saúde.';
@@ -5099,11 +5102,13 @@ function loadWeather(){
     navigator.geolocation.getCurrentPosition(function(pos){
       try{
         const lat = pos.coords.latitude, lon = pos.coords.longitude;
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m`)
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code,wind_speed_10m&forecast_days=2&timezone=auto`)
           .then(r=>r.json())
           .then(j=>{
             const cur = j.current || {};
-            weatherData = { temp: cur.temperature_2m, code: cur.weather_code, wind: cur.wind_speed_10m, at: Date.now() };
+            const hr = j.hourly || {};
+            weatherData = { temp: cur.temperature_2m, code: cur.weather_code, wind: cur.wind_speed_10m, at: Date.now(),
+              horas: hr.time || null, htemp: hr.temperature_2m || null, hcode: hr.weather_code || null, hwind: hr.wind_speed_10m || null };
             try{ localStorage.setItem('metatreino_weather', JSON.stringify(weatherData)); }catch(e){}
           }).catch(e=>console.log('clima:', e));
       }catch(e){ console.log('clima:', e); }
@@ -5124,10 +5129,23 @@ function wmoDesc(code){
 }
 // linha de clima pra saudação da Home — SEMPRE que há dados (qualquer temperatura), com dica real
 // Dicas específicas pra CORRER hoje, conforme o clima real do dia
-function runWeatherTips(){
-  const w = weatherData; if(!w || w.temp==null) return null;
+// Previsão para um horário específico (ex.: a largada da prova). Cai no clima atual se não houver dados.
+function weatherAt(quando){
+  const w = weatherData; if(!w) return null;
+  try{
+    if(!quando || !w.horas || !w.htemp) return { temp:w.temp, code:w.code, wind:w.wind||0, previsto:false };
+    const alvo = new Date(quando);
+    const chave = alvo.getFullYear()+'-'+String(alvo.getMonth()+1).padStart(2,'0')+'-'+String(alvo.getDate()).padStart(2,'0')+'T'+String(alvo.getHours()).padStart(2,'0')+':00';
+    const i = w.horas.indexOf(chave);
+    if(i<0) return { temp:w.temp, code:w.code, wind:w.wind||0, previsto:false };
+    return { temp:w.htemp[i], code:(w.hcode?w.hcode[i]:w.code), wind:(w.hwind?w.hwind[i]:0), previsto:true };
+  }catch(e){ return { temp:w.temp, code:w.code, wind:w.wind||0, previsto:false }; }
+}
+function runWeatherTips(quando){
+  const w = weatherAt(quando); if(!w || w.temp==null) return null;
   const temp = Math.round(w.temp), code = w.code, wind = w.wind||0;
-  const hora = new Date().getHours();
+  const hora = quando ? new Date(quando).getHours() : new Date().getHours();
+  const prefixo = w.previsto ? `Previsão para ${String(new Date(quando).getHours()).padStart(2,'0')}:00 — ` : '';
   const tempestade = code>=95, chuva=(code>=61&&code<=67)||(code>=80&&code<=82), garoa=code>=51&&code<=57, neve=code>=71&&code<=77, neblina=code===45||code===48;
   const dicas = [];
   let titulo = null;
@@ -5175,7 +5193,7 @@ function runWeatherTips(){
     dicas.push('Condições favoráveis hoje. Aqueça 5 min, comece leve e deixe o ritmo vir sozinho.');
     if(hora>=11 && hora<=15) dicas.push('Sol a pino: boné e protetor solar ajudam.');
   }
-  return { titulo, dicas };
+  return { titulo: prefixo + titulo, dicas };
 }
 function weatherHomeLine(){
   const w = weatherData; if(!w || w.temp==null) return null;
