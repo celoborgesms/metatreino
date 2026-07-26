@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.59 =====
-const APP_VERSION = 'v11.59';
+// ===== MetaTreino v11.60 =====
+const APP_VERSION = 'v11.60';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -612,34 +612,33 @@ function buildingSteps(m, setup, prev){
     const gl = {hipertrofia:'Hipertrofia',forca:'Força',emagrecimento:'Emagrecimento',resistencia:'Resistência'}[setup.goal] || 'Seu objetivo';
     const eq = {academia:'Academia completa',halteres:'Halteres em casa',casa:'Peso do corpo',basico:'Academia básica'}[setup.equip] || 'Seu equipamento';
     const lvl = {iniciante:'Iniciante',intermediario:'Intermediário',avancado:'Avançado'}[setup.level] || '';
-    steps.push({emo:'🎯', txt:`Objetivo: <b>${gl}</b>`});
-    steps.push({emo:'🏋️', txt:`${eq} — <b>${countExercisesFor(setup.equip)} exercícios</b> liberados pra você`});
-    steps.push({emo:'📅', txt:`Dividindo em <b>${setup.days} treinos</b>: ${dias}`});
-    steps.push({emo:'🧠', txt:`Variando padrões de movimento pra <b>não repetir estímulo</b> no mesmo dia`});
-    if(setup.goal==='forca') steps.push({emo:'💪', txt:`Priorizando os <b>grandes compostos</b> e segurando os isoladores`});
-    else if(setup.goal==='emagrecimento') steps.push({emo:'🔥', txt:`Priorizando <b>multiarticulares</b> — mais músculo trabalhando, mais gasto`});
-    else if(setup.goal==='resistencia') steps.push({emo:'⚡', txt:`Montando em <b>formato circuito</b>, com descanso curto`});
-    else steps.push({emo:'📊', txt:`Ajustando séries e descanso pro nível <b>${lvl}</b>`});
-    if(dores.length) steps.push({emo:'🩹', txt:`Adaptando por dor: <b>${dores.join(', ')}</b> — trocando o que sobrecarrega`});
+    steps.push({emo:'🎯', pri:1, txt:`Objetivo: <b>${gl}</b>`});
+    steps.push({emo:'🏋️', pri:2, txt:`${eq} — <b>${countExercisesFor(setup.equip)} exercícios</b> liberados pra você`});
+    steps.push({emo:'📅', pri:2, txt:`Dividindo em <b>${setup.days} treinos</b>: ${dias}`});
+    steps.push({emo:'🧠', pri:3, txt:`Variando padrões de movimento pra <b>não repetir estímulo</b> no mesmo dia`});
+    if(setup.goal==='forca') steps.push({emo:'💪', pri:3, txt:`Priorizando os <b>grandes compostos</b> e segurando os isoladores`});
+    else if(setup.goal==='emagrecimento') steps.push({emo:'🔥', pri:3, txt:`Priorizando <b>multiarticulares</b> — mais músculo trabalhando, mais gasto`});
+    else if(setup.goal==='resistencia') steps.push({emo:'⚡', pri:3, txt:`Montando em <b>formato circuito</b>, com descanso curto`});
+    else steps.push({emo:'📊', pri:3, txt:`Ajustando séries e descanso pro nível <b>${lvl}</b>`});
+    if(dores.length) steps.push({emo:'🩹', pri:1, txt:`Adaptando por dor: <b>${dores.join(', ')}</b> — trocando o que sobrecarrega`});
   } else {
     const gl = {'5km':'5 km','10km':'10 km','21km':'Meia maratona','42km':'Maratona'}[setup.goal] || 'Sua meta';
     const tr = {asfalto:'Asfalto',esteira:'Esteira',trilha:'Trilha',pista:'Pista'}[setup.terrain] || 'Seu terreno';
     const lvl = {iniciante:'Iniciante',intermediario:'Intermediário',avancado:'Avançado'}[setup.level] || '';
-    steps.push({emo:'🎯', txt:`Meta: <b>${gl}</b>`});
-    steps.push({emo:'🏃', txt:setup.level==='iniciante'
+    steps.push({emo:'🎯', pri:1, txt:`Meta: <b>${gl}</b>`});
+    steps.push({emo:'🏃', pri:2, txt:setup.level==='iniciante'
       ? `Nível <b>Iniciante</b> — começamos alternando <b>trote e caminhada</b>, sem tiros`
       : `Nível <b>${lvl}</b> — incluindo ritmo forte e tiros na medida certa`});
-    steps.push({emo:'🛣️', txt:`Terreno: <b>${tr}</b> — ajustando o esforço de cada sessão`});
-    steps.push({emo:'📅', txt:`Progressão de <b>12 semanas</b>: ${dias}`});
-    if(setup.raceDate) steps.push({emo:'🏁', txt:`Alinhando o <b>pico</b> com a sua prova`});
-    if(dores.length) steps.push({emo:'🩹', txt:`Considerando sua dor: <b>${dores.join(', ')}</b>`});
+    steps.push({emo:'🛣️', pri:3, txt:`Terreno: <b>${tr}</b> — ajustando o esforço de cada sessão`});
+    steps.push({emo:'📅', pri:2, txt:`Progressão de <b>12 semanas</b>: ${dias}`});
+    if(setup.raceDate) steps.push({emo:'🏁', pri:1, txt:`Alinhando o <b>pico</b> com a sua prova`});
+    if(dores.length) steps.push({emo:'🩹', pri:1, txt:`Considerando sua dor: <b>${dores.join(', ')}</b>`});
   }
-  if(prev) steps.push({emo:'🧩', txt:`Preservando seu <b>histórico</b> e suas <b>trocas fixadas</b>`});
-  steps.push({emo:'✅', txt:m==='lift' ? `<b>Seu plano de musculação está pronto!</b>` : `<b>Seu plano de corrida está pronto!</b>`});
+  if(prev) steps.push({emo:'🧩', pri:1, txt:`Preservando seu <b>histórico</b> e suas <b>trocas fixadas</b>`});
+  steps.push({emo:'✅', pri:1, txt:m==='lift' ? `<b>Seu plano de musculação está pronto!</b>` : `<b>Seu plano de corrida está pronto!</b>`});
   return steps;
 }
 function runBuildingScreen(m, steps, done){
-  // Autossuficiente: estilos aplicados por JS (funciona mesmo com CSS antigo em cache)
   try{
     if(!document.getElementById('bld-style')){
       const st = document.createElement('style'); st.id='bld-style';
@@ -650,6 +649,14 @@ function runBuildingScreen(m, steps, done){
       document.head.appendChild(st);
     }
   }catch(e){}
+  // no máximo 5 etapas: melhor poucas e legíveis do que muitas correndo.
+  // Corta por PRIORIDADE (as mais pessoais — dor, histórico — nunca saem) e mantém a ordem.
+  if(steps.length > 5){
+    const ranking = steps.map((x,idx)=>({x, idx, pri:x.pri||2}))
+      .sort((a,b)=> a.pri-b.pri || a.idx-b.idx)
+      .slice(0,5).map(o=>o.idx).sort((a,b)=>a-b);
+    steps = ranking.map(i=>steps[i]);
+  }
   let ov = document.getElementById('building-ov');
   if(!ov){ ov = document.createElement('div'); ov.id='building-ov'; document.body.appendChild(ov); }
   ov.setAttribute('style',
@@ -658,60 +665,47 @@ function runBuildingScreen(m, steps, done){
     'background:#070d16;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);'+
     'opacity:0;transition:opacity .3s ease');
   const titulo = m==='lift' ? '🧠 Montando seu treino' : '🧠 Montando seu plano de corrida';
-  const dots = steps.map((_,i)=>'<span class="bld-dot" data-i="'+i+'" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.16);transition:background .3s ease,transform .3s ease;display:inline-block"></span>').join('');
   ov.innerHTML =
     '<div style="width:100%;max-width:430px;text-align:center">'+
       '<div style="width:70px;height:70px;margin:0 auto 22px;border-radius:50%;border:3px solid rgba(16,185,129,.16);border-top-color:#10b981;animation:bldspin .9s linear infinite;position:relative">'+
         '<div style="position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:50%;border:2px solid rgba(16,185,129,.12);border-bottom-color:rgba(16,185,129,.55);animation:bldspin 1.5s linear infinite reverse"></div>'+
       '</div>'+
       '<div style="font-size:22px;font-weight:800;letter-spacing:-.3px;color:#fff;margin-bottom:7px">'+titulo+'</div>'+
-      '<div style="font-size:12.5px;color:#8fa0b5;line-height:1.5;margin:0 auto 26px;max-width:330px">Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.</div>'+
-      '<div id="bld-stage" style="min-height:132px;display:flex;align-items:center;justify-content:center"></div>'+
-      '<div style="display:flex;gap:7px;justify-content:center;margin:22px 0 16px">'+dots+'</div>'+
-      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);transition:width .45s ease"></div></div>'+
+      '<div style="font-size:12.5px;color:#8fa0b5;line-height:1.5;margin:0 auto 28px;max-width:330px">Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.</div>'+
+      '<div id="bld-stage" style="min-height:140px;display:flex;align-items:center;justify-content:center"></div>'+
+      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:26px"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);transition:width 1.5s linear"></div></div>'+
     '</div>';
   requestAnimationFrame(()=>{ ov.style.opacity='1'; });
   const stage = document.getElementById('bld-stage');
   const bar = document.getElementById('bld-bar-i');
-  // duração total constante (~5,6s): cada etapa recebe o tempo que couber, sempre confortável
-  const passo = Math.max(760, Math.min(1250, Math.round(5600/Math.max(1,steps.length))));
-  const saida = 300;
+  const passo = 1550;   // tempo total de cada etapa
+  const saida = 260;    // a saída começa só no finalzinho → sobra ~1,3s de leitura estável
   let i = 0;
   const tick = ()=>{
     if(i >= steps.length){
       setTimeout(()=>{
         ov.style.opacity='0';
         setTimeout(()=>{ ov.setAttribute('style','display:none'); ov.innerHTML=''; if(typeof done==='function') done(); }, 320);
-      }, 620);
+      }, 700);
       return;
     }
     const st = steps[i];
     const ultimo = (i === steps.length-1);
     const cor = ultimo ? '#34d399' : '#cfe0f0';
     const el = document.createElement('div');
-    el.setAttribute('style',
-      'display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 6px;'+
-      'animation:bldenter .38s cubic-bezier(.2,.8,.3,1) both');
+    el.setAttribute('style','display:flex;flex-direction:column;align-items:center;gap:13px;padding:0 6px;animation:bldenter .4s cubic-bezier(.2,.8,.3,1) both');
     el.innerHTML =
-      '<div style="font-size:38px;line-height:1">'+st.emo+'</div>'+
-      '<div style="font-size:16px;line-height:1.45;color:'+cor+';font-weight:500">'+
+      '<div style="font-size:40px;line-height:1">'+st.emo+'</div>'+
+      '<div style="font-size:16.5px;line-height:1.45;color:'+cor+';font-weight:500">'+
         String(st.txt).replace(/<b>/g,'<b style="color:'+(ultimo?'#34d399':'#fff')+'">')+
       '</div>';
     stage.innerHTML = '';
     stage.appendChild(el);
-    // acende a bolinha e avança a barra
-    try{
-      const d = ov.querySelector('.bld-dot[data-i="'+i+'"]');
-      if(d){ d.style.background = ultimo ? '#34d399' : '#10b981'; d.style.transform='scale(1.35)'; }
-      const ant = ov.querySelector('.bld-dot[data-i="'+(i-1)+'"]');
-      if(ant) ant.style.transform='scale(1)';
-    }catch(e){}
     if(bar) bar.style.width = Math.round(((i+1)/steps.length)*100) + '%';
     const atual = i;
     i++;
-    // some antes de entrar a próxima (uma de cada vez)
     if(atual < steps.length-1){
-      setTimeout(()=>{ if(el.parentNode) el.style.animation='bldleave .28s ease both'; }, passo - saida);
+      setTimeout(()=>{ if(el.parentNode) el.style.animation='bldleave .26s ease both'; }, passo - saida);
     }
     setTimeout(tick, passo);
   };
