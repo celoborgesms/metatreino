@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.61 =====
-const APP_VERSION = 'v11.61';
+// ===== MetaTreino v11.62 =====
+const APP_VERSION = 'v11.62';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -322,8 +322,14 @@ function doRestart(){
     state = { user:keep, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
     saveData(); syncToCloud();
     $('tabbar').classList.add('hidden');
-    toast('🔄 Recomeçando! Preencha o questionário de novo.');
-    showScreen('scr-quiz'); bindOpts('scr-quiz');
+    const fim = ()=>{ toast('🔄 Recomeçando! Preencha o questionário de novo.'); showScreen('scr-quiz'); bindOpts('scr-quiz'); };
+    try{
+      runBuildingScreen('lift', [
+        {emo:'🧹', pri:1, txt:`Apagando treinos, séries e conquistas`},
+        {emo:'🔐', pri:1, txt:`Mantendo sua <b>conta</b> e seu <b>acesso</b>`},
+        {emo:'✅', pri:1, txt:`<b>Tudo limpo.</b> Vamos montar do zero!`}
+      ], fim, { titulo:'🔄 Recomeçando do zero', sub:'Limpando seu progresso. Sua conta continua a mesma — só o histórico é apagado.', passo:1400 });
+    }catch(e){ fim(); }
   }, {title:'Começar do zero?', emo:'🔄', okLabel:'Sim, apagar progresso', danger:true});
 }
 function doDeleteAccount(){
@@ -337,8 +343,14 @@ function doDeleteAccount(){
     fbAuth.signOut().catch(()=>{});
     fbUser = null;
     state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], ui:{tab:'home',selectedSession:null} };
-    showScreen('scr-auth');
-    toast('✅ Conta excluída. Comece do zero quando quiser.');
+    const fim = ()=>{ showScreen('scr-auth'); toast('Conta excluída. Você pode começar de novo quando quiser.'); };
+    try{
+      runBuildingScreen('lift', [
+        {emo:'🗑️', pri:1, txt:`Apagando seus dados da nuvem`},
+        {emo:'🔓', pri:1, txt:`Encerrando sua sessão neste aparelho`},
+        {emo:'👋', pri:1, txt:`<b>Conta excluída.</b> Obrigado por ter treinado com a gente.`}
+      ], fim, { titulo:'🗑️ Excluindo sua conta', sub:'Removendo seus dados com segurança. Isso não pode ser desfeito.', passo:1400 });
+    }catch(e){ fim(); }
   }, {title:'Excluir conta?', emo:'🗑️', okLabel:'Sim, excluir conta', danger:true});
 }
 
@@ -5342,8 +5354,14 @@ function clearPain(){
   regenAllPlans();
   saveData();
   closeModal();
-  toast('✅ Que bom! Treinos de volta ao normal.');
-  goTab(state.ui.tab||'home');
+  const fim = ()=>{ toast('✅ Que bom! Treinos de volta ao normal.'); goTab(state.ui.tab||'home'); };
+  try{
+    runBuildingScreen('lift', [
+      {emo:'🎉', pri:1, txt:`Tudo <b>liberado de novo</b>`},
+      {emo:'🔁', pri:1, txt:`Devolvendo os exercícios que estavam pausados`},
+      {emo:'✅', pri:1, txt:`<b>Treinos de volta ao normal!</b>`}
+    ], fim, { titulo:'🎉 Liberando seus treinos', sub:'Recolocando tudo que estava pausado pela dor.', passo:1400 });
+  }catch(e){ fim(); }
 }
 
 function quickChangeTerrain(terrain){
