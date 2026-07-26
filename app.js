@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.67 =====
-const APP_VERSION = 'v11.67';
+// ===== MetaTreino v11.68 =====
+const APP_VERSION = 'v11.68';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1837,24 +1837,29 @@ function renderHome(){
   $('plan-phase').textContent = phase;
   const isLiftPlan = mod.plan.type==='lift';
   // plano com início programado pra frente: avisa em vez de fingir que já começou
+  // (NUNCA sair da função aqui — o card do dia é desenhado mais abaixo)
+  let _preStart = false, _preStartMsg = null;
   try{
     const _st = (typeof planStartTs==='function') ? planStartTs(mod) : 0;
     const _h0 = new Date(); _h0.setHours(0,0,0,0);
     if(_st && _st > _h0.getTime()){
+      _preStart = true;
       const fw = planFirstWorkoutInfo(mod);
-      $('plan-foot').textContent = fw
+      _preStartMsg = fw
         ? `▶️ Seu primeiro treino é ${fw.fmt} (${fw.quando}). Até lá, sem cobranças — aproveite pra descansar. 😌`
         : `▶️ Seu plano ainda não começou. Até lá, sem cobranças — aproveite pra descansar. 😌`;
-      return;
     }
   }catch(e){}
-  $('plan-foot').textContent = cw.done ? '🏁 Programa concluído! Toque em "Trocar plano" pra começar um novo ciclo.' : phase==='BUILD'?`🏗️ Fase de construção · ${isLiftPlan?'Ganhando base muscular':'Aumentando base aeróbica'}. ${total-wk} semanas até o pico.`:phase==='PEAK'?`🚀 Fase de pico · Alta intensidade. ${total-wk} semanas restantes.`:isLiftPlan?`🎯 Fase de consolidação · Na semana ${total} o ciclo recomeça renovado.`:`🎯 Fase de taper · Recuperação e afinação final.`;
+  if(_preStartMsg){ $('plan-foot').textContent = _preStartMsg; }
+  else $('plan-foot').textContent = cw.done ? '🏁 Programa concluído! Toque em "Trocar plano" pra começar um novo ciclo.' : phase==='BUILD'?`🏗️ Fase de construção · ${isLiftPlan?'Ganhando base muscular':'Aumentando base aeróbica'}. ${total-wk} semanas até o pico.`:phase==='PEAK'?`🚀 Fase de pico · Alta intensidade. ${total-wk} semanas restantes.`:isLiftPlan?`🎯 Fase de consolidação · Na semana ${total} o ciclo recomeça renovado.`:`🎯 Fase de taper · Recuperação e afinação final.`;
 
   const today = getDayIdx();
   const todayWk = mod.plan.workouts.find(w=>w.dayIdx===today);
   const slot = $('today-slot');
   if(typeof vacationActive==='function' && vacationActive()){
     slot.innerHTML = todayWk ? renderVacationToday(todayWk,isLift) : renderRestDay(mod);
+  } else if(_preStart && !treinouHoje(mod)){
+    slot.innerHTML = renderRestDay(mod); // aguardando a data de início: sem cobrança
   } else if(todayWk && treinouHoje(mod)){
     slot.innerHTML = renderDoneToday(todayWk, mod, isLift);
   } else {
