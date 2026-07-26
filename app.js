@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.69 =====
-const APP_VERSION = 'v11.69';
+// ===== MetaTreino v11.70 =====
+const APP_VERSION = 'v11.70';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1724,8 +1724,14 @@ function renderHome(){
     alertCard.classList.remove('hidden');
     alertCard.querySelector('.card-icon').textContent = '🏁';
     if(_ri.depoisDaLargada){
-      alertCard.querySelector('.card-title').textContent = 'E aí, como foi a prova? 🎉';
-      alertCard.querySelector('.card-sub').innerHTML = 'Você chegou lá! Registra a corrida que eu comparo com seu histórico e te digo o que achei. 👇<br><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="openRunLog(\'livre\')">🏅 Registrar minha prova</button>';
+      const jaRegistrou = raceEntryToday();
+      if(jaRegistrou){
+        alertCard.querySelector('.card-title').textContent = 'Prova concluída! 🏅';
+        alertCard.querySelector('.card-sub').innerHTML = `Registrada: <b>${jaRegistrou.distance||'—'}km</b> em <b>${fmtDur(jaRegistrou.duration||0)}</b>${jaRegistrou.pace?' · '+jaRegistrou.pace:''}. Aproveite o dia — você merece. 🎉`;
+      } else {
+        alertCard.querySelector('.card-title').textContent = 'E aí, como foi a prova? 🎉';
+        alertCard.querySelector('.card-sub').innerHTML = 'Você chegou lá! Registra a corrida que eu comparo com seu histórico e te digo o que achei. 👇<br><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="openRunLog(\'livre\')">🏅 Registrar minha prova</button>';
+      }
     } else {
       alertCard.querySelector('.card-title').textContent = _ri.horaFmt ? `É HOJE! Largada às ${_ri.horaFmt} 🎉` : 'É HOJE! 🎉';
       alertCard.querySelector('.card-sub').innerHTML =
@@ -1734,7 +1740,8 @@ function renderHome(){
         '• 👟 Use o tênis de sempre — nunca estreie no dia<br>' +
         '• ⏰ Chegue cedo e aqueça 10 min com trote leve<br>' +
         '• 🐢 Largue mais devagar do que a empolgação pede<br>' +
-        '• 💧 Beba água nos postos, mesmo sem sede';
+        '• 💧 Beba água nos postos, mesmo sem sede' +
+        ((t=>t&&t.dicas&&t.dicas.length ? `<br><br><b style="color:#7dd3fc">${t.titulo}</b><br>${t.dicas.map(d=>'• '+d).join('<br>')}` : '')(typeof runWeatherTips==='function'?runWeatherTips():null));
     }
   }
   else if(daysToR !== null && daysToR >= 0 && daysToR < 365){
@@ -1976,6 +1983,10 @@ function renderTodayWorkout(w, isLift){
     ${(isLift && typeof fatigueOf==='function' && (w.parts||[]).some(pp=>fatigueOf(pp)>=70)) ? `<div style="margin-top:8px;font-size:12px;color:var(--accent-2)">🟡 ${(w.parts||[]).filter(pp=>fatigueOf(pp)>=70)[0]} ainda em recuperação. Se sentir queda de rendimento, vale tirar uma série hoje — quem manda é você.</div>` : ''}
     ${(isLift && typeof cicloAtual==='function' && cicloAtual()) ? (c=>`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">${c.emo} Ciclo: <b style="color:var(--text)">${c.nome}</b> · semana ${c.sem}</div>`)(cicloAtual()) : ''}
     ${sug?`<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);font-size:13px;line-height:1.45">${sug.emo} <b>Sugestão de hoje:</b> ${sug.txt}</div>`:''}
+    ${(!isLift && typeof runWeatherTips==='function') ? (t=>t?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.25);font-size:12.5px;line-height:1.5">
+        <div style="color:#7dd3fc;font-weight:800;margin-bottom:5px">${t.titulo}</div>
+        ${t.dicas.map(d=>`<div style="color:var(--text-dim);margin:3px 0">• ${d}</div>`).join('')}
+      </div>`:'')(runWeatherTips()) : ''}
     <div class="today-meta">
       <span class="chip mono">⏱️ ${w.duration} min</span>
       ${w.distance?`<span class="chip mono">📍 ${w.distance}</span>`:''}
@@ -5014,6 +5025,60 @@ function wmoDesc(code){
   return 'tempo variável';
 }
 // linha de clima pra saudação da Home — SEMPRE que há dados (qualquer temperatura), com dica real
+// Dicas específicas pra CORRER hoje, conforme o clima real do dia
+function runWeatherTips(){
+  const w = weatherData; if(!w || w.temp==null) return null;
+  const temp = Math.round(w.temp), code = w.code, wind = w.wind||0;
+  const hora = new Date().getHours();
+  const tempestade = code>=95, chuva=(code>=61&&code<=67)||(code>=80&&code<=82), garoa=code>=51&&code<=57, neve=code>=71&&code<=77, neblina=code===45||code===48;
+  const dicas = [];
+  let titulo = null;
+  if(tempestade){
+    titulo = '⛈️ Tempestade por aí';
+    dicas.push('Correr com raios é risco real — hoje o certo é esteira, bike indoor ou trocar o dia.');
+    dicas.push('Se remarcar, não precisa "compensar" depois: um treino a menos não desfaz semanas de trabalho.');
+  } else if(chuva){
+    titulo = '🌧️ Chuva na área';
+    dicas.push('Piso molhado escorrega: encurte a passada e evite curvas rápidas e faixas pintadas.');
+    dicas.push('Use roupa clara ou refletiva — na chuva os carros enxergam bem menos.');
+    dicas.push('Boné de aba ajuda a manter a água fora dos olhos. E troque a roupa molhada logo após.');
+  } else if(neve){
+    titulo = '❄️ Frio extremo';
+    dicas.push('Aqueça mais que o normal e cuide do piso — tração vem antes do ritmo.');
+  } else if(temp>=30){
+    titulo = '🥵 Calor forte ('+temp+'°C)';
+    dicas.push('Beba água <b>antes</b> de sair, não só depois. Em corridas acima de 40 min, leve água.');
+    dicas.push('Se der, corra antes das 9h ou depois das 17h — o sol do meio-dia cobra caro.');
+    dicas.push('Espere ritmo <b>15-30s/km mais lento</b> que o normal. Isso é fisiologia, não queda de forma.');
+    dicas.push('Roupa clara e leve, protetor solar. Tontura ou calafrio no calor = pare na hora.');
+  } else if(temp>=26){
+    titulo = '☀️ Dia quente ('+temp+'°C)';
+    dicas.push('Hidrate-se bem antes e leve água se for passar de 40 min.');
+    dicas.push('Ritmo um pouco mais lento é normal com esse calor — não force pra bater tempo hoje.');
+    dicas.push('Prefira sombra e horários menos quentes.');
+  } else if(temp<=10){
+    titulo = '🧣 Frio ('+temp+'°C)';
+    dicas.push('Aqueça <b>8-10 min</b> antes: músculo frio lesiona mais fácil.');
+    dicas.push('Vista camadas que dá pra tirar. Cubra mãos e orelhas — é por onde mais se perde calor.');
+    dicas.push('Você sua menos, mas continua desidratando: beba água mesmo sem sede.');
+  } else if(temp<=16){
+    titulo = '🌤️ Friozinho bom ('+temp+'°C)';
+    dicas.push('Temperatura ótima pra correr — é nessa faixa que costumam sair os melhores tempos.');
+    dicas.push('Aqueça uns 5-8 min antes de acelerar.');
+  } else if(garoa || neblina){
+    titulo = neblina ? '🌫️ Neblina' : '🌦️ Garoa fina';
+    dicas.push(neblina ? 'Visibilidade baixa: use roupa clara e evite ruas movimentadas.' : 'Garoa refresca e ajuda no ritmo — só cuidado com o piso liso.');
+  } else if(wind>=30){
+    titulo = '💨 Vento forte';
+    dicas.push('Comece o percurso <b>contra</b> o vento e volte a favor — o fim fica bem mais fácil.');
+    dicas.push('Contra o vento o esforço sobe sem o ritmo subir. Vá pelo esforço, não pelo relógio.');
+  } else {
+    titulo = '🙂 Clima bom pra correr ('+temp+'°C)';
+    dicas.push('Condições favoráveis hoje. Aqueça 5 min, comece leve e deixe o ritmo vir sozinho.');
+    if(hora>=11 && hora<=15) dicas.push('Sol a pino: boné e protetor solar ajudam.');
+  }
+  return { titulo, dicas };
+}
 function weatherHomeLine(){
   const w = weatherData; if(!w || w.temp==null) return null;
   const temp = Math.round(w.temp), code = w.code, wind = w.wind||0;
@@ -7317,7 +7382,12 @@ function saveRunLog(dayIdx){
   const name = (type==='corrida' && !livre) ? w.name : `${meta.emo} ${meta.lbl} — ${km}km`;
   mod.history = mod.history || [];
   const adaptInfoRun = adaptMode();
-  mod.history.push({ id:w.k, name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, module:'run', activity:type,
+  // é a prova? só a PRIMEIRA corrida do dia da prova conta como tal — as seguintes são treino normal
+  const _riSave = (typeof raceInfo==='function') ? raceInfo() : null;
+  const _ehProvaAgora = !!(_riSave && _riSave.hoje && type==='corrida' && !raceEntryToday());
+  mod.history.push({ id:w.k, name: _ehProvaAgora ? '🏅 '+(_riSave.dataFmt ? 'Prova' : 'Prova')+' — '+km+'km' : name,
+    at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, module:'run', activity:type,
+    isRace: _ehProvaAgora || undefined,
     adaptedWith: adaptInfoRun.active ? adaptReasonText() : null });
   // Os contadores vitalícios são recalculados por ensureStats (histórico + reserva do que já
   // saiu pela limpeza de 90 dias). NÃO somamos manualmente aqui pra evitar contagem dobrada.
@@ -7335,9 +7405,7 @@ function saveRunLog(dayIdx){
   saveData();
   closeModal();
   // primeiro o feedback da corrida; só depois as conquistas aparecem
-  const _ri = (typeof raceInfo==='function') ? raceInfo() : null;
-  const _ehProva = !!(_ri && _ri.hoje);
-  const fb = runFeedback(km, min, type, _ehProva);
+  const fb = runFeedback(km, min, type, _ehProvaAgora);
   if(fb){
     $('modal-inner').innerHTML = `
       <div style="text-align:center"><div style="font-size:40px">${_ehProva?'🏅':'🏃'}</div>
@@ -7402,6 +7470,16 @@ function raceInfo(){
   }catch(e){ return null; }
 }
 // depois da prova, o campo se limpa sozinho (e a gente pergunta como foi, 1x)
+// A prova já foi registrada hoje? (some o botão; corrida seguinte no dia é treino normal)
+function raceEntryToday(){
+  try{
+    const h0 = new Date(); h0.setHours(0,0,0,0);
+    return (((state.modules.run||{}).history)||[]).find(r=>{
+      const d = new Date(r.at); d.setHours(0,0,0,0);
+      return d.getTime()===h0.getTime() && r.isRace;
+    }) || null;
+  }catch(e){ return null; }
+}
 function cleanupPastRace(){
   try{
     const ri = raceInfo();
