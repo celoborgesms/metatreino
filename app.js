@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.72 =====
-const APP_VERSION = 'v11.72';
+// ===== MetaTreino v11.73 =====
+const APP_VERSION = 'v11.73';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5097,7 +5097,7 @@ let weatherData = null;
 function loadWeather(){
   try{
     // usa cache recente (< 2h) pra não pedir localização toda hora
-    try{ const c = JSON.parse(localStorage.getItem('metatreino_weather')||'null'); if(c && Date.now()-c.at < 2*3600000){ weatherData = c; return; } }catch(e){}
+    try{ const c = JSON.parse(localStorage.getItem('metatreino_weather')||'null'); if(c && c.v===2 && Date.now()-c.at < 2*3600000){ weatherData = c; return; } }catch(e){}
     if(!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(function(pos){
       try{
@@ -5107,7 +5107,7 @@ function loadWeather(){
           .then(j=>{
             const cur = j.current || {};
             const hr = j.hourly || {};
-            weatherData = { temp: cur.temperature_2m, code: cur.weather_code, wind: cur.wind_speed_10m, at: Date.now(),
+            weatherData = { v:2, temp: cur.temperature_2m, code: cur.weather_code, wind: cur.wind_speed_10m, at: Date.now(),
               horas: hr.time || null, htemp: hr.temperature_2m || null, hcode: hr.weather_code || null, hwind: hr.wind_speed_10m || null };
             try{ localStorage.setItem('metatreino_weather', JSON.stringify(weatherData)); }catch(e){}
           }).catch(e=>console.log('clima:', e));
@@ -5143,6 +5143,8 @@ function weatherAt(quando){
 }
 function runWeatherTips(quando){
   const w = weatherAt(quando); if(!w || w.temp==null) return null;
+  // horário específico sem previsão disponível → não mostra nada (conselho da hora errada engana)
+  if(quando && !w.previsto) return null;
   const temp = Math.round(w.temp), code = w.code, wind = w.wind||0;
   const hora = quando ? new Date(quando).getHours() : new Date().getHours();
   const prefixo = w.previsto ? `Previsão para ${String(new Date(quando).getHours()).padStart(2,'0')}:00 — ` : '';
