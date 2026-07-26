@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.76 =====
-const APP_VERSION = 'v11.76';
+// ===== MetaTreino v11.78 =====
+const APP_VERSION = 'v11.78';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -4653,6 +4653,49 @@ function bestTrainingTime(){
 // ===== PERFIL DE RECUPERAÇÃO (sem pedir nada ao aluno) =====
 // Cruza o DESCANSO entre treinos com a sensação registrada — descobre quanto descanso
 // o corpo DESTA pessoa precisa. Só afirma com base suficiente.
+// Dias da semana em que costuma faltar (usa o plano + o histórico)
+function weekdayAdherenceInsight(){
+  try{
+    const mod = state.modules[state.active];
+    if(!mod || !mod.plan) return null;
+    const planDays = (mod.plan.workouts||[]).map(w=>w.dayIdx);
+    if(planDays.length < 2) return null;
+    const hist = (mod.history||[]);
+    if(hist.length < 8) return null;
+    const ini = (typeof planStartTs==='function' ? planStartTs(mod) : 0) || hist[0].at;
+    const d0 = t => { const d=new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+    const treinou = new Set(hist.map(x=>d0(x.at)));
+    const cont = {}; planDays.forEach(d=>cont[d]={prev:0, fez:0});
+    for(let t=d0(ini); t<=d0(Date.now()); t+=86400000){
+      const dt = new Date(t); const idx = dt.getDay()===0 ? 7 : dt.getDay();
+      if(cont[idx]){ cont[idx].prev++; if(treinou.has(t)) cont[idx].fez++; }
+    }
+    const nomes = ['segunda','terça','quarta','quinta','sexta','sábado','domingo'];
+    const validos = Object.entries(cont).filter(([,v])=>v.prev>=3)
+      .map(([k,v])=>({dia:nomes[k-1], pct:Math.round(v.fez/v.prev*100), prev:v.prev}));
+    if(validos.length < 2) return null;
+    validos.sort((a,b)=>a.pct-b.pct);
+    const pior = validos[0], melhor = validos[validos.length-1];
+    if(melhor.pct - pior.pct < 34) return null;
+    if(pior.pct > 60) return null;   // ninguém está faltando de verdade
+    return { pior, melhor };
+  }catch(e){ return null; }
+}
+// Grupo muscular que sempre acaba pesado
+function hardGroupInsight(){
+  try{
+    const hist = (((state.modules.lift||{}).history)||[]).filter(x=>x.feel && x.parts && x.parts.length);
+    if(hist.length < 8) return null;
+    const g = {};
+    hist.forEach(x=>x.parts.forEach(p=>{ (g[p]=g[p]||{n:0,pesado:0}); g[p].n++; if(['cansado','exausto'].includes(x.feel)) g[p].pesado++; }));
+    const validos = Object.entries(g).filter(([,v])=>v.n>=3).map(([k,v])=>({parte:k, pct:Math.round(v.pesado/v.n*100), n:v.n}));
+    if(validos.length < 2) return null;
+    validos.sort((a,b)=>b.pct-a.pct);
+    const top = validos[0];
+    if(top.pct < 65) return null;
+    return top;
+  }catch(e){ return null; }
+}
 function recoveryPatternInsight(){
   try{
     const todos = [
@@ -4677,6 +4720,23 @@ function recoveryPatternInsight(){
     if(melhor.pct - pior.pct < 20) return null;  // diferença pequena: não afirma nada
     return { melhor, pior, base: todos.length };
   }catch(e){ return null; }
+}
+// Registra o que o assistente não soube responder — vira lista de sugestões pro admin
+async function logUnknownQuestion(txt, tipo){
+  try{
+    if(!db) return false;
+    const t = String(txt||'').trim().slice(0,600);
+    if(t.length < 4) return false;
+    await db.collection('perguntasNaoRespondidas').add({
+      texto: t,
+      tipo: tipo || 'auto',                       // 'auto' = não soube responder · 'sugestao' = escrita pelo aluno
+      email: (state.user && state.user.email) || 'anonimo',
+      nome: (state.user && state.user.name) || '',
+      modulo: state.active || '',
+      em: Date.now()
+    });
+    return true;
+  }catch(e){ console.log('Não foi possível registrar:', e); return false; }
 }
 function maTryCommand(txt){
   const t = txt.toLowerCase().trim();
@@ -4743,6 +4803,27 @@ function maTryCommand(txt){
   if(/(prova|corrida|maratona|meia\s*maratona|competi[çc][ãa]o|percurso|\b5k\b|\b10k\b|\b21k\b|\b42k\b)/.test(t) && /\d/.test(t)){
     const d = maParseRaceDate(t);
     if(d) return maSetRaceDate(d, maParseRaceTime(t));
+  }
+
+  // ---- SUGESTÃO / RECADO PRO DESENVOLVEDOR ----
+  if(maPending && maPending.type==='sugestao'){
+    const texto = txt.trim();
+    maPending = null;
+    if(texto.length < 4) return {done:true, msg:'Pode escrever com calma o que você gostaria de ver no app 😊 — é só me mandar a mensagem.'};
+    logUnknownQuestion(texto, 'sugestao');
+    return {done:true, work:'Enviando sua sugestão', msg:`✅ <b>Sugestão enviada!</b> Sua mensagem chegou direto pra quem desenvolve o MetaTreino.<br><br>Obrigado de verdade — boa parte do que existe no app hoje veio de ideia de aluno. 💚`};
+  }
+  if(/(quero (?:mandar|enviar|dar) (?:uma )?(?:sugest[ãa]o|ideia|feedback)|mandar (?:uma )?sugest[ãa]o|falar com (?:o )?(?:suporte|desenvolvedor|administrador|criador)|reportar (?:um )?(?:bug|erro|problema)|tenho uma (?:sugest[ãa]o|ideia))/.test(t)){
+    maPending = {type:'sugestao'};
+    return {done:true, msg:'Manda ver! ✍️ Escreve na próxima mensagem o que você gostaria de sugerir — pode ser uma função nova, um problema que encontrou ou qualquer ideia.<br><br>Eu envio direto pra quem desenvolve o app.'};
+  }
+  // sugestão já escrita de uma vez ("seria legal se tivesse...", "gostaria que tivesse...")
+  {
+    const mSug = txt.match(/(?:gostaria que (?:tivesse|houvesse|desse)|seria (?:legal|bom|[óo]timo) (?:se )?(?:ter|tivesse)|podia(?:m)? (?:ter|colocar|adicionar)|sugiro (?:que )?|minha sugest[ãa]o [ée])\s*(.{4,})/i);
+    if(mSug){
+      logUnknownQuestion(txt.trim(), 'sugestao');
+      return {done:true, work:'Enviando sua sugestão', msg:`✅ <b>Anotei sua sugestão e já enviei</b> pra quem desenvolve o MetaTreino:<br><br><i>"${String(mSug[1]).slice(0,160).replace(/</g,'&lt;')}"</i><br><br>Obrigado! Ideia de aluno é o que mais move esse app. 💚`};
+    }
   }
 
   // ---- SÓ O HORÁRIO DA PROVA (data já cadastrada) ----
@@ -5176,6 +5257,16 @@ function maInsight(){
     const bt = (typeof bestTrainingTime==='function') ? bestTrainingTime() : null;
     if(bt) ins.push(`🕐 Reparei um padrão nos seus <b>${bt.total} treinos</b>: à <b>${bt.melhor.faixa}</b> você termina se sentindo bem em <b>${bt.melhor.pct}%</b> das vezes, contra ${bt.pior.pct}% à ${bt.pior.faixa}. Se der pra escolher, a ${bt.melhor.faixa} parece ser o seu melhor horário.`);
   }catch(e){}
+  // dia da semana que costuma escapar
+  try{
+    const wa = (typeof weekdayAdherenceInsight==='function') ? weekdayAdherenceInsight() : null;
+    if(wa) ins.push(`📆 Reparei que <b>${wa.pior.dia}</b> é o dia que mais escapa: você treina em <b>${wa.pior.pct}%</b> das vezes, contra ${wa.melhor.pct}% na ${wa.melhor.dia}. Se ${wa.pior.dia} é sempre corrido, talvez valha mover esse treino pra outro dia — melhor ajustar o plano que acumular falta.`);
+  }catch(e){}
+  // grupo que sempre termina pesado
+  try{
+    const hg = (typeof hardGroupInsight==='function') ? hardGroupInsight() : null;
+    if(hg) ins.push(`💪 Seus treinos de <b>${hg.parte}</b> terminam como "cansado" ou "exausto" em <b>${hg.pct}%</b> das vezes. Isso é normal em grupos grandes — só vale garantir um dia leve depois dele, e capricho no sono e na comida nesse dia.`);
+  }catch(e){}
   // quanto descanso ESTE corpo precisa (descoberto, não presumido)
   try{
     const rp = (typeof recoveryPatternInsight==='function') ? recoveryPatternInsight() : null;
@@ -5452,8 +5543,10 @@ function openAssistant(){
   try{ saveData(); }catch(e){}
   const fab=document.getElementById('ma-fab'); if(fab) fab.classList.remove('fab-alert','fab-curio','fab-important','fab-rare','fab-special');
   const b=document.getElementById('fab-bubble'); if(b) b.style.display='none';
-  maThread = [{who:'bot', txt: maOpeningSummary()}];
+  maThread = [];
   renderAssistant();
+  // chega como mensagem de gente: primeiro os pontinhos, depois o texto
+  try{ maReply(maOpeningSummary()); }catch(e){ maThread=[{who:'bot', txt:maOpeningSummary()}]; renderAssistant(); }
 }
 function renderAssistant(){
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -5562,11 +5655,12 @@ function maAskText(){
     else if(key && MA_ANSWERS[key]) answer = MA_ANSWERS[key]();
     else if(_anotacoes.length) answer = _anotacoes.join('<br>') + '<br><br>Quer que eu ajuste alguma coisa por causa disso? É só falar. 😊';
     else {
-      // fallback honesto — assume que não sabe, sem despejar manual de instruções
+      // não sabe responder: registra de verdade pra virar melhoria futura
+      try{ logUnknownQuestion(txt); }catch(e){}
       const alt = [
-        'Essa me pegou de surpresa. 😅<br><br>Ainda não sei responder sobre isso, mas estou aprendendo aos poucos. Se essa função for útil pra você, manda uma sugestão pelo suporte que a gente avalia. 💚',
-        'Essa eu não sei responder ainda. 🤔<br><br>Anotado como sugestão! Enquanto isso, posso te ajudar com treinos, corrida, recuperação, peso e conquistas.',
-        'Boa pergunta — e eu ainda não tenho essa resposta. 😅<br><br>Estou sempre ganhando funções novas. Se isso for importante pro seu treino, avisa o suporte que ajuda a priorizar!'
+        'Essa me pegou de surpresa. 😅<br><br>Ainda não sei responder sobre isso — mas <b>guardei sua pergunta</b> pra equipe avaliar. É assim que eu vou aprendendo. 💚',
+        'Essa eu ainda não sei responder. 🤔<br><br><b>Anotei sua pergunta</b> e ela vai pra lista de melhorias do app. Enquanto isso, posso ajudar com treinos, corrida, recuperação, peso e conquistas.',
+        'Boa pergunta — e eu ainda não tenho essa resposta. 😅<br><br><b>Registrei aqui</b> pra virar novidade numa próxima atualização. Obrigado por perguntar!'
       ];
       answer = alt[Math.floor(Math.random()*alt.length)];
     }
@@ -7071,10 +7165,81 @@ async function saveVideoLink(id, exName){
     try{ localStorage.setItem('metatreino_videos', JSON.stringify(videoLinks)); }catch(e){}
     try{ localStorage.setItem('metatreino_video_credits', JSON.stringify(videoCredits)); }catch(e){}
     renderVideoCount();
+    renderSuggestionCount();
   }catch(e){
     console.log('Erro ao salvar vídeo:', e);
     toast('⚠️ Não foi possível salvar. Confira as regras do Firestore (coleção videosExercicios).');
   }
+}
+// Lista as perguntas que o assistente não soube responder (vira roadmap real)
+async function openSuggestions(){
+  try{
+    $('modal-inner').innerHTML = `<h3>💡 Caixa de sugestões</h3><div style="text-align:center;padding:20px;color:var(--text-dim)">⏳ Carregando...</div>`;
+    $('modal-back').classList.add('on');
+    const snap = await db.collection('perguntasNaoRespondidas').orderBy('em','desc').limit(120).get();
+    const itens = []; snap.forEach(d=>itens.push({id:d.id, ...d.data()}));
+    if(!itens.length){
+      $('modal-inner').innerHTML = `<h3>💡 Caixa de sugestões</h3>
+        <div style="text-align:center;padding:22px 10px;color:var(--text-dim);font-size:13px">Nada por aqui ainda. Quando um aluno mandar uma sugestão ou o assistente não souber responder algo, aparece nesta lista. 📬</div>
+        <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+      return;
+    }
+    const agrupa = arr => {
+      const mapa = {};
+      arr.forEach(i=>{ const k=String(i.texto||'').toLowerCase().trim();
+        (mapa[k]=mapa[k]||{txt:i.texto, n:0, em:i.em, nome:i.nome, ids:[]});
+        mapa[k].n++; mapa[k].ids.push(i.id); if(i.em>mapa[k].em) mapa[k].em=i.em; });
+      return Object.values(mapa).sort((a,b)=> b.n-a.n || b.em-a.em);
+    };
+    const sugestoes = agrupa(itens.filter(i=>i.tipo==='sugestao'));
+    const naoSoube  = agrupa(itens.filter(i=>i.tipo!=='sugestao'));
+    const bloco = (x, cor) => `<div class="card" style="padding:11px 13px;margin-bottom:8px;border-color:${cor}">
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <div style="flex:1;font-size:13.5px;line-height:1.45">${String(x.txt).replace(/</g,'&lt;')}</div>
+          <button class="btn btn-ghost" style="padding:5px 9px;font-size:12px;color:var(--danger);border-color:rgba(244,63,94,.3)" onclick="deleteSuggestion('${x.ids.join(',')}')">🗑️</button>
+        </div>
+        <div style="font-size:11.5px;color:var(--text-mute);margin-top:5px">
+          ${x.n>1?`<b style="color:var(--accent-2)">${x.n}× </b>· `:''}${x.nome?String(x.nome).split(' ')[0]+' · ':''}${new Date(x.em).toLocaleDateString('pt-BR')}
+        </div></div>`;
+    $('modal-inner').innerHTML = `<h3>💡 Caixa de sugestões</h3>
+      <div style="max-height:56vh;overflow:auto;margin-top:8px">
+        ${sugestoes.length?`<div class="section-lbl" style="margin:4px 0 8px">✍️ ESCRITAS PELOS ALUNOS (${sugestoes.length})</div>
+          ${sugestoes.map(x=>bloco(x,'rgba(16,185,129,.4)')).join('')}`:''}
+        ${naoSoube.length?`<div class="section-lbl" style="margin:14px 0 8px">🤔 O ASSISTENTE NÃO SOUBE RESPONDER (${naoSoube.length})</div>
+          <div style="font-size:11.5px;color:var(--text-mute);margin-bottom:8px">As mais repetidas vêm primeiro — é o melhor roadmap que existe.</div>
+          ${naoSoube.map(x=>bloco(x,'var(--border)')).join('')}`:''}
+      </div>
+      <button class="btn btn-ghost btn-block" style="margin-top:10px;color:var(--danger);border-color:rgba(244,63,94,.3)" onclick="clearAllSuggestions()">🗑️ Limpar tudo</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+  }catch(e){
+    console.log('Erro ao carregar sugestões:', e);
+    $('modal-inner').innerHTML = `<h3>💡 Caixa de sugestões</h3><p style="color:var(--text-dim);font-size:13px">⚠️ Não foi possível carregar. Confira as permissões do Firestore para a coleção <b>perguntasNaoRespondidas</b>.</p><button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  }
+}
+async function deleteSuggestion(ids){
+  try{
+    const lista = String(ids).split(',').filter(Boolean);
+    await Promise.all(lista.map(id=>db.collection('perguntasNaoRespondidas').doc(id).delete()));
+    toast('🗑️ Removido');
+    openSuggestions(); renderSuggestionCount();
+  }catch(e){ console.log('Erro ao remover:', e); toast('⚠️ Não foi possível remover.'); }
+}
+function clearAllSuggestions(){
+  appConfirm('Todas as sugestões e perguntas registradas serão apagadas. Isso não pode ser desfeito.', async ()=>{
+    try{
+      const snap = await db.collection('perguntasNaoRespondidas').limit(400).get();
+      const docs = []; snap.forEach(d=>docs.push(d.ref));
+      await Promise.all(docs.map(r=>r.delete()));
+      toast(`🗑️ ${docs.length} ${docs.length===1?'item removido':'itens removidos'}`);
+      openSuggestions(); renderSuggestionCount();
+    }catch(e){ console.log('Erro ao limpar:', e); toast('⚠️ Não foi possível limpar.'); }
+  }, {title:'Limpar a caixa toda?', emo:'🗑️', okLabel:'Sim, limpar', danger:true});
+}
+async function renderSuggestionCount(){
+  try{
+    const snap = await db.collection('perguntasNaoRespondidas').limit(100).get();
+    const el = $('adm-sug-count'); if(el) el.textContent = snap.size ? snap.size+(snap.size>=100?'+':'')+' perguntas' : '';
+  }catch(e){}
 }
 function renderVideoCount(){
   const el = $('adm-video-count');
@@ -7780,7 +7945,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,clearVideoLink,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,clearVideoLink,openSuggestions,deleteSuggestion,clearAllSuggestions,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
