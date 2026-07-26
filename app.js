@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.62 =====
-const APP_VERSION = 'v11.62';
+// ===== MetaTreino v11.63 =====
+const APP_VERSION = 'v11.63';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -3755,10 +3755,42 @@ const MODAL_CONTENT = {
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
   'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno (mesmo da conta Google)</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="7">🎁 Teste 7 dias</div><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
   'broadcast':`<h3>📢 Mensagem em massa (WhatsApp)</h3><p style="color:var(--text-dim);font-size:13px">Gera um link do WhatsApp Web para cada aluno com o texto abaixo. Os alunos precisam ter WhatsApp cadastrado.</p><div class="field"><label>Mensagem</label><textarea class="input" id="bc-msg" rows="4" style="resize:vertical">Olá, treinador aqui do MetaTreino! Passando pra lembrar...</textarea></div><button class="btn btn-primary btn-block" onclick="doBroadcast()">Abrir links WhatsApp</button>`,
-  'restart':()=>`<h3>🔄 Começar do zero</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Apaga todo o seu progresso — treinos, séries registradas, recordes, histórico de peso e troféus — e refaz o questionário inicial.<br><br>Sua <b>conta e seu acesso continuam ativos</b> (diferente de excluir a conta).<br><br>Essa ação <b>não pode ser desfeita</b>.</p>
+  'restart':()=>`<h3>🔄 Começar do zero</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Apaga todo o seu progresso — treinos, séries registradas, recordes, histórico de peso e troféus — e refaz o questionário inicial.<br><br>Sua <b>conta e seu acesso continuam ativos</b> (diferente de excluir a conta).<br><br>Essa ação <b>não pode ser desfeita</b> — mas dá pra guardar tudo antes num backup. 💾</p>
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="exportMyData()">💾 Fazer backup antes</button>
     <button class="btn btn-outline btn-block" style="margin-top:16px;border-color:var(--accent);color:var(--accent-2)" onclick="doRestart()">🔄 Sim, começar do zero</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`,
-  'delete-account':()=>{ const email=(state.user&&state.user.email)||''; return `<h3>🗑️ Excluir minha conta</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Isso apaga <b>permanentemente</b> todo o seu progresso: treinos, PRs, histórico de peso e troféus.<br><br>Seu acesso ao app continua liberado — você pode entrar de novo com a mesma conta Google (<b>${email}</b>) e começar do zero na hora.<br><br>Essa ação <b>não pode ser desfeita</b>.</p><button class="btn btn-outline btn-block" style="margin-top:16px;border-color:var(--danger);color:var(--danger)" onclick="doDeleteAccount()">Sim, excluir minha conta</button><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`; },
+  'delete-account':()=>{
+    const email=(state.user&&state.user.email)||'';
+    const lh=((state.modules.lift||{}).history)||[], rh=((state.modules.run||{}).history)||[];
+    const treinos = lh.length + rh.length;
+    const trof = (state.trophies||[]).length;
+    const km = Math.round(rh.reduce((a,x)=>a+(x.distance||0),0));
+    const t0 = Math.min(...[lh[0]&&lh[0].at, rh[0]&&rh[0].at].filter(Boolean));
+    const dias = isFinite(t0) ? Math.max(1, Math.floor((Date.now()-t0)/86400000)) : 0;
+    const nome = (typeof firstName==='function' ? firstName() : '') || '';
+    // mostra o que a pessoa construiu — não pra chantagear, mas pra ela decidir sabendo
+    const conquistou = [];
+    if(treinos) conquistou.push(`<b>${treinos}</b> ${treinos===1?'treino registrado':'treinos registrados'}`);
+    if(km) conquistou.push(`<b>${km} km</b> percorridos`);
+    if(trof) conquistou.push(`<b>${trof}</b> ${trof===1?'conquista':'conquistas'}`);
+    if(dias>1) conquistou.push(`<b>${dias} dias</b> de jornada`);
+    return `<div style="text-align:center;padding:2px 0">
+        <div style="font-size:44px;line-height:1">😢</div>
+        <h3 style="margin:10px 0 4px">${nome?`Vai nos deixar, ${nome}?`:'Vai nos deixar?'}</h3>
+        <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5;margin:0 auto;max-width:330px">Se for pra descansar, existe o <b>Modo Férias</b> — ele pausa as cobranças e guarda tudo do jeito que está. 🌴</p>
+      </div>
+      ${conquistou.length?`<div class="card" style="margin-top:16px;padding:13px 15px;border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06)">
+        <div style="font-size:11.5px;letter-spacing:.6px;color:var(--accent-2);font-weight:800;margin-bottom:7px">O QUE VAI EMBORA COM VOCÊ</div>
+        <div style="font-size:13px;line-height:1.7;color:var(--text-dim)">${conquistou.join(' · ')}</div>
+      </div>`:''}
+      <div style="margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid rgba(244,63,94,.3);background:rgba(244,63,94,.06);font-size:12.5px;line-height:1.55;color:var(--text-dim)">
+        ⚠️ <b>Isso não pode ser desfeito.</b> Seus treinos, séries, recordes, anotações e conquistas serão apagados da nuvem para sempre — a não ser que você <b>faça um backup agora</b>.
+        <br><br>Seu acesso continua liberado: dá pra entrar de novo com <b>${email}</b> e começar do zero — mas do zero mesmo, sem o histórico.
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="exportMyData()">💾 Fazer backup antes de sair</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">💚 Deixa pra lá, vou ficar</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:14px;color:var(--danger);border-color:rgba(244,63,94,.35)" onclick="doDeleteAccount()">Excluir minha conta definitivamente</button>`;
+  },
 };
 function openModal(k){
   const c = MODAL_CONTENT[k];
@@ -4918,7 +4950,13 @@ function openAssistant(){
 }
 function renderAssistant(){
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const bubbles = maThread.map(m=>m.who==='bot'
+  const bubbles = maThread.map(m=> m.typing
+    ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:13px 16px;margin:6px 0;max-width:88%;display:inline-flex;gap:5px;align-items:center;width:auto">
+        <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out infinite"></span>
+        <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .18s infinite"></span>
+        <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .36s infinite"></span>
+      </div>`
+    : m.who==='bot'
     ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:11px 14px;margin:6px 0;font-size:13.5px;line-height:1.5;max-width:88%">${m.txt}</div>`
     : `<div style="background:var(--surface-2);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`
   ).join('');
@@ -4943,23 +4981,45 @@ function renderAssistant(){
 }
 // Ao fechar, se algum comando alterou os planos, redesenha a tela atual pra refletir na hora
 function closeAssistant(){
+  try{ clearTimeout(maTypingT); maThread = maThread.filter(m=>!m.typing); }catch(e){}
   closeModal();
   if(maRefreshUI){ maRefreshUI = false; goTab(state.ui.tab||'home'); }
+}
+// Responde como uma pessoa: mostra "digitando" e leva um tempinho — mais em respostas longas
+let maTypingT = null;
+function maReply(txt){
+  try{
+    if(!document.getElementById('ma-type-style')){
+      const st=document.createElement('style'); st.id='ma-type-style';
+      st.textContent='@keyframes matype{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-4px);opacity:1}}';
+      document.head.appendChild(st);
+    }
+  }catch(e){}
+  clearTimeout(maTypingT);
+  maThread = maThread.filter(m=>!m.typing);       // nunca dois "digitando" ao mesmo tempo
+  maThread.push({who:'bot', typing:true});
+  renderAssistant();
+  const puro = String(txt).replace(/<[^>]+>/g,'');
+  const espera = Math.max(520, Math.min(2000, 420 + puro.length*6)); // resposta longa = pensa um pouco mais
+  maTypingT = setTimeout(()=>{
+    maThread = maThread.filter(m=>!m.typing);
+    maThread.push({who:'bot', txt});
+    renderAssistant();
+  }, espera);
 }
 function maAsk(key){
   if(key==='_normal'){
     maThread.push({who:'user', txt:'Voltar treinos ao normal'});
     const r = maBackToNormal();
     maRefreshUI = true;
-    maThread.push({who:'bot', txt:r.msg});
-    renderAssistant();
+    maReply(r.msg);
     return;
   }
   const sug = MA_SUGGESTIONS.find(s=>s.key===key);
   maThread.push({who:'user', txt: sug?sug.lbl.replace(/^[^\s]+\s/,''):key});
   const fn = MA_SOCIAL[key] || MA_ANSWERS[key];
-  maThread.push({who:'bot', txt: fn?fn():'Ainda não sei responder isso, mas estou aprendendo! 😊'});
   renderAssistant();
+  maReply(fn?fn():'Ainda não sei responder isso, mas estou aprendendo! 😊');
 }
 function maAskText(){
   const inp=$('ma-input'); if(!inp) return;
@@ -4976,8 +5036,7 @@ function maAskText(){
     else if(key && MA_ANSWERS[key]) answer = MA_ANSWERS[key]();
     else answer = 'Hmm, não entendi bem. 🤔 Você pode me pedir pra registrar coisas ("corri 5km em 30 min", "estou pesando 90kg", "estou com dor no joelho") ou perguntar sobre sua evolução, corrida, troféus, meta, recordes... É só falar!';
   }
-  maThread.push({who:'bot', txt:answer});
-  renderAssistant();
+  maReply(answer);
 }
 // ========== FIM META ASSISTENTE ==========
 
