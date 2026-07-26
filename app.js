@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.60 =====
-const APP_VERSION = 'v11.60';
+// ===== MetaTreino v11.61 =====
+const APP_VERSION = 'v11.61';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -638,7 +638,8 @@ function buildingSteps(m, setup, prev){
   steps.push({emo:'✅', pri:1, txt:m==='lift' ? `<b>Seu plano de musculação está pronto!</b>` : `<b>Seu plano de corrida está pronto!</b>`});
   return steps;
 }
-function runBuildingScreen(m, steps, done){
+function runBuildingScreen(m, steps, done, opts){
+  opts = opts || {};
   try{
     if(!document.getElementById('bld-style')){
       const st = document.createElement('style'); st.id='bld-style';
@@ -664,21 +665,21 @@ function runBuildingScreen(m, steps, done){
     'display:flex;align-items:center;justify-content:center;padding:26px;box-sizing:border-box;'+
     'background:#070d16;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);'+
     'opacity:0;transition:opacity .3s ease');
-  const titulo = m==='lift' ? '🧠 Montando seu treino' : '🧠 Montando seu plano de corrida';
+  const titulo = opts.titulo || (m==='lift' ? '🧠 Montando seu treino' : '🧠 Montando seu plano de corrida');
   ov.innerHTML =
     '<div style="width:100%;max-width:430px;text-align:center">'+
       '<div style="width:70px;height:70px;margin:0 auto 22px;border-radius:50%;border:3px solid rgba(16,185,129,.16);border-top-color:#10b981;animation:bldspin .9s linear infinite;position:relative">'+
         '<div style="position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:50%;border:2px solid rgba(16,185,129,.12);border-bottom-color:rgba(16,185,129,.55);animation:bldspin 1.5s linear infinite reverse"></div>'+
       '</div>'+
       '<div style="font-size:22px;font-weight:800;letter-spacing:-.3px;color:#fff;margin-bottom:7px">'+titulo+'</div>'+
-      '<div style="font-size:12.5px;color:#8fa0b5;line-height:1.5;margin:0 auto 28px;max-width:330px">Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.</div>'+
+      '<div style="font-size:12.5px;color:#8fa0b5;line-height:1.5;margin:0 auto 28px;max-width:330px">'+(opts.sub||'Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.')+'</div>'+
       '<div id="bld-stage" style="min-height:140px;display:flex;align-items:center;justify-content:center"></div>'+
       '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:26px"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);transition:width 1.5s linear"></div></div>'+
     '</div>';
   requestAnimationFrame(()=>{ ov.style.opacity='1'; });
   const stage = document.getElementById('bld-stage');
   const bar = document.getElementById('bld-bar-i');
-  const passo = 1550;   // tempo total de cada etapa
+  const passo = opts.passo || 1550;   // tempo total de cada etapa
   const saida = 260;    // a saída começa só no finalzinho → sobra ~1,3s de leitura estável
   let i = 0;
   const tick = ()=>{
@@ -701,7 +702,10 @@ function runBuildingScreen(m, steps, done){
       '</div>';
     stage.innerHTML = '';
     stage.appendChild(el);
-    if(bar) bar.style.width = Math.round(((i+1)/steps.length)*100) + '%';
+    if(bar){
+      if(ultimo){ bar.style.transition='width .45s cubic-bezier(.2,.9,.25,1)'; bar.style.width='100%'; }
+      else bar.style.width = Math.round(((i+1)/steps.length)*100) + '%';
+    }
     const atual = i;
     i++;
     if(atual < steps.length-1){
@@ -5305,12 +5309,31 @@ function regenRunPlan(){
 function regenAllPlans(){ regenLiftExercises(); regenRunPlan(); }
 function savePain(){
   const sel = [...document.querySelectorAll('#pain-areas .opt-multi.on')].map(o=>o.dataset.val);
+  const antes = (state.user.pain||[]).slice();
   state.user.pain = sel;
   regenAllPlans();
   saveData();
   closeModal();
-  toast(sel.length ? '🩹 Treinos adaptados pra proteger: '+sel.join(', ') : '✅ Sem dor registrada');
-  goTab(state.ui.tab||'home');
+  const fim = ()=>{ toast(sel.length ? '🩹 Treinos adaptados pra proteger: '+sel.join(', ') : '✅ Sem dor registrada'); goTab(state.ui.tab||'home'); };
+  // o plano é REALMENTE refeito aqui — vale mostrar o que mudou
+  const mudou = antes.join('|') !== sel.join('|');
+  if(!mudou){ fim(); return; }
+  const steps = sel.length ? [
+    {emo:'🩹', pri:1, txt:`Dor registrada: <b>${sel.join(', ')}</b>`},
+    {emo:'🔁', pri:1, txt:`Tirando o que sobrecarrega e completando com <b>grupos seguros</b>`},
+    {emo:'✅', pri:1, txt:`<b>Treinos adaptados!</b> Respeite seus limites hoje.`}
+  ] : [
+    {emo:'🎉', pri:1, txt:`Dor removida — <b>tudo liberado de novo</b>`},
+    {emo:'🔁', pri:1, txt:`Devolvendo os exercícios que estavam pausados`},
+    {emo:'✅', pri:1, txt:`<b>Treinos de volta ao normal!</b>`}
+  ];
+  try{
+    runBuildingScreen('lift', steps, fim, {
+      titulo: sel.length ? '🩹 Adaptando seus treinos' : '🎉 Liberando seus treinos',
+      sub: sel.length ? 'Refazendo seu plano pra proteger a região dolorida sem você perder o dia.' : 'Recolocando os exercícios que estavam pausados pela dor.',
+      passo: 1400
+    });
+  }catch(e){ fim(); }
 }
 function clearPain(){
   state.user.pain = [];
@@ -5477,10 +5500,19 @@ function quickChangeEquip(equip){
   let mudou = 0, total = 0;
   (mod.plan.workouts||[]).forEach(w=>(w.exercises||[]).forEach(e=>{ total++; if(!antes.has(e.id)) mudou++; }));
   const lbl = {academia:'Academia completa', halteres:'Só halteres', casa:'Peso do corpo', basico:'Academia básica'}[equip]||equip;
-  toast(mudou
-    ? `🏋️ ${lbl}: ${mudou} de ${total} exercícios foram trocados`
-    : `🏋️ ${lbl}: seus exercícios já serviam pro novo equipamento`);
-  goTab('sessions'); // leva pra onde dá pra VER a mudança
+  const fim = ()=>{
+    toast(mudou
+      ? `🏋️ ${lbl}: ${mudou} de ${total} exercícios foram trocados`
+      : `🏋️ ${lbl}: seus exercícios já serviam pro novo equipamento`);
+    goTab('sessions'); // leva pra onde dá pra VER a mudança
+  };
+  try{
+    runBuildingScreen('lift', [
+      {emo:'🏋️', pri:1, txt:`Novo equipamento: <b>${lbl}</b>`},
+      {emo:'🔁', pri:1, txt:`Refazendo seus treinos com os <b>${countExercisesFor(equip)} exercícios</b> disponíveis`},
+      {emo:'✅', pri:1, txt: mudou ? `<b>${mudou} de ${total} exercícios</b> foram trocados` : `<b>Pronto!</b> Seus exercícios já serviam pro novo equipamento`}
+    ], fim, { titulo:'🏋️ Atualizando seus treinos', sub:'Trocando os exercícios pro novo equipamento — objetivo, dias e nível continuam os mesmos.', passo:1400 });
+  }catch(e){ fim(); }
 }
 
 // ---------- FOTO DE PERFIL ----------
