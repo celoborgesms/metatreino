@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.78 =====
-const APP_VERSION = 'v11.78';
+// ===== MetaTreino v11.79 =====
+const APP_VERSION = 'v11.79';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -413,7 +413,8 @@ async function afterGoogleSignIn(user){
   state.user.isAdmin = isAdmin;
   state.user.email = email;
   migrateExerciseIds(); // renomeações: move histórico/PRs/pins pros ids novos
-  try{ cleanupPastRace(); }catch(e){} // prova que já passou some sozinha do card e do campo
+  try{ cleanupPastRace(); }catch(e){}
+  try{ if(state.user && state.user.isAdmin) setTimeout(checkNewFeedback, 2500); }catch(e){} // prova que já passou some sozinha do card e do campo
   loadSpecialAward(); // depois de carregar os dados: reconcilia/mostra a conquista especial
   setTimeout(function(){ if(typeof checkTimeEasterEggs==="function") checkTimeEasterEggs(); }, 2500);
   bootAfterAuth();
@@ -3112,6 +3113,7 @@ function cancelRunPlan(){
 function renderProfile(){
   const u = state.user, p = u.profile || {};
   const vEl = $('pf-version'); if(vEl) vEl.textContent = APP_VERSION;
+  try{ if(state.user && state.user.isAdmin) checkNewFeedback(); }catch(e){}
   const dEl = $('deco-row-label'); if(dEl) dEl.textContent = decoEnabled() ? 'Fundo decorativo' : 'Fundo decorativo (desligado)';
   const vEl2 = $('vac-row-label'); if(vEl2) vEl2.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias';
   renderAvatar('pf-avatar');
@@ -4722,19 +4724,55 @@ function recoveryPatternInsight(){
   }catch(e){ return null; }
 }
 // Registra o que o assistente não soube responder — vira lista de sugestões pro admin
+// Vale a pena registrar? (evita encher o banco com "oi", "kkk", "teste")
+function pareceMensagemUtil(t){
+  const txt = String(t||'').trim();
+  if(txt.length < 12) return false;
+  const palavras = txt.split(/\s+/).filter(Boolean);
+  if(palavras.length < 3) return false;
+  if(/^(oi|ol[áa]|opa|eae|e a[íi]|bom dia|boa tarde|boa noite|tchau|valeu|obrigad|kk+|rs+|haha|teste|test|abc|asd)\b/i.test(txt)) return false;
+  if(/^[^a-zà-ú]+$/i.test(txt)) return false;                       // só números/símbolos
+  const pergunta = /\?\s*$/.test(txt) ||
+    /^(como|qual|quais|por ?que|porque|onde|quando|posso|consigo|devo|d[áa] pra|tem como|[ée] poss[íi]vel|quanto|quantos|quantas|o que|oque|pra que|serve)/i.test(txt);
+  const sugestao = /(gostaria|seria (legal|bom|[óo]timo)|sugiro|sugest[ãa]o|podia|deveria|falta(r)? |adicionar|colocar)/i.test(txt);
+  const bug = /(bug|erro|travou|travando|n[ãa]o funciona|n[ãa]o abre|n[ãa]o salva|sumiu|quebrou|problema)/i.test(txt);
+  return pergunta || sugestao || bug;
+}
+function classificaMensagem(t){
+  if(/(bug|erro|travou|travando|n[ãa]o funciona|n[ãa]o abre|n[ãa]o salva|sumiu|quebrou|falha)/i.test(t)) return 'bug';
+  if(/(gostaria|seria (legal|bom|[óo]timo)|sugiro|sugest[ãa]o|podia|deveria|adicionar|colocar)/i.test(t)) return 'sugestao';
+  return 'auto';
+}
+// Grava agrupando por texto: conta quantas vezes apareceu e em quais versões
 async function logUnknownQuestion(txt, tipo){
   try{
     if(!db) return false;
     const t = String(txt||'').trim().slice(0,600);
-    if(t.length < 4) return false;
-    await db.collection('perguntasNaoRespondidas').add({
-      texto: t,
-      tipo: tipo || 'auto',                       // 'auto' = não soube responder · 'sugestao' = escrita pelo aluno
-      email: (state.user && state.user.email) || 'anonimo',
-      nome: (state.user && state.user.name) || '',
+    if(!t) return false;
+    if(!tipo && !pareceMensagemUtil(t)) return false;         // filtro só vale pra captura automática
+    const tp = tipo || classificaMensagem(t);
+    const chave = t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,'-').slice(0,90) || ('msg-'+Date.now());
+    const inc = (firebase.firestore.FieldValue && firebase.firestore.FieldValue.increment) ? firebase.firestore.FieldValue.increment(1) : undefined;
+    const arrUnion = (firebase.firestore.FieldValue && firebase.firestore.FieldValue.arrayUnion) ? firebase.firestore.FieldValue.arrayUnion : null;
+    const dados = {
+      texto: t, tipo: tp,
       modulo: state.active || '',
-      em: Date.now()
-    });
+      ultimoEmail: (state.user && state.user.email) || 'anonimo',
+      ultimoNome: (state.user && state.user.name) || '',
+      ultimaVersao: APP_VERSION,
+      ultimo: Date.now(),
+      visto: false
+    };
+    if(inc) dados.n = inc; else dados.n = 1;
+    if(arrUnion) dados.versoes = arrUnion(APP_VERSION);
+    const ref = db.collection('perguntasNaoRespondidas').doc(chave);
+    await ref.set(dados, {merge:true});
+    try{
+      const atual = await ref.get();
+      if(atual.exists && !atual.data().primeiro) await ref.set({ primeiro: Date.now() }, {merge:true});
+      else if(!atual.exists) await ref.set({ primeiro: Date.now() }, {merge:true});
+    }catch(e){}
     return true;
   }catch(e){ console.log('Não foi possível registrar:', e); return false; }
 }
@@ -5658,7 +5696,7 @@ function maAskText(){
       // não sabe responder: registra de verdade pra virar melhoria futura
       try{ logUnknownQuestion(txt); }catch(e){}
       const alt = [
-        'Essa me pegou de surpresa. 😅<br><br>Ainda não sei responder sobre isso — mas <b>guardei sua pergunta</b> pra equipe avaliar. É assim que eu vou aprendendo. 💚',
+        'Essa me pegou de surpresa. 😅<br><br>Ainda não sei responder sobre isso — mas <b>guardei sua pergunta</b>, e ela pode virar melhoria numa próxima atualização. 💚',
         'Essa eu ainda não sei responder. 🤔<br><br><b>Anotei sua pergunta</b> e ela vai pra lista de melhorias do app. Enquanto isso, posso ajudar com treinos, corrida, recuperação, peso e conquistas.',
         'Boa pergunta — e eu ainda não tenho essa resposta. 😅<br><br><b>Registrei aqui</b> pra virar novidade numa próxima atualização. Obrigado por perguntar!'
       ];
@@ -7174,58 +7212,63 @@ async function saveVideoLink(id, exName){
 // Lista as perguntas que o assistente não soube responder (vira roadmap real)
 async function openSuggestions(){
   try{
-    $('modal-inner').innerHTML = `<h3>💡 Caixa de sugestões</h3><div style="text-align:center;padding:20px;color:var(--text-dim)">⏳ Carregando...</div>`;
+    $('modal-inner').innerHTML = `<h3>💬 Feedback dos alunos</h3><div style="text-align:center;padding:20px;color:var(--text-dim)">⏳ Carregando...</div>`;
     $('modal-back').classList.add('on');
-    const snap = await db.collection('perguntasNaoRespondidas').orderBy('em','desc').limit(120).get();
+    const snap = await db.collection('perguntasNaoRespondidas').orderBy('ultimo','desc').limit(150).get();
     const itens = []; snap.forEach(d=>itens.push({id:d.id, ...d.data()}));
+    // marca tudo como visto (some o aviso de novidade)
+    try{ localStorage.setItem('mt_feedback_seen', String(Date.now())); }catch(e){}
+    const badge = $('adm-feedback-badge'); if(badge) badge.style.display='none';
+    const badge2 = $('pf-adm-badge'); if(badge2) badge2.style.display='none';
     if(!itens.length){
-      $('modal-inner').innerHTML = `<h3>💡 Caixa de sugestões</h3>
-        <div style="text-align:center;padding:22px 10px;color:var(--text-dim);font-size:13px">Nada por aqui ainda. Quando um aluno mandar uma sugestão ou o assistente não souber responder algo, aparece nesta lista. 📬</div>
+      $('modal-inner').innerHTML = `<h3>💬 Feedback dos alunos</h3>
+        <div style="text-align:center;padding:22px 10px;color:var(--text-dim);font-size:13px">Nada por aqui ainda. Quando um aluno mandar uma sugestão, relatar um problema, ou o assistente não souber responder algo, aparece nesta lista. 📬</div>
         <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
       return;
     }
-    const agrupa = arr => {
-      const mapa = {};
-      arr.forEach(i=>{ const k=String(i.texto||'').toLowerCase().trim();
-        (mapa[k]=mapa[k]||{txt:i.texto, n:0, em:i.em, nome:i.nome, ids:[]});
-        mapa[k].n++; mapa[k].ids.push(i.id); if(i.em>mapa[k].em) mapa[k].em=i.em; });
-      return Object.values(mapa).sort((a,b)=> b.n-a.n || b.em-a.em);
-    };
-    const sugestoes = agrupa(itens.filter(i=>i.tipo==='sugestao'));
-    const naoSoube  = agrupa(itens.filter(i=>i.tipo!=='sugestao'));
-    const bloco = (x, cor) => `<div class="card" style="padding:11px 13px;margin-bottom:8px;border-color:${cor}">
+    const ord = a => a.sort((x,y)=> (y.n||1)-(x.n||1) || (y.ultimo||0)-(x.ultimo||0));
+    const sug = ord(itens.filter(i=>i.tipo==='sugestao'));
+    const bug = ord(itens.filter(i=>i.tipo==='bug'));
+    const perg = ord(itens.filter(i=>i.tipo!=='sugestao' && i.tipo!=='bug'));
+    const bloco = (x, cor) => {
+      const vs = Array.isArray(x.versoes) ? x.versoes.slice(-3).join(', ') : (x.ultimaVersao||'');
+      const voltou = Array.isArray(x.versoes) && x.versoes.length>1;
+      return `<div class="card" style="padding:11px 13px;margin-bottom:8px;border-color:${cor}">
         <div style="display:flex;gap:8px;align-items:flex-start">
-          <div style="flex:1;font-size:13.5px;line-height:1.45">${String(x.txt).replace(/</g,'&lt;')}</div>
-          <button class="btn btn-ghost" style="padding:5px 9px;font-size:12px;color:var(--danger);border-color:rgba(244,63,94,.3)" onclick="deleteSuggestion('${x.ids.join(',')}')">🗑️</button>
+          <div style="flex:1;font-size:13.5px;line-height:1.45">${String(x.texto||'').replace(/</g,'&lt;')}</div>
+          <button class="btn btn-ghost" style="padding:5px 9px;font-size:12px;color:var(--danger);border-color:rgba(244,63,94,.3)" onclick="deleteSuggestion('${x.id}')">🗑️</button>
         </div>
-        <div style="font-size:11.5px;color:var(--text-mute);margin-top:5px">
-          ${x.n>1?`<b style="color:var(--accent-2)">${x.n}× </b>· `:''}${x.nome?String(x.nome).split(' ')[0]+' · ':''}${new Date(x.em).toLocaleDateString('pt-BR')}
+        <div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;line-height:1.6">
+          ${(x.n||1)>1?`<b style="color:var(--accent-2)">${x.n}×</b> · `:''}${x.ultimoNome?String(x.ultimoNome).split(' ')[0]+' · ':''}${x.modulo==='run'?'🏃':'🏋️'} ·
+          ${x.ultimo?new Date(x.ultimo).toLocaleDateString('pt-BR'):''}${x.primeiro && x.primeiro!==x.ultimo?` (desde ${new Date(x.primeiro).toLocaleDateString('pt-BR')})`:''}
+          ${vs?`<br><span style="opacity:.85">${voltou?'⚠️ apareceu em ':'versão '}${vs}</span>`:''}
         </div></div>`;
-    $('modal-inner').innerHTML = `<h3>💡 Caixa de sugestões</h3>
-      <div style="max-height:56vh;overflow:auto;margin-top:8px">
-        ${sugestoes.length?`<div class="section-lbl" style="margin:4px 0 8px">✍️ ESCRITAS PELOS ALUNOS (${sugestoes.length})</div>
-          ${sugestoes.map(x=>bloco(x,'rgba(16,185,129,.4)')).join('')}`:''}
-        ${naoSoube.length?`<div class="section-lbl" style="margin:14px 0 8px">🤔 O ASSISTENTE NÃO SOUBE RESPONDER (${naoSoube.length})</div>
-          <div style="font-size:11.5px;color:var(--text-mute);margin-bottom:8px">As mais repetidas vêm primeiro — é o melhor roadmap que existe.</div>
-          ${naoSoube.map(x=>bloco(x,'var(--border)')).join('')}`:''}
+    };
+    const secao = (titulo, arr, cor) => arr.length ? `<div class="section-lbl" style="margin:14px 0 8px">${titulo} (${arr.length})</div>${arr.map(x=>bloco(x,cor)).join('')}` : '';
+    $('modal-inner').innerHTML = `<h3>💬 Feedback dos alunos</h3>
+      <div style="max-height:56vh;overflow:auto;margin-top:4px">
+        ${secao('💡 SUGESTÕES', sug, 'rgba(16,185,129,.4)')}
+        ${secao('🐞 PROBLEMAS RELATADOS', bug, 'rgba(244,63,94,.4)')}
+        ${perg.length?`<div class="section-lbl" style="margin:14px 0 6px">❓ PERGUNTAS SEM RESPOSTA (${perg.length})</div>
+          <div style="font-size:11.5px;color:var(--text-mute);margin-bottom:8px">As mais repetidas primeiro — é o melhor roadmap que existe.</div>
+          ${perg.map(x=>bloco(x,'var(--border)')).join('')}`:''}
       </div>
       <button class="btn btn-ghost btn-block" style="margin-top:10px;color:var(--danger);border-color:rgba(244,63,94,.3)" onclick="clearAllSuggestions()">🗑️ Limpar tudo</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   }catch(e){
-    console.log('Erro ao carregar sugestões:', e);
-    $('modal-inner').innerHTML = `<h3>💡 Caixa de sugestões</h3><p style="color:var(--text-dim);font-size:13px">⚠️ Não foi possível carregar. Confira as permissões do Firestore para a coleção <b>perguntasNaoRespondidas</b>.</p><button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+    console.log('Erro ao carregar feedback:', e);
+    $('modal-inner').innerHTML = `<h3>💬 Feedback dos alunos</h3><p style="color:var(--text-dim);font-size:13px">⚠️ Não foi possível carregar. Confira as permissões do Firestore para a coleção <b>perguntasNaoRespondidas</b>.</p><button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
   }
 }
-async function deleteSuggestion(ids){
+async function deleteSuggestion(id){
   try{
-    const lista = String(ids).split(',').filter(Boolean);
-    await Promise.all(lista.map(id=>db.collection('perguntasNaoRespondidas').doc(id).delete()));
+    await db.collection('perguntasNaoRespondidas').doc(id).delete();
     toast('🗑️ Removido');
     openSuggestions(); renderSuggestionCount();
   }catch(e){ console.log('Erro ao remover:', e); toast('⚠️ Não foi possível remover.'); }
 }
 function clearAllSuggestions(){
-  appConfirm('Todas as sugestões e perguntas registradas serão apagadas. Isso não pode ser desfeito.', async ()=>{
+  appConfirm('Todo o feedback registrado será apagado: sugestões, problemas e perguntas. Isso não pode ser desfeito.', async ()=>{
     try{
       const snap = await db.collection('perguntasNaoRespondidas').limit(400).get();
       const docs = []; snap.forEach(d=>docs.push(d.ref));
@@ -7233,7 +7276,23 @@ function clearAllSuggestions(){
       toast(`🗑️ ${docs.length} ${docs.length===1?'item removido':'itens removidos'}`);
       openSuggestions(); renderSuggestionCount();
     }catch(e){ console.log('Erro ao limpar:', e); toast('⚠️ Não foi possível limpar.'); }
-  }, {title:'Limpar a caixa toda?', emo:'🗑️', okLabel:'Sim, limpar', danger:true});
+  }, {title:'Limpar todo o feedback?', emo:'🗑️', okLabel:'Sim, limpar', danger:true});
+}
+// Aviso de novidade: só pro admin, sem precisar abrir o painel toda hora
+async function checkNewFeedback(){
+  try{
+    if(!db || !state.user || !state.user.isAdmin) return;
+    let visto = 0; try{ visto = parseInt(localStorage.getItem('mt_feedback_seen')||'0') || 0; }catch(e){}
+    const snap = await db.collection('perguntasNaoRespondidas').orderBy('ultimo','desc').limit(30).get();
+    let novos = 0; snap.forEach(d=>{ const x=d.data(); if((x.ultimo||0) > visto) novos++; });
+    const mostrar = (el, txt)=>{ if(!el) return; el.textContent = txt; el.style.display = novos ? 'inline-block' : 'none'; };
+    mostrar($('adm-feedback-badge'), novos>9?'9+':String(novos));
+    mostrar($('pf-adm-badge'), novos>9?'9+':String(novos));
+    if(novos && !checkNewFeedback._avisou){
+      checkNewFeedback._avisou = true;
+      setTimeout(()=>toast(`💬 ${novos} ${novos===1?'nova mensagem':'novas mensagens'} de aluno no painel`), 2200);
+    }
+  }catch(e){}
 }
 async function renderSuggestionCount(){
   try{
@@ -7945,7 +8004,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,clearVideoLink,openSuggestions,deleteSuggestion,clearAllSuggestions,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,clearVideoLink,openSuggestions,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
