@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.68 =====
-const APP_VERSION = 'v11.68';
+// ===== MetaTreino v11.69 =====
+const APP_VERSION = 'v11.69';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -413,6 +413,7 @@ async function afterGoogleSignIn(user){
   state.user.isAdmin = isAdmin;
   state.user.email = email;
   migrateExerciseIds(); // renomeações: move histórico/PRs/pins pros ids novos
+  try{ cleanupPastRace(); }catch(e){} // prova que já passou some sozinha do card e do campo
   loadSpecialAward(); // depois de carregar os dados: reconcilia/mostra a conquista especial
   setTimeout(function(){ if(typeof checkTimeEasterEggs==="function") checkTimeEasterEggs(); }, 2500);
   bootAfterAuth();
@@ -561,6 +562,9 @@ function openSetupScreen(m){
   }catch(e){}
   // Recriar o plano não pode apagar a prova alvo em silêncio: repõe a data já cadastrada.
   if(m === 'run'){
+    const elT = $('run-race-time');
+    const rt = state.modules.run && state.modules.run.setup && state.modules.run.setup.raceTime;
+    if(elT && rt) elT.value = rt;
     const el = $('run-race-date');
     const rd = state.modules.run && state.modules.run.setup && state.modules.run.setup.raceDate;
     if(el && rd) el.value = rd;
@@ -755,7 +759,8 @@ function finishSetup(m){
     goal:readOpt('run-goal'), level:readOpt('run-level'),
     days:parseInt(readOpt('run-days')), terrain:readOpt('run-terrain'),
     selectedDays: readSelectedDays('run-week-days'),
-    raceDate: $('run-race-date') ? $('run-race-date').value : null
+    raceDate: $('run-race-date') ? $('run-race-date').value : null,
+    raceTime: ($('run-race-time') && $('run-race-time').value) ? $('run-race-time').value : null
   };
   // Exige escolher os dias da semana. (Antes, readSelectedDays devolvia null quando nada
   // estava marcado e a validação era pulada — o aluno novo criava o plano sem escolher.)
@@ -883,7 +888,63 @@ function generatePlan(module, setup){
     return { type:'run', goal, terrain:setup.terrain, level, workouts, totalWeeks };
   }
 }
+// Ritmo REAL do aluno (mediana das últimas corridas) — base pra tudo ficar adaptativo
+// Avaliação da corrida recém-registrada, comparando com o histórico do próprio aluno
+function runFeedback(km, min, type, ehProva){
+  try{
+    if(type!=='corrida') return null;
+    const hist = (((state.modules.run||{}).history)||[])
+      .filter(r=>(!r.activity||r.activity==='corrida') && (r.distance||0)>=1 && (r.duration||0)>0);
+    const anteriores = hist.slice(0,-1); // tira a que acabou de entrar
+    const pace = min/km;
+    const linhas = [];
+    if(anteriores.length < 2){
+      linhas.push(`Corrida registrada: <b>${km}km</b> em <b>${fmtDur(min)}</b> (${fmtPaceMin(pace)}).`);
+      linhas.push(`Ainda tenho poucas corridas suas pra comparar — a partir da terceira eu começo a te mostrar a evolução. 📈`);
+      return { titulo: ehProva ? '🏅 Prova registrada!' : '🏃 Corrida registrada!', linhas };
+    }
+    const pacesAnt = anteriores.map(r=>r.duration/r.distance);
+    const mediaAnt = pacesAnt.reduce((a,b)=>a+b,0)/pacesAnt.length;
+    const melhorAnt = Math.min(...pacesAnt);
+    const maiorAnt = Math.max(...anteriores.map(r=>r.distance||0));
+    const difSeg = Math.round((mediaAnt - pace)*60); // + = mais rápido que a média
+    linhas.push(`<b>${km}km</b> em <b>${fmtDur(min)}</b> · ritmo <b>${fmtPaceMin(pace)}</b>`);
+    if(pace < melhorAnt) linhas.push(`🏆 <b>Seu ritmo mais rápido até hoje!</b> Bateu o recorde anterior de ${fmtPaceMin(melhorAnt)}.`);
+    else if(difSeg >= 10) linhas.push(`📈 Você correu <b>${difSeg}s/km mais rápido</b> que sua média. Sinal claro de evolução.`);
+    else if(difSeg >= 3) linhas.push(`🙂 Um pouco acima da sua média (<b>${difSeg}s/km</b> mais rápido). Constância é isso.`);
+    else if(difSeg <= -25) linhas.push(`🐢 Foi mais lenta que sua média — e tudo bem: calor, cansaço e sono pesam no ritmo. Corrida leve também constrói base.`);
+    else linhas.push(`✅ Bem na sua média de ritmo. Regularidade vale mais que um dia bom isolado.`);
+    if(km > maiorAnt) linhas.push(`📏 <b>Maior distância que você já correu!</b> A anterior era ${maiorAnt}km.`);
+    const totalKm = hist.reduce((a,r)=>a+(r.distance||0),0);
+    linhas.push(`Total acumulado: <b>${Math.round(totalKm)}km</b> em ${hist.length} corridas.`);
+    return { titulo: ehProva ? '🏅 Prova registrada!' : '🏃 Corrida registrada!', linhas };
+  }catch(e){ return null; }
+}
+function myRunPaceMin(){
+  try{
+    const h = (((state.modules.run||{}).history)||[])
+      .filter(r=>(!r.activity || r.activity==='corrida') && (r.distance||0)>=1.5 && (r.duration||0)>0)
+      .slice(-8);
+    if(h.length < 3) return null;                       // com pouca amostra, não inventa
+    const paces = h.map(r=>r.duration/r.distance).sort((a,b)=>a-b);
+    const mid = Math.floor(paces.length/2);
+    return paces.length%2 ? paces[mid] : (paces[mid-1]+paces[mid])/2;  // mediana: ignora corrida atípica
+  }catch(e){ return null; }
+}
+function fmtPaceMin(min){
+  const m = Math.floor(min), sec = Math.round((min-m)*60);
+  return (sec===60 ? (m+1)+':00' : m+':'+String(sec).padStart(2,'0'))+'/km';
+}
 function runPace(kind, setup){
+  // Se o aluno já corre, os alvos saem do ritmo DELE — não de uma tabela genérica
+  const real = myRunPaceMin();
+  if(real){
+    const f = kind==='Intervalado' ? 0.86 : kind==='Corrida Longa' ? 1.08 : kind==='Ritmo Constante' ? 0.94 : 1.05;
+    return fmtPaceMin(Math.max(2.8, Math.min(13, real*f)));
+  }
+  return runPaceTabela(kind, setup);
+}
+function runPaceTabela(kind, setup){
   const paces = {
     iniciante:{leve:'8:00/km',ritmo:'7:00/km',longa:'8:30/km',interval:'5:30/km'},
     intermediario:{leve:'6:30/km',ritmo:'5:30/km',longa:'6:45/km',interval:'4:30/km'},
@@ -1655,9 +1716,28 @@ function renderHome(){
   $('trophy-count').textContent = `${state.trophies.length} de ${TROPHIES.length} troféus`;
 
   // race target card (only for run)
+  const _ri = state.active==='run' ? raceInfo() : null;
   const daysToR = state.active==='run' ? daysToRace() : null;
   const alertCard = $('card-plan-alert');
-  if(daysToR !== null && daysToR >= 0 && daysToR < 365){
+  // DIA DA PROVA: antes da largada = checklist; depois da largada = "como foi?"
+  if(_ri && _ri.hoje){
+    alertCard.classList.remove('hidden');
+    alertCard.querySelector('.card-icon').textContent = '🏁';
+    if(_ri.depoisDaLargada){
+      alertCard.querySelector('.card-title').textContent = 'E aí, como foi a prova? 🎉';
+      alertCard.querySelector('.card-sub').innerHTML = 'Você chegou lá! Registra a corrida que eu comparo com seu histórico e te digo o que achei. 👇<br><button class="btn btn-primary btn-block" style="margin-top:10px" onclick="openRunLog(\'livre\')">🏅 Registrar minha prova</button>';
+    } else {
+      alertCard.querySelector('.card-title').textContent = _ri.horaFmt ? `É HOJE! Largada às ${_ri.horaFmt} 🎉` : 'É HOJE! 🎉';
+      alertCard.querySelector('.card-sub').innerHTML =
+        'Confie no treino que você fez. Checklist rápido:<br>' +
+        '• ☕ Coma leve 2-3h antes (nada novo hoje)<br>' +
+        '• 👟 Use o tênis de sempre — nunca estreie no dia<br>' +
+        '• ⏰ Chegue cedo e aqueça 10 min com trote leve<br>' +
+        '• 🐢 Largue mais devagar do que a empolgação pede<br>' +
+        '• 💧 Beba água nos postos, mesmo sem sede';
+    }
+  }
+  else if(daysToR !== null && daysToR >= 0 && daysToR < 365){
     alertCard.classList.remove('hidden');
     alertCard.querySelector('.card-icon').textContent = '🏁';
     alertCard.querySelector('.card-title').textContent = daysToR===0 ? 'É HOJE! 🎉' : `${daysToR} dia${daysToR>1?'s':''} para sua prova`;
@@ -7251,12 +7331,27 @@ function saveRunLog(dayIdx){
     if(km>=20) unlockTrophy('bike_20k');
     if(km>=50) unlockTrophy('bike_50k');
   }
-  checkTrophies();
   recalibrateRunPlan(); // os próximos treinos se ajustam ao que você registrou
   saveData();
-  toast(`${meta.emo} ${meta.lbl} salva: ${km}km em ${fmtDur(min)} (${paceStr})`);
   closeModal();
-  goTab('home');
+  // primeiro o feedback da corrida; só depois as conquistas aparecem
+  const _ri = (typeof raceInfo==='function') ? raceInfo() : null;
+  const _ehProva = !!(_ri && _ri.hoje);
+  const fb = runFeedback(km, min, type, _ehProva);
+  if(fb){
+    $('modal-inner').innerHTML = `
+      <div style="text-align:center"><div style="font-size:40px">${_ehProva?'🏅':'🏃'}</div>
+        <h3 style="margin:8px 0 4px">${fb.titulo}</h3></div>
+      <div class="card" style="margin-top:12px;padding:13px 15px">
+        ${fb.linhas.map(l=>`<div style="font-size:13.5px;line-height:1.6;color:var(--text-dim);margin:5px 0">${l}</div>`).join('')}
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();checkTrophies();goTab('home')">Beleza! 👊</button>`;
+    $('modal-back').classList.add('on');
+  } else {
+    toast(`${meta.emo} ${meta.lbl} salva: ${km}km em ${fmtDur(min)} (${paceStr})`);
+    checkTrophies();
+    goTab('home');
+  }
 }
 function checkRunEvolution(km, paceStr){
   const h = (state.modules.run.history || []).filter(r=>!r.activity||r.activity==='corrida');
@@ -7283,6 +7378,44 @@ function checkRunEvolution(km, paceStr){
 function parsePace(s){ if(!s) return 9999; const [m,sec] = s.split(':'); return parseFloat(m)*60 + parseFloat(sec||'0'); }
 
 // ---------- RACE TARGET ----------
+// Estado completo da prova: data + horário, se já passou, se é hoje (antes/depois da largada)
+function raceInfo(){
+  try{
+    const st = (state.modules.run||{}).setup||{};
+    if(!st.raceDate) return null;
+    const base = new Date(st.raceDate+'T00:00:00'); if(isNaN(base)) return null;
+    const hora = st.raceTime || null;
+    const largada = new Date(base);
+    if(hora){ const [hh,mm]=String(hora).split(':').map(Number); largada.setHours(hh||0, mm||0, 0, 0); }
+    const h0 = new Date(); h0.setHours(0,0,0,0);
+    const dias = Math.round((base.getTime()-h0.getTime())/86400000);
+    const agora = Date.now();
+    return {
+      data: base, hora, largada, dias,
+      hoje: dias===0,
+      passou: dias<0,
+      antesDaLargada: dias===0 && (!hora || agora < largada.getTime()),
+      depoisDaLargada: dias===0 && !!hora && agora >= largada.getTime(),
+      horaFmt: hora ? String(hora) : null,
+      dataFmt: base.toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'})
+    };
+  }catch(e){ return null; }
+}
+// depois da prova, o campo se limpa sozinho (e a gente pergunta como foi, 1x)
+function cleanupPastRace(){
+  try{
+    const ri = raceInfo();
+    if(ri && ri.passou){
+      const st = state.modules.run.setup;
+      state.ui = state.ui || {};
+      state.ui.lastRacePrompt = { data: st.raceDate, at: Date.now() };
+      st.raceDate = null; st.raceTime = null;
+      saveData();
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
 function daysToRace(){
   const rd = state.modules.run?.setup?.raceDate;
   if(!rd) return null;
