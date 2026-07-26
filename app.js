@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.55 =====
-const APP_VERSION = 'v11.55';
+// ===== MetaTreino v11.56 =====
+const APP_VERSION = 'v11.56';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2674,15 +2674,6 @@ function renderDistDonut(){
   }).join('') + `<text x="60" y="66" text-anchor="middle" fill="#e2e8f0" font-size="16" font-weight="800">${total}</text>`;
   legend.innerHTML = cats.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${c.color};margin-right:6px"></span>${c.lbl}</span><b>${Math.round(c.n/total*100)}%</b></div>`).join('');
 }
-function calcTotalVolume(prog){
-  const cutoff = Date.now() - 7*86400000;
-  let t=0;
-  Object.values(prog).forEach(logs=>{
-    logs.forEach(p=>{ if(p.date>=cutoff) p.sets.forEach(s=>{ t += (s.peso||0)*(s.reps||0); }); });
-  });
-  return t;
-}
-
 // ---------- PLAN SCREEN ----------
 function renderPlan(){
   const mod = state.modules[state.active];
@@ -4642,22 +4633,6 @@ function loadWeather(){
   }catch(e){}
 }
 // retorna UMA mensagem só quando o clima é notável (chuva/tempestade/calor/frio/neblina/vento). Senão null.
-function weatherTip(){
-  const w = weatherData; if(!w || w.temp==null) return null;
-  const code = w.code, temp = Math.round(w.temp), wind = w.wind||0;
-  const tempestade = code>=95;
-  const chuva = (code>=51 && code<=67) || (code>=80 && code<=82);
-  const neve = code>=71 && code<=77;
-  const neblina = code===45 || code===48;
-  if(tempestade) return '⛈️ Tempestade na sua região agora. Melhor um treino indoor hoje — segurança em primeiro lugar.';
-  if(chuva) return '🌧️ Chovendo por aí? Boa hora pra um treino indoor. Se hoje era corrida, uma esteira ou uma musculação resolvem.';
-  if(neve) return '❄️ Neve/gelo na área. Se for treinar na rua, redobre o cuidado com o piso.';
-  if(temp >= 33) return `🔥 Está bem quente hoje (${temp}°C). Capriche na hidratação e, se der, evite treinar ao ar livre no pico do calor.`;
-  if(temp <= 10) return `🥶 Frio hoje (${temp}°C). Faça um aquecimento caprichado antes de começar.`;
-  if(neblina) return '🌫️ Neblina forte. Se for correr na rua, escolha um trajeto seguro e bem iluminado.';
-  if(wind >= 40) return '💨 Vento forte hoje. Se for correr ao ar livre, cuidado com as rajadas e prefira um percurso protegido.';
-  return null; // clima normal → não mostra nada (evita virar mensagem repetitiva)
-}
 function wmoDesc(code){
   if(code===0) return 'céu limpo';
   if(code>=1&&code<=3) return 'parcialmente nublado';
@@ -5072,7 +5047,6 @@ function fatigueMap(){
   return map;
 }
 function fatigueOf(part){ return (fatigueMap()[part])||0; }
-function fatigueLevel(v){ return v>=70?'alta' : v>=35?'parcial' : 'ok'; }
 // grupos mais e menos descansados (pro assistente falar como treinador)
 function fatigueInsight(){
   try{
@@ -6187,7 +6161,6 @@ function startHearts(ov){
     box.appendChild(h);
   }
 }
-function isoToBr(iso){ if(!iso) return ''; const p=String(iso).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso; }
 function openSpecialAwardAdmin(){
   const s = specialAward||{};
   $('modal-inner').innerHTML = `
