@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.65 =====
-const APP_VERSION = 'v11.65';
+// ===== MetaTreino v11.66 =====
+const APP_VERSION = 'v11.66';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -662,10 +662,8 @@ function buildingSteps(m, setup, prev){
     const _st = (state.modules[m]||{}).startAt;
     const _h0 = new Date(); _h0.setHours(0,0,0,0);
     if(_st && _st > _h0.getTime()){
-      const d = new Date(_st);
-      const q = Math.ceil((_st-_h0.getTime())/86400000);
-      const fmt = d.toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'});
-      steps.push({emo:'📆', pri:1, txt:`Começa <b>${fmt}</b> (${q===1?'amanhã':'em '+q+' dias'}) — até lá, <b>sem cobranças</b>`});
+      const fw = (typeof planFirstWorkoutInfo==='function') ? planFirstWorkoutInfo(state.modules[m]) : null;
+      if(fw) steps.push({emo:'📆', pri:1, txt:`Primeiro treino <b>${fw.fmt}</b> (${fw.quando}) — até lá, <b>sem cobranças</b>`});
     }
   }catch(e){}
   steps.push({emo:'✅', pri:1, txt:m==='lift' ? `<b>Seu plano de musculação está pronto!</b>` : `<b>Seu plano de corrida está pronto!</b>`});
@@ -772,8 +770,9 @@ function finishSetup(m){
   // preserva histórico e data de início ao RECRIAR um plano (não zera o progresso do aluno)
   // data de início escolhida (ou hoje) — dias antes disso não contam falta
   const _si = document.getElementById(m+'-start-date');
-  let startAt = Date.now();
-  if(_si && _si.value){ const dS=new Date(_si.value+'T00:00:00'); if(!isNaN(dS)) startAt = dS.getTime(); }
+  const _hoje0 = new Date(); _hoje0.setHours(0,0,0,0);
+  let startAt = _hoje0.getTime();   // meia-noite de hoje (com hora, "hoje" virava futuro)
+  if(_si && _si.value){ const dS=new Date(_si.value+'T00:00:00'); if(!isNaN(dS) && dS.getTime()>_hoje0.getTime()) startAt = dS.getTime(); }
   const prev = state.modules[m];
   state.modules[m] = { setup, plan:generatePlan(m,setup), week:1, createdAt: (prev && prev.createdAt) || Date.now(), startAt, history: (prev && prev.history) || [] };
   state.active = m;
@@ -1269,6 +1268,16 @@ const EX_RENAMES = [
 function migrateExerciseIds(){
   try{
     let changed=false;
+    // startAt salvo COM hora (versões antigas) fazia "hoje" contar como futuro — normaliza pra meia-noite
+    ['lift','run'].forEach(mk=>{
+      const md = state.modules && state.modules[mk];
+      if(md && md.startAt){
+        const d = new Date(md.startAt);
+        if(d.getHours() || d.getMinutes() || d.getSeconds() || d.getMilliseconds()){
+          d.setHours(0,0,0,0); md.startAt = d.getTime(); changed = true;
+        }
+      }
+    });
     EX_RENAMES.forEach(([oldN,newN])=>{
       const o=slug(oldN), n=slug(newN); if(o===n) return;
       if(state.progress && state.progress[o]){ state.progress[n]=(state.progress[n]||[]).concat(state.progress[o]); delete state.progress[o]; changed=true; }
@@ -1832,9 +1841,10 @@ function renderHome(){
     const _st = (typeof planStartTs==='function') ? planStartTs(mod) : 0;
     const _h0 = new Date(); _h0.setHours(0,0,0,0);
     if(_st && _st > _h0.getTime()){
-      const dias = Math.ceil((_st - _h0.getTime())/86400000);
-      const nomeDia = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'][new Date(_st).getDay()];
-      $('plan-foot').textContent = `▶️ Seu plano começa ${dias===1?'amanhã':'em '+dias+' dias'} (${nomeDia}). Até lá, sem cobranças — aproveite pra descansar. 😌`;
+      const fw = planFirstWorkoutInfo(mod);
+      $('plan-foot').textContent = fw
+        ? `▶️ Seu primeiro treino é ${fw.fmt} (${fw.quando}). Até lá, sem cobranças — aproveite pra descansar. 😌`
+        : `▶️ Seu plano ainda não começou. Até lá, sem cobranças — aproveite pra descansar. 😌`;
       return;
     }
   }catch(e){}
@@ -2037,8 +2047,17 @@ function renderSessions(){
   const _stS = (typeof planStartTs==='function') ? planStartTs(mod) : 0;
   const _h0S = new Date(); _h0S.setHours(0,0,0,0);
   const _preStart = _stS && _stS > _h0S.getTime();
-  $('weekly-info').innerHTML = `Meta: ${labelGoal(mod)} · Semana ${cwInfo.wk}/${cwInfo.total} · ${mod.plan.workouts.length}× por semana`
-    + (_preStart ? `<div style="margin-top:8px;padding:9px 11px;border-radius:11px;border:1px solid rgba(56,189,248,.35);background:rgba(56,189,248,.07);color:#7dd3fc;font-size:12.5px;line-height:1.45">▶️ Seu plano começa <b>${new Date(_stS).toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'})}</b>. Dá uma olhada no que vem por aí — e se quiser começar antes, é só treinar: eu ajusto a data. 😉</div>` : '');
+  $('weekly-info').textContent = `Meta: ${labelGoal(mod)} · Semana ${cwInfo.wk}/${cwInfo.total} · ${mod.plan.workouts.length}× por semana`;
+  // aviso em card próprio (fora do card clicável, pra não confundir com o ▾ dele)
+  const _psEl = $('sess-prestart');
+  if(_psEl){
+    const fwS = _preStart ? planFirstWorkoutInfo(mod) : null;
+    _psEl.innerHTML = fwS
+      ? `<div class="card" style="margin-top:10px;padding:12px 14px;border-color:rgba(56,189,248,.35);background:rgba(56,189,248,.06)">
+           <div style="color:#7dd3fc;font-size:12.5px;line-height:1.5">▶️ Seu primeiro treino é <b>${fwS.fmt}</b> (${fwS.quando}). Dá uma olhada no que vem por aí — e se quiser começar antes, é só treinar: eu ajusto a data. 😉</div>
+         </div>`
+      : '';
+  }
 
   const sel = currentSelectedWorkout(mod);
   $('sessions-chips').innerHTML = mod.plan.workouts.map(w=>{
@@ -2561,6 +2580,29 @@ function isBirthday(date){
   }catch(e){ return false; }
 }
 // início real do plano (escolhido pelo aluno ou criação) — antes disso não existe "falta"
+// Primeiro treino REAL a partir do início do plano (se começa terça mas treina qua/sex, é quarta)
+function planFirstWorkoutInfo(mod){
+  try{
+    const m = mod || state.modules[state.active];
+    if(!m || !m.plan) return null;
+    const dias = (m.plan.workouts||[]).map(w=>w.dayIdx);
+    if(!dias.length) return null;
+    const h0 = new Date(); h0.setHours(0,0,0,0);
+    const st0 = new Date(planStartTs(m) || h0.getTime()); st0.setHours(0,0,0,0);
+    const ini = st0.getTime() > h0.getTime() ? st0 : h0;   // nunca olha pro passado
+    for(let k=0;k<21;k++){
+      const d = new Date(ini); d.setDate(d.getDate()+k);
+      const idx = (d.getDay()===0) ? 7 : d.getDay();       // 1=segunda … 7=domingo
+      if(dias.includes(idx)){
+        const emDias = Math.round((d.getTime()-h0.getTime())/86400000);
+        return { data:d, emDias, hoje:emDias===0,
+          fmt: d.toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'}),
+          quando: emDias===0 ? 'hoje' : (emDias===1 ? 'amanhã' : 'em '+emDias+' dias') };
+      }
+    }
+    return null;
+  }catch(e){ return null; }
+}
 function planStartTs(mod){
   const m = mod || state.modules[state.active];
   if(!m) return 0;
