@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.73 =====
-const APP_VERSION = 'v11.73';
+// ===== MetaTreino v11.74 =====
+const APP_VERSION = 'v11.74';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -4643,13 +4643,29 @@ function maTryCommand(txt){
   // remover uma prova já cadastrada
   if(/(n[ãa]o tenho (?:mais )?(?:prova|corrida)|cancela(?:r)? (?:a |minha )?(?:prova|corrida)|apaga(?:r)? (?:a )?(?:data d[ao] )?(?:prova|corrida)|remover? (?:a )?(?:data d[ao] )?(?:prova|corrida)|sem prova(?: nenhuma)?)/.test(t)){
     const mod = state.modules.run;
-    if(mod && mod.setup && mod.setup.raceDate){ mod.setup.raceDate = null; saveData(); return {done:true, msg:'🗑️ Removi a data da sua prova. Quando marcar outra, é só me avisar — ex: "minha prova é dia 12/10". 🏁'}; }
+    if(mod && mod.setup && mod.setup.raceDate){ mod.setup.raceDate = null; mod.setup.raceTime = null; saveData(); return {done:true, msg:'🗑️ Removi a data da sua prova. Quando marcar outra, é só me avisar — ex: "minha prova é dia 12/10". 🏁'}; }
     return {done:true, msg:'Você não tinha nenhuma prova cadastrada 😊. Se quiser marcar uma, me diga a data assim: "minha prova é dia 15/08". 🏁'};
   }
   // cadastrar a data da prova (só tenta se falar de prova/corrida E tiver algum número)
   if(/(prova|corrida|maratona|meia\s*maratona|competi[çc][ãa]o|percurso|\b5k\b|\b10k\b|\b21k\b|\b42k\b)/.test(t) && /\d/.test(t)){
     const d = maParseRaceDate(t);
-    if(d) return maSetRaceDate(d);
+    if(d) return maSetRaceDate(d, maParseRaceTime(t));
+  }
+
+  // ---- SÓ O HORÁRIO DA PROVA (data já cadastrada) ----
+  if(/(largada|prova|corrida|competi[çc][ãa]o)/.test(t) && /(\d{1,2}\s*[h:]|[àa]s\s*\d{1,2}|\d{1,2}\s*h\b)/.test(t) && !maParseRaceDate(t)){
+    const modR = state.modules.run;
+    if(modR && modR.setup && modR.setup.raceDate){
+      const hh = maParseRaceTime(t);
+      if(hh){
+        modR.setup.raceTime = String(hh.h).padStart(2,'0')+':'+String(hh.mi).padStart(2,'0');
+        saveData();
+        const dd = new Date(modR.setup.raceDate+'T00:00:00');
+        return {done:true, msg:`⏰ Anotado! Largada às <b>${modR.setup.raceTime}</b> no dia <b>${dd.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})}</b>.<br><br>Agora eu consigo te mostrar a <b>previsão do tempo da hora da largada</b> — e não a de quando você abrir o app — além do checklist logo antes da prova. 🏁`};
+      }
+    }
+    if(modR && !(modR.setup && modR.setup.raceDate))
+      return {done:true, msg:'Antes do horário eu preciso da <b>data</b> da prova 😊. Me diga assim: <b>"minha prova é dia 15/08 às 7h"</b>. 🏁'};
   }
 
   // ---- RESPOSTA A "ONDE DÓI?" ----
@@ -4835,6 +4851,18 @@ function maExtraWorkout(part){
 }
 // Lê uma data escrita em linguagem natural (dd/mm, dd/mm/aaaa, "15 de agosto"...).
 // Se o ano não for dito e a data já tiver passado este ano, assume o ano que vem.
+// "às 7h", "07:30", "6h30", "às 7 da noite" → {h, mi}
+function maParseRaceTime(t){
+  const periodo = /(da|de)\s*(noite|tarde)/.test(t) ? 'pm' : (/(da|de)\s*(manh[ãa])/.test(t) ? 'am' : null);
+  const ajusta = h => (periodo==='pm' && h<12) ? h+12 : ((periodo==='am' && h===12) ? 0 : h);
+  let m = t.match(/\b(\d{1,2})\s*[h:]\s*(\d{2})\b/);            // 7h30 · 07:30
+  if(m){ const h=ajusta(+m[1]), mi=+m[2]; if(h<24 && mi<60) return {h, mi}; }
+  m = t.match(/(?:[àa]s|as)\s*(\d{1,2})(?:\s*h(?:oras?)?)?\b/);   // às 7 · às 19h
+  if(m){ const h=ajusta(+m[1]); if(h<24) return {h, mi:0}; }
+  m = t.match(/\b(\d{1,2})\s*h\b/);                              // 19h
+  if(m){ const h=ajusta(+m[1]); if(h<24) return {h, mi:0}; }
+  return null;
+}
 function maParseRaceDate(t){
   const meses = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
   let dia, mes, ano=null, m;
@@ -4852,7 +4880,7 @@ function maParseRaceDate(t){
   if(isNaN(d) || d.getDate()!==dia || d.getMonth()!==mes-1) return null; // rejeita datas inexistentes (ex: 31/02)
   return d;
 }
-function maSetRaceDate(d){
+function maSetRaceDate(d, hora){
   const mod = state.modules.run;
   if(!mod){ return {done:true, msg:'Pra cadastrar uma prova eu preciso que você tenha um plano de <b>corrida</b> ativo. Crie um primeiro (é rapidinho!) e depois me diga a data. 🏃'}; }
   const hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -4860,14 +4888,16 @@ function maSetRaceDate(d){
   if(dias < 0) return {done:true, msg:'Essa data já passou 🤔. Me diga a data da sua <b>próxima</b> prova, ex: "minha prova é dia 15/08".'};
   mod.setup = mod.setup || {};
   mod.setup.raceDate = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(hora) mod.setup.raceTime = String(hora.h).padStart(2,'0')+':'+String(hora.mi).padStart(2,'0');
   saveData();
+  const horaFmt = hora ? String(hora.h).padStart(2,'0')+':'+String(hora.mi).padStart(2,'0') : null;
   const dataFmt = d.toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'});
   let extra;
   if(dias===0) extra = 'É <b>hoje</b>! 🏁 Confie no seu treino e aproveite cada km.';
   else if(dias<=7) extra = `Faltam só <b>${dias} dia${dias>1?'s':''}</b>! Semana de prova: reduza o volume e capriche no sono. 💪`;
   else if(dias<=30) extra = `Faltam <b>${dias} dias</b>. Reta de preparação — cada treino-chave conta muito agora. 🔥`;
   else extra = `Faltam <b>${dias} dias</b>. Dá pra construir uma baita preparação até lá — constância é o segredo. 🚀`;
-  return {done:true, msg:`🏁 Prontinho! Marquei sua prova para <b>${dataFmt}</b>. ${extra}<br><br>A contagem regressiva já aparece na tela inicial e no calendário (com bandeira 🏁), e vou ajustando as dicas conforme o dia se aproxima. Bons treinos! 🏃`};
+  return {done:true, msg:`🏁 Prontinho! Marquei sua prova para <b>${dataFmt}</b>${horaFmt?`, largada às <b>${horaFmt}</b>`:''}. ${extra}${horaFmt?'<br><br>Com o horário eu consigo te mandar a <b>previsão do tempo da largada</b> (e não a de agora) e o checklist na hora certa. ⏰':'<br><br>Se me disser o <b>horário da largada</b> (ex: "às 7h"), eu te aviso com a previsão do tempo daquele momento. ⏰'}<br><br>A contagem regressiva já aparece na tela inicial e no calendário (com bandeira 🏁), e vou ajustando as dicas conforme o dia se aproxima. Bons treinos! 🏃`};
 }
 // Regiões oficiais de dor (as mesmas do Perfil)
 const PAIN_REGIONS = ['Ombro','Lombar','Joelho','Punho/Cotovelo','Tornozelo','Pescoço'];
