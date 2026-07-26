@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.58 =====
-const APP_VERSION = 'v11.58';
+// ===== MetaTreino v11.59 =====
+const APP_VERSION = 'v11.59';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -639,11 +639,14 @@ function buildingSteps(m, setup, prev){
   return steps;
 }
 function runBuildingScreen(m, steps, done){
-  // Autossuficiente: aplica os estilos por JS pra funcionar mesmo se o CSS estiver em cache antigo
+  // Autossuficiente: estilos aplicados por JS (funciona mesmo com CSS antigo em cache)
   try{
     if(!document.getElementById('bld-style')){
       const st = document.createElement('style'); st.id='bld-style';
-      st.textContent = '@keyframes bldspin{to{transform:rotate(360deg)}}@keyframes bldin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
+      st.textContent =
+        '@keyframes bldspin{to{transform:rotate(360deg)}}'+
+        '@keyframes bldenter{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}'+
+        '@keyframes bldleave{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-12px) scale(.98)}}';
       document.head.appendChild(st);
     }
   }catch(e){}
@@ -655,43 +658,61 @@ function runBuildingScreen(m, steps, done){
     'background:#070d16;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);'+
     'opacity:0;transition:opacity .3s ease');
   const titulo = m==='lift' ? '🧠 Montando seu treino' : '🧠 Montando seu plano de corrida';
+  const dots = steps.map((_,i)=>'<span class="bld-dot" data-i="'+i+'" style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.16);transition:background .3s ease,transform .3s ease;display:inline-block"></span>').join('');
   ov.innerHTML =
     '<div style="width:100%;max-width:430px;text-align:center">'+
-      '<div style="width:66px;height:66px;margin:0 auto 20px;border-radius:50%;border:3px solid rgba(16,185,129,.18);border-top-color:#10b981;animation:bldspin .9s linear infinite;position:relative">'+
-        '<div style="position:absolute;top:9px;left:9px;right:9px;bottom:9px;border-radius:50%;border:2px solid rgba(16,185,129,.12);border-bottom-color:rgba(16,185,129,.55);animation:bldspin 1.5s linear infinite reverse"></div>'+
+      '<div style="width:70px;height:70px;margin:0 auto 22px;border-radius:50%;border:3px solid rgba(16,185,129,.16);border-top-color:#10b981;animation:bldspin .9s linear infinite;position:relative">'+
+        '<div style="position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:50%;border:2px solid rgba(16,185,129,.12);border-bottom-color:rgba(16,185,129,.55);animation:bldspin 1.5s linear infinite reverse"></div>'+
       '</div>'+
       '<div style="font-size:22px;font-weight:800;letter-spacing:-.3px;color:#fff;margin-bottom:7px">'+titulo+'</div>'+
-      '<div style="font-size:12.5px;color:#8fa0b5;line-height:1.5;margin:0 auto 22px;max-width:330px">Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.</div>'+
-      '<div id="bld-steps" style="text-align:left;min-height:196px;display:flex;flex-direction:column;justify-content:flex-end;gap:9px;margin-bottom:20px"></div>'+
-      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);transition:width .5s ease"></div></div>'+
+      '<div style="font-size:12.5px;color:#8fa0b5;line-height:1.5;margin:0 auto 26px;max-width:330px">Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.</div>'+
+      '<div id="bld-stage" style="min-height:132px;display:flex;align-items:center;justify-content:center"></div>'+
+      '<div style="display:flex;gap:7px;justify-content:center;margin:22px 0 16px">'+dots+'</div>'+
+      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);transition:width .45s ease"></div></div>'+
     '</div>';
   requestAnimationFrame(()=>{ ov.style.opacity='1'; });
-  const box = document.getElementById('bld-steps');
+  const stage = document.getElementById('bld-stage');
   const bar = document.getElementById('bld-bar-i');
+  // duração total constante (~5,6s): cada etapa recebe o tempo que couber, sempre confortável
+  const passo = Math.max(760, Math.min(1250, Math.round(5600/Math.max(1,steps.length))));
+  const saida = 300;
   let i = 0;
-  const passo = 640; // tempo confortável pra ler cada etapa
   const tick = ()=>{
     if(i >= steps.length){
       setTimeout(()=>{
         ov.style.opacity='0';
         setTimeout(()=>{ ov.setAttribute('style','display:none'); ov.innerHTML=''; if(typeof done==='function') done(); }, 320);
-      }, 780);
+      }, 620);
       return;
     }
     const st = steps[i];
     const ultimo = (i === steps.length-1);
+    const cor = ultimo ? '#34d399' : '#cfe0f0';
     const el = document.createElement('div');
     el.setAttribute('style',
-      'display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;box-sizing:border-box;'+
-      'border-radius:13px;padding:11px 13px;animation:bldin .34s ease both;'+
-      (ultimo
-        ? 'color:#34d399;background:rgba(16,185,129,.11);border:1px solid rgba(16,185,129,.42)'
-        : 'color:#9fb0c4;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)'));
-    el.innerHTML = '<span style="flex-shrink:0">'+st.emo+'</span><span>'+String(st.txt).replace(/<b>/g, ultimo?'<b style="color:#34d399">':'<b style="color:#fff">')+'</span>';
-    box.appendChild(el);
-    while(box.children.length > 5) box.removeChild(box.firstChild);
+      'display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 6px;'+
+      'animation:bldenter .38s cubic-bezier(.2,.8,.3,1) both');
+    el.innerHTML =
+      '<div style="font-size:38px;line-height:1">'+st.emo+'</div>'+
+      '<div style="font-size:16px;line-height:1.45;color:'+cor+';font-weight:500">'+
+        String(st.txt).replace(/<b>/g,'<b style="color:'+(ultimo?'#34d399':'#fff')+'">')+
+      '</div>';
+    stage.innerHTML = '';
+    stage.appendChild(el);
+    // acende a bolinha e avança a barra
+    try{
+      const d = ov.querySelector('.bld-dot[data-i="'+i+'"]');
+      if(d){ d.style.background = ultimo ? '#34d399' : '#10b981'; d.style.transform='scale(1.35)'; }
+      const ant = ov.querySelector('.bld-dot[data-i="'+(i-1)+'"]');
+      if(ant) ant.style.transform='scale(1)';
+    }catch(e){}
     if(bar) bar.style.width = Math.round(((i+1)/steps.length)*100) + '%';
+    const atual = i;
     i++;
+    // some antes de entrar a próxima (uma de cada vez)
+    if(atual < steps.length-1){
+      setTimeout(()=>{ if(el.parentNode) el.style.animation='bldleave .28s ease both'; }, passo - saida);
+    }
     setTimeout(tick, passo);
   };
   tick();
