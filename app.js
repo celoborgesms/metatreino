@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.56 =====
-const APP_VERSION = 'v11.56';
+// ===== MetaTreino v11.57 =====
+const APP_VERSION = 'v11.57';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -590,6 +590,88 @@ function updateLevelHint(){
   const lbl = ({iniciante:'Iniciante', intermediario:'Intermediário', avancado:'Avançado'})[lvl] || '';
   el.innerHTML = `⏱️ <b>${lbl}</b>: ~${Math.max(25,min-8)}-${min+7} min por treino · cerca de ${exPorDia} exercícios · ${dias}x na semana`;
 }
+// ---------- TELA DE MONTAGEM DO PLANO ----------
+// Regra: cada etapa mostra um FATO REAL do que o app está fazendo com as escolhas do aluno
+// (nada de teatro genérico). Se o plano já ficou pronto, a tela ainda dura o mínimo pra ler.
+function countExercisesFor(equip){
+  try{
+    const f = equip==='basico' ? ['casa','halteres'] : equip==='academia' ? ['academia','halteres','casa'] : equip==='halteres' ? ['halteres','casa'] : ['casa'];
+    let n=0;
+    EX_BANK.forEach(c=>c.items.forEach(ex=>{
+      if((ex.equip||[]).some(e=>f.includes(e)) && (equip==='casa' || !ex.improv)) n++;
+    }));
+    return n;
+  }catch(e){ return 0; }
+}
+function buildingSteps(m, setup, prev){
+  const dn = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const dias = (setup.selectedDays||[]).map(d=>dn[d-1]).join(', ');
+  const dores = (state.user && state.user.pain) || [];
+  const steps = [];
+  if(m==='lift'){
+    const gl = {hipertrofia:'Hipertrofia',forca:'Força',emagrecimento:'Emagrecimento',resistencia:'Resistência'}[setup.goal] || 'Seu objetivo';
+    const eq = {academia:'Academia completa',halteres:'Halteres em casa',casa:'Peso do corpo',basico:'Academia básica'}[setup.equip] || 'Seu equipamento';
+    const lvl = {iniciante:'Iniciante',intermediario:'Intermediário',avancado:'Avançado'}[setup.level] || '';
+    steps.push({emo:'🎯', txt:`Objetivo: <b>${gl}</b>`});
+    steps.push({emo:'🏋️', txt:`${eq} — <b>${countExercisesFor(setup.equip)} exercícios</b> liberados pra você`});
+    steps.push({emo:'📅', txt:`Dividindo em <b>${setup.days} treinos</b>: ${dias}`});
+    steps.push({emo:'🧠', txt:`Variando padrões de movimento pra <b>não repetir estímulo</b> no mesmo dia`});
+    if(setup.goal==='forca') steps.push({emo:'💪', txt:`Priorizando os <b>grandes compostos</b> e segurando os isoladores`});
+    else if(setup.goal==='emagrecimento') steps.push({emo:'🔥', txt:`Priorizando <b>multiarticulares</b> — mais músculo trabalhando, mais gasto`});
+    else if(setup.goal==='resistencia') steps.push({emo:'⚡', txt:`Montando em <b>formato circuito</b>, com descanso curto`});
+    else steps.push({emo:'📊', txt:`Ajustando séries e descanso pro nível <b>${lvl}</b>`});
+    if(dores.length) steps.push({emo:'🩹', txt:`Adaptando por dor: <b>${dores.join(', ')}</b> — trocando o que sobrecarrega`});
+  } else {
+    const gl = {'5km':'5 km','10km':'10 km','21km':'Meia maratona','42km':'Maratona'}[setup.goal] || 'Sua meta';
+    const tr = {asfalto:'Asfalto',esteira:'Esteira',trilha:'Trilha',pista:'Pista'}[setup.terrain] || 'Seu terreno';
+    const lvl = {iniciante:'Iniciante',intermediario:'Intermediário',avancado:'Avançado'}[setup.level] || '';
+    steps.push({emo:'🎯', txt:`Meta: <b>${gl}</b>`});
+    steps.push({emo:'🏃', txt:setup.level==='iniciante'
+      ? `Nível <b>Iniciante</b> — começamos alternando <b>trote e caminhada</b>, sem tiros`
+      : `Nível <b>${lvl}</b> — incluindo ritmo forte e tiros na medida certa`});
+    steps.push({emo:'🛣️', txt:`Terreno: <b>${tr}</b> — ajustando o esforço de cada sessão`});
+    steps.push({emo:'📅', txt:`Progressão de <b>12 semanas</b>: ${dias}`});
+    if(setup.raceDate) steps.push({emo:'🏁', txt:`Alinhando o <b>pico</b> com a sua prova`});
+    if(dores.length) steps.push({emo:'🩹', txt:`Considerando sua dor: <b>${dores.join(', ')}</b>`});
+  }
+  if(prev) steps.push({emo:'🧩', txt:`Preservando seu <b>histórico</b> e suas <b>trocas fixadas</b>`});
+  steps.push({emo:'✅', txt:m==='lift' ? `<b>Seu plano de musculação está pronto!</b>` : `<b>Seu plano de corrida está pronto!</b>`});
+  return steps;
+}
+function runBuildingScreen(m, steps, done){
+  let ov = document.getElementById('building-ov');
+  if(!ov){ ov = document.createElement('div'); ov.id='building-ov'; document.body.appendChild(ov); }
+  const titulo = m==='lift' ? '🧠 Montando seu treino' : '🧠 Montando seu plano de corrida';
+  ov.innerHTML = `<div class="bld-box">
+      <div class="bld-ring"><div class="bld-ring-i"></div></div>
+      <div class="bld-title">${titulo}</div>
+      <div class="bld-sub">Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.</div>
+      <div class="bld-steps" id="bld-steps"></div>
+      <div class="bld-bar"><div class="bld-bar-i" id="bld-bar-i"></div></div>
+    </div>`;
+  ov.classList.add('on');
+  const box = document.getElementById('bld-steps');
+  const bar = document.getElementById('bld-bar-i');
+  let i = 0;
+  const passo = 400; // ~2,4s com 6 etapas — dá pra ler sem cansar
+  const tick = ()=>{
+    if(i >= steps.length){
+      setTimeout(()=>{ ov.classList.remove('on'); setTimeout(()=>{ ov.innerHTML=''; }, 260); if(typeof done==='function') done(); }, 520);
+      return;
+    }
+    const st = steps[i];
+    const el = document.createElement('div');
+    el.className = 'bld-step' + (i===steps.length-1 ? ' bld-done' : '');
+    el.innerHTML = `<span class="bld-emo">${st.emo}</span><span>${st.txt}</span>`;
+    box.appendChild(el);
+    // mantém sempre as últimas visíveis
+    while(box.children.length > 5) box.removeChild(box.firstChild);
+    if(bar) bar.style.width = Math.round(((i+1)/steps.length)*100) + '%';
+    i++;
+    setTimeout(tick, passo);
+  };
+  tick();
+}
 function finishSetup(m){
   const setup = m==='lift' ? {
     goal:readOpt('lift-goal'), days:parseInt(readOpt('lift-days')),
@@ -620,7 +702,16 @@ function finishSetup(m){
   state.modules[m] = { setup, plan:generatePlan(m,setup), week:1, createdAt: (prev && prev.createdAt) || Date.now(), startAt, history: (prev && prev.history) || [] };
   state.active = m;
   regenAllPlans(); // se o aluno está com dor/TPM, o plano novo já nasce adaptado
-  saveData(); goTab('home'); toast(prev ? '🔄 Plano recriado! Seu histórico foi mantido.' : '🎉 Plano criado!');
+  saveData();
+  // tela de montagem: mostra o que o app REALMENTE fez com as escolhas do aluno
+  try{
+    runBuildingScreen(m, buildingSteps(m, setup, prev), ()=>{
+      goTab('home');
+      toast(prev ? '🔄 Plano recriado! Seu histórico foi mantido.' : '🎉 Plano criado!');
+    });
+  }catch(e){
+    goTab('home'); toast(prev ? '🔄 Plano recriado! Seu histórico foi mantido.' : '🎉 Plano criado!');
+  }
 }
 function readSelectedDays(id){
   const el = $(id); if(!el) return null;
