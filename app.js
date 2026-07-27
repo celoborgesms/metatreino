@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.79 =====
-const APP_VERSION = 'v11.79';
+// ===== MetaTreino v11.81 =====
+const APP_VERSION = 'v11.81';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5213,6 +5213,91 @@ function maBackToNormal(){
 // ===== FIM COMANDOS =====
 
 // respostas sociais (não dependem de dados)
+// ===== CONVERSA BÁSICA =====
+// "ok", "blz", "obrigado" não são perguntas — merecem resposta curta e natural,
+// não o texto de "não sei responder".
+function maSmallTalk(txt){
+  const t = String(txt||'').toLowerCase().trim()
+    .replace(/[!?.,;…]+$/g,'').replace(/\s+/g,' ')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(!t || t.length > 40) return null;
+  const um = arr => arr[Math.floor(Math.random()*arr.length)];
+  const bate = re => re.test(t);
+
+  // agradecimento
+  if(bate(/^(muito )?(obrigad[oa]|obg|obgda|brigad[oa]|vlw|valeu|vlws|agradecid[oa]|grato|grata|thanks|tks)( demais| mesmo| viu| ai| a[ií])?$/))
+    return um([
+      'Imagina! 😊 Tô aqui pra isso. Bons treinos!',
+      'Por nada! 💪 Se precisar de mais alguma coisa, é só chamar.',
+      'Disponha! 👊 Qualquer dúvida, me chama.',
+      'De nada! 💚 Conta comigo sempre que precisar.'
+    ]);
+
+  // ok / entendi / beleza
+  if(bate(/^(ok|okay|okey|blz|beleza|bele|certo|ta|tá|ta bom|tá bom|ta bem|tá bem|esta bem|está bem|entendi|entendido|saquei|entendo|combinado|fechou|fechado|feito|pode ser|ta certo|tá certo|sim senhor|uhum|aham|ahan|isso|isso mesmo|exato|exatamente|perfeito|show|show de bola|massa|top|legal|bacana|joia|jóia|maneiro|dahora|da hora|bom saber|boa)$/))
+    return um([
+      'Combinado! 👊 Qualquer coisa é só me chamar.',
+      'Show! 💪 Tô por aqui se precisar.',
+      'Beleza! 😊 Bons treinos.',
+      'Fechado! 🙌 Se pintar dúvida, me chama.',
+      'Isso aí! 💚 Qualquer coisa, é só falar.'
+    ]);
+
+  // elogio
+  if(bate(/^(voce e (bom|otimo|top|foda)|vc e (bom|otimo|top)|gostei|adorei|muito bom|otimo|excelente|top demais|melhor app|amei|curti|que legal|nossa que legal)$/))
+    return um([
+      'Fico feliz que tenha curtido! 😄 Isso me anima a te ajudar mais ainda.',
+      'Obrigado! 💚 Meu papel é facilitar sua vida — se tiver ideia pra melhorar, me manda que eu envio pro pessoal.',
+      'Que bom! 🙌 E olha: o mérito dos resultados é seu, viu? Eu só organizo as coisas.'
+    ]);
+
+  // risada
+  if(bate(/^(k{2,}|rs{1,}|haha+|hehe+|kkkk+|hahaha+|lol|ksksks+)$/))
+    return um([
+      'Haha 😄 Bora treinar?',
+      '😄 Se precisar de algo é só falar!',
+      'Rindo também 😅 Qualquer coisa, tô aqui.'
+    ]);
+
+  // negativa solta
+  if(bate(/^(nao|nops|nem|negativo|agora nao|deixa|deixa pra la|tanto faz|nada nao|nada)$/))
+    return um([
+      'Beleza! 😊 Quando precisar, é só chamar.',
+      'Sem problema! 👊 Tô por aqui.',
+      'Tranquilo! 💚 Qualquer hora a gente conversa.'
+    ]);
+
+  // afirmativa solta (sem pergunta pendente)
+  if(bate(/^(sim|claro|com certeza|pode sim|quero|bora|vamos|manda|manda ver)$/))
+    return um([
+      'Boa! 💪 Me conta o que você quer que eu faça — ou toca numa das sugestões aí embaixo.',
+      'Show! 😊 O que você precisa? Posso falar sobre treinos, corrida, recuperação, peso e conquistas.',
+      'Bora! 🔥 Só me dizer o que você quer saber ou registrar.'
+    ]);
+
+  // pedido de desculpa / erro de digitação
+  if(bate(/^(desculpa|foi mal|ops|opa desculpa|errei|digitei errado|nada ver|nada a ver)$/))
+    return um([
+      'Que isso, tranquilo! 😄 Manda de novo que eu tento entender.',
+      'Sem problema nenhum! 😊 Pode reescrever.'
+    ]);
+
+  // como você está
+  if(bate(/^(tudo bem|td bem|tudo bom|td bom|como (voce|vc) (esta|ta)|beleza\?*|de boa)$/))
+    return um([
+      `Tudo ótimo por aqui! 😄 E você, ${maName()}, como está se sentindo pro treino de hoje?`,
+      'Tudo certo! 💪 E você, como está a disposição hoje?'
+    ]);
+
+  // bom treino / motivação de volta
+  if(bate(/^(bom treino|bons treinos|boa sorte|vai la|vai que vai|forca|foco)$/))
+    return um([
+      'Valeu! 👊 Bom treino pra você também — capricha na execução!',
+      'Obrigado! 💪 Agora é com você. Depois me conta como foi.'
+    ]);
+
+  return null;
+}
 const MA_SOCIAL = {
   _oi(){ const s=maSaudacao(); return `${s}, ${maName()}! 👋 Como posso te ajudar? Você pode me perguntar sobre sua evolução, corrida, troféus, meta e mais — ou tocar numa das sugestões.`; },
   _bomdia(){ return `Bom dia, ${maName()}! ☀️ Pronto pra mais um dia de evolução? Me pergunte algo ou toque numa sugestão.`; },
@@ -5582,13 +5667,14 @@ function openAssistant(){
   const fab=document.getElementById('ma-fab'); if(fab) fab.classList.remove('fab-alert','fab-curio','fab-important','fab-rare','fab-special');
   const b=document.getElementById('fab-bubble'); if(b) b.style.display='none';
   maThread = [];
+  const _inp0 = $('ma-input'); if(_inp0) _inp0.value = '';
   renderAssistant();
   // chega como mensagem de gente: primeiro os pontinhos, depois o texto
   try{ maReply(maOpeningSummary()); }catch(e){ maThread=[{who:'bot', txt:maOpeningSummary()}]; renderAssistant(); }
 }
-function renderAssistant(){
+function maBubblesHTML(){
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const bubbles = maThread.map(m=> m.typing
+  return maThread.map(m=> m.typing
     ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:13px 16px;margin:6px 0;max-width:88%;display:inline-flex;gap:5px;align-items:center;width:auto">
         <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out infinite"></span>
         <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .18s infinite"></span>
@@ -5602,28 +5688,44 @@ function renderAssistant(){
     ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:11px 14px;margin:6px 0;font-size:13.5px;line-height:1.5;max-width:88%">${m.txt}</div>`
     : `<div style="background:var(--surface-2);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`
   ).join('');
-  // se a pessoa está com dor ou modo TPM, mostra atalho de voltar ao normal
+}
+function maSugsHTML(){
   const emModoLeve = (state.user && ((state.user.pain&&state.user.pain.length) || state.user.tpmMode || state.user.crampMode));
   let sugs = emModoLeve
     ? [{lbl:'💚 Voltar treinos ao normal', key:'_normal'}, ...MA_SUGGESTIONS]
     : MA_SUGGESTIONS;
-  // com pergunta pendente, os atalhos viram a resposta (mais fácil que digitar no celular)
   if(maPending) sugs = [{lbl:'✅ Sim, por favor', key:'_yes'}, {lbl:'🙂 Não, deixa assim', key:'_no'}];
+  return sugs.map(s=>`<button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;white-space:nowrap;flex-shrink:0" onclick="maAsk('${s.key}')">${s.lbl}</button>`).join('');
+}
+// Atualiza SÓ a conversa e os atalhos — o campo de texto continua vivo,
+// então o teclado do celular não fecha no meio da digitação.
+function maRefreshThread(){
+  const th = $('ma-thread');
+  if(!th){ renderAssistant(); return; }
+  th.innerHTML = maBubblesHTML();
+  th.scrollTop = th.scrollHeight;
+  const sc = $('ma-sugs'); if(sc) sc.innerHTML = maSugsHTML();
+}
+function renderAssistant(){
+  if($('ma-thread')){ maRefreshThread(); return; }   // já aberto: nunca refaz a tela (mataria o teclado)
   $('modal-inner').innerHTML = `
     <h3>💬 Meta Assistente</h3>
-    <div id="ma-thread" style="max-height:42vh;overflow-y:auto;margin:10px 0;display:flex;flex-direction:column">${bubbles}</div>
-    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px">
-      ${sugs.map(s=>`<button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;white-space:nowrap;flex-shrink:0" onclick="maAsk('${s.key}')">${s.lbl}</button>`).join('')}
-    </div>
+    <div id="ma-thread" style="max-height:min(42vh,340px);overflow-y:auto;margin:10px 0;display:flex;flex-direction:column">${maBubblesHTML()}</div>
+    <div id="ma-sugs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px">${maSugsHTML()}</div>
     <div class="row" style="gap:6px">
-      <input class="input" id="ma-input" placeholder="Pergunte ou registre algo..." style="flex:1" onkeydown="if(event.key==='Enter')maAskText()">
+      <input class="input" id="ma-input" placeholder="Pergunte ou registre algo..." style="flex:1" autocomplete="off" enterkeyhint="send" onkeydown="if(event.key==='Enter')maAskText()">
       <button class="btn btn-primary" style="padding:11px 16px" onclick="maAskText()">➤</button>
     </div>
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeAssistant()">Fechar</button>`;
   $('modal-back').classList.add('on');
   const th=$('ma-thread'); if(th) th.scrollTop=th.scrollHeight;
+  const inp = $('ma-input');
+  if(inp && !inp._kbBound){
+    inp._kbBound = true;
+    // teclado abriu: mantém a conversa visível em vez de empurrar a janela
+    inp.addEventListener('focus', ()=>{ setTimeout(()=>{ const t=$('ma-thread'); if(t) t.scrollTop=t.scrollHeight; }, 320); });
+  }
 }
-// Ao fechar, se algum comando alterou os planos, redesenha a tela atual pra refletir na hora
 function closeAssistant(){
   try{ clearTimeout(maTypingT); maThread = maThread.filter(m=>!m.typing && !m.working); }catch(e){}
   closeModal();
@@ -5642,14 +5744,14 @@ function maReply(txt, work){
   clearTimeout(maTypingT);
   maThread = maThread.filter(m=>!m.typing && !m.working);   // nunca dois indicadores ao mesmo tempo
   maThread.push(work ? {who:'bot', working:work} : {who:'bot', typing:true});
-  renderAssistant();
+  maRefreshThread();
   const puro = String(txt).replace(/<[^>]+>/g,'');
   // um pouco mais de tempo: dá impressão de alguém realmente escrevendo (respostas longas pensam mais)
   const espera = work ? 1900 : Math.max(750, Math.min(2600, 620 + puro.length*8));
   maTypingT = setTimeout(()=>{
     maThread = maThread.filter(m=>!m.typing && !m.working);
     maThread.push({who:'bot', txt});
-    renderAssistant();
+    maRefreshThread();
   }, espera);
 }
 function maAsk(key){
@@ -5677,9 +5779,11 @@ function maAsk(key){
 function maAskText(){
   const inp=$('ma-input'); if(!inp) return;
   const txt=inp.value.trim(); if(!txt) return;
+  inp.value = '';                      // limpa aqui (a tela não é mais refeita, senão o texto ficaria)
   maThread.push({who:'user', txt});
   let answer, workLabel = null;
   const _low = txt.toLowerCase();
+  const _smallTalk = (typeof maSmallTalk==='function') ? maSmallTalk(txt) : null;  // calcula 1x (sorteia 1 resposta só)
   // 0) anota o que o aluno contou de passagem (sono, tempo, ânimo, fome...)
   let _anotacoes = [];
   try{ _anotacoes = maDetectContext(_low) || []; }catch(e){}
@@ -5691,6 +5795,7 @@ function maAskText(){
     const key = maInterpret(txt);
     if(key && MA_SOCIAL[key]) answer = MA_SOCIAL[key]();
     else if(key && MA_ANSWERS[key]) answer = MA_ANSWERS[key]();
+    else if(_smallTalk) answer = _smallTalk;
     else if(_anotacoes.length) answer = _anotacoes.join('<br>') + '<br><br>Quer que eu ajuste alguma coisa por causa disso? É só falar. 😊';
     else {
       // não sabe responder: registra de verdade pra virar melhoria futura
@@ -7241,6 +7346,7 @@ async function openSuggestions(){
         <div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;line-height:1.6">
           ${(x.n||1)>1?`<b style="color:var(--accent-2)">${x.n}×</b> · `:''}${x.ultimoNome?String(x.ultimoNome).split(' ')[0]+' · ':''}${x.modulo==='run'?'🏃':'🏋️'} ·
           ${x.ultimo?new Date(x.ultimo).toLocaleDateString('pt-BR'):''}${x.primeiro && x.primeiro!==x.ultimo?` (desde ${new Date(x.primeiro).toLocaleDateString('pt-BR')})`:''}
+          ${x.ultimoEmail && x.ultimoEmail!=='anonimo' ? `<br><a href="mailto:${x.ultimoEmail}?subject=MetaTreino%20-%20sua%20mensagem" style="color:var(--primary-2);text-decoration:none">✉️ ${x.ultimoEmail}</a>` : ''}
           ${vs?`<br><span style="opacity:.85">${voltou?'⚠️ apareceu em ':'versão '}${vs}</span>`:''}
         </div></div>`;
     };
