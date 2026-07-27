@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.85 =====
-const APP_VERSION = 'v11.85';
+// ===== MetaTreino v11.86 =====
+const APP_VERSION = 'v11.86';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -429,6 +429,16 @@ fbAuth.onAuthStateChanged(function(user){
   }
 });
 
+// Tela de escolha de módulo: o admin vê o atalho do painel (não precisa criar plano pra entrar)
+function showPickScreen(){
+  showScreen('scr-pick');
+  try{
+    const ab = $('pick-admin-btn');
+    const ehAdmin = !!(state.user && state.user.isAdmin);
+    if(ab) ab.classList.toggle('hidden', !ehAdmin);
+    if(ehAdmin) setTimeout(()=>{ try{ checkNewFeedback(); }catch(e){} }, 1200);
+  }catch(e){}
+}
 function bootAfterAuth(){
   cleanupOldHistory();
   recalibrateRunPlan(); // semana avançou? plano acompanha
@@ -437,10 +447,7 @@ function bootAfterAuth(){
     showScreen('scr-quiz'); bindOpts('scr-quiz');
     return;
   }
-  if(!state.modules.lift && !state.modules.run){
-    showScreen('scr-pick');
-    return;
-  }
+  if(!state.modules.lift && !state.modules.run){ showPickScreen(); return; }
   if(!state.modules[state.active]){
     state.active = state.modules.lift ? 'lift' : 'run';
   }
@@ -474,7 +481,7 @@ function saveQuiz(){
   // seed weight history
   state.weights = [{ date:Date.now(), weight }];
   saveData();
-  showScreen('scr-pick');
+  showPickScreen();
 }
 
 function calcIMC(){
@@ -1742,7 +1749,7 @@ function treinouHoje(mod){ return entriesHoje(mod).length>0; }
 function renderHome(){
   renderModToggle();
   const mod = state.modules[state.active];
-  if(!mod){ showScreen('scr-pick'); return; }
+  if(!mod){ showPickScreen(); return; }
   // Semana nova → varia os exercícios (trocas fixadas do aluno são mantidas pelo applyPins)
   try{
     const _wkNow = Math.floor(Date.now()/(7*86400000));
@@ -7575,6 +7582,7 @@ async function checkNewFeedback(){
     let novos = 0; snap.forEach(d=>{ const x=d.data(); if((x.ultimo||0) > visto) novos++; });
     const mostrar = (el, txt)=>{ if(!el) return; el.textContent = txt; el.style.display = novos ? 'inline-block' : 'none'; };
     mostrar($('adm-feedback-badge'), novos>9?'9+':String(novos));
+    mostrar($('pick-adm-badge'), novos>9?'9+':String(novos));
     mostrar($('pf-adm-badge'), novos>9?'9+':String(novos));
     if(novos && !checkNewFeedback._avisou){
       checkNewFeedback._avisou = true;
@@ -7598,6 +7606,7 @@ let admFilter = 'all';
 let allowCache = {};     // email -> doc de usuariosAutorizados
 let usuariosCache = {};  // email -> doc de usuarios (estadoApp, nome...) — pra stats/perfil na visão do admin
 let admLoaded = false;
+let admVeioDoPick = false;
 
 async function loadAdminData(){
   try{
@@ -7617,6 +7626,7 @@ async function loadAdminData(){
 }
 async function goAdmin(){
   $('tabbar').classList.add('hidden');
+  admVeioDoPick = !(state.modules.lift || state.modules.run);   // admin sem plano: volta pra escolha
   showScreen('scr-admin');
   const p = state.user.profile;
   $('adm-hi').textContent = 'Olá, '+((p&&p.nickname)||'Marcelo')+'!';
