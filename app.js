@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.92 =====
-const APP_VERSION = 'v11.92';
+// ===== MetaTreino v11.93 =====
+const APP_VERSION = 'v11.93';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5869,6 +5869,7 @@ function maOpeningSummary(){
 }
 // Motivo REAL pra chamar a atenção (nunca inventa nada — só fala quando tem algo de verdade)
 // Motivo REAL pra chamar (nunca inventa) + NÍVEL de cor conforme a importância
+let maNudgeAtivo = null;
 function maNudge(){
   try{
     if((state.ui&&state.ui.nudgeSeen) === new Date().toDateString()) return null; // no máx. 1x/dia
@@ -5905,11 +5906,13 @@ function updateFabNudge(){
   fab.classList.remove('fab-curio','fab-important','fab-rare','fab-special','fab-alert');
   if(n){
     fab.classList.add('fab-alert','fab-'+(n.tone||'important'));
+    maNudgeAtivo = n;   // guarda o motivo: ao abrir, o assistente começa por ele
     if(!bubble){ bubble = document.createElement('div'); bubble.id='fab-bubble'; document.body.appendChild(bubble); bubble.onclick=function(){ openAssistant(); }; }
     bubble.textContent = n.text; bubble.style.display='block';
     clearTimeout(window._fabBubbleT);
     window._fabBubbleT = setTimeout(function(){ const b=document.getElementById('fab-bubble'); if(b) b.style.display='none'; }, 8000); // some, mas o botão fica colorido
   } else {
+    maNudgeAtivo = null;
     if(bubble) bubble.style.display='none';
   }
 }
@@ -5939,12 +5942,57 @@ function maClearThread(){
   renderAssistant();
   maReply(maOpeningSummary());
 }
+// Nome legível de um exercício a partir do id
+function nomeDoEx(id){
+  try{
+    for(const c of EX_BANK){ const it=c.items.find(x=>slug(x.name)===id); if(it) return it.name; }
+  }catch(e){}
+  return String(id||'').replace(/-/g,' ');
+}
+// Monta a resposta CHEIA do aviso que acendeu o balão — com o dado real por trás
+function nudgeResposta(n){
+  const t = n && n.tone;
+  const cab = (n && n.text) ? n.text + '<br><br>' : '';
+  try{
+    if(t==='curio'){
+      const fi = (typeof fatigueInsight==='function') ? fatigueInsight() : null;
+      const ins = (typeof maInsight==='function') ? maInsight() : null;
+      return cab + (fi || ins || 'Continue registrando que eu vou te mostrando os padrões. 💪');
+    }
+    if(t==='important'){
+      const partes = [];
+      const prs = Object.entries(state.prs||{}).filter(([,x])=>{ if(!x||!x.at) return false; const d=new Date(x.at); d.setHours(0,0,0,0); const h=new Date(); h.setHours(0,0,0,0); return d.getTime()===h.getTime(); });
+      if(prs.length){
+        partes.push('🏆 <b>Recordes de hoje:</b><br>' + prs.slice(0,4).map(([id,x])=>`• ${nomeDoEx(id)}: <b>${x.peso||x.weight||'—'}kg × ${x.reps||'—'}</b>`).join('<br>'));
+      }
+      const ins = (typeof maInsight==='function') ? maInsight() : null;
+      if(ins) partes.push(ins);
+      return cab + (partes.join('<br><br>') || 'Toca em "Minha evolução" aí embaixo que eu te mostro os números. 📈');
+    }
+    if(t==='rare' || t==='special'){
+      const lift=((state.modules.lift||{}).history)||[], run=((state.modules.run||{}).history)||[];
+      const total=lift.length+run.length;
+      const km=Math.round(run.reduce((a,x)=>a+(parseFloat(x.distance)||0),0));
+      const trof=(state.trophies||[]).length;
+      return cab + `📊 <b>Sua jornada até aqui</b><br>• <b>${total}</b> treinos registrados${km?`<br>• <b>${km} km</b> percorridos`:''}<br>• <b>${trof}</b> conquistas desbloqueadas<br><br>Isso não foi sorte — foi você aparecendo, dia após dia. 💚`;
+    }
+  }catch(e){}
+  return cab + 'Me pergunta o que quiser sobre seus treinos! 😊';
+}
 function openAssistant(){
   state.ui = state.ui || {}; state.ui.nudgeSeen = new Date().toDateString();
   try{ saveData(); }catch(e){}
   const fab=document.getElementById('ma-fab'); if(fab) fab.classList.remove('fab-alert','fab-curio','fab-important','fab-rare','fab-special');
   const b=document.getElementById('fab-bubble'); if(b) b.style.display='none';
   const _inp0 = $('ma-input'); if(_inp0) _inp0.value = '';
+  // Balão colorido = tinha um aviso. Abrir tem que levar AO aviso, não à saudação genérica.
+  if(maNudgeAtivo){
+    const n = maNudgeAtivo; maNudgeAtivo = null;
+    maThread = [];
+    renderAssistant();
+    try{ maReply(nudgeResposta(n)); }catch(e){ maThread=[{who:'bot', txt:n.text}]; renderAssistant(); }
+    return;
+  }
   const anterior = maLoadThread();
   if(anterior && anterior.length){
     // retoma de onde parou (sem repetir a saudação)
@@ -8429,12 +8477,12 @@ function saveRunLog(dayIdx){
   try{ fb = runFeedback(km, min, type, _ehProvaAgora); }catch(e){ console.log('Erro no feedback da corrida:', e); }
   if(fb){
     $('modal-inner').innerHTML = `
-      <div style="text-align:center"><div style="font-size:40px">${_ehProvaAgora?'🏅':'🏃'}</div>
-        <h3 style="margin:8px 0 4px">${fb.titulo}</h3></div>
+      <div style="text-align:center"><div style="font-size:44px;line-height:1">${_ehProvaAgora?'🏅':'🏃'}</div>
+        <h3 style="margin:10px 0 4px">${String(fb.titulo).replace(/^[^\s]+\s/,'')}</h3></div>
       <div class="card" style="margin-top:12px;padding:13px 15px">
         ${fb.linhas.map(l=>`<div style="font-size:13.5px;line-height:1.6;color:var(--text-dim);margin:5px 0">${l}</div>`).join('')}
       </div>
-      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();goTab('home')">Beleza! 👊</button>`;
+      <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal();goTab('home')">Continuar</button>`;
     trofeuPendente = true;   // dispara ao fechar o modal, não importa como
     $('modal-back').classList.add('on');
   } else {
