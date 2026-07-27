@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.93 =====
-const APP_VERSION = 'v11.93';
+// ===== MetaTreino v11.94 =====
+const APP_VERSION = 'v11.94';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5908,7 +5908,9 @@ function updateFabNudge(){
     fab.classList.add('fab-alert','fab-'+(n.tone||'important'));
     maNudgeAtivo = n;   // guarda o motivo: ao abrir, o assistente começa por ele
     if(!bubble){ bubble = document.createElement('div'); bubble.id='fab-bubble'; document.body.appendChild(bubble); bubble.onclick=function(){ openAssistant(); }; }
-    bubble.textContent = n.text; bubble.style.display='block';
+    bubble.textContent = n.text;
+    // na aba Sessões o assistente não aparece — o balão também não
+    bubble.style.display = ((state.ui && state.ui.tab) === 'sessions') ? 'none' : 'block';
     clearTimeout(window._fabBubbleT);
     window._fabBubbleT = setTimeout(function(){ const b=document.getElementById('fab-bubble'); if(b) b.style.display='none'; }, 8000); // some, mas o botão fica colorido
   } else {
@@ -7335,6 +7337,9 @@ function updateFab(tab){
   // fica escondido na aba de treino (Sessões) pra não tirar o foco do treino
   const hide = (tab === 'sessions');
   fab.classList.toggle('hidden', hide);
+  // o balão de aviso é um elemento SEPARADO — precisa sumir junto, senão fica flutuando sozinho
+  const bubble = document.getElementById('fab-bubble');
+  if(bubble && hide) bubble.style.display = 'none';
 }
 function toggleDeco(){
   const next = !decoEnabled();
