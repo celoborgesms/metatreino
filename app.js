@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.87 =====
-const APP_VERSION = 'v11.87';
+// ===== MetaTreino v11.88 =====
+const APP_VERSION = 'v11.88';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -117,6 +117,49 @@ const QUOTES = [
   '⚙️ Não espere vontade. Crie o hábito e a vontade vem junto.'
 ];
 // Frases contextuais, com base no histórico recente do aluno (têm prioridade quando fazem sentido)
+// Plano agendado pra frente: nada de cobrança nem de "descanso merecido" —
+// o tom aqui é de expectativa e preparação.
+function preStartInfo(){
+  try{
+    const mod = state.modules[state.active];
+    if(!mod || !mod.plan) return null;
+    const st = (typeof planStartTs==='function') ? planStartTs(mod) : 0;
+    const h0 = new Date(); h0.setHours(0,0,0,0);
+    if(!st || st <= h0.getTime()) return null;
+    const fw = (typeof planFirstWorkoutInfo==='function') ? planFirstWorkoutInfo(mod) : null;
+    const dias = fw ? fw.emDias : Math.ceil((st-h0.getTime())/86400000);
+    return { dias, fw, isLift: state.active==='lift' };
+  }catch(e){ return null; }
+}
+function preStartStatusLine(p){
+  const d = p.dias;
+  const quando = p.fw ? p.fw.quando : (d===1?'amanhã':'em '+d+' dias');
+  const oQue = p.isLift ? 'treinar' : 'correr';
+  if(d<=1) return `É amanhã que começa! 🔥 Separe a roupa hoje e durma cedo — amanhã a gente inaugura esse plano.`;
+  if(d<=3) return `Faltam <b>${d} dias</b> pro seu primeiro treino. Aproveita pra deixar tudo pronto: roupa, tênis e horário na agenda. 📅`;
+  if(d<=7) return `Seu plano começa ${quando}. Essa semana é de preparação — chegar descansado vale mais que antecipar. 😌`;
+  if(d<=30) return `Faltam <b>${d} dias</b> pro início. Sem pressa: quando chegar o dia, é só ${oQue}. Eu cuido do resto. 💪`;
+  return `Seu plano está agendado pra daqui a <b>${d} dias</b>. Fica tranquilo — não vou te cobrar nada até lá. Quando a data chegar, eu te aviso. 🗓️`;
+}
+function preStartQuote(p){
+  const d = p.dias;
+  const cedo = [
+    '🌱 O primeiro passo já foi dado: você decidiu começar.',
+    '🗓️ Plano marcado é meio caminho andado. O resto é aparecer.',
+    '😌 Não tem pressa. Tem data.',
+    '💡 Quem escolhe quando começar tem mais chance de continuar.',
+    '🧘 Descansar antes de começar não é atraso, é preparação.'
+  ];
+  const perto = [
+    '🔥 Tá chegando! A ansiedade boa é sinal de que você quer mesmo.',
+    '👟 Deixa o tênis separado. Coisa pronta reduz desculpa.',
+    '⏳ Falta pouco. Aproveita pra chegar inteiro no primeiro dia.',
+    '💪 O plano já está montado. Só falta você aparecer.'
+  ];
+  const arr = d<=7 ? perto : cedo;
+  const seed = Math.floor(Date.now()/86400000) + (typeof hashStr==='function' ? hashStr((state.user&&state.user.email)||'x') : 0);
+  return arr[Math.abs(seed) % arr.length];
+}
 function contextualQuote(){
   const allH = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
   if(!allH.length) return null;
@@ -1785,10 +1828,14 @@ function renderHome(){
   $('home-hi').textContent = `${greetTime()}, ${firstName()}! 👋`;
   const _glue = t => String(t||'').replace(/ (?=[^ ]*$)/, '\u00A0'); // cola o emoji final na última palavra
   const _wl = (typeof weatherHomeLine==='function') ? weatherHomeLine() : null;
-  $('home-goal').innerHTML = _glue(homeStatusLine()) + (_wl ? `<br><span style="opacity:.6;font-size:.9em">${_glue(_wl)}</span>` : '');
+  const _ps = (typeof preStartInfo==='function') ? preStartInfo() : null;
+  const _linha = _ps ? preStartStatusLine(_ps) : homeStatusLine();
+  // com plano agendado pra frente, o clima entra só se for útil (não "boa noite pra descansar")
+  const _mostraClima = !_ps || _ps.dias <= 3;
+  $('home-goal').innerHTML = _glue(_linha) + ((_wl && _mostraClima) ? `<br><span style="opacity:.6;font-size:.9em">${_glue(_wl)}</span>` : '');
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
   // 40% de chance de mostrar uma frase contextual (se houver); senão, uma do dia
-  const ctxQuote = Math.random() < 0.4 ? contextualQuote() : null;
+  const ctxQuote = _ps ? preStartQuote(_ps) : (Math.random() < 0.4 ? contextualQuote() : null);
   const qSeed = doy + hashStr((state.user && state.user.email) || 'x'); // cada pessoa tem a SUA frase no mesmo dia
   $('daily-quote').textContent = ctxQuote || QUOTES[qSeed % QUOTES.length];
   renderCoachMural();
