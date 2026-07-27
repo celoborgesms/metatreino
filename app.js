@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.89 =====
-const APP_VERSION = 'v11.89';
+// ===== MetaTreino v11.90 =====
+const APP_VERSION = 'v11.90';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -3794,14 +3794,18 @@ function checkTrophies(){
     if(todas) unlockTrophy('consistent');
   }
 
-  // Meta semanal
-  const mod = state.modules[state.active];
-  if(mod && mod.plan){
-    const wkTarget = mod.plan.workouts.length;
+  // Meta semanal — vale pros DOIS módulos (antes só olhava o que estava aberto,
+  // então quem batia a meta de corrida com a musculação na tela não ganhava)
+  {
     const startWk = new Date(); startWk.setHours(0,0,0,0); startWk.setDate(startWk.getDate()-6);
-    const done7d = (mod.history||[]).filter(h=>h.at>=startWk.getTime()).length;
-    // precisa existir meta E treinos de verdade (senão 0 >= 0 desbloquearia sem treinar)
-    if(wkTarget > 0 && done7d > 0 && done7d >= wkTarget) unlockTrophy('week_goal');
+    ['lift','run'].forEach(mk=>{
+      const m = state.modules[mk];
+      if(!m || !m.plan || !m.plan.workouts) return;
+      const wkTarget = m.plan.workouts.length;
+      const done7d = (m.history||[]).filter(h=>h.at>=startWk.getTime()).length;
+      // precisa existir meta E treinos de verdade (senão 0 >= 0 desbloquearia sem treinar)
+      if(wkTarget > 0 && done7d > 0 && done7d >= wkTarget) unlockTrophy('week_goal');
+    });
   }
   checkMilestones();
   if(typeof checkSpecialAward==='function') checkSpecialAward('workout'); // conquista especial após terminar um treino
