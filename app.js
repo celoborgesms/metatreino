@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.81 =====
-const APP_VERSION = 'v11.81';
+// ===== MetaTreino v11.82 =====
+const APP_VERSION = 'v11.82';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5701,13 +5701,17 @@ function maSugsHTML(){
 // então o teclado do celular não fecha no meio da digitação.
 function maRefreshThread(){
   const th = $('ma-thread');
-  if(!th){ renderAssistant(); return; }
+  const mb = $('modal-back');
+  if(!th || !mb || !mb.classList.contains('on')){ renderAssistant(); return; }
   th.innerHTML = maBubblesHTML();
   th.scrollTop = th.scrollHeight;
   const sc = $('ma-sugs'); if(sc) sc.innerHTML = maSugsHTML();
 }
 function renderAssistant(){
-  if($('ma-thread')){ maRefreshThread(); return; }   // já aberto: nunca refaz a tela (mataria o teclado)
+  const mb = $('modal-back');
+  const visivel = !!(mb && mb.classList.contains('on'));
+  // refresh leve SÓ quando o assistente já está aberto de verdade (senão o modal nunca reabre)
+  if(visivel && $('ma-thread')){ maRefreshThread(); return; }
   $('modal-inner').innerHTML = `
     <h3>💬 Meta Assistente</h3>
     <div id="ma-thread" style="max-height:min(42vh,340px);overflow-y:auto;margin:10px 0;display:flex;flex-direction:column">${maBubblesHTML()}</div>
