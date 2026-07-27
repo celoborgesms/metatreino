@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.90 =====
-const APP_VERSION = 'v11.90';
+// ===== MetaTreino v11.92 =====
+const APP_VERSION = 'v11.92';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -1458,6 +1458,32 @@ const EX_RENAMES = [
 function migrateExerciseIds(){
   try{
     let changed=false;
+    // Números salvos como TEXTO (backup editado, versão antiga) faziam a soma virar
+    // concatenação — e derrubavam checkTrophies inteiro. Normaliza na entrada.
+    // Plano sem lista de treinos (backup corrompido) quebrava a Home em 27 pontos.
+    // Vira "sem plano" — estado que o app inteiro já sabe tratar.
+    ['lift','run'].forEach(mk=>{
+      const md0 = state.modules && state.modules[mk];
+      if(md0 && md0.plan && !Array.isArray(md0.plan.workouts)){ md0.plan = null; changed = true; }
+    });
+    ['lift','run'].forEach(mk=>{
+      const md = state.modules && state.modules[mk];
+      if(!md || !Array.isArray(md.history)) return;
+      md.history.forEach(h=>{
+        ['distance','duration','plannedDuration','rating'].forEach(campo=>{
+          if(h[campo] === undefined || h[campo] === null) return;
+          if(typeof h[campo] === 'number' && isFinite(h[campo])) return;
+          const n = parseFloat(String(h[campo]).replace(',','.'));
+          if(isFinite(n) && n >= 0) h[campo] = n; else delete h[campo];
+          changed = true;
+        });
+        if(typeof h.at !== 'number' || !isFinite(h.at) || h.at <= 0){
+          const t = new Date(h.at).getTime();
+          h.at = isFinite(t) && t > 0 ? t : Date.now();
+          changed = true;
+        }
+      });
+    });
     // startAt salvo COM hora (versões antigas) fazia "hoje" contar como futuro — normaliza pra meia-noite
     ['lift','run'].forEach(mk=>{
       const md = state.modules && state.modules[mk];
@@ -1582,7 +1608,7 @@ function homeStatusLine(){
   const streak = calcStreak(todosH);
   const a = adaptMode();
   const h = new Date().getHours();
-  const w = mod && mod.plan && mod.plan.workouts.find(x=>x.dayIdx===getDayIdx());
+  const w = mod && mod.plan && Array.isArray(mod.plan.workouts) && mod.plan.workouts.find(x=>x.dayIdx===getDayIdx());
   const nomeOutro = isLift ? 'corrida' : 'musculação';
   const nomeAtivo = isLift ? 'musculação' : 'corrida';
 
@@ -2281,6 +2307,8 @@ function renderYourList(mod){
 
 // ---------- SESSIONS ----------
 function renderSessions(){
+  // módulo ativo sem plano (ex.: trocou de módulo e não criou): não quebra a tela
+  if(!state.modules[state.active]){ showPickScreen(); return; }
   const mod = state.modules[state.active];
   if(mod && !mod.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; }
   const isLift = state.active==='lift';
@@ -2306,7 +2334,7 @@ function renderSessions(){
   const sel = currentSelectedWorkout(mod);
   $('sessions-chips').innerHTML = mod.plan.workouts.map(w=>{
     const on = String(w.k||w.dayIdx)===String(sel.k||sel.dayIdx);
-    return `<div class="filter-chip ${on?'on':''}" onclick="selectSession('${w.k||w.dayIdx}')"><div style="font-size:11px;letter-spacing:1px;color:var(--text-dim);font-weight:700">${(w.dayName||'').toUpperCase()}</div><div style="font-weight:700;margin-top:2px">${isLift?'Treino '+w.k:w.name.split('(')[0].trim()}</div></div>`;
+    return `<div class="filter-chip ${on?'on':''}" onclick="selectSession('${w.k||w.dayIdx}')"><div style="font-size:11px;letter-spacing:1px;color:var(--text-dim);font-weight:700">${(w.dayName||'').toUpperCase()}</div><div style="font-weight:700;margin-top:2px">${isLift?'Treino '+w.k:String(w.name||'Treino').split('(')[0].trim()}</div></div>`;
   }).join('');
   renderSessionDetail(sel);
 }
@@ -2443,7 +2471,7 @@ function getLastLog(exId){
 
 function renderRunBlocks(w){
   const cls=['warm','main','cool'], emos=['🔥','🏃','🏁'];
-  return w.blocks.map((b,i)=>`
+  return (w.blocks||[]).map((b,i)=>`
     <div class="block ${i===1?'open':''}">
       <div class="block-head ${cls[i]}" onclick="this.parentNode.classList.toggle('open')">
         <span style="font-size:20px">${emos[i]}</span>
@@ -2739,6 +2767,8 @@ function markRunDone(dayIdx){
 const HIST_PAGE = 14;      // dias carregados por vez
 let histLimit = HIST_PAGE;
 function renderHistory(){
+  // módulo ativo sem plano (ex.: trocou de módulo e não criou): não quebra a tela
+  if(!state.modules[state.active]){ showPickScreen(); return; }
   const mod = state.modules[state.active];
   const isLift = state.active==='lift';
   const h = mod.history||[];
@@ -2790,7 +2820,7 @@ function renderHistory(){
         return `<div class="hist-card ${isRunEntry?'run':''}" onclick="openHistoryEntry(${x._idx})">
           <div class="hist-emo">${emo}</div>
           <div style="flex:1;min-width:0">
-            <div class="hist-name">${x.name.replace(/^[🚶🚴🏃]\s*/u,'')}</div>
+            <div class="hist-name">${String(x.name||'Treino').replace(/^[🚶🚴🏃]\s*/u,'')}</div>
             <div class="hist-meta"><span>🕐 ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>${meta}</div>
             ${parts.length?`<div class="hist-chips">${parts.map(p=>`<span class="hist-chip">${p}</span>`).join('')}</div>`:''}
             ${x.adaptedWith?`<div style="margin-top:5px;font-size:11px;color:var(--info-soft)">🩹 Treinou adaptado — ${x.adaptedWith}</div>`:''}
@@ -3024,6 +3054,8 @@ function renderRecords(){
     </div>`).join('');
 }
 function renderPerf(){
+  // módulo ativo sem plano (ex.: trocou de módulo e não criou): não quebra a tela
+  if(!state.modules[state.active]){ showPickScreen(); return; }
   const _pm = state.modules[state.active];
   if(_pm && !_pm.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; }
   renderCalendar();
@@ -3361,7 +3393,7 @@ function monthBestStreak(){
   dias.forEach(d=>{ cur = (prev!==null && d-prev===86400000) ? cur+1 : 1; best=Math.max(best,cur); prev=d; });
   return best;
 }
-const somaKm = (arr)=>arr.reduce((s,x)=>s+(x.distance||0),0);
+const somaKm = (arr)=>arr.reduce((s,x)=>s+(parseFloat(x.distance)||0),0);
 
 // Cada desafio: progresso() retorna [atual, alvo]. cat filtra por modalidade.
 const MONTH_CHALLENGES = [
@@ -4133,11 +4165,14 @@ function openModal(k){
   if(k==='add-student') bindOpts('modal-inner');
   if(k==='pain') document.querySelectorAll('#pain-areas .opt-multi').forEach(o=>{ o.onclick=()=>o.classList.toggle('on'); });
 }
+let trofeuPendente = false;
 function closeModal(){
   const mi = $('modal-inner'); const hadVideo = mi && mi.querySelector('iframe');
   if(hadVideo) mi.innerHTML=''; // para o vídeo ao fechar
   if(mi) mi.classList.remove('modal-video','short');
   $('modal-back').classList.remove('on','video-open');
+  // conquistas que ficaram esperando o fim do feedback (fechou pelo botão, pelo X ou tocando fora)
+  if(trofeuPendente){ trofeuPendente = false; setTimeout(()=>{ try{ checkTrophies(); }catch(e){ console.log('Erro nas conquistas:', e); } }, 260); }
   // vídeo aberto DE DENTRO do assistente → volta pro assistente ao fechar
   if(hadVideo && typeof maVideoReturn!=='undefined' && maVideoReturn){ maVideoReturn=false; setTimeout(()=>{ try{ renderAssistant(); }catch(e){} }, 60); return; }
   // se um comando do assistente mexeu nos planos, redesenha a tela por baixo
@@ -6097,9 +6132,14 @@ function importMyData(ev){
       const data = JSON.parse(reader.result);
       const est = data.estado || data; // aceita o arquivo completo ou só o estado
       if(!est || !est.user){ toast('⚠️ Arquivo inválido — não parece um backup do MetaTreino'); return; }
+      if('modules' in est && (est.modules === null || typeof est.modules !== 'object')){
+        toast('⚠️ Backup corrompido: a parte dos treinos está inválida'); return;
+      }
       appConfirm('Seus dados atuais serão SUBSTITUÍDOS pelos do arquivo.', ()=>{
         const keepUser = { ...est.user, email: state.user.email, isAdmin: state.user.isAdmin };
         state = {...state, ...est, user:keepUser, ui:{tab:'home',selectedSession:null}};
+        if(!state.modules || typeof state.modules !== 'object') state.modules = {lift:null, run:null};
+        try{ migrateExerciseIds(); }catch(e){ console.log('Erro ao sanear o backup:', e); }  // normaliza números e planos do arquivo
         ensureStats(); saveData(); syncToCloud();
         toast('✅ Backup restaurado com sucesso!'); goTab('home');
       }, {title:'Restaurar backup?', emo:'📥', okLabel:'Sim, restaurar', danger:true});
@@ -8385,15 +8425,17 @@ function saveRunLog(dayIdx){
   saveData();
   closeModal();
   // primeiro o feedback da corrida; só depois as conquistas aparecem
-  const fb = runFeedback(km, min, type, _ehProvaAgora);
+  let fb = null;
+  try{ fb = runFeedback(km, min, type, _ehProvaAgora); }catch(e){ console.log('Erro no feedback da corrida:', e); }
   if(fb){
     $('modal-inner').innerHTML = `
-      <div style="text-align:center"><div style="font-size:40px">${_ehProva?'🏅':'🏃'}</div>
+      <div style="text-align:center"><div style="font-size:40px">${_ehProvaAgora?'🏅':'🏃'}</div>
         <h3 style="margin:8px 0 4px">${fb.titulo}</h3></div>
       <div class="card" style="margin-top:12px;padding:13px 15px">
         ${fb.linhas.map(l=>`<div style="font-size:13.5px;line-height:1.6;color:var(--text-dim);margin:5px 0">${l}</div>`).join('')}
       </div>
-      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();checkTrophies();goTab('home')">Beleza! 👊</button>`;
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();goTab('home')">Beleza! 👊</button>`;
+    trofeuPendente = true;   // dispara ao fechar o modal, não importa como
     $('modal-back').classList.add('on');
   } else {
     toast(`${meta.emo} ${meta.lbl} salva: ${km}km em ${fmtDur(min)} (${paceStr})`);
