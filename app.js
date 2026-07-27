@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.88 =====
-const APP_VERSION = 'v11.88';
+// ===== MetaTreino v11.89 =====
+const APP_VERSION = 'v11.89';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -6790,6 +6790,120 @@ function buildShareCanvas(opts){
   x.fillText('MetaTreino App', 115, 1268);
   return c;
 }
+// ===== RESUMO DA SEMANA (com gráfico por dia) =====
+// Junta os 7 dias e devolve os números da semana, no módulo ativo.
+function weekSummaryData(){
+  const isLift = state.active==='lift';
+  const mod = state.modules[state.active] || {};
+  const hist = mod.history || [];
+  const h0 = new Date(); h0.setHours(0,0,0,0);
+  const ini = new Date(h0); ini.setDate(ini.getDate()-6);            // últimos 7 dias (hoje incluso)
+  const dias = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(ini); d.setDate(d.getDate()+i);
+    const fim = new Date(d); fim.setDate(fim.getDate()+1);
+    const doDia = hist.filter(x=>x.at>=d.getTime() && x.at<fim.getTime());
+    dias.push({
+      data: d,
+      valor: isLift ? doDia.reduce((a,x)=>a+(x.duration||0),0) : doDia.reduce((a,x)=>a+(x.distance||0),0),
+      n: doDia.length
+    });
+  }
+  const daSemana = hist.filter(x=>x.at>=ini.getTime());
+  const totalMin = daSemana.reduce((a,x)=>a+(x.duration||0),0);
+  const totalKm  = daSemana.reduce((a,x)=>a+(x.distance||0),0);
+  const fmtD = d => d.toLocaleDateString('pt-BR',{day:'numeric', month:'short'}).replace('.','');
+  return {
+    isLift, dias, n: daSemana.length,
+    totalMin, totalKm: Math.round(totalKm*10)/10,
+    kcal: Math.round(totalMin*7),                                    // estimativa simples, igual à do assistente
+    periodo: `${fmtD(ini)} – ${fmtD(h0)} de ${h0.getFullYear()}`,
+    vazio: daSemana.length===0
+  };
+}
+// Arte do resumo semanal: foto opcional de fundo + número grande + 3 stats + gráfico de barras
+function buildWeekCanvas(img, d){
+  const W=1080, H=1350;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const x=c.getContext('2d');
+  if(img){
+    const ir=img.width/img.height, cr=W/H;
+    let sw,sh,sx,sy;
+    if(ir>cr){ sh=img.height; sw=sh*cr; sx=(img.width-sw)/2; sy=0; }
+    else { sw=img.width; sh=sw/cr; sx=0; sy=(img.height-sh)/2; }
+    x.drawImage(img, sx,sy,sw,sh, 0,0,W,H);
+    x.fillStyle='rgba(4,10,18,.62)'; x.fillRect(0,0,W,H);            // véu pro texto respirar
+  } else {
+    const g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,'#0b1622'); g.addColorStop(1,'#071018');
+    x.fillStyle=g; x.fillRect(0,0,W,H);
+    x.fillStyle='rgba(16,185,129,.07)'; x.beginPath(); x.arc(W*0.85,H*0.12,300,0,Math.PI*2); x.fill();
+  }
+  x.textAlign='left';
+  x.fillStyle='#10b981'; x.font='900 38px Arial, sans-serif'; x.fillText('Meta',60,92);
+  x.fillStyle='#ffffff'; x.fillText('Treino',60+x.measureText('Meta').width+4,92);
+  x.fillStyle='rgba(255,255,255,.6)'; x.font='700 26px Arial, sans-serif';
+  x.fillText(d.periodo, 60, 165);
+  // número grande
+  const grande = d.isLift ? String(d.n) : String(d.totalKm).replace('.',',');
+  x.fillStyle='#ffffff'; x.font='900 150px Arial, sans-serif';
+  x.fillText(grande, 60, 320);
+  const un = d.isLift ? (d.n===1?'treino na semana':'treinos na semana') : 'quilômetros';
+  x.fillStyle='rgba(255,255,255,.66)'; x.font='800 30px Arial, sans-serif';
+  x.fillText(un, 60, 368);
+  // 3 stats
+  const stats = d.isLift
+    ? [['SESSÕES', String(d.n)], ['TEMPO TOTAL', fmtDur(d.totalMin)], ['QUEIMOU', d.kcal+' kcal']]
+    : [['ATIVIDADES', String(d.n)], ['TEMPO TOTAL', fmtDur(d.totalMin)], ['QUEIMOU', d.kcal+' kcal']];
+  let bx=60;
+  stats.forEach(([rot,val])=>{
+    x.fillStyle='rgba(255,255,255,.55)'; x.font='800 22px Arial, sans-serif'; x.fillText(rot, bx, 448);
+    x.fillStyle='#ffffff'; x.font='900 44px Arial, sans-serif'; x.fillText(val, bx, 500);
+    bx += Math.max(x.measureText(val).width, 150) + 65;
+  });
+  // gráfico de barras (7 dias)
+  const gx=60, gy=620, gw=W-120, gh=430;
+  const max = Math.max(...d.dias.map(v=>v.valor), 1);
+  const bw = gw/7*0.62, gap = gw/7;
+  x.strokeStyle='rgba(255,255,255,.12)'; x.lineWidth=2;
+  x.beginPath(); x.moveTo(gx, gy+gh); x.lineTo(gx+gw, gy+gh); x.stroke();
+  const nomes=['dom','seg','ter','qua','qui','sex','sáb'];
+  d.dias.forEach((dia,i)=>{
+    const bh = dia.valor>0 ? Math.max(14, (dia.valor/max)*(gh-40)) : 5;
+    const px = gx + i*gap + (gap-bw)/2;
+    const py = gy+gh-bh;
+    const g2 = x.createLinearGradient(0,py,0,gy+gh);
+    if(dia.valor>0){ g2.addColorStop(0,'#34d399'); g2.addColorStop(1,'#10b981'); }
+    else { g2.addColorStop(0,'rgba(255,255,255,.14)'); g2.addColorStop(1,'rgba(255,255,255,.08)'); }
+    x.fillStyle=g2;
+    const r=Math.min(12,bw/2);
+    x.beginPath();
+    x.moveTo(px, gy+gh); x.lineTo(px, py+r); x.quadraticCurveTo(px, py, px+r, py);
+    x.lineTo(px+bw-r, py); x.quadraticCurveTo(px+bw, py, px+bw, py+r);
+    x.lineTo(px+bw, gy+gh); x.closePath(); x.fill();
+    // valor em cima da barra
+    if(dia.valor>0){
+      x.fillStyle='#ffffff'; x.font='800 22px Arial, sans-serif'; x.textAlign='center';
+      const rot = d.isLift ? Math.round(dia.valor)+'min' : (Math.round(dia.valor*10)/10).toString().replace('.',',');
+      x.fillText(rot, px+bw/2, py-12);
+      x.textAlign='left';
+    }
+    x.fillStyle='rgba(255,255,255,.5)'; x.font='700 21px Arial, sans-serif'; x.textAlign='center';
+    x.fillText(nomes[dia.data.getDay()], px+bw/2, gy+gh+34);
+    x.textAlign='left';
+  });
+  x.fillStyle='rgba(255,255,255,.85)'; x.font='700 26px Arial, sans-serif';
+  x.fillText(d.isLift ? 'Minha semana de treinos 💪' : 'Minha semana de corrida 🏃', 60, H-92);
+  x.fillStyle='#34d399'; x.font='700 22px Arial, sans-serif';
+  x.fillText('metatreino.app', 60, H-52);
+  return c;
+}
+function shareWeekSummary(){
+  const d = weekSummaryData();
+  if(d.vazio){ toast('📭 Sem atividades nos últimos 7 dias — treine e volte aqui!'); return; }
+  const c = buildWeekCanvas(null, d);
+  _lastPhotoOpts = { semana:d, filename:'metatreino-semana.png', shareText:'Minha semana no MetaTreino 💪' };
+  shareCanvas(c, 'metatreino-semana.png', 'Minha semana no MetaTreino 💪');
+}
 // Modo Foto: a FOTO da pessoa é o fundo; as infos entram discretas por cima
 function buildPhotoShareCanvas(img, opts){
   const W=1080, H=1350;
@@ -6843,7 +6957,9 @@ function onSharePhotoPicked(ev){
   r.onload = ()=>{
     const img = new Image();
     img.onload = ()=>{
-      const c = buildPhotoShareCanvas(img, _lastPhotoOpts);
+      const c = _lastPhotoOpts.semana
+        ? buildWeekCanvas(img, _lastPhotoOpts.semana)
+        : buildPhotoShareCanvas(img, _lastPhotoOpts);
       shareCanvas(c, _lastPhotoOpts.filename||'metatreino-foto.png', _lastPhotoOpts.shareText||'Treinei hoje com MetaTreino 💪');
     };
     img.src = r.result;
@@ -8368,7 +8484,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
