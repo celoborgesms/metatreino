@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.83 =====
-const APP_VERSION = 'v11.83';
+// ===== MetaTreino v11.84 =====
+const APP_VERSION = 'v11.84';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -5799,16 +5799,49 @@ function updateFabNudge(){
     if(bubble) bubble.style.display='none';
   }
 }
+// A conversa fica guardada por algumas horas (no aparelho, não na nuvem).
+// Assim você fecha, confere algo no app e volta sem perder o fio da meada.
+const MA_THREAD_TTL = 3*3600000;   // 3 horas
+function maSaveThread(){
+  try{
+    const limpo = maThread.filter(m=>!m.typing && !m.working).slice(-40);   // sem indicadores, últimas 40
+    if(!limpo.length){ localStorage.removeItem('mt_ma_thread'); return; }
+    localStorage.setItem('mt_ma_thread', JSON.stringify({ at: Date.now(), thread: limpo }));
+  }catch(e){}
+}
+function maLoadThread(){
+  try{
+    const raw = localStorage.getItem('mt_ma_thread'); if(!raw) return null;
+    const o = JSON.parse(raw);
+    if(!o || !o.thread || !o.thread.length) return null;
+    if(Date.now() - (o.at||0) > MA_THREAD_TTL){ localStorage.removeItem('mt_ma_thread'); return null; }
+    return o.thread;
+  }catch(e){ return null; }
+}
+function maClearThread(){
+  try{ localStorage.removeItem('mt_ma_thread'); }catch(e){}
+  clearTimeout(maTypingT);
+  maThread = [];
+  renderAssistant();
+  maReply(maOpeningSummary());
+}
 function openAssistant(){
   state.ui = state.ui || {}; state.ui.nudgeSeen = new Date().toDateString();
   try{ saveData(); }catch(e){}
   const fab=document.getElementById('ma-fab'); if(fab) fab.classList.remove('fab-alert','fab-curio','fab-important','fab-rare','fab-special');
   const b=document.getElementById('fab-bubble'); if(b) b.style.display='none';
-  maThread = [];
   const _inp0 = $('ma-input'); if(_inp0) _inp0.value = '';
-  renderAssistant();
-  // chega como mensagem de gente: primeiro os pontinhos, depois o texto
-  try{ maReply(maOpeningSummary()); }catch(e){ maThread=[{who:'bot', txt:maOpeningSummary()}]; renderAssistant(); }
+  const anterior = maLoadThread();
+  if(anterior && anterior.length){
+    // retoma de onde parou (sem repetir a saudação)
+    maThread = anterior;
+    renderAssistant();
+  } else {
+    maThread = [];
+    renderAssistant();
+    // chega como mensagem de gente: primeiro os pontinhos, depois o texto
+    try{ maReply(maOpeningSummary()); }catch(e){ maThread=[{who:'bot', txt:maOpeningSummary()}]; renderAssistant(); }
+  }
 }
 function maBubblesHTML(){
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -5838,6 +5871,7 @@ function maSugsHTML(){
 // Atualiza SÓ a conversa e os atalhos — o campo de texto continua vivo,
 // então o teclado do celular não fecha no meio da digitação.
 function maRefreshThread(){
+  try{ maSaveThread(); }catch(e){}
   const th = $('ma-thread');
   const mb = $('modal-back');
   if(!th || !mb || !mb.classList.contains('on')){ renderAssistant(); return; }
@@ -5858,7 +5892,10 @@ function renderAssistant(){
       <input class="input" id="ma-input" placeholder="Pergunte ou registre algo..." style="flex:1" autocomplete="off" enterkeyhint="send" onkeydown="if(event.key==='Enter')maAskText()">
       <button class="btn btn-primary" style="padding:11px 16px" onclick="maAskText()">➤</button>
     </div>
-    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeAssistant()">Fechar</button>`;
+    <div class="row" style="gap:6px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeAssistant()">Fechar</button>
+      <button class="btn btn-ghost" id="ma-clear" style="padding:11px 14px;font-size:12.5px" onclick="maClearThread()" title="Limpar conversa">🧹</button>
+    </div>`;
   $('modal-back').classList.add('on');
   const th=$('ma-thread'); if(th) th.scrollTop=th.scrollHeight;
   const inp = $('ma-input');
@@ -5869,7 +5906,7 @@ function renderAssistant(){
   }
 }
 function closeAssistant(){
-  try{ clearTimeout(maTypingT); maThread = maThread.filter(m=>!m.typing && !m.working); }catch(e){}
+  try{ clearTimeout(maTypingT); maThread = maThread.filter(m=>!m.typing && !m.working); maSaveThread(); }catch(e){}
   closeModal();
   if(maRefreshUI){ maRefreshUI = false; goTab(state.ui.tab||'home'); }
 }
@@ -8252,7 +8289,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,clearVideoLink,openSuggestions,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,clearVideoLink,openSuggestions,maClearThread,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
