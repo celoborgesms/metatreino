@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.86 =====
-const APP_VERSION = 'v11.86';
+// ===== MetaTreino v11.87 =====
+const APP_VERSION = 'v11.87';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -335,7 +335,11 @@ function doRestart(){
 function doDeleteAccount(){
   if(!state.user || !fbUser) return;
   const email = fbUser.email;
-  if(email === ADMIN_EMAIL){ toast('⚠️ A conta de administrador não pode ser excluída por aqui.'); closeModal(); return; }
+  // qualquer conta com acesso de administrador é protegida (não só o e-mail principal)
+  if(email === ADMIN_EMAIL || (state.user && state.user.isAdmin)){
+    toast('🛡️ Contas de administrador não podem ser excluídas por aqui.');
+    closeModal(); return;
+  }
   appConfirm('Todo o seu progresso será apagado para sempre e você sairá da conta.', ()=>{
     const uid = fbUser.uid;
     db.collection('usuarios').doc(uid).delete().catch(e=>console.log('Erro ao excluir na nuvem:', e));
@@ -429,15 +433,28 @@ fbAuth.onAuthStateChanged(function(user){
   }
 });
 
-// Tela de escolha de módulo: o admin vê o atalho do painel (não precisa criar plano pra entrar)
-function showPickScreen(){
-  showScreen('scr-pick');
+// Atalho do painel nas telas de cadastro — admin entra sem preencher nada
+function mostraAtalhoAdmin(id){
   try{
-    const ab = $('pick-admin-btn');
+    const ab = $(id);
     const ehAdmin = !!(state.user && state.user.isAdmin);
     if(ab) ab.classList.toggle('hidden', !ehAdmin);
     if(ehAdmin) setTimeout(()=>{ try{ checkNewFeedback(); }catch(e){} }, 1200);
   }catch(e){}
+}
+// Volta do painel pro lugar certo: quem não terminou o cadastro não pode cair na Home
+function sairDoPainel(){
+  try{
+    if(!state.user.profile || !state.user.profile.quiz_done){
+      showScreen('scr-quiz'); bindOpts('scr-quiz'); mostraAtalhoAdmin('quiz-admin-btn'); return;
+    }
+    if(!state.modules.lift && !state.modules.run){ showPickScreen(); return; }
+  }catch(e){}
+  goTab('home');
+}
+function showPickScreen(){
+  showScreen('scr-pick');
+  mostraAtalhoAdmin('pick-admin-btn');
 }
 function bootAfterAuth(){
   cleanupOldHistory();
@@ -445,6 +462,7 @@ function bootAfterAuth(){
   if(!state.user){ showScreen('scr-auth'); return; }
   if(!state.user.profile || !state.user.profile.quiz_done){
     showScreen('scr-quiz'); bindOpts('scr-quiz');
+    mostraAtalhoAdmin('quiz-admin-btn');
     return;
   }
   if(!state.modules.lift && !state.modules.run){ showPickScreen(); return; }
@@ -7583,6 +7601,7 @@ async function checkNewFeedback(){
     const mostrar = (el, txt)=>{ if(!el) return; el.textContent = txt; el.style.display = novos ? 'inline-block' : 'none'; };
     mostrar($('adm-feedback-badge'), novos>9?'9+':String(novos));
     mostrar($('pick-adm-badge'), novos>9?'9+':String(novos));
+    mostrar($('quiz-adm-badge'), novos>9?'9+':String(novos));
     mostrar($('pf-adm-badge'), novos>9?'9+':String(novos));
     if(novos && !checkNewFeedback._avisou){
       checkNewFeedback._avisou = true;
@@ -8302,7 +8321,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,clearVideoLink,openSuggestions,maClearThread,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
