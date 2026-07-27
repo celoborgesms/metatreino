@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.84 =====
-const APP_VERSION = 'v11.84';
+// ===== MetaTreino v11.85 =====
+const APP_VERSION = 'v11.85';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -4622,7 +4622,7 @@ function maInterpret(txt){
   if(has('tchau','até mais','ate mais','falou','xau','adeus','até logo','ate logo','vlw','valeu','obrigad','brigad','obg')) return '_tchau';
   if(has('quem é você','quem e voce','o que você é','o que voce e','vc é','você é um','voce e um','é uma ia','e uma ia','é robô','e robo')) return '_quemsou';
   if(has('como vai','tudo bem','como você está','como voce esta','de boa')) return '_comovai';
-  if(has('o que posso escrever','o que posso falar','o que posso dizer','quais comandos','lista de comandos','comandos')) return '_comandos';
+  if(has('o que posso perguntar','oque posso perguntar','o que posso escrever','o que posso falar','o que posso dizer','o que mais posso','oque mais posso','o que você faz','o que voce faz','o que sabe fazer','quais comandos','lista de comandos','comandos','o que você sabe','o que voce sabe','me ajuda com o que','no que pode me ajudar','como funciona voce','como você funciona','pode fazer o que')) return '_comandos';
   // ===== dia a dia =====
   if(has('que dia é hoje','que dia e hoje','qual dia é hoje','qual a data','data de hoje','hoje é que dia','que data é hoje','em que dia estamos','qual o dia de hoje')) return '_datahoje';
   if(has('que horas são','que horas sao','qual a hora','me diz a hora','horas agora')) return '_horaagora';
@@ -5444,13 +5444,16 @@ const MA_SOCIAL = {
   _tchau(){ return `Até a próxima, ${maName()}! 👊 Continue firme — a constância é o que transforma. Bons treinos!`; },
   _quemsou(){ return 'Sou o Meta Assistente 💬 — seu apoio dentro do MetaTreino. Não sou uma IA da internet: eu leio seus dados reais de treino e um bom conhecimento de treino/saúde pra te responder na hora, de graça e até offline. Pergunte sobre sua evolução, treinos, nutrição, conceitos, sua meta e muito mais! 💪'; },
   _comovai(){ return `Tô ótimo e pronto pra te ajudar! 😄 Mas o que importa é como VOCÊ está. Quer que eu mostre sua evolução recente, ${maName()}?`; },
-  _comandos(){ return `📋 <b>O que você pode me dizer:</b><br><br>
-<b>📊 Perguntar</b><br>• "minha evolução" • "como foi meu treino?"<br>• "minha corrida" • "meus troféus" • "minha meta"<br>• "quando é minha prova?" • "qual meu recorde?"<br>• "que músculo treino menos?" • "qual meu IMC?"<br>• "quantos treinos essa semana?"<br>• "qual meu próximo treino?" • "quando é meu aniversário?"<br>• "quanto tempo fiquei sem treinar?" • "me motive"<br><br>
-<b>✍️ Registrar</b><br>• "estou pesando 90kg" • "emagreci 2kg"<br>• "corri 5km em 30 minutos"<br>• "caminhei 3km em 25 min" • "pedalei 10km em 40min"<br>• "minha prova é dia 15/08" 🏁 (contagem regressiva)<br>• "treinei peito" / "fiz musculação"<br><br>
-<b>🩹 Como estou</b><br>• "estou com dor no joelho" (ou ombro, lombar, punho, cotovelo, tornozelo, pescoço)<br>• "estou cansado" • "estou triste"${tpmAvailable()?' • "estou de TPM"':''}<br>• "voltar ao normal"<br><br>
-<b>⚙️ Mudar treinos</b><br>• "não estou na academia hoje"<br>• "voltei pra academia" • "só tenho halteres"<br>• "quero treinar corrida segunda, quarta e sexta"<br><br>
-<b>💪 Treino extra</b><br>• "quero treinar peito hoje" (sugestão fora do plano)<br><br>
-<b>▶️ Aprender</b><br>• "como fazer supino reto" (abre o vídeo)`; },
+  _comandos(){ return `📋 <b>O que você pode me perguntar ou dizer:</b><br><br>
+<b>📊 Como estou indo</b><br>• "como estou me saindo?" • "me avalia"<br>• "tenho corrido bem?" • "tenho treinado bem?"<br>• "minha evolução" • "como foi meu treino?"<br>• "quantos treinos essa semana?" • "meus troféus"<br><br>
+<b>🏃 Corrida</b><br>• "quanto tempo eu faria 10km?" 🔮 (previsão)<br>• "qual meu recorde?" • "minha meta"<br>• "quando é minha prova?"<br>• "minha prova é dia 15/08 às 7h" 🏁<br><br>
+<b>✍️ Registrar</b><br>• "corri 5km em 30 minutos"<br>• "caminhei 3km em 25 min" • "pedalei 10km em 40min"<br>• "estou pesando 90kg" • "emagreci 2kg"<br>• "treinei peito" / "fiz musculação"<br><br>
+<b>🩹 Como me sinto</b><br>• "estou com dor no joelho" (ou ombro, lombar, punho, cotovelo, tornozelo, pescoço)<br>• "estou cansado" • "estou desanimado"${tpmAvailable()?' • "estou de TPM"':''}<br>• "voltar ao normal"<br><br>
+<b>💬 Me conte do seu dia</b> <i>(eu considero nas respostas)</i><br>• "dormi só 4 horas" • "hoje só tenho 30 minutos"<br>• "não almocei ainda" • "a academia está lotada"<br><br>
+<b>🤔 Dúvidas do dia a dia</b><br>• "dormir mal afeta meu treino?"<br>• "que dia é hoje?" • "que horas são?"<br>• "quantas séries devo fazer?" • "o que comer antes do treino?"<br><br>
+<b>⚙️ Mudar meu plano</b><br>• "quero treinar segunda, quarta e sexta"<br>• "minha academia só tem halteres"<br><br>
+<b>▶️ Aprender</b><br>• "como fazer supino reto" (abre o vídeo)<br><br>
+<b>💡 Falar com quem criou o app</b><br>• "quero mandar uma sugestão"<br>• "gostaria que tivesse tal função"`; },
   _ajuda(){ return 'Posso te contar: 📈 sua evolução, 💪 como foi seu treino, 🏃 sua corrida, 🏆 seus troféus, 🎯 sua meta, qual músculo você treina menos, sua maior pausa, recordes, quanto tempo usa o app, peso, calorias e ainda te motivar. É só tocar numa sugestão ou digitar!'; }
 };
 function maSaudacao(){ const h=new Date().getHours(); return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'; }
