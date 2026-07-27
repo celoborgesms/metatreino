@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.82 =====
-const APP_VERSION = 'v11.82';
+// ===== MetaTreino v11.83 =====
+const APP_VERSION = 'v11.83';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -975,7 +975,7 @@ function runFeedback(km, min, type, ehProva){
     else if(difSeg >= 3) linhas.push(`🙂 Um pouco acima da sua média (<b>${difSeg}s/km</b> mais rápido). Constância é isso.`);
     else if(difSeg <= -25) linhas.push(`🐢 Foi mais lenta que sua média — e tudo bem: calor, cansaço e sono pesam no ritmo. Corrida leve também constrói base.`);
     else linhas.push(`✅ Bem na sua média de ritmo. Regularidade vale mais que um dia bom isolado.`);
-    if(km > maiorAnt) linhas.push(`📏 <b>Maior distância que você já correu!</b> A anterior era ${maiorAnt}km.`);
+    if(km > maiorAnt) linhas.push(`📏 <b>Maior distância que você já correu!</b> A anterior era ${Math.round(maiorAnt*10)/10}km.`);
     const totalKm = hist.reduce((a,r)=>a+(r.distance||0),0);
     linhas.push(`Total acumulado: <b>${Math.round(totalKm)}km</b> em ${hist.length} corridas.`);
     return { titulo: ehProva ? '🏅 Prova registrada!' : '🏃 Corrida registrada!', linhas };
@@ -4141,6 +4141,120 @@ function maDaysUsing(){
   return Math.max(1, Math.floor((Date.now()-created)/86400000));
 }
 const MA_ANSWERS = {
+  // ===== DIA A DIA =====
+  _datahoje(){
+    const d = new Date();
+    const dias = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    const data = d.toLocaleDateString('pt-BR',{day:'2-digit', month:'long', year:'numeric'});
+    const mod = state.modules[state.active];
+    const w = mod && mod.plan ? (mod.plan.workouts||[]).find(x=>x.dayIdx===getDayIdx()) : null;
+    const extra = w ? `E é dia de <b>${w.name||'treino'}</b> — bora? 💪` : 'E hoje é dia de descanso por aqui — aproveita pra recuperar. 😌';
+    return `Hoje é <b>${dias[d.getDay()]}</b>, ${data}. 📅<br><br>${extra}`;
+  },
+  _horaagora(){
+    const d = new Date();
+    const h = d.getHours();
+    const per = h<5?'madrugada':h<12?'manhã':h<18?'tarde':'noite';
+    const bt = (typeof bestTrainingTime==='function') ? bestTrainingTime() : null;
+    let extra = '';
+    if(bt) extra = `<br><br>Só de curiosidade: seus treinos da <b>${bt.melhor.faixa}</b> costumam render mais (${bt.melhor.pct}% terminam bem).`;
+    return `São <b>${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}</b> — boa ${per}! 🕐${extra}`;
+  },
+  // ===== "COMO ESTOU INDO?" =====
+  _comoestou(){
+    const lift = ((state.modules.lift||{}).history)||[];
+    const run  = ((state.modules.run ||{}).history)||[];
+    const total = lift.length + run.length;
+    if(total < 3) return `Ainda é cedo pra eu avaliar direito — você tem <b>${total}</b> ${total===1?'treino registrado':'treinos registrados'}. 😊<br><br>Registra mais alguns que eu te mostro tendência de ritmo, volume, recuperação e evolução. Por enquanto, o mais importante é criar o hábito. 💪`;
+    const semana = [...lift,...run].filter(x=>Date.now()-x.at < 7*86400000).length;
+    const mes = [...lift,...run].filter(x=>Date.now()-x.at < 30*86400000).length;
+    const st = (typeof calcStreak==='function') ? calcStreak([...lift,...run].sort((a,b)=>a.at-b.at)) : 0;
+    const linhas = [];
+    linhas.push(`📊 <b>Seu resumo agora</b>`);
+    linhas.push(`• <b>${total}</b> treinos no total · <b>${mes}</b> nos últimos 30 dias · <b>${semana}</b> nesta semana`);
+    if(st>1) linhas.push(`• Sequência atual: <b>${st} dias</b> 🔥`);
+    if(semana>=4) linhas.push(`• Frequência <b>excelente</b> essa semana. Só cuidado pra não pular a recuperação.`);
+    else if(semana>=2) linhas.push(`• Frequência <b>boa</b> essa semana — é assim que resultado aparece: constância.`);
+    else if(semana===1) linhas.push(`• Uma sessão essa semana. Não é pouco: é mais que 0. Bora somar outra? 💪`);
+    else linhas.push(`• Nenhum treino nos últimos 7 dias. Sem cobrança — o próximo é sempre o mais importante. 💚`);
+    const insights = [];
+    try{ const r=recoveryPatternInsight(); if(r) insights.push(`Você rende melhor treinando <b>${r.melhor.nome}</b> (${r.melhor.pct}% dos treinos terminam bem).`); }catch(e){}
+    try{ const b=bestTrainingTime(); if(b) insights.push(`Seu melhor horário parece ser a <b>${b.melhor.faixa}</b>.`); }catch(e){}
+    try{ const m=monthlyRunCompare(); if(m && m.kmEste>m.kmAnt) insights.push(`Este mês você já corre mais que o mês passado (<b>${m.kmEste}km</b> vs ${m.kmAnt}km). 📈`); }catch(e){}
+    if(insights.length) linhas.push(`<br>🔎 <b>O que descobri sobre você</b><br>• ${insights.join('<br>• ')}`);
+    return linhas.join('<br>');
+  },
+  _correndobem(){
+    const run = (((state.modules.run||{}).history)||[]).filter(r=>(!r.activity||r.activity==='corrida') && (r.distance||0)>0);
+    if(run.length < 3) return `Você tem <b>${run.length}</b> ${run.length===1?'corrida registrada':'corridas registradas'} — ainda pouco pra eu falar de tendência. 🏃<br><br>Com 3+ corridas eu já começo a te mostrar ritmo médio, evolução e previsão de tempo por distância. Bora somar?`;
+    const linhas = [];
+    const pace = (typeof myRunPaceMin==='function') ? myRunPaceMin() : null;
+    const km = run.reduce((a,r)=>a+(r.distance||0),0);
+    const maior = Math.max(...run.map(r=>r.distance||0));
+    linhas.push(`🏃 <b>Sua corrida em números</b>`);
+    linhas.push(`• <b>${run.length}</b> corridas · <b>${Math.round(km)}km</b> acumulados · maior distância: <b>${Math.round(maior*10)/10}km</b>`);
+    if(pace) linhas.push(`• Ritmo atual (mediana das últimas): <b>${fmtPaceMin(pace)}</b>`);
+    try{
+      const m = monthlyRunCompare();
+      if(m){
+        if(m.paceEste && m.paceAnt){
+          const g = Math.round((m.paceAnt-m.paceEste)*60);
+          if(g>=8) linhas.push(`• Seu ritmo <b>melhorou ${g}s/km</b> em relação ao mês passado 🔥`);
+          else if(g<=-15) linhas.push(`• Seu ritmo está ${Math.abs(g)}s/km mais lento que no mês passado — pode ser calor, cansaço ou fase de base. Não é motivo pra preocupação isolada.`);
+          else linhas.push(`• Ritmo <b>estável</b> em relação ao mês passado — consistência também é evolução.`);
+        }
+        linhas.push(`• Este mês: <b>${m.kmEste}km</b> (mês passado: ${m.kmAnt}km)`);
+      }
+    }catch(e){}
+    try{ const v=volumeAlert(); if(v && v.nivel==='alto') linhas.push(`<br>⚠️ Atenção: sua semana está bem acima da média (${v.atual}km vs ${v.media}km). Subir volume rápido é a maior causa de lesão.`); }catch(e){}
+    const alvo = { '5km':5, '10km':10, '21km':21.1, '42km':42.2 }[((state.modules.run||{}).setup||{}).goal];
+    try{
+      const pr = alvo ? racePrediction(alvo) : null;
+      if(pr){ const mm=Math.floor(pr.min), ss=String(Math.round((pr.min-mm)*60)).padStart(2,'0');
+        linhas.push(`<br>🔮 No seu ritmo atual, <b>${alvo}km</b> sairiam em ~<b>${mm}min${ss!=='00'?ss:''}</b>.`); }
+    }catch(e){}
+    return linhas.join('<br>');
+  },
+  _treinandobem(){
+    const lift = ((state.modules.lift||{}).history)||[];
+    if(lift.length < 3) return `Você tem <b>${lift.length}</b> ${lift.length===1?'treino de musculação':'treinos de musculação'} registrados. Ainda cedo pra avaliar tendência — mas o começo é sempre o passo mais difícil, e você já deu. 💪`;
+    const semana = lift.filter(x=>Date.now()-x.at < 7*86400000).length;
+    const mes = lift.filter(x=>Date.now()-x.at < 30*86400000).length;
+    const bons = lift.filter(x=>['otimo','bem'].includes(x.feel)).length;
+    const linhas = [`💪 <b>Sua musculação</b>`,
+      `• <b>${lift.length}</b> treinos no total · <b>${mes}</b> nos últimos 30 dias · <b>${semana}</b> nesta semana`,
+      `• <b>${Math.round(bons/lift.length*100)}%</b> dos seus treinos terminam com sensação boa`];
+    try{ const hg=hardGroupInsight(); if(hg) linhas.push(`• <b>${hg.parte}</b> é seu treino mais puxado (${hg.pct}% terminam cansado/exausto)`); }catch(e){}
+    try{ const fi=fatigueInsight(); if(fi) linhas.push(`<br>${fi}`); }catch(e){}
+    const plano = state.modules.lift && state.modules.lift.setup;
+    if(plano && plano.days){
+      const esperado = parseInt(plano.days)||3;
+      if(semana >= esperado) linhas.push(`<br>✅ Você bateu a meta de <b>${esperado}× por semana</b>. Excelente!`);
+      else linhas.push(`<br>📌 Meta do plano: <b>${esperado}× por semana</b> — você está em ${semana}. Ainda dá tempo!`);
+    }
+    return linhas.join('<br>');
+  },
+  // ===== PREVISÃO DE TEMPO POR DISTÂNCIA =====
+  _previsaoDist(){
+    const alvo = maUltimaDistPergunta || 10;
+    try{
+      const pr = racePrediction(alvo);
+      if(!pr) return `Pra prever seu tempo em <b>${alvo}km</b> eu preciso de pelo menos <b>3 corridas</b> registradas (com distância e tempo). Registra mais algumas que eu faço a conta! 🏃`;
+      const mm = Math.floor(pr.min), ss = String(Math.round((pr.min-mm)*60)).padStart(2,'0');
+      const h = Math.floor(mm/60), rest = mm%60;
+      const tempo = h>0 ? `${h}h${String(rest).padStart(2,'0')}min` : `${mm}min${ss!=='00'?' '+ss+'s':''}`;
+      return `🔮 <b>Previsão pra ${alvo}km: ~${tempo}</b> (ritmo de ${fmtPaceMin(pr.paceAlvo)})<br><br>Baseado na sua melhor corrida recente: <b>${Math.round(pr.base.distance*10)/10}km em ${fmtDur(pr.base.duration)}</b>.<br><br>É uma estimativa (fórmula de Riegel, usada por treinadores) — e ela melhora conforme você treina. Distâncias maiores pedem ritmo um pouco mais conservador. 💪`;
+    }catch(e){ return 'Não consegui calcular agora 😕. Registra mais algumas corridas e tenta de novo.'; }
+  },
+  // ===== SONO =====
+  _sonotreino(){
+    let ctx = '';
+    try{ const s = maCtxGet('sono'); if(s!==null && s<=5) ctx = `<br><br>Você me contou que dormiu <b>${s}h</b> — nesse cenário, eu manteria a carga de hoje e focaria na execução, sem buscar recorde.`; }catch(e){}
+    let padrao = '';
+    try{ const r = recoveryPatternInsight(); if(r) padrao = `<br><br>Nos <b>seus</b> dados: você rende melhor treinando <b>${r.melhor.nome}</b> (${r.melhor.pct}% dos treinos terminam bem, contra ${r.pior.pct}% ${r.pior.nome}).`; }catch(e){}
+    return `Sim, afeta — e bastante. 😴<br><br>Dormir mal alguns dias mexe principalmente com:<br>• <b>Força máxima</b>: você aguenta menos carga que o normal<br>• <b>Coordenação e foco</b>: a técnica piora, e é aí que mora o risco de lesão<br>• <b>Recuperação</b>: boa parte da reconstrução muscular acontece dormindo<br><br>O que <b>não</b> muda: treinar mesmo cansado continua sendo melhor que não treinar. Só não é dia de buscar recorde.<br><br><b>Na prática:</b> mantenha a mesma carga, capriche na execução, aqueça um pouco mais e, se o corpo pedir, tire uma série. Semana de sono ruim + treino pesado é a combinação que mais leva gente ao estagnamento.${ctx}${padrao}`;
+  },
+
   treino_hoje(){
     const today = new Date(); today.setHours(0,0,0,0);
     const done = maAllHistory().filter(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime()===today.getTime(); });
@@ -4495,6 +4609,7 @@ const MA_SUGGESTIONS = [
   {lbl:'❓ O que mais posso perguntar?', key:'_comandos'},
   {lbl:'❤️ Me motive', key:'motiva'}
 ];
+let maUltimaDistPergunta = 10;
 function maInterpret(txt){
   const t = txt.toLowerCase().trim();
   const has = (...ws)=>ws.some(w=>t.includes(w));
@@ -4508,6 +4623,29 @@ function maInterpret(txt){
   if(has('quem é você','quem e voce','o que você é','o que voce e','vc é','você é um','voce e um','é uma ia','e uma ia','é robô','e robo')) return '_quemsou';
   if(has('como vai','tudo bem','como você está','como voce esta','de boa')) return '_comovai';
   if(has('o que posso escrever','o que posso falar','o que posso dizer','quais comandos','lista de comandos','comandos')) return '_comandos';
+  // ===== dia a dia =====
+  if(has('que dia é hoje','que dia e hoje','qual dia é hoje','qual a data','data de hoje','hoje é que dia','que data é hoje','em que dia estamos','qual o dia de hoje')) return '_datahoje';
+  if(has('que horas são','que horas sao','qual a hora','me diz a hora','horas agora')) return '_horaagora';
+  // ===== como estou indo =====
+  if(has('tenho corrido bem','estou correndo bem','como está minha corrida','como esta minha corrida','minha corrida está boa','como vão minhas corridas','como vao minhas corridas','minhas corridas','evolui na corrida','melhorei na corrida')) return '_correndobem';
+  if(has('tenho treinado bem','estou treinando bem','como está meu treino','como esta meu treino','meu treino está bom','como vão meus treinos','como vao meus treinos','estou indo bem na musculação','estou indo bem na musculacao')) return '_treinandobem';
+  if(has('como estou','como estou indo','como estou me saindo','como está meu desempenho','como esta meu desempenho','estou indo bem','estou evoluindo','como está minha evolução','como esta minha evolucao','me avalia','avalia meu desempenho','como está meu progresso','como esta meu progresso')) return '_comoestou';
+  // ===== previsão por distância =====
+  {
+    const mDist = t.match(/(\d{1,2}(?:[.,]\d)?)\s*(?:km|k\b|quil[ôo]metros?)/);
+    const querTempo = /(quanto tempo|em quanto tempo|qual (?:seria )?(?:meu|o) tempo|consigo (?:fazer|correr)|conseguiria|previs[ãa]o|estimativa|quanto (?:eu )?far[ei]a|quanto faria)/.test(t);
+    if(mDist && querTempo){
+      const v = parseFloat(String(mDist[1]).replace(',','.'));
+      if(v>=1 && v<=100){ maUltimaDistPergunta = v; return '_previsaoDist'; }
+    }
+    if(querTempo && /(prova|corrida|maratona|meia)/.test(t)){
+      const alvo = { '5km':5, '10km':10, '21km':21.1, '42km':42.2 }[((state.modules.run||{}).setup||{}).goal];
+      if(alvo){ maUltimaDistPergunta = alvo; return '_previsaoDist'; }
+    }
+  }
+  // ===== sono =====
+  if(has('dormi mal','dormindo mal','sono ruim','pouco sono','falta de sono','não dormi bem','nao dormi bem','sono afeta','dormir afeta','o sono influencia','dormir pouco','noites mal dormidas','insônia','insonia') && has('treino','treinar','afeta','influencia','atrapalha','prejudica','rendimento')) return '_sonotreino';
+  if(has('o sono é importante','sono e importante','importância do sono','importancia do sono','quantas horas devo dormir','quanto devo dormir')) return '_sonotreino';
   if(has('ajuda','o que você faz','o que voce faz','o que sabe','pode fazer','como funciona','me ajuda')) return '_ajuda';
   if(has('análise da semana','analise da semana','análise semanal','analise semanal','resumo da semana','como foi minha semana','relatório','relatorio','minha semana')) return 'analise_semana';
   if(has('insight','padrão','padrao','padrões','padroes','observação','observacao','o que você percebe','o que voce percebe','me surpreenda')) return 'insight';
