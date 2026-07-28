@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.97 =====
-const APP_VERSION = 'v11.97';
+// ===== MetaTreino v11.98 =====
+const APP_VERSION = 'v11.98';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2360,33 +2360,44 @@ function cardioFinisherCard(){
 // O corpo cobra diferente conforme o dia da pessoa. Não é fisioterapia nem obrigação:
 // são 2-3 movimentos no aquecimento que ela já faz, escolhidos pela rotina + grupos do dia.
 const MOB = {
-  peitoral:  { emo:'🚪', nome:'Alongamento de peitoral', tempo:'2× 30s cada lado',
-    como:'Antebraço apoiado no batente da porta, cotovelo na altura do ombro. <b>Gire o tronco</b> (não só o ombro) até sentir o peito alongar.' },
-  toracica:  { emo:'🔄', nome:'Mobilidade torácica', tempo:'8-10 repetições',
-    como:'Mãos na nuca, gire o tronco para um lado e para o outro, respirando fundo. Solta a rigidez de horas na mesma posição.' },
-  rotadores: { emo:'💪', nome:'Rotação externa de ombro', tempo:'2× 15 (carga leve)',
-    como:'Elástico ou halter leve, cotovelo colado ao corpo a 90°, gire o antebraço para fora devagar.' },
-  psoas:     { emo:'🦵', nome:'Alongamento do flexor do quadril', tempo:'2× 30s cada lado',
-    como:'Joelho no chão, outro pé à frente. <b>Contraia o glúteo</b> do lado de trás e leve o quadril à frente — sem arquear a lombar.' },
-  ponte:     { emo:'🌉', nome:'Ponte de glúteo', tempo:'2× 15 repetições',
-    como:'Deitado, pés no chão, suba o quadril apertando o glúteo no topo. Acorda o glúteo que passou o dia desligado.' },
-  posterior: { emo:'🧎', nome:'Alongamento posterior de coxa', tempo:'2× 30s cada lado',
-    como:'Perna estendida à frente, quadril para trás, coluna reta. Desça até sentir atrás da coxa.' },
-  gato:      { emo:'🐈', nome:'Gato e camelo', tempo:'10 repetições lentas',
-    como:'De quatro apoios, arredonde e arqueie a coluna devagar, acompanhando a respiração.' },
-  panturrilha:{emo:'🦶', nome:'Alongamento de panturrilha', tempo:'2× 30s cada lado',
-    como:'Mãos na parede, perna de trás estendida com o calcanhar no chão. Empurre o quadril à frente.' },
-  tornozelo: { emo:'🔃', nome:'Mobilidade de tornozelo', tempo:'10 por lado',
-    como:'Pé à frente, joelho avança por cima dos dedos sem tirar o calcanhar do chão. Melhora agachamento e passada.' },
-  pernasParede:{emo:'🧘', nome:'Pernas na parede', tempo:'2-3 minutos',
-    como:'Deitado, pernas apoiadas na parede. Alivia o inchaço e a sensação de peso de um dia inteiro em pé.' },
-  lombar:    { emo:'🙆', nome:'Extensão de lombar', tempo:'10 repetições lentas',
-    como:'Deitado de bruços, apoie os antebraços e eleve o tronco devagar. Descomprime a lombar de horas sentado ou carregando peso.' },
-  cervical:  { emo:'🙂', nome:'Mobilidade de pescoço', tempo:'8 por direção',
-    como:'Incline a cabeça para os lados e gire devagar, sem forçar. Solta a tensão de dirigir ou olhar pra tela o dia todo.' },
-  punho:     { emo:'🤲', nome:'Alongamento de antebraço', tempo:'2× 30s cada lado',
-    como:'Braço estendido, puxe os dedos para baixo e depois para cima. Alivia quem carrega ou segura peso o dia todo.' }
+  peitoral:{ emo:'🚪', nome:'Abrir o peito', tempo:'30s de cada lado', variantes:{
+    academia:'Fique de lado num aparelho ou pilar. Encoste o antebraço nele com o cotovelo na altura do ombro. Agora <b>gire o corpo todo</b> para o lado contrário, como se fosse olhar para trás, até sentir o peito esticar.',
+    casa:'Encoste o antebraço no <b>batente da porta</b>, cotovelo na altura do ombro. Dê um passo à frente e <b>gire o corpo</b> para o lado contrário até sentir o peito esticar.' } },
+  toracica:{ emo:'🔄', nome:'Soltar as costas', tempo:'8 vezes de cada lado', variantes:{
+    todos:'Sente numa borda com os pés no chão. Mãos atrás da cabeça, cotovelos abertos. <b>Gire o tronco</b> devagar para um lado, respire fundo, volte e faça para o outro. Só o tronco gira — o quadril fica parado.' } },
+  rotadores:{ emo:'💪', nome:'Girar o ombro para fora', tempo:'2 séries de 15', variantes:{
+    academia:'Na polia baixa, pegue o cabo com a mão do lado de fora. <b>Cotovelo colado na cintura</b>, dobrado a 90°. Puxe girando o antebraço para fora, devagar. Carga bem leve.',
+    halteres:'Deite de lado, halter leve na mão de cima. <b>Cotovelo colado na cintura</b>, dobrado a 90°. Gire o antebraço para cima e desça devagar.',
+    casa:'Pegue uma toalha ou elástico com as duas mãos, <b>cotovelos colados na cintura</b>. Puxe as mãos afastando uma da outra e segure 2 segundos.' } },
+  psoas:{ emo:'🦵', nome:'Soltar a frente da coxa', tempo:'30s de cada lado', variantes:{
+    todos:'Apoie um joelho no chão e o outro pé à frente, como quem vai pedir a mão em casamento. <b>Aperte o bumbum</b> do lado do joelho apoiado e empurre o quadril para frente. A lombar fica reta — quem empurra é o quadril, não a barriga.' } },
+  ponte:{ emo:'🌉', nome:'Ativar o bumbum', tempo:'15 repetições', variantes:{
+    todos:'Deite de barriga para cima, joelhos dobrados, pés no chão. <b>Aperte o bumbum</b> e suba o quadril até o corpo ficar reto dos joelhos aos ombros. Segure 2 segundos em cima e desça devagar.' } },
+  posterior:{ emo:'🧎', nome:'Esticar atrás da coxa', tempo:'30s de cada lado', variantes:{
+    academia:'Apoie o calcanhar num banco à sua frente, perna esticada. Coluna reta, <b>empurre o quadril para trás</b> até sentir esticar atrás da coxa. Não curve as costas.',
+    todos:'Perna esticada à frente com o calcanhar no chão, ponta do pé para cima. Coluna reta, <b>empurre o quadril para trás</b> até sentir esticar atrás da coxa.' } },
+  gato:{ emo:'🐈', nome:'Soltar a coluna', tempo:'10 vezes bem devagar', variantes:{
+    todos:'Fique de quatro apoios. <b>Solte o ar</b> arredondando as costas como um gato assustado. <b>Puxe o ar</b> deixando a barriga descer e o peito abrir. Vá lento, sentindo cada vértebra.' } },
+  panturrilha:{ emo:'🦶', nome:'Esticar a panturrilha', tempo:'30s de cada lado', variantes:{
+    todos:'Mãos apoiadas numa parede. Perna de trás <b>esticada com o calcanhar colado no chão</b>. Empurre o quadril para frente até sentir puxar atrás da perna.' } },
+  tornozelo:{ emo:'🔃', nome:'Soltar o tornozelo', tempo:'10 de cada lado', variantes:{
+    todos:'Fique com um pé à frente, a uns 10cm de uma parede. <b>Leve o joelho até encostar na parede</b> sem tirar o calcanhar do chão. Volte e repita. Ajuda a agachar mais fundo.' } },
+  pernasParede:{ emo:'🧘', nome:'Pernas para o alto', tempo:'2 a 3 minutos', variantes:{
+    todos:'Deite no chão com o bumbum perto da parede e <b>apoie as pernas nela</b>, esticadas para cima. Respire fundo. Tira o inchaço e a sensação de peso das pernas.' } },
+  lombar:{ emo:'🙆', nome:'Soltar a lombar', tempo:'10 vezes devagar', variantes:{
+    todos:'Deite de barriga para baixo. <b>Apoie os cotovelos no chão</b> embaixo dos ombros e levante o peito devagar, sem forçar. Segure 3 segundos e desça. A barriga continua encostada.' } },
+  cervical:{ emo:'🙂', nome:'Soltar o pescoço', tempo:'8 para cada lado', variantes:{
+    todos:'Sentado ou em pé, <b>incline a cabeça</b> levando a orelha em direção ao ombro, sem levantar o ombro. Segure 5 segundos. Depois gire devagar olhando por cima de cada ombro.' } },
+  punho:{ emo:'🤲', nome:'Soltar o antebraço', tempo:'30s de cada lado', variantes:{
+    todos:'Estique um braço à frente com a palma para cima. Com a outra mão, <b>puxe os dedos para baixo</b> até sentir esticar o antebraço. Depois vire a palma para baixo e puxe os dedos para cima.' } }
 };
+function mobObj(k){ return MOB[k]; }
+// texto certo pro equipamento do aluno (na academia ninguém usa batente de porta)
+function mobTexto(item){
+  const eq = ((state.modules.lift||{}).setup||{}).equip || 'casa';
+  const v = item.variantes || {};
+  return v[eq] || (eq==='basico' ? (v.halteres||v.academia) : null) || v.todos || v.casa || v.academia || '';
+}
 const ROTINAS = {
   sentado:  { emo:'🪑', label:'Sentado (escritório, computador)',
     foco:['peitoral','toracica','psoas','ponte'],
@@ -2422,13 +2433,16 @@ function mobilidadeDoDia(w){
     if(/Pernas|Glúteos|Panturrilha/.test(partes))  return ['psoas','posterior','ponte','panturrilha','tornozelo','lombar','pernasParede'].includes(k);
     return true;
   };
-  const ordenado = pool.filter(relevante).concat(pool.filter(k=>!relevante(k)));
+  let ordenado = pool.filter(relevante).concat(pool.filter(k=>!relevante(k)));
   if(/Ombro/.test(partes) && !ordenado.includes('rotadores')) ordenado.unshift('rotadores');
+  // RODÍZIO SEMANAL: igual aos exercícios do treino, pra não enjoar de ver sempre os mesmos
+  const wk = Math.floor(Date.now()/(7*86400000)) % Math.max(1, ordenado.length);
+  if(ordenado.length > 3 && wk > 0) ordenado = ordenado.slice(wk).concat(ordenado.slice(0, wk));
   return ordenado.slice(0,3).map(k=>MOB[k]).filter(Boolean);
 }
-function mobRecolhido(){ try{ return localStorage.getItem('mt_mob_recolhido')==='1'; }catch(e){ return false; } }
+function mobRecolhido(){ try{ return localStorage.getItem('mt_mob_recolhido') !== '0'; }catch(e){ return true; } } // nasce recolhido: uma linha só
 function toggleMobCard(){
-  try{ localStorage.setItem('mt_mob_recolhido', mobRecolhido() ? '0' : '1'); }catch(e){}
+  try{ localStorage.setItem('mt_mob_recolhido', mobRecolhido() ? '0' : '1'); }catch(e){}   // aberto fica aberto até fechar de novo
   if(state.ui && state.ui.tab) goTab(state.ui.tab);
 }
 function mobilidadeCard(w){
@@ -2451,9 +2465,9 @@ function mobilidadeCard(w){
     </div>
     ${itens.map(i=>`<div style="padding:9px 0;border-top:1px dashed var(--border)">
       <div style="font-size:13.5px;font-weight:700">${i.emo} ${i.nome} <span style="color:var(--text-mute);font-weight:600;font-size:12px">· ${i.tempo}</span></div>
-      <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:3px">${i.como}</div>
+      <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:3px">${mobTexto(i)}</div>
     </div>`).join('')}
-    <div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;line-height:1.45">Opcional — sem tempo? Treinar já é ótimo. Toque em ▴ pra deixar recolhido nas próximas vezes.</div>
+    <div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;line-height:1.45">Opcional — sem tempo? Treinar já é ótimo. Toque em ▴ pra recolher — fica assim nas próximas vezes.</div>
   </div>`;
 }
 function setRotina(r){
@@ -2482,7 +2496,7 @@ function renderSessionDetail(w){
       </div>
     </div>
     ${w.adapted ? `<div class="card card-alert card-row" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
-    <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
+    ${(((state.modules.lift||{}).history||[]).length + ((state.modules.run||{}).history||[]).length) >= 8 ? '' : `<div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>`}
     ${isLift && isCustomized(w) ? `<div class="card card-row" style="border-color:rgba(167,139,250,0.35);background:rgba(167,139,250,0.06)"><div class="card-icon">✨</div><div style="flex:1"><div class="card-title" style="color:#a78bfa">Treino personalizado</div><div class="card-sub">Você trocou ${w.pins.length} exercício${w.pins.length>1?'s':''} neste treino. As trocas ficam salvas nos próximos treinos. Pra desfazer, use "Voltar à sugestão" em cada exercício.</div></div></div>` : ''}
     ${typeof mobilidadeCard==='function' ? mobilidadeCard(w) : ''}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
