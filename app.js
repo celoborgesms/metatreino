@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.04 =====
-const APP_VERSION = 'v12.04';
+// ===== MetaTreino v12.05 =====
+const APP_VERSION = 'v12.05';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -634,6 +634,16 @@ function openSetupScreen(m){
       }
     }catch(e){}
     if(m==='lift'){
+      // lista de equipamentos aparece só quando "Escolher meus equipamentos" está marcado
+      try{
+        equipTemp = (((state.modules.lift||{}).setup||{}).equipList || []).slice();
+        const grid = $('lift-equip');
+        const sync = ()=>{ const on = grid && grid.querySelector('.opt.on'); const custom = on && on.dataset.val==='custom';
+          const box=$('lift-equip-custom'); if(box) box.style.display = custom ? 'block' : 'none';
+          if(custom) renderEquipChecklist(); };
+        if(grid && !grid._eqBound){ grid._eqBound=true; grid.addEventListener('click', ()=>setTimeout(sync,20)); }
+        setTimeout(sync, 60);
+      }catch(e){}
       ['lift-level','lift-goal','lift-days'].forEach(gid=>{ const g=$(gid); if(g && !g._hintBound){ g._hintBound=true; g.addEventListener('click', ()=>setTimeout(updateLevelHint,30)); } });
       setTimeout(updateLevelHint, 60);
     }
@@ -697,6 +707,88 @@ function updateLevelHint(){
 // ---------- TELA DE MONTAGEM DO PLANO ----------
 // Regra: cada etapa mostra um FATO REAL do que o app está fazendo com as escolhas do aluno
 // (nada de teatro genérico). Se o plano já ficou pronto, a tela ainda dura o mínimo pra ler.
+// ===== EQUIPAMENTOS ESPECÍFICOS =====
+// Cada exercício exige um aparelho. Descobrimos pelo NOME (são descritivos) — assim
+// não foi preciso re-etiquetar 123 exercícios na mão, e novos entram já classificados.
+const EQUIP_LISTA = [
+  { id:'banco',      nome:'Banco (reto/inclinado)', emo:'🛋️' },
+  { id:'halteres',   nome:'Halteres',               emo:'🏋️' },
+  { id:'barra',      nome:'Barra + anilhas',        emo:'🥢' },
+  { id:'barraw',     nome:'Barra W',                emo:'〰️' },
+  { id:'smith',      nome:'Smith',                  emo:'🏗️' },
+  { id:'polia',      nome:'Polia / cabos / cross',  emo:'🔗' },
+  { id:'maquina',    nome:'Máquinas (Hammer, voador)', emo:'⚙️' },
+  { id:'barrafixa',  nome:'Barra fixa',             emo:'🙌' },
+  { id:'paralelas',  nome:'Paralelas',              emo:'🤸' },
+  { id:'legpress',   nome:'Leg press',              emo:'🦿' },
+  { id:'hack',       nome:'Hack',                   emo:'📐' },
+  { id:'extensora',  nome:'Cadeira extensora',      emo:'🪑' },
+  { id:'flexora',    nome:'Mesa flexora',           emo:'🛏️' },
+  { id:'adutora',    nome:'Adutora / abdutora',     emo:'↔️' },
+  { id:'panturrilha',nome:'Panturrilha (máquina)',  emo:'🦶' },
+  { id:'gluteo',     nome:'Glúteo (máquina/caneleira)', emo:'🍑' },
+  { id:'kettlebell', nome:'Kettlebell',             emo:'🔔' },
+  { id:'elastico',   nome:'Elástico / faixa',       emo:'🎗️' }
+];
+function equipDoExercicio(ex){
+  const n = String(ex.name||'').toLowerCase();
+  const eq = new Set();
+  if(/smith/.test(n)) eq.add('smith');
+  else if(/leg press/.test(n)) eq.add('legpress');
+  else if(/\bhack\b/.test(n)) eq.add('hack');
+  else if(/extensora/.test(n)) eq.add('extensora');
+  else if(/flexora/.test(n)) eq.add('flexora');
+  else if(/adutora|abdutora/.test(n)) eq.add('adutora');
+  else if(/panturrilha (sentad|no leg|na m[áa]quina)/.test(n)) eq.add('panturrilha');
+  else if(/cabo|polia|pulley|crossover|pulldown|face pull|pallof/.test(n)) eq.add('polia');
+  else if(/m[áa]quina|hammer|voador|peck deck|articulad|graviton|t-bar|cavalinho/.test(n)) eq.add('maquina');
+  else if(/barra fixa|chin-?up|pull-?up|pegada pronada|pegada supinada/.test(n)) eq.add('barrafixa');
+  else if(/paralelas/.test(n)) eq.add('paralelas');
+  else if(/kettlebell/.test(n)) eq.add('kettlebell');
+  else if(/el[áa]stico|faixa el/.test(n)) eq.add('elastico');
+  else if(/barra w|barra ez/.test(n)) eq.add('barraw');
+  else if(/halter|arnold|goblet|concentrada|farmer|posterior curvad/.test(n)) eq.add('halteres');
+  else if(/\bbarra\b|terra|hip thrust|pélvica|pelvica/.test(n)) eq.add('barra');
+  if(/supino|crucifixo|inclinad|declinad|scott|pregador|hip thrust|p[ée]lvica|b[úu]lgaro|step-?up|banco/.test(n)) eq.add('banco');
+  if(/gl[úu]teo|coice/.test(n) && /m[áa]quina|cabo|caneleira/.test(n)) eq.add('gluteo');
+  if(!eq.size){
+    // sem aparelho no nome: é peso do corpo se a biblioteca marcou como 'casa'
+    if((ex.equip||[]).includes('casa')) return [];
+    eq.add('maquina');   // segurança: exercício de academia não identificado
+  }
+  return [...eq];
+}
+// O aluno consegue fazer este exercício com o que ele tem?
+function podeFazerCom(ex, lista){
+  const req = equipDoExercicio(ex);
+  if(!req.length) return true;                 // peso do corpo: sempre pode
+  return req.every(r => lista.includes(r));    // precisa ter TODOS os aparelhos exigidos
+}
+// desenha a lista de equipamentos marcáveis
+function renderEquipChecklist(){
+  const box = $('equip-check-list'); if(!box) return;
+  const sel = new Set(((state.modules.lift||{}).setup||{}).equipList || equipTemp);
+  box.innerHTML = EQUIP_LISTA.map(e=>`<div class="list-row" onclick="toggleEquip('${e.id}')" style="padding:10px 12px;${sel.has(e.id)?'border-color:var(--line-primary);background:var(--tint-primary)':''}">
+      <span style="font-size:16px">${e.emo}</span><span style="flex:1">${e.nome}</span>
+      <span style="font-size:16px;color:${sel.has(e.id)?'var(--primary-2)':'var(--text-mute)'}">${sel.has(e.id)?'☑':'☐'}</span>
+    </div>`).join('');
+  atualizaContagemEquip();
+}
+let equipTemp = [];
+function toggleEquip(id){
+  const i = equipTemp.indexOf(id);
+  if(i>=0) equipTemp.splice(i,1); else equipTemp.push(id);
+  renderEquipChecklist();
+}
+function atualizaContagemEquip(){
+  const el = $('equip-count'); if(!el) return;
+  let n=0;
+  try{ EX_BANK.forEach(c=>c.items.forEach(x=>{ if(podeFazerCom(x, equipTemp) && !x.improv) n++; })); }catch(e){}
+  el.innerHTML = n < 12
+    ? `⚠️ Só <b>${n} exercícios</b> disponíveis — marque mais alguns pro treino ficar variado.`
+    : `✅ <b>${n} exercícios</b> disponíveis pra montar seus treinos`;
+  el.style.color = n<12 ? 'var(--accent-2)' : 'var(--text-dim)';
+}
 function countExercisesFor(equip){
   try{
     const f = equip==='basico' ? ['casa','halteres'] : equip==='academia' ? ['academia','halteres','casa'] : equip==='halteres' ? ['halteres','casa'] : ['casa'];
@@ -714,10 +806,14 @@ function buildingSteps(m, setup, prev){
   const steps = [];
   if(m==='lift'){
     const gl = {hipertrofia:'Hipertrofia',forca:'Força',emagrecimento:'Emagrecimento',resistencia:'Resistência'}[setup.goal] || 'Seu objetivo';
-    const eq = {academia:'Academia completa',halteres:'Halteres em casa',casa:'Peso do corpo',basico:'Academia básica'}[setup.equip] || 'Seu equipamento';
+    const eq = {academia:'Academia completa',halteres:'Halteres em casa',casa:'Peso do corpo',basico:'Academia básica',custom:'Seus equipamentos'}[setup.equip] || 'Seu equipamento';
     const lvl = {iniciante:'Iniciante',intermediario:'Intermediário',avancado:'Avançado'}[setup.level] || '';
     steps.push({emo:'🎯', pri:1, txt:`Objetivo: <b>${gl}</b>`});
-    steps.push({emo:'🏋️', pri:2, txt:`${eq} — <b>${countExercisesFor(setup.equip)} exercícios</b> liberados pra você`});
+    if(setup.equip==='custom'){
+      let n=0; try{ EX_BANK.forEach(c=>c.items.forEach(x=>{ if(podeFazerCom(x,setup.equipList||[]) && !x.improv) n++; })); }catch(e){}
+      const q=(setup.equipList||[]).length;
+      steps.push({emo:'🛠️', pri:2, txt:`Montando com <b>${q} ${q===1?'equipamento':'equipamentos'}</b> que você tem — <b>${n} exercícios</b> possíveis`});
+    } else steps.push({emo:'🏋️', pri:2, txt:`${eq} — <b>${countExercisesFor(setup.equip)} exercícios</b> liberados pra você`});
     steps.push({emo:'📅', pri:2, txt:`Dividindo em <b>${setup.days} treinos</b>: ${dias}`});
     steps.push({emo:'🧠', pri:3, txt:`Variando padrões de movimento pra <b>não repetir estímulo</b> no mesmo dia`});
     if(setup.goal==='forca') steps.push({emo:'💪', pri:3, txt:`Priorizando os <b>grandes compostos</b> e segurando os isoladores`});
@@ -1141,6 +1237,11 @@ function buildLiftExercises(parts, setup){
     if(blocked.has(p)) return; // pula grupos que sobrecarregam a região dolorida
     const cat = EX_BANK.find(c=>c.name===p); if(!cat) return;
     let compat = cat.items.filter(ex => (ex.equip||[]).some(e => equipFilter.includes(e)) && (equip==='casa' || !ex.improv));
+    // Equipamentos escolhidos pelo aluno: só entra o que ele realmente tem (+ peso do corpo)
+    if(equip === 'custom'){
+      const lista = (setup.equipList || []);
+      compat = cat.items.filter(ex => podeFazerCom(ex, lista) && !ex.improv);
+    }
     if(!compat.length) return;
     // VARIAÇÃO SEMANAL: gira as opções a cada semana — mesmo estímulo, exercício diferente (Supino barra → halteres → máquina → volta)
     const wkSeed = Math.floor(Date.now()/(7*86400000)) % 4;
@@ -3412,7 +3513,7 @@ function renderProfile(){
   const s = mod.setup || {};
   const hasPlan = !!mod.plan;
   let rows;
-  if(isLift) rows = [['Objetivo',labelGoal(mod)],['Dias',s.days+'/semana'],['Equipamento',{academia:'🏋️ Academia',halteres:'💪 Halteres',casa:'🤸 Peso corpo',basico:'💪 Halteres'}[s.equip]]];
+  if(isLift) rows = [['Objetivo',labelGoal(mod)],['Dias',s.days+'/semana'],['Equipamento',{academia:'🏋️ Academia',halteres:'💪 Halteres',casa:'🤸 Peso corpo',basico:'💪 Halteres',custom:'🛠️ '+((s.equipList||[]).length)+' equipamentos'}[s.equip]||'—']];
   else if(hasPlan) rows = [['Objetivo',labelGoal(mod)],['Duração',mod.plan.totalWeeks+' semanas'],['Sessões',s.days+'/semana'],['Terreno',{asfalto:'🛣️ Asfalto',esteira:'🏃 Esteira',trilha:'⛰️ Trilha',pista:'🏟️ Pista'}[s.terrain]]];
   else rows = [['Status','📋 Modo registro (sem plano)'],['Atividades', (mod.history||[]).length+' registradas']];
   $('pf-plan-card').innerHTML = rows.map(r=>`<div style="display:flex;justify-content:space-between;padding:8px 0"><span class="text-dim">${r[0]}</span><b>${r[1]}</b></div>`).join('');
@@ -8511,7 +8612,7 @@ function openSwapExercise(exId){
   if(!w) return;
   const cur = w.exercises.find(e=>e.id===exId);
   const equip = mod.setup.equip || 'academia';
-  const equipFilter = equip==='basico'?['casa','halteres']:equip==='academia'?['academia','halteres','casa']:equip==='halteres'?['halteres','casa']:['casa'];
+  const equipFilter = equip==='custom'?['academia','halteres','casa'] : equip==='basico'?['casa','halteres']:equip==='academia'?['academia','halteres','casa']:equip==='halteres'?['halteres','casa']:['casa'];
   const cat = EX_BANK.find(c=>c.name===cur.part) || EX_BANK.find(c=>c.items.some(x=>slug(x.name)===exId));
   if(!cat){ toast('Não foi possível encontrar alternativas'); return; }
   const usedIds = new Set(w.exercises.map(e=>e.id));
@@ -8779,7 +8880,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
