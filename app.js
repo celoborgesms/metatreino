@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.01 =====
-const APP_VERSION = 'v12.01';
+// ===== MetaTreino v12.02 =====
+const APP_VERSION = 'v12.02';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2151,7 +2151,7 @@ function renderTodayWorkout(w, isLift){
     <div class="today-label">TREINO DE HOJE</div>
     <div class="today-diff ${isLift?'diff-med':'diff-easy'}">${isLift?'Foco':'Fácil'}</div>
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:w.name}</div>
-    ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:99px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
+    ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:99px;background:var(--tint-primary);border:1px solid rgba(16,185,129,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
     <div class="today-desc">${desc}</div>
     ${(isLift && typeof fatigueOf==='function' && (w.parts||[]).some(pp=>fatigueOf(pp)>=70)) ? `<div class="note note-warn" style="margin-top:10px"><div class="note-line">🟡 <b>${(w.parts||[]).filter(pp=>fatigueOf(pp)>=70)[0]}</b> ainda em recuperação. Se sentir queda de rendimento, vale tirar uma série hoje — quem manda é você.</div></div>` : ''}
     ${(isLift && typeof cicloAtual==='function' && cicloAtual()) ? (c=>`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">${c.emo} Ciclo: <b style="color:var(--text)">${c.nome}</b> · semana ${c.sem}</div>`)(cicloAtual()) : ''}
@@ -2190,7 +2190,7 @@ function renderDoneToday(w, mod, isLift){
   const proxTxt = (prox && ord.length>0) ? `${isLift&&prox.k?('Treino '+prox.k+' — '):''}${prox.name} · ${dias[prox.dayIdx-1]}` : '';
   const totMin = Math.round(es.reduce((a,x)=>a+(x.duration||0),0));
   const exN = isLift ? ((h.exercisesDone||[]).length || null) : null;
-  return `<div class="today" style="border-color:rgba(16,185,129,.45)">
+  return `<div class="today" style="border-color:var(--line-primary)">
     <div class="today-label" style="color:var(--primary-2)">✅ TREINO CONCLUÍDO</div>
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:(h.name||w.name)}</div>
     <div class="today-meta" style="margin-top:10px">
@@ -2199,7 +2199,7 @@ function renderDoneToday(w, mod, isLift){
       ${h.distance?`<span class="chip mono">📍 ${h.distance}km</span>`:''}
       <span class="chip">${feelLbl}</span>
     </div>
-    <div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.25);font-size:13px;line-height:1.5">${rec}</div>
+    <div style="margin-top:12px;padding:10px 12px;border-radius:var(--radius-btn);background:var(--tint-primary);border:1px solid var(--line-primary);font-size:13px;line-height:1.5">${rec}</div>
     ${proxTxt?`<div style="margin-top:10px;font-size:12.5px;color:var(--text-dim)">📅 Próximo: <b style="color:var(--text)">${proxTxt}</b></div>`:''}
     <div class="today-actions">
       <button class="btn btn-ghost" onclick="openSession('${w.k||w.dayIdx}')">Ver detalhes</button>
@@ -2242,7 +2242,7 @@ function runDesc(w){
 function renderRestDay(mod){
   const isLift = mod.plan.type==='lift';
   const ws = mod.plan.workouts.slice(0,3);
-  const freeRunBtn = (state.active==='run' && state.modules.run) ? `<div class="rest-divider">— ou —</div><button class="btn btn-outline btn-block" style="border-color:rgba(245,158,11,0.4);color:var(--accent-2)" onclick="openRunLog('livre')">🏃 Registrar corrida, caminhada ou bike livre</button>` : '';
+  const freeRunBtn = (state.active==='run' && state.modules.run) ? `<div class="rest-divider">— ou —</div><button class="btn btn-outline btn-block hl-warn" style=";color:var(--accent-2)" onclick="openRunLog('livre')">🏃 Registrar corrida, caminhada ou bike livre</button>` : '';
   return `<div class="rest-card"><div class="rest-emoji">😴</div><div class="rest-title">Dia de Descanso</div><div class="rest-sub">Aproveite pra recuperar. Você volta amanhã mais forte!</div><div class="rest-divider">— ou —</div><div style="font-weight:700">Quer antecipar algum treino?</div><div class="anticipate">${ws.map(w=>`<div class="antic-card" onclick="openSession('${w.k||w.dayIdx}')"><div class="antic-letter">${(w.k||'').charAt(0)||'S'}</div><div class="antic-name">${isLift?'Treino '+w.k:w.name.split(' ')[0]}</div><div class="antic-day">${w.dayName}</div></div>`).join('')}</div>${freeRunBtn}</div>`;
 }
 
@@ -2355,7 +2355,7 @@ function currentSelectedWorkout(mod){
   return w || mod.plan.workouts.find(x=>x.dayIdx===getDayIdx()) || mod.plan.workouts[0];
 }
 function cardioFinisherCard(){
-  return `<div class="card card-info card-row" style="margin-top:14px;border-color:rgba(245,158,11,0.35);background:rgba(245,158,11,0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:#f59e0b">Bônus cardio (opcional)</div><div class="card-sub">Treino mais curto hoje? Se quiser turbinar, finalize com ~8 min: <b>2 a 3 voltas</b> de 30s em cada — polichinelo, corrida no lugar (joelho alto), mountain climber e agachamento com salto. 30s de descanso entre as voltas, no seu ritmo. 💪</div></div></div>`;
+  return `<div class="card card-info card-row" class="hl-warn" style="margin-top:14px;;background:rgba(245,158,11,0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:#f59e0b">Bônus cardio (opcional)</div><div class="card-sub">Treino mais curto hoje? Se quiser turbinar, finalize com ~8 min: <b>2 a 3 voltas</b> de 30s em cada — polichinelo, corrida no lugar (joelho alto), mountain climber e agachamento com salto. 30s de descanso entre as voltas, no seu ritmo. 💪</div></div></div>`;
 }
 // ===== PERFIL OCUPACIONAL =====
 // O corpo cobra diferente conforme o dia da pessoa. Não é fisioterapia nem obrigação:
@@ -2488,7 +2488,7 @@ function renderSessionDetail(w){
   const html = `
     <div class="detail-hero">
       <h2>${isLift?`Treino ${w.k} — ${w.name}`:w.name}</h2>
-      <div style="margin-top:8px"><span class="plan-badge">${isLift?'Foco':'Fácil'}</span>${isLift && isCustomized(w) ? '<span class="plan-badge" style="margin-left:6px;background:rgba(167,139,250,0.15);color:#a78bfa;border-color:rgba(167,139,250,0.4)">✨ Personalizado</span>' : ''}</div>
+      <div style="margin-top:8px"><span class="plan-badge">${isLift?'Foco':'Fácil'}</span>${isLift && isCustomized(w) ? '<span class="plan-badge" style="margin-left:6px;background:var(--tint-prep);color:var(--prep);border-color:var(--line-prep)">✨ Personalizado</span>' : ''}</div>
       <div class="today-desc" style="margin-top:14px">${isLift?liftDesc(w):runDesc(w)}</div>
       <div class="info-grid">
         <div class="info-cell"><div class="info-cell-icon">⏱️</div><div class="info-cell-lbl">DURAÇÃO</div><div class="info-cell-val mono">${w.duration} min</div></div>
@@ -2496,9 +2496,9 @@ function renderSessionDetail(w){
         <div class="info-cell"><div class="info-cell-icon">📅</div><div class="info-cell-lbl">DIA</div><div class="info-cell-val">${w.dayName}</div></div>
       </div>
     </div>
-    ${w.adapted ? `<div class="card card-alert card-row" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
+    ${w.adapted ? `<div class="card card-alert card-row hl-info" style=";background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
     ${(((state.modules.lift||{}).history||[]).length + ((state.modules.run||{}).history||[]).length) >= 8 ? '' : `<div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>`}
-    ${isLift && isCustomized(w) ? `<div class="card card-row" style="border-color:rgba(167,139,250,0.35);background:rgba(167,139,250,0.06)"><div class="card-icon">✨</div><div style="flex:1"><div class="card-title" style="color:#a78bfa">Treino personalizado</div><div class="card-sub">Você trocou ${w.pins.length} exercício${w.pins.length>1?'s':''} neste treino. As trocas ficam salvas nos próximos treinos. Pra desfazer, use "Voltar à sugestão" em cada exercício.</div></div></div>` : ''}
+    ${isLift && isCustomized(w) ? `<div class="card card-row hl-prep" style=";background:rgba(167,139,250,0.06)"><div class="card-icon">✨</div><div style="flex:1"><div class="card-title" style="color:#a78bfa">Treino personalizado</div><div class="card-sub">Você trocou ${w.pins.length} exercício${w.pins.length>1?'s':''} neste treino. As trocas ficam salvas nos próximos treinos. Pra desfazer, use "Voltar à sugestão" em cada exercício.</div></div></div>` : ''}
     ${typeof mobilidadeCard==='function' ? mobilidadeCard(w) : ''}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
@@ -2689,7 +2689,7 @@ function renderSetLogModal(){
       ${rows}
     </div>
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="addSet()">+ Nova série</button>
-    <button class="btn btn-outline btn-block" style="margin-top:8px;border-color:rgba(16,185,129,0.4)" onclick="startRestFor('${exId}','${exName.replace(/'/g,"\\'")}')">⏱️ Iniciar descanso</button>
+    <button class="btn btn-outline btn-block" class="hl-primary" style="margin-top:8px" onclick="startRestFor('${exId}','${exName.replace(/'/g,"\\'")}')">⏱️ Iniciar descanso</button>
     <div class="row" style="gap:8px;margin-top:14px">
       <button class="btn btn-ghost btn-block" onclick="closeSetLog(false)">Voltar</button>
       <button class="btn btn-primary btn-block" onclick="closeSetLog(true)">Salvar</button>
@@ -3347,7 +3347,7 @@ function renderProfile(){
   const vEl2 = $('vac-row-label'); if(vEl2) vEl2.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias';
   renderAvatar('pf-avatar');
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
-  const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:99px;background:rgba(244,63,94,0.15);color:var(--danger-soft);font-weight:800">${pn.join(', ')}</span>`:''; }
+  const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:99px;background:var(--tint-danger);color:var(--danger-soft);font-weight:800">${pn.join(', ')}</span>`:''; }
   const qe = $('pf-quick-equip'); if(qe) qe.style.display = (state.active==='lift' && state.modules.lift && state.modules.lift.plan) ? 'block' : 'none';
   const qt = $('pf-quick-terrain'); if(qt) qt.style.display = (state.active==='run' && state.modules.run && state.modules.run.plan) ? 'block' : 'none';
   $('pf-name').textContent = p.nickname || u.name;
@@ -3372,7 +3372,7 @@ function renderProfile(){
       <div class="info-cell"><div class="info-cell-icon">📏</div><div class="info-cell-lbl">ALTURA</div><div class="info-cell-val mono">${p.height?p.height+' cm':'—'}</div></div>
       <div class="info-cell"><div class="info-cell-icon">📊</div><div class="info-cell-lbl">IMC</div><div class="info-cell-val mono" style="color:${imc?imc.color:'var(--text)'}">${imc?imc.value:'—'}</div></div>
     </div>
-    <div style="margin-top:10px;padding:12px;border-radius:12px;background:var(--surface-2)">
+    <div style="margin-top:10px;padding:12px;border-radius:var(--radius-btn);background:var(--surface-2)">
       <div style="font-size:12px;color:var(--text-dim);font-weight:700;letter-spacing:1px">CLASSIFICAÇÃO</div>
       <div style="font-weight:800;color:${imc?imc.color:'var(--text)'};margin-top:2px">${imc?imc.cls:'—'}</div>
       <div style="font-size:12px;color:${deltaColor};margin-top:4px;font-weight:700">${deltaTxt} desde o início</div>
@@ -3691,7 +3691,7 @@ function openMonthly(){
     <h3>🎖️ Desafios do mês</h3>
     <p style="color:var(--text-dim);font-size:13px">${monthName(state.monthly.key)} · ${restam===0?'último dia!':`faltam ${restam} dias`}. Todo dia 1º os desafios zeram e as medalhas ficam guardadas.</p>
     <div style="max-height:52vh;overflow-y:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px">${linhas}</div>
-    <button class="btn btn-outline btn-block" style="margin-top:14px;border-color:rgba(245,158,11,0.4)" onclick="closeModal();openMedals()">🏅 Ver minhas medalhas de meses anteriores</button>
+    <button class="btn btn-outline btn-block" class="hl-warn" style="margin-top:14px" onclick="closeModal();openMedals()">🏅 Ver minhas medalhas de meses anteriores</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
@@ -4081,7 +4081,7 @@ function openTrophyDetail(id){
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--border)"><span style="color:var(--text-dim);font-size:13px">🏆 Coleção</span><b style="font-size:13px">${tenho} de ${total} troféus</b></div>
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();shareTrophyImage('${t.id}')">📤 Compartilhar esta conquista</button>
-    <button class="btn btn-outline btn-block" style="margin-top:8px;border-color:rgba(16,185,129,0.4)" onclick="closeModal();shareTrophiesImage()">🏆 Compartilhar coleção inteira</button>
+    <button class="btn btn-outline btn-block" class="hl-primary" style="margin-top:8px" onclick="closeModal();shareTrophiesImage()">🏆 Compartilhar coleção inteira</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();openTrophiesKeepScroll()">← Voltar aos troféus</button>`;
   $('modal-back').classList.add('on');
 }
@@ -4150,14 +4150,14 @@ function openTrophies(){
           return `<div class="trophy ${ul?'unlock':''}"${clique}><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div>${bar}</div>`;
         }).join('')}</div></div>`;
     }).join('')}
-    ${state.specialTrophy ? `<div onclick="showSpecialReveal(state.specialTrophy)" style="margin-top:20px;padding:18px;border-radius:16px;background:rgba(167,139,250,0.07);border:1px solid rgba(167,139,250,0.30);text-align:center;cursor:pointer">
+    ${state.specialTrophy ? `<div onclick="showSpecialReveal(state.specialTrophy)" style="margin-top:20px;padding:18px;border-radius:var(--radius-card);background:var(--tint-prep);border:1px solid rgba(167,139,250,0.30);text-align:center;cursor:pointer">
       <div style="font-size:44px;filter:drop-shadow(0 0 10px rgba(167,139,250,.38))">${state.specialTrophy.emo||'💍'}</div>
       <div style="font-size:10.5px;letter-spacing:2px;color:#a78bfa;font-weight:700;margin-top:4px">CONQUISTA ETERNA</div>
       <div style="font-weight:800;font-size:16px;margin-top:2px">${(state.specialTrophy.titulo||'').replace(/</g,'&lt;')}</div>
       <div style="color:var(--text-dim);font-size:12.5px;line-height:1.55;margin-top:6px;white-space:pre-line">${(state.specialTrophy.descricao||'').replace(/</g,'&lt;')}</div>
       <div style="font-size:11px;color:var(--text-mute);margin-top:8px;font-style:italic">Toque para reviver este momento</div>
     </div>` : ''}
-    <button class="btn btn-outline btn-block" style="margin-top:14px;border-color:rgba(16,185,129,0.4)" onclick="shareTrophiesImage()">📤 Compartilhar minhas conquistas</button>
+    <button class="btn btn-outline btn-block" class="hl-primary" style="margin-top:14px" onclick="shareTrophiesImage()">📤 Compartilhar minhas conquistas</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');
@@ -4253,7 +4253,7 @@ const MODAL_CONTENT = {
     return `<h3>💼 Como é sua rotina de trabalho?</h3>
       <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cada rotina cobra do corpo de um jeito. Sabendo a sua, eu sugiro <b>2-3 min de preparação</b> antes do treino — nada obrigatório, só o que faz sentido pro seu dia.</p>
       <div style="margin-top:14px">
-        ${Object.entries(ROTINAS).map(([k,v])=>`<div class="list-row" onclick="setRotina('${k}')" style="${atual===k?'border-color:rgba(167,139,250,.5);background:rgba(167,139,250,.08)':''}">${v.emo} <span>${v.label}</span>${atual===k?'<span style="margin-left:auto;color:#c4b5fd;font-size:12px;font-weight:800">ativo</span>':''}</div>`).join('')}
+        ${Object.entries(ROTINAS).map(([k,v])=>`<div class="list-row" onclick="setRotina('${k}')" style="${atual===k?'border-color:var(--line-prep);background:rgba(167,139,250,.08)':''}">${v.emo} <span>${v.label}</span>${atual===k?'<span style="margin-left:auto;color:#c4b5fd;font-size:12px;font-weight:800">ativo</span>':''}</div>`).join('')}
         <div class="list-row" onclick="setRotina('none')" style="color:var(--text-mute)">🚫 <span>Não quero essa sugestão</span></div>
       </div>
       <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
@@ -4278,17 +4278,17 @@ const MODAL_CONTENT = {
         <h3 style="margin:10px 0 4px">${nome?`Vai nos deixar, ${nome}?`:'Vai nos deixar?'}</h3>
         <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5;margin:0 auto;max-width:330px">Se for pra descansar, existe o <b>Modo Férias</b> — ele pausa as cobranças e guarda tudo do jeito que está. 🌴</p>
       </div>
-      ${conquistou.length?`<div class="card" style="margin-top:16px;padding:13px 15px;border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06)">
+      ${conquistou.length?`<div class="card" class="hl-warn" style="margin-top:16px;padding:13px 15px">
         <div style="font-size:11.5px;letter-spacing:.6px;color:var(--accent-2);font-weight:800;margin-bottom:7px">O QUE VAI EMBORA COM VOCÊ</div>
         <div style="font-size:13px;line-height:1.7;color:var(--text-dim)">${conquistou.join(' · ')}</div>
       </div>`:''}
-      <div style="margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid rgba(244,63,94,.3);background:rgba(244,63,94,.06);font-size:12.5px;line-height:1.55;color:var(--text-dim)">
+      <div class="note note-danger">
         ⚠️ <b>Isso não pode ser desfeito.</b> Seus treinos, séries, recordes, anotações e conquistas serão apagados da nuvem para sempre — a não ser que você <b>faça um backup agora</b>.
         <br><br>Seu acesso continua liberado: dá pra entrar de novo com <b>${email}</b> e começar do zero — mas do zero mesmo, sem o histórico.
       </div>
       <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="exportMyData()">💾 Fazer backup antes de sair</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">💚 Deixa pra lá, vou ficar</button>
-      <button class="btn btn-ghost btn-block" style="margin-top:14px;color:var(--danger);border-color:rgba(244,63,94,.35)" onclick="doDeleteAccount()">Excluir minha conta definitivamente</button>`;
+      <button class="btn btn-ghost btn-block" class="hl-danger" style="margin-top:14px" onclick="doDeleteAccount()">Excluir minha conta definitivamente</button>`;
   },
 };
 function openModal(k){
@@ -6166,18 +6166,18 @@ function maBubblesHTML(){
     const comAvatar = (html)=> `<div style="display:flex;gap:8px;align-items:flex-end;margin:6px 0;max-width:92%">
         ${primeiroDoBot ? maAvatar(30) : '<div style="width:30px;flex-shrink:0"></div>'}${html}</div>`;
     return m.typing
-    ? comAvatar(`<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:13px 16px;display:inline-flex;gap:5px;align-items:center;width:auto">
+    ? comAvatar(`<div style="background:var(--tint-primary);border:1px solid var(--line-primary);border-radius:var(--radius-card) var(--radius-card) var(--radius-card) 4px;padding:13px 16px;display:inline-flex;gap:5px;align-items:center;width:auto">
         <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out infinite"></span>
         <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .18s infinite"></span>
         <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .36s infinite"></span>
       </div>`)
     : m.working
-    ? comAvatar(`<div style="background:rgba(56,189,248,0.09);border:1px solid rgba(56,189,248,0.28);border-radius:16px 16px 16px 4px;padding:11px 14px;font-size:13px;color:#7dd3fc;display:flex;gap:8px;align-items:center">
+    ? comAvatar(`<div style="background:var(--tint-info);border:1px solid var(--line-info);border-radius:var(--radius-card) var(--radius-card) var(--radius-card) 4px;padding:11px 14px;font-size:13px;color:#7dd3fc;display:flex;gap:8px;align-items:center">
         <span style="display:inline-block;animation:maspin 1.1s linear infinite">⚙️</span><span>${m.working}…</span>
       </div>`)
     : m.who==='bot'
-    ? comAvatar(`<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:${primeiroDoBot?'16px 16px 16px 4px':'4px 16px 16px 4px'};padding:11px 14px;font-size:13.5px;line-height:1.5">${m.txt}</div>`)
-    : `<div style="background:var(--surface-2);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`;
+    ? comAvatar(`<div style="background:var(--tint-primary);border:1px solid var(--line-primary);border-radius:${primeiroDoBot?'16px 16px 16px 4px':'4px 16px 16px 4px'};padding:11px 14px;font-size:13.5px;line-height:1.5">${m.txt}</div>`)
+    : `<div style="background:var(--surface-2);border-radius:var(--radius-card) var(--radius-card) 4px var(--radius-card);padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`;
   }).join('');
 }
 function maSugsHTML(){
@@ -6443,7 +6443,7 @@ function startRestTimer(seconds, exName){
   if(!el){
     el = document.createElement('div');
     el.id = 'rest-timer-banner';
-    el.style.cssText = 'position:fixed;bottom:76px;left:14px;right:14px;z-index:350;background:var(--bg-2);border:1.5px solid var(--primary);border-radius:18px;padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-md)';
+    el.style.cssText = 'position:fixed;bottom:76px;left:14px;right:14px;z-index:350;background:var(--bg-2);border:1.5px solid var(--primary);border-radius:var(--radius-card);padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-md)';
     document.body.appendChild(el);
   }
   const render = ()=>{
@@ -7270,10 +7270,10 @@ async function shareCanvas(canvas, filename, shareText){
     $('modal-inner').innerHTML = `
       <h3>📤 Compartilhar</h3>
       <p style="color:var(--text-dim);font-size:13px;line-height:1.5">A imagem está pronta! Escolha como quer usá-la. Se for postar no Instagram Stories, <b>salvar no celular</b> e postar pela galeria costuma dar o melhor resultado.</p>
-      <img src="${URL.createObjectURL(blob)}" style="width:100%;border-radius:14px;margin:12px 0;border:1px solid var(--border)">
+      <img src="${URL.createObjectURL(blob)}" style="width:100%;border-radius:var(--radius-note);margin:12px 0;border:1px solid var(--border)">
       <button class="btn btn-primary btn-block" onclick="doShareNow('${shareText.replace(/'/g,"\\'")}')">📲 Compartilhar agora</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="doSaveToDevice()">💾 Salvar no celular</button>
-      ${_lastPhotoOpts?`<button class="btn btn-outline btn-block" style="margin-top:8px;border-color:rgba(16,185,129,0.45)" onclick="pickSharePhoto()">📷 Usar minha foto de fundo</button>
+      ${_lastPhotoOpts?`<button class="btn btn-outline btn-block" class="hl-primary" style="margin-top:8px" onclick="pickSharePhoto()">📷 Usar minha foto de fundo</button>
       <input type="file" id="share-photo-input" accept="image/*" style="display:none" onchange="onSharePhotoPicked(event)">`:''}
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
     $('modal-back').classList.add('on');
@@ -7698,7 +7698,7 @@ function openMuralAdmin(){
     <div class="field" style="margin-top:12px"><label>Mensagem fixada (vazio = sem mensagem)</label><textarea class="input" id="mural-msg" rows="3" style="resize:vertical">${(m.mensagem||'').replace(/</g,'&lt;')}</textarea></div>
     <div class="field"><label>Foto/logo temporário</label>
       <div class="row" style="gap:8px;align-items:center">
-        <div id="mural-preview" style="width:52px;height:52px;border-radius:12px;overflow:hidden;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--on-primary);flex-shrink:0">${m.foto?`<img src="${m.foto}" style="width:100%;height:100%;object-fit:cover">`:'M'}</div>
+        <div id="mural-preview" style="width:52px;height:52px;border-radius:var(--radius-btn);overflow:hidden;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--on-primary);flex-shrink:0">${m.foto?`<img src="${m.foto}" style="width:100%;height:100%;object-fit:cover">`:'M'}</div>
         <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('mural-foto-input').click()">📷 Escolher foto</button>
         ${m.foto?`<button class="btn btn-ghost" onclick="muralFotoTemp='REMOVE';document.getElementById('mural-preview').innerHTML='M'">🗑️</button>`:''}
       </div>
@@ -7903,7 +7903,7 @@ async function openVideoAdmin(){
         <div class="row" style="gap:6px;margin-top:6px">
           <input class="input" id="vidc-${id}" value="${curCred.replace(/"/g,'&quot;')}" placeholder="Perfil de quem gravou — Instagram, YouTube, TikTok... (opcional)" style="flex:1;font-size:12.5px;padding:9px 12px">
           <button class="btn btn-primary" style="padding:9px 14px;font-size:12.5px" onclick="saveVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">💾</button>
-          ${cur?`<button class="btn btn-ghost" style="padding:9px 12px;font-size:12.5px;color:var(--danger);border-color:rgba(244,63,94,.35)" onclick="clearVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">🗑️</button>`:''}
+          ${cur?`<button class="btn btn-ghost" class="hl-danger" style="padding:9px 12px;font-size:12.5px" onclick="clearVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">🗑️</button>`:''}
         </div>
       </div>`;
     }).join('');
@@ -7995,7 +7995,7 @@ async function openSuggestions(){
       return `<div class="card" style="padding:11px 13px;margin-bottom:8px;border-color:${cor}">
         <div style="display:flex;gap:8px;align-items:flex-start">
           <div style="flex:1;font-size:13.5px;line-height:1.45">${String(x.texto||'').replace(/</g,'&lt;')}</div>
-          <button class="btn btn-ghost" style="padding:5px 9px;font-size:12px;color:var(--danger);border-color:rgba(244,63,94,.3)" onclick="deleteSuggestion('${x.id}')">🗑️</button>
+          <button class="btn btn-ghost" class="hl-danger" style="padding:5px 9px;font-size:12px" onclick="deleteSuggestion('${x.id}')">🗑️</button>
         </div>
         <div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;line-height:1.6">
           ${(x.n||1)>1?`<b style="color:var(--accent-2)">${x.n}×</b> · `:''}${x.ultimoNome?String(x.ultimoNome).split(' ')[0]+' · ':''}${x.modulo==='run'?'🏃':'🏋️'} ·
@@ -8013,7 +8013,7 @@ async function openSuggestions(){
           <div style="font-size:11.5px;color:var(--text-mute);margin-bottom:8px">As mais repetidas primeiro — é o melhor roadmap que existe.</div>
           ${perg.map(x=>bloco(x,'var(--border)')).join('')}`:''}
       </div>
-      <button class="btn btn-ghost btn-block" style="margin-top:10px;color:var(--danger);border-color:rgba(244,63,94,.3)" onclick="clearAllSuggestions()">🗑️ Limpar tudo</button>
+      <button class="btn btn-ghost btn-block" class="hl-danger" style="margin-top:10px" onclick="clearAllSuggestions()">🗑️ Limpar tudo</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   }catch(e){
     console.log('Erro ao carregar feedback:', e);
@@ -8218,7 +8218,7 @@ function openStudent(email){
     </div>
     <div class="row" style="gap:6px;margin-top:8px">
       ${a.expiresAt
-        ? `<button class="btn btn-outline btn-block" style="border-color:rgba(16,185,129,0.4)" onclick="setLifetime('${email}')">♾️ Tornar vitalício</button>`
+        ? `<button class="btn btn-outline btn-block hl-primary" style="" onclick="setLifetime('${email}')">♾️ Tornar vitalício</button>`
         : (String(email).toLowerCase()===(((fbUser&&fbUser.email)||(state.user&&state.user.email)||'').toLowerCase())
             ? `<div style="text-align:center;font-size:12.5px;color:var(--text-mute);padding:6px 0">🛡️ Sua conta de administrador tem acesso permanente protegido</div>`
             : `<button class="btn btn-ghost btn-block" onclick="unsetLifetime('${email}')">📅 Remover vitalício (definir 30 dias)</button>`)}
@@ -8243,7 +8243,7 @@ function openStudent(email){
 
     <div class="section-lbl">Gerenciar</div>
     <button class="btn btn-ghost btn-block" onclick="toggleStudent('${email}')">${a.active?'🔒 Bloquear acesso':'🔓 Reativar acesso'}</button>
-    <button class="btn btn-ghost btn-block danger" style="margin-top:8px;color:var(--danger-soft);border-color:rgba(244,63,94,0.3)" onclick="removeStudent('${email}')">🗑️ Remover aluno</button>
+    <button class="btn btn-ghost btn-block danger" style="margin-top:8px;color:var(--danger-soft);border-color:var(--line-danger)" onclick="removeStudent('${email}')">🗑️ Remover aluno</button>
   `;
 }
 async function setLifetime(email){
@@ -8311,7 +8311,7 @@ function doBroadcast(){
   closeModal();
   const links = phones.map(p=>`https://wa.me/${p.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`);
   const w = window.open('','_blank');
-  w.document.write(`<html><head><title>Envio em massa</title><style>body{font-family:sans-serif;padding:20px;background:#050914;color:var(--text)}a{display:block;padding:12px 16px;background:#10b981;color:var(--on-primary);text-decoration:none;border-radius:12px;margin:6px 0;font-weight:700}</style></head><body><h2>📢 Clique em cada link para abrir o WhatsApp:</h2>${links.map((l,i)=>`<a href="${l}" target="_blank">Aluno ${i+1} · abrir WhatsApp</a>`).join('')}</body></html>`);
+  w.document.write(`<html><head><title>Envio em massa</title><style>body{font-family:sans-serif;padding:20px;background:#050914;color:var(--text)}a{display:block;padding:12px 16px;background:#10b981;color:var(--on-primary);text-decoration:none;border-radius:var(--radius-btn);margin:6px 0;font-weight:700}</style></head><body><h2>📢 Clique em cada link para abrir o WhatsApp:</h2>${links.map((l,i)=>`<a href="${l}" target="_blank">Aluno ${i+1} · abrir WhatsApp</a>`).join('')}</body></html>`);
 }
 async function exportData(){
   toast('📤 Preparando backup...');
@@ -8333,11 +8333,11 @@ function openHistoryEntry(idx){
   const d = new Date(x.at);
   const isRun = state.active==='run';
   const parts = !isRun ? partsFromEntry(x) : [];
-  const adaptBlock = x.adaptedWith ? `<div class="card card-alert card-row" style="margin-top:12px;border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado</div><div class="card-sub">Neste dia você treinou em modo adaptado por <b>${x.adaptedWith}</b> — por isso o volume foi menor. Cuidar do corpo também é treinar. 💚</div></div></div>` : '';
+  const adaptBlock = x.adaptedWith ? `<div class="card card-alert card-row" class="hl-info" style="margin-top:12px;;background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado</div><div class="card-sub">Neste dia você treinou em modo adaptado por <b>${x.adaptedWith}</b> — por isso o volume foi menor. Cuidar do corpo também é treinar. 💚</div></div></div>` : '';
   const muscleBlock = parts.length ? `
     <div class="card" style="margin-top:12px">
       <div class="section-lbl" style="margin:0 0 8px">💪 Músculos trabalhados</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:12.5px;padding:5px 13px;border-radius:99px;background:rgba(16,185,129,0.14);color:var(--primary-2);font-weight:800;border:1px solid rgba(16,185,129,0.3)">${p}</span>`).join('')}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:12.5px;padding:5px 13px;border-radius:99px;background:var(--tint-primary);color:var(--primary-2);font-weight:800;border:1px solid rgba(16,185,129,0.3)">${p}</span>`).join('')}</div>
     </div>` : '';
   const exBlock = (x.exercisesDone && x.exercisesDone.length) ? `
     <div class="section-lbl" style="margin-top:14px">Exercícios por grupo</div>
@@ -8357,7 +8357,7 @@ function openHistoryEntry(idx){
       <button class="btn btn-primary btn-block" onclick="saveHistoryEntry(${idx})">💾 Salvar</button>
     </div>
     <button class="btn btn-outline btn-block" style="margin-top:10px" onclick="shareWorkoutImage(${idx})">📤 Compartilhar como imagem</button>
-    <button class="btn btn-block" style="margin-top:8px;background:rgba(244,63,94,0.1);color:var(--danger-soft);border:1px solid rgba(244,63,94,0.3)" onclick="deleteHistoryEntry(${idx})">🗑️ Excluir este treino</button>
+    <button class="btn btn-block" style="margin-top:8px;background:var(--tint-danger);color:var(--danger-soft);border:1px solid rgba(244,63,94,0.3)" onclick="deleteHistoryEntry(${idx})">🗑️ Excluir este treino</button>
   `;
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');

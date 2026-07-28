@@ -56,6 +56,19 @@
   --toast-bg:#0c1626;
   --scrim:rgba(0,0,0,.72);
   --shadow-sm:0 2px 8px rgba(0,0,0,.30);
+  /* ---- TOKENS DE FORMA: toda tela nova usa daqui (nunca mais px solto) ---- */
+  --radius-card:16px;
+  --radius-note:14px;
+  --radius-btn:12px;
+  --radius-pill:99px;
+  --prep:#a78bfa;                /* roxo: preparação/mobilidade */
+  --prep-soft:#c4b5fd;
+  /* bordas e fundos translúcidos padronizados por família */
+  --tint-primary:rgba(16,185,129,.07);   --line-primary:rgba(16,185,129,.32);
+  --tint-info:rgba(56,189,248,.07);      --line-info:rgba(56,189,248,.32);
+  --tint-warn:rgba(245,158,11,.07);      --line-warn:rgba(245,158,11,.32);
+  --tint-danger:rgba(244,63,94,.07);     --line-danger:rgba(244,63,94,.32);
+  --tint-prep:rgba(167,139,250,.07);     --line-prep:rgba(167,139,250,.32);
   --shadow-md:0 8px 32px rgba(0,0,0,.45);
   --glow:0 0 0 1px rgba(16,185,129,.18), 0 8px 30px rgba(16,185,129,.14);
   --card-bg:var(--surface);
@@ -314,21 +327,27 @@ body.no-deco #app-deco{display:none}
 
 
 /* ---- SISTEMA DE NOTAS: todo aviso do app usa isto (antes cada um tinha estilo próprio) ---- */
-.note{border-radius:14px;padding:12px 14px;margin-top:12px;font-size:12.5px;line-height:1.55;border:1px solid;display:block}
+.note{border-radius:var(--radius-note);padding:12px 14px;margin-top:12px;font-size:12.5px;line-height:1.55;border:1px solid;display:block}
 .note-title{font-weight:800;font-size:13px;margin-bottom:5px;display:flex;align-items:center;gap:7px}
 .note-line{margin:3px 0;color:var(--text-dim)}
 .note-foot{font-size:11.5px;color:var(--text-mute);margin-top:8px;line-height:1.45}
-.note-tip{border-color:rgba(16,185,129,.32);background:rgba(16,185,129,.07)}
+.note-tip{border-color:var(--line-primary);background:var(--tint-primary)}
 .note-tip .note-title{color:var(--primary-2)}
-.note-info{border-color:rgba(56,189,248,.32);background:rgba(56,189,248,.07)}
-.note-info .note-title{color:#7dd3fc}
-.note-warn{border-color:rgba(245,158,11,.32);background:rgba(245,158,11,.07)}
+.note-info{border-color:var(--line-info);background:var(--tint-info)}
+.note-info .note-title{color:var(--info-soft)}
+.note-warn{border-color:var(--line-warn);background:var(--tint-warn)}
 .note-warn .note-title{color:var(--accent-2)}
-.note-danger{border-color:rgba(244,63,94,.32);background:rgba(244,63,94,.07)}
-.note-danger .note-title{color:#fda4af}
-.note-prep{border-color:rgba(167,139,250,.32);background:rgba(167,139,250,.07)}
-.note-prep .note-title{color:#c4b5fd}
+.note-danger{border-color:var(--line-danger);background:var(--tint-danger)}
+.note-danger .note-title{color:var(--danger-soft)}
+.note-prep{border-color:var(--line-prep);background:var(--tint-prep)}
+.note-prep .note-title{color:var(--prep-soft)}
 .note-row{display:flex;gap:10px;align-items:center;cursor:pointer}
+/* destaques de botão/card — antes cada um repetia a cor no style= */
+.hl-primary{border-color:var(--line-primary)!important;color:var(--primary-2)!important}
+.hl-info{border-color:var(--line-info)!important;color:var(--info-soft)!important}
+.hl-warn{border-color:var(--line-warn)!important;color:var(--accent-2)!important;background:var(--tint-warn)!important}
+.hl-danger{border-color:var(--line-danger)!important;color:var(--danger)!important}
+.hl-prep{border-color:var(--line-prep)!important;color:var(--prep-soft)!important;background:var(--tint-prep)!important}
 #building-ov{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(5,10,18,.93);backdrop-filter:blur(10px);opacity:0;transition:opacity .26s ease}
 #building-ov.on{display:flex;opacity:1}
 .bld-box{width:100%;max-width:420px;text-align:center}
@@ -605,7 +624,7 @@ body.no-deco #app-deco{display:none}
     </div>
 
     <button class="btn btn-primary btn-block" id="google-btn" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="doGoogleSignIn()">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v12.018h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v12.028h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
       <span id="google-btn-lbl">Entrar com Google</span>
     </button>
     <div id="auth-err" style="margin-top:10px"></div>
@@ -1204,7 +1223,7 @@ body.no-deco #app-deco{display:none}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">v12.01</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">v12.02</span>
     </div>
   </div>
 </div>
@@ -1247,9 +1266,9 @@ body.no-deco #app-deco{display:none}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=12.01"></script>
+<script src="./app.js?v=12.02"></script>
 <script>
-const APP_VERSION = 'v12.01';
+const APP_VERSION = 'v12.02';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {
