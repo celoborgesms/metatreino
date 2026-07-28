@@ -1,7 +1,16 @@
-// ===== MetaTreino v12.02 =====
-const APP_VERSION = 'v12.02';
+// ===== MetaTreino v12.04 =====
+const APP_VERSION = 'v12.04';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
+
+/* ═══ CONVENÇÃO DE ÍCONES (siga isto ao criar recurso novo) ═══
+   MÓDULOS      🏋️ musculação · 🏃 corrida · 🚴 bike · 🚶 caminhada
+   ESTADOS      ✅ concluído · 😴 descanso · ⚠️ atenção · 🗑️ excluir · 🔒 bloqueado
+   TEMPO        📅 data/calendário · ⏱️ duração · 🕐 horário
+   PROGRESSO    📈 evolução · 🔥 sequência/intensidade · 🏆 conquista · 🥇 marco
+   COMUNICAÇÃO  💬 assistente · 💡 dica · 🧠 análise/insight · 📤 compartilhar
+   ESFORÇO      💪 motivação/músculo (nunca como ícone de módulo — esse é 🏋️)
+   REGRA DE OURO: um conceito = um emoji. Nunca dois emojis na mesma linha de texto. */
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
 const HISTORY_RETENTION_DAYS = 90;
 
@@ -75,7 +84,7 @@ const QUOTES = [
   '🔩 Pequenos ajustes hoje, grandes conquistas amanhã.',
   '🌊 Persistência dissolve resistência.',
   '🦁 Coragem não é ausência de cansaço, é treinar apesar dele.',
-  '📆 Um mês de constância muda mais que um dia perfeito.',
+  '📅 Um mês de constância muda mais que um dia perfeito.',
   '🧠 Treinar a mente é tão importante quanto treinar o corpo.',
   '⚙️ Sistemas vencem metas. Confie na sua rotina.',
   '🌤️ Depois do esforço vem a leveza. Aguente mais um pouco.',
@@ -98,7 +107,7 @@ const QUOTES = [
   '🍕 Você não perde treino, só adia o sofrimento (e come a pizza em paz).',
   '🏋️ Levantar peso é caro? Não levantar sai mais caro lá na frente.',
   '🏃 Correr é de graça e ainda vem com terapia inclusa.',
-  '💤 Dormir é oficialmente parte do treino. Aproveite a desculpa.',
+  '😴 Dormir é oficialmente parte do treino. Aproveite a desculpa.',
   '🦵 Nunca pule o dia de perna. Ninguém respeita um pombo. 🐦',
   '😤 O agachamento não pergunta se você está com preguiça.',
   '🥵 Se foi fácil demais, talvez você não tenha feito direito.',
@@ -139,13 +148,13 @@ function preStartStatusLine(p){
   if(d<=3) return `Faltam <b>${d} dias</b> pro seu primeiro treino. Aproveita pra deixar tudo pronto: roupa, tênis e horário na agenda. 📅`;
   if(d<=7) return `Seu plano começa ${quando}. Essa semana é de preparação — chegar descansado vale mais que antecipar. 😌`;
   if(d<=30) return `Faltam <b>${d} dias</b> pro início. Sem pressa: quando chegar o dia, é só ${oQue}. Eu cuido do resto. 💪`;
-  return `Seu plano está agendado pra daqui a <b>${d} dias</b>. Fica tranquilo — não vou te cobrar nada até lá. Quando a data chegar, eu te aviso. 🗓️`;
+  return `Seu plano está agendado pra daqui a <b>${d} dias</b>. Fica tranquilo — não vou te cobrar nada até lá. Quando a data chegar, eu te aviso. 📅`;
 }
 function preStartQuote(p){
   const d = p.dias;
   const cedo = [
     '🌱 O primeiro passo já foi dado: você decidiu começar.',
-    '🗓️ Plano marcado é meio caminho andado. O resto é aparecer.',
+    '📅 Plano marcado é meio caminho andado. O resto é aparecer.',
     '😌 Não tem pressa. Tem data.',
     '💡 Quem escolhe quando começar tem mais chance de continuar.',
     '🧘 Descansar antes de começar não é atraso, é preparação.'
@@ -736,7 +745,7 @@ function buildingSteps(m, setup, prev){
     const _h0 = new Date(); _h0.setHours(0,0,0,0);
     if(_st && _st > _h0.getTime()){
       const fw = (typeof planFirstWorkoutInfo==='function') ? planFirstWorkoutInfo(state.modules[m]) : null;
-      if(fw) steps.push({emo:'📆', pri:1, txt:`Primeiro treino <b>${fw.fmt}</b> (${fw.quando}) — até lá, <b>sem cobranças</b>`});
+      if(fw) steps.push({emo:'📅', pri:1, txt:`Primeiro treino <b>${fw.fmt}</b> (${fw.quando}) — até lá, <b>sem cobranças</b>`});
     }
   }catch(e){}
   steps.push({emo:'✅', pri:1, txt:m==='lift' ? `<b>Seu plano de musculação está pronto!</b>` : `<b>Seu plano de corrida está pronto!</b>`});
@@ -3252,7 +3261,7 @@ function renderPerf(){
         <div style="height:9px;border-radius:99px;background:rgba(148,163,184,0.15);overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:99px;transition:width .4s"></div></div>
       </div>`;
     };
-    gb.innerHTML = bar(weekDone, wkTarget, 'Meta da semana', '📅') + bar(monthDone, monthTarget, 'Meta do mês', '🗓️');
+    gb.innerHTML = bar(weekDone, wkTarget, 'Meta da semana', '📅') + bar(monthDone, monthTarget, 'Meta do mês', '📅');
   }
 }
 function calcVolumeBetween(a,b){
@@ -4798,7 +4807,7 @@ const MA_ANSWERS = {
     const mod = state.modules[state.active];
     if(!mod||!mod.plan) return 'Crie um plano que eu te mostro os dias de descanso! 🎯';
     const treino = (mod.plan.workouts||[]).length;
-    return `🗓️ Seu plano tem <b>${treino}</b> dias de treino e <b>${7-treino}</b> de descanso por semana. Descanso não é preguiça — é quando o corpo se reconstrói mais forte. 😴`;
+    return `📅 Seu plano tem <b>${treino}</b> dias de treino e <b>${7-treino}</b> de descanso por semana. Descanso não é preguiça — é quando o corpo se reconstrói mais forte. 😴`;
   },
   analise_semana(){
     const now = Date.now();
@@ -5764,7 +5773,7 @@ function maInsight(){
   if(Math.max(...porDia)>=3) ins.push(`📅 Seu dia mais consistente é <b>${dias[maxDia]}</b>. Ancorar os treinos nos dias que já funcionam é uma baita estratégia.`);
   if(manha+noite>=5){ if(manha>noite*1.5) ins.push(`🌅 Você treina mais de manhã — treino cedo tem uma vantagem: ninguém "rouba" seu horário durante o dia.`); else if(noite>manha*1.5) ins.push(`🌙 Você é mais de treinar à noite. Só evite treinos muito intensos perto da hora de dormir.`); }
   const dias1 = Math.floor((Date.now()-all[0].at)/86400000);
-  if(dias1>=30) ins.push(`🗓️ Faz <b>${dias1} dias</b> que você começou no MetaTreino — e já são <b>${all.length}</b> sessões registradas. Cada uma construiu a próxima.`);
+  if(dias1>=30) ins.push(`📅 Faz <b>${dias1} dias</b> que você começou no MetaTreino — e já são <b>${all.length}</b> sessões registradas. Cada uma construiu a próxima.`);
   if(state.active==='lift'){
     const ult = state.modules.lift && state.modules.lift.planCriadoEm;
     const semFicha = ult ? Math.floor((Date.now()-ult)/86400000) : null;
@@ -5778,7 +5787,7 @@ function maInsight(){
   // dia da semana que costuma escapar
   try{
     const wa = (typeof weekdayAdherenceInsight==='function') ? weekdayAdherenceInsight() : null;
-    if(wa) ins.push(`📆 Reparei que <b>${wa.pior.dia}</b> é o dia que mais escapa: você treina em <b>${wa.pior.pct}%</b> das vezes, contra ${wa.melhor.pct}% na ${wa.melhor.dia}. Se ${wa.pior.dia} é sempre corrido, talvez valha mover esse treino pra outro dia — melhor ajustar o plano que acumular falta.`);
+    if(wa) ins.push(`📅 Reparei que <b>${wa.pior.dia}</b> é o dia que mais escapa: você treina em <b>${wa.pior.pct}%</b> das vezes, contra ${wa.melhor.pct}% na ${wa.melhor.dia}. Se ${wa.pior.dia} é sempre corrido, talvez valha mover esse treino pra outro dia — melhor ajustar o plano que acumular falta.`);
   }catch(e){}
   // grupo que sempre termina pesado
   try{
@@ -5983,7 +5992,7 @@ function maOpeningSummary(){
       if(totalPlanned) L.push(`📋 Já concluiu <b>${doneCount}</b> de <b>${totalPlanned}</b> treinos do plano.`);
     }
     const created = (state.modules.lift?.createdAt) || (state.modules.run?.createdAt);
-    if(created){ const d = Math.max(1, Math.floor((Date.now()-created)/86400000)); L.push(`📆 Está no MetaTreino há <b>${d}</b> dia${d>1?'s':''}.`); }
+    if(created){ const d = Math.max(1, Math.floor((Date.now()-created)/86400000)); L.push(`📅 Está no MetaTreino há <b>${d}</b> dia${d>1?'s':''}.`); }
     const streak = calcStreak(allHist);
     if(streak>0) L.push(`🔥 Sequência atual: <b>${streak}</b> dia${streak>1?'s':''} sem faltar.`);
     const nx = maNextWorkout();
