@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.98 =====
-const APP_VERSION = 'v11.98';
+// ===== MetaTreino v12.00 =====
+const APP_VERSION = 'v12.00';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -6149,22 +6149,35 @@ function openAssistant(){
     try{ maReply(maOpeningSummary()); }catch(e){ maThread=[{who:'bot', txt:maOpeningSummary()}]; renderAssistant(); }
   }
 }
+// Avatar do assistente — dá cara de atendimento de verdade
+function maAvatar(tam){
+  const t = tam || 30;
+  return `<div style="width:${t}px;height:${t}px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(135deg,#10b981,#047857);display:flex;align-items:center;justify-content:center;
+    font-weight:900;font-size:${Math.round(t*0.46)}px;color:#04140d;letter-spacing:-.5px;
+    box-shadow:0 2px 8px rgba(16,185,129,.35)">M</div>`;
+}
 function maBubblesHTML(){
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  return maThread.map(m=> m.typing
-    ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:13px 16px;margin:6px 0;max-width:88%;display:inline-flex;gap:5px;align-items:center;width:auto">
+  return maThread.map((m,idx)=>{
+    const anterior = maThread[idx-1];
+    const primeiroDoBot = !anterior || anterior.who!=='bot' || anterior.typing || anterior.working;
+    const comAvatar = (html)=> `<div style="display:flex;gap:8px;align-items:flex-end;margin:6px 0;max-width:92%">
+        ${primeiroDoBot ? maAvatar(30) : '<div style="width:30px;flex-shrink:0"></div>'}${html}</div>`;
+    return m.typing
+    ? comAvatar(`<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:13px 16px;display:inline-flex;gap:5px;align-items:center;width:auto">
         <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out infinite"></span>
         <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .18s infinite"></span>
         <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .36s infinite"></span>
-      </div>`
+      </div>`)
     : m.working
-    ? `<div style="background:rgba(56,189,248,0.09);border:1px solid rgba(56,189,248,0.28);border-radius:16px 16px 16px 4px;padding:11px 14px;margin:6px 0;font-size:13px;color:#7dd3fc;max-width:88%;display:flex;gap:8px;align-items:center">
+    ? comAvatar(`<div style="background:rgba(56,189,248,0.09);border:1px solid rgba(56,189,248,0.28);border-radius:16px 16px 16px 4px;padding:11px 14px;font-size:13px;color:#7dd3fc;display:flex;gap:8px;align-items:center">
         <span style="display:inline-block;animation:maspin 1.1s linear infinite">⚙️</span><span>${m.working}…</span>
-      </div>`
+      </div>`)
     : m.who==='bot'
-    ? `<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:16px 16px 16px 4px;padding:11px 14px;margin:6px 0;font-size:13.5px;line-height:1.5;max-width:88%">${m.txt}</div>`
-    : `<div style="background:var(--surface-2);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`
-  ).join('');
+    ? comAvatar(`<div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:${primeiroDoBot?'16px 16px 16px 4px':'4px 16px 16px 4px'};padding:11px 14px;font-size:13.5px;line-height:1.5">${m.txt}</div>`)
+    : `<div style="background:var(--surface-2);border-radius:16px 16px 4px 16px;padding:11px 14px;margin:6px 0 6px auto;font-size:13.5px;max-width:88%;text-align:right">${esc(m.txt)}</div>`;
+  }).join('');
 }
 function maSugsHTML(){
   const emModoLeve = (state.user && ((state.user.pain&&state.user.pain.length) || state.user.tpmMode || state.user.crampMode));
@@ -6191,7 +6204,16 @@ function renderAssistant(){
   // refresh leve SÓ quando o assistente já está aberto de verdade (senão o modal nunca reabre)
   if(visivel && $('ma-thread')){ maRefreshThread(); return; }
   $('modal-inner').innerHTML = `
-    <h3>💬 Meta Assistente</h3>
+    <div style="display:flex;gap:11px;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      ${maAvatar(42)}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;font-size:16px;letter-spacing:-.2px">Meta Assistente</div>
+        <div style="font-size:11.5px;color:var(--primary-2);display:flex;align-items:center;gap:5px;margin-top:2px">
+          <span style="width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)"></span>
+          online · responde na hora
+        </div>
+      </div>
+    </div>
     <div id="ma-thread" style="max-height:min(42vh,340px);overflow-y:auto;margin:10px 0;display:flex;flex-direction:column">${maBubblesHTML()}</div>
     <div id="ma-sugs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px">${maSugsHTML()}</div>
     <div class="row" style="gap:6px">
@@ -6227,17 +6249,39 @@ function maReply(txt, work){
     }
   }catch(e){}
   clearTimeout(maTypingT);
-  maThread = maThread.filter(m=>!m.typing && !m.working);   // nunca dois indicadores ao mesmo tempo
+  maThread = maThread.filter(m=>!m.typing && !m.working);
   maThread.push(work ? {who:'bot', working:work} : {who:'bot', typing:true});
   maRefreshThread();
-  const puro = String(txt).replace(/<[^>]+>/g,'');
-  // um pouco mais de tempo: dá impressão de alguém realmente escrevendo (respostas longas pensam mais)
+  const partes = maQuebrarResposta(txt);
+  const puro = String(partes[0]).replace(/<[^>]+>/g,'');
   const espera = work ? 1900 : Math.max(750, Math.min(2600, 620 + puro.length*8));
-  maTypingT = setTimeout(()=>{
+  const entregar = (i)=>{
     maThread = maThread.filter(m=>!m.typing && !m.working);
-    maThread.push({who:'bot', txt});
+    maThread.push({who:'bot', txt: partes[i]});
     maRefreshThread();
-  }, espera);
+    if(i+1 < partes.length){
+      // mais uma mensagem vindo: mostra "digitando" de novo, como uma pessoa faria
+      maThread.push({who:'bot', typing:true});
+      maRefreshThread();
+      const prox = String(partes[i+1]).replace(/<[^>]+>/g,'');
+      maTypingT = setTimeout(()=>entregar(i+1), Math.max(600, Math.min(1500, 380 + prox.length*5)));
+    }
+  };
+  maTypingT = setTimeout(()=>entregar(0), espera);
+}
+// Divide respostas longas em 2-3 mensagens, quebrando em parágrafo — nunca no meio de uma frase.
+function maQuebrarResposta(txt){
+  const t = String(txt||'');
+  const puro = t.replace(/<[^>]+>/g,'');
+  if(puro.length < 200) return [t];                 // resposta curta: uma bolha só
+  const blocos = t.split(/<br>\s*<br>/).map(x=>x.trim()).filter(Boolean);
+  if(blocos.length < 2) return [t];                  // sem ponto natural de quebra: não força
+  if(blocos.length === 2) return blocos;
+  // 3+ blocos: primeiro sozinho, o resto agrupado em no máximo 2 mensagens
+  const meio = Math.ceil((blocos.length-1)/2);
+  return [ blocos[0],
+           blocos.slice(1, 1+meio).join('<br><br>'),
+           blocos.slice(1+meio).join('<br><br>') ].filter(Boolean);
 }
 function maAsk(key){
   if(key==='_yes' || key==='_no'){
