@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.00 =====
-const APP_VERSION = 'v12.00';
+// ===== MetaTreino v12.01 =====
+const APP_VERSION = 'v12.01';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2151,15 +2151,18 @@ function renderTodayWorkout(w, isLift){
     <div class="today-label">TREINO DE HOJE</div>
     <div class="today-diff ${isLift?'diff-med':'diff-easy'}">${isLift?'Foco':'Fácil'}</div>
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:w.name}</div>
-    ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:999px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
+    ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:99px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
     <div class="today-desc">${desc}</div>
-    ${(isLift && typeof fatigueOf==='function' && (w.parts||[]).some(pp=>fatigueOf(pp)>=70)) ? `<div style="margin-top:8px;font-size:12px;color:var(--accent-2)">🟡 ${(w.parts||[]).filter(pp=>fatigueOf(pp)>=70)[0]} ainda em recuperação. Se sentir queda de rendimento, vale tirar uma série hoje — quem manda é você.</div>` : ''}
+    ${(isLift && typeof fatigueOf==='function' && (w.parts||[]).some(pp=>fatigueOf(pp)>=70)) ? `<div class="note note-warn" style="margin-top:10px"><div class="note-line">🟡 <b>${(w.parts||[]).filter(pp=>fatigueOf(pp)>=70)[0]}</b> ainda em recuperação. Se sentir queda de rendimento, vale tirar uma série hoje — quem manda é você.</div></div>` : ''}
     ${(isLift && typeof cicloAtual==='function' && cicloAtual()) ? (c=>`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">${c.emo} Ciclo: <b style="color:var(--text)">${c.nome}</b> · semana ${c.sem}</div>`)(cicloAtual()) : ''}
-    ${sug?`<div style="margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);font-size:13px;line-height:1.45">${sug.emo} <b>Sugestão de hoje:</b> ${sug.txt}</div>`:''}
-    ${(!isLift && typeof volumeAlert==='function') ? (v=>v&&v.nivel==='alto'?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(244,63,94,0.07);border:1px solid rgba(244,63,94,0.3);font-size:12.5px;line-height:1.5;color:var(--text-dim)"><b style="color:#fda4af">⚠️ Cuidado com o volume</b><br>Você correu ${v.atual}km nesta semana, ${v.alta>=100?'mais que o dobro':v.alta+'% acima'} da sua média (${v.media}km). Subir rápido demais é a maior causa de lesão em corrida — se sentir dor nova, pegue leve.</div>`:'')(volumeAlert()) : ''}
-    ${(!isLift && typeof runWeatherTips==='function') ? (t=>t?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.25);font-size:12.5px;line-height:1.5">
-        <div style="color:#7dd3fc;font-weight:800;margin-bottom:5px">${t.titulo}</div>
-        ${t.dicas.map(d=>`<div style="color:var(--text-dim);margin:3px 0">• ${d}</div>`).join('')}
+    ${sug?`<div class="note note-warn"><div class="note-line">${sug.emo} <b>Sugestão de hoje:</b> ${sug.txt}</div></div>`:''}
+    ${(!isLift && typeof volumeAlert==='function') ? (v=>v&&v.nivel==='alto'?`<div class="note note-danger">
+        <div class="note-title">⚠️ Cuidado com o volume</div>
+        <div class="note-line">Você correu <b>${v.atual}km</b> nesta semana, ${v.alta>=100?'mais que o dobro':v.alta+'% acima'} da sua média (${v.media}km). Subir rápido demais é a maior causa de lesão em corrida — se sentir dor nova, pegue leve.</div>
+      </div>`:'')(volumeAlert()) : ''}
+    ${(!isLift && typeof runWeatherTips==='function') ? (t=>t?`<div class="note note-info">
+        <div class="note-title">${t.titulo}</div>
+        ${t.dicas.map(d=>`<div class="note-line">• ${d}</div>`).join('')}
       </div>`:'')(runWeatherTips()) : ''}
     <div class="today-meta">
       <span class="chip mono">⏱️ ${w.duration} min</span>
@@ -2325,9 +2328,7 @@ function renderSessions(){
   if(_psEl){
     const fwS = _preStart ? planFirstWorkoutInfo(mod) : null;
     _psEl.innerHTML = fwS
-      ? `<div class="card" style="margin-top:10px;padding:12px 14px;border-color:rgba(56,189,248,.35);background:rgba(56,189,248,.06)">
-           <div style="color:#7dd3fc;font-size:12.5px;line-height:1.5">▶️ Seu primeiro treino é <b>${fwS.fmt}</b> (${fwS.quando}). Dá uma olhada no que vem por aí — e se quiser começar antes, é só treinar: eu ajusto a data. 😉</div>
-         </div>`
+      ? `<div class="note note-info"><div class="note-line" style="color:#7dd3fc">▶️ Seu primeiro treino é <b>${fwS.fmt}</b> (${fwS.quando}). Dá uma olhada no que vem por aí — e se quiser começar antes, é só treinar: eu ajusto a data. 😉</div></div>`
       : '';
   }
 
@@ -2451,23 +2452,23 @@ function mobilidadeCard(w){
   if(!itens.length || !r) return '';
   const fechado = mobRecolhido();
   // Recolhido: vira uma linha só. Quem já decorou não precisa ler tudo de novo toda sessão.
-  if(fechado) return `<div class="card card-row" onclick="toggleMobCard()" style="margin-top:14px;padding:11px 13px;border-color:rgba(167,139,250,0.28);background:rgba(167,139,250,0.05);cursor:pointer">
+  if(fechado) return `<div class="note note-prep note-row" onclick="toggleMobCard()">
       <div style="font-size:19px">${ROTINAS[r].emo}</div>
-      <div style="flex:1;font-size:12.5px;color:#c4b5fd;font-weight:700">Preparação de 2-3 min <span style="color:var(--text-mute);font-weight:600">· ${itens.map(i=>i.nome.replace(/^(Alongamento|Mobilidade) (de |do )?/,'')).join(', ')}</span></div>
+      <div style="flex:1"><b style="color:#c4b5fd">Preparação de 2-3 min</b> <span style="color:var(--text-mute)">· ${itens.map(i=>i.nome).join(', ')}</span></div>
       <div style="color:#c4b5fd;font-size:18px">▾</div>
     </div>`;
-  return `<div class="card" style="margin-top:14px;border-color:rgba(167,139,250,0.35);background:rgba(167,139,250,0.06)">
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
-      <div style="font-size:22px">${ROTINAS[r].emo}</div>
-      <div style="flex:1"><div style="font-weight:800;color:#c4b5fd;font-size:14px">Antes de começar — 2 a 3 min</div>
-      <div style="font-size:11.5px;color:var(--text-mute)">Escolhidos pro treino de hoje e pra sua rotina de trabalho</div></div>
-      <div onclick="toggleMobCard()" style="color:#c4b5fd;font-size:18px;padding:4px 8px;cursor:pointer">▴</div>
+  return `<div class="note note-prep">
+    <div class="note-row" onclick="toggleMobCard()" style="margin-bottom:8px">
+      <div style="font-size:20px">${ROTINAS[r].emo}</div>
+      <div style="flex:1"><div class="note-title" style="margin:0">Antes de começar — 2 a 3 min</div>
+      <div style="font-size:11.5px;color:var(--text-mute)">Pro treino de hoje e pra sua rotina</div></div>
+      <div style="color:#c4b5fd;font-size:18px">▴</div>
     </div>
     ${itens.map(i=>`<div style="padding:9px 0;border-top:1px dashed var(--border)">
       <div style="font-size:13.5px;font-weight:700">${i.emo} ${i.nome} <span style="color:var(--text-mute);font-weight:600;font-size:12px">· ${i.tempo}</span></div>
-      <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:3px">${mobTexto(i)}</div>
+      <div class="note-line" style="margin-top:3px">${mobTexto(i)}</div>
     </div>`).join('')}
-    <div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;line-height:1.45">Opcional — sem tempo? Treinar já é ótimo. Toque em ▴ pra recolher — fica assim nas próximas vezes.</div>
+    <div class="note-foot">Opcional — sem tempo? Treinar já é ótimo. Toque em ▴ pra recolher.</div>
   </div>`;
 }
 function setRotina(r){
@@ -3346,7 +3347,7 @@ function renderProfile(){
   const vEl2 = $('vac-row-label'); if(vEl2) vEl2.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias';
   renderAvatar('pf-avatar');
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
-  const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:999px;background:rgba(244,63,94,0.15);color:var(--danger-soft);font-weight:800">${pn.join(', ')}</span>`:''; }
+  const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:99px;background:rgba(244,63,94,0.15);color:var(--danger-soft);font-weight:800">${pn.join(', ')}</span>`:''; }
   const qe = $('pf-quick-equip'); if(qe) qe.style.display = (state.active==='lift' && state.modules.lift && state.modules.lift.plan) ? 'block' : 'none';
   const qt = $('pf-quick-terrain'); if(qt) qt.style.display = (state.active==='run' && state.modules.run && state.modules.run.plan) ? 'block' : 'none';
   $('pf-name').textContent = p.nickname || u.name;
@@ -3718,7 +3719,7 @@ function showAwards(){
 function renderAward(){
   const a = awardQueue[awardIdx]; if(!a) return;
   const n = awardQueue.length;
-  const dots = awardQueue.map((_,i)=>`<span style="width:${i===awardIdx?'18px':'6px'};height:6px;border-radius:999px;background:${i===awardIdx?'var(--primary)':'var(--surface-2)'};display:inline-block;transition:width .25s"></span>`).join('');
+  const dots = awardQueue.map((_,i)=>`<span style="width:${i===awardIdx?'18px':'6px'};height:6px;border-radius:99px;background:${i===awardIdx?'var(--primary)':'var(--surface-2)'};display:inline-block;transition:width .25s"></span>`).join('');
   const seta = (dir,dis)=>`<button onclick="awardNav(${dir})" ${dis?'disabled':''} style="background:none;border:none;font-size:26px;color:${dis?'var(--surface-2)':'var(--text-dim)'};padding:8px 10px;cursor:${dis?'default':'pointer'}">${dir<0?'‹':'›'}</button>`;
   $('modal-inner').innerHTML = `
     <div style="display:flex;justify-content:flex-end;margin:-4px -4px 0 0">
@@ -8336,7 +8337,7 @@ function openHistoryEntry(idx){
   const muscleBlock = parts.length ? `
     <div class="card" style="margin-top:12px">
       <div class="section-lbl" style="margin:0 0 8px">💪 Músculos trabalhados</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:12.5px;padding:5px 13px;border-radius:999px;background:rgba(16,185,129,0.14);color:var(--primary-2);font-weight:800;border:1px solid rgba(16,185,129,0.3)">${p}</span>`).join('')}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:12.5px;padding:5px 13px;border-radius:99px;background:rgba(16,185,129,0.14);color:var(--primary-2);font-weight:800;border:1px solid rgba(16,185,129,0.3)">${p}</span>`).join('')}</div>
     </div>` : '';
   const exBlock = (x.exercisesDone && x.exercisesDone.length) ? `
     <div class="section-lbl" style="margin-top:14px">Exercícios por grupo</div>
