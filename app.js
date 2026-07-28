@@ -1,5 +1,5 @@
-// ===== MetaTreino v11.94 =====
-const APP_VERSION = 'v11.94';
+// ===== MetaTreino v11.97 =====
+const APP_VERSION = 'v11.97';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 const CONTACT_EMAIL = 'metatreinooficial@gmail.com';
@@ -2356,6 +2356,114 @@ function currentSelectedWorkout(mod){
 function cardioFinisherCard(){
   return `<div class="card card-info card-row" style="margin-top:14px;border-color:rgba(245,158,11,0.35);background:rgba(245,158,11,0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:#f59e0b">Bônus cardio (opcional)</div><div class="card-sub">Treino mais curto hoje? Se quiser turbinar, finalize com ~8 min: <b>2 a 3 voltas</b> de 30s em cada — polichinelo, corrida no lugar (joelho alto), mountain climber e agachamento com salto. 30s de descanso entre as voltas, no seu ritmo. 💪</div></div></div>`;
 }
+// ===== PERFIL OCUPACIONAL =====
+// O corpo cobra diferente conforme o dia da pessoa. Não é fisioterapia nem obrigação:
+// são 2-3 movimentos no aquecimento que ela já faz, escolhidos pela rotina + grupos do dia.
+const MOB = {
+  peitoral:  { emo:'🚪', nome:'Alongamento de peitoral', tempo:'2× 30s cada lado',
+    como:'Antebraço apoiado no batente da porta, cotovelo na altura do ombro. <b>Gire o tronco</b> (não só o ombro) até sentir o peito alongar.' },
+  toracica:  { emo:'🔄', nome:'Mobilidade torácica', tempo:'8-10 repetições',
+    como:'Mãos na nuca, gire o tronco para um lado e para o outro, respirando fundo. Solta a rigidez de horas na mesma posição.' },
+  rotadores: { emo:'💪', nome:'Rotação externa de ombro', tempo:'2× 15 (carga leve)',
+    como:'Elástico ou halter leve, cotovelo colado ao corpo a 90°, gire o antebraço para fora devagar.' },
+  psoas:     { emo:'🦵', nome:'Alongamento do flexor do quadril', tempo:'2× 30s cada lado',
+    como:'Joelho no chão, outro pé à frente. <b>Contraia o glúteo</b> do lado de trás e leve o quadril à frente — sem arquear a lombar.' },
+  ponte:     { emo:'🌉', nome:'Ponte de glúteo', tempo:'2× 15 repetições',
+    como:'Deitado, pés no chão, suba o quadril apertando o glúteo no topo. Acorda o glúteo que passou o dia desligado.' },
+  posterior: { emo:'🧎', nome:'Alongamento posterior de coxa', tempo:'2× 30s cada lado',
+    como:'Perna estendida à frente, quadril para trás, coluna reta. Desça até sentir atrás da coxa.' },
+  gato:      { emo:'🐈', nome:'Gato e camelo', tempo:'10 repetições lentas',
+    como:'De quatro apoios, arredonde e arqueie a coluna devagar, acompanhando a respiração.' },
+  panturrilha:{emo:'🦶', nome:'Alongamento de panturrilha', tempo:'2× 30s cada lado',
+    como:'Mãos na parede, perna de trás estendida com o calcanhar no chão. Empurre o quadril à frente.' },
+  tornozelo: { emo:'🔃', nome:'Mobilidade de tornozelo', tempo:'10 por lado',
+    como:'Pé à frente, joelho avança por cima dos dedos sem tirar o calcanhar do chão. Melhora agachamento e passada.' },
+  pernasParede:{emo:'🧘', nome:'Pernas na parede', tempo:'2-3 minutos',
+    como:'Deitado, pernas apoiadas na parede. Alivia o inchaço e a sensação de peso de um dia inteiro em pé.' },
+  lombar:    { emo:'🙆', nome:'Extensão de lombar', tempo:'10 repetições lentas',
+    como:'Deitado de bruços, apoie os antebraços e eleve o tronco devagar. Descomprime a lombar de horas sentado ou carregando peso.' },
+  cervical:  { emo:'🙂', nome:'Mobilidade de pescoço', tempo:'8 por direção',
+    como:'Incline a cabeça para os lados e gire devagar, sem forçar. Solta a tensão de dirigir ou olhar pra tela o dia todo.' },
+  punho:     { emo:'🤲', nome:'Alongamento de antebraço', tempo:'2× 30s cada lado',
+    como:'Braço estendido, puxe os dedos para baixo e depois para cima. Alivia quem carrega ou segura peso o dia todo.' }
+};
+const ROTINAS = {
+  sentado:  { emo:'🪑', label:'Sentado (escritório, computador)',
+    foco:['peitoral','toracica','psoas','ponte'],
+    porque:'Ficar sentado encurta peitoral e flexor do quadril, e "desliga" o glúteo.' },
+  pe:       { emo:'🧍', label:'Em pé parado (balcão, loja, cozinha)',
+    foco:['panturrilha','posterior','lombar','pernasParede'],
+    porque:'Horas em pé sobrecarregam panturrilha, posterior de coxa e lombar.' },
+  peso:     { emo:'📦', label:'Carregando peso (carga, obra, estoque)',
+    foco:['gato','toracica','punho','posterior'],
+    porque:'Carregar peso cansa lombar, ombros e antebraços — mobilidade ajuda a descomprimir.' },
+  dirigindo:{ emo:'🚗', label:'Dirigindo (motorista, entregador)',
+    foco:['psoas','lombar','cervical','toracica'],
+    porque:'Dirigir junta o sentar prolongado com tensão de pescoço e lombar.' },
+  misto:    { emo:'🚶', label:'Em movimento o dia todo',
+    foco:['tornozelo','posterior','toracica'],
+    porque:'Você já se movimenta bastante — aqui a mobilidade é só pra treinar melhor.' }
+};
+function rotinaAtual(){
+  const p = state.user && state.user.profile;
+  if(!p) return null;
+  if(p.rotina) return p.rotina;
+  if(p.sentado === true) return 'sentado';   // compatível com a versão anterior
+  return null;
+}
+function trabalhaSentado(){ const r=rotinaAtual(); return r==='sentado' || r==='dirigindo'; }
+function mobilidadeDoDia(w){
+  const r = rotinaAtual(); if(!r || !ROTINAS[r] || !w) return [];
+  const partes = (w.parts||[]).join(' ');
+  const pool = ROTINAS[r].foco.slice();
+  // prioriza o que conversa com os grupos DO DIA
+  const relevante = k => {
+    if(/Peito|Ombro|Trapézio|Costas/.test(partes)) return ['peitoral','toracica','rotadores','punho','cervical'].includes(k);
+    if(/Pernas|Glúteos|Panturrilha/.test(partes))  return ['psoas','posterior','ponte','panturrilha','tornozelo','lombar','pernasParede'].includes(k);
+    return true;
+  };
+  const ordenado = pool.filter(relevante).concat(pool.filter(k=>!relevante(k)));
+  if(/Ombro/.test(partes) && !ordenado.includes('rotadores')) ordenado.unshift('rotadores');
+  return ordenado.slice(0,3).map(k=>MOB[k]).filter(Boolean);
+}
+function mobRecolhido(){ try{ return localStorage.getItem('mt_mob_recolhido')==='1'; }catch(e){ return false; } }
+function toggleMobCard(){
+  try{ localStorage.setItem('mt_mob_recolhido', mobRecolhido() ? '0' : '1'); }catch(e){}
+  if(state.ui && state.ui.tab) goTab(state.ui.tab);
+}
+function mobilidadeCard(w){
+  const itens = mobilidadeDoDia(w);
+  const r = rotinaAtual();
+  if(!itens.length || !r) return '';
+  const fechado = mobRecolhido();
+  // Recolhido: vira uma linha só. Quem já decorou não precisa ler tudo de novo toda sessão.
+  if(fechado) return `<div class="card card-row" onclick="toggleMobCard()" style="margin-top:14px;padding:11px 13px;border-color:rgba(167,139,250,0.28);background:rgba(167,139,250,0.05);cursor:pointer">
+      <div style="font-size:19px">${ROTINAS[r].emo}</div>
+      <div style="flex:1;font-size:12.5px;color:#c4b5fd;font-weight:700">Preparação de 2-3 min <span style="color:var(--text-mute);font-weight:600">· ${itens.map(i=>i.nome.replace(/^(Alongamento|Mobilidade) (de |do )?/,'')).join(', ')}</span></div>
+      <div style="color:#c4b5fd;font-size:18px">▾</div>
+    </div>`;
+  return `<div class="card" style="margin-top:14px;border-color:rgba(167,139,250,0.35);background:rgba(167,139,250,0.06)">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+      <div style="font-size:22px">${ROTINAS[r].emo}</div>
+      <div style="flex:1"><div style="font-weight:800;color:#c4b5fd;font-size:14px">Antes de começar — 2 a 3 min</div>
+      <div style="font-size:11.5px;color:var(--text-mute)">Escolhidos pro treino de hoje e pra sua rotina de trabalho</div></div>
+      <div onclick="toggleMobCard()" style="color:#c4b5fd;font-size:18px;padding:4px 8px;cursor:pointer">▴</div>
+    </div>
+    ${itens.map(i=>`<div style="padding:9px 0;border-top:1px dashed var(--border)">
+      <div style="font-size:13.5px;font-weight:700">${i.emo} ${i.nome} <span style="color:var(--text-mute);font-weight:600;font-size:12px">· ${i.tempo}</span></div>
+      <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:3px">${i.como}</div>
+    </div>`).join('')}
+    <div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;line-height:1.45">Opcional — sem tempo? Treinar já é ótimo. Toque em ▴ pra deixar recolhido nas próximas vezes.</div>
+  </div>`;
+}
+function setRotina(r){
+  state.user.profile = state.user.profile || {};
+  if(r === 'none'){ delete state.user.profile.rotina; delete state.user.profile.sentado; }
+  else { state.user.profile.rotina = r; delete state.user.profile.sentado; }
+  saveData(); closeModal();
+  toast(r==='none' ? 'Preparação personalizada desativada' : `${ROTINAS[r].emo} Vou preparar seu aquecimento pensando nisso`);
+  if(state.ui.tab) goTab(state.ui.tab);
+}
 function renderSessionDetail(w){
   if(!w){ $('session-detail-slot').innerHTML=''; return; }
   const isLift = state.active==='lift';
@@ -2376,6 +2484,7 @@ function renderSessionDetail(w){
     ${w.adapted ? `<div class="card card-alert card-row" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
     <div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>
     ${isLift && isCustomized(w) ? `<div class="card card-row" style="border-color:rgba(167,139,250,0.35);background:rgba(167,139,250,0.06)"><div class="card-icon">✨</div><div style="flex:1"><div class="card-title" style="color:#a78bfa">Treino personalizado</div><div class="card-sub">Você trocou ${w.pins.length} exercício${w.pins.length>1?'s':''} neste treino. As trocas ficam salvas nos próximos treinos. Pra desfazer, use "Voltar à sugestão" em cada exercício.</div></div></div>` : ''}
+    ${typeof mobilidadeCard==='function' ? mobilidadeCard(w) : ''}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
     ${isSkippedToday(w)
@@ -3217,6 +3326,7 @@ function cancelRunPlan(){
 function renderProfile(){
   const u = state.user, p = u.profile || {};
   const vEl = $('pf-version'); if(vEl) vEl.textContent = APP_VERSION;
+  try{ const sr=$('pf-sentado-row'); if(sr){ const r=rotinaAtual(); sr.querySelector('span').textContent = r&&ROTINAS[r] ? 'Rotina: '+ROTINAS[r].label.split(' (')[0] : 'Minha rotina de trabalho'; } }catch(e){}
   try{ if(state.user && state.user.isAdmin) checkNewFeedback(); }catch(e){}
   const dEl = $('deco-row-label'); if(dEl) dEl.textContent = decoEnabled() ? 'Fundo decorativo' : 'Fundo decorativo (desligado)';
   const vEl2 = $('vac-row-label'); if(vEl2) vEl2.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias';
@@ -4123,6 +4233,16 @@ const MODAL_CONTENT = {
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="exportMyData()">💾 Fazer backup antes</button>
     <button class="btn btn-outline btn-block" style="margin-top:16px;border-color:var(--accent);color:var(--accent-2)" onclick="doRestart()">🔄 Sim, começar do zero</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`,
+  'rotina':()=>{
+    const atual = (typeof rotinaAtual==='function') ? rotinaAtual() : null;
+    return `<h3>💼 Como é sua rotina de trabalho?</h3>
+      <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cada rotina cobra do corpo de um jeito. Sabendo a sua, eu sugiro <b>2-3 min de preparação</b> antes do treino — nada obrigatório, só o que faz sentido pro seu dia.</p>
+      <div style="margin-top:14px">
+        ${Object.entries(ROTINAS).map(([k,v])=>`<div class="list-row" onclick="setRotina('${k}')" style="${atual===k?'border-color:rgba(167,139,250,.5);background:rgba(167,139,250,.08)':''}">${v.emo} <span>${v.label}</span>${atual===k?'<span style="margin-left:auto;color:#c4b5fd;font-size:12px;font-weight:800">ativo</span>':''}</div>`).join('')}
+        <div class="list-row" onclick="setRotina('none')" style="color:var(--text-mute)">🚫 <span>Não quero essa sugestão</span></div>
+      </div>
+      <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
+  },
   'delete-account':()=>{
     const email=(state.user&&state.user.email)||'';
     const lh=((state.modules.lift||{}).history)||[], rh=((state.modules.run||{}).history)||[];
@@ -4358,6 +4478,13 @@ const MA_ANSWERS = {
     }catch(e){ return 'Não consegui calcular agora 😕. Registra mais algumas corridas e tenta de novo.'; }
   },
   // ===== SONO =====
+  _trabalhosentado(){
+    const r = (typeof rotinaAtual==='function') ? rotinaAtual() : null;
+    const base = `O corpo cobra de quem passa o dia na <b>mesma posição</b> — sentado, em pé parado ou dirigindo. 💼<br><br>
+<b>O que a pesquisa mostra:</b><br>• O problema maior é ficar <b>muitas horas seguidas</b> parado, não a posição em si<br>• Levantar/mudar de posição 2-3 min a cada hora já muda bastante<br>• Quem faz <b>60-75 min de atividade moderada por dia</b> praticamente anula o risco extra (Lancet, +1 milhão de pessoas)<br>• Meta oficial: <b>150 min por semana</b> de atividade moderada<br><br>`;
+    if(r && ROTINAS[r]) return base + `✅ Você marcou: <b>${ROTINAS[r].label}</b>. ${ROTINAS[r].porque}<br><br>Por isso eu já coloco <b>2-3 min de preparação</b> no aquecimento dos seus treinos, escolhidos conforme os grupos do dia.`;
+    return base + '💡 Me conta como é seu dia em <b>Perfil › Minha rotina de trabalho</b> (sentado, em pé, carregando peso, dirigindo ou em movimento). Aí eu passo a sugerir a preparação certa antes de cada treino.';
+  },
   _sonotreino(){
     let ctx = '';
     try{ const s = maCtxGet('sono'); if(s!==null && s<=5) ctx = `<br><br>Você me contou que dormiu <b>${s}h</b> — nesse cenário, eu manteria a carga de hoje e focaria na execução, sem buscar recorde.`; }catch(e){}
@@ -4756,6 +4883,7 @@ function maInterpret(txt){
   }
   // ===== sono =====
   if(has('dormi mal','dormindo mal','sono ruim','pouco sono','falta de sono','não dormi bem','nao dormi bem','sono afeta','dormir afeta','o sono influencia','dormir pouco','noites mal dormidas','insônia','insonia') && has('treino','treinar','afeta','influencia','atrapalha','prejudica','rendimento')) return '_sonotreino';
+  if(has('trabalho sentado','fico sentado','sentado o dia todo','muito tempo sentado','trabalhar sentado','passo o dia sentado','escritório','escritorio','sedentário','sedentario','trabalho em pé','trabalho em pe','fico em pé','o dia todo em pé','carrego peso','carregando peso','trabalho dirigindo','dirijo o dia','sou motorista','minha rotina de trabalho','rotina de trabalho')) return '_trabalhosentado';
   if(has('o sono é importante','sono e importante','importância do sono','importancia do sono','quantas horas devo dormir','quanto devo dormir')) return '_sonotreino';
   if(has('ajuda','o que você faz','o que voce faz','o que sabe','pode fazer','como funciona','me ajuda')) return '_ajuda';
   if(has('análise da semana','analise da semana','análise semanal','analise semanal','resumo da semana','como foi minha semana','relatório','relatorio','minha semana')) return 'analise_semana';
@@ -8583,7 +8711,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
