@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.05 =====
-const APP_VERSION = 'v12.05';
+// ===== MetaTreino v12.06 =====
+const APP_VERSION = 'v12.06';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -731,6 +731,9 @@ const EQUIP_LISTA = [
   { id:'elastico',   nome:'Elástico / faixa',       emo:'🎗️' }
 ];
 function equipDoExercicio(ex){
+  // A biblioteca já sabe o que dá pra fazer em casa (cadeira vira banco, barra na porta...).
+  // Esses nunca exigem aparelho — garante que o personalizado nunca ofereça menos que "Peso do corpo".
+  if((ex.equip||[]).includes('casa')) return [];
   const n = String(ex.name||'').toLowerCase();
   const eq = new Set();
   if(/smith/.test(n)) eq.add('smith');
@@ -783,11 +786,12 @@ function toggleEquip(id){
 function atualizaContagemEquip(){
   const el = $('equip-count'); if(!el) return;
   let n=0;
-  try{ EX_BANK.forEach(c=>c.items.forEach(x=>{ if(podeFazerCom(x, equipTemp) && !x.improv) n++; })); }catch(e){}
-  el.innerHTML = n < 12
-    ? `⚠️ Só <b>${n} exercícios</b> disponíveis — marque mais alguns pro treino ficar variado.`
-    : `✅ <b>${n} exercícios</b> disponíveis pra montar seus treinos`;
-  el.style.color = n<12 ? 'var(--accent-2)' : 'var(--text-dim)';
+  try{ EX_BANK.forEach(c=>c.items.forEach(x=>{ if(podeFazerCom(x, equipTemp)) n++; })); }catch(e){}
+  const marcados = equipTemp.length;
+  el.innerHTML = marcados===0
+    ? `🤸 <b>${n} exercícios</b> de peso do corpo — marque o que você tem pra desbloquear mais`
+    : `✅ <b>${n} exercícios</b> disponíveis · <b>${marcados}</b> ${marcados===1?'equipamento marcado':'equipamentos marcados'}`;
+  el.style.color = 'var(--text-dim)';
 }
 function countExercisesFor(equip){
   try{
@@ -810,7 +814,7 @@ function buildingSteps(m, setup, prev){
     const lvl = {iniciante:'Iniciante',intermediario:'Intermediário',avancado:'Avançado'}[setup.level] || '';
     steps.push({emo:'🎯', pri:1, txt:`Objetivo: <b>${gl}</b>`});
     if(setup.equip==='custom'){
-      let n=0; try{ EX_BANK.forEach(c=>c.items.forEach(x=>{ if(podeFazerCom(x,setup.equipList||[]) && !x.improv) n++; })); }catch(e){}
+      let n=0; try{ EX_BANK.forEach(c=>c.items.forEach(x=>{ if(podeFazerCom(x,setup.equipList||[])) n++; })); }catch(e){}
       const q=(setup.equipList||[]).length;
       steps.push({emo:'🛠️', pri:2, txt:`Montando com <b>${q} ${q===1?'equipamento':'equipamentos'}</b> que você tem — <b>${n} exercícios</b> possíveis`});
     } else steps.push({emo:'🏋️', pri:2, txt:`${eq} — <b>${countExercisesFor(setup.equip)} exercícios</b> liberados pra você`});
@@ -1240,7 +1244,9 @@ function buildLiftExercises(parts, setup){
     // Equipamentos escolhidos pelo aluno: só entra o que ele realmente tem (+ peso do corpo)
     if(equip === 'custom'){
       const lista = (setup.equipList || []);
-      compat = cat.items.filter(ex => podeFazerCom(ex, lista) && !ex.improv);
+      // peso do corpo (inclusive improvisados) SEMPRE entra + o que o aluno marcou.
+      // Assim o personalizado nunca oferece menos que a opção "Peso do corpo".
+      compat = cat.items.filter(ex => podeFazerCom(ex, lista));
     }
     if(!compat.length) return;
     // VARIAÇÃO SEMANAL: gira as opções a cada semana — mesmo estímulo, exercício diferente (Supino barra → halteres → máquina → volta)
