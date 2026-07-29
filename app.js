@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.12 =====
-const APP_VERSION = 'v12.12';
+// ===== MetaTreino v12.13 =====
+const APP_VERSION = 'v12.13';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -341,6 +341,30 @@ function normalizaLogin(v){
   return limpo ? limpo + '@' + DOMINIO_INTERNO : '';
 }
 function ehLoginInterno(email){ return String(email||'').endsWith('@'+DOMINIO_INTERNO); }
+// Mostra na hora o que vai acontecer com o que a pessoa está digitando.
+// Evita o erro de digitar um e-mail que não existe e ficar preso na confirmação.
+function dicaLogin(){
+  const campo = document.getElementById('auth-email');
+  const box = document.getElementById('auth-hint');
+  if(!campo || !box) return;
+  const v = String(campo.value||'').trim();
+  if(!v){ box.innerHTML=''; return; }
+  if(v.includes('@')){
+    const valido = /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(v);
+    box.innerHTML = authModo==='criar'
+      ? (valido
+          ? '📧 E-mail real — vamos enviar um <b>link de confirmação</b>. Precisa ser um e-mail que você acessa.'
+          : '⚠️ Esse e-mail parece incompleto. Se você <b>não tem e-mail</b>, apague o "@" e digite só um usuário (ex: <b>joao123</b>).')
+      : '📧 Entrando com e-mail.';
+    box.style.color = (authModo==='criar' && !valido) ? 'var(--accent-2)' : 'var(--text-mute)';
+  } else {
+    const limpo = v.toLowerCase().replace(/[^a-z0-9._-]/g,'');
+    box.innerHTML = limpo
+      ? `👤 Login de <b>usuário</b> — sem e-mail e <b>sem confirmação</b>. Você vai entrar digitando <b>${limpo}</b> e a senha.`
+      : '⚠️ Use letras e números (ex: joao123).';
+    box.style.color = limpo ? 'var(--primary-2)' : 'var(--accent-2)';
+  }
+}
 function toggleAuthMode(){
   authModo = authModo==='entrar' ? 'criar' : 'entrar';
   const criar = authModo==='criar';
@@ -351,6 +375,7 @@ function toggleAuthMode(){
   if(el('auth-forgot')) el('auth-forgot').style.display = criar ? 'none' : '';
   if(el('auth-pass')) el('auth-pass').setAttribute('autocomplete', criar ? 'new-password' : 'current-password');
   const e=el('auth-err'); if(e) e.innerHTML='';
+  try{ dicaLogin(); }catch(err){}
 }
 function authErro(msg){ const e=document.getElementById('auth-err'); if(e) e.innerHTML='<div class="err">'+msg+'</div>'; }
 function authMsgErro(code){
@@ -9056,7 +9081,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,doEmailAuth,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,doEmailAuth,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
