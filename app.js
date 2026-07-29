@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.11 =====
-const APP_VERSION = 'v12.11';
+// ===== MetaTreino v12.12 =====
+const APP_VERSION = 'v12.12';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -395,7 +395,12 @@ function doEmailAuth(){
   }
   const acao = authModo==='criar'
     ? fbAuth.createUserWithEmailAndPassword(email, pass).then(cred=>{
-        if(cred.user && nome) return cred.user.updateProfile({ displayName: nome }).catch(()=>{});
+        const u = cred.user;
+        const tarefas = [];
+        if(u && nome) tarefas.push(u.updateProfile({ displayName: nome }).catch(()=>{}));
+        // e-mail real: manda o link de confirmação (as regras do Firestore exigem verificação)
+        if(u && !ehLoginInterno(email)) tarefas.push(u.sendEmailVerification().catch(e=>console.log('Falha ao enviar verificação:', e)));
+        return Promise.all(tarefas);
       })
     : fbAuth.signInWithEmailAndPassword(email, pass);
   acao.catch(e=>{ console.log('Erro no login por e-mail:', e); fim(); authErro(authMsgErro(e && e.code)); });
@@ -442,6 +447,12 @@ function doResetPassword(){
   fbAuth.sendPasswordResetEmail(email)
     .then(()=>toast('📧 Link de recuperação enviado pro seu e-mail'))
     .catch(e=>authErro(authMsgErro(e && e.code)));
+}
+function resendVerification(){
+  if(!fbUser){ toast('Entre novamente pra reenviar.'); return; }
+  fbUser.sendEmailVerification()
+    .then(()=>toast('📧 Link reenviado! Confira sua caixa de entrada e o spam.'))
+    .catch(e=>{ console.log('Erro ao reenviar:', e); toast('⚠️ Não foi possível reenviar agora. Tente em alguns minutos.'); });
 }
 function retryAccessCheck(){
   try{
@@ -578,7 +589,16 @@ async function afterGoogleSignIn(user){
     state.user = { name:user.displayName||'', email, blocked:true };
     // Não conseguimos verificar (rede lenta/timeout) ≠ acesso negado.
     // Antes os dois caíam na mesma tela, dizendo "não autorizado" pra quem tinha acesso.
+    const naoVerificado = !!(user && user.email && !user.emailVerified && !ehLoginInterno(email));
     const el = $('noaccess-msg');
+    if(el && naoVerificado && !checkedOnline){
+      // causa mais comum agora: conta criada por e-mail e ainda não confirmada
+      el.innerHTML = `📧 <b>Confirme seu e-mail pra continuar</b><br><br>Enviamos um link de confirmação para <b>${email}</b>. Abra o e-mail, clique no link e volte aqui.<br><br><span style="font-size:12px;color:var(--text-mute)">Não achou? Veja a caixa de spam.</span>`;
+      const rt0 = $('noaccess-retry'); if(rt0){ rt0.classList.remove('hidden'); rt0.textContent = '🔄 Já confirmei, verificar de novo'; }
+      const rs = $('noaccess-resend'); if(rs) rs.classList.remove('hidden');
+      showScreen('scr-noaccess');
+      return;
+    }
     if(el){
       el.innerHTML = checkedOnline
         ? `Sua conta ainda não foi autorizada pelo treinador.<br><br><span style="font-size:12px;color:var(--text-mute)">Conta verificada: <b>${ehLoginInterno(email)?email.split('@')[0]:email}</b></span>`
@@ -9036,7 +9056,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,doEmailAuth,retryAccessCheck,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,doEmailAuth,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
