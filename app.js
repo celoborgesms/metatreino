@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.06 =====
-const APP_VERSION = 'v12.06';
+// ===== MetaTreino v12.09 =====
+const APP_VERSION = 'v12.09';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -327,6 +327,122 @@ async function loadData(){
 }
 
 // ---------- AUTH (Google) ----------
+// ===== LOGIN POR E-MAIL/USUÁRIO + SENHA =====
+// Permite criar conta sem Google. Quem não tem e-mail usa um "usuário"
+// (ex: joao123) — internamente vira joao123@aluno.metatreino.app, invisível pro aluno.
+const DOMINIO_INTERNO = 'aluno.metatreino.app';
+let authModo = 'entrar';   // 'entrar' | 'criar'
+function normalizaLogin(v){
+  const t = String(v||'').trim().toLowerCase();
+  if(!t) return '';
+  if(t.includes('@')) return t;
+  // usuário simples (letras, números, ponto, hífen, _) vira e-mail interno
+  const limpo = t.replace(/[^a-z0-9._-]/g,'');
+  return limpo ? limpo + '@' + DOMINIO_INTERNO : '';
+}
+function ehLoginInterno(email){ return String(email||'').endsWith('@'+DOMINIO_INTERNO); }
+function toggleAuthMode(){
+  authModo = authModo==='entrar' ? 'criar' : 'entrar';
+  const criar = authModo==='criar';
+  const el=(id)=>document.getElementById(id);
+  if(el('auth-submit')) el('auth-submit').textContent = criar ? 'Criar conta' : 'Entrar';
+  if(el('auth-toggle-lbl')) el('auth-toggle-lbl').textContent = criar ? 'Já tenho conta' : 'Criar uma conta';
+  if(el('auth-name-field')) el('auth-name-field').classList.toggle('hidden', !criar);
+  if(el('auth-forgot')) el('auth-forgot').style.display = criar ? 'none' : '';
+  if(el('auth-pass')) el('auth-pass').setAttribute('autocomplete', criar ? 'new-password' : 'current-password');
+  const e=el('auth-err'); if(e) e.innerHTML='';
+}
+function authErro(msg){ const e=document.getElementById('auth-err'); if(e) e.innerHTML='<div class="err">'+msg+'</div>'; }
+function authMsgErro(code){
+  return ({
+    'auth/invalid-email':'E-mail ou usuário inválido.',
+    'auth/user-not-found':'Não encontrei essa conta. Confira os dados ou crie uma conta.',
+    'auth/wrong-password':'Senha incorreta.',
+    'auth/invalid-credential':'E-mail/usuário ou senha incorretos.',
+    'auth/email-already-in-use':'Já existe uma conta com esse e-mail/usuário. Tente entrar.',
+    'auth/weak-password':'A senha precisa ter pelo menos 6 caracteres.',
+    'auth/too-many-requests':'Muitas tentativas. Aguarde alguns minutos e tente de novo.',
+    'auth/network-request-failed':'Sem conexão. Confira sua internet.',
+    'auth/operation-not-allowed':'Login por e-mail não está habilitado no Firebase (Authentication › Sign-in method).'
+  })[code] || 'Não foi possível continuar. Tente novamente.';
+}
+function doEmailAuth(){
+  const el=(id)=>document.getElementById(id);
+  const email = normalizaLogin(el('auth-email') && el('auth-email').value);
+  const pass  = (el('auth-pass') && el('auth-pass').value) || '';
+  const nome  = (el('auth-name') && el('auth-name').value || '').trim();
+  if(!email) return authErro('Digite seu e-mail ou um nome de usuário.');
+  if(pass.length < 6) return authErro('A senha precisa ter pelo menos 6 caracteres.');
+  if(authModo==='criar' && !nome) return authErro('Diga como você quer ser chamado.');
+  const btn=el('auth-submit');
+  if(btn){ btn.disabled=true; btn.textContent = authModo==='criar' ? 'Criando...' : 'Entrando...'; }
+  const fim = ()=>{ if(btn){ btn.disabled=false; btn.textContent = authModo==='criar' ? 'Criar conta' : 'Entrar'; } };
+  // sem e-mail real não existe recuperação automática — o aluno precisa saber ANTES
+  if(authModo==='criar' && ehLoginInterno(email)){
+    const el2=document.getElementById('auth-warn-ok');
+    if(!el2 || !el2.checked){
+      fim();
+      const box=document.getElementById('auth-err');
+      if(box) box.innerHTML = `<div class="note note-warn" style="margin-top:10px">
+        <div class="note-title">⚠️ Conta sem e-mail</div>
+        <div class="note-line">Você está criando a conta como <b>usuário</b>, sem e-mail. Se esquecer a senha, <b>não há como recuperá-la</b> — nem por você, nem pelo treinador. A conta teria que ser recriada do zero.</div>
+        <div class="note-line" style="margin-top:6px"><b>Recomendo usar um e-mail real</b> — assim dá pra redefinir a senha sozinho quando precisar.</div>
+        <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:12.5px;cursor:pointer">
+          <input type="checkbox" id="auth-warn-ok" style="margin-top:2px"> <span>Entendi o risco e quero criar mesmo assim</span>
+        </label></div>`;
+      return;
+    }
+  }
+  const acao = authModo==='criar'
+    ? fbAuth.createUserWithEmailAndPassword(email, pass).then(cred=>{
+        if(cred.user && nome) return cred.user.updateProfile({ displayName: nome }).catch(()=>{});
+      })
+    : fbAuth.signInWithEmailAndPassword(email, pass);
+  acao.catch(e=>{ console.log('Erro no login por e-mail:', e); fim(); authErro(authMsgErro(e && e.code)); });
+}
+// Trocar a senha estando logado — vale pra conta de e-mail E de usuário
+function openChangePassword(){
+  const email = (fbUser && fbUser.email) || '';
+  const google = !!(fbUser && (fbUser.providerData||[]).some(p=>p.providerId==='google.com'));
+  if(google){
+    $('modal-inner').innerHTML = `<h3>🔑 Trocar senha</h3>
+      <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Sua conta entra pelo <b>Google</b> — a senha é gerenciada por lá, não pelo MetaTreino. Pra trocar, acesse a sua Conta Google.</p>
+      <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="closeModal()">Entendi</button>`;
+    $('modal-back').classList.add('on'); return;
+  }
+  $('modal-inner').innerHTML = `<h3>🔑 Trocar minha senha</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Sua conta: <b>${ehLoginInterno(email)?email.split('@')[0]:email}</b></p>
+    <div class="field" style="margin-top:12px"><label>Senha atual</label><input class="input" type="password" id="cp-old" autocomplete="current-password"></div>
+    <div class="field"><label>Nova senha (mín. 6)</label><input class="input" type="password" id="cp-new" autocomplete="new-password"></div>
+    <div class="field"><label>Repita a nova senha</label><input class="input" type="password" id="cp-new2" autocomplete="new-password"></div>
+    <div id="cp-err"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="doChangePassword()">Salvar nova senha</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+}
+function doChangePassword(){
+  const g=(id)=>document.getElementById(id);
+  const velha=(g('cp-old')||{}).value||'', nova=(g('cp-new')||{}).value||'', nova2=(g('cp-new2')||{}).value||'';
+  const err=g('cp-err');
+  const mostra=(m)=>{ if(err) err.innerHTML='<div class="err">'+m+'</div>'; };
+  if(nova.length<6) return mostra('A nova senha precisa ter pelo menos 6 caracteres.');
+  if(nova!==nova2) return mostra('As duas senhas novas não são iguais.');
+  if(!fbUser) return mostra('Sessão expirada. Entre novamente.');
+  const cred = firebase.auth.EmailAuthProvider.credential(fbUser.email, velha);
+  fbUser.reauthenticateWithCredential(cred)
+    .then(()=>fbUser.updatePassword(nova))
+    .then(()=>{ closeModal(); toast('🔑 Senha alterada com sucesso'); })
+    .catch(e=>{ console.log('Erro ao trocar senha:', e); mostra(authMsgErro(e && e.code)); });
+}
+function doResetPassword(){
+  const el=(id)=>document.getElementById(id);
+  const email = normalizaLogin(el('auth-email') && el('auth-email').value);
+  if(!email) return authErro('Digite seu e-mail primeiro pra eu enviar o link.');
+  if(ehLoginInterno(email)) return authErro('Contas de usuário (sem e-mail) não têm recuperação automática — fale com o treinador pra redefinir sua senha.');
+  fbAuth.sendPasswordResetEmail(email)
+    .then(()=>toast('📧 Link de recuperação enviado pro seu e-mail'))
+    .catch(e=>authErro(authMsgErro(e && e.code)));
+}
 function doGoogleSignIn(){
   const btn=$('google-btn'), lbl=$('google-btn-lbl'), err=$('auth-err');
   if(err) err.innerHTML='';
@@ -8281,13 +8397,14 @@ function renderAdminList(){
   }
 }
 async function doAddStudent(){
-  const email = $('as-email').value.trim().toLowerCase();
+  // aceita e-mail OU usuário simples (vira usuario@aluno.metatreino.app, igual ao login)
+  const email = normalizaLogin($('as-email').value);
   const name = $('as-name').value.trim();
   const phone = $('as-whats').value.trim();
   const notes = $('as-notes').value.trim();
   const dur = parseInt(readOpt('as-dur'));
   const err = $('as-err'); err.innerHTML='';
-  if(!email || !email.includes('@')){ err.innerHTML='<div class="err">E-mail inválido</div>'; return; }
+  if(!email || !email.includes('@')){ err.innerHTML='<div class="err">Digite um e-mail válido ou um nome de usuário (ex: joao123)</div>'; return; }
   if(!dur){ err.innerHTML='<div class="err">Selecione a duração</div>'; return; }
   const dados = { addedAt:Date.now(), expiresAt: dur>=9999?null:Date.now()+dur*86400000, active:true, phone, notes, name };
   try{
@@ -8626,7 +8743,11 @@ function openSwapExercise(exId){
   // — usada pra não sugerir algo que treina exatamente o mesmo que outro exercício já no treino
   const stim = s => (s||'').toLowerCase().replace(/[()]/g,'').trim();
   const usedStims = new Set(w.exercises.filter(e=>e.id!==exId).map(e=>stim(e.sub)));
-  const compat = cat.items.filter(ex => !usedIds.has(slug(ex.name)) && (ex.equip||[]).some(e=>equipFilter.includes(e)) && (equip==='casa' || !ex.improv));
+  // No modo personalizado a regra é a MESMA do gerador: só o que dá pra fazer
+  // com os equipamentos marcados (antes oferecia leg press pra quem só tem halteres).
+  const compat = equip==='custom'
+    ? cat.items.filter(ex => !usedIds.has(slug(ex.name)) && podeFazerCom(ex, mod.setup.equipList||[]))
+    : cat.items.filter(ex => !usedIds.has(slug(ex.name)) && (ex.equip||[]).some(e=>equipFilter.includes(e)) && (equip==='casa' || !ex.improv));
   if(!compat.length){ toast('Sem alternativas disponíveis pro seu equipamento'); return; }
   // separa em "recomendadas" (estímulo diferente do que já tem no treino) e "similares"
   const recomendadas = compat.filter(ex => !usedStims.has(stim(ex.sub)));
@@ -8886,7 +9007,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,doEmailAuth,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
