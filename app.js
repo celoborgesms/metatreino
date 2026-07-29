@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.10 =====
-const APP_VERSION = 'v12.10';
+// ===== MetaTreino v12.11 =====
+const APP_VERSION = 'v12.11';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -550,14 +550,19 @@ async function afterGoogleSignIn(user){
     isAdmin = cached.isAdmin; allowData = cached.allowData;
     toast('📴 Modo offline — seus treinos funcionam normal e sincronizam depois. Só os vídeos precisam de internet.');
   } else {
-    try{
-      const adminDoc = await fbTimeout(db.collection('admins').doc(email).get(), 4500);
+    const tentar = async ()=>{
+      const adminDoc = await fbTimeout(db.collection('admins').doc(email).get(), 9000);
       isAdmin = adminDoc.exists && adminDoc.data().ativo === true;
-      const allowDoc = await fbTimeout(db.collection('usuariosAutorizados').doc(email).get(), 4500);
+      const allowDoc = await fbTimeout(db.collection('usuariosAutorizados').doc(email).get(), 9000);
       if(allowDoc.exists) allowData = allowDoc.data();
       checkedOnline = true;
+    };
+    try{
+      try{ await tentar(); }
+      catch(e1){ console.log('1ª tentativa falhou, tentando de novo:', e1); await new Promise(r=>setTimeout(r,1200)); await tentar(); }
       try{ localStorage.setItem(accessCacheKey, JSON.stringify({isAdmin, allowData, at:Date.now()})); }catch(e){}
     }catch(e){
+      window.__acessoErro = (e && (e.code || e.message)) || 'erro desconhecido';
       console.log('Sem conexão/timeout pra verificar acesso — usando cache offline:', e);
       if(cacheValid){
         isAdmin = cached.isAdmin; allowData = cached.allowData;
@@ -577,7 +582,13 @@ async function afterGoogleSignIn(user){
     if(el){
       el.innerHTML = checkedOnline
         ? `Sua conta ainda não foi autorizada pelo treinador.<br><br><span style="font-size:12px;color:var(--text-mute)">Conta verificada: <b>${ehLoginInterno(email)?email.split('@')[0]:email}</b></span>`
-        : `⚠️ <b>Não consegui verificar seu acesso</b> — a conexão falhou ou demorou demais.<br><br>Se o treinador já liberou, toque em <b>Tentar de novo</b>.<br><br><span style="font-size:12px;color:var(--text-mute)">Conta: <b>${ehLoginInterno(email)?email.split('@')[0]:email}</b></span>`;
+        : `⚠️ <b>Não consegui verificar seu acesso</b>.<br><br>${(function(){
+              const m = window.__acessoErro || '';
+              if(/permission|insufficient/i.test(m)) return 'O banco de dados <b>recusou a leitura</b>. As regras do Firestore precisam liberar a coleção <b>usuariosAutorizados</b> para usuários autenticados.';
+              if(/timeout/i.test(m)) return 'A resposta demorou demais. Pode ser conexão lenta — toque em <b>Tentar de novo</b>.';
+              if(/network|unavailable|offline/i.test(m)) return 'Sem conexão com o servidor. Confira sua internet e toque em <b>Tentar de novo</b>.';
+              return 'Falha ao consultar o servidor. Toque em <b>Tentar de novo</b>.';
+            })()}<br><br><span style="font-size:12px;color:var(--text-mute)">Conta: <b>${ehLoginInterno(email)?email.split('@')[0]:email}</b><br>Detalhe técnico: <b>${window.__acessoErro||'—'}</b></span>`;
     }
     const rt = $('noaccess-retry'); if(rt) rt.classList.remove('hidden');
     showScreen('scr-noaccess');
