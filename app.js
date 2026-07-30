@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.16 =====
-const APP_VERSION = 'v12.16';
+// ===== MetaTreino v12.17 =====
+const APP_VERSION = 'v12.17';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -760,14 +760,14 @@ function calcIMC(){
   const w = latestWeight() || p.currentWeight;
   const h = p.height/100;
   const imc = w / (h*h);
-  let cls = '', color = 'var(--primary-2)';
-  if(imc < 18.5){ cls='Abaixo do peso'; color='var(--info)'; }
-  else if(imc < 25){ cls='Peso normal ✅'; color='var(--primary-2)'; }
-  else if(imc < 30){ cls='Sobrepeso'; color='var(--accent-2)'; }
-  else if(imc < 35){ cls='Obesidade I'; color='#fda4af'; }
-  else if(imc < 40){ cls='Obesidade II'; color='#fda4af'; }
-  else { cls='Obesidade III'; color='#fda4af'; }
-  return { value:imc.toFixed(1), cls, color };
+  // O IMC não separa gordura de músculo — quem treina há tempo costuma "pesar mal" nele.
+  // Por isso o app mostra o número (útil como referência) sem carimbar diagnóstico na pessoa.
+  let cls = '', color = 'var(--text)', faixa = '';
+  if(imc < 18.5){ cls='Abaixo da faixa de referência'; color='var(--info-soft)'; faixa='abaixo'; }
+  else if(imc < 25){ cls='Dentro da faixa de referência'; color='var(--primary-2)'; faixa='dentro'; }
+  else if(imc < 30){ cls='Acima da faixa de referência'; color='var(--accent-2)'; faixa='acima'; }
+  else { cls='Bem acima da faixa de referência'; color='var(--accent-2)'; faixa='muito'; }
+  return { value:imc.toFixed(1), cls, color, faixa };
 }
 function latestWeight(){ if(!state.weights.length) return null; return state.weights[state.weights.length-1].weight; }
 function firstWeight(){ if(!state.weights.length) return null; return state.weights[0].weight; }
@@ -2559,8 +2559,9 @@ function liftDesc(w){
   // ela só ocupa espaço e empurra os exercícios pra baixo.
   const novato = ((((state.modules.lift||{}).history)||[]).length + (((state.modules.run||{}).history)||[]).length) < 8;
   return novato
-    ? `🎯 Foco em ${parts.toLowerCase()}\n\n${cue}\n\n💧 Aqueça 5-8 min, hidrate-se e respeite os intervalos de cada exercício.`
-    : `🎯 Foco em ${parts.toLowerCase()}\n\n${cue}`;
+    // "Foco em X" repetia o título do card ("Treino D — Ombro + Trapézio + Core"). Removido.
+    ? `${cue}\n\n💧 Aqueça 5-8 min, hidrate-se e respeite os intervalos de cada exercício.`
+    : cue;
 }
 function runDesc(w){
   const main = (w.blocks||[]).find(b=>b.name==='Principal');
@@ -2781,12 +2782,12 @@ function mobilidadeCard(w){
   if(!itens.length || !r) return '';
   const fechado = mobRecolhido();
   // Recolhido: vira uma linha só. Quem já decorou não precisa ler tudo de novo toda sessão.
-  if(fechado) return `<div class="note note-prep note-row" onclick="toggleMobCard()">
+  if(fechado) return `<div class="note note-prep note-row" onclick="toggleMobCard()" style="margin-bottom:18px">
       <div style="font-size:19px">${ROTINAS[r].emo}</div>
       <div style="flex:1"><b style="color:#c4b5fd">Preparação de 2-3 min</b> <span style="color:var(--text-mute)">· ${itens.map(i=>i.nome).join(', ')}</span></div>
       <div style="color:#c4b5fd;font-size:18px">▾</div>
     </div>`;
-  return `<div class="note note-prep">
+  return `<div class="note note-prep" style="margin-bottom:18px">
     <div class="note-row" onclick="toggleMobCard()" style="margin-bottom:8px">
       <div style="font-size:20px">${ROTINAS[r].emo}</div>
       <div style="flex:1"><div class="note-title" style="margin:0">Antes de começar — 2 a 3 min</div>
@@ -3713,9 +3714,14 @@ function renderProfile(){
       <div class="info-cell"><div class="info-cell-icon">📊</div><div class="info-cell-lbl">IMC</div><div class="info-cell-val mono" style="color:${imc?imc.color:'var(--text)'}">${imc?imc.value:'—'}</div></div>
     </div>
     <div style="margin-top:10px;padding:12px;border-radius:var(--radius-btn);background:var(--surface-2)">
-      <div style="font-size:12px;color:var(--text-dim);font-weight:700;letter-spacing:1px">CLASSIFICAÇÃO</div>
-      <div style="font-weight:800;color:${imc?imc.color:'var(--text)'};margin-top:2px">${imc?imc.cls:'—'}</div>
-      <div style="font-size:12px;color:${deltaColor};margin-top:4px;font-weight:700">${deltaTxt} desde o início</div>
+      <div style="font-size:12px;color:var(--text-dim);font-weight:700;letter-spacing:1px">SUA EVOLUÇÃO</div>
+      <div style="font-weight:800;color:${deltaColor};margin-top:3px;font-size:15px">${deltaTxt} desde o início</div>
+      ${imc?`<div style="font-size:12px;color:var(--text-mute);margin-top:8px;line-height:1.5">
+        IMC ${imc.value} — <span style="color:${imc.color}">${imc.cls.toLowerCase()}</span>.
+        ${imc.faixa==='dentro'
+          ? 'É só uma referência de população: quem treina pode ficar fora dela e estar muito bem.'
+          : 'O IMC não separa músculo de gordura, então serve como referência — não como diagnóstico. Quem treina força costuma pesar mais e estar mais saudável.'}
+      </div>`:''}
     </div>
   `;
   // Chart
