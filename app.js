@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.14 =====
-const APP_VERSION = 'v12.14';
+// ===== MetaTreino v12.15 =====
+const APP_VERSION = 'v12.15';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2185,7 +2185,10 @@ function renderHome(){
   renderCoachMural();
 
   const days = accessDaysLeft();
-  $('access-days').textContent = accessLabel(days);
+  // vitalício: título já diz "Acesso vitalício" — o subtítulo precisa dizer outra coisa
+  $('access-days').textContent = days>=999999
+    ? 'Sem data de expiração'
+    : accessLabel(days);
   const cardAccess = $('card-access-info');
   cardAccess.querySelector('.card-title').textContent = days>=999999 ? '♾️ Acesso vitalício' : days>0 ? 'Acesso ativo' : 'Acesso expirado';
 
@@ -2549,7 +2552,12 @@ const PART_CUES = {
 function liftDesc(w){
   const parts = w.parts.join(' + ');
   const cue = PART_CUES[w.parts[0]] || '💡 Técnica primeiro, carga depois. Registre as séries pra ver sua evolução.';
-  return `🎯 Foco em ${parts.toLowerCase()}\n\n${cue}\n\n💧 Aqueça 5-8 min, hidrate-se e respeite os intervalos de cada exercício.`;
+  // A linha de aquecimento é orientação de quem está começando — depois de 8 treinos
+  // ela só ocupa espaço e empurra os exercícios pra baixo.
+  const novato = ((((state.modules.lift||{}).history)||[]).length + (((state.modules.run||{}).history)||[]).length) < 8;
+  return novato
+    ? `🎯 Foco em ${parts.toLowerCase()}\n\n${cue}\n\n💧 Aqueça 5-8 min, hidrate-se e respeite os intervalos de cada exercício.`
+    : `🎯 Foco em ${parts.toLowerCase()}\n\n${cue}`;
 }
 function runDesc(w){
   const main = (w.blocks||[]).find(b=>b.name==='Principal');
@@ -3498,6 +3506,17 @@ function renderRecords(){
 function renderPerf(){
   // módulo ativo sem plano (ex.: trocou de módulo e não criou): não quebra a tela
   if(!state.modules[state.active]){ showPickScreen(); return; }
+  // Sem nenhum treino, a tela virava uma parede de zeros (0/5, 0kg, 0, 0, 0min, 0d).
+  // Pra quem acabou de entrar isso desanima em vez de informar.
+  try{
+    const totalTudo = ((((state.modules.lift||{}).history)||[]).length) + ((((state.modules.run||{}).history)||[]).length);
+    const box = $('perf-empty');
+    if(box) box.innerHTML = totalTudo===0
+      ? `<div class="note note-info"><div class="note-title">📊 Seus números aparecem aqui</div>
+         <div class="note-line">Assim que você registrar o primeiro treino, esta tela mostra sequência, volume, recordes, constância e a distribuição das suas atividades.</div>
+         <div class="note-line" style="margin-top:6px">Por enquanto está tudo zerado — e isso é só o ponto de partida. 💪</div></div>`
+      : '';
+  }catch(e){}
   const _pm = state.modules[state.active];
   if(_pm && !_pm.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; }
   renderCalendar();
