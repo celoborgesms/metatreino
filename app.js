@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.15 =====
-const APP_VERSION = 'v12.15';
+// ===== MetaTreino v12.16 =====
+const APP_VERSION = 'v12.16';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2186,9 +2186,12 @@ function renderHome(){
 
   const days = accessDaysLeft();
   // vitalício: título já diz "Acesso vitalício" — o subtítulo precisa dizer outra coisa
-  $('access-days').textContent = days>=999999
-    ? 'Sem data de expiração'
-    : accessLabel(days);
+  // O tempo de acesso já aparece no Perfil — repetir na Home é ruído.
+  // Só mostra aqui quando está acabando (aí vira aviso útil).
+  const cAcc = $('card-access-info');
+  if(cAcc) cAcc.classList.toggle('hidden', !(days>0 && days<=15));
+  const ad = $('access-days');
+  if(ad) ad.textContent = days>=999999 ? 'Sem data de expiração' : accessLabel(days);
   const cardAccess = $('card-access-info');
   cardAccess.querySelector('.card-title').textContent = days>=999999 ? '♾️ Acesso vitalício' : days>0 ? 'Acesso ativo' : 'Acesso expirado';
 
