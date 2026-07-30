@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.17 =====
-const APP_VERSION = 'v12.17';
+// ===== MetaTreino v12.21 =====
+const APP_VERSION = 'v12.21';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -518,7 +518,7 @@ function doLogout(){
   syncToCloud(); // envia qualquer alteração pendente (ex: foto removida) ANTES de sair
   fbAuth.signOut().catch(()=>{});
   fbUser = null;
-  state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], ui:{tab:'home',selectedSession:null} };
+  state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
   showScreen('scr-auth');
   $('tabbar').classList.add('hidden');
   try{ resetAuthUI(); }catch(e){}
@@ -570,7 +570,7 @@ function doDeleteAccount(){
     try{ localStorage.removeItem(localCacheKey(uid)); }catch(e){}
     fbAuth.signOut().catch(()=>{});
     fbUser = null;
-    state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], ui:{tab:'home',selectedSession:null} };
+    state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
     const fim = ()=>{ showScreen('scr-auth'); toast('Conta excluída. Você pode começar de novo quando quiser.'); };
     try{
       runBuildingScreen('lift', [
@@ -806,6 +806,11 @@ function cleanupOldHistory(){
 // ---------- MODULE PICK / SETUP ----------
 // Abre a tela de configuração de um módulo com TODOS os bindings necessários.
 // (Existiam três lugares chamando bindings diferentes — um deles esquecia os dias da semana.)
+function sairDoSetup(){
+  // Sem isso, quem abria o setup ficava preso: a única saída era limpar os dados do app.
+  if(state.modules.lift || state.modules.run){ goTab(state.ui.tab||'home'); return; }
+  showPickScreen();
+}
 function openSetupScreen(m){
   showScreen('scr-setup-'+m);
   bindOpts('scr-setup-'+m);
@@ -1252,10 +1257,17 @@ function generatePlan(module, setup){
     const paceMinKm = { iniciante:7.5, intermediario:6, avancado:5 }[level]; // min por km aproximado
     const workouts = wkDays.map((d,i)=>{
       const kind = types[i%types.length];
-      const km = Math.max(1.5, Math.round(baseLong * kindFactor[kind] * 2) / 2); // arredonda a 0,5km
+      // Dois tetos: distância por tipo e TEMPO por tipo. A distância é reduzida pra caber
+      // no tempo — assim os dois números nunca se contradizem na tela.
+      const tetoKm  = { 'Corrida Longa':32, 'Corrida Leve':12, 'Ritmo Constante':10, 'Intervalado':8 }[kind] || 12;
+      const tetoMin = { 'Corrida Longa':160, 'Corrida Leve':70, 'Ritmo Constante':55, 'Intervalado':45 }[kind] || 60;
+      let km = Math.min(tetoKm, Math.max(1.5, Math.round(baseLong * kindFactor[kind] * 2) / 2));
+      const fatorTempo = kind==='Intervalado' ? 1.25 : 1;
+      if(km * paceMinKm * fatorTempo > tetoMin) km = Math.max(1.5, Math.round((tetoMin/(paceMinKm*fatorTempo))*2)/2);
       const distance = '~'+km+'km';
       // minutos estimados da parte principal = distância × pace do nível
       // (intervalado é mais curto em distância mas exige mais tempo por causa das pausas)
+      // O tempo vem da distância (assim os dois nunca se contradizem na tela).
       const mainMin = kind==='Intervalado'
         ? Math.round(km * paceMinKm * 1.25)
         : Math.round(km * paceMinKm);
@@ -1517,10 +1529,14 @@ function buildRunBlocks(kind, setup){
   // (Ajuste silencioso: o app nunca expõe o motivo em termos de peso.)
   const p = state.user && state.user.profile;
   const imcVal = (()=>{ try{ const r = calcIMC(); return r ? parseFloat(r.value) : null; }catch(e){ return null; } })();
-  const gentle = level==='iniciante' && ((imcVal && imcVal >= 30) || (p && p.age >= 50));
+  // Ser iniciante JÁ é motivo pra trote+caminhada. Antes, só quem tinha IMC>=30
+  // ou 50+ anos recebia isso — o iniciante comum pegava 35 min de corrida contínua.
+  const gentle = level==='iniciante'
+    || (imcVal && imcVal >= 32 && level!=='avancado')
+    || (p && p.age >= 60);
 
   const warm = {name:'Aquecimento',exs:[{name:'Caminhada leve',desc:'Ritmo natural, aumente gradualmente',min:gentle?7:5},{name:'Mobilidade dinâmica',desc:'Rotações + elevação de joelhos',min:2}]};
-  const cool = {name:'Desaquecimento',exs:[{name:'Caminhada leve',desc:'Normalize a FC gradualmente',min:5}]};
+  const cool = {name:'Desaquecimento',exs:[{name:'Caminhada leve',desc:'Normalize os batimentos aos poucos',min:5}]};
   let main;
 
   if(kind==='Intervalado'){
@@ -1559,12 +1575,12 @@ function buildRunBlocks(kind, setup){
     }
   } else if(kind==='Corrida Longa'){
     if(gentle){
-      main = {name:'Principal',exs:[{name:'30 min alternando: 3 min corrida leve / 2 min caminhada',desc:'O objetivo é tempo em movimento, não velocidade. Com as semanas, os blocos de corrida vão crescendo naturalmente.',min:30}]};
+      main = {name:'Principal',exs:[{name:'30 min alternando: 3 min trote leve / 2 min caminhada',desc:'O objetivo é <b>tempo em movimento</b>, não velocidade. Se cansar, caminhe mais — isso não é falha, é o treino funcionando. Com as semanas os blocos de trote crescem sozinhos.',min:30}]};
       return [warm, main, cool];
     }
     const tips = {
       esteira:'Na esteira use inclinação de 1% pra simular a rua. Quebre mentalmente em blocos de 10 min.',
-      trilha:'Na trilha o ritmo naturalmente cai — vá por tempo e esforço, não por pace. Leve água.',
+      trilha:'Na trilha o ritmo naturalmente cai — vá por tempo e esforço, não pelo ritmo. Leve água.',
       pista:'Na pista, alterne o sentido a cada 15 min pra não sobrecarregar um lado do corpo.',
       asfalto:'Ritmo confortável, converse sem ficar sem fôlego. Hidrate a cada 20 min.'
     };
@@ -1581,14 +1597,14 @@ function buildRunBlocks(kind, setup){
     main = {name:'Principal',exs:[{name:'Corrida em ritmo alvo',desc:tips[terrain]||tips.asfalto,min:ritmoMin}]};
   } else {
     if(gentle){
-      main = {name:'Principal',exs:[{name:'20 min alternando: 2 min corrida leve / 2 min caminhada',desc:'Zona 2, sempre conseguindo conversar. Esse formato constrói base protegendo joelhos e canelas.',min:20}]};
+      main = {name:'Principal',exs:[{name:'20 min alternando: 2 min corrida leve / 2 min caminhada',desc:'ritmo de conversa (Zona 2) — você consegue falar frases inteiras enquanto corre. Esse formato constrói base protegendo joelhos e canelas.',min:20}]};
       return [warm, main, cool];
     }
     const tips = {
-      esteira:'Zona 2 com inclinação 1%. Bom dia pra assistir algo e deixar o tempo passar.',
-      trilha:'Zona 2, aproveite a paisagem. Terreno leve, evite subidas fortes hoje.',
-      pista:'Zona 2, ritmo bem tranquilo. Deixe os mais rápidos passarem por fora.',
-      asfalto:'Zona 2, converse sem esforço. Esse treino constrói sua base aeróbica.'
+      esteira:'Ritmo leve, de conversa (Zona 2), com inclinação 1%. Bom dia pra assistir algo e deixar o tempo passar.',
+      trilha:'Ritmo de conversa (Zona 2), aproveite a paisagem. Terreno leve, evite subidas fortes hoje.',
+      pista:'Ritmo de conversa (Zona 2), bem tranquilo. Deixe os mais rápidos passarem por fora.',
+      asfalto:'Ritmo de conversa (Zona 2) — você fala sem esforço. Esse treino constrói sua base aeróbica.'
     };
     const leveMin = setup._mainMin || ({iniciante:20,intermediario:30,avancado:40}[level]||20);
     main = {name:'Principal',exs:[{name:'Corrida em ritmo leve',desc:tips[terrain]||tips.asfalto,min:leveMin}]};
@@ -1772,9 +1788,26 @@ const EX_RENAMES = [
   ['Panturrilha Sentado','Panturrilha Sentada'],
   ['Step-up em banco/degrau','Step-up no Banco']
 ];
+// Campos-base com tipo errado (backup editado, versão antiga, corrupção)
+// derrubavam telas inteiras. Aqui eles voltam ao formato esperado.
+function ensureStateShape(){
+  let mudou = false;
+  try{
+    if(!state || typeof state !== 'object') return false;
+    if(!state.modules || typeof state.modules !== 'object'){ state.modules = {lift:null, run:null}; mudou=true; }
+    if(!Array.isArray(state.weights)){ state.weights = []; mudou=true; }
+    if(!Array.isArray(state.trophies)){ state.trophies = []; mudou=true; }
+    if(!state.progress || typeof state.progress !== 'object'){ state.progress = {}; mudou=true; }
+    if(!state.prs || typeof state.prs !== 'object'){ state.prs = {}; mudou=true; }
+    if(!state.ui || typeof state.ui !== 'object'){ state.ui = {tab:'home', selectedSession:null}; mudou=true; }
+    if(state.user && typeof state.user === 'object' && (!state.user.profile || typeof state.user.profile !== 'object')){ state.user.profile = {}; mudou=true; }
+  }catch(e){}
+  return mudou;
+}
 function migrateExerciseIds(){
   try{
     let changed=false;
+    if(ensureStateShape()) changed = true;
     // Números salvos como TEXTO (backup editado, versão antiga) faziam a soma virar
     // concatenação — e derrubavam checkTrophies inteiro. Normaliza na entrada.
     // Plano sem lista de treinos (backup corrompido) quebrava a Home em 27 pontos.
@@ -2152,6 +2185,8 @@ function entriesHoje(mod){
 }
 function treinouHoje(mod){ return entriesHoje(mod).length>0; }
 function renderHome(){
+  if(!state || !state.user){ try{ showScreen('scr-auth'); }catch(e){} return; }   // logout no meio de um render
+  try{ ensureStateShape(); }catch(e){}
   renderModToggle();
   const mod = state.modules[state.active];
   if(!mod){ showPickScreen(); return; }
@@ -2196,7 +2231,7 @@ function renderHome(){
   cardAccess.querySelector('.card-title').textContent = days>=999999 ? '♾️ Acesso vitalício' : days>0 ? 'Acesso ativo' : 'Acesso expirado';
 
   // trophies count
-  $('trophy-count').textContent = `${state.trophies.length} de ${TROPHIES.length} troféus`;
+  $('trophy-count').textContent = `${state.trophies.length} de ${TROPHIES.length} conquistas`;
 
   // race target card (only for run)
   const _ri = state.active==='run' ? raceInfo() : null;
@@ -2247,7 +2282,7 @@ function renderHome(){
     else if(daysToR===1) msg = 'Véspera: nada de treino forte. Separe a roupa, hidrate bem e durma cedo. Amanhã é seu dia! 😴';
     else if(daysToR<=3) msg = 'Reta final: só trotes leves. A energia que você poupa agora aparece na prova.';
     else if(daysToR<=7) msg = 'Semana da prova: reduza o volume, foco em recuperação e sono. O trabalho duro já foi feito 💪';
-    else if(daysToR<=14) msg = 'Fase de taper: a intensidade cai e você chega afiado. Confie no processo, não invente treino novo.';
+    else if(daysToR<=14) msg = 'Fase de afinação (taper): a intensidade cai e você chega afiado. Confie no processo, não invente treino novo.';
     else if(daysToR<=30) msg = 'Menos de um mês! Seus treinos-chave estão acontecendo agora — cada um deles conta muito.';
     else if(daysToR<=60) msg = 'Você está no meio da preparação. Constância nas próximas semanas é o que define seu resultado.';
     else msg = 'Prova no radar! Construa a base com calma — quem chega longe é quem não pula etapas.';
@@ -2435,7 +2470,7 @@ function renderHome(){
     }
   }catch(e){}
   if(_preStartMsg){ $('plan-foot').textContent = _preStartMsg; }
-  else $('plan-foot').textContent = cw.done ? '🏁 Programa concluído! Toque em "Trocar plano" pra começar um novo ciclo.' : phase==='BUILD'?`🏗️ Fase de construção · ${isLiftPlan?'Ganhando base muscular':'Aumentando base aeróbica'}. ${total-wk} semanas até o pico.`:phase==='PEAK'?`🚀 Fase de pico · Alta intensidade. ${total-wk} semanas restantes.`:isLiftPlan?`🎯 Fase de consolidação · Na semana ${total} o ciclo recomeça renovado.`:`🎯 Fase de taper · Recuperação e afinação final.`;
+  else $('plan-foot').textContent = cw.done ? '🏁 Programa concluído! Toque em "Trocar plano" pra começar um novo ciclo.' : phase==='BUILD'?`🏗️ Fase de construção · ${isLiftPlan?'Ganhando base muscular':'Aumentando base aeróbica'}. ${total-wk} semanas até o pico.`:phase==='PEAK'?`🚀 Fase de pico · Alta intensidade. ${total-wk} semanas restantes.`:isLiftPlan?`🎯 Fase de consolidação · Na semana ${total} o ciclo recomeça renovado.`:`🎯 Fase de afinação (taper) · Recuperação e afinação final.`;
 
   const today = getDayIdx();
   const todayWk = mod.plan.workouts.find(w=>w.dayIdx===today);
@@ -2640,6 +2675,7 @@ function renderYourList(mod){
 
 // ---------- SESSIONS ----------
 function renderSessions(){
+  if(!state || !state.user){ try{ showScreen('scr-auth'); }catch(e){} return; }   // logout no meio de um render
   // módulo ativo sem plano (ex.: trocou de módulo e não criou): não quebra a tela
   if(!state.modules[state.active]){ showPickScreen(); return; }
   const mod = state.modules[state.active];
@@ -2827,7 +2863,7 @@ function renderSessionDetail(w){
       </div>
     </div>
     ${w.adapted ? `<div class="card card-alert card-row hl-info" style=";background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
-    ${(((state.modules.lift||{}).history||[]).length + ((state.modules.run||{}).history||[]).length) >= 8 ? '' : `<div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. FC entre 60-70% do máximo.'}</div></div></div>`}
+    ${(((state.modules.lift||{}).history||[]).length + ((state.modules.run||{}).history||[]).length) >= 8 ? '' : `<div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. frequência cardíaca entre 60-70% do máximo (220 menos sua idade).'}</div></div></div>`}
     ${isLift && isCustomized(w) ? `<div class="card card-row hl-prep" style=";background:rgba(167,139,250,0.06)"><div class="card-icon">✨</div><div style="flex:1"><div class="card-title" style="color:#a78bfa">Treino personalizado</div><div class="card-sub">Você trocou ${w.pins.length} exercício${w.pins.length>1?'s':''} neste treino. As trocas ficam salvas nos próximos treinos. Pra desfazer, use "Voltar à sugestão" em cada exercício.</div></div></div>` : ''}
     ${typeof mobilidadeCard==='function' ? mobilidadeCard(w) : ''}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
@@ -3221,6 +3257,7 @@ function markRunDone(dayIdx){
 const HIST_PAGE = 14;      // dias carregados por vez
 let histLimit = HIST_PAGE;
 function renderHistory(){
+  if(!state || !state.user){ try{ showScreen('scr-auth'); }catch(e){} return; }   // logout no meio de um render
   // módulo ativo sem plano (ex.: trocou de módulo e não criou): não quebra a tela
   if(!state.modules[state.active]){ showPickScreen(); return; }
   const mod = state.modules[state.active];
@@ -3376,6 +3413,7 @@ function moodEmoji(x){
   return '';
 }
 function renderCalendar(){
+  if(!state || !state.user){ try{ showScreen('scr-auth'); }catch(e){} return; }   // logout no meio de um render
   const box = $('calendar'); if(!box) return;
   const base = new Date();
   base.setDate(1);
@@ -3508,6 +3546,7 @@ function renderRecords(){
     </div>`).join('');
 }
 function renderPerf(){
+  if(!state || !state.user){ try{ showScreen('scr-auth'); }catch(e){} return; }   // logout no meio de um render
   // módulo ativo sem plano (ex.: trocou de módulo e não criou): não quebra a tela
   if(!state.modules[state.active]){ showPickScreen(); return; }
   // Sem nenhum treino, a tela virava uma parede de zeros (0/5, 0kg, 0, 0, 0min, 0d).
@@ -3680,6 +3719,8 @@ function cancelRunPlan(){
 
 // ---------- PROFILE ----------
 function renderProfile(){
+  if(!state || !state.user){ try{ showScreen('scr-auth'); }catch(e){} return; }   // logout no meio de um render
+  try{ ensureStateShape(); }catch(e){}
   const u = state.user, p = u.profile || {};
   const vEl = $('pf-version'); if(vEl) vEl.textContent = APP_VERSION;
   try{ const sr=$('pf-sentado-row'); if(sr){ const r=rotinaAtual(); sr.querySelector('span').textContent = r&&ROTINAS[r] ? 'Rotina: '+ROTINAS[r].label.split(' (')[0] : 'Minha rotina de trabalho'; } }catch(e){}
@@ -3974,7 +4015,7 @@ function openMedals(){
     <div style="display:flex;justify-content:flex-end;margin:-4px -4px 0 0">
       <button onclick="closeModal()" style="background:none;border:none;font-size:20px;color:var(--text-mute);padding:4px 8px;cursor:pointer">✕</button>
     </div>
-    <h3>🏅 Minhas medalhas</h3>
+    <h3>🏅 Minhas conquistas</h3>
     <p style="color:var(--text-dim);font-size:13px">${totalMedalhas} ${totalMedalhas===1?'medalha conquistada':'medalhas conquistadas'} em ${meses.length} ${meses.length===1?'mês':'meses'}. Os desafios zeram todo dia 1º, mas as medalhas ficam.</p>
     <div style="max-height:56vh;overflow-y:auto;margin-top:12px">${corpo}</div>
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
@@ -4089,7 +4130,7 @@ function renderAward(){
     </div>
     ${n>1?`<div style="display:flex;justify-content:center;gap:5px;margin:12px 0 4px">${dots}</div>
       <div style="text-align:center;font-size:11.5px;color:var(--text-mute)">${awardIdx+1} de ${n} conquistas</div>`:''}
-    <button class="btn btn-primary btn-block anim-glow" style="margin-top:14px" onclick="closeAwards();openTrophies()">🏆 Ver meus troféus</button>
+    <button class="btn btn-primary btn-block anim-glow" style="margin-top:14px" onclick="closeAwards();openTrophies()">🏆 Ver meus conquistas</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeAwards()">Fechar</button>`;
   $('modal-back').classList.add('on','award-dark');
 }
@@ -4179,9 +4220,9 @@ function subtractFromStats(x){
 function checkTrophies(){
   ensureStats();
   checkMonthly();
-  // (A revogação de troféus acontece só no recálculo explícito — ver recomputeAchievements.)
+  // (A revogação de conquistas acontece só no recálculo explícito — ver recomputeAchievements.)
   // Contadores vitalícios: não zeram quando o histórico de 90 dias é limpo,
-  // então troféus como "Centurião" (100 treinos) são alcançáveis de verdade.
+  // então conquistas como "Centurião" (100 treinos) são alcançáveis de verdade.
   const liftDone = state.stats.liftTotal;
   const runDone = state.stats.runTotal;
   const totalDone = liftDone + runDone;
@@ -4222,7 +4263,7 @@ function checkTrophies(){
   if(bKm>=50) unlockTrophy('bike_km_50');
   if(bKm>=100) unlockTrophy('bike_km_100');
   if(bKm>=500) unlockTrophy('bike_km_500');
-  // Best single run (só corrida — caminhada e bike têm troféus próprios)
+  // Best single run (só corrida — caminhada e bike têm conquistas próprios)
   const bestKm = Math.max(0, ...((state.modules.run?.history||[]).filter(r=>!r.activity||r.activity==='corrida').map(r=>r.distance||0)));
   if(bestKm>=5) unlockTrophy('run_5k_run');
   if(bestKm>=10) unlockTrophy('run_10k_run');
@@ -4367,8 +4408,8 @@ function trophyProgress(id){
   };
   return map[id]||null;
 }
-// Detalhe de um troféu conquistado: quando foi, quantos já tem, e um empurrãozinho.
-// Compartilha um único troféu (o aluno escolhe qual, em vez de despejar todos).
+// Detalhe de uma conquista conquistado: quando foi, quantos já tem, e um empurrãozinho.
+// Compartilha um única conquista (o aluno escolhe qual, em vez de despejar todos).
 function shareTrophyImage(id){
   const t = TROPHIES.find(x=>x.id===id); if(!t) return;
   const quando = (state.trophyDates||{})[id];
@@ -4424,14 +4465,14 @@ function openTrophyDetail(id){
     <div class="card" style="margin-top:16px;padding:14px">
       <div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:var(--text-dim);font-size:13px">📅 Conquistado em</span><b style="font-size:13px">${dataStr}</b></div>
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--border)"><span style="color:var(--text-dim);font-size:13px">🏷️ Categoria</span><b style="font-size:13px">${catNome} (${naCat}/${mesmaCat.length})</b></div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--border)"><span style="color:var(--text-dim);font-size:13px">🏆 Coleção</span><b style="font-size:13px">${tenho} de ${total} troféus</b></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--border)"><span style="color:var(--text-dim);font-size:13px">🏆 Coleção</span><b style="font-size:13px">${tenho} de ${total} conquistas</b></div>
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();shareTrophyImage('${t.id}')">📤 Compartilhar esta conquista</button>
     <button class="btn btn-outline btn-block" class="hl-primary" style="margin-top:8px" onclick="closeModal();shareTrophiesImage()">🏆 Compartilhar coleção inteira</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();openTrophiesKeepScroll()">← Voltar aos troféus</button>`;
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();openTrophiesKeepScroll()">← Voltar aos conquistas</button>`;
   $('modal-back').classList.add('on');
 }
-// Ordena os troféus de um grupo: os conquistados sobem pro topo (mais recentes primeiro),
+// Ordena os conquistas de um grupo: os conquistados sobem pro topo (mais recentes primeiro),
 // depois vêm os bloqueados ordenados pelo quanto falta — quem está a 90% aparece antes de quem está a 0%.
 function ordenarTrofeus(items){
   const pct = t => {
@@ -4590,7 +4631,7 @@ const MODAL_CONTENT = {
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
   'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail do aluno (mesmo da conta Google)</label><input class="input" type="email" id="as-email" placeholder="aluno@email.com"></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="7">🎁 Teste 7 dias</div><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
   'broadcast':`<h3>📢 Mensagem em massa (WhatsApp)</h3><p style="color:var(--text-dim);font-size:13px">Gera um link do WhatsApp Web para cada aluno com o texto abaixo. Os alunos precisam ter WhatsApp cadastrado.</p><div class="field"><label>Mensagem</label><textarea class="input" id="bc-msg" rows="4" style="resize:vertical">Olá, treinador aqui do MetaTreino! Passando pra lembrar...</textarea></div><button class="btn btn-primary btn-block" onclick="doBroadcast()">Abrir links WhatsApp</button>`,
-  'restart':()=>`<h3>🔄 Começar do zero</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Apaga todo o seu progresso — treinos, séries registradas, recordes, histórico de peso e troféus — e refaz o questionário inicial.<br><br>Sua <b>conta e seu acesso continuam ativos</b> (diferente de excluir a conta).<br><br>Essa ação <b>não pode ser desfeita</b> — mas dá pra guardar tudo antes num backup. 💾</p>
+  'restart':()=>`<h3>🔄 Começar do zero</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Apaga todo o seu progresso — treinos, séries registradas, recordes, histórico de peso e conquistas — e refaz o questionário inicial.<br><br>Sua <b>conta e seu acesso continuam ativos</b> (diferente de excluir a conta).<br><br>Essa ação <b>não pode ser desfeita</b> — mas dá pra guardar tudo antes num backup. 💾</p>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="exportMyData()">💾 Fazer backup antes</button>
     <button class="btn btn-outline btn-block" style="margin-top:16px;border-color:var(--accent);color:var(--accent-2)" onclick="doRestart()">🔄 Sim, começar do zero</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`,
@@ -4919,7 +4960,7 @@ const MA_ANSWERS = {
     const locked = TROPHIES.filter(x=>!state.trophies.includes(x.id));
     let closest=null, bestPct=0;
     locked.forEach(tr=>{ const pr=trophyProgress(tr.id); if(pr&&pr[1]>0){ const pct=pr[0]/pr[1]; if(pct>bestPct&&pct<1){ bestPct=pct; closest={tr,pr}; } } });
-    let r = `Você desbloqueou ${u} de ${t} troféus (${Math.round(u/t*100)}%).`;
+    let r = `Você desbloqueou ${u} de ${t} conquistas (${Math.round(u/t*100)}%).`;
     if(closest) r += ` O mais perto é "${closest.tr.name}": ${Math.floor(closest.pr[0])}/${closest.pr[1]}. Falta pouco! 🏆`;
     return r;
   },
@@ -5084,9 +5125,9 @@ const MA_ANSWERS = {
   proximo_trofeu(){
     const unlocked = (state.trophies||[]).length, total = TROPHIES.length;
     const falta = TROPHIES.filter(t=>!t.secret && !(state.trophies||[]).includes(t.id));
-    if(!falta.length) return `🏆 Você já desbloqueou todos os troféus visíveis (${unlocked}/${total})! Ainda há secretos escondidos por aí... 🤫`;
+    if(!falta.length) return `🏆 Você já desbloqueou todos os conquistas visíveis (${unlocked}/${total})! Ainda há secretos escondidos por aí... 🤫`;
     const alvo = falta[0];
-    return `Você tem <b>${unlocked}/${total}</b> troféus. Um ao seu alcance: <b>${alvo.emoji} ${alvo.name}</b> — ${alvo.desc}. E ainda há conquistas secretas pra descobrir treinando! 🤫`;
+    return `Você tem <b>${unlocked}/${total}</b> conquistas. Um ao seu alcance: <b>${alvo.emoji} ${alvo.name}</b> — ${alvo.desc}. E ainda há conquistas secretas pra descobrir treinando! 🤫`;
   },
   agua(){
     const w = latestWeight();
@@ -5193,7 +5234,7 @@ const MA_SUGGESTIONS = [
   {lbl:'⚖️ Quanto peso perdi?', key:'peso_mudanca'},
   {lbl:'🔀 Posso trocar um exercício?', key:'trocar_ex'},
   {lbl:'📈 Minha evolução', key:'evolucao'},
-  {lbl:'🏆 Próximo troféu', key:'proximo_trofeu'},
+  {lbl:'🏆 Próxima conquista', key:'proximo_trofeu'},
   {lbl:'🏁 Quando é minha prova?', key:'prova'},
   {lbl:'💧 Quanta água beber?', key:'agua'},
   {lbl:'🍗 Quanta proteína por dia?', key:'proteina'},
@@ -6037,7 +6078,7 @@ function maSmallTalk(txt){
   return null;
 }
 const MA_SOCIAL = {
-  _oi(){ const s=maSaudacao(); return `${s}, ${maName()}! 👋 Como posso te ajudar? Você pode me perguntar sobre sua evolução, corrida, troféus, meta e mais — ou tocar numa das sugestões.`; },
+  _oi(){ const s=maSaudacao(); return `${s}, ${maName()}! 👋 Como posso te ajudar? Você pode me perguntar sobre sua evolução, corrida, conquistas, meta e mais — ou tocar numa das sugestões.`; },
   _bomdia(){ return `Bom dia, ${maName()}! ☀️ Pronto pra mais um dia de evolução? Me pergunte algo ou toque numa sugestão.`; },
   _boatarde(){ return `Boa tarde, ${maName()}! 💪 Como posso ajudar? Quer saber como está sua evolução?`; },
   _boanoite(){ return `Boa noite, ${maName()}! 🌙 Bora fechar o dia com chave de ouro? Me pergunte o que quiser sobre seus treinos.`; },
@@ -6045,7 +6086,7 @@ const MA_SOCIAL = {
   _quemsou(){ return 'Sou o Meta Assistente 💬 — seu apoio dentro do MetaTreino. Não sou uma IA da internet: eu leio seus dados reais de treino e um bom conhecimento de treino/saúde pra te responder na hora, de graça e até offline. Pergunte sobre sua evolução, treinos, nutrição, conceitos, sua meta e muito mais! 💪'; },
   _comovai(){ return `Tô ótimo e pronto pra te ajudar! 😄 Mas o que importa é como VOCÊ está. Quer que eu mostre sua evolução recente, ${maName()}?`; },
   _comandos(){ return `📋 <b>O que você pode me perguntar ou dizer:</b><br><br>
-<b>📊 Como estou indo</b><br>• "como estou me saindo?" • "me avalia"<br>• "tenho corrido bem?" • "tenho treinado bem?"<br>• "minha evolução" • "como foi meu treino?"<br>• "quantos treinos essa semana?" • "meus troféus"<br><br>
+<b>📊 Como estou indo</b><br>• "como estou me saindo?" • "me avalia"<br>• "tenho corrido bem?" • "tenho treinado bem?"<br>• "minha evolução" • "como foi meu treino?"<br>• "quantos treinos essa semana?" • "meus conquistas"<br><br>
 <b>🏃 Corrida</b><br>• "quanto tempo eu faria 10km?" 🔮 (previsão)<br>• "qual meu recorde?" • "minha meta"<br>• "quando é minha prova?"<br>• "minha prova é dia 15/08 às 7h" 🏁<br><br>
 <b>✍️ Registrar</b><br>• "corri 5km em 30 minutos"<br>• "caminhei 3km em 25 min" • "pedalei 10km em 40min"<br>• "estou pesando 90kg" • "emagreci 2kg"<br>• "treinei peito" / "fiz musculação"<br><br>
 <b>🩹 Como me sinto</b><br>• "estou com dor no joelho" (ou ombro, lombar, punho, cotovelo, tornozelo, pescoço)<br>• "estou cansado" • "estou desanimado"${tpmAvailable()?' • "estou de TPM"':''}<br>• "voltar ao normal"<br><br>
@@ -6054,7 +6095,7 @@ const MA_SOCIAL = {
 <b>⚙️ Mudar meu plano</b><br>• "quero treinar segunda, quarta e sexta"<br>• "minha academia só tem halteres"<br><br>
 <b>▶️ Aprender</b><br>• "como fazer supino reto" (abre o vídeo)<br><br>
 <b>💡 Falar com quem criou o app</b><br>• "quero mandar uma sugestão"<br>• "gostaria que tivesse tal função"`; },
-  _ajuda(){ return 'Posso te contar: 📈 sua evolução, 💪 como foi seu treino, 🏃 sua corrida, 🏆 seus troféus, 🎯 sua meta, qual músculo você treina menos, sua maior pausa, recordes, quanto tempo usa o app, peso, calorias e ainda te motivar. É só tocar numa sugestão ou digitar!'; }
+  _ajuda(){ return 'Posso te contar: 📈 sua evolução, 💪 como foi seu treino, 🏃 sua corrida, 🏆 seus conquistas, 🎯 sua meta, qual músculo você treina menos, sua maior pausa, recordes, quanto tempo usa o app, peso, calorias e ainda te motivar. É só tocar numa sugestão ou digitar!'; }
 };
 function maSaudacao(){ const h=new Date().getHours(); return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'; }
 let maThread = [];
@@ -7206,7 +7247,9 @@ function raceSmartTip(daysToR){
   const longest = runs.length ? Math.max(...runs.map(r=>r.distance||0)) : 0;
   const p = state.user && state.user.profile;
   const imcVal = (()=>{ try{ const r=calcIMC(); return r?parseFloat(r.value):null; }catch(e){ return null; } })();
-  const gentle = (setup.level==='iniciante') && ((imcVal && imcVal>=30) || (p && p.age>=50));
+  const gentle = (setup.level==='iniciante')
+    || (imcVal && imcVal>=32 && setup.level!=='avancado')
+    || (p && p.age>=60);
   const weeks = Math.ceil(daysToR/7);
   const tips = [];
   if(longest>0 && longest < raceKm*0.6 && daysToR<=14){
@@ -7678,7 +7721,7 @@ function shareTrophiesImage(){
   const destaque = unlocked.slice(-6).map(t=>t.emoji+' '+t.name);
   const c = buildShareCanvas({
     title:'Minhas conquistas 🏆',
-    subtitle:unlocked.length+' de '+TROPHIES.length+' troféus',
+    subtitle:unlocked.length+' de '+TROPHIES.length+' conquistas',
     stats:[
       {rotulo:'Desbloqueados', valor:String(unlocked.length)},
       {rotulo:'Progresso', valor:Math.round(unlocked.length/TROPHIES.length*100)+'%'},
@@ -8756,7 +8799,7 @@ function recomputeAchievements(){
   silentAwards = true;
   const datasAntigas = Object.assign({}, state.trophyDates || {});
 
-  // zera e reconstrói os troféus a partir dos dados atuais
+  // zera e reconstrói os conquistas a partir dos dados atuais
   state.trophies = [];
   state.trophyDates = {};
   // desafios do MÊS CORRENTE também são recalculados (medalhas de meses passados ficam)
@@ -8766,8 +8809,8 @@ function recomputeAchievements(){
   state.monthly.doneAt = {};
 
   try{
-    checkTrophies();                                        // troféus de treino/km/sequência/PR
-    if(typeof checkWeightTrophies === 'function') checkWeightTrophies(); // troféus de peso
+    checkTrophies();                                        // conquistas de treino/km/sequência/PR
+    if(typeof checkWeightTrophies === 'function') checkWeightTrophies(); // conquistas de peso
   }catch(e){ console.log('recompute trophies:', e); }
 
   // preserva a data original de quem continua conquistado
@@ -9121,7 +9164,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.

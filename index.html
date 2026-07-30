@@ -662,7 +662,7 @@ details summary::-webkit-details-marker{display:none}
     </div>
 
     <button class="btn btn-primary btn-block" id="google-btn" style="margin-top:0;display:flex;align-items:center;justify-content:center;gap:10px" onclick="doGoogleSignIn()">
-      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v12.178h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v12.218h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
       <span id="google-btn-lbl">Entrar com Google</span>
     </button>
     
@@ -702,7 +702,7 @@ details summary::-webkit-details-marker{display:none}
     <div class="field"><label>Data de nascimento</label><input class="input mono" type="date" id="q-birth"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">Usamos para ajustar seu treino — e para te dar os parabéns no dia 🎂</div></div>
     <div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="q-height" placeholder="Ex: 175" min="100" max="230"></div>
     <div class="field"><label>Peso atual (kg)</label><input class="input mono" type="number" step="0.1" id="q-weight" placeholder="Ex: 78" min="30" max="250"></div>
-    <div class="field"><label>WhatsApp (com DDD)</label><input class="input mono" type="tel" id="q-whats" placeholder="Ex: 61999999999"></div>
+    <div class="field"><label>WhatsApp (com DDD) <span style="font-weight:400;color:var(--text-mute)">— opcional</span></label><input class="input mono" type="tel" id="q-whats" placeholder="Ex: 61999999999"></div>
 
     <div class="field"><label>Objetivo principal</label>
       <div class="radio-grid" id="q-goal">
@@ -783,7 +783,7 @@ details summary::-webkit-details-marker{display:none}
 
     <div class="pick-card lift" onclick="pickModule('lift')">
       <div class="pick-icon">🏋️</div>
-      <div><div class="pick-name">Musculação</div><div class="pick-desc">Treinos ABCD, hipertrofia, força, com biblioteca de 65+ exercícios</div></div>
+      <div><div class="pick-name">Musculação</div><div class="pick-desc">Treinos ABCD, hipertrofia, força, com biblioteca completa de exercícios</div></div>
     </div>
     <div class="pick-card run" onclick="pickModule('run')">
       <div class="pick-icon">🏃</div>
@@ -795,6 +795,7 @@ details summary::-webkit-details-marker{display:none}
 <!-- ========== SETUP (LIFT) ========== -->
 <div id="scr-setup-lift" class="screen">
   <div class="wrap setup">
+    <button class="btn btn-ghost" style="align-self:flex-start;padding:8px 12px;font-size:13px;margin-bottom:8px" onclick="sairDoSetup()">← Voltar</button>
     <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">MUSCULAÇÃO</div><div class="brand-tag">Configure seu plano</div></div></div>
     <h1>Vamos montar seu plano</h1>
     <p class="sub">Responda pra receber um plano feito pra você.</p>
@@ -858,6 +859,7 @@ details summary::-webkit-details-marker{display:none}
 <!-- ========== SETUP (RUN) ========== -->
 <div id="scr-setup-run" class="screen">
   <div class="wrap setup">
+    <button class="btn btn-ghost" style="align-self:flex-start;padding:8px 12px;font-size:13px;margin-bottom:8px" onclick="sairDoSetup()">← Voltar</button>
     <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">CORRIDA</div><div class="brand-tag">Configure seu plano</div></div></div>
     <h1>Bora correr?</h1>
     <p class="sub">Configuramos seu plano em segundos.</p>
@@ -1034,7 +1036,7 @@ details summary::-webkit-details-marker{display:none}
     </div>
 
     <!-- Conquistas -->
-    <div class="card card-info card-row" style="margin-top:14px" onclick="openTrophies()"><div class="card-icon">🏆</div><div style="flex:1"><div class="card-title info">Suas conquistas</div><div class="card-sub" id="trophy-count">0 troféus desbloqueados</div></div><div class="card-chev">›</div></div>
+    <div class="card card-info card-row" style="margin-top:14px" onclick="openTrophies()"><div class="card-icon">🏆</div><div style="flex:1"><div class="card-title info">Suas conquistas</div><div class="card-sub" id="trophy-count">0 conquistas desbloqueadas</div></div><div class="card-chev">›</div></div>
 
     <!-- Ferramenta de apoio (aviso legal — discreto de propósito) -->
     <div class="note" onclick="openModal('support-info')" style="border-color:var(--border);background:transparent;cursor:pointer">
@@ -1264,7 +1266,7 @@ details summary::-webkit-details-marker{display:none}
     </details>
 
     🏆 CONQUISTAS</div>
-    <div class="list-row" onclick="openMedals()">🏅 <span>Minhas medalhas</span></div>
+    <div class="list-row" onclick="openMedals()">🏅 <span>Minhas conquistas</span></div>
     <div class="section-lbl" style="margin:18px 0 8px">🎛️ APLICATIVO</div>
     <div class="list-row" onclick="toggleTheme()"><span id="theme-row-icon">🌙</span> <span id="theme-row-label">Tema escuro</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">tocar para trocar</span></div>
     <div class="list-row" onclick="toggleDeco()"><span>🎨</span> <span id="deco-row-label">Fundo decorativo</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">tocar para trocar</span></div>
@@ -1278,7 +1280,7 @@ details summary::-webkit-details-marker{display:none}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">v12.17</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">v12.21</span>
     </div>
   </div>
 </div>
@@ -1321,9 +1323,9 @@ details summary::-webkit-details-marker{display:none}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=12.17"></script>
+<script src="./app.js?v=12.21"></script>
 <script>
-const APP_VERSION = 'v12.17';
+const APP_VERSION = 'v12.21';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {
