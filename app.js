@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.32 =====
-const APP_VERSION = 'v12.32';
+// ===== MetaTreino v12.33 =====
+const APP_VERSION = 'v12.33';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -1880,12 +1880,17 @@ function forcaRank(ex){
 function $(id){ return document.getElementById(id); }
 function showScreen(id){
   if(id==='scr-auth'){ try{ resetAuthUI(); }catch(e){} } document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); window.scrollTo({top:0,behavior:'instant'}); }
-function toast(msg){
+function toast(msg, ms){
   let wrap = document.getElementById('toast-wrap');
   if(!wrap){ wrap = document.createElement('div'); wrap.id='toast-wrap'; document.body.appendChild(wrap); }
   const t = document.createElement('div'); t.className='toast'; t.textContent = msg;
   wrap.appendChild(t);
-  setTimeout(()=>t.remove(), 3200);
+  // O tempo acompanha o tamanho do texto: "✅ Salvo!" some rápido, uma frase
+  // de duas linhas fica no ar o suficiente pra ser lida (teto de 7s).
+  const txt = String(msg||'');
+  const dur = ms || Math.max(2800, Math.min(7000, 2400 + txt.length*38));
+  setTimeout(()=>{ t.style.transition='opacity .35s ease'; t.style.opacity='0'; }, dur-350);
+  setTimeout(()=>t.remove(), dur);
 }
 function getDayIdx(){ const d=new Date().getDay(); return d===0?7:d; }
 // Detecta treinos do plano que estavam marcados pra dias ANTERIORES desta semana
