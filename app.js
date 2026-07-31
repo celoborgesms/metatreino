@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.21 =====
-const APP_VERSION = 'v12.21';
+// ===== MetaTreino v12.24 =====
+const APP_VERSION = 'v12.24';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -3725,8 +3725,15 @@ function renderProfile(){
   const vEl = $('pf-version'); if(vEl) vEl.textContent = APP_VERSION;
   try{ const sr=$('pf-sentado-row'); if(sr){ const r=rotinaAtual(); sr.querySelector('span').textContent = r&&ROTINAS[r] ? 'Rotina: '+ROTINAS[r].label.split(' (')[0] : 'Minha rotina de trabalho'; } }catch(e){}
   try{ if(state.user && state.user.isAdmin) checkNewFeedback(); }catch(e){}
-  const dEl = $('deco-row-label'); if(dEl) dEl.textContent = decoEnabled() ? 'Fundo decorativo' : 'Fundo decorativo (desligado)';
-  const vEl2 = $('vac-row-label'); if(vEl2) vEl2.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias';
+  // A seção "Meu perfil" só tem o botão do painel — sem ele, o título ficava
+  // sozinho na tela pro aluno comum, parecendo bug.
+  try{
+    const ehAdm = !!(state.user && state.user.isAdmin);
+    const lbl = $('pf-admin-lbl'); if(lbl) lbl.classList.toggle('hidden', !ehAdm);
+    const bt = $('pf-admin-btn'); if(bt) bt.classList.toggle('hidden', !ehAdm);
+  }catch(e){}
+  const dEl = $('deco-row-label'); if(dEl) dEl.textContent = decoEnabled() ? 'Fundo decorativo (ligado)' : 'Fundo decorativo (desligado)';
+  const vEl2 = $('vac-row-label'); if(vEl2) vEl2.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias (desligado)';
   renderAvatar('pf-avatar');
   const rp = $('pf-remove-photo'); if(rp) rp.style.display = p.photo ? 'block' : 'none';
   const painBadge = $('pf-pain-badge'); if(painBadge){ const pn=(u.pain||[]); painBadge.innerHTML = pn.length?`<span style="padding:2px 8px;border-radius:99px;background:var(--tint-danger);color:var(--danger-soft);font-weight:800">${pn.join(', ')}</span>`:''; }
@@ -6277,6 +6284,8 @@ function runWeatherTips(quando){
   const temp = Math.round(w.temp), code = w.code, wind = w.wind||0;
   const hora = quando ? new Date(quando).getHours() : new Date().getHours();
   const prefixo = w.previsto ? `Previsão para ${String(new Date(quando).getHours()).padStart(2,'0')}:00 — ` : '';
+  const comSol = hora >= 6 && hora < 18;      // sol no céu
+  const solForte = hora >= 9 && hora < 17;    // sol castigando
   const tempestade = code>=95, chuva=(code>=61&&code<=67)||(code>=80&&code<=82), garoa=code>=51&&code<=57, neve=code>=71&&code<=77, neblina=code===45||code===48;
   const dicas = [];
   let titulo = null;
@@ -6293,16 +6302,23 @@ function runWeatherTips(quando){
     titulo = '❄️ Frio extremo';
     dicas.push('Aqueça mais que o normal e cuide do piso — tração vem antes do ritmo.');
   } else if(temp>=30){
-    titulo = '🥵 Calor forte ('+temp+'°C)';
+    // Dica de sol/sombra só faz sentido com o sol no céu — antes o app mandava
+    // "prefira sombra" às 21h.
+    titulo = (comSol ? '🥵 Calor forte (' : '🌡️ Calor mesmo à noite (') + temp + '°C)';
     dicas.push('Beba água <b>antes</b> de sair, não só depois. Em corridas acima de 40 min, leve água.');
-    dicas.push('Se der, corra antes das 9h ou depois das 17h — o sol do meio-dia cobra caro.');
+    if(solForte) dicas.push('Se der, corra antes das 9h ou depois das 17h — o sol do meio-dia cobra caro.');
+    else if(!comSol) dicas.push('Sem sol agora, mas o calor ainda pesa: comece mais devagar que o normal.');
     dicas.push('Espere ritmo <b>15-30s/km mais lento</b> que o normal. Isso é fisiologia, não queda de forma.');
-    dicas.push('Roupa clara e leve, protetor solar. Tontura ou calafrio no calor = pare na hora.');
+    dicas.push(comSol
+      ? 'Roupa clara e leve, protetor solar. Tontura ou calafrio no calor = pare na hora.'
+      : 'Roupa leve e clara pra ser visto. Tontura ou calafrio no calor = pare na hora.');
   } else if(temp>=26){
-    titulo = '☀️ Dia quente ('+temp+'°C)';
+    titulo = (comSol ? '☀️ Dia quente (' : '🌙 Noite quente (') + temp + '°C)';
     dicas.push('Hidrate-se bem antes e leve água se for passar de 40 min.');
     dicas.push('Ritmo um pouco mais lento é normal com esse calor — não force pra bater tempo hoje.');
-    dicas.push('Prefira sombra e horários menos quentes.');
+    if(solForte) dicas.push('Prefira sombra e horários menos quentes.');
+    else if(comSol) dicas.push('Prefira o lado da sombra do percurso.');
+    else dicas.push('Sem sol pelo menos — só cuidado com a visibilidade: roupa clara ou refletiva.');
   } else if(temp<=10){
     titulo = '🧣 Frio ('+temp+'°C)';
     dicas.push('Aqueça <b>8-10 min</b> antes: músculo frio lesiona mais fácil.');
@@ -6322,7 +6338,8 @@ function runWeatherTips(quando){
   } else {
     titulo = '🙂 Clima bom pra correr ('+temp+'°C)';
     dicas.push('Condições favoráveis hoje. Aqueça 5 min, comece leve e deixe o ritmo vir sozinho.');
-    if(hora>=11 && hora<=15) dicas.push('Sol a pino: boné e protetor solar ajudam.');
+    if(solForte && hora>=11 && hora<=15) dicas.push('Sol a pino: boné e protetor solar ajudam.');
+    else if(!comSol) dicas.push('Correndo no escuro? Roupa clara ou refletiva ajuda os carros a te verem.');
   }
   return { titulo: prefixo + titulo, dicas };
 }
@@ -7921,7 +7938,7 @@ function toggleDeco(){
   const next = !decoEnabled();
   try{ localStorage.setItem('metatreino_deco', next ? '1' : '0'); }catch(e){}
   updateDeco(state.ui.tab || 'home');
-  const lbl = document.getElementById('deco-row-label'); if(lbl) lbl.textContent = next ? 'Fundo decorativo' : 'Fundo decorativo (desligado)';
+  const lbl = document.getElementById('deco-row-label'); if(lbl) lbl.textContent = next ? 'Fundo decorativo (ligado)' : 'Fundo decorativo (desligado)';
   toast(next ? '🎨 Fundo decorativo ativado' : 'Fundo decorativo desativado');
 }
 // Liga/desliga o Modo Férias. Ao ligar: pausa cobranças e começa a "congelar" a sequência.
@@ -7944,7 +7961,7 @@ function toggleVacation(){
     saveData();
     toast('🌴 Modo Férias ativado. Relaxa — nada de cobrança, e sua sequência fica guardada.');
   }
-  const lbl = document.getElementById('vac-row-label'); if(lbl) lbl.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias';
+  const lbl = document.getElementById('vac-row-label'); if(lbl) lbl.textContent = vacationActive() ? 'Modo Férias (ativo 🌴)' : 'Modo Férias (desligado)';
   const vc = document.getElementById('card-vacation'); if(vc) vc.classList.toggle('hidden', !vacationActive());
 }
 // Pular o treino do dia de propósito (não conta como falta, não cobra).
