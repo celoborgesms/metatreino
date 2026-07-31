@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.26 =====
-const APP_VERSION = 'v12.26';
+// ===== MetaTreino v12.27 =====
+const APP_VERSION = 'v12.27';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
