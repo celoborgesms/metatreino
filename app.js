@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.28 =====
-const APP_VERSION = 'v12.28';
+// ===== MetaTreino v12.29 =====
+const APP_VERSION = 'v12.29';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2434,8 +2434,9 @@ function renderHome(){
       const ac=$('card-plan-alert');
       ac.classList.remove('hidden');
       const _icA=ac.querySelector('.card-icon'); if(_icA) _icA.style.display='';
-      if($('plan-alert-title')) $('plan-alert-title').textContent='Pernas ainda em recuperação';
-      if($('plan-alert-msg')) $('plan-alert-msg').textContent='Você treinou pernas forte há pouco. Se sentir peso na passada, faça hoje em ritmo leve ou troque por uma caminhada — a corrida rende mais com as pernas descansadas.';
+      const t1=ac.querySelector('.card-title'), s1=ac.querySelector('.card-sub');
+      if(t1) t1.textContent='Pernas ainda em recuperação';
+      if(s1) s1.textContent='Você treinou pernas forte há pouco. Se sentir peso na passada, faça hoje em ritmo leve ou troque por uma caminhada — a corrida rende mais com as pernas descansadas.';
     }
   }catch(e){}
   // aviso de dor: corrida com dor em perna/joelho/tornozelo → sugerir caminhada ou bike
@@ -3616,12 +3617,12 @@ function renderPerf(){
       const s=now-(i+1)*7*86400000, e=now-i*7*86400000;
       const done = h.filter(x=>x.at>=s && x.at<e).length;
       const pct = Math.min(100,(done/wkTarget)*100);
-      pts.push([40+(3-i)*100, 170-pct*1.5]);
+      pts.push([40+(3-i)*100, 158-pct*1.32]);   // sobe a curva pra não cobrir os rótulos S1-S4
     }
     line.setAttribute('points', pts.map(p=>p.join(',')).join(' '));
     // área preenchida sob a linha + valores em cima dos pontos (antes eram só bolinhas soltas)
     const areaEl = $('perf-area');
-    if(areaEl) areaEl.setAttribute('points', `${pts[0][0]},170 ` + pts.map(p=>p.join(',')).join(' ') + ` ${pts[pts.length-1][0]},170`);
+    if(areaEl) areaEl.setAttribute('points', `${pts[0][0]},158 ` + pts.map(p=>p.join(',')).join(' ') + ` ${pts[pts.length-1][0]},158`);
     if(dots) dots.innerHTML = pts.map((p,i)=>{
       const s2 = now-(4-i)*7*86400000, e2 = now-(3-i)*7*86400000;
       const feitos = h.filter(x=>x.at>=s2 && x.at<e2).length;
@@ -3864,7 +3865,13 @@ function renderWeightChart(){
     <polyline points="${pts.join(' ')}" fill="none" stroke="${cor}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
     ${ws.map((w,i)=>{
       const ultimo = i===ws.length-1;
-      return `<circle cx="${x(i).toFixed(1)}" cy="${y(w.weight).toFixed(1)}" r="${ultimo?4.5:2.6}" fill="${ultimo?cor:'#0a1122'}" stroke="${cor}" stroke-width="${ultimo?0:2}"/>`;
+      const px = x(i), py = y(w.weight);
+      // valor em cima de cada ponto — com poucos registros mostra todos,
+      // com muitos alterna pra não virar borrão.
+      const mostra = ws.length<=6 || i%2===0 || ultimo;
+      const acima = py > (T + (H-T-B)/2);
+      return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${ultimo?4.5:2.8}" fill="${ultimo?cor:'#0a1122'}" stroke="${cor}" stroke-width="${ultimo?0:2}"/>`
+        + (mostra ? `<text x="${px.toFixed(1)}" y="${(acima?py-9:py+15).toFixed(1)}" fill="${ultimo?cor:'#94a3b8'}" font-size="9.5" font-weight="${ultimo?'800':'700'}" text-anchor="middle">${w.weight.toFixed(1)}</text>` : '');
     }).join('')}
     <text x="2" y="${T+4}" fill="#64748b" font-size="10">${max.toFixed(0)}kg</text>
     <text x="2" y="${H-B+4}" fill="#64748b" font-size="10">${min.toFixed(0)}kg</text>
