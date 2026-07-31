@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.30 =====
-const APP_VERSION = 'v12.30';
+// ===== MetaTreino v12.31 =====
+const APP_VERSION = 'v12.31';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -3871,9 +3871,16 @@ function renderWeightChart(){
       // com muitos alterna pra não virar borrão.
       // com muitos pontos só rotula os extremos e alternados, pra não virar borrão
       const mostra = ws.length<=5 || ultimo || i===0 || (ws.length<=8 && i%2===0);
-      const acima = py > (T + (H-T-B)/2);
+      // Onde colocar o número: acima se o ponto for "vale", abaixo se for "pico".
+      // Antes ia sempre pro mesmo lado e o texto caía em cima da própria linha.
+      const yAnt = i>0 ? y(ws[i-1].weight) : py;
+      const yProx = i<ws.length-1 ? y(ws[i+1].weight) : py;
+      const vale = py >= yAnt && py >= yProx;      // ponto mais baixo que os vizinhos
+      const ty = vale ? py+15 : py-10;
+      const ancora = i===0 ? 'start' : (ultimo ? 'end' : 'middle');
+      const tx = i===0 ? px-4 : (ultimo ? px+5 : px);
       return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${ultimo?4.5:2.8}" fill="${ultimo?cor:'#0a1122'}" stroke="${cor}" stroke-width="${ultimo?0:2}"/>`
-        + (mostra ? `<text x="${px.toFixed(1)}" y="${(acima?py-9:py+15).toFixed(1)}" fill="${ultimo?cor:'#94a3b8'}" font-size="9.5" font-weight="${ultimo?'800':'700'}" text-anchor="middle">${w.weight.toFixed(1)}</text>` : '');
+        + (mostra ? `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="${ultimo?cor:'#cbd5e1'}" font-size="9.5" font-weight="${ultimo?'800':'700'}" text-anchor="${ancora}" stroke="#0a1122" stroke-width="2.5" paint-order="stroke" style="paint-order:stroke fill">${w.weight.toFixed(1)}</text>` : '');
     }).join('')}
     <text x="2" y="${T+4}" fill="#64748b" font-size="10">${max.toFixed(0)}kg</text>
     <text x="2" y="${H-B+4}" fill="#64748b" font-size="10">${min.toFixed(0)}kg</text>
@@ -3924,22 +3931,43 @@ function saveWeight(){
 }
 
 function checkWeightTrophies(){
-  const p = state.user.profile; if(!p||state.weights.length<2) return;
+  const p = state.user.profile; if(!p || !Array.isArray(state.weights) || state.weights.length<2) return;
   const first = firstWeight(), cur = latestWeight();
   const delta = cur - first;
-  if(p.goal==='emagrecer' && delta < 0){
+  const anterior = state.weights[state.weights.length-2];
+  const varRecente = anterior ? (cur - anterior.weight) : 0;   // mudança DESTE registro
+  const querPerder = p.goal==='emagrecer';
+  const querGanhar = p.goal==='massa';
+
+  // conquistas continuam pelo acumulado desde o início
+  if(querPerder && delta < 0){
     const lost = Math.abs(delta);
     if(lost>=1) unlockTrophy('weight_down_1');
     if(lost>=3) unlockTrophy('weight_down_3');
     if(lost>=5) unlockTrophy('weight_down_5');
     if(lost>=10) unlockTrophy('weight_down_10');
-    toast(`🎉 Parabéns! Você perdeu ${lost.toFixed(1)}kg desde o início!`);
-  } else if(p.goal==='massa' && delta > 0){
+  } else if(querGanhar && delta > 0){
     if(delta>=2) unlockTrophy('weight_up_2');
     if(delta>=5) unlockTrophy('weight_up_5');
     if(delta>=10) unlockTrophy('weight_up_10');
-    toast(`💪 Bora! Você ganhou ${delta.toFixed(1)}kg desde o início!`);
   }
+
+  // A MENSAGEM olha o registro de AGORA, não o acumulado.
+  // Antes o app dava parabéns por "perdeu 32kg" logo depois da pessoa engordar 10kg.
+  if(Math.abs(varRecente) < 0.15) return;                    // variação irrelevante: não comenta
+  const v = Math.abs(varRecente).toFixed(1);
+  const noRumo = (querPerder && varRecente < 0) || (querGanhar && varRecente > 0);
+
+  if(noRumo){
+    setTimeout(()=>toast(varRecente<0 ? `🎉 Boa! ${v}kg a menos desde o último registro.` : `💪 Boa! ${v}kg a mais desde o último registro.`), 700);
+    return;
+  }
+  if(!querPerder && !querGanhar) return;                      // sem meta de peso: só registra, sem comentar
+
+  // foi na direção contrária da meta: apoio, nunca cobrança
+  setTimeout(()=>toast(varRecente>0
+    ? `📊 ${v}kg a mais que o último registro. O peso oscila com água, sono e comida — o que conta é a linha do gráfico.`
+    : `📊 ${v}kg a menos que o último registro. Se não era o objetivo, capriche na comida e na proteína.`), 700);
 }
 
 // ---------- TROPHIES ----------
