@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.24 =====
-const APP_VERSION = 'v12.24';
+// ===== MetaTreino v12.25 =====
+const APP_VERSION = 'v12.25';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2792,6 +2792,9 @@ function rotinaAtual(){
 function trabalhaSentado(){ const r=rotinaAtual(); return r==='sentado' || r==='dirigindo'; }
 function mobilidadeDoDia(w){
   const r = rotinaAtual(); if(!r || !ROTINAS[r] || !w) return [];
+  // Só na musculação: o treino de corrida já tem bloco de Aquecimento
+  // (caminhada leve + mobilidade dinâmica). Mostrar os dois vira instrução repetida.
+  if(state.active !== 'lift') return [];
   const partes = (w.parts||[]).join(' ');
   const pool = ROTINAS[r].foco.slice();
   // prioriza o que conversa com os grupos DO DIA
