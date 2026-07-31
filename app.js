@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.27 =====
-const APP_VERSION = 'v12.27';
+// ===== MetaTreino v12.28 =====
+const APP_VERSION = 'v12.28';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -3619,7 +3619,17 @@ function renderPerf(){
       pts.push([40+(3-i)*100, 170-pct*1.5]);
     }
     line.setAttribute('points', pts.map(p=>p.join(',')).join(' '));
-    if(dots) dots.innerHTML = pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#10b981"/>`).join('');
+    // área preenchida sob a linha + valores em cima dos pontos (antes eram só bolinhas soltas)
+    const areaEl = $('perf-area');
+    if(areaEl) areaEl.setAttribute('points', `${pts[0][0]},170 ` + pts.map(p=>p.join(',')).join(' ') + ` ${pts[pts.length-1][0]},170`);
+    if(dots) dots.innerHTML = pts.map((p,i)=>{
+      const s2 = now-(4-i)*7*86400000, e2 = now-(3-i)*7*86400000;
+      const feitos = h.filter(x=>x.at>=s2 && x.at<e2).length;
+      const pct = Math.round(Math.min(100,(feitos/wkTarget)*100));
+      const bateu = feitos>=wkTarget;
+      return `<circle cx="${p[0]}" cy="${p[1]}" r="${bateu?6:4.5}" fill="${bateu?'#34d399':'#0a1122'}" stroke="#10b981" stroke-width="${bateu?0:2.5}"/>
+        <text x="${p[0]}" y="${Math.max(14, p[1]-13)}" fill="${bateu?'#34d399':'#94a3b8'}" font-size="11" font-weight="800" text-anchor="middle">${pct}%</text>`;
+    }).join('');
   }
   renderDistDonut();
   // metas semanal e mensal (reais)
@@ -3627,15 +3637,33 @@ function renderPerf(){
   if(gb){
     const monthDone = h.filter(x=>x.at >= now-30*86400000).length;
     const monthTarget = wkTarget*4;
-    const bar = (done,target,lbl,emo)=>{
-      const pct = Math.min(100, Math.round(done/target*100));
-      const hit = done>=target;
-      return `<div style="margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>${emo} ${lbl}</span><b style="color:${hit?'var(--primary-2)':'var(--text)'}">${done}/${target}${hit?' 🎉':''}</b></div>
-        <div style="height:9px;border-radius:99px;background:rgba(148,163,184,0.15);overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:99px;transition:width .4s"></div></div>
+    // ANEL DE PROGRESSO: um SVG por meta, mais legível de relance que a barra antiga
+    const anel = (done, target, lbl, cor)=>{
+      const pct = target>0 ? Math.min(100, Math.round(done/target*100)) : 0;
+      const R = 34, C = 2*Math.PI*R;
+      const off = C - (pct/100)*C;
+      const hit = target>0 && done>=target;
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:0">
+        <svg width="88" height="88" viewBox="0 0 88 88" style="transform:rotate(-90deg)">
+          <circle cx="44" cy="44" r="${R}" fill="none" stroke="rgba(148,163,184,.16)" stroke-width="8"/>
+          <circle cx="44" cy="44" r="${R}" fill="none" stroke="${cor}" stroke-width="8" stroke-linecap="round"
+            stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
+            style="transition:stroke-dashoffset .7s cubic-bezier(.2,.8,.3,1)"/>
+        </svg>
+        <div style="margin-top:-62px;text-align:center;pointer-events:none">
+          <div style="font-weight:800;font-size:19px;letter-spacing:-.5px">${done}<span style="color:var(--text-mute);font-weight:700;font-size:14px">/${target}</span></div>
+          ${hit?'<div style="font-size:13px;margin-top:-2px">🎉</div>':`<div style="font-size:10.5px;color:var(--text-mute);font-weight:700">${pct}%</div>`}
+        </div>
+        <div style="margin-top:26px;font-size:11.5px;color:var(--text-dim);font-weight:700;letter-spacing:.3px">${lbl}</div>
       </div>`;
     };
-    gb.innerHTML = bar(weekDone, wkTarget, 'Meta da semana', '📅') + bar(monthDone, monthTarget, 'Meta do mês', '📅');
+    const streakAtual = (typeof calcStreak==='function') ? calcStreak(h) : 0;
+    const metaStreak = Math.max(7, Math.ceil((streakAtual+1)/7)*7);
+    gb.innerHTML = `<div style="display:flex;gap:6px;justify-content:space-around;padding:6px 0 2px">
+      ${anel(weekDone, wkTarget, 'SEMANA', 'var(--primary)')}
+      ${anel(monthDone, monthTarget, 'MÊS', 'var(--info)')}
+      ${anel(streakAtual, metaStreak, 'SEQUÊNCIA', 'var(--accent)')}
+    </div>`;
   }
 }
 function calcVolumeBetween(a,b){
@@ -3811,17 +3839,38 @@ function renderProfile(){
 }
 
 function renderWeightChart(){
-  if(state.weights.length<2) return '<div class="text-dim" style="text-align:center;padding:20px;font-size:13px">Registre seu peso periodicamente pra ver a evolução aqui.</div>';
+  if(!Array.isArray(state.weights) || state.weights.length<2) return '<div class="text-dim" style="text-align:center;padding:20px;font-size:13px">Registre seu peso periodicamente pra ver a evolução aqui.</div>';
   const ws = state.weights.slice(-12);
-  const min = Math.min(...ws.map(w=>w.weight)) - 2;
-  const max = Math.max(...ws.map(w=>w.weight)) + 2;
-  const rng = max-min || 1;
-  const pts = ws.map((w,i)=>`${20+i*(360/(ws.length-1))},${100-((w.weight-min)/rng)*80}`).join(' ');
-  return `<svg viewBox="0 0 400 120" width="100%" class="wchart">
-    <polyline points="${pts}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-    ${ws.map((w,i)=>`<circle cx="${20+i*(360/(ws.length-1))}" cy="${100-((w.weight-min)/rng)*80}" r="3" fill="#10b981"/>`).join('')}
-    <text x="4" y="12" fill="#64748b" font-size="10">${max.toFixed(1)}kg</text>
-    <text x="4" y="105" fill="#64748b" font-size="10">${min.toFixed(1)}kg</text>
+  const vals = ws.map(w=>w.weight);
+  const min = Math.min(...vals) - 1.5, max = Math.max(...vals) + 1.5;
+  const rng = (max-min) || 1;
+  const W=400, H=130, L=34, R=10, T=14, B=26;
+  const x = i => L + i*((W-L-R)/Math.max(1,ws.length-1));
+  const y = v => T + (1-((v-min)/rng))*(H-T-B);
+  const pts = ws.map((w,i)=>x(i).toFixed(1)+','+y(w.weight).toFixed(1));
+  const area = `${L},${H-B} ${pts.join(' ')} ${x(ws.length-1).toFixed(1)},${H-B}`;
+  const delta = vals[vals.length-1]-vals[0];
+  const cor = Math.abs(delta)<0.2 ? '#94a3b8' : (delta<0 ? '#34d399' : '#fbbf24');
+  const dFmt = (delta>0?'+':'')+delta.toFixed(1)+'kg';
+  const dt = t => { const d=new Date(t); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" class="wchart" style="overflow:visible">
+    <defs><linearGradient id="wgrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${cor}" stop-opacity=".28"/><stop offset="100%" stop-color="${cor}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <line x1="${L}" y1="${T}" x2="${W-R}" y2="${T}" stroke="rgba(148,163,184,.12)"/>
+    <line x1="${L}" y1="${(T+H-B)/2}" x2="${W-R}" y2="${(T+H-B)/2}" stroke="rgba(148,163,184,.12)"/>
+    <line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="rgba(148,163,184,.12)"/>
+    <polygon points="${area}" fill="url(#wgrad)"/>
+    <polyline points="${pts.join(' ')}" fill="none" stroke="${cor}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${ws.map((w,i)=>{
+      const ultimo = i===ws.length-1;
+      return `<circle cx="${x(i).toFixed(1)}" cy="${y(w.weight).toFixed(1)}" r="${ultimo?4.5:2.6}" fill="${ultimo?cor:'#0a1122'}" stroke="${cor}" stroke-width="${ultimo?0:2}"/>`;
+    }).join('')}
+    <text x="2" y="${T+4}" fill="#64748b" font-size="10">${max.toFixed(0)}kg</text>
+    <text x="2" y="${H-B+4}" fill="#64748b" font-size="10">${min.toFixed(0)}kg</text>
+    <text x="${L}" y="${H-8}" fill="#64748b" font-size="9.5">${dt(ws[0].date)}</text>
+    <text x="${W-R}" y="${H-8}" fill="#64748b" font-size="9.5" text-anchor="end">${dt(ws[ws.length-1].date)}</text>
+    <text x="${W-R}" y="${T+4}" fill="${cor}" font-size="12" font-weight="800" text-anchor="end">${dFmt}</text>
   </svg>`;
 }
 
