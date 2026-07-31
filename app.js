@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.29 =====
-const APP_VERSION = 'v12.29';
+// ===== MetaTreino v12.30 =====
+const APP_VERSION = 'v12.30';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -744,7 +744,7 @@ function saveQuiz(){
   if(!birth){ err.innerHTML='<div class="err">Informe sua data de nascimento.</div>'; return; }
   if(age===null || age<10 || age>100){ err.innerHTML='<div class="err">Data de nascimento inválida.</div>'; return; }
   if(!height || height<100 || height>230){ err.innerHTML='<div class="err">Altura inválida.</div>'; return; }
-  if(!weight || weight<30 || weight>250){ err.innerHTML='<div class="err">Peso inválido.</div>'; return; }
+  if(!weight || weight<25 || weight>400){ err.innerHTML='<div class="err">Peso inválido (entre 25 e 400 kg).</div>'; return; }
   if(!goal){ err.innerHTML='<div class="err">Selecione um objetivo.</div>'; return; }
 
   const profile = { nickname:nick, sex, birth, age, height, currentWeight:weight, whatsapp:whats, goal, level, quiz_done:true };
@@ -2433,7 +2433,8 @@ function renderHome(){
     if(state.active==='run' && typeof fatigueOf==='function' && fatigueOf('Pernas')>=70 && $('card-plan-alert') && $('card-plan-alert').classList.contains('hidden')){
       const ac=$('card-plan-alert');
       ac.classList.remove('hidden');
-      const _icA=ac.querySelector('.card-icon'); if(_icA) _icA.style.display='';
+      const _icA=ac.querySelector('.card-icon');
+      if(_icA){ _icA.style.display=''; _icA.textContent='🦵'; }   // sem isto herdava o 🎉 do card padrão
       const t1=ac.querySelector('.card-title'), s1=ac.querySelector('.card-sub');
       if(t1) t1.textContent='Pernas ainda em recuperação';
       if(s1) s1.textContent='Você treinou pernas forte há pouco. Se sentir peso na passada, faça hoje em ritmo leve ou troque por uma caminhada — a corrida rende mais com as pernas descansadas.';
@@ -2445,7 +2446,7 @@ function renderHome(){
   if(state.active==='run' && legPain && $('card-plan-alert') && $('card-plan-alert').classList.contains('hidden')){
     const ac = $('card-plan-alert');
     ac.classList.remove('hidden');
-    const _icB=ac.querySelector('.card-icon'); if(_icB) _icB.style.display='';
+    const _icB=ac.querySelector('.card-icon'); if(_icB){ _icB.style.display=''; _icB.textContent='🩹'; }
     ac.querySelector('.card-icon').textContent = '🩹';
     ac.querySelector('.card-title').textContent = 'Dor registrada: '+pains.join(', ');
     ac.querySelector('.card-sub').textContent = 'Hoje troque a corrida por caminhada leve ou bike (menos impacto). Fortalecer com musculação leve de core e quadril também ajuda a proteger a região. Dor persistindo, procure um profissional de saúde.';
@@ -3841,7 +3842,7 @@ function renderProfile(){
 
 function renderWeightChart(){
   if(!Array.isArray(state.weights) || state.weights.length<2) return '<div class="text-dim" style="text-align:center;padding:20px;font-size:13px">Registre seu peso periodicamente pra ver a evolução aqui.</div>';
-  const ws = state.weights.slice(-12);
+  const ws = state.weights.slice(-8);   // 8 registros cabem sem os números se atropelarem
   const vals = ws.map(w=>w.weight);
   const min = Math.min(...vals) - 1.5, max = Math.max(...vals) + 1.5;
   const rng = (max-min) || 1;
@@ -3868,7 +3869,8 @@ function renderWeightChart(){
       const px = x(i), py = y(w.weight);
       // valor em cima de cada ponto — com poucos registros mostra todos,
       // com muitos alterna pra não virar borrão.
-      const mostra = ws.length<=6 || i%2===0 || ultimo;
+      // com muitos pontos só rotula os extremos e alternados, pra não virar borrão
+      const mostra = ws.length<=5 || ultimo || i===0 || (ws.length<=8 && i%2===0);
       const acima = py > (T + (H-T-B)/2);
       return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${ultimo?4.5:2.8}" fill="${ultimo?cor:'#0a1122'}" stroke="${cor}" stroke-width="${ultimo?0:2}"/>`
         + (mostra ? `<text x="${px.toFixed(1)}" y="${(acima?py-9:py+15).toFixed(1)}" fill="${ultimo?cor:'#94a3b8'}" font-size="9.5" font-weight="${ultimo?'800':'700'}" text-anchor="middle">${w.weight.toFixed(1)}</text>` : '');
@@ -3911,7 +3913,7 @@ function onPhotoPicked(ev){
 // ---------- WEIGHT LOG ----------
 function saveWeight(){
   const v = parseFloat($('wt-val').value);
-  if(!v || v<30 || v>250) return toast('Peso inválido');
+  if(!v || v<25 || v>400) return toast('⚠️ Peso inválido (entre 25 e 400 kg)');
   state.weights.push({ date:Date.now(), weight:v });
   state.user.profile.currentWeight = v;
   saveData();
