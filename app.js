@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.31 =====
-const APP_VERSION = 'v12.31';
+// ===== MetaTreino v12.32 =====
+const APP_VERSION = 'v12.32';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -3786,8 +3786,10 @@ function renderProfile(){
   const cur = latestWeight() || p.currentWeight;
   const first = firstWeight() || p.currentWeight;
   const delta = cur - first;
-  const deltaTxt = delta===0?'Sem mudança':delta<0?`↓ ${Math.abs(delta).toFixed(1)}kg`:`↑ ${delta.toFixed(1)}kg`;
-  const deltaColor = delta===0?'var(--text-dim)':((p.goal==='emagrecer'&&delta<0)||(p.goal==='massa'&&delta>0)?'var(--primary-2)':'var(--accent-2)');
+  // Com um registro só não existe "início" pra comparar — dizer "sem mudança" não faz sentido.
+  const nReg = Array.isArray(state.weights) ? state.weights.length : 0;
+  const deltaTxt = nReg<2 ? 'Primeiro registro' : (Math.abs(delta)<0.05 ? 'Estável' : (delta<0?`↓ ${Math.abs(delta).toFixed(1)}kg`:`↑ ${delta.toFixed(1)}kg`));
+  const deltaColor = (nReg<2 || Math.abs(delta)<0.05) ? 'var(--text-dim)':((p.goal==='emagrecer'&&delta<0)||(p.goal==='massa'&&delta>0)?'var(--primary-2)':'var(--accent-2)');
   $('pf-body-info').innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       <div class="info-cell"><div class="info-cell-icon">⚖️</div><div class="info-cell-lbl">PESO ATUAL</div><div class="info-cell-val mono">${cur?cur.toFixed(1)+'kg':'—'}</div></div>
@@ -3796,7 +3798,8 @@ function renderProfile(){
     </div>
     <div style="margin-top:10px;padding:12px;border-radius:var(--radius-btn);background:var(--surface-2)">
       <div style="font-size:12px;color:var(--text-dim);font-weight:700;letter-spacing:1px">SUA EVOLUÇÃO</div>
-      <div style="font-weight:800;color:${deltaColor};margin-top:3px;font-size:15px">${deltaTxt} desde o início</div>
+      <div style="font-weight:800;color:${deltaColor};margin-top:3px;font-size:15px">${nReg<2 ? 'Primeiro registro feito 👍' : deltaTxt+' desde o início'}</div>
+      ${nReg<2?'<div style="font-size:12px;color:var(--text-mute);margin-top:4px;line-height:1.5">A partir do próximo registro eu mostro sua evolução aqui.</div>':''}
       ${imc?`<div style="font-size:12px;color:var(--text-mute);margin-top:8px;line-height:1.5">
         IMC ${imc.value} — <span style="color:${imc.color}">${imc.cls.toLowerCase()}</span>.
         ${imc.faixa==='dentro'
