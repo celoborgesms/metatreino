@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.33 =====
-const APP_VERSION = 'v12.33';
+// ===== MetaTreino v12.34 =====
+const APP_VERSION = 'v12.34';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2365,11 +2365,11 @@ function renderHome(){
       const isLift = mod.plan.type==='lift';
       if(pend.length===1){
         // 1 dia perdido: sugere encaixar hoje SE hoje for descanso, senão sugere no próximo descanso
-        $('missed-title').textContent = '📌 Você perdeu 1 treino esta semana';
+        $('missed-title').textContent = '📌 Um treino ficou para trás esta semana';
         if(hasToday){
-          $('missed-msg').textContent = `Faltou ${pend[0].name.split(' — ')[0]}. Como você já tem treino hoje, o ideal é seguir o de hoje e encaixar o pendente num dia de descanso ou no fim de semana — sem dobrar a carga e sobrecarregar. Toque pra ver o treino pendente.`;
+          $('missed-msg').textContent = `${pend[0].name.split(' — ')[0]} não aconteceu — e tudo bem, acontece com todo mundo. Hoje você já tem treino: foca nele. Se bater vontade de fazer o que ficou, toque aqui — mas sem obrigação.`;
         } else {
-          $('missed-msg').textContent = `Faltou ${pend[0].name.split(' — ')[0]}, e hoje é dia de descanso — momento perfeito pra recuperar esse treino! Toque pra fazer agora.`;
+          $('missed-msg').textContent = `${pend[0].name.split(' — ')[0]} não aconteceu. Hoje é dia de descanso — se estiver com disposição, dá pra fazer agora. Se preferir descansar, também está certo. 😌`;
         }
         missed.onclick = (ev)=>{
           if(ev.target && ev.target.id==='missed-dismiss') return;
@@ -2378,7 +2378,7 @@ function renderHome(){
         };
       } else {
         // 2+ dias perdidos: NÃO sugere fazer tudo — orienta priorizar e seguir em frente
-        $('missed-title').textContent = `📌 Você perdeu ${pend.length} treinos esta semana`;
+        $('missed-title').textContent = `📌 ${pend.length} treinos ficaram para trás esta semana`;
         $('missed-msg').textContent = `Acontece! Não tente recuperar todos de uma vez — isso sobrecarrega e atrapalha mais que ajuda. ${isLift?'Escolha 1 treino pendente pra fazer num dia livre e siga o plano normalmente a partir de amanhã. Na próxima semana o ciclo recomeça equilibrado.':'Faça a atividade mais importante (a corrida longa) quando puder e retome o plano normalmente. Constância vale mais que perfeição.'} Toque pra ver os pendentes.`;
         missed.onclick = (ev)=>{
           if(ev.target && ev.target.id==='missed-dismiss') return;
@@ -2864,7 +2864,7 @@ function renderSessionDetail(w){
   const html = `
     <div class="detail-hero">
       <h2>${isLift?`Treino ${w.k} — ${w.name}`:w.name}</h2>
-      <div style="margin-top:8px"><span class="plan-badge">${isLift?'Foco':'Fácil'}</span>${isLift && isCustomized(w) ? '<span class="plan-badge" style="margin-left:6px;background:var(--tint-prep);color:var(--prep);border-color:var(--line-prep)">✨ Personalizado</span>' : ''}</div>
+      <div style="margin-top:8px"><span class="plan-badge">${isLift?'Foco':'Fácil'}</span>${isLift && isCustomized(w) ? `<span class="plan-badge" onclick="explicaPersonalizado(${w.pins.length})" style="margin-left:6px;background:var(--tint-prep);color:var(--prep);border-color:var(--line-prep);cursor:pointer">✨ Personalizado ⓘ</span>` : ''}</div>
       <div class="today-desc" style="margin-top:14px">${isLift?liftDesc(w):runDesc(w)}</div>
       <div class="info-grid">
         <div class="info-cell"><div class="info-cell-icon">⏱️</div><div class="info-cell-lbl">DURAÇÃO</div><div class="info-cell-val mono">${w.duration} min</div></div>
@@ -2874,7 +2874,6 @@ function renderSessionDetail(w){
     </div>
     ${w.adapted ? `<div class="card card-alert card-row hl-info" style=";background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
     ${(((state.modules.lift||{}).history||[]).length + ((state.modules.run||{}).history||[]).length) >= 8 ? '' : `<div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. frequência cardíaca entre 60-70% do máximo (220 menos sua idade).'}</div></div></div>`}
-    ${isLift && isCustomized(w) ? `<div class="card card-row hl-prep" style=";background:rgba(167,139,250,0.06)"><div class="card-icon">✨</div><div style="flex:1"><div class="card-title" style="color:#a78bfa">Treino personalizado</div><div class="card-sub">Você trocou ${w.pins.length} exercício${w.pins.length>1?'s':''} neste treino. As trocas ficam salvas nos próximos treinos. Pra desfazer, use "Voltar à sugestão" em cada exercício.</div></div></div>` : ''}
     ${typeof mobilidadeCard==='function' ? mobilidadeCard(w) : ''}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
@@ -5218,7 +5217,9 @@ const MA_ANSWERS = {
     const miss = missedWorkoutsThisWeek(mod);
     if(!miss.length) return `👏 Você não faltou nenhum treino esta semana, ${maName()}! Constância em dia — continue assim. 💪`;
     const nomes = miss.map(w=>state.active==='lift'?('Treino '+w.k):(w.name||'').split(' ')[0]).join(', ');
-    return `Esta semana você tem <b>${miss.length}</b> treino${miss.length>1?'s':''} pendente${miss.length>1?'s':''} (${nomes}). Sem culpa — encaixe o mais importante num dia livre e siga o plano. A constância vale mais que a perfeição. 🙂`;
+    const feitosSem = (((state.modules[state.active]||{}).history)||[]).filter(x=>Date.now()-x.at < 7*86400000).length;
+    const prev = feitosSem + miss.length;
+    return `Você treinou <b>${feitosSem} de ${prev}</b> dias planejados nesta semana. ${nomes} ${miss.length>1?'ficaram':'ficou'} para trás — e tudo bem, isso não se paga depois. 🙂<br><br>O que conta agora é o <b>próximo treino</b>. Voltar à rotina vale mais que compensar o que passou.`;
   },
   peso_mudanca(){
     const f = firstWeight(), l = latestWeight();
@@ -8989,6 +8990,18 @@ function deleteHistoryEntry(idx){
 }
 
 // ---------- SWAP EXERCISE ----------
+function explicaPersonalizado(n){
+  const q = n||0;
+  $('modal-inner').innerHTML = `<div style="text-align:center"><div style="font-size:40px">✨</div>
+      <h3 style="margin:10px 0 4px">Treino personalizado</h3></div>
+    <div class="note note-prep" style="margin-top:12px">
+      <div class="note-line">Você trocou <b>${q} exercício${q>1?'s':''}</b> neste treino.</div>
+      <div class="note-line" style="margin-top:6px">As trocas ficam salvas e valem nos próximos treinos — o app respeita a sua escolha.</div>
+      <div class="note-line" style="margin-top:6px">Pra voltar ao original, use <b>"Voltar à sugestão"</b> no exercício trocado.</div>
+    </div>
+    <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="closeModal()">Entendi</button>`;
+  $('modal-back').classList.add('on');
+}
 function isCustomized(w){ return !!(w && w.pins && w.pins.length>0); }
 function restoreWorkout(k){
   const mod = state.modules.lift;
@@ -9281,7 +9294,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,explicaPersonalizado,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
