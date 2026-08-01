@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.37 =====
-const APP_VERSION = 'v12.37';
+// ===== MetaTreino v12.38 =====
+const APP_VERSION = 'v12.38';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2192,6 +2192,7 @@ function treinouHoje(mod){ return entriesHoje(mod).length>0; }
 function renderHome(){
   if(!state || !state.user){ try{ showScreen('scr-auth'); }catch(e){} return; }   // logout no meio de um render
   try{ ensureStateShape(); }catch(e){}
+  try{ if(state.ui && state.ui.mesFechado && !state.ui.mesFechado.visto) setTimeout(showMesFechado, 900); }catch(e){}
   renderModToggle();
   const mod = state.modules[state.active];
   if(!mod){ showPickScreen(); return; }
@@ -2442,7 +2443,12 @@ function renderHome(){
       if(_icA){ _icA.style.display=''; _icA.textContent='🦵'; }   // sem isto herdava o 🎉 do card padrão
       const t1=ac.querySelector('.card-title'), s1=ac.querySelector('.card-sub');
       if(t1) t1.textContent='Pernas ainda em recuperação';
-      if(s1) s1.textContent='Você treinou pernas forte há pouco. Se sentir peso na passada, faça hoje em ritmo leve ou troque por uma caminhada — a corrida rende mais com as pernas descansadas.';
+      // O texto muda se HÁ corrida hoje ou não — antes dizia "faça hoje em ritmo leve"
+      // até em dia de descanso, o que não fazia sentido.
+      const temHoje = !!(mod && mod.plan && (mod.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx()));
+      if(s1) s1.textContent = temHoje
+        ? 'Você treinou pernas forte há pouco. Se sentir peso na passada, faça a corrida de hoje em ritmo leve ou troque por uma caminhada — ela rende mais com as pernas descansadas.'
+        : 'Você treinou pernas forte há pouco e hoje é dia de descanso — perfeito pra recuperar. Na próxima corrida, se sentir peso na passada, comece mais leve.';
     }
   }catch(e){}
   // aviso de dor: corrida com dor em perna/joelho/tornozelo → sugerir caminhada ou bike
@@ -4043,6 +4049,42 @@ function visibleChallenges(){
   return MONTH_CHALLENGES.filter(c=>c.cat==='geral' || (c.cat==='lift'&&temLift) || (c.cat==='run'&&temRun));
 }
 // garante o objeto do mês; ao virar o mês, arquiva as medalhas e zera
+// Mostrado UMA vez, quando o aluno abre o app depois da virada do mês.
+// Só aparece se ele realmente conquistou algo — sem conquista, sem janela.
+function showMesFechado(){
+  try{
+    const mf = state.ui && state.ui.mesFechado;
+    if(!mf || mf.visto || !mf.ids || !mf.ids.length) return false;
+    const lista = mf.ids.map(id=>MONTH_CHALLENGES.find(c=>c.id===id)).filter(Boolean);
+    if(!lista.length){ mf.visto = true; saveData(); return false; }
+    const nome = monthName(mf.key);
+    $('modal-inner').innerHTML = `
+      <div style="text-align:center">
+        <div style="font-size:46px;line-height:1">🎖️</div>
+        <h3 style="margin:10px 0 2px">${nome} fechou!</h3>
+        <div style="font-size:13px;color:var(--text-dim)">Você conquistou <b>${lista.length}</b> ${lista.length===1?'desafio':'desafios'} — ${lista.length===1?'ela virou medalha permanente':'elas viraram medalhas permanentes'}.</div>
+      </div>
+      <div class="note note-warn" style="margin-top:14px">
+        ${lista.map(c=>`<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px dashed var(--border)">
+          <div style="font-size:22px">${c.emo||'🏅'}</div>
+          <div style="flex:1"><div style="font-weight:800;font-size:13.5px">${c.nome}</div>
+          <div style="font-size:12px;color:var(--text-dim)">${c.desc||''}</div></div>
+        </div>`).join('')}
+      </div>
+      <div style="text-align:center;font-size:12.5px;color:var(--text-mute);margin-top:12px;line-height:1.5">
+        Os desafios de <b>${monthName(monthKey())}</b> já começaram. Bora buscar mais? 💪
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="fecharMesFechado()">Ver os novos desafios</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="fecharMesFechado(true)">Agora não</button>`;
+    $('modal-back').classList.add('on');
+    mf.visto = true; saveData();
+    return true;
+  }catch(e){ return false; }
+}
+function fecharMesFechado(soFechar){
+  closeModal();
+  if(!soFechar){ try{ openMonthly(); }catch(e){} }
+}
 function ensureMonthly(){
   const k = monthKey();
   state.medals = state.medals || [];
@@ -4056,6 +4098,14 @@ function ensureMonthly(){
         }
       });
     }
+    // guarda o resumo do mês que fechou, pra mostrar UMA vez quando o aluno abrir o app
+    try{
+      const feitos = (state.monthly && (state.monthly.done||[]).length) ? state.monthly.done.slice() : [];
+      if(state.monthly && feitos.length){
+        state.ui = state.ui || {};
+        state.ui.mesFechado = { key: state.monthly.key, ids: feitos, visto: false };
+      }
+    }catch(e){}
     state.monthly = { key:k, done:[], doneAt:{} };
   }
   state.monthly.doneAt = state.monthly.doneAt || {};
@@ -6541,7 +6591,10 @@ function maNudge(){
     if(prox && total>0 && (prox-total)<=2) return {text:`🎯 Falta ${prox-total===1?'1 treino':(prox-total)+' treinos'} pro seu ${prox}º! Quer ver?`, tone:'important'};
     if(streak>=7) return {text:`🔥 ${streak} dias seguidos — sua melhor fase! Dá uma olhada no ritmo.`, tone:'important'};
     // 🟢 VERDE — curiosidade/insight (em férias não puxa, pra não parecer cobrança)
-    if(!vac && typeof fatigueInsight==='function' && fatigueInsight() && total>=4) return {text:`🧠 Dei uma olhada na sua recuperação — tenho uma dica pra hoje.`, tone:'curio'};
+    // Dica de "pegar leve hoje" só faz sentido se existir treino hoje.
+    const temTreinoHoje = (()=>{ try{ const m=state.modules[state.active];
+      return !!(m && m.plan && (m.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx())); }catch(e){ return false; } })();
+    if(!vac && temTreinoHoje && typeof fatigueInsight==='function' && fatigueInsight() && total>=4) return {text:`🧠 Dei uma olhada na sua recuperação — tenho uma dica pra hoje.`, tone:'curio'};
     if(!vac && total>=6 && streak>=2) return {text:`💡 Descobri um padrão nos seus treinos. Posso te mostrar?`, tone:'curio'};
     return null;
   }catch(e){ return null; }
@@ -9340,7 +9393,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
