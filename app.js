@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.35 =====
-const APP_VERSION = 'v12.35';
+// ===== MetaTreino v12.36 =====
+const APP_VERSION = 'v12.36';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -4132,7 +4132,7 @@ function renderMonthlyCard(){
   const restam = daysLeftInMonth();
   card.classList.remove('hidden');
   const _ev = (typeof seasonalEvent==='function') ? seasonalEvent() : null;
-  $('monthly-title').textContent = `🎖️ Desafios de ${monthName(state.monthly.key)}` + (_ev ? ` · ${_ev.emo} ${_ev.nome}` : '');
+  $('monthly-title').textContent = `Desafios de ${monthName(state.monthly.key)}` + (_ev ? ` · ${_ev.emo} ${_ev.nome}` : '');
   $('monthly-sub').textContent = `${feitos} de ${lista.length} concluídos · ${restam===0?'último dia!':`${restam} ${restam===1?'dia restante':'dias restantes'}`}`;
   // mostra os 3 mais próximos de fechar (ainda não concluídos)
   const pendentes = lista.filter(c=>!state.monthly.done.includes(c.id))
