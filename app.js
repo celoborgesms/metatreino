@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.34 =====
-const APP_VERSION = 'v12.34';
+// ===== MetaTreino v12.35 =====
+const APP_VERSION = 'v12.35';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2864,7 +2864,8 @@ function renderSessionDetail(w){
   const html = `
     <div class="detail-hero">
       <h2>${isLift?`Treino ${w.k} — ${w.name}`:w.name}</h2>
-      <div style="margin-top:8px"><span class="plan-badge">${isLift?'Foco':'Fácil'}</span>${isLift && isCustomized(w) ? `<span class="plan-badge" onclick="explicaPersonalizado(${w.pins.length})" style="margin-left:6px;background:var(--tint-prep);color:var(--prep);border-color:var(--line-prep);cursor:pointer">✨ Personalizado ⓘ</span>` : ''}</div>
+      <div style="margin-top:8px"><span class="plan-badge">${isLift?'Foco':'Fácil'}</span></div>
+      ${sessTags(w, isLift)}
       <div class="today-desc" style="margin-top:14px">${isLift?liftDesc(w):runDesc(w)}</div>
       <div class="info-grid">
         <div class="info-cell"><div class="info-cell-icon">⏱️</div><div class="info-cell-lbl">DURAÇÃO</div><div class="info-cell-val mono">${w.duration} min</div></div>
@@ -2872,9 +2873,7 @@ function renderSessionDetail(w){
         <div class="info-cell"><div class="info-cell-icon">📅</div><div class="info-cell-lbl">DIA</div><div class="info-cell-val">${w.dayName}</div></div>
       </div>
     </div>
-    ${w.adapted ? `<div class="card card-alert card-row hl-info" style=";background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado hoje</div><div class="card-sub">${w.adaptNote||''} ${w.originalParts&&w.originalParts.join()!==w.parts.join()?`O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje focamos em <b>${w.parts.join(' + ')}</b>.`:''} Respeite seus limites e pare se sentir dor.</div></div></div>` : ''}
     ${(((state.modules.lift||{}).history||[]).length + ((state.modules.run||{}).history||[]).length) >= 8 ? '' : `<div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. frequência cardíaca entre 60-70% do máximo (220 menos sua idade).'}</div></div></div>`}
-    ${typeof mobilidadeCard==='function' ? mobilidadeCard(w) : ''}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
     ${isSkippedToday(w)
@@ -8990,6 +8989,53 @@ function deleteHistoryEntry(idx){
 }
 
 // ---------- SWAP EXERCISE ----------
+// Uma linha de etiquetas no lugar de 3 cards. Quem quer o detalhe, toca.
+function sessTags(w, isLift){
+  const tags = [];
+  if(isLift && isCustomized(w))
+    tags.push(`<span class="sess-tag sess-tag-prep" onclick="explicaPersonalizado(${w.pins.length})">✨ Personalizado ⓘ</span>`);
+  if(w && w.adapted)
+    tags.push(`<span class="sess-tag sess-tag-warn" onclick="explicaAdaptado()">🩹 Treino adaptado ⓘ</span>`);
+  try{
+    const r = (typeof rotinaAtual==='function') ? rotinaAtual() : null;
+    if(isLift && r && ROTINAS[r] && mobilidadeDoDia(w).length)
+      tags.push(`<span class="sess-tag sess-tag-prep" onclick="explicaRotina()">${ROTINAS[r].emo} Preparação ⓘ</span>`);
+  }catch(e){}
+  return tags.length ? `<div class="sess-tags">${tags.join('')}</div>` : '';
+}
+function explicaAdaptado(){
+  const mod = state.modules[state.active];
+  const w = (mod && mod.plan && typeof currentSelectedWorkout==='function') ? currentSelectedWorkout(mod) : null;
+  const nota = (w && w.adaptNote) || 'Seu treino de hoje foi ajustado.';
+  const orig = (w && w.originalParts && w.parts && w.originalParts.join()!==w.parts.join())
+    ? `<div class="note-line" style="margin-top:6px">O treino original era <b>${w.originalParts.join(' + ')}</b> — hoje ficou <b>${w.parts.join(' + ')}</b>.</div>` : '';
+  $('modal-inner').innerHTML = `<div style="text-align:center"><div style="font-size:40px">🩹</div>
+      <h3 style="margin:10px 0 4px">Treino adaptado hoje</h3></div>
+    <div class="note note-warn" style="margin-top:12px">
+      <div class="note-line">${nota}</div>${orig}
+      <div class="note-line" style="margin-top:6px">Respeite seus limites e pare se sentir dor.</div>
+    </div>
+    <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="closeModal()">Entendi</button>`;
+  $('modal-back').classList.add('on');
+}
+function explicaRotina(){
+  const r = rotinaAtual(); const mod2 = state.modules[state.active];
+  const w = (mod2 && mod2.plan) ? currentSelectedWorkout(mod2) : null;
+  const itens = mobilidadeDoDia(w);
+  if(!r || !ROTINAS[r] || !itens.length){ closeModal(); return; }
+  $('modal-inner').innerHTML = `<div style="text-align:center"><div style="font-size:40px">${ROTINAS[r].emo}</div>
+      <h3 style="margin:10px 0 2px">Antes de começar — 2 a 3 min</h3>
+      <div style="font-size:12px;color:var(--text-mute)">${ROTINAS[r].porque}</div></div>
+    <div class="note note-prep" style="margin-top:12px">
+      ${itens.map(i=>`<div style="padding:9px 0;border-top:1px dashed var(--border)">
+        <div style="font-size:13.5px;font-weight:700">${i.emo} ${i.nome} <span style="color:var(--text-mute);font-weight:600;font-size:12px">· ${i.tempo}</span></div>
+        <div class="note-line" style="margin-top:3px">${mobTexto(i)}</div>
+      </div>`).join('')}
+      <div class="note-foot">Opcional — sem tempo? Treinar já é ótimo.</div>
+    </div>
+    <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
 function explicaPersonalizado(n){
   const q = n||0;
   $('modal-inner').innerHTML = `<div style="text-align:center"><div style="font-size:40px">✨</div>
@@ -9294,7 +9340,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,explicaPersonalizado,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
