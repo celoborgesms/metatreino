@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.38 =====
-const APP_VERSION = 'v12.38';
+// ===== MetaTreino v12.39 =====
+const APP_VERSION = 'v12.39';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2771,7 +2771,6 @@ const MOB = {
   punho:{ emo:'🤲', nome:'Soltar o antebraço', tempo:'30s de cada lado', variantes:{
     todos:'Estique um braço à frente com a palma para cima. Com a outra mão, <b>puxe os dedos para baixo</b> até sentir esticar o antebraço. Depois vire a palma para baixo e puxe os dedos para cima.' } }
 };
-function mobObj(k){ return MOB[k]; }
 // texto certo pro equipamento do aluno (na academia ninguém usa batente de porta)
 function mobTexto(item){
   const eq = ((state.modules.lift||{}).setup||{}).equip || 'casa';
@@ -2802,7 +2801,6 @@ function rotinaAtual(){
   if(p.sentado === true) return 'sentado';   // compatível com a versão anterior
   return null;
 }
-function trabalhaSentado(){ const r=rotinaAtual(); return r==='sentado' || r==='dirigindo'; }
 function mobilidadeDoDia(w){
   const r = rotinaAtual(); if(!r || !ROTINAS[r] || !w) return [];
   // Só na musculação: o treino de corrida já tem bloco de Aquecimento
@@ -2827,31 +2825,6 @@ function mobRecolhido(){ try{ return localStorage.getItem('mt_mob_recolhido') !=
 function toggleMobCard(){
   try{ localStorage.setItem('mt_mob_recolhido', mobRecolhido() ? '0' : '1'); }catch(e){}   // aberto fica aberto até fechar de novo
   if(state.ui && state.ui.tab) goTab(state.ui.tab);
-}
-function mobilidadeCard(w){
-  const itens = mobilidadeDoDia(w);
-  const r = rotinaAtual();
-  if(!itens.length || !r) return '';
-  const fechado = mobRecolhido();
-  // Recolhido: vira uma linha só. Quem já decorou não precisa ler tudo de novo toda sessão.
-  if(fechado) return `<div class="note note-prep note-row" onclick="toggleMobCard()" style="margin-bottom:18px">
-      <div style="font-size:19px">${ROTINAS[r].emo}</div>
-      <div style="flex:1"><b style="color:#c4b5fd">Preparação de 2-3 min</b> <span style="color:var(--text-mute)">· ${itens.map(i=>i.nome).join(', ')}</span></div>
-      <div style="color:#c4b5fd;font-size:18px">▾</div>
-    </div>`;
-  return `<div class="note note-prep" style="margin-bottom:18px">
-    <div class="note-row" onclick="toggleMobCard()" style="margin-bottom:8px">
-      <div style="font-size:20px">${ROTINAS[r].emo}</div>
-      <div style="flex:1"><div class="note-title" style="margin:0">Antes de começar — 2 a 3 min</div>
-      <div style="font-size:11.5px;color:var(--text-mute)">Pro treino de hoje e pra sua rotina</div></div>
-      <div style="color:#c4b5fd;font-size:18px">▴</div>
-    </div>
-    ${itens.map(i=>`<div style="padding:9px 0;border-top:1px dashed var(--border)">
-      <div style="font-size:13.5px;font-weight:700">${i.emo} ${i.nome} <span style="color:var(--text-mute);font-weight:600;font-size:12px">· ${i.tempo}</span></div>
-      <div class="note-line" style="margin-top:3px">${mobTexto(i)}</div>
-    </div>`).join('')}
-    <div class="note-foot">Opcional — sem tempo? Treinar já é ótimo. Toque em ▴ pra recolher.</div>
-  </div>`;
 }
 function setRotina(r){
   state.user.profile = state.user.profile || {};
