@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.39 =====
-const APP_VERSION = 'v12.39';
+// ===== MetaTreino v12.40 =====
+const APP_VERSION = 'v12.40';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -556,6 +556,41 @@ function doRestart(){
     }catch(e){ fim(); }
   }, {title:'Começar do zero?', emo:'🔄', okLabel:'Sim, apagar progresso', danger:true});
 }
+// O Firebase exige login recente pra excluir a conta. Quando exige, pedimos
+// a senha (ou o popup do Google) e concluímos — senão a conta ficaria de pé.
+function pedeReautenticarParaExcluir(u){
+  try{
+    const google = !!(u.providerData||[]).some(p=>p.providerId==='google.com');
+    if(google){
+      const prov = new firebase.auth.GoogleAuthProvider();
+      u.reauthenticateWithPopup(prov)
+        .then(()=>u.delete())
+        .then(()=>toast('Conta excluída por completo.'))
+        .catch(e=>{ console.log('Reautenticação falhou:', e); toast('⚠️ Seus dados foram apagados, mas o login ainda existe. Entre de novo e exclua para concluir.'); });
+      return;
+    }
+    $('modal-inner').innerHTML = `<h3>🔐 Confirme sua senha</h3>
+      <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Por segurança, o sistema pede sua senha pra concluir a exclusão da conta.</p>
+      <div class="field" style="margin-top:12px"><label>Senha</label><input class="input" type="password" id="del-pass" autocomplete="current-password"></div>
+      <div id="del-err"></div>
+      <button class="btn btn-primary btn-block hl-danger" style="margin-top:10px" onclick="confirmaExclusaoFinal()">Excluir minha conta</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+    $('modal-back').classList.add('on');
+    window.__delUser = u;
+  }catch(e){ console.log('Erro na reautenticação:', e); }
+}
+function confirmaExclusaoFinal(){
+  const u = window.__delUser; const g=(id)=>document.getElementById(id);
+  const pass = (g('del-pass')||{}).value || '';
+  const err = g('del-err');
+  if(!u){ closeModal(); return; }
+  if(!pass){ if(err) err.innerHTML='<div class="err">Digite sua senha.</div>'; return; }
+  const cred = firebase.auth.EmailAuthProvider.credential(u.email, pass);
+  u.reauthenticateWithCredential(cred)
+    .then(()=>u.delete())
+    .then(()=>{ window.__delUser=null; closeModal(); toast('Conta excluída por completo.'); })
+    .catch(e=>{ console.log('Erro ao concluir exclusão:', e); if(err) err.innerHTML='<div class="err">'+authMsgErro(e && e.code)+'</div>'; });
+}
 function doDeleteAccount(){
   if(!state.user || !fbUser) return;
   const email = fbUser.email;
@@ -566,8 +601,17 @@ function doDeleteAccount(){
   }
   appConfirm('Todo o seu progresso será apagado para sempre e você sairá da conta.', ()=>{
     const uid = fbUser.uid;
+    const _u = fbUser;
     db.collection('usuarios').doc(uid).delete().catch(e=>console.log('Erro ao excluir na nuvem:', e));
     try{ localStorage.removeItem(localCacheKey(uid)); }catch(e){}
+    // Antes só saíamos da conta: o login continuava valendo e a pessoa "voltava"
+    // com os dados zerados. Agora a conta em si é removida do Firebase Auth.
+    try{
+      _u.delete().catch(e=>{
+        if(e && e.code === 'auth/requires-recent-login') pedeReautenticarParaExcluir(_u);
+        else console.log('Erro ao excluir a conta:', e);
+      });
+    }catch(e){ console.log('Erro ao excluir a conta:', e); }
     fbAuth.signOut().catch(()=>{});
     fbUser = null;
     state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
@@ -5521,9 +5565,9 @@ function maDetectContext(t){
   else if(/(dormi mal|n[ãa]o dormi|noite mal dormida|mal dormi|virei a noite|ins[ôo]nia)/.test(t)){ maCtxSet('sono', 4, 14); anotou.push('Anotei que você <b>dormiu mal</b> — considero isso nas orientações de hoje.'); }
   m = t.match(/(?:s[óo]\s*)?tenho\s*(\d{1,3})\s*min/);
   if(m){ const min=+m[1]; if(min>=5&&min<=240){ maCtxSet('tempo', min, 8); anotou.push(`Anotei: <b>${min} minutos</b> disponíveis hoje.`); } }
-  else if(/(pouco tempo|estou sem tempo|t[ôo] sem tempo)/.test(t)){ maCtxSet('tempo', 30, 8); anotou.push('Anotei que hoje o <b>tempo é curto</b>.'); }
+  else if(/(pouco tempo|estou sem tempo|t[ôo] sem tempo)/.test(t)){ maCtxSet('tempo', 30, 8); anotou.push('Anotei que hoje o <b>tempo é curto</b> — nesse caso, faça os primeiros exercícios do treino (são os principais) e encerre sem culpa.'); }
   if(/(desanimad|sem vontade|sem motiva|desmotivad|pregui[çc]a)/.test(t)){ maCtxSet('animo', 'baixo', 10); }
-  if(/(n[ãa]o almocei|n[ãa]o comi|n[ãa]o jantei|est[ôo]mago vazio|em jejum)/.test(t)){ maCtxSet('comeu', false, 6); anotou.push('Anotei que você <b>ainda não comeu</b>.'); }
+  if(/(n[ãa]o almocei|n[ãa]o comi|n[ãa]o jantei|est[ôo]mago vazio|em jejum)/.test(t)){ maCtxSet('comeu', false, 6); anotou.push('Anotei que você <b>ainda não comeu</b> — se for treinar agora, prefira algo leve antes (fruta, pão) e espere um treino mais curto render melhor que um longo.'); }
   if(/(academia (?:est[áa] )?(?:lotada|cheia)|muita gente na academia)/.test(t)){ maCtxSet('lotada', true, 6); anotou.push('Anotei que a <b>academia está cheia</b> — considero isso nas trocas de exercício.'); }
   if(/(vou viajar|estou viajando)/.test(t)){ maCtxSet('viagem', true, 72); }
   if(/(ventou|muito vento|vento forte)/.test(t)){ maCtxSet('vento', true, 10); }
@@ -6856,7 +6900,9 @@ function maAskText(){
     if(key && MA_SOCIAL[key]) answer = MA_SOCIAL[key]();
     else if(key && MA_ANSWERS[key]) answer = MA_ANSWERS[key]();
     else if(_smallTalk) answer = _smallTalk;
-    else if(_anotacoes.length) answer = _anotacoes.join('<br>') + '<br><br>Quer que eu ajuste alguma coisa por causa disso? É só falar. 😊';
+    // Antes terminava com "Quer que eu ajuste alguma coisa?", pergunta que não
+    // levava a lugar nenhum. Agora cada anotação já vem com a orientação prática.
+    else if(_anotacoes.length) answer = _anotacoes.join('<br><br>') + '<br><br>Vou levar isso em conta no que eu te sugerir hoje. 😊';
     else {
       // não sabe responder: registra de verdade pra virar melhoria futura
       try{ logUnknownQuestion(txt); }catch(e){}
@@ -9366,7 +9412,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
