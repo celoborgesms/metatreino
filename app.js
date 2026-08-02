@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.43 =====
-const APP_VERSION = 'v12.43';
+// ===== MetaTreino v12.44 =====
+const APP_VERSION = 'v12.44';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -8244,9 +8244,14 @@ function applyHeroCapa(){
     if(!usar) return;
     const bg = $('home-hero-bg'); if(bg) bg.style.backgroundImage = `url('${foto}')`;
     // reaproveita os textos que a Home já calculou
-    const hi = $('home-hi'), sub = $('home-goal');   // o clima já vem dentro de home-goal
+    const hi = $('home-hi'), sub = $('home-goal');
     if(hi && $('hero-hi')) $('hero-hi').innerHTML = hi.innerHTML;
-    if(sub && $('hero-sub')) $('hero-sub').innerHTML = sub.innerHTML;
+    // Sobre a imagem entra SÓ a primeira linha (sem o clima) — menos texto
+    // cobrindo a foto. O clima continua completo pra quem não usa capa.
+    if(sub && $('hero-sub')){
+      const primeira = String(sub.innerHTML).split('<br>')[0];
+      $('hero-sub').innerHTML = primeira;
+    }
   }catch(e){ console.log('Erro na capa:', e); }
 }
 function applyMuralLogo(){
