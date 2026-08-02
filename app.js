@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.50 =====
-const APP_VERSION = 'v12.50';
+// ===== MetaTreino v12.51 =====
+const APP_VERSION = 'v12.51';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -7800,16 +7800,6 @@ function shareWeekSummary(){
   shareCanvas(c, 'metatreino-semana.png', 'Minha semana no MetaTreino 💪');
 }
 // Modo Foto: a FOTO da pessoa é o fundo; as infos entram discretas por cima
-// desenha retângulo arredondado (nem todo navegador tem roundRect)
-function _rrect(x, px, py, w, h, r){
-  x.beginPath();
-  x.moveTo(px+r, py);
-  x.arcTo(px+w, py,   px+w, py+h, r);
-  x.arcTo(px+w, py+h, px,   py+h, r);
-  x.arcTo(px,   py+h, px,   py,   r);
-  x.arcTo(px,   py,   px+w, py,   r);
-  x.closePath();
-}
 function buildPhotoShareCanvas(img, opts){
   const W=1080, H=1350;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
@@ -7820,74 +7810,64 @@ function buildPhotoShareCanvas(img, opts){
   if(ir>cr){ sh=img.height; sw=sh*cr; sx=(img.width-sw)/2; sy=0; }
   else { sw=img.width; sh=sw/cr; sx=0; sy=(img.height-sh)/2; }
   x.drawImage(img, sx,sy,sw,sh, 0,0,W,H);
-  // gradientes só onde tem texto (topo e base)
-  let g=x.createLinearGradient(0,0,0,320); g.addColorStop(0,'rgba(0,0,0,.60)'); g.addColorStop(1,'rgba(0,0,0,0)');
-  x.fillStyle=g; x.fillRect(0,0,W,320);
-  g=x.createLinearGradient(0,H-620,0,H); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.42,'rgba(0,0,0,.58)'); g.addColorStop(1,'rgba(0,0,0,.92)');
-  x.fillStyle=g; x.fillRect(0,H-620,W,620);
-
-  // ---- topo: marca + data ----
+  // gradientes suaves só onde tem texto (topo e base)
+  let g=x.createLinearGradient(0,0,0,300); g.addColorStop(0,'rgba(0,0,0,.55)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g; x.fillRect(0,0,W,300);
+  g=x.createLinearGradient(0,H-560,0,H); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.45,'rgba(0,0,0,.55)'); g.addColorStop(1,'rgba(0,0,0,.88)');
+  x.fillStyle=g; x.fillRect(0,H-560,W,560);
+  // Sombra suave em vez de caixas: garante leitura sobre foto clara
+  // sem poluir o visual. Números soltos ficam mais elegantes.
+  const comSombra = (fn)=>{
+    x.save();
+    x.shadowColor='rgba(0,0,0,.85)'; x.shadowBlur=18; x.shadowOffsetY=2;
+    fn();
+    x.restore();
+  };
+  // marca pequena no topo
   x.textAlign='left';
-  x.fillStyle='#10b981'; x.font='900 42px Arial, sans-serif'; x.fillText('Meta',60,104);
-  x.fillStyle='#ffffff'; x.fillText('Treino',60+x.measureText('Meta').width+4,104);
-  const d = new Date();
-  const dataTxt = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
-  x.font='800 26px Arial, sans-serif';
-  const dw = x.measureText(dataTxt).width + 44;
-  x.fillStyle='rgba(255,255,255,.16)'; _rrect(x, W-60-dw, 66, dw, 52, 26); x.fill();
-  x.fillStyle='rgba(255,255,255,.92)'; x.textAlign='center';
-  x.fillText(dataTxt, W-60-dw/2, 101);
-
-  // ---- selo de sequência (se houver) ----
-  try{
-    const seq = (typeof calcStreak==='function') ? calcStreak(((state.modules[state.active]||{}).history)||[]) : 0;
-    if(seq >= 2){
-      const t = '🔥 ' + seq + ' dias seguidos';
-      x.textAlign='left'; x.font='800 27px Arial, sans-serif';
-      const tw = x.measureText(t).width + 46;
-      x.fillStyle='rgba(16,185,129,.24)'; _rrect(x, 60, H-556, tw, 58, 29); x.fill();
-      x.strokeStyle='rgba(52,211,153,.55)'; x.lineWidth=2; _rrect(x, 60, H-556, tw, 58, 29); x.stroke();
-      x.fillStyle='#a7f3d0'; x.fillText(t, 83, H-518);
+  comSombra(()=>{
+    x.fillStyle='#10b981'; x.font='900 40px Arial, sans-serif'; x.fillText('Meta',60,100);
+    x.fillStyle='#ffffff'; x.fillText('Treino',60+x.measureText('Meta').width+4,100);
+  });
+  // título com barra de destaque
+  comSombra(()=>{
+    x.fillStyle='#10b981'; x.fillRect(60, H-406, 7, 96);
+    x.fillStyle='#ffffff'; x.font='900 60px Arial, sans-serif';
+    x.fillText(cutTxt(x, opts.title||'Treino concluído 💪', 900), 86, H-348);
+    if(opts.subtitle){
+      x.fillStyle='#a7f3d0'; x.font='800 33px Arial, sans-serif';
+      x.fillText(cutTxt(x, opts.subtitle, 900), 86, H-300);
     }
-  }catch(e){}
-
-  // ---- título com barra de destaque ----
-  x.textAlign='left';
-  x.fillStyle='#10b981'; _rrect(x, 60, H-448, 8, 108, 4); x.fill();
-  x.fillStyle='#ffffff'; x.font='900 62px Arial, sans-serif';
-  x.fillText(cutTxt(x, opts.title||'Treino concluído 💪', 900), 88, H-386);
-  if(opts.subtitle){
-    x.fillStyle='#a7f3d0'; x.font='800 33px Arial, sans-serif';
-    x.fillText(cutTxt(x, opts.subtitle, 900), 88, H-336);
-  }
-
-  // ---- stats em pílulas (legíveis sobre qualquer foto) ----
+  });
+  // stats: números soltos, mas em COLUNAS IGUAIS (antes o espaçamento variava
+  // com o tamanho do texto e desalinhava tudo)
   const st=(opts.stats||[]).slice(0,3);
   if(st.length){
-    const gap=18, disp=W-120-gap*(st.length-1), pw=disp/st.length, py=H-286, ph=118;
-    st.forEach((item,i)=>{
-      const px=60+i*(pw+gap);
-      x.fillStyle='rgba(255,255,255,.13)'; _rrect(x, px, py, pw, ph, 22); x.fill();
-      x.strokeStyle='rgba(255,255,255,.20)'; x.lineWidth=2; _rrect(x, px, py, pw, ph, 22); x.stroke();
-      x.textAlign='center';
-      x.fillStyle='rgba(255,255,255,.62)'; x.font='800 22px Arial, sans-serif';
-      x.fillText(cutTxt(x, String(item.rotulo||''), pw-24), px+pw/2, py+38);
-      x.fillStyle='#ffffff'; x.font='900 46px Arial, sans-serif';
-      x.fillText(cutTxt(x, String(item.valor||''), pw-20), px+pw/2, py+92);
+    const col=(W-120)/st.length;
+    comSombra(()=>{
+      st.forEach((item,i)=>{
+        const bx = 60 + i*col;
+        x.textAlign='left';
+        x.fillStyle='rgba(255,255,255,.62)'; x.font='800 23px Arial, sans-serif';
+        x.fillText(cutTxt(x, String(item.rotulo||''), col-20), bx, H-222);
+        x.fillStyle='#ffffff'; x.font='900 46px Arial, sans-serif';
+        x.fillText(cutTxt(x, String(item.valor||''), col-16), bx, H-166);
+      });
     });
   }
-
-  // ---- rodapé: grupos + site ----
-  x.textAlign='left';
-  if(opts.linhaDiscreta){
-    x.fillStyle='rgba(255,255,255,.85)'; x.font='700 26px Arial, sans-serif';
-    x.fillText(cutTxt(x, opts.linhaDiscreta, 960), 60, H-124);
-  }
-  x.fillStyle='#34d399'; x.font='800 23px Arial, sans-serif';
-  x.fillText('metatreino.app', 60, H-58);
+  // linha discreta (grupos do treino)
+  comSombra(()=>{
+    if(opts.linhaDiscreta){
+      x.fillStyle='rgba(255,255,255,.85)'; x.font='700 26px Arial, sans-serif';
+      x.fillText(cutTxt(x, opts.linhaDiscreta, 960), 60, H-106);
+    }
+    x.fillStyle='#34d399'; x.font='800 23px Arial, sans-serif';
+    x.fillText('metatreino.app', 60, H-56);
+  });
   return c;
 }
 let _lastPhotoOpts = null;
+let _fotoUsada = false;   // muda o texto da faixa: usar × trocar
 function pickSharePhoto(){ const i=document.getElementById('share-photo-input'); if(i) i.click(); }
 function onSharePhotoPicked(ev){
   const f = ev.target.files && ev.target.files[0]; if(!f || !_lastPhotoOpts) return;
@@ -7895,6 +7875,7 @@ function onSharePhotoPicked(ev){
   r.onload = ()=>{
     const img = new Image();
     img.onload = ()=>{
+      _fotoUsada = true;   // a faixa passa a dizer "trocar a foto"
       const c = _lastPhotoOpts.semana
         ? buildWeekCanvas(img, _lastPhotoOpts.semana)
         : buildPhotoShareCanvas(img, _lastPhotoOpts);
@@ -7924,15 +7905,25 @@ async function shareCanvas(canvas, filename, shareText){
     if(!blob){ toast('⚠️ Não foi possível gerar a imagem'); return; }
     _lastShareBlob = blob; _lastShareName = filename;
     // mostra um modal com as duas opções: compartilhar OU salvar no celular
+    // A foto de fundo era o 3º botão da fila — o recurso mais legal ficava escondido.
+    // Agora ela é uma faixa em destaque logo abaixo da prévia.
     $('modal-inner').innerHTML = `
       <h3>📤 Compartilhar</h3>
-      <p style="color:var(--text-dim);font-size:13px;line-height:1.5">A imagem está pronta! Escolha como quer usá-la. Se for postar no Instagram Stories, <b>salvar no celular</b> e postar pela galeria costuma dar o melhor resultado.</p>
-      <img src="${URL.createObjectURL(blob)}" style="width:100%;border-radius:var(--radius-note);margin:12px 0;border:1px solid var(--border)">
-      <button class="btn btn-primary btn-block" onclick="doShareNow('${shareText.replace(/'/g,"\\'")}')">📲 Compartilhar agora</button>
-      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="doSaveToDevice()">💾 Salvar no celular</button>
-      ${_lastPhotoOpts?`<button class="btn btn-outline btn-block" class="hl-primary" style="margin-top:8px" onclick="pickSharePhoto()">📷 Usar minha foto de fundo</button>
+      <img src="${URL.createObjectURL(blob)}" style="width:100%;border-radius:var(--radius-note);margin:10px 0 12px;border:1px solid var(--border)">
+      ${_lastPhotoOpts?`
+      <div class="note note-prep" onclick="pickSharePhoto()" style="cursor:pointer;margin-top:0;display:flex;gap:11px;align-items:center">
+        <div style="font-size:26px">📷</div>
+        <div style="flex:1"><div style="font-weight:800;font-size:13.5px;color:var(--prep-soft)">${_fotoUsada?'Trocar a foto de fundo':'Usar uma foto sua de fundo'}</div>
+        <div style="font-size:11.5px;color:var(--text-mute);line-height:1.4">${_fotoUsada?'Escolher outra imagem da galeria':'Fica bem mais bonito com sua própria foto do treino'}</div></div>
+        <div style="color:var(--prep-soft);font-size:18px">›</div>
+      </div>
       <input type="file" id="share-photo-input" accept="image/*" style="display:none" onchange="onSharePhotoPicked(event)">`:''}
-      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="doShareNow('${shareText.replace(/'/g,"\\'")}')">📲 Compartilhar agora</button>
+      <div class="row" style="gap:8px;margin-top:8px">
+        <button class="btn btn-ghost" style="flex:1;font-size:13px" onclick="doSaveToDevice()">💾 Salvar</button>
+        <button class="btn btn-ghost" style="flex:1;font-size:13px" onclick="closeModal()">Fechar</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--text-mute);text-align:center;margin-top:10px;line-height:1.45">Pra postar no Instagram Stories, <b>salve</b> primeiro e escolha da galeria.</div>`;
     $('modal-back').classList.add('on');
   }, 'image/png');
 }
