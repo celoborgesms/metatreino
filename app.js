@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.47 =====
-const APP_VERSION = 'v12.47';
+// ===== MetaTreino v12.49 =====
+const APP_VERSION = 'v12.49';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -1939,6 +1939,40 @@ function toast(msg, ms){
 function getDayIdx(){ const d=new Date().getDay(); return d===0?7:d; }
 // Detecta treinos do plano que estavam marcados pra dias ANTERIORES desta semana
 // e não foram registrados — pra sugerir "recuperar" sem quebrar a grade fixa de dias.
+// Lista os treinos que ficaram para trás, em ordem. Quem quiser fazer, escolhe —
+// e é avisado se já treinou hoje (dobrar treino no mesmo dia atrapalha mais que ajuda).
+function listaPendentes(pend){
+  const DIAS = ['','segunda','terça','quarta','quinta','sexta','sábado','domingo'];
+  const jaTreinouHoje = (()=>{ try{
+    const h0=new Date(); h0.setHours(0,0,0,0);
+    return ((((state.modules[state.active]||{}).history)||[]).some(x=>x.at>=h0.getTime()));
+  }catch(e){ return false; } })();
+  $('modal-inner').innerHTML = `
+    <div style="text-align:center"><div style="font-size:38px;line-height:1">📌</div>
+      <h3 style="margin:8px 0 2px">O que ficou para trás</h3>
+      <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5">Nada aqui é obrigatório. Se quiser fazer algum, escolha <b>um</b>.</div>
+    </div>
+    ${jaTreinouHoje ? `<div class="note note-warn" style="margin-top:12px"><div class="note-line">⚠️ Você <b>já treinou hoje</b>. Fazer outro treino em seguida costuma render menos e aumenta o risco de lesão — se puder, deixe pra outro dia.</div></div>` : ''}
+    <div style="margin-top:12px">
+      ${pend.map((w,i)=>`<div class="list-row" onclick="abrirPendente('${String(w.k||w.dayIdx)}',${w.dayIdx})">
+        <span style="width:26px;height:26px;border-radius:50%;background:var(--tint-warn);color:var(--accent-2);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0">${i+1}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13.5px">${(w.name||('Treino '+(w.k||''))).split(' — ')[0]}</div>
+          <div style="font-size:11.5px;color:var(--text-mute)">era ${DIAS[w.dayIdx]||'—'}${w.parts&&w.parts.length?' · '+w.parts.join(' + '):''}</div>
+        </div>
+        <span style="color:var(--text-mute)">›</span>
+      </div>`).join('')}
+    </div>
+    <div class="note note-info" style="margin-top:12px"><div class="note-line">💡 Não precisa fazer nenhum. Seguir o plano a partir de hoje já é o caminho — na próxima semana o ciclo recomeça equilibrado.</div></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function abrirPendente(k, dayIdx){
+  closeModal();
+  if(state.active==='run'){ openRunLog(String(dayIdx)); return; }
+  goTab('sessions');
+  setTimeout(()=>{ try{ selectSession(k); }catch(e){} }, 140);
+}
 function missedWorkoutsThisWeek(mod){
   if(!mod || !mod.plan) return [];
   if(vacationActive()) return []; // em férias não existe treino "perdido"
@@ -2429,8 +2463,7 @@ function renderHome(){
         $('missed-msg').textContent = `Semana cheia, acontece. Esses treinos não se pagam depois — e tudo bem: o que conta é o próximo. ${isLift?'Volte no ritmo normal do plano a partir de agora; na próxima semana o ciclo recomeça equilibrado.':'Retome o plano no próximo treino; a constância nas semanas seguintes é o que constrói o resultado.'} Toque se quiser ver o que ficou.`;
         missed.onclick = (ev)=>{
           if(ev.target && ev.target.id==='missed-dismiss') return;
-          if(state.active==='run'){ openRunLog(String(pend[0].dayIdx)); }
-          else { goTab('sessions'); setTimeout(()=>{ if(pend[0]) selectSession(pend[0].k); }, 120); }
+          listaPendentes(pend);   // 2+: mostra a lista e deixa o aluno escolher
         };
       }
       // botão de dispensar o aviso até a semana seguinte
@@ -2923,6 +2956,7 @@ function liftDoneToday(w){
 }
 function checkLiftDone(w){
   const today = new Date(); today.setHours(0,0,0,0);
+  if(!w || !Array.isArray(w.exercises)) return false;   // plano corrompido não derruba a tela
   return w.exercises.some(ex=>{
     const arr = state.progress[ex.id]||[];
     return arr.some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime() && p.sets && p.sets.length>0; });
@@ -9466,7 +9500,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{applyHeroCapa,processaMuralFoto,doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{applyHeroCapa,processaMuralFoto,doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,listaPendentes,abrirPendente,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
