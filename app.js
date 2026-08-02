@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.49 =====
-const APP_VERSION = 'v12.49';
+// ===== MetaTreino v12.50 =====
+const APP_VERSION = 'v12.50';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -7800,6 +7800,16 @@ function shareWeekSummary(){
   shareCanvas(c, 'metatreino-semana.png', 'Minha semana no MetaTreino 💪');
 }
 // Modo Foto: a FOTO da pessoa é o fundo; as infos entram discretas por cima
+// desenha retângulo arredondado (nem todo navegador tem roundRect)
+function _rrect(x, px, py, w, h, r){
+  x.beginPath();
+  x.moveTo(px+r, py);
+  x.arcTo(px+w, py,   px+w, py+h, r);
+  x.arcTo(px+w, py+h, px,   py+h, r);
+  x.arcTo(px,   py+h, px,   py,   r);
+  x.arcTo(px,   py,   px+w, py,   r);
+  x.closePath();
+}
 function buildPhotoShareCanvas(img, opts){
   const W=1080, H=1350;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
@@ -7810,38 +7820,71 @@ function buildPhotoShareCanvas(img, opts){
   if(ir>cr){ sh=img.height; sw=sh*cr; sx=(img.width-sw)/2; sy=0; }
   else { sw=img.width; sh=sw/cr; sx=0; sy=(img.height-sh)/2; }
   x.drawImage(img, sx,sy,sw,sh, 0,0,W,H);
-  // gradientes suaves só onde tem texto (topo e base)
-  let g=x.createLinearGradient(0,0,0,300); g.addColorStop(0,'rgba(0,0,0,.55)'); g.addColorStop(1,'rgba(0,0,0,0)');
-  x.fillStyle=g; x.fillRect(0,0,W,300);
-  g=x.createLinearGradient(0,H-560,0,H); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.45,'rgba(0,0,0,.55)'); g.addColorStop(1,'rgba(0,0,0,.88)');
-  x.fillStyle=g; x.fillRect(0,H-560,W,560);
-  // marca pequena no topo
+  // gradientes só onde tem texto (topo e base)
+  let g=x.createLinearGradient(0,0,0,320); g.addColorStop(0,'rgba(0,0,0,.60)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g; x.fillRect(0,0,W,320);
+  g=x.createLinearGradient(0,H-620,0,H); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.42,'rgba(0,0,0,.58)'); g.addColorStop(1,'rgba(0,0,0,.92)');
+  x.fillStyle=g; x.fillRect(0,H-620,W,620);
+
+  // ---- topo: marca + data ----
   x.textAlign='left';
-  x.fillStyle='#10b981'; x.font='900 40px Arial, sans-serif'; x.fillText('Meta',60,100);
-  x.fillStyle='#ffffff'; x.fillText('Treino',60+x.measureText('Meta').width+4,100);
-  // bloco inferior discreto
-  x.fillStyle='#ffffff'; x.font='900 60px Arial, sans-serif';
-  x.fillText(cutTxt(x, opts.title||'Treino concluído 💪', 960), 60, H-360);
-  x.fillStyle='#a7f3d0'; x.font='800 33px Arial, sans-serif';
-  x.fillText(cutTxt(x, opts.subtitle||'', 960), 60, H-306);
-  // stats na horizontal (valor grande, rótulo pequeno)
+  x.fillStyle='#10b981'; x.font='900 42px Arial, sans-serif'; x.fillText('Meta',60,104);
+  x.fillStyle='#ffffff'; x.fillText('Treino',60+x.measureText('Meta').width+4,104);
+  const d = new Date();
+  const dataTxt = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  x.font='800 26px Arial, sans-serif';
+  const dw = x.measureText(dataTxt).width + 44;
+  x.fillStyle='rgba(255,255,255,.16)'; _rrect(x, W-60-dw, 66, dw, 52, 26); x.fill();
+  x.fillStyle='rgba(255,255,255,.92)'; x.textAlign='center';
+  x.fillText(dataTxt, W-60-dw/2, 101);
+
+  // ---- selo de sequência (se houver) ----
+  try{
+    const seq = (typeof calcStreak==='function') ? calcStreak(((state.modules[state.active]||{}).history)||[]) : 0;
+    if(seq >= 2){
+      const t = '🔥 ' + seq + ' dias seguidos';
+      x.textAlign='left'; x.font='800 27px Arial, sans-serif';
+      const tw = x.measureText(t).width + 46;
+      x.fillStyle='rgba(16,185,129,.24)'; _rrect(x, 60, H-556, tw, 58, 29); x.fill();
+      x.strokeStyle='rgba(52,211,153,.55)'; x.lineWidth=2; _rrect(x, 60, H-556, tw, 58, 29); x.stroke();
+      x.fillStyle='#a7f3d0'; x.fillText(t, 83, H-518);
+    }
+  }catch(e){}
+
+  // ---- título com barra de destaque ----
+  x.textAlign='left';
+  x.fillStyle='#10b981'; _rrect(x, 60, H-448, 8, 108, 4); x.fill();
+  x.fillStyle='#ffffff'; x.font='900 62px Arial, sans-serif';
+  x.fillText(cutTxt(x, opts.title||'Treino concluído 💪', 900), 88, H-386);
+  if(opts.subtitle){
+    x.fillStyle='#a7f3d0'; x.font='800 33px Arial, sans-serif';
+    x.fillText(cutTxt(x, opts.subtitle, 900), 88, H-336);
+  }
+
+  // ---- stats em pílulas (legíveis sobre qualquer foto) ----
   const st=(opts.stats||[]).slice(0,3);
-  let bx=60;
-  st.forEach(item=>{
-    x.fillStyle='rgba(255,255,255,.65)'; x.font='800 23px Arial, sans-serif';
-    x.fillText(String(item.rotulo||''), bx, H-226);
-    x.fillStyle='#ffffff'; x.font='900 45px Arial, sans-serif';
-    const v=String(item.valor||'');
-    x.fillText(v, bx, H-172);
-    bx += Math.max(x.measureText(v).width, 120) + 70;
-  });
-  // linha discreta (grupos do treino)
+  if(st.length){
+    const gap=18, disp=W-120-gap*(st.length-1), pw=disp/st.length, py=H-286, ph=118;
+    st.forEach((item,i)=>{
+      const px=60+i*(pw+gap);
+      x.fillStyle='rgba(255,255,255,.13)'; _rrect(x, px, py, pw, ph, 22); x.fill();
+      x.strokeStyle='rgba(255,255,255,.20)'; x.lineWidth=2; _rrect(x, px, py, pw, ph, 22); x.stroke();
+      x.textAlign='center';
+      x.fillStyle='rgba(255,255,255,.62)'; x.font='800 22px Arial, sans-serif';
+      x.fillText(cutTxt(x, String(item.rotulo||''), pw-24), px+pw/2, py+38);
+      x.fillStyle='#ffffff'; x.font='900 46px Arial, sans-serif';
+      x.fillText(cutTxt(x, String(item.valor||''), pw-20), px+pw/2, py+92);
+    });
+  }
+
+  // ---- rodapé: grupos + site ----
+  x.textAlign='left';
   if(opts.linhaDiscreta){
     x.fillStyle='rgba(255,255,255,.85)'; x.font='700 26px Arial, sans-serif';
-    x.fillText(cutTxt(x, opts.linhaDiscreta, 960), 60, H-106);
+    x.fillText(cutTxt(x, opts.linhaDiscreta, 960), 60, H-124);
   }
-  x.fillStyle='#34d399'; x.font='700 22px Arial, sans-serif';
-  x.fillText('metatreino.app', 60, H-56);
+  x.fillStyle='#34d399'; x.font='800 23px Arial, sans-serif';
+  x.fillText('metatreino.app', 60, H-58);
   return c;
 }
 let _lastPhotoOpts = null;
