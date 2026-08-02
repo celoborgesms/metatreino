@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.42 =====
-const APP_VERSION = 'v12.42';
+// ===== MetaTreino v12.43 =====
+const APP_VERSION = 'v12.43';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2261,7 +2261,8 @@ function renderHome(){
   const _linha = _ps ? preStartStatusLine(_ps) : homeStatusLine();
   // com plano agendado pra frente, o clima entra só se for útil (não "boa noite pra descansar")
   const _mostraClima = !_ps || _ps.dias <= 3;
-  $('home-goal').innerHTML = _glue(_linha) + ((_wl && _mostraClima) ? `<br><span style="opacity:.6;font-size:.9em">${_glue(_wl)}</span>` : '');
+  const _naCapa = !!(coachMural && coachMural.foto && coachMural.capa);
+  $('home-goal').innerHTML = _glue(_linha) + ((_wl && _mostraClima) ? `<br><span style="opacity:${_naCapa?'.85':'.6'};font-size:.9em">${_glue(_wl)}</span>` : '');
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
   // 40% de chance de mostrar uma frase contextual (se houver); senão, uma do dia
   const ctxQuote = _ps ? preStartQuote(_ps) : (Math.random() < 0.4 ? contextualQuote() : null);
