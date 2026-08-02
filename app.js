@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.46 =====
-const APP_VERSION = 'v12.46';
+// ===== MetaTreino v12.47 =====
+const APP_VERSION = 'v12.47';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2426,7 +2426,7 @@ function renderHome(){
       } else {
         // 2+ dias perdidos: NÃO sugere fazer tudo — orienta priorizar e seguir em frente
         $('missed-title').textContent = `📌 ${pend.length} treinos ficaram para trás esta semana`;
-        $('missed-msg').textContent = `Acontece! Não tente recuperar todos de uma vez — isso sobrecarrega e atrapalha mais que ajuda. ${isLift?'Escolha 1 treino pendente pra fazer num dia livre e siga o plano normalmente a partir de amanhã. Na próxima semana o ciclo recomeça equilibrado.':'Faça a atividade mais importante (a corrida longa) quando puder e retome o plano normalmente. Constância vale mais que perfeição.'} Toque pra ver os pendentes.`;
+        $('missed-msg').textContent = `Semana cheia, acontece. Esses treinos não se pagam depois — e tudo bem: o que conta é o próximo. ${isLift?'Volte no ritmo normal do plano a partir de agora; na próxima semana o ciclo recomeça equilibrado.':'Retome o plano no próximo treino; a constância nas semanas seguintes é o que constrói o resultado.'} Toque se quiser ver o que ficou.`;
         missed.onclick = (ev)=>{
           if(ev.target && ev.target.id==='missed-dismiss') return;
           if(state.active==='run'){ openRunLog(String(pend[0].dayIdx)); }
@@ -6291,7 +6291,7 @@ function maGentleNudge(){
     if(miss && miss.length>=3) return `🔴 Você tem ${miss.length} treinos pendentes esta semana. Sem culpa — faça o mais importante quando puder e retome. Quer treinos mais leves? Diga "estou cansado".`;
     const ws = state.weights||[];
     if(ws.length){ const last = ws[ws.length-1].date||0; const d = Math.floor((Date.now()-last)/86400000); if(d>=7) return `🟢 Faz ${d} dias que você não registra o peso. Quer atualizar? Diga "estou pesando XX kg".`; }
-    if(miss && miss.length>=1) return `🟡 Você tem ${miss.length} treino pendente esta semana. Encaixe num dia livre e siga o plano.`;
+    if(miss && miss.length>=1) return `🟡 ${miss.length} treino${miss.length>1?'s ficaram':' ficou'} para trás esta semana. Bora focar no próximo?`;
   }catch(e){}
   return null;
 }
