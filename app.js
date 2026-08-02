@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.45 =====
-const APP_VERSION = 'v12.45';
+// ===== MetaTreino v12.46 =====
+const APP_VERSION = 'v12.46';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -8246,14 +8246,9 @@ function applyHeroCapa(){
     // reaproveita os textos que a Home já calculou
     const hi = $('home-hi'), sub = $('home-goal');
     if(hi && $('hero-hi')) $('hero-hi').innerHTML = hi.innerHTML;
-    // Status e clima na MESMA linha (separados por ·): o clima não se perde
-    // e não custa uma linha extra em cima da imagem.
-    if(sub && $('hero-sub')){
-      const partes = String(sub.innerHTML).split('<br>');
-      const st = partes[0] || '';
-      const wx = (partes[1] || '').replace(/<[^>]+>/g,'').trim();
-      $('hero-sub').innerHTML = wx ? `${st} <span style="opacity:.78">· ${wx}</span>` : st;
-    }
+    // Cada um na sua linha: juntar com "·" fazia o emoji do clima sobrar
+    // no fim da primeira linha e o resto quebrar embaixo.
+    if(sub && $('hero-sub')) $('hero-sub').innerHTML = sub.innerHTML;
   }catch(e){ console.log('Erro na capa:', e); }
 }
 function applyMuralLogo(){
