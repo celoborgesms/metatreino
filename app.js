@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.40 =====
-const APP_VERSION = 'v12.40';
+// ===== MetaTreino v12.42 =====
+const APP_VERSION = 'v12.42';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2268,6 +2268,7 @@ function renderHome(){
   const qSeed = doy + hashStr((state.user && state.user.email) || 'x'); // cada pessoa tem a SUA frase no mesmo dia
   $('daily-quote').textContent = ctxQuote || QUOTES[qSeed % QUOTES.length];
   renderCoachMural();
+  try{ applyHeroCapa(); }catch(e){}
 
   const days = accessDaysLeft();
   // vitalício: título já diz "Acesso vitalício" — o subtítulo precisa dizer outra coisa
@@ -8228,6 +8229,25 @@ async function saveCoachContact(){
 
 // Aplica a logo do treinador em todos os cabeçalhos que mostram a marca "M".
 // Os cabeçalhos com ícone próprio (⚡ do painel admin) são preservados.
+// Se o treinador marcou "usar como capa", a Home mostra um banner largo com a
+// imagem de fundo e a saudação por cima — no lugar da linha de marca + saudação.
+function applyHeroCapa(){
+  try{
+    const hero = $('home-hero'); if(!hero) return;
+    const foto = coachMural && coachMural.foto;
+    const usar = !!(foto && coachMural && coachMural.capa);
+    hero.classList.toggle('hidden', !usar);
+    const brandRow = $('home-brand-row'), greetRow = $('home-greet-row');
+    if(brandRow) brandRow.classList.toggle('hidden', usar);
+    if(greetRow) greetRow.classList.toggle('hidden', usar);
+    if(!usar) return;
+    const bg = $('home-hero-bg'); if(bg) bg.style.backgroundImage = `url('${foto}')`;
+    // reaproveita os textos que a Home já calculou
+    const hi = $('home-hi'), sub = $('home-goal');   // o clima já vem dentro de home-goal
+    if(hi && $('hero-hi')) $('hero-hi').innerHTML = hi.innerHTML;
+    if(sub && $('hero-sub')) $('hero-sub').innerHTML = sub.innerHTML;
+  }catch(e){ console.log('Erro na capa:', e); }
+}
 function applyMuralLogo(){
   const foto = coachMural && coachMural.foto;
   document.querySelectorAll('.brand-logo').forEach(el=>{
@@ -8281,36 +8301,67 @@ function openMuralAdmin(){
         ${m.foto?`<button class="btn btn-ghost" onclick="muralFotoTemp='REMOVE';document.getElementById('mural-preview').innerHTML='M'">🗑️</button>`:''}
       </div>
       <input type="file" id="mural-foto-input" accept="image/*" style="display:none" onchange="onMuralFotoPicked(event)">
+      <div id="mural-peso" style="font-size:11.5px;color:var(--text-mute);margin-top:6px;text-align:center"></div>
+      <div class="list-row" onclick="const c=document.getElementById('mural-capa');c.checked=!c.checked;processaMuralFoto()" style="margin-top:10px">
+        <span style="font-size:17px">🖼️</span>
+        <div style="flex:1"><div style="font-weight:700;font-size:13.5px">Usar como capa larga</div>
+        <div style="font-size:11.5px;color:var(--text-mute);line-height:1.45">A foto vira um banner do tamanho da tela na Hoje, com a saudação por cima. Use imagem horizontal e sem texto importante nas bordas.</div></div>
+        <input type="checkbox" id="mural-capa" ${m.capa?'checked':''} style="pointer-events:none">
+      </div>
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveMural()">💾 Publicar pra todos os alunos</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
   $('modal-back').classList.add('on');
 }
 let muralFotoTemp = null;
+let muralImgOriginal = null;   // guardada pra reprocessar se o modo mudar
 function onMuralFotoPicked(ev){
   const file = ev.target.files && ev.target.files[0];
   if(!file) return;
-  const img = new Image();
   const reader = new FileReader();
-  reader.onload = ()=>{
-    img.onload = ()=>{
-      // comprime pra 160px (fica leve no Firestore e rápido de carregar)
-      const c = document.createElement('canvas');
-      const s = Math.min(img.width, img.height);
-      c.width = 160; c.height = 160;
-      const x = c.getContext('2d');
-      x.drawImage(img, (img.width-s)/2, (img.height-s)/2, s, s, 0, 0, 160, 160);
-      muralFotoTemp = c.toDataURL('image/jpeg', 0.82);
-      $('mural-preview').innerHTML = `<img src="${muralFotoTemp}" style="width:100%;height:100%;object-fit:cover">`;
-    };
-    img.src = reader.result;
-  };
+  reader.onload = ()=>{ muralImgOriginal = reader.result; processaMuralFoto(); };
   reader.readAsDataURL(file);
   ev.target.value = '';
+}
+// Logo = quadrado 160px. Capa = retângulo 900×450 (o quadrado de 160 ficaria
+// borrado e cortado quando esticado num banner de tela inteira).
+function processaMuralFoto(){
+  if(!muralImgOriginal) return;
+  const capa = !!(document.getElementById('mural-capa')||{}).checked;
+  const img = new Image();
+  img.onload = ()=>{
+    const c = document.createElement('canvas');
+    const x = c.getContext('2d');
+    if(capa){
+      const LW = 900, LH = 450;                       // 2:1, cobre bem qualquer celular
+      c.width = LW; c.height = LH;
+      const escala = Math.max(LW/img.width, LH/img.height);
+      const w = img.width*escala, h = img.height*escala;
+      x.drawImage(img, (LW-w)/2, (LH-h)/2, w, h);     // centraliza e corta o excesso
+      muralFotoTemp = c.toDataURL('image/jpeg', 0.80);
+    } else {
+      const s = Math.min(img.width, img.height);
+      c.width = 160; c.height = 160;
+      x.drawImage(img, (img.width-s)/2, (img.height-s)/2, s, s, 0, 0, 160, 160);
+      muralFotoTemp = c.toDataURL('image/jpeg', 0.82);
+    }
+    const pv = document.getElementById('mural-preview');
+    if(pv){
+      pv.style.width = capa ? '100%' : '52px';
+      pv.style.height = capa ? '58px' : '52px';
+      pv.innerHTML = `<img src="${muralFotoTemp}" style="width:100%;height:100%;object-fit:cover">`;
+    }
+    // aviso se ficar pesado demais pro Firestore (limite de 1MB por documento)
+    const kb = Math.round(muralFotoTemp.length/1024);
+    const av = document.getElementById('mural-peso');
+    if(av) av.textContent = kb > 700 ? `⚠️ Imagem pesada (${kb}KB) — use uma foto menor.` : `Imagem: ${kb}KB ✅`;
+  };
+  img.src = muralImgOriginal;
 }
 async function saveMural(){
   const msg = $('mural-msg').value.trim();
   const data = { mensagem:msg, atualizadoEm:Date.now() };
+  data.capa = !!(document.getElementById('mural-capa')||{}).checked;   // usar como banner largo
   if(muralFotoTemp==='REMOVE') data.foto = null;
   else if(muralFotoTemp) data.foto = muralFotoTemp;
   else if(coachMural && coachMural.foto) data.foto = coachMural.foto;
@@ -9412,7 +9463,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{applyHeroCapa,processaMuralFoto,doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
