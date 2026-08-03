@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.52 =====
-const APP_VERSION = 'v12.52';
+// ===== MetaTreino v12.53 =====
+const APP_VERSION = 'v12.53';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -7181,13 +7181,34 @@ function fatigueMap(){
 }
 function fatigueOf(part){ return (fatigueMap()[part])||0; }
 // grupos mais e menos descansados (pro assistente falar como treinador)
+// Gênero e número dos grupos musculares: "Seu peito está" × "Suas pernas estão".
+// Sem isso saía "Seu pernas ainda está se recuperando".
+const GRUPO_GENERO = {
+  'peito':      {posse:'Seu',  verbo:'está', artigo:'o'},
+  'costas':     {posse:'Suas', verbo:'estão',artigo:'as'},
+  'ombro':      {posse:'Seu',  verbo:'está', artigo:'o'},
+  'bíceps':     {posse:'Seu',  verbo:'está', artigo:'o'},
+  'tríceps':    {posse:'Seu',  verbo:'está', artigo:'o'},
+  'pernas':     {posse:'Suas', verbo:'estão',artigo:'as'},
+  'glúteos':    {posse:'Seus', verbo:'estão',artigo:'os'},
+  'panturrilha':{posse:'Sua',  verbo:'está', artigo:'a'},
+  'trapézio':   {posse:'Seu',  verbo:'está', artigo:'o'},
+  'core':       {posse:'Seu',  verbo:'está', artigo:'o'}
+};
+function concordaGrupo(nome){
+  const k = String(nome||'').toLowerCase().trim();
+  return GRUPO_GENERO[k] || {posse:'Seu', verbo:'está', artigo:'o'};
+}
 function fatigueInsight(){
   try{
     const map = fatigueMap();
     const cic = (typeof cicloAtual==='function') ? cicloAtual() : null;
     if(cic && cic.nome==='Deload') return `😌 Você entrou na <b>semana de recuperação</b> (deload). É normal bater vontade de pegar pesado — mas é justamente nesta fase que o corpo consolida os ganhos. Segura a mão que semana que vem você volta mais forte.`;
     const alta = Object.keys(map).filter(k=>map[k]>=70).sort((a,b)=>map[b]-map[a]);
-    if(alta.length) return `💪 Seu <b>${alta[0].toLowerCase()}</b> ainda está se recuperando do treino intenso recente. Se notar queda de força hoje, priorize uma boa execução em vez de aumentar a carga — recuperação também é treino.`;
+    if(alta.length){
+      const g = concordaGrupo(alta[0]);
+      return `💪 ${g.posse} <b>${alta[0].toLowerCase()}</b> ainda ${g.verbo} se recuperando do treino intenso recente. Se notar queda de força hoje, priorize uma boa execução em vez de aumentar a carga — recuperação também é treino.`;
+    }
     // grupo esquecido há tempo
     const lifts = (((state.modules.lift||{}).history)||[]);
     if(lifts.length>=4){

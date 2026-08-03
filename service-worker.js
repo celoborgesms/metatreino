@@ -1,4 +1,4 @@
-const APP_VERSION = 'v12.52';
+const APP_VERSION = 'v12.53';
 const CACHE = 'metatreino-' + APP_VERSION;
 // manifest.json entra aqui de propósito: é o arquivo que o Chrome consulta pra
 // detectar mudança de ícone/nome e reemitir o app instalado. Em cache-first ele
