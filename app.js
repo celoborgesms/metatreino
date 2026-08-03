@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.51 =====
-const APP_VERSION = 'v12.51';
+// ===== MetaTreino v12.52 =====
+const APP_VERSION = 'v12.52';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -3825,6 +3825,7 @@ function renderProfile(){
   try{
     const ehAdm = !!(state.user && state.user.isAdmin);
     const lbl = $('pf-admin-lbl'); if(lbl) lbl.classList.toggle('hidden', !ehAdm);
+    const sa = $('adm-special-row'); if(sa) sa.classList.toggle('hidden', !ehDonoDoApp());
     const bt = $('pf-admin-btn'); if(bt) bt.classList.toggle('hidden', !ehAdm);
   }catch(e){}
   const dEl = $('deco-row-label'); if(dEl) dEl.textContent = decoEnabled() ? 'Fundo decorativo (ligado)' : 'Fundo decorativo (desligado)';
@@ -8542,7 +8543,14 @@ function startHearts(ov){
     box.appendChild(h);
   }
 }
+// A conquista especial é pessoal do dono do app — nem outros administradores
+// veem ou editam. A trava está aqui (e não só no botão) pra valer mesmo se
+// alguém chamar a função pelo console.
+function ehDonoDoApp(){
+  return String((state.user && state.user.email) || '').toLowerCase() === ADMIN_EMAIL;
+}
 function openSpecialAwardAdmin(){
+  if(!ehDonoDoApp()){ toast('🔒 Recurso restrito ao administrador principal.'); return; }
   const s = specialAward||{};
   $('modal-inner').innerHTML = `
     <h3>💍 Conquista especial</h3>
@@ -8562,6 +8570,7 @@ function openSpecialAwardAdmin(){
   $('modal-back').classList.add('on');
 }
 async function saveSpecialAward(){
+  if(!ehDonoDoApp()){ toast('🔒 Recurso restrito ao administrador principal.'); return; }
   const data = {
     email: ($('sa-email').value||'').trim().toLowerCase(),
     titulo: ($('sa-titulo').value||'').trim(),
@@ -8794,6 +8803,8 @@ async function goAdmin(){
   $('tabbar').classList.add('hidden');
   admVeioDoPick = !(state.modules.lift || state.modules.run);   // admin sem plano: volta pra escolha
   showScreen('scr-admin');
+  // a conquista especial só aparece pro dono do app, nem pros outros admins
+  try{ const sa = $('adm-special-row'); if(sa) sa.classList.toggle('hidden', !ehDonoDoApp()); }catch(e){}
   const p = state.user.profile;
   $('adm-hi').textContent = 'Olá, '+((p&&p.nickname)||'Marcelo')+'!';
   $('adm-list').innerHTML = `<div class="rest-card"><div style="font-size:34px">⏳</div><div class="rest-sub">Carregando alunos...</div></div>`;
