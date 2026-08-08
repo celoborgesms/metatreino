@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.53 =====
-const APP_VERSION = 'v12.53';
+// ===== MetaTreino v12.55 =====
+const APP_VERSION = 'v12.55';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -1534,7 +1534,13 @@ function buildLiftExercises(parts, setup){
     const patCap = pat => pat==='isolador' ? (goal==='forca'?1:2) : 1; // máx 1 por padrão (isoladores até 2; força limita a 1)
     compat.forEach(ex => { const pat=exPattern(ex.name); if(pick.length<need && !usedStim.has(stim(ex.sub)) && (usedPat[pat]||0)<patCap(pat)){ pick.push(ex); usedStim.add(stim(ex.sub)); usedPat[pat]=(usedPat[pat]||0)+1; } });
     if(pick.length<need){ compat.forEach(ex => { if(pick.length<need && !pick.includes(ex)) pick.push(ex); }); }
-    pick.forEach(ex=>{ list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps, rest, part:p, equip:ex.equip }); });
+    // Isométricos (Prancha, Hollow Hold...) não fazem sentido com "reps" —
+    // o alvo vira TEMPO SEGURADO, escalado pelo nível.
+    const tempoIsoMap = {iniciante:'20-30s', intermediario:'30-45s', avancado:'45-60s'};
+    pick.forEach(ex=>{
+      const isoAlvo = ex.iso ? tempoIsoMap[level] : null;
+      list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps: isoAlvo||reps, rest, part:p, equip:ex.equip, unit: ex.iso?'tempo':'reps' });
+    });
   });
   // dor: se algum grupo foi bloqueado, completa com sinergistas seguros — o treino continua útil
   const blockedCount = parts.filter(p=>blocked.has(p)).length;
@@ -1735,7 +1741,7 @@ const EX_BANK = [
     {name:'Chin-up (barra pegada supinada)',sub:'Bíceps / Costas',equip:['academia','casa']},
     {name:'Rosca com Mochila/Bolsa',sub:'Bíceps',equip:['casa'],improv:true},
     {name:'Rosca Martelo com Garrafas',sub:'Braquial / Antebraço',equip:['casa'],improv:true},
-    {name:'Rosca Isométrica com Toalha',sub:'Bíceps (isometria)',equip:['casa'],improv:true}
+    {name:'Rosca Isométrica com Toalha',sub:'Bíceps (isometria)',equip:['casa'],improv:true,iso:true}
   ]},
   {name:'Tríceps',emo:'🦾',color:'orange',items:[
     // ACADEMIA
@@ -1810,15 +1816,15 @@ const EX_BANK = [
     {name:'Encolhimento com Mochila/Bolsa',sub:'Trapézio',equip:['casa'],improv:true}
   ]},
   {name:'Core',emo:'🧱',color:'',items:[
-    {name:'Prancha (Plank)',sub:'Core (estabilidade)',equip:['casa','halteres','academia']},
-    {name:'Prancha Lateral',sub:'Oblíquos',equip:['casa','halteres','academia']},
+    {name:'Prancha (Plank)',sub:'Core (estabilidade)',equip:['casa','halteres','academia'],iso:true},
+    {name:'Prancha Lateral',sub:'Oblíquos',equip:['casa','halteres','academia'],iso:true},
     {name:'Abdominal Crunch',sub:'Reto abdominal',equip:['casa','halteres','academia']},
     {name:'Abdominal Bicicleta',sub:'Reto / Oblíquos',equip:['casa','halteres','academia']},
     {name:'Elevação de Pernas',sub:'Abdômen Inferior',equip:['casa','halteres','academia']},
     {name:'Russian Twist',sub:'Oblíquos (rotação)',equip:['casa','halteres','academia']},
     {name:'Dead Bug',sub:'Core Profundo (anti-extensão)',equip:['casa','halteres','academia']},
     {name:'Pallof Press (anti-rotação)',sub:'Core (anti-rotação)',equip:['academia']},
-    {name:'Hollow Hold',sub:'Core (isometria avançada)',equip:['casa','halteres','academia']},
+    {name:'Hollow Hold',sub:'Core (isometria avançada)',equip:['casa','halteres','academia'],iso:true},
     {name:'Farmer Walk (caminhada carregada)',sub:'Core / Pegada',equip:['academia','halteres']},
     {name:'Mountain Climber',sub:'Core / Cardio',equip:['casa','halteres','academia']}
   ]}
@@ -2813,7 +2819,7 @@ function currentSelectedWorkout(mod){
   return w || mod.plan.workouts.find(x=>x.dayIdx===getDayIdx()) || mod.plan.workouts[0];
 }
 function cardioFinisherCard(){
-  return `<div class="card card-info card-row" class="hl-warn" style="margin-top:14px;;background:rgba(245,158,11,0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:#f59e0b">Bônus cardio (opcional)</div><div class="card-sub">Treino mais curto hoje? Se quiser turbinar, finalize com ~8 min: <b>2 a 3 voltas</b> de 30s em cada — polichinelo, corrida no lugar (joelho alto), mountain climber e agachamento com salto. 30s de descanso entre as voltas, no seu ritmo. 💪</div></div></div>`;
+  return `<div class="card card-info card-row hl-warn" style="margin-top:14px;;background:rgba(245,158,11,0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:#f59e0b">Bônus cardio (opcional)</div><div class="card-sub">Treino mais curto hoje? Se quiser turbinar, finalize com ~8 min: <b>2 a 3 voltas</b> de 30s em cada — polichinelo, corrida no lugar (joelho alto), mountain climber e agachamento com salto. 30s de descanso entre as voltas, no seu ritmo. 💪</div></div></div>`;
 }
 // ===== PERFIL OCUPACIONAL =====
 // O corpo cobra diferente conforme o dia da pessoa. Não é fisioterapia nem obrigação:
@@ -3002,10 +3008,10 @@ function renderExerciseCard(ex, idx){
     <div class="ex" style="${doneToday?'border-left:3px solid var(--primary);padding-left:10px':''}">
       <div class="ex-num ${doneToday?'anim-check':''}" style="${doneToday?'background:var(--primary);color:var(--on-primary)':''}">${doneToday?'✓':idx+1}</div>
       <div style="flex:1">
-        <div class="ex-name">${ex.name} ${ex.pinned?`<span class="pr-badge" style="background:var(--tint-info);color:var(--info)">📌 fixado</span>`:''} ${pr?`<span class="pr-badge">🏆 PR ${pr.peso}kg×${pr.reps}</span>`:''}</div>
-        <div class="ex-desc">${ex.sub} · Alvo: <b>${ex.sets}×${ex.reps}</b> · Descanso ${ex.rest}</div>
-        ${last?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px">📊 Última: ${last.sets.map(s=>`${s.peso}kg×${s.reps}`).join(', ')}</div>`:''}
-        ${doneToday?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px;font-weight:700">✅ Hoje: ${todayEntry.sets.map(s=>`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', ')}</div>`:''}
+        <div class="ex-name">${ex.name} ${ex.pinned?`<span class="pr-badge" style="background:var(--tint-info);color:var(--info)">📌 fixado</span>`:''} ${pr?`<span class="pr-badge">🏆 PR ${ex.unit==='tempo'?fmtTempo(pr.reps):(pr.peso+'kg×'+pr.reps)}</span>`:''}</div>
+        <div class="ex-desc">${ex.sub} · Alvo: <b>${ex.sets}× ${ex.reps}</b> · Descanso ${ex.rest}</div>
+        ${last?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px">📊 Última: ${last.sets.map(s=>ex.unit==='tempo'?(s.peso>0?s.peso+'kg · ':'')+fmtTempo(s.reps):`${s.peso}kg×${s.reps}`).join(', ')}</div>`:''}
+        ${doneToday?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px;font-weight:700">✅ Hoje: ${todayEntry.sets.map(s=>ex.unit==='tempo'?(s.peso>0?s.peso+'kg · ':'')+fmtTempo(s.reps):`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', ')}</div>`:''}
         <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
           ${ex.pinned?`<button class="btn btn-ghost" style="padding:6px 10px;font-size:11.5px" onclick="unpinExercise('${ex.id}')">↩️ Voltar à sugestão</button>`:''}
           ${curSessionLocked
@@ -3060,6 +3066,29 @@ function openSetLog(exId, exName){
 // ---------- PROGRESSÃO ADAPTATIVA ----------
 // Analisa o histórico real do exercício e a faixa de repetições do plano
 // pra sugerir o próximo passo — o app "aprende" com a evolução do aluno.
+// Segundos ↔ "mm:ss" — usado nos exercícios de tempo (Prancha, Hollow Hold...)
+function fmtTempo(seg){
+  seg = Math.max(0, Math.round(+seg||0));
+  const m = Math.floor(seg/60), s2 = seg%60;
+  return m>0 ? `${m}:${String(s2).padStart(2,'0')}` : `${s2}s`;
+}
+function parseTempo(txt){
+  const t = String(txt||'').trim();
+  const mmss = t.match(/^(\d+):(\d{1,2})$/);
+  if(mmss) return parseInt(mmss[1])*60 + parseInt(mmss[2]);
+  const n = parseInt(t);
+  return isFinite(n) ? n : 0;
+}
+// O exercício está no plano de hoje como tempo? (Prancha, Hollow Hold...)
+function exExigeTempo(exId){
+  const ex = (state.modules.lift?.plan?.workouts||[]).flatMap(w=>w.exercises||[]).find(e=>e.id===exId);
+  return !!(ex && ex.unit==='tempo');
+}
+// Isométrico mesmo fora do plano atual (útil pra PRs antigos/Recordes) — varre o banco pelo id
+function exBankIsIso(exId){
+  for(const c of EX_BANK) for(const e of c.items) if(slug(e.name)===exId) return !!e.iso;
+  return false;
+}
 function repRangeFor(exId){
   const w = (state.modules.lift?.plan?.workouts||[]).flatMap(x=>x.exercises||[]).find(e=>e.id===exId);
   if(!w || !w.reps) return {lo:8, hi:12};
@@ -3069,15 +3098,27 @@ function repRangeFor(exId){
 function smartProgressionHint(exId){
   const logs = (state.progress[exId]||[]).filter(p=>p.sets && p.sets.length);
   const prev = logs.filter(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); const t=new Date(); t.setHours(0,0,0,0); return d.getTime()<t.getTime(); });
-  if(!prev.length) return {cls:'card-info', txt:'🌱 Primeira vez neste exercício: comece com uma carga confortável e capriche na técnica. O app vai aprender com seus registros.'};
-  const range = repRangeFor(exId);
+  const isTempo = exExigeTempo(exId);
+  if(!prev.length) return {cls:'card-info', txt: isTempo
+    ? '🌱 Primeira vez neste exercício: segure com boa postura até onde conseguir, sem forçar. O app vai aprender com seus registros.'
+    : '🌱 Primeira vez neste exercício: comece com uma carga confortável e capriche na técnica. O app vai aprender com seus registros.'};
+  const range = repRangeFor(exId);   // funciona igual pra "30-45s": captura 30 e 45
   const last = prev[prev.length-1];
   const lastW = Math.max(...last.sets.map(s=>+s.peso||0));
   const allTop = arr => arr.sets.every(s=>(+s.reps||0) >= range.hi);
   const anyBelow = last.sets.some(s=>(+s.reps||0) > 0 && (+s.reps||0) < range.lo);
-  // como terminou o último treino de musculação?
   const lastFeel = (state.modules.lift?.history||[]).filter(x=>x.feel).slice(-1)[0]?.feel;
   const isBodyweight = lastW === 0;
+
+  // ISOMÉTRICOS: mesma lógica de decisão, vocabulário de tempo em vez de reps
+  if(isTempo){
+    if(lastFeel==='exausto') return {cls:'card-warn', txt:`😌 Último treino terminou em exaustão — hoje mantenha o mesmo tempo de sustentação (ou um pouco menos) e priorize a postura.`};
+    const twoTop = prev.length>=2 && allTop(prev[prev.length-1]) && allTop(prev[prev.length-2]);
+    if(twoTop) return {cls:'card-ok', txt:`📈 Você segurou ${fmtTempo(range.hi)} ou mais nas 2 últimas sessões — hora de dificultar: mais ${fmtTempo(10)} por série, ou uma variação mais avançada.`};
+    if(allTop(last)) return {cls:'card-info', txt:`💪 Sessão passada você fechou todas as séries em ${fmtTempo(range.hi)}+. Repita hoje — mais uma assim e sobe o desafio.`};
+    if(anyBelow) return {cls:'card-warn', txt:`⚖️ Na última sessão algumas séries ficaram abaixo de ${fmtTempo(range.lo)}. Sem problema: busque chegar na faixa ${range.lo}-${range.hi} antes de progredir.`};
+    return {cls:'card-info', txt:`🎯 Última vez: ${last.sets.map(s=>(s.peso>0?s.peso+'kg · ':'')+fmtTempo(s.reps)).join(', ')}. Hoje tente segurar alguns segundos a mais — progresso constante vence pressa.`};
+  }
 
   if(lastFeel==='exausto'){
     return {cls:'card-warn', txt:`😌 Último treino terminou em exaustão — hoje mantenha ${isBodyweight?'as repetições de sempre':lastW+'kg'} (ou um pouco menos) e priorize a execução.`};
@@ -3102,27 +3143,30 @@ function smartProgressionHint(exId){
 }
 function renderSetLogModal(){
   const { exId, exName, entry } = curLog;
+  const isTempo = exExigeTempo(exId);
   const hint = smartProgressionHint(exId);
   const suggested = `<div class="card ${hint.cls}" style="padding:12px;margin-bottom:12px"><div class="card-sub">${hint.txt}</div></div>`;
   const rows = entry.sets.length? entry.sets.map((s,i)=>`
     <div class="set-row">
       <div class="set-num">${i+1}</div>
       <input class="set-in mono" type="number" step="0.5" value="${s.peso}" onchange="updateSet(${i},'peso',this.value)" placeholder="kg">
-      <input class="set-in mono" type="number" value="${s.reps}" onchange="updateSet(${i},'reps',this.value)" placeholder="reps">
+      ${isTempo
+        ? `<input class="set-in mono" type="text" inputmode="numeric" value="${fmtTempo(s.reps)}" onchange="updateSet(${i},'tempo',this.value)" placeholder="mm:ss">`
+        : `<input class="set-in mono" type="number" value="${s.reps}" onchange="updateSet(${i},'reps',this.value)" placeholder="reps">`}
       <button class="set-x" onclick="delSet(${i})">✕</button>
     </div>`).join('') : `<div class="text-dim" style="text-align:center;padding:12px 0">Nenhuma série ainda. Clique em "+ Nova série" para começar.</div>`;
   $('modal-inner').innerHTML = `
     <h3>📝 ${exName}</h3>
-    <p style="font-size:13px;color:var(--text-dim);margin-top:2px">Registre peso e repetições de cada série.</p>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:2px">${isTempo ? 'Registre o peso extra (se usar) e o tempo que segurou cada série.' : 'Registre peso e repetições de cada série.'}</p>
     ${suggested}
     <div style="margin-top:10px">
       <div class="set-row" style="border-bottom:1px solid var(--border);padding-bottom:6px;color:var(--text-dim);font-size:11px;font-weight:700;letter-spacing:1px">
-        <div>#</div><div style="text-align:center">PESO (kg)</div><div style="text-align:center">REPS</div><div></div>
+        <div>#</div><div style="text-align:center">PESO (kg)</div><div style="text-align:center">${isTempo?'TEMPO (mm:ss)':'REPS'}</div><div></div>
       </div>
       ${rows}
     </div>
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="addSet()">+ Nova série</button>
-    <button class="btn btn-outline btn-block" class="hl-primary" style="margin-top:8px" onclick="startRestFor('${exId}','${exName.replace(/'/g,"\\'")}')">⏱️ Iniciar descanso</button>
+    <button class="btn btn-outline btn-block hl-primary" style="margin-top:8px" onclick="startRestFor('${exId}','${exName.replace(/'/g,"\\'")}')">⏱️ Reiniciar descanso</button>
     <div class="row" style="gap:8px;margin-top:14px">
       <button class="btn btn-ghost btn-block" onclick="closeSetLog(false)">Voltar</button>
       <button class="btn btn-primary btn-block" onclick="closeSetLog(true)">Salvar</button>
@@ -3134,23 +3178,39 @@ function startRestFor(exId, exName){
   startRestTimer(parseRestSeconds(ex && ex.rest), exName);
 }
 function addSet(){
+  // "+ Nova série" só é clicado depois que a série anterior acabou — então
+  // esse toque já significa "descanse antes da próxima". O timer dispara
+  // sozinho, sem precisar tocar em "Iniciar descanso" toda vez.
   const last = curLog.entry.sets[curLog.entry.sets.length-1];
   const prev = getLastLog(curLog.exId);
-  const seed = last || (prev && prev.sets[0]) || {peso:0,reps:10};
-  curLog.entry.sets.push({ peso:parseFloat(seed.peso)||0, reps:parseInt(seed.reps)||10 });
+  const seedDefault = exExigeTempo(curLog.exId) ? 30 : 10;   // isométrico: começa sugerindo 30s
+  const seed = last || (prev && prev.sets[0]) || {peso:0,reps:seedDefault};
+  curLog.entry.sets.push({ peso:parseFloat(seed.peso)||0, reps:parseInt(seed.reps)||seedDefault });
   renderSetLogModal();
+  try{
+    const ex = (state.modules.lift?.plan?.workouts||[]).flatMap(w=>w.exercises||[]).find(e=>e.id===curLog.exId);
+    startRestTimer(parseRestSeconds(ex && ex.rest), curLog.exName || (ex && ex.name) || '');
+  }catch(e){}
 }
 function delSet(i){ curLog.entry.sets.splice(i,1); renderSetLogModal(); }
-function updateSet(i,k,v){ curLog.entry.sets[i][k] = k==='peso'?parseFloat(v)||0:parseInt(v)||0; }
+function updateSet(i,k,v){
+  if(k==='tempo'){ curLog.entry.sets[i].reps = parseTempo(v); return; }   // mm:ss → segundos, guardado em reps
+  curLog.entry.sets[i][k] = k==='peso'?parseFloat(v)||0:parseInt(v)||0;
+}
 function closeSetLog(save){
   const savedExId = curLog ? curLog.exId : null;
   if(save){
     // reps>0 basta: peso 0 é válido (exercícios de peso corporal)
     curLog.entry.sets = curLog.entry.sets.filter(s=>s.reps>0 && s.peso>=0);
-    // check PR (só faz sentido com peso externo)
-    curLog.entry.sets.filter(s=>s.peso>0).forEach(s=>{
+    const isTempo = exExigeTempo(curLog.exId);
+    // Isométricos: o recorde é o TEMPO segurado, com ou sem peso extra —
+    // senão a Prancha sem peso nunca teria PR registrado.
+    curLog.entry.sets.filter(s=>isTempo || s.peso>0).forEach(s=>{
       const pr = state.prs[curLog.exId];
-      if(!pr || s.peso > pr.peso || (s.peso===pr.peso && s.reps > pr.reps)){
+      const bateu = isTempo
+        ? (!pr || s.reps > pr.reps || (s.reps===pr.reps && s.peso > pr.peso))
+        : (!pr || s.peso > pr.peso || (s.peso===pr.peso && s.reps > pr.reps));
+      if(bateu){
         state.prs[curLog.exId] = { peso:s.peso, reps:s.reps, at:Date.now() };
         // registra o recorde agora, mas o TROFÉU só é celebrado ao salvar o treino completo
         if(pr) toast(`🏆 Novo recorde em ${curLog.exName}!`);
@@ -3586,7 +3646,7 @@ function renderRecords(){
   Object.entries(state.prs||{})
     .map(([id,pr])=>({id,...pr}))
     .sort((a,b)=>b.peso-a.peso).slice(0,3)
-    .forEach(p=>linhas.push({emo:'🏋️', titulo:nome(p.id), sub:dt(p.at), val:`${p.peso}kg × ${p.reps}`}));
+    .forEach(p=>linhas.push({emo:'🏋️', titulo:nome(p.id), sub:dt(p.at), val: exBankIsIso(p.id) ? (p.peso>0?p.peso+'kg · ':'')+fmtTempo(p.reps) : `${p.peso}kg × ${p.reps}`}));
   // corrida: maior distância e melhor pace
   const runs = (state.modules.run?.history||[]).filter(r=>!r.activity || r.activity==='corrida');
   if(runs.length){
@@ -4284,7 +4344,7 @@ function openMonthly(){
     <h3>🎖️ Desafios do mês</h3>
     <p style="color:var(--text-dim);font-size:13px">${monthName(state.monthly.key)} · ${restam===0?'último dia!':`faltam ${restam} dias`}. Todo dia 1º os desafios zeram e as medalhas ficam guardadas.</p>
     <div style="max-height:52vh;overflow-y:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px">${linhas}</div>
-    <button class="btn btn-outline btn-block" class="hl-warn" style="margin-top:14px" onclick="closeModal();openMedals()">🏅 Ver minhas medalhas de meses anteriores</button>
+    <button class="btn btn-outline btn-block hl-warn" style="margin-top:14px" onclick="closeModal();openMedals()">🏅 Ver minhas medalhas de meses anteriores</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
@@ -4674,7 +4734,7 @@ function openTrophyDetail(id){
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--border)"><span style="color:var(--text-dim);font-size:13px">🏆 Coleção</span><b style="font-size:13px">${tenho} de ${total} conquistas</b></div>
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();shareTrophyImage('${t.id}')">📤 Compartilhar esta conquista</button>
-    <button class="btn btn-outline btn-block" class="hl-primary" style="margin-top:8px" onclick="closeModal();shareTrophiesImage()">🏆 Compartilhar coleção inteira</button>
+    <button class="btn btn-outline btn-block hl-primary" style="margin-top:8px" onclick="closeModal();shareTrophiesImage()">🏆 Compartilhar coleção inteira</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();openTrophiesKeepScroll()">← Voltar aos conquistas</button>`;
   $('modal-back').classList.add('on');
 }
@@ -4750,7 +4810,7 @@ function openTrophies(){
       <div style="color:var(--text-dim);font-size:12.5px;line-height:1.55;margin-top:6px;white-space:pre-line">${(state.specialTrophy.descricao||'').replace(/</g,'&lt;')}</div>
       <div style="font-size:11px;color:var(--text-mute);margin-top:8px;font-style:italic">Toque para reviver este momento</div>
     </div>` : ''}
-    <button class="btn btn-outline btn-block" class="hl-primary" style="margin-top:14px" onclick="shareTrophiesImage()">📤 Compartilhar minhas conquistas</button>
+    <button class="btn btn-outline btn-block hl-primary" style="margin-top:14px" onclick="shareTrophiesImage()">📤 Compartilhar minhas conquistas</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');
@@ -4874,7 +4934,7 @@ const MODAL_CONTENT = {
         <h3 style="margin:10px 0 4px">${nome?`Vai nos deixar, ${nome}?`:'Vai nos deixar?'}</h3>
         <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5;margin:0 auto;max-width:330px">Se for pra descansar, existe o <b>Modo Férias</b> — ele pausa as cobranças e guarda tudo do jeito que está. 🌴</p>
       </div>
-      ${conquistou.length?`<div class="card" class="hl-warn" style="margin-top:16px;padding:13px 15px">
+      ${conquistou.length?`<div class="card hl-warn" style="margin-top:16px;padding:13px 15px">
         <div style="font-size:11.5px;letter-spacing:.6px;color:var(--accent-2);font-weight:800;margin-bottom:7px">O QUE VAI EMBORA COM VOCÊ</div>
         <div style="font-size:13px;line-height:1.7;color:var(--text-dim)">${conquistou.join(' · ')}</div>
       </div>`:''}
@@ -4884,7 +4944,7 @@ const MODAL_CONTENT = {
       </div>
       <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="exportMyData()">💾 Fazer backup antes de sair</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">💚 Deixa pra lá, vou ficar</button>
-      <button class="btn btn-ghost btn-block" class="hl-danger" style="margin-top:14px" onclick="doDeleteAccount()">Excluir minha conta definitivamente</button>`;
+      <button class="btn btn-ghost btn-block hl-danger" style="margin-top:14px" onclick="doDeleteAccount()">Excluir minha conta definitivamente</button>`;
   },
 };
 function openModal(k){
@@ -5120,8 +5180,8 @@ const MA_ANSWERS = {
     }
     const lift = done.filter(x=>x.module==='lift'), run = done.filter(x=>x.module==='run');
     let r = '';
-    if(lift.length){ const w=lift[0]; const n=(w.exercisesDone||[]).length; r += `Hoje você concluiu ${w.name}${n?` — ${n} exercícios`:''}, cerca de ${w.duration} min.${w.feel?` Você terminou se sentindo "${({otimo:'muito bem 🚀',bem:'bem 😊',cansado:'cansado 😮‍💨',exausto:'exausto 😩'})[w.feel]}".`:''} `; }
-    if(run.length){ const w=run[0]; r += `${lift.length?'E ':''}Registrou ${w.name.replace(/^[🚶🚴🏃]\s*/u,'')}${w.distance?` — ${w.distance}km`:''} em ${w.duration} min${w.pace?` (${w.pace})`:''}. `; }
+    if(lift.length){ const w=lift[0]; const n=(w.exercisesDone||[]).length; r += `Hoje você concluiu ${w.name}${n?` — ${n} exercícios`:''}, cerca de ${fmtDur(w.duration)}.${w.feel?` Você terminou se sentindo "${({otimo:'muito bem 🚀',bem:'bem 😊',cansado:'cansado 😮‍💨',exausto:'exausto 😩'})[w.feel]}".`:''} `; }
+    if(run.length){ const w=run[0]; r += `${lift.length?'E ':''}Registrou ${w.name.replace(/^[🚶🚴🏃]\s*/u,'')}${w.distance?` — ${w.distance}km`:''} em ${fmtDur(w.duration)}${w.pace?` (${w.pace})`:''}. `; }
     return r + 'Excelente trabalho! 👏';
   },
   evolucao(){
@@ -6719,7 +6779,7 @@ function nudgeResposta(n){
       const partes = [];
       const prs = Object.entries(state.prs||{}).filter(([,x])=>{ if(!x||!x.at) return false; const d=new Date(x.at); d.setHours(0,0,0,0); const h=new Date(); h.setHours(0,0,0,0); return d.getTime()===h.getTime(); });
       if(prs.length){
-        partes.push('🏆 <b>Recordes de hoje:</b><br>' + prs.slice(0,4).map(([id,x])=>`• ${nomeDoEx(id)}: <b>${x.peso||x.weight||'—'}kg × ${x.reps||'—'}</b>`).join('<br>'));
+        partes.push('🏆 <b>Recordes de hoje:</b><br>' + prs.slice(0,4).map(([id,x])=>`• ${nomeDoEx(id)}: <b>${exBankIsIso(id) ? ((x.peso||x.weight||0)>0?(x.peso||x.weight)+'kg · ':'')+fmtTempo(x.reps) : (x.peso||x.weight||'—')+'kg × '+(x.reps||'—')}</b>`).join('<br>'));
       }
       const ins = (typeof maInsight==='function') ? maInsight() : null;
       if(ins) partes.push(ins);
@@ -8633,7 +8693,7 @@ async function openVideoAdmin(){
         <div class="row" style="gap:6px;margin-top:6px">
           <input class="input" id="vidc-${id}" value="${curCred.replace(/"/g,'&quot;')}" placeholder="Perfil de quem gravou — Instagram, YouTube, TikTok... (opcional)" style="flex:1;font-size:12.5px;padding:9px 12px">
           <button class="btn btn-primary" style="padding:9px 14px;font-size:12.5px" onclick="saveVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">💾</button>
-          ${cur?`<button class="btn btn-ghost" class="hl-danger" style="padding:9px 12px;font-size:12.5px" onclick="clearVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">🗑️</button>`:''}
+          ${cur?`<button class="btn btn-ghost hl-danger" style="padding:9px 12px;font-size:12.5px" onclick="clearVideoLink('${id}','${ex.name.replace(/'/g,"\\'")}')">🗑️</button>`:''}
         </div>
       </div>`;
     }).join('');
@@ -8725,7 +8785,7 @@ async function openSuggestions(){
       return `<div class="card" style="padding:11px 13px;margin-bottom:8px;border-color:${cor}">
         <div style="display:flex;gap:8px;align-items:flex-start">
           <div style="flex:1;font-size:13.5px;line-height:1.45">${String(x.texto||'').replace(/</g,'&lt;')}</div>
-          <button class="btn btn-ghost" class="hl-danger" style="padding:5px 9px;font-size:12px" onclick="deleteSuggestion('${x.id}')">🗑️</button>
+          <button class="btn btn-ghost hl-danger" style="padding:5px 9px;font-size:12px" onclick="deleteSuggestion('${x.id}')">🗑️</button>
         </div>
         <div style="font-size:11.5px;color:var(--text-mute);margin-top:6px;line-height:1.6">
           ${(x.n||1)>1?`<b style="color:var(--accent-2)">${x.n}×</b> · `:''}${x.ultimoNome?String(x.ultimoNome).split(' ')[0]+' · ':''}${x.modulo==='run'?'🏃':'🏋️'} ·
@@ -8743,7 +8803,7 @@ async function openSuggestions(){
           <div style="font-size:11.5px;color:var(--text-mute);margin-bottom:8px">As mais repetidas primeiro — é o melhor roadmap que existe.</div>
           ${perg.map(x=>bloco(x,'var(--border)')).join('')}`:''}
       </div>
-      <button class="btn btn-ghost btn-block" class="hl-danger" style="margin-top:10px" onclick="clearAllSuggestions()">🗑️ Limpar tudo</button>
+      <button class="btn btn-ghost btn-block hl-danger" style="margin-top:10px" onclick="clearAllSuggestions()">🗑️ Limpar tudo</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   }catch(e){
     console.log('Erro ao carregar feedback:', e);
@@ -9066,7 +9126,7 @@ function openHistoryEntry(idx){
   const d = new Date(x.at);
   const isRun = state.active==='run';
   const parts = !isRun ? partsFromEntry(x) : [];
-  const adaptBlock = x.adaptedWith ? `<div class="card card-alert card-row" class="hl-info" style="margin-top:12px;;background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado</div><div class="card-sub">Neste dia você treinou em modo adaptado por <b>${x.adaptedWith}</b> — por isso o volume foi menor. Cuidar do corpo também é treinar. 💚</div></div></div>` : '';
+  const adaptBlock = x.adaptedWith ? `<div class="card card-alert card-row hl-info" style="margin-top:12px;;background:rgba(56,189,248,0.06)"><div class="card-icon">🩹</div><div><div class="card-title info">Treino adaptado</div><div class="card-sub">Neste dia você treinou em modo adaptado por <b>${x.adaptedWith}</b> — por isso o volume foi menor. Cuidar do corpo também é treinar. 💚</div></div></div>` : '';
   const muscleBlock = parts.length ? `
     <div class="card" style="margin-top:12px">
       <div class="section-lbl" style="margin:0 0 8px">💪 Músculos trabalhados</div>
