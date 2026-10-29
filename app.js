@@ -1,5 +1,5 @@
-// ===== MetaTreino v12.55 =====
-const APP_VERSION = 'v12.55';
+// ===== MetaTreino 2027.1 Beta 1 =====
+const APP_VERSION = '2027.1-beta.1';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -706,6 +706,7 @@ async function afterGoogleSignIn(user){
 
   state.user = { name:user.displayName||'', email, isAdmin };
   loadVideoLinks(); // não bloqueia o login; links do treinador pros vídeos
+  try{ await loadCustomExercises(); }catch(e){}   // exercícios novos cadastrados no painel admin
   loadCoachMural(); // logo/mensagem fixada do treinador
   loadCoachContact(); // whatsapp/e-mail de contato do treinador
   loadWeather(); // clima (só mostra dica quando for notável)
@@ -753,8 +754,35 @@ function showPickScreen(){
   showScreen('scr-pick');
   mostraAtalhoAdmin('pick-admin-btn');
 }
+// A cada 4 semanas (mesmo ritmo do ciclo Adaptação→Volume→Sobrecarga→Deload) a ficha ganha
+// exercícios NOVOS dentro do mesmo plano. Respeita equipamento, dor, objetivo e os exercícios
+// que o aluno fixou na mão. O histórico (cargas, recordes) continua valendo por exercício.
+const BLOCO_DIAS = 28;
+function blocoAtualLift(mod){
+  const t0 = (typeof planStartTs==='function') ? planStartTs(mod) : 0;
+  if(!t0) return 0;
+  return Math.max(0, Math.floor((Date.now()-t0)/(BLOCO_DIAS*86400000)));
+}
+function rotacionarBlocoLift(){
+  try{
+    const mod = state.modules.lift;
+    if(!mod || !mod.plan || !mod.setup || !Array.isArray(mod.plan.workouts)) return false;
+    const b = blocoAtualLift(mod);
+    const atual = mod.plan.bloco || 0;
+    if(b <= atual) return false;
+    const anteriores = new Set();
+    mod.plan.workouts.forEach(w=>(w.exercises||[]).forEach(e=>anteriores.add(e.id)));
+    window.__blocoSeed = b; window.__evitarIds = anteriores;
+    try{ regenLiftExercises(); } finally { delete window.__blocoSeed; delete window.__evitarIds; }
+    mod.plan.bloco = b;
+    mod.plan.blocoAt = Date.now();
+    state.ui = state.ui || {}; state.ui.novoBloco = b;
+    return true;
+  }catch(e){ console.log('rotação de bloco falhou', e); return false; }
+}
 function bootAfterAuth(){
   cleanupOldHistory();
+  try{ if(rotacionarBlocoLift()) setTimeout(()=>toast('🔄 Novo bloco de treinos! Mesmos objetivos, exercícios novos pra seguir evoluindo.', 4500), 1500); }catch(e){}
   recalibrateRunPlan(); // semana avançou? plano acompanha
   if(!state.user){ showScreen('scr-auth'); return; }
   if(!state.user.profile || !state.user.profile.quiz_done){
@@ -1131,13 +1159,13 @@ function runBuildingScreen(m, steps, done, opts){
   const titulo = opts.titulo || (m==='lift' ? '🧠 Montando seu treino' : '🧠 Montando seu plano de corrida');
   ov.innerHTML =
     '<div style="width:100%;max-width:430px;text-align:center">'+
-      '<div style="width:70px;height:70px;margin:0 auto 22px;border-radius:50%;border:3px solid rgba(16,185,129,.16);border-top-color:#10b981;animation:bldspin .9s linear infinite;position:relative">'+
-        '<div style="position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:50%;border:2px solid rgba(16,185,129,.12);border-bottom-color:rgba(16,185,129,.55);animation:bldspin 1.5s linear infinite reverse"></div>'+
+      '<div style="width:70px;height:70px;margin:0 auto 22px;border-radius:50%;border:3px solid rgba(124,108,255,.16);border-top-color:#7c6cff;animation:bldspin .9s linear infinite;position:relative">'+
+        '<div style="position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:50%;border:2px solid rgba(124,108,255,.12);border-bottom-color:rgba(124,108,255,.55);animation:bldspin 1.5s linear infinite reverse"></div>'+
       '</div>'+
       '<div style="font-size:22px;font-weight:800;letter-spacing:-.3px;color:#fff;margin-bottom:7px">'+titulo+'</div>'+
       '<div style="font-size:12.5px;color:#8fa0b5;line-height:1.5;margin:0 auto 28px;max-width:330px">'+(opts.sub||'Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.')+'</div>'+
       '<div id="bld-stage" style="min-height:140px;display:flex;align-items:center;justify-content:center"></div>'+
-      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:26px"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);transition:width 1.5s linear"></div></div>'+
+      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:26px"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#7c6cff,#a99cff);transition:width 1.5s linear"></div></div>'+
     '</div>';
   requestAnimationFrame(()=>{ ov.style.opacity='1'; });
   const stage = document.getElementById('bld-stage');
@@ -1155,13 +1183,13 @@ function runBuildingScreen(m, steps, done, opts){
     }
     const st = steps[i];
     const ultimo = (i === steps.length-1);
-    const cor = ultimo ? '#34d399' : '#cfe0f0';
+    const cor = ultimo ? '#a99cff' : '#cfe0f0';
     const el = document.createElement('div');
     el.setAttribute('style','display:flex;flex-direction:column;align-items:center;gap:13px;padding:0 6px;animation:bldenter .4s cubic-bezier(.2,.8,.3,1) both');
     el.innerHTML =
       '<div style="font-size:40px;line-height:1">'+st.emo+'</div>'+
       '<div style="font-size:16.5px;line-height:1.45;color:'+cor+';font-weight:500">'+
-        String(st.txt).replace(/<b>/g,'<b style="color:'+(ultimo?'#34d399':'#fff')+'">')+
+        String(st.txt).replace(/<b>/g,'<b style="color:'+(ultimo?'#a99cff':'#fff')+'">')+
       '</div>';
     stage.innerHTML = '';
     stage.appendChild(el);
@@ -1276,7 +1304,7 @@ function generatePlan(module, setup){
         exercises
       };
     });
-    return { type:'lift', goal:setup.goal, workouts, totalWeeks:12 };
+    return { type:'lift', goal:setup.goal, workouts, totalWeeks:12, bloco:0 };
   } else {
     const goal = setup.goal || '5km';
     const totalWeeks = {'5km':8,'10km':10,'21km':12,'42km':16}[goal];
@@ -1507,7 +1535,7 @@ function buildLiftExercises(parts, setup){
     }
     if(!compat.length) return;
     // VARIAÇÃO SEMANAL: gira as opções a cada semana — mesmo estímulo, exercício diferente (Supino barra → halteres → máquina → volta)
-    const wkSeed = Math.floor(Date.now()/(7*86400000)) % 4;
+    const wkSeed = ((typeof window.__blocoSeed==='number') ? window.__blocoSeed : 0) % 4;
     if(compat.length>3 && wkSeed>0) compat = [...compat.slice(wkSeed), ...compat.slice(0,wkSeed)];
     // Força prioriza exercícios compostos/pesados (os primeiros do banco em cada grupo
     // são os básicos de academia); emagrecimento/resistência rotacionam a lista pra
@@ -1522,6 +1550,12 @@ function buildLiftExercises(parts, setup){
       if(comp.length) compat = [...comp, ...iso];
     } else if(goalOffset>0 && compat.length>3){
       compat = [...compat.slice(goalOffset), ...compat.slice(0,goalOffset)];
+    }
+    // BLOCO NOVO: exercícios do bloco anterior ficam por último (só repete se não houver alternativa)
+    if(window.__evitarIds && window.__evitarIds.size && compat.length>3){
+      const _ev = window.__evitarIds;
+      const _rep = e => _ev.has(slug(e.name)) && !(goal==='forca' && forcaRank(e)===0);
+      compat = [...compat].sort((a,b)=>(_rep(a)?1:0)-(_rep(b)?1:0));
     }
     // guarda: isoladores nunca lideram o grupo (rotação continua, mas entre os principais)
     const isIso = e => /isolador|isolad/.test((e.sub||'').toLowerCase()) || exPattern(e.name)==='isolador';
@@ -2189,8 +2223,9 @@ function socialInfo(url){
 }
 // "Ver como fazer": se o treinador cadastrou um link de VÍDEO, toca dentro do app (embed).
 // Sem link (ou link que não seja um vídeo do YouTube), mantém a busca abrindo no YouTube.
-function playExercise(name){
-  const url = videoLinks[slug(name)];
+function playExercise(name, idKey){
+  const _vk = idKey || slug(name);
+  const url = videoLinks[_vk];
   const id = url ? ytVideoId(url) : null;
   if(id){
     const isShort = /\/shorts\//.test(String(url));
@@ -2198,7 +2233,7 @@ function playExercise(name){
     $('modal-inner').classList.add('modal-video');
     if(isShort) $('modal-inner').classList.add('short');
     $('modal-back').classList.add('video-open');
-    const cred = videoCredits[slug(name)];
+    const cred = videoCredits[_vk];
     const info = cred ? socialInfo(cred) : null;
     const creditLine = info
       ? `<a href="${escHtml(cred)}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;color:var(--text-dim);font-size:12px;text-decoration:none">🎥 Demonstração por <b style="color:var(--primary-2)">${escHtml(info.handle)}</b> <span>${info.icon}</span></a>`
@@ -2608,7 +2643,7 @@ function renderTodayWorkout(w, isLift){
     <div class="today-label">TREINO DE HOJE</div>
     <div class="today-diff ${isLift?'diff-med':'diff-easy'}">${isLift?'Foco':'Fácil'}</div>
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:w.name}</div>
-    ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:99px;background:var(--tint-primary);border:1px solid rgba(16,185,129,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
+    ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:99px;background:var(--tint-primary);border:1px solid rgba(124,108,255,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
     <div class="today-desc">${desc}</div>
     ${(isLift && typeof fatigueOf==='function' && (w.parts||[]).some(pp=>fatigueOf(pp)>=70)) ? `<div class="note note-warn" style="margin-top:10px"><div class="note-line">🟡 <b>${(w.parts||[]).filter(pp=>fatigueOf(pp)>=70)[0]}</b> ainda em recuperação. Se sentir queda de rendimento, vale tirar uma série hoje — quem manda é você.</div></div>` : ''}
     ${(isLift && typeof cicloAtual==='function' && cicloAtual()) ? (c=>`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">${c.emo} Ciclo: <b style="color:var(--text)">${c.nome}</b> · semana ${c.sem}</div>`)(cicloAtual()) : ''}
@@ -2799,7 +2834,8 @@ function renderSessions(){
   const sel = currentSelectedWorkout(mod);
   $('sessions-chips').innerHTML = mod.plan.workouts.map(w=>{
     const on = String(w.k||w.dayIdx)===String(sel.k||sel.dayIdx);
-    return `<div class="filter-chip ${on?'on':''}" onclick="selectSession('${w.k||w.dayIdx}')"><div style="font-size:11px;letter-spacing:1px;color:var(--text-dim);font-weight:700">${(w.dayName||'').toUpperCase()}</div><div style="font-weight:700;margin-top:2px">${isLift?'Treino '+w.k:String(w.name||'Treino').split('(')[0].trim()}</div></div>`;
+    const _feito = !!entradaConcluidaSemana(w, state.active);
+    return `<div class="filter-chip ${on?'on':''}" onclick="selectSession('${w.k||w.dayIdx}')"><div style="font-size:11px;letter-spacing:1px;color:var(--text-dim);font-weight:700">${(w.dayName||'').toUpperCase()}</div><div style="font-weight:700;margin-top:2px">${isLift?'Treino '+w.k:String(w.name||'Treino').split('(')[0].trim()}${_feito?' ✅':''}</div></div>`;
   }).join('');
   renderSessionDetail(sel);
 }
@@ -2819,7 +2855,7 @@ function currentSelectedWorkout(mod){
   return w || mod.plan.workouts.find(x=>x.dayIdx===getDayIdx()) || mod.plan.workouts[0];
 }
 function cardioFinisherCard(){
-  return `<div class="card card-info card-row hl-warn" style="margin-top:14px;;background:rgba(245,158,11,0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:#f59e0b">Bônus cardio (opcional)</div><div class="card-sub">Treino mais curto hoje? Se quiser turbinar, finalize com ~8 min: <b>2 a 3 voltas</b> de 30s em cada — polichinelo, corrida no lugar (joelho alto), mountain climber e agachamento com salto. 30s de descanso entre as voltas, no seu ritmo. 💪</div></div></div>`;
+  return `<div class="card card-info card-row hl-warn" style="margin-top:14px;;background:rgba(255,122,89,0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:#ff7a59">Bônus cardio (opcional)</div><div class="card-sub">Treino mais curto hoje? Se quiser turbinar, finalize com ~8 min: <b>2 a 3 voltas</b> de 30s em cada — polichinelo, corrida no lugar (joelho alto), mountain climber e agachamento com salto. 30s de descanso entre as voltas, no seu ritmo. 💪</div></div></div>`;
 }
 // ===== PERFIL OCUPACIONAL =====
 // O corpo cobra diferente conforme o dia da pessoa. Não é fisioterapia nem obrigação:
@@ -2856,6 +2892,7 @@ const MOB = {
   punho:{ emo:'🤲', nome:'Soltar o antebraço', tempo:'30s de cada lado', variantes:{
     todos:'Estique um braço à frente com a palma para cima. Com a outra mão, <b>puxe os dedos para baixo</b> até sentir esticar o antebraço. Depois vire a palma para baixo e puxe os dedos para cima.' } }
 };
+Object.keys(MOB).forEach(k=>{ MOB[k].key = k; });
 // texto certo pro equipamento do aluno (na academia ninguém usa batente de porta)
 function mobTexto(item){
   const eq = ((state.modules.lift||{}).setup||{}).equip || 'casa';
@@ -2925,6 +2962,9 @@ function renderSessionDetail(w){
   const done = isLift ? checkLiftDone(w) : false;
   const lockedToday = isLift ? liftDoneToday(w) : false;
   curSessionLocked = lockedToday;
+  const _entSem = entradaConcluidaSemana(w, state.active);
+  const concluidoAnterior = !!(_entSem && !(isLift ? lockedToday : runDoneToday(w)));
+  curSessionDoneEntry = (isLift && concluidoAnterior) ? _entSem : null;
   const html = `
     <div class="detail-hero">
       <h2>${isLift?`Treino ${w.k} — ${w.name}`:w.name}</h2>
@@ -2940,14 +2980,14 @@ function renderSessionDetail(w){
     ${(((state.modules.lift||{}).history||[]).length + ((state.modules.run||{}).history||[]).length) >= 8 ? '' : `<div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série pra ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. frequência cardíaca entre 60-70% do máximo (220 menos sua idade).'}</div></div></div>`}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
-    ${isSkippedToday(w)
+    ${concluidoAnterior ? cardConcluidoAnterior(_entSem) : isSkippedToday(w)
       ? `<div class="card card-alert card-row" style="margin-top:14px;border-color:rgba(148,163,184,0.45)"><div class="card-icon">😴</div><div style="flex:1"><div class="card-title">Treino pulado hoje</div><div class="card-sub">Você escolheu descansar hoje — sem cobrança. Mudou de ideia?</div><button class="btn btn-primary" style="margin-top:10px;padding:8px 16px;font-size:13px" onclick="unskipWorkout('${isLift?w.k:w.dayIdx}')">💪 Voltar atrás (quero treinar)</button></div></div>`
       : `${isLift ? (lockedToday
       ? `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído hoje</div><div class="card-sub">Pra ajustar algo, edite pelo Histórico. Amanhã a sessão libera de novo.</div></div>`
       : `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>`) : (runDoneToday(w)
       ? `<div class="card card-ok" style="margin-top:14px;text-align:center;padding:12px"><div style="color:var(--primary-2);font-weight:800">✅ Atividade registrada hoje</div><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar outra atividade</button></div>`
       : `<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar atividade (km + tempo)</button>`)}
-    ${((isLift && !lockedToday) || (!isLift && !runDoneToday(w))) ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--text-dim);font-weight:600" onclick="skipWorkout('${isLift?w.k:w.dayIdx}')">😴 Não vou treinar hoje (pular)</button>` : ''}`}
+    ${(!concluidoAnterior && ((isLift && !lockedToday) || (!isLift && !runDoneToday(w)))) ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--text-dim);font-weight:600" onclick="skipWorkout('${isLift?w.k:w.dayIdx}')">😴 Não vou treinar hoje (pular)</button>` : ''}`}
   `;
   $('session-detail-slot').innerHTML = html;
 }
@@ -2980,14 +3020,15 @@ function renderLiftBlocks(w){
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   const exFeito = ex => (state.progress[ex.id]||[]).some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===hoje.getTime() && p.sets.length>0; });
   const entradas = Object.entries(groups);
-  const prontos = entradas.map(([,exs])=>exs.every(exFeito));
+  const feitoAntes = ex => !!(curSessionDoneEntry && (curSessionDoneEntry.exercisesDone||[]).some(e=>e.id===ex.id));
+  const prontos = entradas.map(([,exs])=>exs.every(ex=>exFeito(ex)||feitoAntes(ex)));
   let abrir = prontos.findIndex(p=>!p);          // primeiro grupo pendente
   if(abrir === -1) abrir = entradas.length - 1;  // todos prontos: deixa o último aberto
   return entradas.map(([g,exs],i)=>`
     <div class="block ${i===abrir?'open':''}">
       <div class="block-head main" onclick="this.parentNode.classList.toggle('open')">
         <span style="font-size:20px">${prontos[i]?'✅':'🔥'}</span>
-        <div class="block-head-txt"><div class="block-name">${g}${prontos[i]?' <span style="font-size:11px;color:var(--primary-2);font-weight:700">concluído</span>':''}</div><div class="block-sub">${exs.filter(exFeito).length}/${exs.length} ${exs.length===1?'exercício':'exercícios'}</div></div>
+        <div class="block-head-txt"><div class="block-name">${g}${prontos[i]?' <span style="font-size:11px;color:var(--primary-2);font-weight:700">concluído</span>':''}</div><div class="block-sub">${exs.filter(ex=>exFeito(ex)||feitoAntes(ex)).length}/${exs.length} ${exs.length===1?'exercício':'exercícios'}</div></div>
         <div class="block-chev">▾</div>
       </div>
       <div class="block-body"><div class="block-inner">
@@ -2997,6 +3038,22 @@ function renderLiftBlocks(w){
   `).join('');
 }
 let curSessionLocked = false;
+let curSessionDoneEntry = null;   // treino já concluído em dia anterior desta semana
+function inicioSemanaTs(){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-(getDayIdx()-1)); return d.getTime(); }
+function entradaConcluidaSemana(w, modKey){
+  try{
+    const mod = state.modules[modKey]; if(!mod || !w) return null;
+    const ini = inicioSemanaTs();
+    const arr = (mod.history||[]).filter(h=>h.id===w.k && h.at>=ini);
+    return arr.length ? arr[arr.length-1] : null;
+  }catch(e){ return null; }
+}
+function cardConcluidoAnterior(h){
+  const d = new Date(h.at);
+  const dias = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  const dt = dias[d.getDay()]+', '+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
+  return `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído</div><div class="card-sub">Feito ${dt}. Pra ajustar algo, edite pelo Histórico.</div></div>`;
+}
 function renderExerciseCard(ex, idx){
   const last = getLastLog(ex.id);
   const pr = state.prs[ex.id];
@@ -3004,18 +3061,21 @@ function renderExerciseCard(ex, idx){
   const todayLogs = (state.progress[ex.id]||[]).filter(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime(); });
   const todayEntry = todayLogs.length? todayLogs[todayLogs.length-1] : null;
   const doneToday = todayEntry && todayEntry.sets.length>0;
+  const _fa = (!doneToday && curSessionDoneEntry) ? (curSessionDoneEntry.exercisesDone||[]).find(e=>e.id===ex.id) : null;
+  const doneToday_ = doneToday || !!_fa;
   return `
-    <div class="ex" style="${doneToday?'border-left:3px solid var(--primary);padding-left:10px':''}">
-      <div class="ex-num ${doneToday?'anim-check':''}" style="${doneToday?'background:var(--primary);color:var(--on-primary)':''}">${doneToday?'✓':idx+1}</div>
+    <div class="ex" style="${doneToday_?'border-left:3px solid var(--primary);padding-left:10px':''}">
+      <div class="ex-num ${doneToday?'anim-check':''}" style="${doneToday_?'background:var(--primary);color:var(--on-primary)':''}">${doneToday_?'✓':idx+1}</div>
       <div style="flex:1">
         <div class="ex-name">${ex.name} ${ex.pinned?`<span class="pr-badge" style="background:var(--tint-info);color:var(--info)">📌 fixado</span>`:''} ${pr?`<span class="pr-badge">🏆 PR ${ex.unit==='tempo'?fmtTempo(pr.reps):(pr.peso+'kg×'+pr.reps)}</span>`:''}</div>
         <div class="ex-desc">${ex.sub} · Alvo: <b>${ex.sets}× ${ex.reps}</b> · Descanso ${ex.rest}</div>
-        ${last?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px">📊 Última: ${last.sets.map(s=>ex.unit==='tempo'?(s.peso>0?s.peso+'kg · ':'')+fmtTempo(s.reps):`${s.peso}kg×${s.reps}`).join(', ')}</div>`:''}
+        ${last?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px">📊 Última: ${last.sets.map(s=>ex.unit==='tempo'?(s.peso>0?s.peso+'kg · ':'')+fmtTempo(s.reps):`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', ')}</div>`:''}
+        ${_fa?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px;font-weight:700">✅ Feito: ${_fa.best}</div>`:''}
         ${doneToday?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px;font-weight:700">✅ Hoje: ${todayEntry.sets.map(s=>ex.unit==='tempo'?(s.peso>0?s.peso+'kg · ':'')+fmtTempo(s.reps):`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', ')}</div>`:''}
         <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
           ${ex.pinned?`<button class="btn btn-ghost" style="padding:6px 10px;font-size:11.5px" onclick="unpinExercise('${ex.id}')">↩️ Voltar à sugestão</button>`:''}
-          ${curSessionLocked
-            ? `<span style="font-size:12px;color:var(--text-mute);padding:8px 4px">🔒 Concluído hoje — edite pelo Histórico</span>`
+          ${(curSessionLocked || _fa)
+            ? `<span style="font-size:12px;color:var(--text-mute);padding:8px 4px">🔒 Concluído ${_fa?'':'hoje '}— edite pelo Histórico</span>`
             : `<button class="btn ${doneToday?'btn-ghost':'btn-primary'}" style="padding:8px 14px;font-size:13px" onclick="openSetLog('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">${doneToday?'✏️ Editar séries':'📝 Registrar'}</button>`}
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="playExercise('${ex.name.replace(/'/g,"\\'")}')">▶ Ver como fazer</button>
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="openSwapExercise('${ex.id}')">🔄 Trocar</button>
@@ -3080,6 +3140,17 @@ function parseTempo(txt){
   return isFinite(n) ? n : 0;
 }
 // O exercício está no plano de hoje como tempo? (Prancha, Hollow Hold...)
+// Exercícios que se fazem só com o peso do corpo (ou em que a carga é um extra):
+// panturrilha, core, isométricos e variações 'casa'. Aqui a carga NUNCA é cobrada nem sugerida.
+function exCargaOpcional(exId){
+  try{
+    for(const c of EX_BANK) for(const e of c.items){
+      if(slug(e.name)!==exId) continue;
+      return !!(e.iso || c.name==='Core' || c.name==='Panturrilha' || (e.equip||[]).includes('casa'));
+    }
+  }catch(err){}
+  return /panturrilha|prancha|abdominal/.test(String(exId||''));
+}
 function exExigeTempo(exId){
   const ex = (state.modules.lift?.plan?.workouts||[]).flatMap(w=>w.exercises||[]).find(e=>e.id===exId);
   return !!(ex && ex.unit==='tempo');
@@ -3101,14 +3172,16 @@ function smartProgressionHint(exId){
   const isTempo = exExigeTempo(exId);
   if(!prev.length) return {cls:'card-info', txt: isTempo
     ? '🌱 Primeira vez neste exercício: segure com boa postura até onde conseguir, sem forçar. O app vai aprender com seus registros.'
-    : '🌱 Primeira vez neste exercício: comece com uma carga confortável e capriche na técnica. O app vai aprender com seus registros.'};
+    : (exCargaOpcional(exId)
+      ? '🌱 Primeira vez neste exercício: capriche na técnica e nas repetições. A carga é opcional — use só se quiser mais desafio.'
+      : '🌱 Primeira vez neste exercício: comece com uma carga confortável e capriche na técnica. O app vai aprender com seus registros.')};
   const range = repRangeFor(exId);   // funciona igual pra "30-45s": captura 30 e 45
   const last = prev[prev.length-1];
   const lastW = Math.max(...last.sets.map(s=>+s.peso||0));
   const allTop = arr => arr.sets.every(s=>(+s.reps||0) >= range.hi);
   const anyBelow = last.sets.some(s=>(+s.reps||0) > 0 && (+s.reps||0) < range.lo);
   const lastFeel = (state.modules.lift?.history||[]).filter(x=>x.feel).slice(-1)[0]?.feel;
-  const isBodyweight = lastW === 0;
+  const isBodyweight = lastW === 0 || exCargaOpcional(exId);
 
   // ISOMÉTRICOS: mesma lógica de decisão, vocabulário de tempo em vez de reps
   if(isTempo){
@@ -3139,7 +3212,7 @@ function smartProgressionHint(exId){
       ? {cls:'card-warn', txt:`⚖️ Na última sessão algumas séries ficaram abaixo de ${range.lo} reps. Sem problema: mantenha e busque chegar na faixa ${range.lo}-${range.hi} antes de progredir.`}
       : {cls:'card-warn', txt:`⚖️ Na última sessão (${lastW}kg) algumas séries ficaram abaixo de ${range.lo} reps. Mantenha ${lastW}kg e busque a faixa completa antes de subir.`};
   }
-  return {cls:'card-info', txt:`🎯 Última vez: ${last.sets.map(s=>`${s.peso}kg×${s.reps}`).join(', ')}. Hoje tente ${isBodyweight?'+1 repetição por série':'as mesmas cargas com +1 repetição'} — progresso constante vence pressa.`};
+  return {cls:'card-info', txt:`🎯 Última vez: ${last.sets.map(s=>`${s.peso>0?s.peso+'kg×':''}${s.reps}${s.peso>0?'':' reps'}`).join(', ')}. Hoje tente ${isBodyweight?'+1 repetição por série':'as mesmas cargas com +1 repetição'} — progresso constante vence pressa.`};
 }
 function renderSetLogModal(){
   const { exId, exName, entry } = curLog;
@@ -3149,7 +3222,7 @@ function renderSetLogModal(){
   const rows = entry.sets.length? entry.sets.map((s,i)=>`
     <div class="set-row">
       <div class="set-num">${i+1}</div>
-      <input class="set-in mono" type="number" step="0.5" value="${s.peso}" onchange="updateSet(${i},'peso',this.value)" placeholder="kg">
+      <input class="set-in mono" type="number" step="0.5" value="${s.peso}" onchange="updateSet(${i},'peso',this.value)" placeholder="${exCargaOpcional(exId)?'opcional':'kg'}">
       ${isTempo
         ? `<input class="set-in mono" type="text" inputmode="numeric" value="${fmtTempo(s.reps)}" onchange="updateSet(${i},'tempo',this.value)" placeholder="mm:ss">`
         : `<input class="set-in mono" type="number" value="${s.reps}" onchange="updateSet(${i},'reps',this.value)" placeholder="reps">`}
@@ -3157,11 +3230,11 @@ function renderSetLogModal(){
     </div>`).join('') : `<div class="text-dim" style="text-align:center;padding:12px 0">Nenhuma série ainda. Clique em "+ Nova série" para começar.</div>`;
   $('modal-inner').innerHTML = `
     <h3>📝 ${exName}</h3>
-    <p style="font-size:13px;color:var(--text-dim);margin-top:2px">${isTempo ? 'Registre o peso extra (se usar) e o tempo que segurou cada série.' : 'Registre peso e repetições de cada série.'}</p>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:2px">${isTempo ? 'Registre o peso extra (se usar) e o tempo que segurou cada série.' : (exCargaOpcional(exId) ? 'Registre as repetições. A carga é opcional neste exercício.' : 'Registre peso e repetições de cada série.')}</p>
     ${suggested}
     <div style="margin-top:10px">
       <div class="set-row" style="border-bottom:1px solid var(--border);padding-bottom:6px;color:var(--text-dim);font-size:11px;font-weight:700;letter-spacing:1px">
-        <div>#</div><div style="text-align:center">PESO (kg)</div><div style="text-align:center">${isTempo?'TEMPO (mm:ss)':'REPS'}</div><div></div>
+        <div>#</div><div style="text-align:center">PESO (kg)${exCargaOpcional(exId)?' · opc.':''}</div><div style="text-align:center">${isTempo?'TEMPO (mm:ss)':'REPS'}</div><div></div>
       </div>
       ${rows}
     </div>
@@ -3337,6 +3410,7 @@ function progressionTip(){
     for(const ex of (w.exercises||[])){
       const logs = (state.progress[ex.id]||[]).filter(p=>p.sets && p.sets.length).sort((a,b)=>a.date-b.date).slice(-2);
       if(logs.length < 2) continue;
+      if(exCargaOpcional(ex.id)) continue;   // carga opcional: nunca sugere peso
       const top = parseInt(String(ex.reps||'').split('-').pop()) || 12;
       const pesoDe = sess => Math.max(...sess.sets.map(x=>+x.peso||0));
       const fechou = sess => { const w0=pesoDe(sess); return w0>0 && sess.sets.every(x=>(+x.peso||0)===w0 && (+x.reps||0)>=top); };
@@ -3751,8 +3825,8 @@ function renderPerf(){
       const feitos = h.filter(x=>x.at>=s2 && x.at<e2).length;
       const pct = Math.round(Math.min(100,(feitos/wkTarget)*100));
       const bateu = feitos>=wkTarget;
-      return `<circle cx="${p[0]}" cy="${p[1]}" r="${bateu?6:4.5}" fill="${bateu?'#34d399':'#0a1122'}" stroke="#10b981" stroke-width="${bateu?0:2.5}"/>
-        <text x="${p[0]}" y="${Math.max(14, p[1]-13)}" fill="${bateu?'#34d399':'#94a3b8'}" font-size="11" font-weight="800" text-anchor="middle">${pct}%</text>`;
+      return `<circle cx="${p[0]}" cy="${p[1]}" r="${bateu?6:4.5}" fill="${bateu?'#a99cff':'#0d1230'}" stroke="#7c6cff" stroke-width="${bateu?0:2.5}"/>
+        <text x="${p[0]}" y="${Math.max(14, p[1]-13)}" fill="${bateu?'#a99cff':'#94a3b8'}" font-size="11" font-weight="800" text-anchor="middle">${pct}%</text>`;
     }).join('');
   }
   renderDistDonut();
@@ -3818,10 +3892,10 @@ function renderDistDonut(){
   const donut = $('dist-donut'), legend = $('dist-legend');
   if(!donut||!legend) return;
   const cats = [
-    {n:liftN, lbl:'💪 Musculação', color:'#10b981'},
-    {n:runN, lbl:'🏃 Corrida', color:'#f59e0b'},
+    {n:liftN, lbl:'💪 Musculação', color:'#7c6cff'},
+    {n:runN, lbl:'🏃 Corrida', color:'#ff7a59'},
     {n:walkN, lbl:'🚶 Caminhada', color:'#38bdf8'},
-    {n:bikeN, lbl:'🚴 Bike', color:'#a78bfa'}
+    {n:bikeN, lbl:'🚴 Bike', color:'#2dd4bf'}
   ].filter(c=>c.n>0);
   if(!total){
     donut.innerHTML = `<circle cx="60" cy="60" r="45" fill="none" stroke="rgba(148,163,184,0.14)" stroke-width="14"/><text x="60" y="66" text-anchor="middle" fill="#94a3b8" font-size="12">Sem dados</text>`;
@@ -3978,7 +4052,7 @@ function renderWeightChart(){
   const pts = ws.map((w,i)=>x(i).toFixed(1)+','+y(w.weight).toFixed(1));
   const area = `${L},${H-B} ${pts.join(' ')} ${x(ws.length-1).toFixed(1)},${H-B}`;
   const delta = vals[vals.length-1]-vals[0];
-  const cor = Math.abs(delta)<0.2 ? '#94a3b8' : (delta<0 ? '#34d399' : '#fbbf24');
+  const cor = Math.abs(delta)<0.2 ? '#94a3b8' : (delta<0 ? '#a99cff' : '#ffa387');
   const dFmt = (delta>0?'+':'')+delta.toFixed(1)+'kg';
   const dt = t => { const d=new Date(t); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" class="wchart" style="overflow:visible">
@@ -4005,8 +4079,8 @@ function renderWeightChart(){
       const ty = vale ? py+15 : py-10;
       const ancora = i===0 ? 'start' : (ultimo ? 'end' : 'middle');
       const tx = i===0 ? px-4 : (ultimo ? px+5 : px);
-      return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${ultimo?4.5:2.8}" fill="${ultimo?cor:'#0a1122'}" stroke="${cor}" stroke-width="${ultimo?0:2}"/>`
-        + (mostra ? `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="${ultimo?cor:'#cbd5e1'}" font-size="9.5" font-weight="${ultimo?'800':'700'}" text-anchor="${ancora}" stroke="#0a1122" stroke-width="2.5" paint-order="stroke" style="paint-order:stroke fill">${w.weight.toFixed(1)}</text>` : '');
+      return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${ultimo?4.5:2.8}" fill="${ultimo?cor:'#0d1230'}" stroke="${cor}" stroke-width="${ultimo?0:2}"/>`
+        + (mostra ? `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="${ultimo?cor:'#cbd5e1'}" font-size="9.5" font-weight="${ultimo?'800':'700'}" text-anchor="${ancora}" stroke="#0d1230" stroke-width="2.5" paint-order="stroke" style="paint-order:stroke fill">${w.weight.toFixed(1)}</text>` : '');
     }).join('')}
     <text x="2" y="${T+4}" fill="#64748b" font-size="10">${max.toFixed(0)}kg</text>
     <text x="2" y="${H-B+4}" fill="#64748b" font-size="10">${min.toFixed(0)}kg</text>
@@ -4130,7 +4204,7 @@ function monthBestStreak(){
 const somaKm = (arr)=>arr.reduce((s,x)=>s+(parseFloat(x.distance)||0),0);
 
 // Cada desafio: progresso() retorna [atual, alvo]. cat filtra por modalidade.
-const MONTH_CHALLENGES = [
+const MONTH_CHALLENGES_LEGACY = [
   { id:'m_lift_8',  emo:'🏋️', cat:'lift',  nome:'Ferro em Brasa',       desc:'12 treinos de musculação no mês',
     prog:()=>[ (state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs()).length, 12 ] },
   { id:'m_lift_pr', emo:'💥', cat:'lift',  nome:'Quebrador de Limites',  desc:'Bata 3 recordes pessoais no mês',
@@ -4157,11 +4231,84 @@ const MONTH_CHALLENGES = [
     prog:()=>[ monthHistory().filter(x=>new Date(x.at).getHours()<7).length, 3 ] }
 ];
 
-// desafios visíveis: os da modalidade ativa + os gerais
-function visibleChallenges(){
-  const temLift = !!state.modules.lift, temRun = !!state.modules.run;
-  return MONTH_CHALLENGES.filter(c=>c.cat==='geral' || (c.cat==='lift'&&temLift) || (c.cat==='run'&&temRun));
+// ---- 2027.1: cada mês tem um TEMA com foco diferente (constância, volume, variedade, recordes...)
+// e cada desafio tem 3 níveis (🥉 bronze, 🥈 prata, 🥇 ouro) que escalam com o nível do aluno.
+// Quem fecha 4 níveis ganha o SELO COLECIONÁVEL do mês.
+const MES_TEMAS = [
+  {nome:'Recomeço',            emo:'🎆', foco:'Constância',   frase:'Ano novo, hábito novo: aqui vale aparecer.',            bases:['dias','seq','semanas','lift','early']},
+  {nome:'Volume Máximo',       emo:'📦', foco:'Volume',       frase:'Mais séries, mais minutos, mais trabalho feito.',       bases:['series','minutos','lift','km','cardio']},
+  {nome:'Explorador',          emo:'🧭', foco:'Variedade',    frase:'Teste exercícios novos e treine o corpo todo.',         bases:['variedade','grupos','lift','cardio','dias']},
+  {nome:'Caça-Recordes',       emo:'💥', foco:'Recordes',     frase:'Mês de empurrar os seus limites.',                      bases:['prs','series','lift','km','seq']},
+  {nome:'Resistência',         emo:'🫁', foco:'Cardio',       frase:'Fôlego em primeiro lugar.',                             bases:['km','cardio','bike','minutos','dias']},
+  {nome:'Equilíbrio',          emo:'⚖️', foco:'Completo',     frase:'Ferro e cardio andando juntos.',                        bases:['mix','grupos','dias','variedade','minutos']},
+  {nome:'Disciplina',          emo:'⏰', foco:'Rotina',       frase:'Quem treina cedo, treina sempre.',                      bases:['early','seq','semanas','lift','dias']},
+  {nome:'Força Bruta',         emo:'🦍', foco:'Força',        frase:'Carga, técnica e recordes.',                            bases:['prs','series','lift','minutos','pernas']},
+  {nome:'Sequência de Ferro',  emo:'🔗', foco:'Sequência',    frase:'Não quebre a corrente.',                                bases:['seq','dias','semanas','cardio','variedade']},
+  {nome:'Noite dos Desafios',  emo:'🎃', foco:'Variedade',    frase:'Mês de sustos… só pros seus limites.',                  bases:['variedade','early','prs','mix','seq']},
+  {nome:'Superação',           emo:'🚀', foco:'Evolução',     frase:'Melhor que o mês passado, é só isso.',                  bases:['minutos','series','km','prs','dias']},
+  {nome:'Reta Final',          emo:'🎄', foco:'Constância',   frase:'Fechar o ano em alta.',                                 bases:['dias','lift','semanas','mix','seq']}
+];
+function mesTema(mk){
+  const m = mk ? (parseInt(String(mk).split('-')[1],10)-1) : new Date().getMonth();
+  return MES_TEMAS[((m%12)+12)%12];
 }
+const NIVEIS_DESAFIO = [{id:'bronze',emo:'🥉',lbl:'Bronze'},{id:'prata',emo:'🥈',lbl:'Prata'},{id:'ouro',emo:'🥇',lbl:'Ouro'}];
+function _progMes(){ return state.progress || {}; }
+function _semanasAtivas(){
+  const porSemana = {};
+  monthActiveDays().forEach(t=>{ const d=new Date(t); const dia=d.getDay()===0?7:d.getDay(); const ini=t-(dia-1)*86400000; porSemana[ini]=(porSemana[ini]||0)+1; });
+  return Object.values(porSemana).filter(n=>n>=3).length;
+}
+const DESAFIO_BASES = {
+  dias:      {cat:'geral', emo:'📅', nome:'Presença',          desc:t=>`Ative-se em ${t} dias diferentes`,                 tiers:[8,12,18],    val:()=>monthActiveDays().size},
+  seq:       {cat:'geral', emo:'🔥', nome:'Constância de Aço', desc:t=>`${t} dias seguidos de atividade`,                  tiers:[3,5,7],      val:()=>monthBestStreak()},
+  semanas:   {cat:'geral', emo:'🗓️', nome:'Semanas Fortes',     desc:t=>`${t} semana${t>1?'s':''} com 3+ dias ativos`,      tiers:[2,3,4],      val:()=>_semanasAtivas()},
+  minutos:   {cat:'geral', emo:'⏱️', nome:'Horas Suadas',       desc:t=>`${t} minutos de treino no mês`,                    tiers:[300,600,900],val:()=>Math.round(monthHistory().reduce((s,x)=>s+(x.duration||0),0))},
+  early:     {cat:'geral', emo:'🌅', nome:'Clube da Madrugada', desc:t=>`${t} treinos antes das 7h`,                        tiers:[2,4,6],      val:()=>monthHistory().filter(x=>new Date(x.at).getHours()<7).length},
+  mix:       {cat:'ambos', emo:'🔀', nome:'Atleta Completo',    desc:t=>`${t} treinos de musculação e ${t} de cardio`,      tiers:[2,4,6],      val:()=>{ const ini=monthStartTs(); const l=(state.modules.lift?.history||[]).filter(x=>x.at>=ini).length; const r=(state.modules.run?.history||[]).filter(x=>x.at>=ini).length; return Math.min(l,r); }},
+  lift:      {cat:'lift',  emo:'🏋️', nome:'Ferro em Brasa',     desc:t=>`${t} treinos de musculação no mês`,                tiers:[6,10,14],    val:()=>(state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs()).length},
+  series:    {cat:'lift',  emo:'🧱', nome:'Construtor de Séries',desc:t=>`${t} séries registradas no mês`,                  tiers:[60,120,200], val:()=>{ const ini=monthStartTs(); let n=0; Object.values(_progMes()).forEach(arr=>(arr||[]).forEach(p=>{ if(p.date>=ini) n+=(p.sets||[]).length; })); return n; }},
+  variedade: {cat:'lift',  emo:'🧭', nome:'Explorador',         desc:t=>`Treine ${t} exercícios diferentes`,                tiers:[10,16,24],   val:()=>{ const ini=monthStartTs(); return Object.values(_progMes()).filter(arr=>(arr||[]).some(p=>p.date>=ini && (p.sets||[]).length)).length; }},
+  grupos:    {cat:'lift',  emo:'🧬', nome:'Corpo Inteiro',      desc:t=>`Treine ${t} grupos musculares diferentes`,         tiers:[4,6,8],      val:()=>{ const set=new Set(); (state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs()).forEach(x=>(x.parts||[]).forEach(p=>set.add(p))); return set.size; }},
+  prs:       {cat:'lift',  emo:'💥', nome:'Quebrador de Limites',desc:t=>`Bata ${t} recorde${t>1?'s':''} pessoal${t>1?'is':''}`,tiers:[1,3,5],   val:()=>Object.values(state.prs||{}).filter(p=>p.at>=monthStartTs()).length},
+  pernas:    {cat:'lift',  emo:'🦵', nome:'Dia de Perna Garantido',desc:t=>`${t} treinos com pernas ou glúteos`,            tiers:[2,4,6],      val:()=>(state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs() && (x.parts||[]).some(p=>['Pernas','Glúteos','Panturrilha'].includes(p))).length},
+  km:        {cat:'run',   emo:'🏃', nome:'Maratonista do Mês', desc:t=>`Corra ${t} km somados no mês`,                     tiers:[15,30,50],   val:()=>+somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && (!x.activity||x.activity==='corrida'))).toFixed(1)},
+  cardio:    {cat:'run',   emo:'🫀', nome:'Cardio em Dia',      desc:t=>`${t} atividades de cardio no mês`,                 tiers:[4,8,12],     val:()=>(state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs()).length},
+  bike:      {cat:'run',   emo:'🚴', nome:'Pedal do Mês',       desc:t=>`${t} km de bike no mês`,                           tiers:[40,80,150],  val:()=>+somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && x.activity==='bike')).toFixed(1)}
+};
+function _escalaDesafio(){
+  const lv = (state.modules.lift&&state.modules.lift.setup&&state.modules.lift.setup.level) || (state.modules.run&&state.modules.run.setup&&state.modules.run.setup.level) || 'intermediario';
+  return {iniciante:0.75, intermediario:1, avancado:1.3}[lv] || 1;
+}
+function mkDesafio(baseId, nivel){
+  const b = DESAFIO_BASES[baseId]; const idx = NIVEIS_DESAFIO.findIndex(n=>n.id===nivel);
+  const alvo = Math.max(1, Math.round(b.tiers[idx]*_escalaDesafio()));
+  return { id: baseId+'_'+nivel, base: baseId, nivel, emo: b.emo, cat: b.cat, nome: b.nome+' '+NIVEIS_DESAFIO[idx].emo, desc: b.desc(alvo), alvo,
+           prog: ()=>[ b.val(), alvo ] };
+}
+// qualquer desafio (inclusive dos meses antigos e selos) pelo id — usado nas medalhas
+function desafioPorId(id){
+  if(String(id).startsWith('selo:')){
+    const t = mesTema(String(id).slice(5));
+    return { id, emo:t.emo, nome:'Selo '+t.nome, desc:'Conquistou 4 níveis nos desafios do mês' };
+  }
+  const leg = MONTH_CHALLENGES_LEGACY.find(c=>c.id===id); if(leg) return leg;
+  const m = String(id).match(/^(.+)_(bronze|prata|ouro)$/);
+  if(m && DESAFIO_BASES[m[1]]) return mkDesafio(m[1], m[2]);
+  return null;
+}
+const SELO_MIN_NIVEIS = 4;
+// desafios do mês, agrupados por tipo (3 níveis cada), conforme o tema e as modalidades do aluno
+function desafiosDoMes(){
+  const temLift = !!state.modules.lift, temRun = !!state.modules.run;
+  const tema = mesTema();
+  const bases = tema.bases.filter(id=>{ const c=DESAFIO_BASES[id].cat; return c==='geral' || (c==='lift'&&temLift) || (c==='run'&&temRun) || (c==='ambos'&&temLift&&temRun); });
+  // aluno só de corrida/musculação: completa com bases gerais pra nunca ficar com tela vazia
+  ['dias','seq','semanas','minutos'].forEach(id=>{ if(bases.length<4 && !bases.includes(id)) bases.push(id); });
+  return bases.map(id=>({ base:id, info:DESAFIO_BASES[id], niveis:NIVEIS_DESAFIO.map(n=>mkDesafio(id,n.id)) }));
+}
+// lista plana (compatível com o resto do app)
+function visibleChallenges(){ return desafiosDoMes().flatMap(g=>g.niveis); }
 // garante o objeto do mês; ao virar o mês, arquiva as medalhas e zera
 // Mostrado UMA vez, quando o aluno abre o app depois da virada do mês.
 // Só aparece se ele realmente conquistou algo — sem conquista, sem janela.
@@ -4169,7 +4316,7 @@ function showMesFechado(){
   try{
     const mf = state.ui && state.ui.mesFechado;
     if(!mf || mf.visto || !mf.ids || !mf.ids.length) return false;
-    const lista = mf.ids.map(id=>MONTH_CHALLENGES.find(c=>c.id===id)).filter(Boolean);
+    const lista = mf.ids.map(id=>desafioPorId(id)).filter(Boolean);
     if(!lista.length){ mf.visto = true; saveData(); return false; }
     const nome = monthName(mf.key);
     $('modal-inner').innerHTML = `
@@ -4233,9 +4380,19 @@ function checkMonthly(){
     const [a, alvo] = c.prog();
     if(a >= alvo){ state.monthly.done.push(c.id); state.monthly.doneAt[c.id] = Date.now(); novos.push(c); }
   });
+  // selo colecionável do tema do mês
+  try{
+    const seloId = 'selo:'+state.monthly.key;
+    const niveis = state.monthly.done.filter(id=>!String(id).startsWith('selo:')).length;
+    if(niveis >= SELO_MIN_NIVEIS && !state.monthly.done.includes(seloId)){
+      state.monthly.done.push(seloId); state.monthly.doneAt[seloId] = Date.now();
+      const t = mesTema(state.monthly.key);
+      novos.push({ id:seloId, emo:t.emo, nome:'Selo '+t.nome, desc:'Você dominou o tema de '+monthName(state.monthly.key).split('/')[0]+'!', selo:true });
+    }
+  }catch(e){}
   if(novos.length){
     saveData();
-    novos.forEach(c=>queueAward({ id:'m_'+c.id, emo:c.emo, tipo:'DESAFIO DO MÊS CONCLUÍDO', nome:c.nome, desc:c.desc, medalha:true }));
+    novos.forEach(c=>queueAward({ id:'m_'+c.id, emo:c.emo, tipo:c.selo?'SELO DO MÊS CONQUISTADO':'DESAFIO DO MÊS CONCLUÍDO', nome:c.nome, desc:c.desc, medalha:true }));
   }
   return novos;
 }
@@ -4255,7 +4412,7 @@ function openMedals(){
   const corpo = meses.length ? meses.map(mk=>{
     const emAndamento = mk === state.monthly.key;
     const itens = porMes[mk].map(m=>{
-      const c = MONTH_CHALLENGES.find(x=>x.id===m.id);
+      const c = desafioPorId(m.id);
       const dt = m.at ? new Date(m.at).toLocaleDateString('pt-BR') : '';
       return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px dashed var(--border)">
         <span style="font-size:20px">${c?c.emo:'🎖️'}</span>
@@ -4291,17 +4448,20 @@ function openMedals(){
 function renderMonthlyCard(){
   const card = $('card-monthly'); if(!card) return;
   ensureMonthly();
-  const lista = visibleChallenges();
-  const feitos = lista.filter(c=>state.monthly.done.includes(c.id)).length;
+  const grupos = desafiosDoMes();
+  const total = grupos.length*NIVEIS_DESAFIO.length;
+  const feitos = grupos.reduce((s,g)=>s+g.niveis.filter(c=>state.monthly.done.includes(c.id)).length,0);
   const restam = daysLeftInMonth();
+  const tema = mesTema();
   card.classList.remove('hidden');
-  const _ev = (typeof seasonalEvent==='function') ? seasonalEvent() : null;
-  $('monthly-title').textContent = `Desafios de ${monthName(state.monthly.key)}` + (_ev ? ` · ${_ev.emo} ${_ev.nome}` : '');
-  $('monthly-sub').textContent = `${feitos} de ${lista.length} concluídos · ${restam===0?'último dia!':`${restam} ${restam===1?'dia restante':'dias restantes'}`}`;
-  // mostra os 3 mais próximos de fechar (ainda não concluídos)
-  const pendentes = lista.filter(c=>!state.monthly.done.includes(c.id))
-    .map(c=>{ const [a,alvo]=c.prog(); return {c, a, alvo, pct:Math.min(1, a/alvo)}; })
-    .sort((x,y)=>y.pct-x.pct).slice(0,3);
+  $('monthly-title').textContent = `${tema.emo} ${tema.nome} · ${monthName(state.monthly.key).split('/')[0]}`;
+  const selo = state.monthly.done.includes('selo:'+state.monthly.key);
+  $('monthly-sub').textContent = `${feitos} de ${total} níveis${selo?' · selo conquistado 🎖️':''} · ${restam===0?'último dia!':`${restam} ${restam===1?'dia restante':'dias restantes'}`}`;
+  // próximo nível de cada desafio, os 3 mais perto de fechar
+  const pendentes = grupos.map(g=>{
+    const prox = g.niveis.find(c=>!state.monthly.done.includes(c.id)); if(!prox) return null;
+    const [a,alvo] = prox.prog(); return {c:prox, a, alvo, pct:Math.min(1,a/alvo)};
+  }).filter(Boolean).sort((x,y)=>y.pct-x.pct).slice(0,3);
   $('monthly-bars').innerHTML = pendentes.length ? pendentes.map(({c,a,alvo,pct})=>`
     <div style="margin-top:10px">
       <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
@@ -4309,42 +4469,45 @@ function renderMonthlyCard(){
       </div>
       <div class="tprog"><div class="tprog-fill" style="width:${Math.round(pct*100)}%"></div></div>
     </div>`).join('')
-    : `<div style="margin-top:8px;color:var(--primary-2);font-weight:700;font-size:13px">🎉 Todos os desafios do mês concluídos! Você é fera.</div>`;
+    : `<div style="margin-top:8px;color:var(--primary-2);font-weight:700;font-size:13px">🎉 Todos os níveis do mês concluídos! Você é fera.</div>`;
 }
 // tela completa
 function openMonthly(){
   ensureMonthly();
-  const lista = visibleChallenges();
+  const grupos = desafiosDoMes();
   const restam = daysLeftInMonth();
-  // concluídos no topo; depois os mais perto de fechar
-  const ordenada = [...lista].sort((x,y)=>{
-    const fx = state.monthly.done.includes(x.id), fy = state.monthly.done.includes(y.id);
-    if(fx !== fy) return fx ? -1 : 1;
-    const px = Math.min(1, x.prog()[0]/x.prog()[1]);
-    const py = Math.min(1, y.prog()[0]/y.prog()[1]);
-    return py - px;
-  });
-  const linhas = ordenada.map(c=>{
-    const feito = state.monthly.done.includes(c.id);
-    const [a,alvo] = c.prog();
-    const pct = Math.min(100, Math.round(a/alvo*100));
-    return `<div class="trophy ${feito?'unlock':''}" style="text-align:left;padding:12px">
+  const tema = mesTema();
+  const feitosN = grupos.reduce((s,g)=>s+g.niveis.filter(c=>state.monthly.done.includes(c.id)).length,0);
+  const selo = state.monthly.done.includes('selo:'+state.monthly.key);
+  const linhas = grupos.map(g=>{
+    const val = g.info.val();
+    const prox = g.niveis.find(c=>!state.monthly.done.includes(c.id));
+    const alvoProx = prox ? prox.alvo : g.niveis[g.niveis.length-1].alvo;
+    const pct = Math.min(100, Math.round(val/alvoProx*100));
+    const pills = g.niveis.map((c,i)=>{ const ok = state.monthly.done.includes(c.id);
+      return `<span style="font-size:11px;padding:3px 8px;border-radius:99px;border:1px solid ${ok?'var(--primary)':'var(--border)'};background:${ok?'var(--tint-primary)':'transparent'};color:${ok?'var(--primary-2)':'var(--text-mute)'};font-weight:700">${NIVEIS_DESAFIO[i].emo} ${c.alvo}</span>`; }).join(' ');
+    return `<div class="trophy ${prox?'':'unlock'}" style="text-align:left;padding:12px">
       <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:22px">${c.emo}</span>
+        <span style="font-size:22px">${g.info.emo}</span>
         <div style="flex:1">
-          <div style="font-weight:800;font-size:13.5px">${c.nome} ${feito?'✅':''}</div>
-          <div style="font-size:11.5px;color:var(--text-mute)">${c.desc}</div>
+          <div style="font-weight:800;font-size:13.5px">${g.info.nome} ${prox?'':'✅'}</div>
+          <div style="font-size:11.5px;color:var(--text-mute)">${prox?prox.desc:'Todos os níveis concluídos'}</div>
         </div>
-        <span class="mono" style="font-size:12px;color:${feito?'var(--primary-2)':'var(--text-dim)'}">${a}/${alvo}</span>
+        <span class="mono" style="font-size:12px;color:var(--text-dim)">${val}</span>
       </div>
-      ${feito?'':`<div class="tprog" style="margin-top:8px"><div class="tprog-fill" style="width:${pct}%"></div></div>`}
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">${pills}</div>
+      ${prox?`<div class="tprog" style="margin-top:8px"><div class="tprog-fill" style="width:${pct}%"></div></div>`:''}
     </div>`;
   }).join('');
   $('modal-inner').innerHTML = `
-    <h3>🎖️ Desafios do mês</h3>
-    <p style="color:var(--text-dim);font-size:13px">${monthName(state.monthly.key)} · ${restam===0?'último dia!':`faltam ${restam} dias`}. Todo dia 1º os desafios zeram e as medalhas ficam guardadas.</p>
-    <div style="max-height:52vh;overflow-y:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px">${linhas}</div>
-    <button class="btn btn-outline btn-block hl-warn" style="margin-top:14px" onclick="closeModal();openMedals()">🏅 Ver minhas medalhas de meses anteriores</button>
+    <div style="text-align:center">
+      <div style="font-size:42px;line-height:1">${tema.emo}</div>
+      <h3 style="margin:8px 0 2px">${tema.nome}</h3>
+      <div style="font-size:12.5px;color:var(--text-dim)">Foco do mês: <b>${tema.foco}</b> · ${tema.frase}</div>
+    </div>
+    <p style="color:var(--text-dim);font-size:12.5px;margin:12px 0 0;text-align:center">${monthName(state.monthly.key)} · ${restam===0?'último dia!':`faltam ${restam} dias`} · feche <b>${SELO_MIN_NIVEIS} níveis</b> pra ganhar o <b>selo ${tema.emo}</b> ${selo?'— <span style="color:var(--primary-2);font-weight:800">conquistado!</span>':`(${Math.min(feitosN,SELO_MIN_NIVEIS)}/${SELO_MIN_NIVEIS})`}</p>
+    <div style="max-height:46vh;overflow-y:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px">${linhas}</div>
+    <button class="btn btn-outline btn-block hl-warn" style="margin-top:14px" onclick="closeModal();openMedals()">🏅 Ver minhas medalhas e selos</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
@@ -4380,12 +4543,12 @@ function renderAward(){
     </div>
     <div style="display:flex;align-items:center;gap:4px">
       ${n>1 ? seta(-1, awardIdx===0) : '<div style="width:44px"></div>'}
-      <div style="flex:1;text-align:center;padding:4px 0${a.secreto?';background:radial-gradient(circle at 50% 30%, rgba(245,158,11,0.16), transparent 70%);border-radius:18px':a.medalha?';background:radial-gradient(circle at 50% 30%, rgba(16,185,129,0.18), transparent 70%);border-radius:18px':a.marco?';background:radial-gradient(circle at 50% 30%, rgba(167,139,250,0.20), transparent 70%);border-radius:18px':''}">
+      <div style="flex:1;text-align:center;padding:4px 0${a.secreto?';background:radial-gradient(circle at 50% 30%, rgba(255,122,89,0.16), transparent 70%);border-radius:18px':a.medalha?';background:radial-gradient(circle at 50% 30%, rgba(124,108,255,0.18), transparent 70%);border-radius:18px':a.marco?';background:radial-gradient(circle at 50% 30%, rgba(45,212,191,0.20), transparent 70%);border-radius:18px':''}">
         ${a.secreto?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
         ${a.medalha?'<div style="font-size:11px;letter-spacing:2px;color:var(--primary-2);font-weight:800">🎖️ MEDALHA DO MÊS 🎖️</div>':''}
-        ${a.marco?'<div style="font-size:11px;letter-spacing:2px;color:#a78bfa;font-weight:800">🎉 MARCO ALCANÇADO 🎉</div>':''}
-        <div class="anim-check" style="font-size:${a.secreto||a.medalha||a.marco?'70px':'62px'};line-height:1.1${a.secreto?';filter:drop-shadow(0 0 18px rgba(245,158,11,0.55))':a.medalha?';filter:drop-shadow(0 0 18px rgba(16,185,129,0.55))':a.marco?';filter:drop-shadow(0 0 18px rgba(167,139,250,0.6))':''}">${a.emo}</div>
-        <div style="font-size:12px;color:${a.secreto?'var(--accent-2)':a.medalha?'var(--primary-2)':a.marco?'#a78bfa':'var(--text-mute)'};letter-spacing:.5px;margin-top:6px;font-weight:${a.secreto||a.medalha||a.marco?'800':'400'}">${a.tipo}</div>
+        ${a.marco?'<div style="font-size:11px;letter-spacing:2px;color:#2dd4bf;font-weight:800">🎉 MARCO ALCANÇADO 🎉</div>':''}
+        <div class="anim-check" style="font-size:${a.secreto||a.medalha||a.marco?'70px':'62px'};line-height:1.1${a.secreto?';filter:drop-shadow(0 0 18px rgba(255,122,89,0.55))':a.medalha?';filter:drop-shadow(0 0 18px rgba(124,108,255,0.55))':a.marco?';filter:drop-shadow(0 0 18px rgba(45,212,191,0.6))':''}">${a.emo}</div>
+        <div style="font-size:12px;color:${a.secreto?'var(--accent-2)':a.medalha?'var(--primary-2)':a.marco?'#2dd4bf':'var(--text-mute)'};letter-spacing:.5px;margin-top:6px;font-weight:${a.secreto||a.medalha||a.marco?'800':'400'}">${a.tipo}</div>
         <h3 style="margin:2px 0 0;font-size:${a.secreto||a.medalha||a.marco?'21px':'19px'}">${a.nome}</h3>
         <p style="color:var(--text-dim);font-size:13px;margin-top:6px;line-height:1.45">${a.desc}</p>
         ${a.secreto?'<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;font-style:italic">Ninguém te contou essa. Você descobriu.</div>':''}
@@ -4724,7 +4887,7 @@ function openTrophyDetail(id){
     </div>
     <div style="text-align:center">
       ${t.secret?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
-      <div class="anim-check" style="font-size:66px;line-height:1.1${t.secret?';filter:drop-shadow(0 0 18px rgba(245,158,11,0.5))':''}">${t.emoji}</div>
+      <div class="anim-check" style="font-size:66px;line-height:1.1${t.secret?';filter:drop-shadow(0 0 18px rgba(255,122,89,0.5))':''}">${t.emoji}</div>
       <h3 style="margin:8px 0 2px">${t.name}</h3>
       <div style="color:var(--text-dim);font-size:13.5px;line-height:1.5">${t.desc}</div>
     </div>
@@ -4772,7 +4935,7 @@ function openTrophies(){
     <p style="color:var(--text-dim);font-size:13px;margin-top:2px">${totalUnlocked} de ${TROPHIES.length} desbloqueados</p>
     ${(()=>{ const sec=TROPHIES.filter(t=>t.secret); const rev=sec.filter(t=>state.trophies.includes(t.id)).length;
       return `<p style="color:var(--accent-2);font-size:12px;margin-top:4px">✨ ${rev} de ${sec.length} conquistas secretas reveladas — elas aparecem sozinhas quando você as merece</p>`; })()}
-    <div style="height:8px;border-radius:99px;background:rgba(148,163,184,0.15);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pctAll}%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:99px"></div></div>
+    <div style="height:8px;border-radius:99px;background:rgba(148,163,184,0.15);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pctAll}%;background:linear-gradient(90deg,#7c6cff,#a99cff);border-radius:99px"></div></div>
     ${groups.map(g=>{
       const u = g.items.filter(t=>state.trophies.includes(t.id)).length;
       if(g.cat==='secret'){
@@ -4803,9 +4966,9 @@ function openTrophies(){
           return `<div class="trophy ${ul?'unlock':''}"${clique}><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div>${bar}</div>`;
         }).join('')}</div></div>`;
     }).join('')}
-    ${state.specialTrophy ? `<div onclick="showSpecialReveal(state.specialTrophy)" style="margin-top:20px;padding:18px;border-radius:var(--radius-card);background:var(--tint-prep);border:1px solid rgba(167,139,250,0.30);text-align:center;cursor:pointer">
-      <div style="font-size:44px;filter:drop-shadow(0 0 10px rgba(167,139,250,.38))">${state.specialTrophy.emo||'💍'}</div>
-      <div style="font-size:10.5px;letter-spacing:2px;color:#a78bfa;font-weight:700;margin-top:4px">CONQUISTA ETERNA</div>
+    ${state.specialTrophy ? `<div onclick="showSpecialReveal(state.specialTrophy)" style="margin-top:20px;padding:18px;border-radius:var(--radius-card);background:var(--tint-prep);border:1px solid rgba(45,212,191,0.30);text-align:center;cursor:pointer">
+      <div style="font-size:44px;filter:drop-shadow(0 0 10px rgba(45,212,191,.38))">${state.specialTrophy.emo||'💍'}</div>
+      <div style="font-size:10.5px;letter-spacing:2px;color:#2dd4bf;font-weight:700;margin-top:4px">CONQUISTA ETERNA</div>
       <div style="font-weight:800;font-size:16px;margin-top:2px">${(state.specialTrophy.titulo||'').replace(/</g,'&lt;')}</div>
       <div style="color:var(--text-dim);font-size:12.5px;line-height:1.55;margin-top:6px;white-space:pre-line">${(state.specialTrophy.descricao||'').replace(/</g,'&lt;')}</div>
       <div style="font-size:11px;color:var(--text-mute);margin-top:8px;font-style:italic">Toque para reviver este momento</div>
@@ -4909,7 +5072,7 @@ const MODAL_CONTENT = {
     return `<h3>💼 Como é sua rotina de trabalho?</h3>
       <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cada rotina cobra do corpo de um jeito. Sabendo a sua, eu sugiro <b>2-3 min de preparação</b> antes do treino — nada obrigatório, só o que faz sentido pro seu dia.</p>
       <div style="margin-top:14px">
-        ${Object.entries(ROTINAS).map(([k,v])=>`<div class="list-row" onclick="setRotina('${k}')" style="${atual===k?'border-color:var(--line-prep);background:rgba(167,139,250,.08)':''}">${v.emo} <span>${v.label}</span>${atual===k?'<span style="margin-left:auto;color:#c4b5fd;font-size:12px;font-weight:800">ativo</span>':''}</div>`).join('')}
+        ${Object.entries(ROTINAS).map(([k,v])=>`<div class="list-row" onclick="setRotina('${k}')" style="${atual===k?'border-color:var(--line-prep);background:rgba(45,212,191,.08)':''}">${v.emo} <span>${v.label}</span>${atual===k?'<span style="margin-left:auto;color:#99f6e4;font-size:12px;font-weight:800">ativo</span>':''}</div>`).join('')}
         <div class="list-row" onclick="setRotina('none')" style="color:var(--text-mute)">🚫 <span>Não quero essa sugestão</span></div>
       </div>
       <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
@@ -6403,6 +6566,94 @@ function maComeback(){
   if(d>=6) return `Senti sua falta, ${maName()}! 💙 ${d} dias sem treinar acontece com todo mundo. Não precisa compensar tudo de uma vez — que tal recomeçar leve hoje?`;
   return null;
 }
+// ===== DICAS CONCRETAS (2027.1) =====
+// Só fala quando existe um DADO real por trás, e sempre fecha com o que fazer a respeito.
+// Retorna lista de {bolha, completa}: bolha = frase curta do balão; completa = resposta ao abrir.
+function maDicasConcretas(){
+  const out = [];
+  try{
+    const lift = state.modules.lift;
+    const hist = (lift && lift.history) || [];
+    const DIA = 86400000;
+    // 1) carga estagnada: mesma carga máxima nas últimas 3 sessões do exercício, ao longo de 2+ semanas
+    if(lift && hist.length>=6){
+      const cand = [];
+      Object.entries(state.progress||{}).forEach(([id,arr])=>{
+        if(exCargaOpcional(id)) return;
+        const logs = (arr||[]).filter(p=>p.sets && p.sets.length).sort((a,b)=>a.date-b.date);
+        if(logs.length<3) return;
+        const ult = logs.slice(-3);
+        const pesos = ult.map(l=>Math.max(...l.sets.map(x=>+x.peso||0)));
+        if(pesos[0]<=0 || !(pesos[0]===pesos[1] && pesos[1]===pesos[2])) return;
+        const semanas = Math.floor((ult[2].date-ult[0].date)/(7*DIA));
+        if(semanas<2) return;
+        if(Date.now()-ult[2].date > 21*DIA) return;                 // só se ainda está treinando isso
+        const range = repRangeFor(id);
+        const todasNoTopo = ult[2].sets.every(x=>(+x.reps||0)>=range.hi);
+        cand.push({id, kg:pesos[2], semanas, topo:todasNoTopo, faixa:range});
+      });
+      cand.sort((a,b)=>b.semanas-a.semanas);
+      const c = cand[0];
+      if(c){
+        const nome = nomeDoEx(c.id);
+        const prox = (c.kg+2.5).toFixed(1).replace('.0','');
+        out.push({
+          bolha:`📊 Sua carga no ${nome} está em ${c.kg}kg há ${c.semanas} semanas.`,
+          completa:`📊 Sua carga no <b>${nome}</b> está em <b>${c.kg}kg</b> há cerca de <b>${c.semanas} semanas</b>.<br><br>`
+            + (c.topo
+              ? `Você já fecha as séries no topo da faixa (${c.faixa.hi} reps). Hoje tente <b>${prox}kg</b> — se as reps caírem pra ${c.faixa.lo}-${c.faixa.lo+2}, é normal e é exatamente a progressão.`
+              : `As reps ainda não chegaram no topo da faixa (${c.faixa.lo}-${c.faixa.hi}). Mantenha ${c.kg}kg e busque <b>+1 repetição por série</b> antes de subir. Se travar de novo, troque por uma variação no botão 🔄 do exercício.`)
+        });
+      }
+    }
+    // 2) grupo muscular esquecido (só grupos que estão no plano do aluno)
+    if(lift && lift.plan && hist.length>=4){
+      const ultimo = {};
+      hist.forEach(x=>(x.parts||[]).forEach(p=>{ ultimo[p]=Math.max(ultimo[p]||0, x.at); }));
+      const noPlano = new Set(); (lift.plan.workouts||[]).forEach(w=>(w.originalParts||w.parts||[]).forEach(p=>noPlano.add(p)));
+      const lista = [...noPlano].filter(p=>ultimo[p]).map(p=>({p, dias:Math.floor((Date.now()-ultimo[p])/DIA)})).filter(x=>x.dias>=8).sort((a,b)=>b.dias-a.dias);
+      const g = lista[0];
+      if(g){
+        const w = (lift.plan.workouts||[]).find(x=>(x.originalParts||x.parts||[]).includes(g.p));
+        out.push({
+          bolha:`📌 Você não treina ${g.p} há ${g.dias} dias.`,
+          completa:`📌 Faz <b>${g.dias} dias</b> que você não treina <b>${g.p}</b>.<br><br>${w?`Esse grupo está no seu <b>Treino ${w.k}</b> (${w.dayName}). `:''}Se der, encaixe-o nos próximos dias — pular grupos por muito tempo desequilibra o corpo e faz você perder força lá.`
+        });
+      }
+    }
+    // 3) constância: semana atual vs melhor semana
+    const todos = [...hist, ...((state.modules.run&&state.modules.run.history)||[])];
+    if(todos.length>=8){
+      const semDe = t=>{ const d=new Date(t); d.setHours(0,0,0,0); const dia=d.getDay()===0?7:d.getDay(); return d.getTime()-(dia-1)*DIA; };
+      const porSem = {}; todos.forEach(x=>{ const k=semDe(x.at); (porSem[k]=porSem[k]||new Set()).add(new Date(x.at).toDateString()); });
+      const atualK = semDe(Date.now());
+      const atual = porSem[atualK] ? porSem[atualK].size : 0;
+      const melhor = Math.max(...Object.entries(porSem).filter(([k])=>+k!==atualK).map(([,v])=>v.size), 0);
+      if(atual>0 && atual>melhor && melhor>0) out.push({
+        bolha:`🔥 Semana recorde: ${atual} dias ativos, sua melhor marca.`,
+        completa:`🔥 Esta semana você já treinou em <b>${atual} dias</b> — mais que qualquer outra semana (a anterior melhor foi ${melhor}). Pra manter o ritmo sem se machucar, garanta pelo menos um dia de descanso real depois dessa sequência.`
+      });
+    }
+    // 4) volume da semana vs semana anterior (séries registradas)
+    if(lift && hist.length>=6){
+      const ini = (()=>{ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-(getDayIdx()-1)); return d.getTime(); })();
+      let atual=0, ant=0;
+      Object.values(state.progress||{}).forEach(arr=>(arr||[]).forEach(p=>{
+        const n=(p.sets||[]).length; if(p.date>=ini) atual+=n; else if(p.date>=ini-7*DIA) ant+=n;
+      }));
+      if(ant>=12 && getDayIdx()>=4 && atual>=ant*1.25) out.push({
+        bolha:`📈 Seu volume semanal subiu ${Math.round((atual/ant-1)*100)}% — hora de cuidar da recuperação.`,
+        completa:`📈 Você já fez <b>${atual} séries</b> esta semana contra ${ant} na anterior (<b>+${Math.round((atual/ant-1)*100)}%</b>). Ótimo estímulo — só garanta sono e proteína nos próximos dias, que é onde o ganho acontece.`
+      });
+    }
+  }catch(e){ console.log('maDicasConcretas', e); }
+  return out;
+}
+function maDicaConcreta(){
+  const l = maDicasConcretas();
+  if(!l.length) return null;
+  return l[Math.floor(Date.now()/86400000) % l.length];
+}
 function maInsight(){
   const _fi = (typeof fatigueInsight==='function') ? fatigueInsight() : null;
   if(_fi) return _fi;
@@ -6489,6 +6740,7 @@ function maInsight(){
       }
     }
   }catch(e){}
+  try{ maDicasConcretas().forEach(d=>ins.unshift(d.completa)); }catch(e){}
   if(!ins.length) return `Você está com uma boa constância, ${maName()}! Continue registrando que logo te trago padrões mais detalhados. 💪`;
   return ins[Math.floor(Date.now()/86400000) % ins.length];
 }
@@ -6708,6 +6960,7 @@ function maNudge(){
     // Dica de "pegar leve hoje" só faz sentido se existir treino hoje.
     const temTreinoHoje = (()=>{ try{ const m=state.modules[state.active];
       return !!(m && m.plan && (m.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx())); }catch(e){ return false; } })();
+    if(!vac && total>=4){ const dc = maDicaConcreta(); if(dc) return {text:dc.bolha, tone:'curio', dica:dc}; }
     if(!vac && temTreinoHoje && typeof fatigueInsight==='function' && fatigueInsight() && total>=4) return {text:`🧠 Dei uma olhada na sua recuperação — tenho uma dica pra hoje.`, tone:'curio'};
     if(!vac && total>=6 && streak>=2) return {text:`💡 Descobri um padrão nos seus treinos. Posso te mostrar?`, tone:'curio'};
     return null;
@@ -6770,6 +7023,7 @@ function nudgeResposta(n){
   const t = n && n.tone;
   const cab = (n && n.text) ? n.text + '<br><br>' : '';
   try{
+    if(t==='curio' && n.dica){ return n.dica.completa; }
     if(t==='curio'){
       const fi = (typeof fatigueInsight==='function') ? fatigueInsight() : null;
       const ins = (typeof maInsight==='function') ? maInsight() : null;
@@ -6825,9 +7079,9 @@ function openAssistant(){
 function maAvatar(tam){
   const t = tam || 30;
   return `<div style="width:${t}px;height:${t}px;border-radius:50%;flex-shrink:0;
-    background:linear-gradient(135deg,#10b981,#047857);display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#7c6cff,#047857);display:flex;align-items:center;justify-content:center;
     font-weight:900;font-size:${Math.round(t*0.46)}px;color:#04140d;letter-spacing:-.5px;
-    box-shadow:0 2px 8px rgba(16,185,129,.35)">M</div>`;
+    box-shadow:0 2px 8px rgba(124,108,255,.35)">M</div>`;
 }
 function maBubblesHTML(){
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -6838,9 +7092,9 @@ function maBubblesHTML(){
         ${primeiroDoBot ? maAvatar(30) : '<div style="width:30px;flex-shrink:0"></div>'}${html}</div>`;
     return m.typing
     ? comAvatar(`<div style="background:var(--tint-primary);border:1px solid var(--line-primary);border-radius:var(--radius-card) var(--radius-card) var(--radius-card) 4px;padding:13px 16px;display:inline-flex;gap:5px;align-items:center;width:auto">
-        <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out infinite"></span>
-        <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .18s infinite"></span>
-        <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:matype 1.1s ease-in-out .36s infinite"></span>
+        <span style="width:7px;height:7px;border-radius:50%;background:#a99cff;animation:matype 1.1s ease-in-out infinite"></span>
+        <span style="width:7px;height:7px;border-radius:50%;background:#a99cff;animation:matype 1.1s ease-in-out .18s infinite"></span>
+        <span style="width:7px;height:7px;border-radius:50%;background:#a99cff;animation:matype 1.1s ease-in-out .36s infinite"></span>
       </div>`)
     : m.working
     ? comAvatar(`<div style="background:var(--tint-info);border:1px solid var(--line-info);border-radius:var(--radius-card) var(--radius-card) var(--radius-card) 4px;padding:11px 14px;font-size:13px;color:#7dd3fc;display:flex;gap:8px;align-items:center">
@@ -6881,7 +7135,7 @@ function renderAssistant(){
       <div style="flex:1;min-width:0">
         <div style="font-weight:800;font-size:16px;letter-spacing:-.2px">Meta Assistente</div>
         <div style="font-size:11.5px;color:var(--primary-2);display:flex;align-items:center;gap:5px;margin-top:2px">
-          <span style="width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)"></span>
+          <span style="width:7px;height:7px;border-radius:50%;background:#7c6cff;box-shadow:0 0 0 3px rgba(124,108,255,.18)"></span>
           online · responde na hora
         </div>
       </div>
@@ -7663,8 +7917,8 @@ function renderHistEvolution(isLift, h){
     const hgt = max>0 ? Math.max(2, (v/max)*110) : 2;
     const x = gap + i*(barW+gap);
     const cur = i===7;
-    return `<rect x="${x}" y="${130-hgt}" width="${barW}" height="${hgt}" rx="6" fill="${cur?'#10b981':'rgba(16,185,129,0.35)'}"/>
-      ${v>0?`<text x="${x+barW/2}" y="${124-hgt}" text-anchor="middle" fill="${cur?'#34d399':'#64748b'}" font-size="9.5" font-weight="700">${isLift?Math.round(v):v.toFixed(1)}</text>`:''}
+    return `<rect x="${x}" y="${130-hgt}" width="${barW}" height="${hgt}" rx="6" fill="${cur?'#7c6cff':'rgba(124,108,255,0.35)'}"/>
+      ${v>0?`<text x="${x+barW/2}" y="${124-hgt}" text-anchor="middle" fill="${cur?'#a99cff':'#64748b'}" font-size="9.5" font-weight="700">${isLift?Math.round(v):v.toFixed(1)}</text>`:''}
       <text x="${x+barW/2}" y="146" text-anchor="middle" fill="#64748b" font-size="9">S${i+1}</text>`;
   }).join('');
   $('hist-evo-sub').textContent = isLift
@@ -7681,22 +7935,22 @@ function buildShareCanvas(opts){
   const x = c.getContext('2d');
   // fundo gradiente escuro → verde
   const g = x.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, '#050914');
+  g.addColorStop(0, '#070a1a');
   g.addColorStop(0.5, '#06281f');
   g.addColorStop(1, '#0a3d2e');
   x.fillStyle = g; x.fillRect(0, 0, W, H);
   // círculos decorativos
-  x.globalAlpha = 0.10; x.fillStyle = '#10b981';
+  x.globalAlpha = 0.10; x.fillStyle = '#7c6cff';
   x.beginPath(); x.arc(915, 170, 180, 0, Math.PI*2); x.fill();
   x.beginPath(); x.arc(120, 1120, 230, 0, Math.PI*2); x.fill();
   x.globalAlpha = 1;
   // painel central
   roundRect(x, 70, 60, W-140, H-120, 58);
   x.fillStyle = 'rgba(5, 9, 20, 0.80)'; x.fill();
-  x.strokeStyle = 'rgba(16, 185, 129, 0.40)'; x.lineWidth = 3; x.stroke();
+  x.strokeStyle = 'rgba(124, 108, 255, 0.40)'; x.lineWidth = 3; x.stroke();
   // marca
   x.textAlign = 'left';
-  x.fillStyle = '#10b981';
+  x.fillStyle = '#7c6cff';
   x.font = '900 42px Arial, sans-serif';
   x.fillText('Meta', 115, 145);
   x.fillStyle = '#ffffff';
@@ -7719,7 +7973,7 @@ function buildShareCanvas(opts){
     const bx = 115 + col*435, by = 430 + row*156;
     roundRect(x, bx, by, boxW, boxH, 28);
     x.fillStyle = 'rgba(255,255,255,0.08)'; x.fill();
-    x.strokeStyle = 'rgba(16,185,129,0.35)'; x.lineWidth = 2; x.stroke();
+    x.strokeStyle = 'rgba(124,108,255,0.35)'; x.lineWidth = 2; x.stroke();
     x.fillStyle = '#94a3b8';
     x.font = '800 24px Arial, sans-serif';
     x.fillText(cutTxt(x, String(item.rotulo||''), boxW-56), bx+28, by+42);
@@ -7731,7 +7985,7 @@ function buildShareCanvas(opts){
   const listaX = 115, listaY = 775, listaW = 850, listaH = 330;
   roundRect(x, listaX, listaY, listaW, listaH, 32);
   x.fillStyle = 'rgba(5, 9, 20, 0.65)'; x.fill();
-  x.strokeStyle = 'rgba(16,185,129,0.40)'; x.lineWidth = 2; x.stroke();
+  x.strokeStyle = 'rgba(124,108,255,0.40)'; x.lineWidth = 2; x.stroke();
   x.save();
   roundRect(x, listaX+2, listaY+2, listaW-4, listaH-4, 30); x.clip();
   x.fillStyle = '#6ee7b7';
@@ -7762,7 +8016,7 @@ function buildShareCanvas(opts){
   x.fillStyle = '#6ee7b7';
   x.font = '700 24px Arial, sans-serif';
   x.fillText('MetaTreino • treinos inteligentes que evoluem com você', 115, 1235);
-  x.fillStyle = '#34d399';
+  x.fillStyle = '#a99cff';
   x.font = '700 21px Arial, sans-serif';
   x.fillText('MetaTreino App', 115, 1268);
   return c;
@@ -7813,10 +8067,10 @@ function buildWeekCanvas(img, d){
   } else {
     const g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,'#0b1622'); g.addColorStop(1,'#071018');
     x.fillStyle=g; x.fillRect(0,0,W,H);
-    x.fillStyle='rgba(16,185,129,.07)'; x.beginPath(); x.arc(W*0.85,H*0.12,300,0,Math.PI*2); x.fill();
+    x.fillStyle='rgba(124,108,255,.07)'; x.beginPath(); x.arc(W*0.85,H*0.12,300,0,Math.PI*2); x.fill();
   }
   x.textAlign='left';
-  x.fillStyle='#10b981'; x.font='900 38px Arial, sans-serif'; x.fillText('Meta',60,92);
+  x.fillStyle='#7c6cff'; x.font='900 38px Arial, sans-serif'; x.fillText('Meta',60,92);
   x.fillStyle='#ffffff'; x.fillText('Treino',60+x.measureText('Meta').width+4,92);
   x.fillStyle='rgba(255,255,255,.6)'; x.font='700 26px Arial, sans-serif';
   x.fillText(d.periodo, 60, 165);
@@ -7849,7 +8103,7 @@ function buildWeekCanvas(img, d){
     const px = gx + i*gap + (gap-bw)/2;
     const py = gy+gh-bh;
     const g2 = x.createLinearGradient(0,py,0,gy+gh);
-    if(dia.valor>0){ g2.addColorStop(0,'#34d399'); g2.addColorStop(1,'#10b981'); }
+    if(dia.valor>0){ g2.addColorStop(0,'#a99cff'); g2.addColorStop(1,'#7c6cff'); }
     else { g2.addColorStop(0,'rgba(255,255,255,.14)'); g2.addColorStop(1,'rgba(255,255,255,.08)'); }
     x.fillStyle=g2;
     const r=Math.min(12,bw/2);
@@ -7870,7 +8124,7 @@ function buildWeekCanvas(img, d){
   });
   x.fillStyle='rgba(255,255,255,.85)'; x.font='700 26px Arial, sans-serif';
   x.fillText(d.isLift ? 'Minha semana de treinos 💪' : 'Minha semana de corrida 🏃', 60, H-92);
-  x.fillStyle='#34d399'; x.font='700 22px Arial, sans-serif';
+  x.fillStyle='#a99cff'; x.font='700 22px Arial, sans-serif';
   x.fillText('metatreino.app', 60, H-52);
   return c;
 }
@@ -7908,12 +8162,12 @@ function buildPhotoShareCanvas(img, opts){
   // marca pequena no topo
   x.textAlign='left';
   comSombra(()=>{
-    x.fillStyle='#10b981'; x.font='900 40px Arial, sans-serif'; x.fillText('Meta',60,100);
+    x.fillStyle='#7c6cff'; x.font='900 40px Arial, sans-serif'; x.fillText('Meta',60,100);
     x.fillStyle='#ffffff'; x.fillText('Treino',60+x.measureText('Meta').width+4,100);
   });
   // título com barra de destaque
   comSombra(()=>{
-    x.fillStyle='#10b981'; x.fillRect(60, H-406, 7, 96);
+    x.fillStyle='#7c6cff'; x.fillRect(60, H-406, 7, 96);
     x.fillStyle='#ffffff'; x.font='900 60px Arial, sans-serif';
     x.fillText(cutTxt(x, opts.title||'Treino concluído 💪', 900), 86, H-348);
     if(opts.subtitle){
@@ -7943,7 +8197,7 @@ function buildPhotoShareCanvas(img, opts){
       x.fillStyle='rgba(255,255,255,.85)'; x.font='700 26px Arial, sans-serif';
       x.fillText(cutTxt(x, opts.linhaDiscreta, 960), 60, H-106);
     }
-    x.fillStyle='#34d399'; x.font='800 23px Arial, sans-serif';
+    x.fillStyle='#a99cff'; x.font='800 23px Arial, sans-serif';
     x.fillText('metatreino.app', 60, H-56);
   });
   return c;
@@ -8215,7 +8469,7 @@ function applyTheme(t){
   const light = t==='light';
   document.documentElement.setAttribute('data-theme', light?'light':'dark');
   const meta = document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', light?'#f7f8fa':'#050914');
+  if(meta) meta.setAttribute('content', light?'#f7f8fa':'#070a1a');
   try{ localStorage.setItem(THEME_KEY, light?'light':'dark'); }catch(e){}
   const row = document.getElementById('theme-row-label');
   if(row) row.textContent = light ? 'Tema claro' : 'Tema escuro';
@@ -8593,11 +8847,11 @@ function showSpecialReveal(sa){
     <div id="sr-hearts" style="position:absolute;inset:0;overflow:hidden;pointer-events:none"></div>
     <div id="sr-phrase" style="font-size:19px;line-height:1.6;color:#e8ecf4;max-width:340px;min-height:130px;opacity:0;transition:opacity 1s;position:relative;z-index:2"></div>
     <div id="sr-award" style="opacity:0;transition:opacity 1.4s,transform 1.4s;transform:scale(.8);position:relative;z-index:2">
-      <div style="font-size:80px;filter:drop-shadow(0 0 24px rgba(167,139,250,.6))">${emo}</div>
-      <div style="font-size:12px;letter-spacing:3px;color:#a78bfa;font-weight:800;margin-top:10px">CONQUISTA DESBLOQUEADA</div>
+      <div style="font-size:80px;filter:drop-shadow(0 0 24px rgba(45,212,191,.6))">${emo}</div>
+      <div style="font-size:12px;letter-spacing:3px;color:#2dd4bf;font-weight:800;margin-top:10px">CONQUISTA DESBLOQUEADA</div>
       <h2 style="margin:6px 0 12px;color:#fff;font-size:26px">${(sa.titulo||'').replace(/</g,'&lt;')}</h2>
       <p style="color:#c7cfdd;font-size:14.5px;line-height:1.65;max-width:320px;margin:0 auto;white-space:pre-line">${(sa.descricao||'').replace(/</g,'&lt;')}</p>
-      <button class="btn btn-primary" style="margin-top:26px;background:#a78bfa;box-shadow:none;padding:12px 30px;color:#fff" onclick="if(typeof releaseWakeLock==='function')releaseWakeLock();var e=document.getElementById('special-reveal');if(e){e.style.opacity='0';setTimeout(function(){e.remove()},800)}">Continuar ❤️</button>
+      <button class="btn btn-primary" style="margin-top:26px;background:#2dd4bf;box-shadow:none;padding:12px 30px;color:#fff" onclick="if(typeof releaseWakeLock==='function')releaseWakeLock();var e=document.getElementById('special-reveal');if(e){e.style.opacity='0';setTimeout(function(){e.remove()},800)}">Continuar ❤️</button>
     </div>`;
   document.body.appendChild(ov);
   requestAnimationFrame(()=>{ ov.style.opacity='1'; });
@@ -8646,7 +8900,7 @@ function openSpecialAwardAdmin(){
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0"><input type="checkbox" id="sa-treinar" ${s.aoTreinar?'checked':''}> 🏋️ Revelar quando ela terminar um treino (não na abertura)</label>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:2px 0 6px"><input type="checkbox" id="sa-agora" ${s.liberarAgora?'checked':''}> ⚡ Liberar agora (ignora a data)</label>
-    <button class="btn btn-primary btn-block" style="margin-top:8px;background:#a78bfa;box-shadow:none;color:#fff" onclick="saveSpecialAward()">💾 Salvar conquista especial</button>
+    <button class="btn btn-primary btn-block" style="margin-top:8px;background:#2dd4bf;box-shadow:none;color:#fff" onclick="saveSpecialAward()">💾 Salvar conquista especial</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
   $('modal-back').classList.add('on');
 }
@@ -8699,12 +8953,160 @@ async function openVideoAdmin(){
     }).join('');
     return `<div style="margin-top:16px"><div class="section-lbl" style="margin:0 0 4px">${cat.name} · ${cat.items.length}</div>${items}</div>`;
   }).join('');
+  const mobRows = Object.keys(MOB).map(k=>{
+    const m = MOB[k]; const id = 'mob-'+k; const cur = videoLinks[id]||''; const curCred = videoCredits[id]||'';
+    const nm = m.nome.replace(/'/g,"\\'");
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13.5px;font-weight:700">${m.emo} ${m.nome} ${cur?'<span style="color:var(--primary-2);font-size:11px">● vídeo próprio</span>':''}</div>
+        <div class="row" style="gap:6px;margin-top:6px">
+          <input class="input" id="vid-${id}" value="${cur.replace(/"/g,'&quot;')}" placeholder="Link do vídeo (YouTube, Shorts...)" style="flex:1;font-size:12.5px;padding:9px 12px">
+          <button class="btn btn-ghost" style="padding:9px 12px;font-size:12.5px" onclick="testVideoLink('${id}','${nm}')">▶</button>
+        </div>
+        <div class="row" style="gap:6px;margin-top:6px">
+          <input class="input" id="vidc-${id}" value="${curCred.replace(/"/g,'&quot;')}" placeholder="Perfil de quem gravou (opcional)" style="flex:1;font-size:12.5px;padding:9px 12px">
+          <button class="btn btn-primary" style="padding:9px 14px;font-size:12.5px" onclick="saveVideoLink('${id}','${nm}')">💾</button>
+          ${cur?`<button class="btn btn-ghost hl-danger" style="padding:9px 12px;font-size:12.5px" onclick="clearVideoLink('${id}','${nm}')">🗑️</button>`:''}
+        </div>
+      </div>`;
+  }).join('');
+  const mobGroup = `<div style="margin-top:16px"><div class="section-lbl" style="margin:0 0 4px">🧰 Rotina de trabalho (preparação) · ${Object.keys(MOB).length}</div>${mobRows}</div>`;
   $('modal-inner').innerHTML = `
     <h3>🎬 Vídeos dos exercícios</h3>
     <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cole o link do vídeo do YouTube pra cada exercício. O vídeo abre <b>dentro do app</b>; Shorts tocam em vertical. No 2º campo você pode colocar o <b>perfil de quem gravou</b> (Instagram, YouTube, TikTok...) — aparece um crédito discreto embaixo do vídeo. É por exercício, então dá pra creditar pessoas diferentes. Deixe o link do vídeo vazio e salve pra remover tudo.</p>
-    <div style="max-height:56vh;overflow-y:auto;margin-top:6px">${groups}</div>
+    <div style="max-height:56vh;overflow-y:auto;margin-top:6px">${mobGroup}${groups}</div>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
+}
+// ================= EXERCÍCIOS NOVOS (painel admin) =================
+// Coleção Firestore: exerciciosCustom/{slug} → { nome, sub, grupo, equip:[...], iso, url, credito, criadoEm }
+const EQUIP_CUSTOM_OPCOES = [
+  { id:'academia', lbl:'Academia (máquinas/cabos/barra)', equip:['academia'] },
+  { id:'halteres', lbl:'Halteres',                         equip:['academia','halteres'] },
+  { id:'casa',     lbl:'Peso do corpo / casa',             equip:['academia','halteres','casa'] }
+];
+let customExercises = [];
+function aplicaCustomNoBanco(lista){
+  // remove os custom antigos e reinsere (assim edição/remoção refletem na hora)
+  EX_BANK.forEach(c=>{ c.items = c.items.filter(x=>!x.custom); });
+  (lista||[]).forEach(d=>{
+    if(!d || !d.nome || !d.grupo) return;
+    const cat = EX_BANK.find(c=>c.name===d.grupo); if(!cat) return;
+    if(cat.items.some(x=>slug(x.name)===slug(d.nome))) return;   // já existe no banco padrão
+    const it = { name:d.nome, sub:d.sub||d.grupo, equip:Array.isArray(d.equip)&&d.equip.length?d.equip:['academia'], custom:true };
+    if(d.iso) it.iso = true;
+    cat.items.push(it);
+  });
+}
+async function loadCustomExercises(){
+  let lista = null;
+  try{
+    const snap = await fbTimeout(db.collection('exerciciosCustom').get(), 6000);
+    lista = []; snap.forEach(doc=>{ const d=doc.data(); if(d && d.ativo!==false) lista.push({...d, _id:doc.id}); });
+    try{ localStorage.setItem('metatreino_ex_custom', JSON.stringify(lista)); }catch(e){}
+  }catch(e){
+    try{ lista = JSON.parse(localStorage.getItem('metatreino_ex_custom')||'[]'); }catch(e2){ lista = []; }
+  }
+  customExercises = lista || [];
+  aplicaCustomNoBanco(customExercises);
+}
+function openNewExercise(){
+  if(!(state.user && state.user.isAdmin)){ toast('🔒 Recurso restrito a administradores.'); return; }
+  const grupos = EX_BANK.map(c=>`<option value="${c.name}">${c.emo} ${c.name}</option>`).join('');
+  const equips = EQUIP_CUSTOM_OPCOES.map(o=>`<option value="${o.id}">${o.lbl}</option>`).join('');
+  const lista = customExercises.length ? customExercises.map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px dashed var(--border)">
+      <div style="flex:1;font-size:13px"><b>${escHtml(d.nome)}</b><div style="font-size:11.5px;color:var(--text-mute)">${escHtml(d.grupo)} · ${escHtml(d.sub||'')}</div></div>
+      <button class="btn btn-ghost hl-danger" style="padding:6px 10px;font-size:12px" onclick="removeCustomExercise('${d._id}')">🗑️</button>
+    </div>`).join('') : '<div class="text-dim" style="font-size:12.5px;padding:8px 0">Nenhum exercício novo cadastrado ainda.</div>';
+  $('modal-inner').innerHTML = `
+    <h3>➕ Novo exercício</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cadastre um exercício que ainda não existe. Ele entra no banco, pode ser sorteado nos treinos dos grupos que você marcar e aparece em “Trocar exercício” e na Biblioteca.</p>
+    <input class="input" id="nx-nome" placeholder="Título do exercício" style="margin-top:8px">
+    <input class="input" id="nx-url" placeholder="Link do vídeo (YouTube, Shorts...)" style="margin-top:8px">
+    <input class="input" id="nx-cred" placeholder="Perfil de quem gravou (opcional)" style="margin-top:8px">
+    <div class="section-lbl" style="margin:12px 0 4px">Parte do corpo (onde ele será distribuído)</div>
+    <select class="input" id="nx-grupo">${grupos}</select>
+    <div class="section-lbl" style="margin:12px 0 4px">Onde dá pra fazer</div>
+    <select class="input" id="nx-equip">${equips}</select>
+    <input class="input" id="nx-sub" placeholder="Foco (ex.: Peito Superior) — opcional" style="margin-top:8px">
+    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px"><input type="checkbox" id="nx-iso"> Isométrico (conta tempo, não repetições)</label>
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="saveNewExercise()">💾 Salvar exercício</button>
+    <div class="section-lbl" style="margin:16px 0 0">Cadastrados por você · ${customExercises.length}</div>
+    <div style="max-height:22vh;overflow-y:auto">${lista}</div>
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+async function saveNewExercise(){
+  const nome = ($('nx-nome').value||'').trim().replace(/\s+/g,' ');
+  const url = ($('nx-url').value||'').trim();
+  const cred = ($('nx-cred').value||'').trim();
+  const grupo = $('nx-grupo').value;
+  const eq = EQUIP_CUSTOM_OPCOES.find(o=>o.id===$('nx-equip').value) || EQUIP_CUSTOM_OPCOES[0];
+  const sub = ($('nx-sub').value||'').trim();
+  const iso = !!$('nx-iso').checked;
+  if(nome.length<3){ toast('⚠️ Dê um título ao exercício'); return; }
+  if(url && !/^https?:\/\//i.test(url)){ toast('⚠️ O link do vídeo precisa começar com http:// ou https://'); return; }
+  if(cred && !/^https?:\/\//i.test(cred)){ toast('⚠️ O link do perfil precisa começar com http:// ou https://'); return; }
+  const id = slug(nome);
+  if(EX_BANK.some(c=>c.items.some(x=>slug(x.name)===id))){ toast('⚠️ Já existe um exercício com esse nome'); return; }
+  try{
+    await db.collection('exerciciosCustom').doc(id).set({ nome, sub: sub||grupo, grupo, equip:eq.equip, iso, ativo:true, criadoEm:Date.now(), criadoPor:(state.user&&state.user.email)||'' });
+    if(url){
+      const data = { nome, url, atualizadoEm:Date.now() }; if(cred) data.credito = cred;
+      await db.collection('videosExercicios').doc(id).set(data);
+      videoLinks[id] = url; if(cred) videoCredits[id] = cred;
+      try{ localStorage.setItem('metatreino_videos', JSON.stringify(videoLinks)); }catch(e){}
+    }
+    await loadCustomExercises();
+    renderVideoCount();
+    toast('✅ Exercício criado: '+nome);
+    openNewExercise();
+  }catch(e){ console.log('Erro ao criar exercício:', e); toast('⚠️ Não foi possível salvar. Confira as regras do Firestore (coleção exerciciosCustom).'); }
+}
+async function removeCustomExercise(id){
+  appConfirm('Ele sai do banco. Treinos que já usam esse exercício continuam mostrando ele até a próxima troca.', async ()=>{
+    try{
+      await db.collection('exerciciosCustom').doc(id).delete();
+      await loadCustomExercises();
+      toast('🗑️ Exercício removido');
+      openNewExercise();
+    }catch(e){ console.log(e); toast('⚠️ Não foi possível remover. Confira as permissões do Firestore.'); }
+  }, {title:'Remover exercício?', emo:'🗑️', okLabel:'Sim, remover', danger:true});
+}
+// ================= PROMOVER ALUNO A ADMINISTRADOR =================
+// Só o administrador principal promove/rebaixa. Doc: admins/{email} → { ativo:true }
+async function carregaSlotAdmin(email){
+  const slot = $('stud-admin-slot'); if(!slot) return;
+  if(!ehDonoDoApp()) return;
+  if(String(email).toLowerCase()===ADMIN_EMAIL){ slot.innerHTML=''; return; }
+  let ehAdm = false;
+  try{ const d = await db.collection('admins').doc(String(email).toLowerCase()).get(); ehAdm = d.exists && d.data().ativo===true; }catch(e){ return; }
+  if($('stud-admin-slot') !== slot) return;   // saiu da tela enquanto carregava
+  slot.innerHTML = `<div class="section-lbl">Administração</div>
+    ${ehAdm
+      ? `<div class="card card-ok" style="padding:10px 14px;margin-bottom:8px"><b>👑 Este aluno é administrador</b></div>
+         <button class="btn btn-ghost btn-block" onclick="rebaixarAdmin('${email}')">Remover permissão de administrador</button>`
+      : `<button class="btn btn-outline btn-block hl-primary" onclick="promoverAdmin('${email}')">👑 Promover a administrador</button>`}`;
+}
+function promoverAdmin(email){
+  if(!ehDonoDoApp()){ toast('🔒 Só o administrador principal pode promover.'); return; }
+  appConfirm('Ele passa a ver o painel admin: alunos, vídeos, exercícios e sugestões.', async ()=>{
+    try{
+      await db.collection('admins').doc(String(email).toLowerCase()).set({ ativo:true, promovidoEm:Date.now(), promovidoPor:state.user.email });
+      toast('👑 Agora ele é administrador (vale no próximo login dele)');
+      carregaSlotAdmin(email);
+    }catch(e){ console.log(e); toast('⚠️ Não foi possível salvar. Confira as regras do Firestore (coleção admins).'); }
+  }, {title:'Promover a administrador?', emo:'👑', okLabel:'Sim, promover'});
+}
+function rebaixarAdmin(email){
+  if(!ehDonoDoApp()){ toast('🔒 Só o administrador principal pode remover.'); return; }
+  if(String(email).toLowerCase()===ADMIN_EMAIL){ toast('🛡️ O administrador principal não pode ser removido.'); return; }
+  appConfirm('Ele volta a ser aluno comum no próximo login.', async ()=>{
+    try{
+      await db.collection('admins').doc(String(email).toLowerCase()).set({ ativo:false, removidoEm:Date.now(), removidoPor:state.user.email }, {merge:true});
+      toast('Permissão removida');
+      carregaSlotAdmin(email);
+    }catch(e){ console.log(e); toast('⚠️ Não foi possível salvar. Confira as regras do Firestore.'); }
+  }, {title:'Remover administrador?', emo:'👑', okLabel:'Sim, remover', danger:true});
 }
 function testVideoLink(id, exName){
   const inp = $('vid-'+id); if(!inp) return;
@@ -8797,7 +9199,7 @@ async function openSuggestions(){
     const secao = (titulo, arr, cor) => arr.length ? `<div class="section-lbl" style="margin:14px 0 8px">${titulo} (${arr.length})</div>${arr.map(x=>bloco(x,cor)).join('')}` : '';
     $('modal-inner').innerHTML = `<h3>💬 Feedback dos alunos</h3>
       <div style="max-height:56vh;overflow:auto;margin-top:4px">
-        ${secao('💡 SUGESTÕES', sug, 'rgba(16,185,129,.4)')}
+        ${secao('💡 SUGESTÕES', sug, 'rgba(124,108,255,.4)')}
         ${secao('🐞 PROBLEMAS RELATADOS', bug, 'rgba(244,63,94,.4)')}
         ${perg.length?`<div class="section-lbl" style="margin:14px 0 6px">❓ PERGUNTAS SEM RESPOSTA (${perg.length})</div>
           <div style="font-size:11.5px;color:var(--text-mute);margin-bottom:8px">As mais repetidas primeiro — é o melhor roadmap que existe.</div>
@@ -9034,10 +9436,12 @@ function openStudent(email){
       </div>
     ` : '<p class="text-dim" style="margin:14px 0">Aluno ainda não completou o questionário inicial.</p>'}
 
+    <div id="stud-admin-slot"></div>
     <div class="section-lbl">Gerenciar</div>
     <button class="btn btn-ghost btn-block" onclick="toggleStudent('${email}')">${a.active?'🔒 Bloquear acesso':'🔓 Reativar acesso'}</button>
     <button class="btn btn-ghost btn-block danger" style="margin-top:8px;color:var(--danger-soft);border-color:var(--line-danger)" onclick="removeStudent('${email}')">🗑️ Remover aluno</button>
   `;
+  try{ carregaSlotAdmin(email); }catch(e){}
 }
 async function setLifetime(email){
   const a = allowCache[email]; if(!a) return;
@@ -9104,7 +9508,7 @@ function doBroadcast(){
   closeModal();
   const links = phones.map(p=>`https://wa.me/${p.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`);
   const w = window.open('','_blank');
-  w.document.write(`<html><head><title>Envio em massa</title><style>body{font-family:sans-serif;padding:20px;background:#050914;color:var(--text)}a{display:block;padding:12px 16px;background:#10b981;color:var(--on-primary);text-decoration:none;border-radius:var(--radius-btn);margin:6px 0;font-weight:700}</style></head><body><h2>📢 Clique em cada link para abrir o WhatsApp:</h2>${links.map((l,i)=>`<a href="${l}" target="_blank">Aluno ${i+1} · abrir WhatsApp</a>`).join('')}</body></html>`);
+  w.document.write(`<html><head><title>Envio em massa</title><style>body{font-family:sans-serif;padding:20px;background:#070a1a;color:var(--text)}a{display:block;padding:12px 16px;background:#7c6cff;color:var(--on-primary);text-decoration:none;border-radius:var(--radius-btn);margin:6px 0;font-weight:700}</style></head><body><h2>📢 Clique em cada link para abrir o WhatsApp:</h2>${links.map((l,i)=>`<a href="${l}" target="_blank">Aluno ${i+1} · abrir WhatsApp</a>`).join('')}</body></html>`);
 }
 async function exportData(){
   toast('📤 Preparando backup...');
@@ -9130,7 +9534,7 @@ function openHistoryEntry(idx){
   const muscleBlock = parts.length ? `
     <div class="card" style="margin-top:12px">
       <div class="section-lbl" style="margin:0 0 8px">💪 Músculos trabalhados</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:12.5px;padding:5px 13px;border-radius:99px;background:var(--tint-primary);color:var(--primary-2);font-weight:800;border:1px solid rgba(16,185,129,0.3)">${p}</span>`).join('')}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:12.5px;padding:5px 13px;border-radius:99px;background:var(--tint-primary);color:var(--primary-2);font-weight:800;border:1px solid rgba(124,108,255,0.3)">${p}</span>`).join('')}</div>
     </div>` : '';
   const exBlock = (x.exercisesDone && x.exercisesDone.length) ? `
     <div class="section-lbl" style="margin-top:14px">Exercícios por grupo</div>
@@ -9316,6 +9720,7 @@ function explicaRotina(){
       ${itens.map(i=>`<div style="padding:9px 0;border-top:1px dashed var(--border)">
         <div style="font-size:13.5px;font-weight:700">${i.emo} ${i.nome} <span style="color:var(--text-mute);font-weight:600;font-size:12px">· ${i.tempo}</span></div>
         <div class="note-line" style="margin-top:3px">${mobTexto(i)}</div>
+        ${videoLinks['mob-'+i.key] ? `<button class="btn btn-ghost" style="margin-top:8px;padding:6px 12px;font-size:12px" onclick="playExercise('${i.nome}','mob-${i.key}')">▶ Ver vídeo</button>` : ''}
       </div>`).join('')}
       <div class="note-foot">Opcional — sem tempo? Treinar já é ótimo.</div>
     </div>
@@ -9634,3 +10039,5 @@ loadCoachContact();
 
 // impede escolher uma data de nascimento no futuro
 (function(){ const b = document.getElementById('q-birth'); if(b) b.max = new Date().toISOString().slice(0,10); })();
+
+Object.assign(window,{openNewExercise,saveNewExercise,removeCustomExercise,promoverAdmin,rebaixarAdmin,carregaSlotAdmin,playExercise});
