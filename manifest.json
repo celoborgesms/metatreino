@@ -4,8 +4,8 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#050914",
-  "theme_color": "#050914",
+  "background_color": "#070a1a",
+  "theme_color": "#070a1a",
   "orientation": "portrait",
   "description": "Treinos inteligentes de musculação e corrida",
   "icons": [
