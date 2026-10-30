@@ -754,9 +754,40 @@ function showPickScreen(){
   showScreen('scr-pick');
   mostraAtalhoAdmin('pick-admin-btn');
 }
-// A cada 4 semanas (mesmo ritmo do ciclo Adaptação→Volume→Sobrecarga→Deload) a ficha ganha
-// exercícios NOVOS dentro do mesmo plano. Respeita equipamento, dor, objetivo e os exercícios
-// que o aluno fixou na mão. O histórico (cargas, recordes) continua valendo por exercício.
+// modo 'semana': os exercícios PRINCIPAIS de cada grupo ficam (a carga precisa evoluir sobre o mesmo
+//   exercício) e os acessórios giram pra opções que o aluno não fez na semana anterior.
+// modo 'bloco' : a cada 4 semanas tudo gira, inclusive os principais.
+function variarLiftExercises(modo){
+  const mod = state.modules.lift;
+  if(!mod || !mod.plan || !Array.isArray(mod.plan.workouts)) return;
+  const antes = mod.plan.workouts.map(w=>(w.exercises||[]).map(e=>({...e})));
+  const evitar = new Set(); const lideres = [];
+  antes.forEach((exs,wi)=>{
+    const vistos = new Set(); const L = {};
+    exs.forEach(e=>{
+      if(!vistos.has(e.part)){ vistos.add(e.part); L[e.part] = e; if(modo==='bloco') evitar.add(e.id); }
+      else evitar.add(e.id);
+    });
+    lideres[wi] = L;
+  });
+  window.__evitarIds = evitar;
+  try{ regenLiftExercises(); } finally { delete window.__evitarIds; }
+  if(modo==='semana'){
+    mod.plan.workouts.forEach((w,wi)=>{
+      const L = lideres[wi] || {}; const exs = w.exercises || [];
+      Object.keys(L).forEach(part=>{
+        const lead = L[part];
+        const idxs = exs.map((e,i)=>e.part===part?i:-1).filter(i=>i>=0);
+        if(!idxs.length) return;
+        const first = idxs[0];
+        if(exs[first].pinned || exs[first].id===lead.id) return;
+        const onde = exs.findIndex(e=>e.id===lead.id);
+        if(onde>=0){ const tmp = exs[onde]; exs[onde] = exs[first]; exs[first] = tmp; }
+        else { exs[first] = { ...lead, sets: exs[first].sets }; }
+      });
+    });
+  }
+}
 const BLOCO_DIAS = 28;
 function blocoAtualLift(mod){
   const t0 = (typeof planStartTs==='function') ? planStartTs(mod) : 0;
@@ -768,21 +799,16 @@ function rotacionarBlocoLift(){
     const mod = state.modules.lift;
     if(!mod || !mod.plan || !mod.setup || !Array.isArray(mod.plan.workouts)) return false;
     const b = blocoAtualLift(mod);
-    const atual = mod.plan.bloco || 0;
-    if(b <= atual) return false;
-    const anteriores = new Set();
-    mod.plan.workouts.forEach(w=>(w.exercises||[]).forEach(e=>anteriores.add(e.id)));
-    window.__blocoSeed = b; window.__evitarIds = anteriores;
-    try{ regenLiftExercises(); } finally { delete window.__blocoSeed; delete window.__evitarIds; }
-    mod.plan.bloco = b;
-    mod.plan.blocoAt = Date.now();
-    state.ui = state.ui || {}; state.ui.novoBloco = b;
+    if(b <= (mod.plan.bloco || 0)) return false;
+    variarLiftExercises('bloco');
+    mod.plan.bloco = b; mod.plan.blocoAt = Date.now();
+    state.lastVarWeek = Math.floor(Date.now()/(7*86400000));   // já variou nesta semana
     return true;
   }catch(e){ console.log('rotação de bloco falhou', e); return false; }
 }
 function bootAfterAuth(){
   cleanupOldHistory();
-  try{ if(rotacionarBlocoLift()) setTimeout(()=>toast('🔄 Novo bloco de treinos! Mesmos objetivos, exercícios novos pra seguir evoluindo.', 4500), 1500); }catch(e){}
+  try{ if(rotacionarBlocoLift()) setTimeout(()=>toast('🔄 Novo bloco de 4 semanas! Treinos renovados, com exercícios novos pro seu plano.', 4500), 1500); }catch(e){}
   recalibrateRunPlan(); // semana avançou? plano acompanha
   if(!state.user){ showScreen('scr-auth'); return; }
   if(!state.user.profile || !state.user.profile.quiz_done){
@@ -1159,13 +1185,13 @@ function runBuildingScreen(m, steps, done, opts){
   const titulo = opts.titulo || (m==='lift' ? '🧠 Montando seu treino' : '🧠 Montando seu plano de corrida');
   ov.innerHTML =
     '<div style="width:100%;max-width:430px;text-align:center">'+
-      '<div style="width:70px;height:70px;margin:0 auto 22px;border-radius:50%;border:3px solid rgba(124,108,255,.16);border-top-color:#7c6cff;animation:bldspin .9s linear infinite;position:relative">'+
-        '<div style="position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:50%;border:2px solid rgba(124,108,255,.12);border-bottom-color:rgba(124,108,255,.55);animation:bldspin 1.5s linear infinite reverse"></div>'+
+      '<div style="width:70px;height:70px;margin:0 auto 22px;border-radius:50%;border:3px solid rgba(var(--primary-rgb),.16);border-top-color:var(--primary);animation:bldspin .9s linear infinite;position:relative">'+
+        '<div style="position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:50%;border:2px solid rgba(var(--primary-rgb),.12);border-bottom-color:rgba(var(--primary-rgb),.55);animation:bldspin 1.5s linear infinite reverse"></div>'+
       '</div>'+
       '<div style="font-size:22px;font-weight:800;letter-spacing:-.3px;color:#fff;margin-bottom:7px">'+titulo+'</div>'+
       '<div style="font-size:12.5px;color:#8fa0b5;line-height:1.5;margin:0 auto 28px;max-width:330px">'+(opts.sub||'Analisando seus objetivos, equipamentos e preferências pra montar algo que faça sentido pra você.')+'</div>'+
       '<div id="bld-stage" style="min-height:140px;display:flex;align-items:center;justify-content:center"></div>'+
-      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:26px"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#7c6cff,#a99cff);transition:width 1.5s linear"></div></div>'+
+      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:26px"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--primary-2));transition:width 1.5s linear"></div></div>'+
     '</div>';
   requestAnimationFrame(()=>{ ov.style.opacity='1'; });
   const stage = document.getElementById('bld-stage');
@@ -1183,13 +1209,13 @@ function runBuildingScreen(m, steps, done, opts){
     }
     const st = steps[i];
     const ultimo = (i === steps.length-1);
-    const cor = ultimo ? '#a99cff' : '#cfe0f0';
+    const cor = ultimo ? 'var(--primary-2)' : '#cfe0f0';
     const el = document.createElement('div');
     el.setAttribute('style','display:flex;flex-direction:column;align-items:center;gap:13px;padding:0 6px;animation:bldenter .4s cubic-bezier(.2,.8,.3,1) both');
     el.innerHTML =
       '<div style="font-size:40px;line-height:1">'+st.emo+'</div>'+
       '<div style="font-size:16.5px;line-height:1.45;color:'+cor+';font-weight:500">'+
-        String(st.txt).replace(/<b>/g,'<b style="color:'+(ultimo?'#a99cff':'#fff')+'">')+
+        String(st.txt).replace(/<b>/g,'<b style="color:'+(ultimo?'var(--primary-2)':'#fff')+'">')+
       '</div>';
     stage.innerHTML = '';
     stage.appendChild(el);
@@ -1535,7 +1561,7 @@ function buildLiftExercises(parts, setup){
     }
     if(!compat.length) return;
     // VARIAÇÃO SEMANAL: gira as opções a cada semana — mesmo estímulo, exercício diferente (Supino barra → halteres → máquina → volta)
-    const wkSeed = ((typeof window.__blocoSeed==='number') ? window.__blocoSeed : 0) % 4;
+    const wkSeed = Math.floor(Date.now()/(7*86400000)) % 4;
     if(compat.length>3 && wkSeed>0) compat = [...compat.slice(wkSeed), ...compat.slice(0,wkSeed)];
     // Força prioriza exercícios compostos/pesados (os primeiros do banco em cada grupo
     // são os básicos de academia); emagrecimento/resistência rotacionam a lista pra
@@ -2255,10 +2281,34 @@ function playExercise(name, idKey){
 
 // ---------- MODULE TOGGLE ----------
 function renderModToggle(){
-  const el = $('mod-toggle'); const a = state.active;
-  const cur = a==='lift' ? {emo:'🏋️',name:'Musculação',cls:'lift'} : {emo:'🏃',name:'Corrida',cls:'run'};
-  const other = a==='lift' ? {emo:'🏃',name:'Corrida',to:'run'} : {emo:'🏋️',name:'Musculação',to:'lift'};
-  el.innerHTML = `<div class="mod-cur ${cur.cls}"><span style="font-size:20px">${cur.emo}</span><span>${cur.name}</span></div><button class="mod-switch" onclick="switchModule('${other.to}')">⇄ Ir para <span style="font-size:16px">${other.emo}</span> ${other.name}</button>`;
+  const el = $('mod-toggle'); if(!el) return; const a = state.active;
+  const seg = (k,emo,nome)=> a===k
+    ? `<button class="seg on" type="button">${emo} ${nome}</button>`
+    : `<button class="seg" type="button" onclick="switchModule('${k}')">${emo} ${nome}</button>`;
+  el.innerHTML = seg('lift','🏋️','Musculação') + seg('run','🏃','Corrida');
+}
+function renderQuickStats(){
+  const el = $('home-quick'); if(!el) return;
+  try{
+    const mods = [state.modules.lift, state.modules.run].filter(Boolean);
+    const hist = mods.flatMap(m=>m.history||[]);
+    const ini = (typeof inicioSemanaTs==='function') ? inicioSemanaTs() : 0;
+    const sem = hist.filter(x=>x.at>=ini);
+    const planejados = mods.reduce((s,m)=>s+(((m.plan&&m.plan.workouts)||[]).length),0);
+    const min = Math.round(sem.reduce((s,x)=>s+(x.duration||0),0));
+    const _dias = new Set(hist.map(x=>new Date(x.at).toDateString()));
+    let streak = 0; const _c = new Date();
+    if(!_dias.has(_c.toDateString())) _c.setDate(_c.getDate()-1);   // hoje ainda não treinou: não zera a sequência
+    for(let g=0; g<3650; g++){
+      if(_dias.has(_c.toDateString())){ streak++; _c.setDate(_c.getDate()-1); continue; }
+      if(isVacationDay(_c) || isBirthday(_c)){ _c.setDate(_c.getDate()-1); continue; }
+      break;
+    }
+    el.innerHTML = `
+      <div class="qs"><div class="qs-v">${streak}</div><div class="qs-l">🔥 dias seguidos</div></div>
+      <div class="qs"><div class="qs-v">${sem.length}${planejados?`<span style="font-size:13px;color:var(--text-dim)">/${planejados}</span>`:''}</div><div class="qs-l">💪 treinos na semana</div></div>
+      <div class="qs"><div class="qs-v">${min}</div><div class="qs-l">⏱️ min na semana</div></div>`;
+  }catch(e){ el.innerHTML=''; }
 }
 function switchModule(to){
   // Corrida sem plano (com ou sem registros) → abre a tela de escolha, não o setup direto
@@ -2321,7 +2371,7 @@ function renderHome(){
     if(state.lastVarWeek !== _wkNow){
       const tinhaPlano = !!(state.modules.lift && state.modules.lift.plan);
       state.lastVarWeek = _wkNow;
-      if(tinhaPlano){ regenLiftExercises(); toast('🔄 Semana nova: variei alguns exercícios (suas trocas fixadas continuam). '); }
+      if(tinhaPlano){ variarLiftExercises('semana'); toast('🔄 Semana nova: troquei os acessórios e mantive seus exercícios principais pra você evoluir a carga. '); }
       saveData();
     }
   }catch(e){}
@@ -2619,6 +2669,7 @@ function renderHome(){
   }
 
   renderWeekGrid(mod);
+  try{ renderQuickStats(); }catch(e){}
   renderYourList(mod);
 }
 
@@ -2643,7 +2694,7 @@ function renderTodayWorkout(w, isLift){
     <div class="today-label">TREINO DE HOJE</div>
     <div class="today-diff ${isLift?'diff-med':'diff-easy'}">${isLift?'Foco':'Fácil'}</div>
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:w.name}</div>
-    ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:99px;background:var(--tint-primary);border:1px solid rgba(124,108,255,0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
+    ${runDone?`<div style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:99px;background:var(--tint-primary);border:1px solid rgba(var(--primary-rgb),0.4);color:var(--primary-2);font-size:12px;font-weight:800">✅ Atividade registrada hoje — pode registrar outra se quiser</div>`:''}
     <div class="today-desc">${desc}</div>
     ${(isLift && typeof fatigueOf==='function' && (w.parts||[]).some(pp=>fatigueOf(pp)>=70)) ? `<div class="note note-warn" style="margin-top:10px"><div class="note-line">🟡 <b>${(w.parts||[]).filter(pp=>fatigueOf(pp)>=70)[0]}</b> ainda em recuperação. Se sentir queda de rendimento, vale tirar uma série hoje — quem manda é você.</div></div>` : ''}
     ${(isLift && typeof cicloAtual==='function' && cicloAtual()) ? (c=>`<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">${c.emo} Ciclo: <b style="color:var(--text)">${c.nome}</b> · semana ${c.sem}</div>`)(cicloAtual()) : ''}
@@ -2855,7 +2906,7 @@ function currentSelectedWorkout(mod){
   return w || mod.plan.workouts.find(x=>x.dayIdx===getDayIdx()) || mod.plan.workouts[0];
 }
 function cardioFinisherCard(){
-  return `<div class="card card-info card-row hl-warn" style="margin-top:14px;;background:rgba(255,122,89,0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:#ff7a59">Bônus cardio (opcional)</div><div class="card-sub">Treino mais curto hoje? Se quiser turbinar, finalize com ~8 min: <b>2 a 3 voltas</b> de 30s em cada — polichinelo, corrida no lugar (joelho alto), mountain climber e agachamento com salto. 30s de descanso entre as voltas, no seu ritmo. 💪</div></div></div>`;
+  return `<div class="card card-info card-row hl-warn" style="margin-top:14px;;background:rgba(var(--accent-rgb),0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:var(--accent)">Bônus cardio (opcional)</div><div class="card-sub">Treino mais curto hoje? Se quiser turbinar, finalize com ~8 min: <b>2 a 3 voltas</b> de 30s em cada — polichinelo, corrida no lugar (joelho alto), mountain climber e agachamento com salto. 30s de descanso entre as voltas, no seu ritmo. 💪</div></div></div>`;
 }
 // ===== PERFIL OCUPACIONAL =====
 // O corpo cobra diferente conforme o dia da pessoa. Não é fisioterapia nem obrigação:
@@ -3825,8 +3876,8 @@ function renderPerf(){
       const feitos = h.filter(x=>x.at>=s2 && x.at<e2).length;
       const pct = Math.round(Math.min(100,(feitos/wkTarget)*100));
       const bateu = feitos>=wkTarget;
-      return `<circle cx="${p[0]}" cy="${p[1]}" r="${bateu?6:4.5}" fill="${bateu?'#a99cff':'#0d1230'}" stroke="#7c6cff" stroke-width="${bateu?0:2.5}"/>
-        <text x="${p[0]}" y="${Math.max(14, p[1]-13)}" fill="${bateu?'#a99cff':'#94a3b8'}" font-size="11" font-weight="800" text-anchor="middle">${pct}%</text>`;
+      return `<circle cx="${p[0]}" cy="${p[1]}" r="${bateu?6:4.5}" fill="${bateu?'var(--primary-2)':'var(--bg-2)'}" stroke="var(--primary)" stroke-width="${bateu?0:2.5}"/>
+        <text x="${p[0]}" y="${Math.max(14, p[1]-13)}" fill="${bateu?'var(--primary-2)':'#94a3b8'}" font-size="11" font-weight="800" text-anchor="middle">${pct}%</text>`;
     }).join('');
   }
   renderDistDonut();
@@ -3892,10 +3943,10 @@ function renderDistDonut(){
   const donut = $('dist-donut'), legend = $('dist-legend');
   if(!donut||!legend) return;
   const cats = [
-    {n:liftN, lbl:'💪 Musculação', color:'#7c6cff'},
-    {n:runN, lbl:'🏃 Corrida', color:'#ff7a59'},
+    {n:liftN, lbl:'💪 Musculação', color:'var(--primary)'},
+    {n:runN, lbl:'🏃 Corrida', color:'var(--accent)'},
     {n:walkN, lbl:'🚶 Caminhada', color:'#38bdf8'},
-    {n:bikeN, lbl:'🚴 Bike', color:'#2dd4bf'}
+    {n:bikeN, lbl:'🚴 Bike', color:'var(--prep)'}
   ].filter(c=>c.n>0);
   if(!total){
     donut.innerHTML = `<circle cx="60" cy="60" r="45" fill="none" stroke="rgba(148,163,184,0.14)" stroke-width="14"/><text x="60" y="66" text-anchor="middle" fill="#94a3b8" font-size="12">Sem dados</text>`;
@@ -3948,6 +3999,7 @@ function cancelRunPlan(){
 
 // ---------- PROFILE ----------
 function renderProfile(){
+  try{ renderThemePicker(); }catch(e){}
   if(!state || !state.user){ try{ showScreen('scr-auth'); }catch(e){} return; }   // logout no meio de um render
   try{ ensureStateShape(); }catch(e){}
   const u = state.user, p = u.profile || {};
@@ -3959,7 +4011,7 @@ function renderProfile(){
   try{
     const ehAdm = !!(state.user && state.user.isAdmin);
     const lbl = $('pf-admin-lbl'); if(lbl) lbl.classList.toggle('hidden', !ehAdm);
-    const sa = $('adm-special-row'); if(sa) sa.classList.toggle('hidden', !ehDonoDoApp());
+    const sa = $('adm-special-row'); if(sa) sa.classList.toggle('hidden', !ehDonoDoApp()); const sb = $('adm-row-admins'); if(sb) sb.classList.toggle('hidden', !ehDonoDoApp());
     const bt = $('pf-admin-btn'); if(bt) bt.classList.toggle('hidden', !ehAdm);
   }catch(e){}
   const dEl = $('deco-row-label'); if(dEl) dEl.textContent = decoEnabled() ? 'Fundo decorativo (ligado)' : 'Fundo decorativo (desligado)';
@@ -4052,7 +4104,7 @@ function renderWeightChart(){
   const pts = ws.map((w,i)=>x(i).toFixed(1)+','+y(w.weight).toFixed(1));
   const area = `${L},${H-B} ${pts.join(' ')} ${x(ws.length-1).toFixed(1)},${H-B}`;
   const delta = vals[vals.length-1]-vals[0];
-  const cor = Math.abs(delta)<0.2 ? '#94a3b8' : (delta<0 ? '#a99cff' : '#ffa387');
+  const cor = Math.abs(delta)<0.2 ? '#94a3b8' : (delta<0 ? 'var(--primary-2)' : 'var(--accent-2)');
   const dFmt = (delta>0?'+':'')+delta.toFixed(1)+'kg';
   const dt = t => { const d=new Date(t); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" class="wchart" style="overflow:visible">
@@ -4079,8 +4131,8 @@ function renderWeightChart(){
       const ty = vale ? py+15 : py-10;
       const ancora = i===0 ? 'start' : (ultimo ? 'end' : 'middle');
       const tx = i===0 ? px-4 : (ultimo ? px+5 : px);
-      return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${ultimo?4.5:2.8}" fill="${ultimo?cor:'#0d1230'}" stroke="${cor}" stroke-width="${ultimo?0:2}"/>`
-        + (mostra ? `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="${ultimo?cor:'#cbd5e1'}" font-size="9.5" font-weight="${ultimo?'800':'700'}" text-anchor="${ancora}" stroke="#0d1230" stroke-width="2.5" paint-order="stroke" style="paint-order:stroke fill">${w.weight.toFixed(1)}</text>` : '');
+      return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${ultimo?4.5:2.8}" fill="${ultimo?cor:'var(--bg-2)'}" stroke="${cor}" stroke-width="${ultimo?0:2}"/>`
+        + (mostra ? `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="${ultimo?cor:'#cbd5e1'}" font-size="9.5" font-weight="${ultimo?'800':'700'}" text-anchor="${ancora}" stroke="var(--bg-2)" stroke-width="2.5" paint-order="stroke" style="paint-order:stroke fill">${w.weight.toFixed(1)}</text>` : '');
     }).join('')}
     <text x="2" y="${T+4}" fill="#64748b" font-size="10">${max.toFixed(0)}kg</text>
     <text x="2" y="${H-B+4}" fill="#64748b" font-size="10">${min.toFixed(0)}kg</text>
@@ -4274,6 +4326,8 @@ const DESAFIO_BASES = {
   pernas:    {cat:'lift',  emo:'🦵', nome:'Dia de Perna Garantido',desc:t=>`${t} treinos com pernas ou glúteos`,            tiers:[2,4,6],      val:()=>(state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs() && (x.parts||[]).some(p=>['Pernas','Glúteos','Panturrilha'].includes(p))).length},
   km:        {cat:'run',   emo:'🏃', nome:'Maratonista do Mês', desc:t=>`Corra ${t} km somados no mês`,                     tiers:[15,30,50],   val:()=>+somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && (!x.activity||x.activity==='corrida'))).toFixed(1)},
   cardio:    {cat:'run',   emo:'🫀', nome:'Cardio em Dia',      desc:t=>`${t} atividades de cardio no mês`,                 tiers:[4,8,12],     val:()=>(state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs()).length},
+  longao:    {cat:'run',   emo:'🎯', nome:'Longão do Mês',      desc:t=>`Uma corrida de ${t} km ou mais`,                  tiers:[5,8,12],    val:()=>{ const r=(state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && (!x.activity||x.activity==='corrida')); return r.length?+Math.max(...r.map(x=>x.distance||0)).toFixed(1):0; }},
+  caminhada: {cat:'run',   emo:'🚶', nome:'Andarilho',          desc:t=>`${t} km de caminhada no mês`,                      tiers:[15,25,40],   val:()=>+somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && x.activity==='caminhada')).toFixed(1)},
   bike:      {cat:'run',   emo:'🚴', nome:'Pedal do Mês',       desc:t=>`${t} km de bike no mês`,                           tiers:[40,80,150],  val:()=>+somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && x.activity==='bike')).toFixed(1)}
 };
 function _escalaDesafio(){
@@ -4290,22 +4344,24 @@ function mkDesafio(baseId, nivel){
 function desafioPorId(id){
   if(String(id).startsWith('selo:')){
     const t = mesTema(String(id).slice(5));
-    return { id, emo:t.emo, nome:'Selo '+t.nome, desc:'Conquistou 4 níveis nos desafios do mês' };
+    return { id, emo:t.emo, nome:'Selo '+t.nome, desc:'Conquistou 6 níveis nos desafios do mês' };
   }
   const leg = MONTH_CHALLENGES_LEGACY.find(c=>c.id===id); if(leg) return leg;
   const m = String(id).match(/^(.+)_(bronze|prata|ouro)$/);
   if(m && DESAFIO_BASES[m[1]]) return mkDesafio(m[1], m[2]);
   return null;
 }
-const SELO_MIN_NIVEIS = 4;
+const SELO_MIN_NIVEIS = 6;
 // desafios do mês, agrupados por tipo (3 níveis cada), conforme o tema e as modalidades do aluno
 function desafiosDoMes(){
   const temLift = !!state.modules.lift, temRun = !!state.modules.run;
   const tema = mesTema();
-  const bases = tema.bases.filter(id=>{ const c=DESAFIO_BASES[id].cat; return c==='geral' || (c==='lift'&&temLift) || (c==='run'&&temRun) || (c==='ambos'&&temLift&&temRun); });
-  // aluno só de corrida/musculação: completa com bases gerais pra nunca ficar com tela vazia
-  ['dias','seq','semanas','minutos'].forEach(id=>{ if(bases.length<4 && !bases.includes(id)) bases.push(id); });
-  return bases.map(id=>({ base:id, info:DESAFIO_BASES[id], niveis:NIVEIS_DESAFIO.map(n=>mkDesafio(id,n.id)) }));
+  const serve = id=>{ const c=DESAFIO_BASES[id].cat; return c==='geral' || (c==='lift'&&temLift) || (c==='run'&&temRun) || (c==='ambos'&&temLift&&temRun); };
+  // primeiro os desafios em DESTAQUE do tema (foco do mês), depois todos os outros que servem ao aluno:
+  // o tema muda o que vem na frente, mas ninguém fica com menos desafios que antes.
+  const destaque = tema.bases.filter(serve);
+  const resto = Object.keys(DESAFIO_BASES).filter(id=>serve(id) && !destaque.includes(id));
+  return [...destaque, ...resto].map(id=>({ base:id, destaque:destaque.includes(id), info:DESAFIO_BASES[id], niveis:NIVEIS_DESAFIO.map(n=>mkDesafio(id,n.id)) }));
 }
 // lista plana (compatível com o resto do app)
 function visibleChallenges(){ return desafiosDoMes().flatMap(g=>g.niveis); }
@@ -4460,7 +4516,7 @@ function renderMonthlyCard(){
   // próximo nível de cada desafio, os 3 mais perto de fechar
   const pendentes = grupos.map(g=>{
     const prox = g.niveis.find(c=>!state.monthly.done.includes(c.id)); if(!prox) return null;
-    const [a,alvo] = prox.prog(); return {c:prox, a, alvo, pct:Math.min(1,a/alvo)};
+    const [a0,alvo] = prox.prog(); const a = Math.min(a0,alvo); return {c:prox, a, alvo, pct:Math.min(1,a0/alvo)};
   }).filter(Boolean).sort((x,y)=>y.pct-x.pct).slice(0,3);
   $('monthly-bars').innerHTML = pendentes.length ? pendentes.map(({c,a,alvo,pct})=>`
     <div style="margin-top:10px">
@@ -4490,7 +4546,7 @@ function openMonthly(){
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:22px">${g.info.emo}</span>
         <div style="flex:1">
-          <div style="font-weight:800;font-size:13.5px">${g.info.nome} ${prox?'':'✅'}</div>
+          <div style="font-weight:800;font-size:13.5px">${g.info.nome} ${prox?'':'✅'} ${g.destaque?'<span style="font-size:10px;font-weight:800;color:var(--accent);letter-spacing:.6px;margin-left:4px">⭐ FOCO</span>':''}</div>
           <div style="font-size:11.5px;color:var(--text-mute)">${prox?prox.desc:'Todos os níveis concluídos'}</div>
         </div>
         <span class="mono" style="font-size:12px;color:var(--text-dim)">${val}</span>
@@ -4506,7 +4562,7 @@ function openMonthly(){
       <div style="font-size:12.5px;color:var(--text-dim)">Foco do mês: <b>${tema.foco}</b> · ${tema.frase}</div>
     </div>
     <p style="color:var(--text-dim);font-size:12.5px;margin:12px 0 0;text-align:center">${monthName(state.monthly.key)} · ${restam===0?'último dia!':`faltam ${restam} dias`} · feche <b>${SELO_MIN_NIVEIS} níveis</b> pra ganhar o <b>selo ${tema.emo}</b> ${selo?'— <span style="color:var(--primary-2);font-weight:800">conquistado!</span>':`(${Math.min(feitosN,SELO_MIN_NIVEIS)}/${SELO_MIN_NIVEIS})`}</p>
-    <div style="max-height:46vh;overflow-y:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px">${linhas}</div>
+    <div style="max-height:52vh;overflow-y:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px">${linhas}</div>
     <button class="btn btn-outline btn-block hl-warn" style="margin-top:14px" onclick="closeModal();openMedals()">🏅 Ver minhas medalhas e selos</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
@@ -4543,12 +4599,12 @@ function renderAward(){
     </div>
     <div style="display:flex;align-items:center;gap:4px">
       ${n>1 ? seta(-1, awardIdx===0) : '<div style="width:44px"></div>'}
-      <div style="flex:1;text-align:center;padding:4px 0${a.secreto?';background:radial-gradient(circle at 50% 30%, rgba(255,122,89,0.16), transparent 70%);border-radius:18px':a.medalha?';background:radial-gradient(circle at 50% 30%, rgba(124,108,255,0.18), transparent 70%);border-radius:18px':a.marco?';background:radial-gradient(circle at 50% 30%, rgba(45,212,191,0.20), transparent 70%);border-radius:18px':''}">
+      <div style="flex:1;text-align:center;padding:4px 0${a.secreto?';background:radial-gradient(circle at 50% 30%, rgba(var(--accent-rgb),0.16), transparent 70%);border-radius:18px':a.medalha?';background:radial-gradient(circle at 50% 30%, rgba(var(--primary-rgb),0.18), transparent 70%);border-radius:18px':a.marco?';background:radial-gradient(circle at 50% 30%, rgba(var(--prep-rgb),0.20), transparent 70%);border-radius:18px':''}">
         ${a.secreto?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
         ${a.medalha?'<div style="font-size:11px;letter-spacing:2px;color:var(--primary-2);font-weight:800">🎖️ MEDALHA DO MÊS 🎖️</div>':''}
-        ${a.marco?'<div style="font-size:11px;letter-spacing:2px;color:#2dd4bf;font-weight:800">🎉 MARCO ALCANÇADO 🎉</div>':''}
-        <div class="anim-check" style="font-size:${a.secreto||a.medalha||a.marco?'70px':'62px'};line-height:1.1${a.secreto?';filter:drop-shadow(0 0 18px rgba(255,122,89,0.55))':a.medalha?';filter:drop-shadow(0 0 18px rgba(124,108,255,0.55))':a.marco?';filter:drop-shadow(0 0 18px rgba(45,212,191,0.6))':''}">${a.emo}</div>
-        <div style="font-size:12px;color:${a.secreto?'var(--accent-2)':a.medalha?'var(--primary-2)':a.marco?'#2dd4bf':'var(--text-mute)'};letter-spacing:.5px;margin-top:6px;font-weight:${a.secreto||a.medalha||a.marco?'800':'400'}">${a.tipo}</div>
+        ${a.marco?'<div style="font-size:11px;letter-spacing:2px;color:var(--prep);font-weight:800">🎉 MARCO ALCANÇADO 🎉</div>':''}
+        <div class="anim-check" style="font-size:${a.secreto||a.medalha||a.marco?'70px':'62px'};line-height:1.1${a.secreto?';filter:drop-shadow(0 0 18px rgba(var(--accent-rgb),0.55))':a.medalha?';filter:drop-shadow(0 0 18px rgba(var(--primary-rgb),0.55))':a.marco?';filter:drop-shadow(0 0 18px rgba(var(--prep-rgb),0.6))':''}">${a.emo}</div>
+        <div style="font-size:12px;color:${a.secreto?'var(--accent-2)':a.medalha?'var(--primary-2)':a.marco?'var(--prep)':'var(--text-mute)'};letter-spacing:.5px;margin-top:6px;font-weight:${a.secreto||a.medalha||a.marco?'800':'400'}">${a.tipo}</div>
         <h3 style="margin:2px 0 0;font-size:${a.secreto||a.medalha||a.marco?'21px':'19px'}">${a.nome}</h3>
         <p style="color:var(--text-dim);font-size:13px;margin-top:6px;line-height:1.45">${a.desc}</p>
         ${a.secreto?'<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;font-style:italic">Ninguém te contou essa. Você descobriu.</div>':''}
@@ -4887,7 +4943,7 @@ function openTrophyDetail(id){
     </div>
     <div style="text-align:center">
       ${t.secret?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
-      <div class="anim-check" style="font-size:66px;line-height:1.1${t.secret?';filter:drop-shadow(0 0 18px rgba(255,122,89,0.5))':''}">${t.emoji}</div>
+      <div class="anim-check" style="font-size:66px;line-height:1.1${t.secret?';filter:drop-shadow(0 0 18px rgba(var(--accent-rgb),0.5))':''}">${t.emoji}</div>
       <h3 style="margin:8px 0 2px">${t.name}</h3>
       <div style="color:var(--text-dim);font-size:13.5px;line-height:1.5">${t.desc}</div>
     </div>
@@ -4935,7 +4991,7 @@ function openTrophies(){
     <p style="color:var(--text-dim);font-size:13px;margin-top:2px">${totalUnlocked} de ${TROPHIES.length} desbloqueados</p>
     ${(()=>{ const sec=TROPHIES.filter(t=>t.secret); const rev=sec.filter(t=>state.trophies.includes(t.id)).length;
       return `<p style="color:var(--accent-2);font-size:12px;margin-top:4px">✨ ${rev} de ${sec.length} conquistas secretas reveladas — elas aparecem sozinhas quando você as merece</p>`; })()}
-    <div style="height:8px;border-radius:99px;background:rgba(148,163,184,0.15);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pctAll}%;background:linear-gradient(90deg,#7c6cff,#a99cff);border-radius:99px"></div></div>
+    <div style="height:8px;border-radius:99px;background:rgba(148,163,184,0.15);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pctAll}%;background:linear-gradient(90deg,var(--primary),var(--primary-2));border-radius:99px"></div></div>
     ${groups.map(g=>{
       const u = g.items.filter(t=>state.trophies.includes(t.id)).length;
       if(g.cat==='secret'){
@@ -4966,9 +5022,9 @@ function openTrophies(){
           return `<div class="trophy ${ul?'unlock':''}"${clique}><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div>${bar}</div>`;
         }).join('')}</div></div>`;
     }).join('')}
-    ${state.specialTrophy ? `<div onclick="showSpecialReveal(state.specialTrophy)" style="margin-top:20px;padding:18px;border-radius:var(--radius-card);background:var(--tint-prep);border:1px solid rgba(45,212,191,0.30);text-align:center;cursor:pointer">
-      <div style="font-size:44px;filter:drop-shadow(0 0 10px rgba(45,212,191,.38))">${state.specialTrophy.emo||'💍'}</div>
-      <div style="font-size:10.5px;letter-spacing:2px;color:#2dd4bf;font-weight:700;margin-top:4px">CONQUISTA ETERNA</div>
+    ${state.specialTrophy ? `<div onclick="showSpecialReveal(state.specialTrophy)" style="margin-top:20px;padding:18px;border-radius:var(--radius-card);background:var(--tint-prep);border:1px solid rgba(var(--prep-rgb),0.30);text-align:center;cursor:pointer">
+      <div style="font-size:44px;filter:drop-shadow(0 0 10px rgba(var(--prep-rgb),.38))">${state.specialTrophy.emo||'💍'}</div>
+      <div style="font-size:10.5px;letter-spacing:2px;color:var(--prep);font-weight:700;margin-top:4px">CONQUISTA ETERNA</div>
       <div style="font-weight:800;font-size:16px;margin-top:2px">${(state.specialTrophy.titulo||'').replace(/</g,'&lt;')}</div>
       <div style="color:var(--text-dim);font-size:12.5px;line-height:1.55;margin-top:6px;white-space:pre-line">${(state.specialTrophy.descricao||'').replace(/</g,'&lt;')}</div>
       <div style="font-size:11px;color:var(--text-mute);margin-top:8px;font-style:italic">Toque para reviver este momento</div>
@@ -5072,7 +5128,7 @@ const MODAL_CONTENT = {
     return `<h3>💼 Como é sua rotina de trabalho?</h3>
       <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cada rotina cobra do corpo de um jeito. Sabendo a sua, eu sugiro <b>2-3 min de preparação</b> antes do treino — nada obrigatório, só o que faz sentido pro seu dia.</p>
       <div style="margin-top:14px">
-        ${Object.entries(ROTINAS).map(([k,v])=>`<div class="list-row" onclick="setRotina('${k}')" style="${atual===k?'border-color:var(--line-prep);background:rgba(45,212,191,.08)':''}">${v.emo} <span>${v.label}</span>${atual===k?'<span style="margin-left:auto;color:#99f6e4;font-size:12px;font-weight:800">ativo</span>':''}</div>`).join('')}
+        ${Object.entries(ROTINAS).map(([k,v])=>`<div class="list-row" onclick="setRotina('${k}')" style="${atual===k?'border-color:var(--line-prep);background:rgba(var(--prep-rgb),.08)':''}">${v.emo} <span>${v.label}</span>${atual===k?'<span style="margin-left:auto;color:var(--prep-soft);font-size:12px;font-weight:800">ativo</span>':''}</div>`).join('')}
         <div class="list-row" onclick="setRotina('none')" style="color:var(--text-mute)">🚫 <span>Não quero essa sugestão</span></div>
       </div>
       <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
@@ -7079,9 +7135,9 @@ function openAssistant(){
 function maAvatar(tam){
   const t = tam || 30;
   return `<div style="width:${t}px;height:${t}px;border-radius:50%;flex-shrink:0;
-    background:linear-gradient(135deg,#7c6cff,#047857);display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--primary),#047857);display:flex;align-items:center;justify-content:center;
     font-weight:900;font-size:${Math.round(t*0.46)}px;color:#04140d;letter-spacing:-.5px;
-    box-shadow:0 2px 8px rgba(124,108,255,.35)">M</div>`;
+    box-shadow:0 2px 8px rgba(var(--primary-rgb),.35)">M</div>`;
 }
 function maBubblesHTML(){
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -7092,9 +7148,9 @@ function maBubblesHTML(){
         ${primeiroDoBot ? maAvatar(30) : '<div style="width:30px;flex-shrink:0"></div>'}${html}</div>`;
     return m.typing
     ? comAvatar(`<div style="background:var(--tint-primary);border:1px solid var(--line-primary);border-radius:var(--radius-card) var(--radius-card) var(--radius-card) 4px;padding:13px 16px;display:inline-flex;gap:5px;align-items:center;width:auto">
-        <span style="width:7px;height:7px;border-radius:50%;background:#a99cff;animation:matype 1.1s ease-in-out infinite"></span>
-        <span style="width:7px;height:7px;border-radius:50%;background:#a99cff;animation:matype 1.1s ease-in-out .18s infinite"></span>
-        <span style="width:7px;height:7px;border-radius:50%;background:#a99cff;animation:matype 1.1s ease-in-out .36s infinite"></span>
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--primary-2);animation:matype 1.1s ease-in-out infinite"></span>
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--primary-2);animation:matype 1.1s ease-in-out .18s infinite"></span>
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--primary-2);animation:matype 1.1s ease-in-out .36s infinite"></span>
       </div>`)
     : m.working
     ? comAvatar(`<div style="background:var(--tint-info);border:1px solid var(--line-info);border-radius:var(--radius-card) var(--radius-card) var(--radius-card) 4px;padding:11px 14px;font-size:13px;color:#7dd3fc;display:flex;gap:8px;align-items:center">
@@ -7135,7 +7191,7 @@ function renderAssistant(){
       <div style="flex:1;min-width:0">
         <div style="font-weight:800;font-size:16px;letter-spacing:-.2px">Meta Assistente</div>
         <div style="font-size:11.5px;color:var(--primary-2);display:flex;align-items:center;gap:5px;margin-top:2px">
-          <span style="width:7px;height:7px;border-radius:50%;background:#7c6cff;box-shadow:0 0 0 3px rgba(124,108,255,.18)"></span>
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px rgba(var(--primary-rgb),.18)"></span>
           online · responde na hora
         </div>
       </div>
@@ -7917,8 +7973,8 @@ function renderHistEvolution(isLift, h){
     const hgt = max>0 ? Math.max(2, (v/max)*110) : 2;
     const x = gap + i*(barW+gap);
     const cur = i===7;
-    return `<rect x="${x}" y="${130-hgt}" width="${barW}" height="${hgt}" rx="6" fill="${cur?'#7c6cff':'rgba(124,108,255,0.35)'}"/>
-      ${v>0?`<text x="${x+barW/2}" y="${124-hgt}" text-anchor="middle" fill="${cur?'#a99cff':'#64748b'}" font-size="9.5" font-weight="700">${isLift?Math.round(v):v.toFixed(1)}</text>`:''}
+    return `<rect x="${x}" y="${130-hgt}" width="${barW}" height="${hgt}" rx="6" fill="${cur?'var(--primary)':'rgba(var(--primary-rgb),0.35)'}"/>
+      ${v>0?`<text x="${x+barW/2}" y="${124-hgt}" text-anchor="middle" fill="${cur?'var(--primary-2)':'#64748b'}" font-size="9.5" font-weight="700">${isLift?Math.round(v):v.toFixed(1)}</text>`:''}
       <text x="${x+barW/2}" y="146" text-anchor="middle" fill="#64748b" font-size="9">S${i+1}</text>`;
   }).join('');
   $('hist-evo-sub').textContent = isLift
@@ -7940,17 +7996,17 @@ function buildShareCanvas(opts){
   g.addColorStop(1, '#0a3d2e');
   x.fillStyle = g; x.fillRect(0, 0, W, H);
   // círculos decorativos
-  x.globalAlpha = 0.10; x.fillStyle = '#7c6cff';
+  x.globalAlpha = 0.10; x.fillStyle = 'var(--primary)';
   x.beginPath(); x.arc(915, 170, 180, 0, Math.PI*2); x.fill();
   x.beginPath(); x.arc(120, 1120, 230, 0, Math.PI*2); x.fill();
   x.globalAlpha = 1;
   // painel central
   roundRect(x, 70, 60, W-140, H-120, 58);
   x.fillStyle = 'rgba(5, 9, 20, 0.80)'; x.fill();
-  x.strokeStyle = 'rgba(124, 108, 255, 0.40)'; x.lineWidth = 3; x.stroke();
+  x.strokeStyle = 'rgba(var(--primary-rgb), 0.40)'; x.lineWidth = 3; x.stroke();
   // marca
   x.textAlign = 'left';
-  x.fillStyle = '#7c6cff';
+  x.fillStyle = 'var(--primary)';
   x.font = '900 42px Arial, sans-serif';
   x.fillText('Meta', 115, 145);
   x.fillStyle = '#ffffff';
@@ -7973,7 +8029,7 @@ function buildShareCanvas(opts){
     const bx = 115 + col*435, by = 430 + row*156;
     roundRect(x, bx, by, boxW, boxH, 28);
     x.fillStyle = 'rgba(255,255,255,0.08)'; x.fill();
-    x.strokeStyle = 'rgba(124,108,255,0.35)'; x.lineWidth = 2; x.stroke();
+    x.strokeStyle = 'rgba(var(--primary-rgb),0.35)'; x.lineWidth = 2; x.stroke();
     x.fillStyle = '#94a3b8';
     x.font = '800 24px Arial, sans-serif';
     x.fillText(cutTxt(x, String(item.rotulo||''), boxW-56), bx+28, by+42);
@@ -7985,7 +8041,7 @@ function buildShareCanvas(opts){
   const listaX = 115, listaY = 775, listaW = 850, listaH = 330;
   roundRect(x, listaX, listaY, listaW, listaH, 32);
   x.fillStyle = 'rgba(5, 9, 20, 0.65)'; x.fill();
-  x.strokeStyle = 'rgba(124,108,255,0.40)'; x.lineWidth = 2; x.stroke();
+  x.strokeStyle = 'rgba(var(--primary-rgb),0.40)'; x.lineWidth = 2; x.stroke();
   x.save();
   roundRect(x, listaX+2, listaY+2, listaW-4, listaH-4, 30); x.clip();
   x.fillStyle = '#6ee7b7';
@@ -8016,7 +8072,7 @@ function buildShareCanvas(opts){
   x.fillStyle = '#6ee7b7';
   x.font = '700 24px Arial, sans-serif';
   x.fillText('MetaTreino • treinos inteligentes que evoluem com você', 115, 1235);
-  x.fillStyle = '#a99cff';
+  x.fillStyle = 'var(--primary-2)';
   x.font = '700 21px Arial, sans-serif';
   x.fillText('MetaTreino App', 115, 1268);
   return c;
@@ -8067,10 +8123,10 @@ function buildWeekCanvas(img, d){
   } else {
     const g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,'#0b1622'); g.addColorStop(1,'#071018');
     x.fillStyle=g; x.fillRect(0,0,W,H);
-    x.fillStyle='rgba(124,108,255,.07)'; x.beginPath(); x.arc(W*0.85,H*0.12,300,0,Math.PI*2); x.fill();
+    x.fillStyle='rgba(var(--primary-rgb),.07)'; x.beginPath(); x.arc(W*0.85,H*0.12,300,0,Math.PI*2); x.fill();
   }
   x.textAlign='left';
-  x.fillStyle='#7c6cff'; x.font='900 38px Arial, sans-serif'; x.fillText('Meta',60,92);
+  x.fillStyle='var(--primary)'; x.font='900 38px Arial, sans-serif'; x.fillText('Meta',60,92);
   x.fillStyle='#ffffff'; x.fillText('Treino',60+x.measureText('Meta').width+4,92);
   x.fillStyle='rgba(255,255,255,.6)'; x.font='700 26px Arial, sans-serif';
   x.fillText(d.periodo, 60, 165);
@@ -8103,7 +8159,7 @@ function buildWeekCanvas(img, d){
     const px = gx + i*gap + (gap-bw)/2;
     const py = gy+gh-bh;
     const g2 = x.createLinearGradient(0,py,0,gy+gh);
-    if(dia.valor>0){ g2.addColorStop(0,'#a99cff'); g2.addColorStop(1,'#7c6cff'); }
+    if(dia.valor>0){ g2.addColorStop(0,'var(--primary-2)'); g2.addColorStop(1,'var(--primary)'); }
     else { g2.addColorStop(0,'rgba(255,255,255,.14)'); g2.addColorStop(1,'rgba(255,255,255,.08)'); }
     x.fillStyle=g2;
     const r=Math.min(12,bw/2);
@@ -8124,7 +8180,7 @@ function buildWeekCanvas(img, d){
   });
   x.fillStyle='rgba(255,255,255,.85)'; x.font='700 26px Arial, sans-serif';
   x.fillText(d.isLift ? 'Minha semana de treinos 💪' : 'Minha semana de corrida 🏃', 60, H-92);
-  x.fillStyle='#a99cff'; x.font='700 22px Arial, sans-serif';
+  x.fillStyle='var(--primary-2)'; x.font='700 22px Arial, sans-serif';
   x.fillText('metatreino.app', 60, H-52);
   return c;
 }
@@ -8162,12 +8218,12 @@ function buildPhotoShareCanvas(img, opts){
   // marca pequena no topo
   x.textAlign='left';
   comSombra(()=>{
-    x.fillStyle='#7c6cff'; x.font='900 40px Arial, sans-serif'; x.fillText('Meta',60,100);
+    x.fillStyle='var(--primary)'; x.font='900 40px Arial, sans-serif'; x.fillText('Meta',60,100);
     x.fillStyle='#ffffff'; x.fillText('Treino',60+x.measureText('Meta').width+4,100);
   });
   // título com barra de destaque
   comSombra(()=>{
-    x.fillStyle='#7c6cff'; x.fillRect(60, H-406, 7, 96);
+    x.fillStyle='var(--primary)'; x.fillRect(60, H-406, 7, 96);
     x.fillStyle='#ffffff'; x.font='900 60px Arial, sans-serif';
     x.fillText(cutTxt(x, opts.title||'Treino concluído 💪', 900), 86, H-348);
     if(opts.subtitle){
@@ -8197,7 +8253,7 @@ function buildPhotoShareCanvas(img, opts){
       x.fillStyle='rgba(255,255,255,.85)'; x.font='700 26px Arial, sans-serif';
       x.fillText(cutTxt(x, opts.linhaDiscreta, 960), 60, H-106);
     }
-    x.fillStyle='#a99cff'; x.font='800 23px Arial, sans-serif';
+    x.fillStyle='var(--primary-2)'; x.font='800 23px Arial, sans-serif';
     x.fillText('metatreino.app', 60, H-56);
   });
   return c;
@@ -8459,27 +8515,40 @@ function dismissInstall(){
   toast('👍 Sem problema! O convite volta daqui a um mês.');
 }
 
-// ---------- TEMA (claro / escuro) ----------
+// ---------- TEMAS (aurora · clássico · oceano · claro) ----------
 const THEME_KEY = 'metatreino_theme';
+const THEMES = {
+  aurora:   {nome:'Aurora',   sub:'Escuro · índigo e coral',  bar:'#070a1a', prev:{bg:'#070a1a', a:'#7c6cff', b:'#ff7a59', c:'#1b2150'}},
+  classico: {nome:'Clássico', sub:'Escuro · verde (o de antes)', bar:'#050914', prev:{bg:'#050914', a:'#10b981', b:'#f59e0b', c:'#10223a'}},
+  oceano:   {nome:'Oceano',   sub:'Escuro · azul e dourado',  bar:'#04111b', prev:{bg:'#04111b', a:'#06b6d4', b:'#fbbf24', c:'#0b2c3f'}},
+  claro:    {nome:'Claro',    sub:'Claro · índigo',            bar:'#f5f6fb', prev:{bg:'#f5f6fb', a:'#5b4bdb', b:'#c2410c', c:'#dfe2f2'}}
+};
+function normalizaTema(t){ if(t==='dark') return 'aurora'; if(t==='light') return 'claro'; return THEMES[t] ? t : 'aurora'; }
 function currentTheme(){
   const attr = document.documentElement.getAttribute('data-theme');
-  try{ return localStorage.getItem(THEME_KEY) || attr || 'dark'; }catch(e){ return attr || 'dark'; }
+  try{ return normalizaTema(localStorage.getItem(THEME_KEY) || attr || 'aurora'); }catch(e){ return normalizaTema(attr); }
 }
 function applyTheme(t){
-  const light = t==='light';
-  document.documentElement.setAttribute('data-theme', light?'light':'dark');
+  t = normalizaTema(t);
+  document.documentElement.setAttribute('data-theme', t);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', light?'#f7f8fa':'#070a1a');
-  try{ localStorage.setItem(THEME_KEY, light?'light':'dark'); }catch(e){}
-  const row = document.getElementById('theme-row-label');
-  if(row) row.textContent = light ? 'Tema claro' : 'Tema escuro';
-  const ico = document.getElementById('theme-row-icon');
-  if(ico) ico.textContent = light ? '☀️' : '🌙';
+  if(meta) meta.setAttribute('content', THEMES[t].bar);
+  try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
+  renderThemePicker();
 }
-function toggleTheme(){
-  const next = currentTheme()==='light' ? 'dark' : 'light';
-  applyTheme(next);
-  toast(next==='light' ? '☀️ Tema claro ativado' : '🌙 Tema escuro ativado');
+function setTheme(t){ applyTheme(t); toast('🎨 Tema '+THEMES[normalizaTema(t)].nome+' ativado'); }
+function toggleTheme(){ setTheme(currentTheme()==='claro' ? 'aurora' : 'claro'); }   // compatibilidade
+function renderThemePicker(){
+  const g = document.getElementById('theme-grid'); if(!g) return;
+  const cur = currentTheme();
+  g.innerHTML = Object.keys(THEMES).map(k=>{
+    const t = THEMES[k], p = t.prev;
+    return `<button class="theme-opt ${k===cur?'on':''}" onclick="setTheme('${k}')">
+      <div class="theme-prev" style="background:${p.bg}"><b style="background:${p.a}"></b><i style="background:${p.a}"></i><i style="background:${p.b}"></i><i style="background:${p.c}"></i></div>
+      <div class="theme-name"><span>${t.nome}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}</div>
+      <small style="font-size:11px;color:var(--text-dim);margin-top:-6px">${t.sub}</small>
+    </button>`;
+  }).join('');
 }
 
 // ---------- FUNDO DECORATIVO (motivo em linha, discreto, por aba) ----------
@@ -8847,11 +8916,11 @@ function showSpecialReveal(sa){
     <div id="sr-hearts" style="position:absolute;inset:0;overflow:hidden;pointer-events:none"></div>
     <div id="sr-phrase" style="font-size:19px;line-height:1.6;color:#e8ecf4;max-width:340px;min-height:130px;opacity:0;transition:opacity 1s;position:relative;z-index:2"></div>
     <div id="sr-award" style="opacity:0;transition:opacity 1.4s,transform 1.4s;transform:scale(.8);position:relative;z-index:2">
-      <div style="font-size:80px;filter:drop-shadow(0 0 24px rgba(45,212,191,.6))">${emo}</div>
-      <div style="font-size:12px;letter-spacing:3px;color:#2dd4bf;font-weight:800;margin-top:10px">CONQUISTA DESBLOQUEADA</div>
+      <div style="font-size:80px;filter:drop-shadow(0 0 24px rgba(var(--prep-rgb),.6))">${emo}</div>
+      <div style="font-size:12px;letter-spacing:3px;color:var(--prep);font-weight:800;margin-top:10px">CONQUISTA DESBLOQUEADA</div>
       <h2 style="margin:6px 0 12px;color:#fff;font-size:26px">${(sa.titulo||'').replace(/</g,'&lt;')}</h2>
       <p style="color:#c7cfdd;font-size:14.5px;line-height:1.65;max-width:320px;margin:0 auto;white-space:pre-line">${(sa.descricao||'').replace(/</g,'&lt;')}</p>
-      <button class="btn btn-primary" style="margin-top:26px;background:#2dd4bf;box-shadow:none;padding:12px 30px;color:#fff" onclick="if(typeof releaseWakeLock==='function')releaseWakeLock();var e=document.getElementById('special-reveal');if(e){e.style.opacity='0';setTimeout(function(){e.remove()},800)}">Continuar ❤️</button>
+      <button class="btn btn-primary" style="margin-top:26px;background:var(--prep);box-shadow:none;padding:12px 30px;color:#fff" onclick="if(typeof releaseWakeLock==='function')releaseWakeLock();var e=document.getElementById('special-reveal');if(e){e.style.opacity='0';setTimeout(function(){e.remove()},800)}">Continuar ❤️</button>
     </div>`;
   document.body.appendChild(ov);
   requestAnimationFrame(()=>{ ov.style.opacity='1'; });
@@ -8900,7 +8969,7 @@ function openSpecialAwardAdmin(){
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0"><input type="checkbox" id="sa-treinar" ${s.aoTreinar?'checked':''}> 🏋️ Revelar quando ela terminar um treino (não na abertura)</label>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:2px 0 6px"><input type="checkbox" id="sa-agora" ${s.liberarAgora?'checked':''}> ⚡ Liberar agora (ignora a data)</label>
-    <button class="btn btn-primary btn-block" style="margin-top:8px;background:#2dd4bf;box-shadow:none;color:#fff" onclick="saveSpecialAward()">💾 Salvar conquista especial</button>
+    <button class="btn btn-primary btn-block" style="margin-top:8px;background:var(--prep);box-shadow:none;color:#fff" onclick="saveSpecialAward()">💾 Salvar conquista especial</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
   $('modal-back').classList.add('on');
 }
@@ -9077,15 +9146,51 @@ async function removeCustomExercise(id){
 async function carregaSlotAdmin(email){
   const slot = $('stud-admin-slot'); if(!slot) return;
   if(!ehDonoDoApp()) return;
-  if(String(email).toLowerCase()===ADMIN_EMAIL){ slot.innerHTML=''; return; }
-  let ehAdm = false;
-  try{ const d = await db.collection('admins').doc(String(email).toLowerCase()).get(); ehAdm = d.exists && d.data().ativo===true; }catch(e){ return; }
-  if($('stud-admin-slot') !== slot) return;   // saiu da tela enquanto carregava
-  slot.innerHTML = `<div class="section-lbl">Administração</div>
-    ${ehAdm
-      ? `<div class="card card-ok" style="padding:10px 14px;margin-bottom:8px"><b>👑 Este aluno é administrador</b></div>
-         <button class="btn btn-ghost btn-block" onclick="rebaixarAdmin('${email}')">Remover permissão de administrador</button>`
-      : `<button class="btn btn-outline btn-block hl-primary" onclick="promoverAdmin('${email}')">👑 Promover a administrador</button>`}`;
+  email = String(email).toLowerCase();
+  if(email===ADMIN_EMAIL){ slot.innerHTML=''; return; }
+  // o botão aparece SEMPRE para o dono; a leitura só decide qual dos dois mostrar
+  const pinta = (ehAdm, aviso)=>{
+    if($('stud-admin-slot') !== slot) return;
+    slot.innerHTML = `<div class="section-lbl">Administração</div>
+      ${ehAdm
+        ? `<div class="card card-ok" style="padding:10px 14px;margin-bottom:8px"><b>👑 Este aluno é administrador</b></div>
+           <button class="btn btn-ghost btn-block" onclick="rebaixarAdmin('${email}')">Remover permissão de administrador</button>`
+        : `<button class="btn btn-outline btn-block hl-primary" onclick="promoverAdmin('${email}')">👑 Promover a administrador</button>`}
+      ${aviso?`<div class="text-dim" style="font-size:11.5px;margin-top:6px">${aviso}</div>`:''}`;
+  };
+  pinta(false, '');
+  try{
+    const d = await db.collection('admins').doc(email).get();
+    pinta(d.exists && d.data().ativo===true, '');
+  }catch(e){ console.log('admins read', e); pinta(false, '⚠️ Não consegui ler a lista de administradores (regras do Firestore).'); }
+}
+// lista de administradores + promover por e-mail (tela do dono)
+async function openAdminsList(){
+  if(!ehDonoDoApp()){ toast('🔒 Recurso restrito ao administrador principal.'); return; }
+  $('modal-inner').innerHTML = `<h3>👑 Administradores</h3><div id="adm-list-body" class="text-dim" style="font-size:13px;padding:10px 0">Carregando…</div>`;
+  $('modal-back').classList.add('on');
+  let lista = [];
+  try{ const snap = await db.collection('admins').get(); snap.forEach(d=>{ const x=d.data(); lista.push({email:d.id, ativo:x.ativo===true}); }); }
+  catch(e){ console.log(e); }
+  const ativos = lista.filter(x=>x.ativo);
+  const linhas = ativos.length ? ativos.map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px dashed var(--border)">
+      <div style="flex:1;font-size:13px;overflow-wrap:anywhere">👑 ${escHtml(x.email)}</div>
+      <button class="btn btn-ghost hl-danger" style="padding:6px 10px;font-size:12px" onclick="rebaixarAdmin('${x.email}');setTimeout(openAdminsList,700)">Remover</button></div>`).join('')
+    : '<div class="text-dim" style="font-size:12.5px;padding:8px 0">Nenhum administrador promovido ainda (além de você).</div>';
+  $('modal-inner').innerHTML = `
+    <h3>👑 Administradores</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Só você promove ou remove. O administrador promovido vê o painel de alunos, vídeos, exercícios e sugestões.</p>
+    <div style="margin-top:8px">${linhas}</div>
+    <div class="section-lbl" style="margin:16px 0 4px">Promover por e-mail</div>
+    <input class="input" id="adm-novo-email" type="email" placeholder="email@exemplo.com">
+    <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="promoverPorEmail()">👑 Promover</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+}
+function promoverPorEmail(){
+  const e = (($('adm-novo-email')||{}).value||'').trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ toast('⚠️ Digite um e-mail válido'); return; }
+  promoverAdmin(e);
+  setTimeout(openAdminsList, 900);
 }
 function promoverAdmin(email){
   if(!ehDonoDoApp()){ toast('🔒 Só o administrador principal pode promover.'); return; }
@@ -9199,7 +9304,7 @@ async function openSuggestions(){
     const secao = (titulo, arr, cor) => arr.length ? `<div class="section-lbl" style="margin:14px 0 8px">${titulo} (${arr.length})</div>${arr.map(x=>bloco(x,cor)).join('')}` : '';
     $('modal-inner').innerHTML = `<h3>💬 Feedback dos alunos</h3>
       <div style="max-height:56vh;overflow:auto;margin-top:4px">
-        ${secao('💡 SUGESTÕES', sug, 'rgba(124,108,255,.4)')}
+        ${secao('💡 SUGESTÕES', sug, 'rgba(var(--primary-rgb),.4)')}
         ${secao('🐞 PROBLEMAS RELATADOS', bug, 'rgba(244,63,94,.4)')}
         ${perg.length?`<div class="section-lbl" style="margin:14px 0 6px">❓ PERGUNTAS SEM RESPOSTA (${perg.length})</div>
           <div style="font-size:11.5px;color:var(--text-mute);margin-bottom:8px">As mais repetidas primeiro — é o melhor roadmap que existe.</div>
@@ -9287,7 +9392,7 @@ async function goAdmin(){
   admVeioDoPick = !(state.modules.lift || state.modules.run);   // admin sem plano: volta pra escolha
   showScreen('scr-admin');
   // a conquista especial só aparece pro dono do app, nem pros outros admins
-  try{ const sa = $('adm-special-row'); if(sa) sa.classList.toggle('hidden', !ehDonoDoApp()); }catch(e){}
+  try{ const sa = $('adm-special-row'); if(sa) sa.classList.toggle('hidden', !ehDonoDoApp()); const sb = $('adm-row-admins'); if(sb) sb.classList.toggle('hidden', !ehDonoDoApp()); }catch(e){}
   const p = state.user.profile;
   $('adm-hi').textContent = 'Olá, '+((p&&p.nickname)||'Marcelo')+'!';
   $('adm-list').innerHTML = `<div class="rest-card"><div style="font-size:34px">⏳</div><div class="rest-sub">Carregando alunos...</div></div>`;
@@ -9508,7 +9613,7 @@ function doBroadcast(){
   closeModal();
   const links = phones.map(p=>`https://wa.me/${p.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`);
   const w = window.open('','_blank');
-  w.document.write(`<html><head><title>Envio em massa</title><style>body{font-family:sans-serif;padding:20px;background:#070a1a;color:var(--text)}a{display:block;padding:12px 16px;background:#7c6cff;color:var(--on-primary);text-decoration:none;border-radius:var(--radius-btn);margin:6px 0;font-weight:700}</style></head><body><h2>📢 Clique em cada link para abrir o WhatsApp:</h2>${links.map((l,i)=>`<a href="${l}" target="_blank">Aluno ${i+1} · abrir WhatsApp</a>`).join('')}</body></html>`);
+  w.document.write(`<html><head><title>Envio em massa</title><style>body{font-family:sans-serif;padding:20px;background:#070a1a;color:var(--text)}a{display:block;padding:12px 16px;background:var(--primary);color:var(--on-primary);text-decoration:none;border-radius:var(--radius-btn);margin:6px 0;font-weight:700}</style></head><body><h2>📢 Clique em cada link para abrir o WhatsApp:</h2>${links.map((l,i)=>`<a href="${l}" target="_blank">Aluno ${i+1} · abrir WhatsApp</a>`).join('')}</body></html>`);
 }
 async function exportData(){
   toast('📤 Preparando backup...');
@@ -9534,7 +9639,7 @@ function openHistoryEntry(idx){
   const muscleBlock = parts.length ? `
     <div class="card" style="margin-top:12px">
       <div class="section-lbl" style="margin:0 0 8px">💪 Músculos trabalhados</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:12.5px;padding:5px 13px;border-radius:99px;background:var(--tint-primary);color:var(--primary-2);font-weight:800;border:1px solid rgba(124,108,255,0.3)">${p}</span>`).join('')}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${parts.map(p=>`<span style="font-size:12.5px;padding:5px 13px;border-radius:99px;background:var(--tint-primary);color:var(--primary-2);font-weight:800;border:1px solid rgba(var(--primary-rgb),0.3)">${p}</span>`).join('')}</div>
     </div>` : '';
   const exBlock = (x.exercisesDone && x.exercisesDone.length) ? `
     <div class="section-lbl" style="margin-top:14px">Exercícios por grupo</div>
@@ -10041,3 +10146,7 @@ loadCoachContact();
 (function(){ const b = document.getElementById('q-birth'); if(b) b.max = new Date().toISOString().slice(0,10); })();
 
 Object.assign(window,{openNewExercise,saveNewExercise,removeCustomExercise,promoverAdmin,rebaixarAdmin,carregaSlotAdmin,playExercise});
+
+Object.assign(window,{openAdminsList,promoverPorEmail});
+
+Object.assign(window,{setTheme,applyTheme,renderThemePicker});
