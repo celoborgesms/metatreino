@@ -17,6 +17,7 @@
     if(t==='dark') t = 'zepp'; if(t==='light') t = 'claro';
     if(['zepp','aurora','classico','oceano','claro'].indexOf(t)<0) t = 'zepp';
     document.documentElement.setAttribute('data-theme', t);
+    try{ if(localStorage.getItem('metatreino_sessao')) document.documentElement.classList.add('restaurando'); }catch(e){}
     var cores = {zepp:'#000000', aurora:'#070a1a', classico:'#050914', oceano:'#04111b', claro:'#f5f6fb'};
     var m = document.querySelector('meta[name="theme-color"]');
     if(m) m.setAttribute('content', cores[t]);
@@ -42,7 +43,7 @@
 /* ===== TEMAS: aurora (padrão) · classico · oceano · claro ===== */
 [data-theme="aurora"]{
   --bg:#070a1a; --bg-2:#0d1230;
-  --surface:rgba(148,163,184,0.06); --surface-2:rgba(148,163,184,0.10);
+  --surface:rgba(130,120,255,0.075); --surface-2:rgba(130,120,255,0.13);
   --border:rgba(148,163,184,0.14); --border-strong:rgba(148,163,184,0.24);
   --primary:#7c6cff; --primary-2:#a99cff; --primary-dark:#5b4bdb; --primary-rgb:124,108,255; --primary-glow:rgba(124,108,255,0.35);
   --accent:#ff7a59; --accent-2:#ffa387; --accent-rgb:255,122,89;
@@ -64,7 +65,7 @@
 }
 [data-theme="classico"]{
   --bg:#050914; --bg-2:#0a1122;
-  --surface:rgba(148,163,184,0.06); --surface-2:rgba(148,163,184,0.10);
+  --surface:rgba(52,211,153,0.06); --surface-2:rgba(52,211,153,0.11);
   --border:rgba(148,163,184,0.14); --border-strong:rgba(148,163,184,0.24);
   --primary:#10b981; --primary-2:#34d399; --primary-dark:#059669; --primary-rgb:16,185,129; --primary-glow:rgba(16,185,129,0.35);
   --accent:#f59e0b; --accent-2:#fbbf24; --accent-rgb:245,158,11;
@@ -86,7 +87,7 @@
 }
 [data-theme="oceano"]{
   --bg:#04111b; --bg-2:#08202f;
-  --surface:rgba(148,163,184,0.06); --surface-2:rgba(148,163,184,0.10);
+  --surface:rgba(34,211,238,0.07); --surface-2:rgba(34,211,238,0.12);
   --border:rgba(148,163,184,0.14); --border-strong:rgba(148,163,184,0.24);
   --primary:#06b6d4; --primary-2:#67e8f9; --primary-dark:#0891b2; --primary-rgb:6,182,212; --primary-glow:rgba(6,182,212,0.35);
   --accent:#fbbf24; --accent-2:#fcd34d; --accent-rgb:251,191,36;
@@ -106,7 +107,7 @@
   --bar-bg:rgba(4,17,27,0.82);
   --grad-primary:linear-gradient(135deg,#06b6d4 0%,#67e8f9 60%,#fbbf24 150%);
 }
-:root,[data-theme="zepp"]{
+:root:not([data-theme]),[data-theme="zepp"]{
   --bg:#000000; --bg-2:#0b0b0c;
   --surface:#161618; --surface-2:#212124;
   --border:rgba(255,255,255,0.07); --border-strong:rgba(255,255,255,0.15);
@@ -715,9 +716,9 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
 .tab.active span{display:inline;font-size:12.5px;font-weight:800;white-space:nowrap}
 #ma-fab{bottom:calc(92px + env(safe-area-inset-bottom))}
 
-/* ---- HOME: ordem dos blocos ---- */
+/* ---- HOME: ordem dos blocos (do mais útil ao menos útil) ---- */
 #scr-home .wrap{display:flex;flex-direction:column}
-#scr-home .wrap > *{order:50;flex:0 0 auto;min-width:0}
+#scr-home .wrap > *{order:80;flex:0 0 auto;min-width:0}
 #scr-home #home-brand-row{order:0;margin:0 0 2px!important}
 #home-brand-row .brand-logo{width:34px;height:34px;flex-basis:34px;border-radius:11px;font-size:15px}
 #home-brand-row .brand-name{font-size:12.5px;letter-spacing:2.6px;color:var(--text-dim)}
@@ -727,15 +728,22 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
 #scr-home .greet h1{font-size:27px;line-height:1.12}
 #scr-home .greet-sub{font-size:13.5px;line-height:1.4;margin-top:6px}
 #scr-home .avatar{width:50px;height:50px;flex:0 0 50px;font-size:20px}
-#scr-home #home-quick{order:12}
-#scr-home #mod-toggle{order:14}
-#scr-home #card-birthday,#scr-home #card-coach-msg,#scr-home #card-adapt,#scr-home #card-vacation,#scr-home #card-skipped,#scr-home #card-plan-alert,#scr-home #card-missed{order:20}
-#scr-home #today-slot{order:30}
-#scr-home #card-combo{order:31}
-#scr-home .week{order:40}
-#scr-home #card-monthly{order:45}
-#scr-home .plan-card{order:48}
-#scr-home .quote{order:49}
+#scr-home #mod-toggle{order:12}
+#scr-home #card-adapt,#scr-home #card-vacation,#scr-home #card-birthday{order:14}
+#scr-home #today-slot{order:20}
+#scr-home #card-combo{order:21}
+#scr-home #home-quick{order:30}
+#scr-home .week{order:32}
+#scr-home #home-metrics{order:34}
+#scr-home #card-missed,#scr-home #card-skipped,#scr-home #card-plan-alert,#scr-home #card-coach-msg{order:36}
+#scr-home #card-monthly{order:40}
+#scr-home .plan-card{order:42}
+#scr-home .section-head{order:44}
+#scr-home #your-list{order:45}
+#scr-home #card-weekrecap{order:46}
+#scr-home #card-weight-reminder{order:47}
+#scr-home #card-install{order:48}
+#scr-home .quote{order:60}
 
 /* tiles rápidas */
 .quick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:2px 0 12px}
@@ -788,9 +796,13 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
 .act-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
 .act-center b{font-size:26px;font-weight:300;font-family:'Outfit',system-ui,sans-serif;color:var(--text-strong);line-height:1}
 .act-center span{font-size:10px;color:var(--text-dim);letter-spacing:.6px;margin-top:3px;text-transform:uppercase}
-.act-legend{flex:1;display:flex;flex-direction:column;gap:11px;min-width:0}
-.act-row{display:flex;align-items:center;gap:10px}
-.act-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+.act-legend{flex:1;display:flex;flex-direction:column;gap:13px;min-width:0}
+.act-row{display:block}
+.act-line{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.act-bar{height:5px;border-radius:99px;background:var(--surface-2);margin-top:6px;overflow:hidden}
+.act-bar i{display:block;height:100%;border-radius:99px;transition:width .8s ease}
+.act-pct{font-size:11px;font-weight:700;color:var(--text-dim)}
+.act-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
 .act-lbl{font-size:11.5px;color:var(--text-dim);font-weight:600;line-height:1.2}
 .act-val{font-size:19px;font-weight:300;font-family:'Outfit',system-ui,sans-serif;color:var(--text-strong);line-height:1.15}
 .act-val small{font-size:12px;color:var(--text-dim);font-weight:500}
@@ -807,7 +819,6 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
 .met-v small{font-size:13px;color:var(--text-dim);font-weight:500;margin-left:3px}
 .met-s{font-size:11.5px;color:var(--text-dim);line-height:1.3}
 .met-s.up{color:var(--accent)} .met-s.dn{color:var(--primary-2)}
-#scr-home #home-metrics{order:41}
 
 /* tema Zepp: tudo chapado, sem vidro nem brilho */
 [data-theme="zepp"] body{background:#000}
@@ -824,6 +835,46 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
 [data-theme="zepp"] #ma-fab{background:var(--surface-2);box-shadow:none;border:1px solid var(--border-strong)}
 [data-theme="zepp"] .greet h1{font-weight:600}
 #scr-home .card-row[onclick="openTrophies()"]{display:none}
+
+/* abrindo o app com sessão salva: some o formulário de login (evita clicar no botão sem precisar) */
+.auth-restoring{display:none;margin-top:22px;font-size:14px;color:var(--text-dim);align-items:center;justify-content:center;gap:10px}
+.restaurando #scr-auth .auth-restoring{display:flex}
+.restaurando #scr-auth .auth-wrap > :not(.auth-hero){display:none!important}
+.spin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--primary);animation:maspin 0.9s linear infinite}
+
+.rest-card{padding:18px 16px}
+.rest-emoji{font-size:34px}
+.rest-title{font-size:20px}
+.rest-sub{font-size:13px}
+.anticipate{gap:8px}
+.antic-card{padding:10px 4px;border-radius:16px}
+.antic-letter{width:30px;height:30px;font-size:14px}
+
+/* plano alimentar */
+.ndays{display:flex;gap:6px;margin:6px 0 8px}
+.nd{flex:1;padding:8px 0 6px;border-radius:14px;background:var(--surface-2);border:1px solid var(--border);font-size:11px;font-weight:800;color:var(--text-dim);display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.nd i{font-style:normal;font-size:11px;height:13px}
+.nd.on{background:var(--primary);color:var(--on-primary);border-color:transparent}
+.macbar{display:flex;height:8px;border-radius:99px;overflow:hidden;margin-top:12px;background:var(--surface-2);gap:2px}
+.macbar i{display:block;height:100%}
+.maclg{display:flex;justify-content:space-between;gap:6px;margin-top:8px;font-size:11.5px;color:var(--text-dim)}
+.maclg i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.maclg b{color:var(--text-strong);font-weight:700}
+.mealc{background:var(--surface);border:1px solid var(--border);border-radius:20px;margin-bottom:8px;overflow:hidden}
+.mealc summary{list-style:none;display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer}
+.mealc summary::-webkit-details-marker{display:none}
+.mealc .mi{font-size:22px;flex:0 0 28px;text-align:center}
+.mealc .mt{flex:1;min-width:0;display:flex;flex-direction:column}
+.mealc .mt b{font-size:14.5px}
+.mealc .mt small,.mealc .mk small{font-size:11.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mealc .mk{display:flex;flex-direction:column;align-items:flex-end}
+.mealc .mk b{font-size:17px;font-weight:300;font-family:'Outfit',system-ui,sans-serif;color:var(--primary-2)}
+.mealc .mb{padding:2px 14px 14px;border-top:1px solid var(--border)}
+.mrow{display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:13px;border-bottom:1px dashed var(--border)}
+.mrow span:last-child{color:var(--text-dim);text-align:right}
+.mfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;color:var(--text-dim)}
+.eqgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.eqgrid span{font-size:12px;padding:7px 9px;border-radius:12px;background:var(--surface-2);color:var(--text-dim)}
 </style>
 </head>
 <body>
@@ -837,6 +888,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
       <div class="auth-logo" style="background:none;overflow:hidden"><img src="./icon-512.png" alt="MetaTreino" style="width:100%;height:100%;object-fit:cover;border-radius:22px"></div>
       <h1>MetaTreino</h1>
       <p>Treinos inteligentes que evoluem com você</p>
+      <div class="auth-restoring"><span class="spin-dot"></span> Entrando na sua conta…</div>
     </div>
 
     <!-- ENTRAR / CRIAR CONTA por e-mail ou usuário -->
@@ -1485,8 +1537,8 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     <div class="section-lbl" style="margin:18px 0 8px">🏆 CONQUISTAS</div>
     <div class="list-row" onclick="openMedals()">🏅 <span>Minhas conquistas</span></div>
     <div class="section-lbl" style="margin:18px 0 8px">🎛️ APLICATIVO</div>
-    <div class="section-lbl" style="margin-top:4px">Aparência</div>
-    <div class="theme-grid" id="theme-grid"></div>
+    <div class="list-row" onclick="toggleThemePicker()" id="theme-row"><span>🎨</span> <span>Aparência</span><span id="theme-row-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">Premium ›</span></div>
+    <div class="theme-grid hidden" id="theme-grid"></div>
     <div class="list-row" onclick="toggleDeco()"><span>🎨</span> <span id="deco-row-label">Fundo decorativo (ligado)</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">tocar para trocar</span></div>
     <div class="section-lbl" style="margin:18px 0 8px">👤 CONTA</div>
     <div class="list-row" onclick="openModal('edit-profile')">✏️ <span>Editar dados pessoais</span></div>
@@ -1498,7 +1550,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 1</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 3</span>
     </div>
   </div>
 </div>
@@ -1541,9 +1593,9 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=2027.1-beta.1"></script>
+<script src="./app.js?v=2027.1-beta.3"></script>
 <script>
-const APP_VERSION = '2027.1-beta.1';
+const APP_VERSION = '2027.1-beta.3';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {

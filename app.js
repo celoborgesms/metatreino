@@ -1,5 +1,5 @@
 // ===== MetaTreino 2027.1 Beta 1 =====
-const APP_VERSION = '2027.1-beta.1';
+const APP_VERSION = '2027.1-beta.3';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -515,6 +515,7 @@ function doGoogleSignIn(){
   });
 }
 function doLogout(){
+  try{ localStorage.removeItem('metatreino_sessao'); }catch(e){}
   syncToCloud(); // envia qualquer alteração pendente (ex: foto removida) ANTES de sair
   fbAuth.signOut().catch(()=>{});
   fbUser = null;
@@ -628,6 +629,7 @@ function doDeleteAccount(){
 
 async function afterGoogleSignIn(user){
   fbUser = user;
+  try{ localStorage.setItem('metatreino_sessao','1'); }catch(e){}
   const email = (user.email||'').toLowerCase();
   showScreen('scr-auth');
   const lbl = $('google-btn-lbl'); if(lbl) lbl.textContent='Verificando acesso...';
@@ -706,7 +708,7 @@ async function afterGoogleSignIn(user){
 
   state.user = { name:user.displayName||'', email, isAdmin };
   loadVideoLinks(); // não bloqueia o login; links do treinador pros vídeos
-  try{ await loadCustomExercises(); }catch(e){}   // exercícios novos cadastrados no painel admin
+  loadCustomExercises().catch(()=>{});   // exercícios novos do painel admin: em segundo plano, sem segurar o login
   loadCoachMural(); // logo/mensagem fixada do treinador
   loadCoachContact(); // whatsapp/e-mail de contato do treinador
   loadWeather(); // clima (só mostra dica quando for notável)
@@ -722,10 +724,14 @@ async function afterGoogleSignIn(user){
   bootAfterAuth();
 }
 
+try{ fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{}); }catch(e){}
+setTimeout(()=>{ document.documentElement.classList.remove('restaurando'); }, 12000);   // segurança: nunca deixa o login escondido pra sempre
 fbAuth.onAuthStateChanged(function(user){
   if(user){
     afterGoogleSignIn(user);
   } else {
+    document.documentElement.classList.remove('restaurando');
+    try{ localStorage.removeItem('metatreino_sessao'); }catch(e){}
     fbUser = null;
     if(!state.user || !state.user.blocked) showScreen('scr-auth');
   }
@@ -807,6 +813,7 @@ function rotacionarBlocoLift(){
   }catch(e){ console.log('rotação de bloco falhou', e); return false; }
 }
 function bootAfterAuth(){
+  document.documentElement.classList.remove('restaurando');
   cleanupOldHistory();
   try{ if(rotacionarBlocoLift()) setTimeout(()=>toast('🔄 Novo bloco de 4 semanas! Treinos renovados, com exercícios novos pro seu plano.', 4500), 1500); }catch(e){}
   recalibrateRunPlan(); // semana avançou? plano acompanha
@@ -2318,9 +2325,9 @@ function renderQuickStats(){
         <div class="act-rings"><svg viewBox="0 0 120 120">${_anel(52,pT,'var(--primary)')}${_anel(40,pM,'var(--accent)')}${_anel(28,pS,'var(--prep)')}</svg>
           <div class="act-center"><b>${pctGeral}%</b><span>da meta</span></div></div>
         <div class="act-legend">
-          <div class="act-row"><i class="act-dot" style="background:var(--primary)"></i><div><div class="act-lbl">Treinos</div><div class="act-val">${sem.length}<small> / ${planejados||'–'}</small></div></div></div>
-          <div class="act-row"><i class="act-dot" style="background:var(--accent)"></i><div><div class="act-lbl">Minutos</div><div class="act-val">${min}<small> / ${minPlan||'–'}</small></div></div></div>
-          <div class="act-row"><i class="act-dot" style="background:var(--prep)"></i><div><div class="act-lbl">Sequência</div><div class="act-val">${streak}<small> ${streak===1?'dia':'dias'}</small></div></div></div>
+          <div class="act-row"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:var(--primary)"></i>Treinos</div><span class="act-pct">${Math.round(Math.min(1,pT)*100)}%</span></div><div class="act-val">${sem.length}<small> / ${planejados||'–'}</small></div><div class="act-bar"><i style="width:${Math.round(Math.min(1,pT)*100)}%;background:var(--primary)"></i></div></div>
+          <div class="act-row"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:var(--accent)"></i>Minutos</div><span class="act-pct">${Math.round(Math.min(1,pM)*100)}%</span></div><div class="act-val">${min}<small> / ${minPlan||'–'} min</small></div><div class="act-bar"><i style="width:${Math.round(Math.min(1,pM)*100)}%;background:var(--accent)"></i></div></div>
+          <div class="act-row"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:var(--prep)"></i>Sequência</div><span class="act-pct">${Math.round(Math.min(1,pS)*100)}%</span></div><div class="act-val">${streak}<small> ${streak===1?'dia':'dias'} · meta 7</small></div><div class="act-bar"><i style="width:${Math.round(Math.min(1,pS)*100)}%;background:var(--prep)"></i></div></div>
         </div>
       </div>`;
   }catch(e){ el.innerHTML=''; }
@@ -8577,11 +8584,13 @@ function applyTheme(t){
   try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
   renderThemePicker();
 }
-function setTheme(t){ applyTheme(t); toast('🎨 Tema '+THEMES[normalizaTema(t)].nome+' ativado'); }
+function setTheme(t){ applyTheme(t); const g=document.getElementById('theme-grid'); if(g) g.classList.add('hidden'); renderThemePicker(); toast('🎨 Tema '+THEMES[normalizaTema(t)].nome+' ativado'); }
+function toggleThemePicker(){ const g=document.getElementById('theme-grid'); if(!g) return; g.classList.toggle('hidden'); renderThemePicker(); }
 function toggleTheme(){ setTheme(currentTheme()==='claro' ? 'zepp' : 'claro'); }   // compatibilidade
 function renderThemePicker(){
   const g = document.getElementById('theme-grid'); if(!g) return;
   const cur = currentTheme();
+  const rv = document.getElementById('theme-row-val'); if(rv) rv.textContent = THEMES[cur].nome + (g.classList.contains('hidden') ? ' ›' : ' ⌄');
   g.innerHTML = Object.keys(THEMES).map(k=>{
     const t = THEMES[k], p = t.prev;
     return `<button class="theme-opt ${k===cur?'on':''}" onclick="setTheme('${k}')">
@@ -10193,33 +10202,44 @@ Object.assign(window,{openAdminsList,promoverPorEmail});
 Object.assign(window,{setTheme,applyTheme,renderThemePicker});
 
 // ===================================================================
-// 🥗 PLANO ALIMENTAR (2027.1) — simples, calculado a partir do cadastro
+// 🥗 PLANO ALIMENTAR (2027.1) — calculado a partir do cadastro
 // Mifflin-St Jeor + fator de atividade (dias de treino) + objetivo.
+// Dia de treino ganha um pouco mais de energia e o de descanso um pouco menos (média da semana igual).
 // Estimativa educativa: não substitui nutricionista.
 // ===================================================================
 const NUTRI_ALIMENTOS = {
   // id: [nome, kcal/100g, prot, carb, gord, unidade(g) | null, medida caseira {g,nome} | null, livre]
   pao:      ['Pão francês', 300, 8, 58.6, 3.1, 50, null],
   paoint:   ['Pão integral (fatia)', 250, 9, 49, 3.5, 25, null],
+  paodq:    ['Pão de queijo', 330, 5, 34, 18, 30, null],
   ovo:      ['Ovo', 146, 13.3, 0.6, 9.5, 50, null],
   aveia:    ['Aveia em flocos', 394, 13.9, 66.6, 8.5, null, {g:15,nome:'col. de sopa'}],
+  granola:  ['Granola', 410, 8, 68, 12, null, {g:15,nome:'col. de sopa'}],
   leite:    ['Leite desnatado', 35, 3.4, 4.9, 0.1, null, {g:200,nome:'copo'}],
   iogurte:  ['Iogurte natural', 60, 3.5, 4.5, 3.3, null, {g:170,nome:'pote'}],
   minas:    ['Queijo minas frescal', 264, 17.4, 3.2, 20.2, null, {g:30,nome:'fatia'}],
   cottage:  ['Queijo cottage', 98, 11, 3.4, 4.3, null, {g:30,nome:'col. de sopa'}],
+  ricota:   ['Ricota', 140, 12, 3, 9, null, {g:30,nome:'fatia'}],
   mucarela: ['Queijo muçarela', 330, 22, 3, 25, 20, null],
+  peru:     ['Peito de peru', 100, 18, 2, 2, null, null],
   banana:   ['Banana', 98, 1.3, 26, 0.1, 80, null],
   maca:     ['Maçã', 56, 0.3, 15.2, 0, 130, null],
+  laranja:  ['Laranja', 37, 1, 9, 0.1, 180, null],
   mamao:    ['Mamão', 40, 0.5, 10.4, 0.1, null, null],
+  abacaxi:  ['Abacaxi', 48, 0.9, 12.3, 0.1, null, null],
+  morango:  ['Morango', 30, 0.9, 6.8, 0.3, null, null],
+  abacate:  ['Abacate', 96, 1.2, 6, 8.4, null, {g:30,nome:'col. de sopa'}],
   tapioca:  ['Goma de tapioca', 240, 0, 60, 0, null, {g:30,nome:'col. de sopa'}],
   cuscuz:   ['Cuscuz de milho', 113, 2.2, 25, 0.7, null, null],
   arroz:    ['Arroz branco cozido', 128, 2.5, 28.1, 0.2, null, {g:45,nome:'col. de servir'}],
   feijao:   ['Feijão carioca cozido', 76, 4.8, 13.6, 0.5, null, {g:80,nome:'concha'}],
   frango:   ['Peito de frango grelhado', 159, 32, 0, 2.5, null, null],
+  sobrecoxa:['Sobrecoxa assada (sem pele)', 180, 26, 0, 8, null, null],
   patinho:  ['Patinho grelhado', 219, 35.9, 0, 7.3, null, null],
   peixe:    ['Tilápia grelhada', 128, 26, 0, 2.7, null, null],
   atum:     ['Atum em lata (natural)', 118, 26, 0, 1, null, null],
   batata:   ['Batata-doce cozida', 77, 0.6, 18.4, 0.1, null, null],
+  mandioca: ['Mandioca cozida', 125, 0.6, 30, 0.3, null, null],
   macarrao: ['Macarrão cozido', 140, 4.8, 28, 0.9, null, null],
   lentilha: ['Lentilha cozida', 93, 6.3, 16.3, 0.5, null, null],
   grao:     ['Grão-de-bico cozido', 164, 8.9, 27, 2.6, null, null],
@@ -10227,51 +10247,91 @@ const NUTRI_ALIMENTOS = {
   legumes:  ['Legumes cozidos', 35, 1.5, 7, 0.3, null, null, true],
   salada:   ['Salada crua', 20, 1, 4, 0.2, null, null, true],
   azeite:   ['Azeite', 884, 0, 0, 100, null, {g:4,nome:'col. de chá'}, true],
+  mel:      ['Mel', 309, 0.4, 84, 0, null, {g:7,nome:'col. de chá'}],
   amendoim: ['Pasta de amendoim', 590, 25, 20, 50, null, {g:15,nome:'col. de sopa'}],
   castanha: ['Castanhas', 570, 18, 25, 46, null, {g:10,nome:'punhado pequeno'}],
   whey:     ['Whey protein', 400, 80, 8, 6, null, {g:30,nome:'scoop'}]
 };
-// 4 opções por refeição (rotacionam por dia / pelo botão Trocar). veg = versão vegetariana.
+// Cada refeição tem várias opções (n = nome do prato, i = itens). veg = versão vegetariana (ovo e leite liberados).
 const NUTRI_REFEICOES = [
-  { id:'cafe', nome:'Café da manhã', icone:'☕', hora:'07:00', share:.25, opcoes:[
-      [['pao',1],['ovo',2],['minas',40],['banana',1]],
-      [['aveia',40],['leite',250],['banana',1],['amendoim',15]],
-      [['tapioca',60],['ovo',2],['cottage',60],['mamao',150]],
-      [['cuscuz',150],['ovo',2],['minas',40],['maca',1]] ] },
-  { id:'lanche1', nome:'Lanche da manhã', icone:'🍎', hora:'10:00', share:.10, opcoes:[
-      [['iogurte',170],['aveia',20],['maca',1]],
-      [['banana',1],['castanha',20]],
-      [['paoint',2],['cottage',60]] ] },
-  { id:'almoco', nome:'Almoço', icone:'🍛', hora:'12:30', share:.30,
-    opcoes:[
-      [['arroz',150],['feijao',100],['frango',120],['legumes',100],['salada',80],['azeite',4]],
-      [['arroz',150],['feijao',80],['patinho',110],['legumes',100],['salada',80],['azeite',4]],
-      [['arroz',100],['batata',150],['peixe',140],['legumes',100],['salada',80],['azeite',4]],
-      [['macarrao',150],['frango',120],['legumes',120],['salada',80],['azeite',4]] ],
+  { id:'cafe', nome:'Café da manhã', icone:'☕', hora:'07:00', opcoes:[
+    {n:'Pão com ovo e queijo',        i:[['pao',1],['ovo',2],['minas',40],['banana',1]]},
+    {n:'Mingau de aveia com banana',  i:[['aveia',40],['leite',250],['banana',1],['amendoim',15]]},
+    {n:'Tapioca com ovo e cottage',   i:[['tapioca',60],['ovo',2],['cottage',60],['mamao',150]]},
+    {n:'Cuscuz com ovo',              i:[['cuscuz',150],['ovo',2],['minas',40],['maca',1]]},
+    {n:'Iogurte com granola e frutas',i:[['iogurte',170],['granola',30],['morango',100],['banana',1]]},
+    {n:'Panqueca de banana e aveia',  i:[['banana',2],['ovo',2],['aveia',30],['mel',7]]},
+    {n:'Omelete de queijo com pão',   i:[['ovo',3],['mucarela',1],['pao',1],['laranja',1]]},
+    {n:'Vitamina de banana e whey',   i:[['leite',250],['banana',1],['aveia',30],['whey',30]]} ] },
+  { id:'lanche1', nome:'Lanche da manhã', icone:'🍎', hora:'10:00', opcoes:[
+    {n:'Iogurte com aveia e maçã',    i:[['iogurte',170],['aveia',20],['maca',1]]},
+    {n:'Banana com castanhas',        i:[['banana',1],['castanha',20]]},
+    {n:'Pão integral com cottage',    i:[['paoint',2],['cottage',60]]},
+    {n:'Ovos cozidos e laranja',      i:[['ovo',2],['laranja',1]]},
+    {n:'Queijo minas com abacaxi',    i:[['minas',50],['abacaxi',150]]},
+    {n:'Vitamina de morango',         i:[['leite',250],['morango',150],['aveia',20]]},
+    {n:'Banana com pasta de amendoim',i:[['banana',1],['amendoim',15],['aveia',15]]} ] },
+  { id:'almoco', nome:'Almoço', icone:'🍛', hora:'12:30', opcoes:[
+    {n:'Prato feito com frango',            i:[['arroz',150],['feijao',100],['frango',120],['legumes',100],['salada',80],['azeite',4]]},
+    {n:'Prato feito com patinho',           i:[['arroz',150],['feijao',80],['patinho',110],['legumes',100],['salada',80],['azeite',4]]},
+    {n:'Tilápia com batata-doce',           i:[['arroz',100],['batata',150],['peixe',140],['legumes',100],['salada',80],['azeite',4]]},
+    {n:'Macarrão com frango e legumes',     i:[['macarrao',150],['frango',120],['legumes',120],['salada',80],['azeite',4]]},
+    {n:'Sobrecoxa com mandioca e feijão',   i:[['mandioca',120],['sobrecoxa',120],['feijao',80],['salada',100],['azeite',4]]},
+    {n:'Carne moída com purê de batata-doce',i:[['batata',200],['patinho',100],['legumes',120],['salada',80],['azeite',4]]},
+    {n:'Atum com arroz e feijão',           i:[['arroz',150],['feijao',100],['atum',100],['legumes',100],['salada',80],['azeite',4]]},
+    {n:'Frango com arroz e abacate',        i:[['arroz',130],['frango',130],['abacate',60],['salada',100],['legumes',80]]} ],
     veg:[
-      [['arroz',150],['feijao',120],['ovo',2],['legumes',100],['salada',80],['azeite',4]],
-      [['arroz',120],['lentilha',120],['tofu',100],['salada',80],['azeite',4]],
-      [['arroz',100],['grao',120],['minas',50],['legumes',100],['salada',80],['azeite',4]] ] },
-  { id:'lanche2', nome:'Lanche da tarde / pré-treino', icone:'⚡', hora:'16:00', share:.15, opcoes:[
-      [['pao',1],['ovo',2],['banana',1]],
-      [['banana',1],['aveia',30],['iogurte',170]],
-      [['tapioca',50],['minas',40],['maca',1]],
-      [['paoint',2],['atum',50],['maca',1]] ],
+    {n:'Arroz, feijão e ovos',              i:[['arroz',150],['feijao',120],['ovo',2],['legumes',100],['salada',80],['azeite',4]]},
+    {n:'Arroz com lentilha e tofu',         i:[['arroz',120],['lentilha',120],['tofu',100],['salada',80],['azeite',4]]},
+    {n:'Grão-de-bico com queijo',           i:[['arroz',100],['grao',120],['minas',50],['legumes',100],['salada',80],['azeite',4]]},
+    {n:'Macarrão com ricota e grão-de-bico',i:[['macarrao',150],['ricota',60],['grao',80],['legumes',120],['salada',80],['azeite',4]]},
+    {n:'Escondidinho de mandioca com tofu', i:[['mandioca',150],['tofu',120],['legumes',100],['salada',80],['azeite',4]]},
+    {n:'Arroz, feijão e omelete',           i:[['arroz',150],['feijao',100],['ovo',3],['legumes',100],['salada',80],['azeite',4]]} ] },
+  { id:'lanche2', nome:'Lanche da tarde', icone:'🥪', hora:'16:00', opcoes:[
+    {n:'Sanduíche de ovo com banana',       i:[['pao',1],['ovo',2],['banana',1]]},
+    {n:'Iogurte com banana e aveia',        i:[['banana',1],['aveia',30],['iogurte',170]]},
+    {n:'Tapioca com queijo e maçã',         i:[['tapioca',50],['minas',40],['maca',1]]},
+    {n:'Sanduíche de atum com maçã',        i:[['paoint',2],['atum',50],['maca',1]]},
+    {n:'Pão de queijo com fruta',           i:[['paodq',3],['banana',1],['iogurte',100]]},
+    {n:'Batata-doce com frango desfiado',   i:[['batata',150],['frango',60]]},
+    {n:'Vitamina de banana com whey',       i:[['leite',250],['banana',1],['whey',30]]},
+    {n:'Cuscuz com ovo e banana',           i:[['cuscuz',120],['ovo',1],['banana',1]]} ],
     veg:[
-      [['pao',1],['ovo',2],['banana',1]],
-      [['banana',1],['aveia',30],['iogurte',170]],
-      [['tapioca',50],['minas',40],['maca',1]] ] },
-  { id:'jantar', nome:'Jantar', icone:'🌙', hora:'19:30', share:.20,
-    opcoes:[
-      [['ovo',3],['legumes',120],['arroz',100],['salada',80],['azeite',4]],
-      [['frango',120],['batata',150],['legumes',120],['azeite',4]],
-      [['patinho',100],['macarrao',120],['salada',100],['azeite',4]],
-      [['peixe',140],['arroz',100],['legumes',120],['azeite',4]] ],
+    {n:'Sanduíche de ovo com banana',       i:[['pao',1],['ovo',2],['banana',1]]},
+    {n:'Iogurte com banana e aveia',        i:[['banana',1],['aveia',30],['iogurte',170]]},
+    {n:'Tapioca com queijo e maçã',         i:[['tapioca',50],['minas',40],['maca',1]]},
+    {n:'Pão de queijo com fruta',           i:[['paodq',3],['banana',1],['iogurte',100]]},
+    {n:'Sanduíche de queijo e peito de peru',i:[['paoint',2],['ricota',50],['maca',1]]},
+    {n:'Cuscuz com ovo e banana',           i:[['cuscuz',120],['ovo',1],['banana',1]]} ] },
+  { id:'jantar', nome:'Jantar', icone:'🌙', hora:'19:30', opcoes:[
+    {n:'Omelete com legumes e arroz',       i:[['ovo',3],['legumes',120],['arroz',100],['salada',80],['azeite',4]]},
+    {n:'Frango com batata-doce',            i:[['frango',120],['batata',150],['legumes',120],['azeite',4]]},
+    {n:'Carne com macarrão e salada',       i:[['patinho',100],['macarrao',120],['salada',100],['azeite',4]]},
+    {n:'Peixe com arroz e legumes',         i:[['peixe',140],['arroz',100],['legumes',120],['azeite',4]]},
+    {n:'Sopa de legumes com frango',        i:[['legumes',250],['frango',100],['mandioca',100]]},
+    {n:'Tapioca recheada de frango',        i:[['tapioca',70],['frango',100],['minas',30],['salada',100]]},
+    {n:'Salada completa com atum e ovo',    i:[['salada',200],['atum',80],['ovo',2],['arroz',80],['azeite',4]]},
+    {n:'Sobrecoxa com mandioca',            i:[['sobrecoxa',120],['mandioca',120],['legumes',120],['azeite',4]]} ],
     veg:[
-      [['ovo',3],['legumes',120],['arroz',100],['salada',80],['azeite',4]],
-      [['tofu',120],['batata',150],['legumes',120],['azeite',4]],
-      [['lentilha',140],['arroz',100],['salada',100],['azeite',4]] ] }
+    {n:'Omelete com legumes e arroz',       i:[['ovo',3],['legumes',120],['arroz',100],['salada',80],['azeite',4]]},
+    {n:'Tofu com batata-doce',              i:[['tofu',120],['batata',150],['legumes',120],['azeite',4]]},
+    {n:'Lentilha com arroz e salada',       i:[['lentilha',140],['arroz',100],['salada',100],['azeite',4]]},
+    {n:'Sopa de legumes com ovo',           i:[['legumes',250],['ovo',2],['mandioca',100]]},
+    {n:'Tapioca recheada de queijo e ovo',  i:[['tapioca',70],['ovo',2],['minas',30],['salada',100]]},
+    {n:'Salada completa com grão-de-bico',  i:[['salada',200],['grao',100],['ovo',2],['arroz',60],['azeite',4]]} ] },
+  { id:'ceia', nome:'Ceia', icone:'🌜', hora:'21:30', opcoes:[
+    {n:'Iogurte com castanhas',             i:[['iogurte',170],['castanha',15]]},
+    {n:'Leite com aveia',                   i:[['leite',250],['aveia',30]]},
+    {n:'Cottage com morango',               i:[['cottage',100],['morango',100]]},
+    {n:'Banana com pasta de amendoim',      i:[['banana',1],['amendoim',15]]} ] }
 ];
+// quanto cada refeição pesa no dia, conforme o nº de refeições
+const NUTRI_SHARE = {
+  4:{cafe:.25, almoco:.35, lanche2:.15, jantar:.25},
+  5:{cafe:.25, lanche1:.10, almoco:.30, lanche2:.15, jantar:.20},
+  6:{cafe:.22, lanche1:.10, almoco:.28, lanche2:.13, jantar:.20, ceia:.07}
+};
+const NUTRI_DIAS = ['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
 function nutriDados(){
   const p = (state.user && state.user.profile) || {};
   const peso = parseFloat(p.currentWeight), alt = parseFloat(p.height), idade = parseInt(p.age,10);
@@ -10301,7 +10361,7 @@ function nutriAjustePeso(objetivo){
     if(!ref) return {kcal:0, nota:''};
     const semanas = (ult.date - ref.date)/(7*86400000);
     if(semanas > 8) return {kcal:0, nota:''};
-    const pct = ((ult.weight - ref.weight)/ref.weight*100)/semanas;   // % do peso por semana (+ ganhou)
+    const pct = ((ult.weight - ref.weight)/ref.weight*100)/semanas;
     if(objetivo==='emagrecer'){
       if(pct > -0.1) return {kcal:-100, nota:`Seu peso quase não mudou nas últimas semanas, então reduzi 100 kcal.`};
       if(pct < -1)   return {kcal:+100, nota:`Você está perdendo peso rápido demais (${Math.abs(pct).toFixed(1)}%/semana), então subi 100 kcal pra proteger a massa muscular.`};
@@ -10313,6 +10373,11 @@ function nutriAjustePeso(objetivo){
     return {kcal:0, nota:'Seu peso está evoluindo no ritmo certo para esse objetivo. Mantive as calorias. ✅'};
   }catch(e){ return {kcal:0, nota:''}; }
 }
+function nutriDiasTreino(){
+  const set = new Set();
+  ['lift','run'].forEach(k=>{ const m = state.modules[k]; ((m&&m.plan&&m.plan.workouts)||[]).forEach(w=>{ if(w.dayIdx) set.add(w.dayIdx); }); });
+  return set;
+}
 function nutriCalcular(){
   const {peso, alt, idade, sexo} = nutriDados();
   const n = nutriConfig();
@@ -10320,7 +10385,7 @@ function nutriCalcular(){
   if(idade < 18) return {erro:'menor'};
   const imc = peso/Math.pow(alt/100,2);
   const bmr = 10*peso + 6.25*alt - 5*idade + (sexo==='f' ? -161 : 5);
-  const dias = ['lift','run'].reduce((s,k)=>s+((state.modules[k]&&state.modules[k].plan&&state.modules[k].plan.workouts)||[]).length,0);
+  const dias = nutriDiasTreino().size || ['lift','run'].reduce((s,k)=>s+((state.modules[k]&&state.modules[k].plan&&state.modules[k].plan.workouts)||[]).length,0);
   const fator = dias<=1 ? 1.2 : dias<=3 ? 1.375 : dias<=5 ? 1.55 : 1.725;
   const tdee = bmr*fator;
   let objetivo = n.objetivo, avisos = [];
@@ -10336,11 +10401,11 @@ function nutriCalcular(){
   const agua = Math.round(peso*35/250)*250/1000;   // litros, em passos de 250ml
   return { kcal, prot, gord, carb, agua, tdee:Math.round(tdee), bmr:Math.round(bmr), imc, objetivo, avisos, ajusteNota: aj.nota, dias };
 }
-function nutriItem(id, qtdBase, f, fixo){
+function nutriItem(id, qtdBase, f){
   const a = NUTRI_ALIMENTOS[id]; const [nome,kcal100,p,c,g,un,med,livre] = a;
   let q = qtdBase * (livre ? Math.min(1.3, Math.max(.8, f)) : f);
   let gramas, texto;
-  if(un){ q = Math.max(1, Math.round(q)); gramas = q*un; texto = `${q} ${q>1 ? 'unid.' : 'unid.'}`; }
+  if(un){ q = Math.max(1, Math.round(q)); gramas = q*un; texto = `${q} unid.`; }
   else {
     const passo = (id==='leite'||id==='iogurte') ? 50 : (med && med.g<=20 ? med.g : 5);
     gramas = Math.max(passo, Math.round(q/passo)*passo);
@@ -10351,38 +10416,70 @@ function nutriItem(id, qtdBase, f, fixo){
   const k = gramas/100;
   return { id, nome, texto, kcal:kcal100*k, p:p*k, c:c*k, g:g*k };
 }
-function nutriMontarPlano(){
-  const calc = nutriCalcular(); if(calc.erro) return calc;
+function nutriMontarPlano(diaIdx){
+  const calc0 = nutriCalcular(); if(calc0.erro) return calc0;
   const n = nutriConfig();
-  const slots = NUTRI_REFEICOES.filter(r => n.refeicoes>=5 || r.id!=='lanche1');
-  const somaShare = slots.reduce((s,r)=>s+r.share,0);
-  const hoje = new Date(); const diaAno = Math.floor((hoje - new Date(hoje.getFullYear(),0,0))/86400000);
+  const hojeIdx = (typeof getDayIdx==='function') ? getDayIdx() : 1;
+  diaIdx = diaIdx || hojeIdx;
+  const diasT = nutriDiasTreino();
+  const treino = diasT.has(diaIdx);
+  // média da semana continua igual: dia de treino +5%, descanso um pouco menos
+  const nT = diasT.size, y = nT>=1 && nT<=6 ? Math.min(0.05, 0.08*(7-nT)/nT) : 0;   // descanso nunca cai mais que ~8%
+  const fDia = nT>=1 && nT<=6 ? (treino ? 1+y : 1 - y*nT/(7-nT)) : 1;
+  const kcalDia = Math.round(calc0.kcal*fDia/10)*10;
+  const carbDia = Math.max(80, Math.round((kcalDia - calc0.prot*4 - calc0.gord*9)/4/5)*5);
+  const calc = {...calc0, kcal:kcalDia, carb:carbDia};
+  const shares = NUTRI_SHARE[n.refeicoes] || NUTRI_SHARE[5];
+  const slots = NUTRI_REFEICOES.filter(r => shares[r.id]);
   const refeicoes = slots.map((r,idx)=>{
     const lista = (n.vegetariano && r.veg) ? r.veg : r.opcoes;
     const chave = r.id + (n.vegetariano?'v':'');
-    const v = (diaAno + idx*2 + n.seed + (n.trocas[chave]||0)) % lista.length;
-    const base = lista[v];
-    const k0 = base.reduce((s,[id,q])=>{ const a=NUTRI_ALIMENTOS[id]; return s + a[1]*(a[5]? q*a[5] : q)/100; },0);
-    const alvo = calc.kcal * r.share/somaShare;
+    const v = (diaIdx*3 + idx*2 + n.seed + (n.trocas[chave]||0)) % lista.length;
+    const op = lista[v];
+    const k0 = op.i.reduce((s,[id,q])=>{ const a=NUTRI_ALIMENTOS[id]; return s + a[1]*(a[5]? q*a[5] : q)/100; },0);
+    const alvo = calc.kcal * shares[r.id];
     const f = Math.min(2.0, Math.max(.55, alvo/k0));
-    const itens = base.map(([id,q])=>nutriItem(id,q,f));
+    const itens = op.i.map(([id,q])=>nutriItem(id,q,f));
     const tot = itens.reduce((t,i)=>({kcal:t.kcal+i.kcal,p:t.p+i.p,c:t.c+i.c,g:t.g+i.g}),{kcal:0,p:0,c:0,g:0});
-    return { id:r.id, chave, nome:r.nome, icone:r.icone, hora:r.hora, itens, tot, variante:v+1, total:lista.length };
+    const preTreino = treino && r.id==='lanche2';
+    return { id:r.id, chave, nome: preTreino ? 'Pré-treino' : r.nome, icone: preTreino ? '⚡' : r.icone, hora:r.hora, prato:op.n, itens, tot, variante:v+1, total:lista.length, preTreino };
   });
   const dia = refeicoes.reduce((t,m)=>({kcal:t.kcal+m.tot.kcal,p:t.p+m.tot.p,c:t.c+m.tot.c,g:t.g+m.tot.g}),{kcal:0,p:0,c:0,g:0});
   const dicas = [];
   const faltaP = calc.prot - dia.p;
   if(faltaP > calc.prot*0.12) dicas.push(`Pra fechar sua proteína, faltam ~${Math.round(faltaP/5)*5} g: some 1 scoop de whey (≈ 24 g) ou ${Math.ceil(faltaP/6.5)} ovos ao longo do dia.`);
+  if(treino) dicas.push('Hoje é dia de treino: faça o lanche pré-treino 1 a 2 h antes e capriche na proteína depois.');
+  else dicas.push('Dia de descanso: calorias um pouco menores, mas mantenha a proteína. É nela que o músculo se recupera.');
   if(calc.objetivo==='emagrecer') dicas.push('Priorize proteína em toda refeição e legumes à vontade: ajudam a manter a saciedade e a massa muscular.');
-  if(calc.objetivo==='massa') dicas.push('Não pule o lanche pré-treino: carboidrato antes rende mais força, e a proteína depois ajuda a recuperar.');
+  if(calc.objetivo==='massa') dicas.push('Não pule refeições: pra ganhar massa, o difícil costuma ser comer o suficiente todo dia.');
   dicas.push('Beba água ao longo do dia, não só nas refeições. Em dia de treino, some uns 500 ml.');
-  dicas.push('Vale trocar os alimentos por equivalentes (ex.: frango por peixe) mantendo as quantidades.');
-  return { calc, refeicoes, dia, dicas };
+  return { calc, refeicoes, dia, dicas, treino, diaIdx };
+}
+// equivalências: quanto de cada alimento rende o mesmo macro (porções-base: 25 g de proteína, 30 g de carbo, 10 g de gordura, 15 g de carbo de fruta)
+function nutriEquivalencias(){
+  const g = (id, macroIdx, alvo)=>{
+    const a = NUTRI_ALIMENTOS[id]; const por100 = a[macroIdx]; if(!por100) return null;
+    let gramas = alvo/por100*100;
+    if(a[5]){ const u = Math.max(1, Math.round(gramas/a[5])); return `${a[0]}: ${u} unid.`; }
+    const passo = (id==='azeite') ? 1 : 5;
+    gramas = Math.max(passo, Math.round(gramas/passo)*passo);
+    return `${a[0]}: ${gramas} ${id==='leite'||id==='iogurte'?'ml':'g'}`;
+  };
+  const lista = (ids,m,alvo)=>ids.map(id=>g(id,m,alvo)).filter(Boolean);
+  return [
+    {t:'🍗 Proteínas', sub:'cada item ≈ 25 g de proteína', l:lista(['frango','sobrecoxa','patinho','peixe','atum','ovo','tofu','peru','cottage','whey'],2,25)},
+    {t:'🍚 Carboidratos', sub:'cada item ≈ 30 g de carboidrato', l:lista(['arroz','macarrao','batata','mandioca','cuscuz','pao','paoint','tapioca','aveia','feijao'],3,30)},
+    {t:'🥑 Gorduras boas', sub:'cada item ≈ 10 g de gordura', l:lista(['azeite','amendoim','castanha','abacate','minas'],4,10)},
+    {t:'🍌 Frutas', sub:'cada item ≈ 15 g de carboidrato', l:lista(['banana','maca','laranja','mamao','abacaxi','morango'],3,15)}
+  ];
 }
 const NUTRI_OBJ = { emagrecer:'🔥 Emagrecer', massa:'💪 Ganhar massa', manter:'⚖️ Manter / recomposição' };
+function nutriTog(id, aberto){ window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[id] = aberto; }
+function nutriDia(i){ window.__nutriDia = i; openNutri(); }
 function openNutri(){
   const n = nutriConfig();
-  const plano = nutriMontarPlano();
+  const dIdx = window.__nutriDia || ((typeof getDayIdx==='function') ? getDayIdx() : 1);
+  const plano = nutriMontarPlano(dIdx);
   const fecha = `<button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
   if(plano.erro==='dados'){
     $('modal-inner').innerHTML = `<h3>🥗 Plano alimentar</h3>
@@ -10395,46 +10492,60 @@ function openNutri(){
       <p style="color:var(--text-dim);font-size:13.5px;line-height:1.55">Pra menores de 18 anos eu não monto plano de calorias: a alimentação nessa fase precisa de acompanhamento de um nutricionista ou pediatra. Continue treinando e comendo variado, com bastante fruta, proteína e água. 💚</p>${fecha}`;
     $('modal-back').classList.add('on'); return;
   }
-  const c = plano.calc;
-  const pill = (k,t)=>`<button class="seg ${n[k.chave]===k.val?'on':''}" onclick="nutriSet('${k.chave}','${k.val}')">${t}</button>`;
-  const objBtns = Object.keys(NUTRI_OBJ).map(k=>`<button class="seg ${c.objetivo===k||(n.objetivo===k)?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('objetivo','${k}')">${NUTRI_OBJ[k]}</button>`).join('');
+  const c = plano.calc, ab = window.__nutriAbertos || {};
+  const diasT = nutriDiasTreino();
+  const chips = NUTRI_DIAS.map((d,i)=>`<button class="nd ${i+1===dIdx?'on':''}" onclick="nutriDia(${i+1})">${d}${diasT.has(i+1)?'<i>🏋️</i>':'<i></i>'}</button>`).join('');
+  const kc = c.kcal||1, pP = Math.round(c.prot*4/kc*100), pG = Math.round(c.gord*9/kc*100), pC = Math.max(0,100-pP-pG);
+  const objBtns = Object.keys(NUTRI_OBJ).map(k=>`<button class="seg ${n.objetivo===k?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('objetivo','${k}')">${NUTRI_OBJ[k]}</button>`).join('');
   const refs = plano.refeicoes.map(m=>`
-    <div class="card" style="padding:14px 16px;margin-bottom:10px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="font-size:22px">${m.icone}</div>
-        <div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14.5px">${m.nome}</div><div style="font-size:11.5px;color:var(--text-dim)">sugestão ${m.hora} · opção ${m.variante}/${m.total}</div></div>
-        <div style="text-align:right"><div class="mono" style="font-weight:800;color:var(--primary-2)">${Math.round(m.tot.kcal)}</div><div style="font-size:10px;color:var(--text-mute)">kcal</div></div>
+    <details class="mealc" ${ab[m.chave]?'open':''} ontoggle="nutriTog('${m.chave}',this.open)">
+      <summary>
+        <span class="mi">${m.icone}</span>
+        <span class="mt"><b>${m.nome}</b><small>${m.hora} · ${m.prato}</small></span>
+        <span class="mk"><b>${Math.round(m.tot.kcal)}</b><small>kcal</small></span>
+      </summary>
+      <div class="mb">
+        ${m.itens.map(i=>`<div class="mrow"><span>${i.nome}</span><span>${i.texto}</span></div>`).join('')}
+        <div class="mfoot"><span>P ${Math.round(m.tot.p)}g · C ${Math.round(m.tot.c)}g · G ${Math.round(m.tot.g)}g</span>
+          <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="nutriTrocar('${m.chave}')">🔄 Outro prato (${m.variante}/${m.total})</button></div>
       </div>
-      <div style="margin-top:10px;font-size:13px;line-height:1.7">${m.itens.map(i=>`<div style="display:flex;justify-content:space-between;gap:10px"><span>${i.nome}</span><span style="color:var(--text-dim);text-align:right">${i.texto}</span></div>`).join('')}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-        <span style="font-size:11.5px;color:var(--text-dim)">P ${Math.round(m.tot.p)}g · C ${Math.round(m.tot.c)}g · G ${Math.round(m.tot.g)}g</span>
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="nutriTrocar('${m.chave}')">🔄 Trocar</button>
-      </div>
-    </div>`).join('');
+    </details>`).join('');
+  const eq = nutriEquivalencias().map(g=>`<div style="margin-top:10px"><b style="font-size:13px">${g.t}</b> <span style="font-size:11px;color:var(--text-mute)">${g.sub}</span>
+      <div class="eqgrid">${g.l.map(x=>`<span>${x}</span>`).join('')}</div></div>`).join('');
   $('modal-inner').innerHTML = `
     <h3>🥗 Plano alimentar</h3>
-    <div class="card" style="padding:16px;margin:8px 0 12px;background:linear-gradient(150deg,rgba(var(--primary-rgb),.22),var(--surface))">
-      <div style="font-size:12px;letter-spacing:1px;color:var(--text-dim);font-weight:700">SUA META DIÁRIA</div>
-      <div style="display:flex;align-items:baseline;gap:6px;margin-top:4px"><span class="mono" style="font-size:40px;font-weight:800;line-height:1">${c.kcal}</span><span style="color:var(--text-dim)">kcal</span></div>
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:12px;text-align:center">
-        <div class="qs" style="padding:9px 2px"><div class="qs-v" style="font-size:15px">${c.prot}g</div><div class="qs-l">proteína</div></div>
-        <div class="qs" style="padding:9px 2px"><div class="qs-v" style="font-size:15px">${c.carb}g</div><div class="qs-l">carbo</div></div>
-        <div class="qs" style="padding:9px 2px"><div class="qs-v" style="font-size:15px">${c.gord}g</div><div class="qs-l">gordura</div></div>
-        <div class="qs" style="padding:9px 2px"><div class="qs-v" style="font-size:15px">${c.agua.toString().replace('.',',')}L</div><div class="qs-l">água</div></div>
+    <div class="ndays">${chips}</div>
+    <div style="max-height:70vh;overflow-y:auto;padding-right:2px">
+      <div class="card" style="padding:16px;margin:4px 0 10px;background:linear-gradient(150deg,rgba(var(--primary-rgb),.20),var(--surface))">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11.5px;letter-spacing:1px;color:var(--text-dim);font-weight:700">${plano.treino?'DIA DE TREINO 🏋️':'DIA DE DESCANSO 😴'}</span>
+          <span style="font-size:11.5px;color:var(--text-dim)">${NUTRI_OBJ[c.objetivo].replace(/^[^\s]+\s/,'')}</span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-top:6px"><span style="font-size:44px;font-weight:300;line-height:1;font-family:'Outfit',system-ui,sans-serif">${c.kcal}</span><span style="color:var(--text-dim)">kcal</span>
+          <span style="margin-left:auto;font-size:12px;color:var(--text-dim)">💧 ${c.agua.toString().replace('.',',')} L</span></div>
+        <div class="macbar"><i style="width:${pP}%;background:var(--primary)"></i><i style="width:${pC}%;background:var(--accent)"></i><i style="width:${pG}%;background:var(--prep)"></i></div>
+        <div class="maclg">
+          <span><i style="background:var(--primary)"></i>Proteína <b>${c.prot}g</b></span>
+          <span><i style="background:var(--accent)"></i>Carbo <b>${c.carb}g</b></span>
+          <span><i style="background:var(--prep)"></i>Gordura <b>${c.gord}g</b></span>
+        </div>
+        <div style="font-size:11.5px;color:var(--text-dim);margin-top:10px;line-height:1.5">Gasto estimado: ${c.tdee} kcal (${c.dias} treinos/semana). ${c.ajusteNota||''}</div>
       </div>
-      <div style="font-size:11.5px;color:var(--text-dim);margin-top:10px;line-height:1.5">Base: ${c.tdee} kcal de gasto estimado (${c.dias} treinos/semana). ${c.ajusteNota||''}</div>
-    </div>
-    ${c.avisos.map(a=>`<div class="card card-alert" style="padding:12px 14px;font-size:12.5px;line-height:1.5">⚠️ ${a}</div>`).join('')}
-    <div class="section-lbl" style="margin:6px 0 6px">Objetivo</div>
-    <div class="mod-toggle" style="margin-bottom:10px">${objBtns}</div>
-    <div class="mod-toggle" style="margin-bottom:12px">
-      <button class="seg ${n.refeicoes===5?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('refeicoes',5)">5 refeições</button>
-      <button class="seg ${n.refeicoes===4?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('refeicoes',4)">4 refeições</button>
-      <button class="seg ${n.vegetariano?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('vegetariano',${!n.vegetariano})">🌱 Vegetariano</button>
-    </div>
-    <div style="max-height:46vh;overflow-y:auto;padding-right:2px">${refs}
-      <div class="card" style="padding:14px 16px"><b style="font-size:13.5px">Dicas pra você</b><div style="font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-top:6px">${plano.dicas.map(d=>`• ${d}`).join('<br>')}</div></div>
-      <div style="font-size:11px;color:var(--text-mute);line-height:1.5;padding:10px 4px">Total do cardápio de hoje: ~${Math.round(plano.dia.kcal)} kcal · P ${Math.round(plano.dia.p)}g · C ${Math.round(plano.dia.c)}g · G ${Math.round(plano.dia.g)}g. Valores aproximados (tabelas brasileiras de composição). É uma orientação geral, não substitui um nutricionista; se tiver doença, alergia ou usar medicação, procure um profissional.</div>
+      ${c.avisos.map(a=>`<div class="card card-alert" style="padding:12px 14px;font-size:12.5px;line-height:1.5">⚠️ ${a}</div>`).join('')}
+      ${refs}
+      <details class="mealc"><summary><span class="mi">⚙️</span><span class="mt"><b>Ajustar plano</b><small>objetivo, refeições, vegetariano</small></span></summary>
+        <div class="mb">
+          <div class="mod-toggle" style="margin:4px 0 8px">${objBtns}</div>
+          <div class="mod-toggle" style="margin:0">
+            <button class="seg ${n.refeicoes===4?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('refeicoes',4)">4 refeições</button>
+            <button class="seg ${n.refeicoes===5?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('refeicoes',5)">5 refeições</button>
+            <button class="seg ${n.refeicoes===6?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('refeicoes',6)">6 refeições</button>
+          </div>
+          <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${n.vegetariano?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('vegetariano',${!n.vegetariano})">🌱 Vegetariano (ovos e laticínios liberados)</button></div>
+        </div></details>
+      <details class="mealc"><summary><span class="mi">🔁</span><span class="mt"><b>Trocas equivalentes</b><small>mesma quantidade de nutriente</small></span></summary><div class="mb">${eq}</div></details>
+      <details class="mealc"><summary><span class="mi">💡</span><span class="mt"><b>Dicas pra hoje</b><small>${plano.dicas.length} dicas</small></span></summary><div class="mb" style="font-size:12.5px;color:var(--text-dim);line-height:1.6">${plano.dicas.map(d=>`• ${d}`).join('<br>')}</div></details>
+      <div style="font-size:11px;color:var(--text-mute);line-height:1.5;padding:10px 4px">Cardápio de ${NUTRI_DIAS[dIdx-1]}: ~${Math.round(plano.dia.kcal)} kcal · P ${Math.round(plano.dia.p)}g · C ${Math.round(plano.dia.c)}g · G ${Math.round(plano.dia.g)}g. Valores aproximados (tabelas brasileiras de composição). É uma orientação geral e não substitui um nutricionista; se tiver doença, alergia ou usar medicação, procure um profissional.</div>
     </div>
     ${fecha}`;
   $('modal-back').classList.add('on');
@@ -10444,10 +10555,12 @@ function nutriSet(k, v){
   if(k==='refeicoes') n.refeicoes = parseInt(v,10);
   else if(k==='vegetariano') n.vegetariano = (v===true || v==='true');
   else n[k] = v;
+  window.__nutriAbertos = Object.assign(window.__nutriAbertos||{}, {});
   saveData(); openNutri();
 }
 function nutriTrocar(chave){
   const n = nutriConfig(); n.trocas[chave] = (n.trocas[chave]||0) + 1;
+  window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[chave] = true;
   saveData(); openNutri();
 }
 function nutriResumoMA(){
@@ -10455,8 +10568,8 @@ function nutriResumoMA(){
   if(plano.erro==='dados') return `Pra montar seu plano alimentar eu preciso de <b>sexo, idade, altura e peso</b> no seu cadastro. Complete em Perfil → Editar dados pessoais e me chame de novo. 😊`;
   if(plano.erro==='menor') return `Pra menores de 18 anos eu não monto plano de calorias, porque a alimentação nessa fase pede acompanhamento de nutricionista ou pediatra. Posso te ajudar com água, proteína e o que comer antes e depois do treino! 💚`;
   const c = plano.calc;
-  return `🥗 Pelo seu cadastro e pelos seus <b>${c.dias} treinos/semana</b>, sua meta pra <b>${NUTRI_OBJ[c.objetivo].replace(/^[^\s]+\s/,'').toLowerCase()}</b> é de <b>~${c.kcal} kcal/dia</b>: <b>${c.prot}g</b> de proteína, <b>${c.carb}g</b> de carboidrato e <b>${c.gord}g</b> de gordura, com ${c.agua.toString().replace('.',',')} L de água.${c.ajusteNota?`<br><br>${c.ajusteNota}`:''}<br><br><button class="btn btn-primary" style="padding:9px 16px;font-size:13px" onclick="closeAssistant();setTimeout(openNutri,200)">Ver cardápio completo</button>`;
+  return `🥗 Pelo seu cadastro e pelos seus <b>${c.dias} treinos/semana</b>, sua meta pra <b>${NUTRI_OBJ[c.objetivo].replace(/^[^\s]+\s/,'').toLowerCase()}</b> hoje (${plano.treino?'dia de treino':'dia de descanso'}) é de <b>~${c.kcal} kcal</b>: <b>${c.prot}g</b> de proteína, <b>${c.carb}g</b> de carboidrato e <b>${c.gord}g</b> de gordura, com ${c.agua.toString().replace('.',',')} L de água.${c.ajusteNota?`<br><br>${c.ajusteNota}`:''}<br><br><button class="btn btn-primary" style="padding:9px 16px;font-size:13px" onclick="closeAssistant();setTimeout(openNutri,200)">Ver cardápio da semana</button>`;
 }
 
-Object.assign(window,{openNutri,nutriSet,nutriTrocar});
+Object.assign(window,{openNutri,nutriSet,nutriTrocar,nutriDia,nutriTog});
 MA_ANSWERS.plano_alimentar = nutriResumoMA;
