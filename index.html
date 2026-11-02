@@ -15,10 +15,10 @@
     var t = 'zepp';
     try{ t = localStorage.getItem('metatreino_theme') || 'zepp'; }catch(e){}
     if(t==='dark') t = 'zepp'; if(t==='light') t = 'claro';
-    if(['zepp','aurora','classico','oceano','claro'].indexOf(t)<0) t = 'zepp';
+    if(['zepp','aurora','classico','oceano','claro','amoled'].indexOf(t)<0) t = 'zepp';
     document.documentElement.setAttribute('data-theme', t);
     try{ if(localStorage.getItem('metatreino_sessao')) document.documentElement.classList.add('restaurando'); }catch(e){}
-    var cores = {zepp:'#000000', aurora:'#070a1a', classico:'#050914', oceano:'#04111b', claro:'#f5f6fb'};
+    var cores = {amoled:'#000000', zepp:'#000000', aurora:'#070a1a', classico:'#050914', oceano:'#04111b', claro:'#f5f6fb'};
     var m = document.querySelector('meta[name="theme-color"]');
     if(m) m.setAttribute('content', cores[t]);
   })();
@@ -61,7 +61,7 @@
   --tint-prep:rgba(45,212,191,.08);  --line-prep:rgba(45,212,191,.32);
   --bg-grad-1:rgba(124,108,255,.12); --bg-grad-2:rgba(255,122,89,.07); --bg-grad-3:rgba(56,189,248,.05);
   --bar-bg:rgba(7,10,26,0.82);
-  --grad-primary:linear-gradient(135deg,#7c6cff 0%,#a99cff 60%,#ff7a59 150%);
+  --grad-primary:linear-gradient(135deg,#22d3ee 0%,#7c6cff 52%,#f0abfc 100%);
 }
 [data-theme="classico"]{
   --bg:#050914; --bg-2:#0a1122;
@@ -83,7 +83,7 @@
   --tint-prep:rgba(167,139,250,.08);  --line-prep:rgba(167,139,250,.32);
   --bg-grad-1:rgba(16,185,129,.12); --bg-grad-2:rgba(245,158,11,.07); --bg-grad-3:rgba(56,189,248,.05);
   --bar-bg:rgba(5,9,20,0.82);
-  --grad-primary:linear-gradient(135deg,#10b981 0%,#34d399 60%,#f59e0b 150%);
+  --grad-primary:linear-gradient(135deg,#10b981,#059669);
 }
 [data-theme="oceano"]{
   --bg:#04111b; --bg-2:#08202f;
@@ -105,7 +105,7 @@
   --tint-prep:rgba(192,132,252,.08);  --line-prep:rgba(192,132,252,.32);
   --bg-grad-1:rgba(6,182,212,.12); --bg-grad-2:rgba(251,191,36,.07); --bg-grad-3:rgba(56,189,248,.05);
   --bar-bg:rgba(4,17,27,0.82);
-  --grad-primary:linear-gradient(135deg,#06b6d4 0%,#67e8f9 60%,#fbbf24 150%);
+  --grad-primary:linear-gradient(135deg,#06b6d4,#0891b2);
 }
 :root:not([data-theme]),[data-theme="zepp"]{
   --bg:#000000; --bg-2:#0b0b0c;
@@ -127,7 +127,28 @@
   --tint-prep:rgba(91,155,255,.09);  --line-prep:rgba(91,155,255,.32);
   --bg-grad-1:rgba(255,106,43,.05); --bg-grad-2:rgba(47,212,181,.03); --bg-grad-3:rgba(0,0,0,0);
   --bar-bg:rgba(22,22,24,0.92);
-  --grad-primary:linear-gradient(135deg,#ff6a2b 0%,#ff8a4c 100%);
+  --grad-primary:linear-gradient(135deg,#ff6a2b,#ff6a2b);
+}
+[data-theme="amoled"]{
+  --bg:#000000; --bg-2:#000000;
+  --surface:#000000; --surface-2:#0e0e0e;
+  --border:rgba(255,255,255,0.14); --border-strong:rgba(255,255,255,0.26);
+  --primary:#b6f23a; --primary-2:#d4ff6a; --primary-dark:#8cc21b; --primary-rgb:182,242,58; --primary-glow:rgba(182,242,58,0.25);
+  --accent:#3de0ff; --accent-2:#9aefff; --accent-rgb:61,224,255;
+  --prep:#ff9f43; --prep-soft:#ffc58a; --prep-rgb:255,159,67;
+  --danger:#ff4d6d; --danger-soft:#ff9fb0; --info:#64d2ff; --info-soft:#a5e6ff; --pink:#ff8fb1; --teal:#3de0ff;
+  --text:#f2f2f2; --text-strong:#ffffff; --text-dim:#a3a3a3; --text-mute:#707070;
+  --run:#3de0ff; --lift:#b6f23a;
+  --on-primary:#0b1200; --toast-bg:#111111; --scrim:rgba(0,0,0,.85);
+  --shadow-sm:none; --shadow-md:none; --glow:none;
+  --tint-primary:rgba(182,242,58,.08); --line-primary:rgba(182,242,58,.40);
+  --tint-accent:rgba(61,224,255,.08);  --line-warn:rgba(255,159,67,.40); --tint-warn:rgba(255,159,67,.07);
+  --tint-info:rgba(100,210,255,.07); --line-info:rgba(100,210,255,.32);
+  --tint-danger:rgba(255,77,109,.08); --line-danger:rgba(255,77,109,.34);
+  --tint-prep:rgba(255,159,67,.07);  --line-prep:rgba(255,159,67,.34);
+  --bg-grad-1:transparent; --bg-grad-2:transparent; --bg-grad-3:transparent;
+  --bar-bg:rgba(0,0,0,0.94);
+  --grad-primary:linear-gradient(135deg,#b6f23a,#b6f23a);
 }
 [data-theme="claro"]{
   --bg:#f5f6fb; --bg-2:#ffffff;
@@ -149,7 +170,7 @@
   --tint-prep:rgba(13,148,136,.08); --line-prep:rgba(13,148,136,.30);
   --bg-grad-1:rgba(91,75,219,.07); --bg-grad-2:rgba(194,65,12,.04); --bg-grad-3:rgba(2,132,199,.04);
   --bar-bg:rgba(255,255,255,0.86);
-  --grad-primary:linear-gradient(135deg,#5b4bdb 0%,#7c6cff 60%,#c2410c 170%);
+  --grad-primary:linear-gradient(135deg,#5b4bdb,#4338ca);
 }
 
 /* no tema claro o toast é escuro: seu texto precisa ser claro */
@@ -346,7 +367,7 @@ a{color:var(--primary-2);text-decoration:none}
 /* No claro, .055 de opacidade sobre fundo branco some. Precisa de mais contraste. */
 [data-theme="claro"] #app-deco{opacity:.13;color:#0f172a}
 body.no-deco #app-deco{display:none}
-#ma-fab{position:fixed;right:18px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:90;width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(135deg,var(--primary),#0ea5e9);box-shadow:0 6px 18px rgba(var(--primary-rgb),.4);transition:transform .18s ease,opacity .25s ease;-webkit-tap-highlight-color:transparent}
+#ma-fab{position:fixed;right:18px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:90;width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--grad-primary);box-shadow:0 6px 18px rgba(var(--primary-rgb),.4);transition:transform .18s ease,opacity .25s ease;-webkit-tap-highlight-color:transparent}
 #ma-fab:active{transform:scale(.9)}
 /* --- polimento: feedback tátil ao toque + remove o flash cinza do mobile --- */
 *{-webkit-tap-highlight-color:transparent}
@@ -430,7 +451,7 @@ details summary::-webkit-details-marker{display:none}
 .bld-bar{height:4px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
 .bld-bar-i{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--primary-2));transition:width .4s ease}
 
-#ma-fab.fab-curio{background:linear-gradient(135deg,var(--primary),#22c55e)}
+#ma-fab.fab-curio{background:var(--grad-primary)}
 #ma-fab.fab-important{background:linear-gradient(135deg,var(--accent),#f97316)}
 #ma-fab.fab-important::after{border-color:rgba(var(--accent-rgb),.6);animation:fabpulse 1.3s ease-out infinite}
 #ma-fab.fab-rare{background:linear-gradient(135deg,var(--prep),#8b5cf6)}
@@ -674,14 +695,13 @@ details summary::-webkit-details-marker{display:none}
 .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 
 /* ===== 2027.1 — visual "Aurora": cantos maiores, gradientes suaves, vidro leve ===== */
-:root{--radius-card:20px;--radius-note:16px;--radius-btn:14px;
-  --grad-primary:linear-gradient(135deg,var(--primary) 0%,#9b8cff 55%,var(--accent) 130%);}
 .btn-primary{background:var(--grad-primary)!important;border:0!important;box-shadow:0 6px 20px var(--primary-glow);letter-spacing:.2px}
 [data-theme="claro"] .btn-primary{color:#fff!important}
 .card,.rest-card,.stud,.trophy{border-radius:var(--radius-card);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-.tprog-fill{background:linear-gradient(90deg,var(--primary),var(--accent))!important}
-.filter-chip.on{background:var(--grad-primary)!important;color:#fff!important;border-color:transparent!important}
-.detail-hero,.today-card{background:linear-gradient(160deg,var(--tint-primary),var(--tint-accent))!important;border-radius:calc(var(--radius-card) + 4px)}
+.tprog-fill{background:var(--primary)!important}
+.filter-chip.on{background:var(--primary)!important;color:var(--on-primary)!important;border-color:transparent!important}
+.filter-chip.on *{color:var(--on-primary)!important}
+.detail-hero,.today-card{background:linear-gradient(160deg,var(--tint-primary),var(--surface))!important;border-radius:calc(var(--radius-card) + 4px)}
 
 /* seletor de tema */
 .theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
@@ -832,7 +852,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
 [data-theme="zepp"] #card-monthly{background:var(--surface)!important}
 [data-theme="zepp"] .tprog-fill{background:var(--primary)!important}
 [data-theme="zepp"] .tabbar{background:rgba(22,22,24,.92)}
-[data-theme="zepp"] #ma-fab{background:var(--surface-2);box-shadow:none;border:1px solid var(--border-strong)}
+[data-theme="zepp"] #ma-fab{background:var(--surface-2)!important;box-shadow:none;border:1px solid var(--border-strong)}
 [data-theme="zepp"] .greet h1{font-weight:600}
 #scr-home .card-row[onclick="openTrophies()"]{display:none}
 
@@ -875,6 +895,35 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
 .mfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;color:var(--text-dim)}
 .eqgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .eqgrid span{font-size:12px;padding:7px 9px;border-radius:12px;background:var(--surface-2);color:var(--text-dim)}
+
+/* AMOLED: preto absoluto (pixels apagados), só bordas finas */
+[data-theme="amoled"] body{background:#000!important}
+[data-theme="amoled"] #app-deco{display:none}
+[data-theme="amoled"] .card,[data-theme="amoled"] .week,[data-theme="amoled"] .plan-card,[data-theme="amoled"] #scr-home .quote,
+[data-theme="amoled"] .list-item,[data-theme="amoled"] .stat,[data-theme="amoled"] .stat-mini,[data-theme="amoled"] .list-row,
+[data-theme="amoled"] .trophy,[data-theme="amoled"] .hist-card,[data-theme="amoled"] .rest-card,[data-theme="amoled"] .act-card,
+[data-theme="amoled"] .met,[data-theme="amoled"] .qs,[data-theme="amoled"] .mealc,[data-theme="amoled"] .theme-opt{background:#000!important;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
+[data-theme="amoled"] .today{background:#000;border:1px solid var(--line-primary);box-shadow:none}
+[data-theme="amoled"] .btn-primary{background:var(--primary)!important;color:var(--on-primary)!important;box-shadow:none}
+[data-theme="amoled"] .tabbar{background:#000;border-color:var(--border-strong)}
+[data-theme="amoled"] #ma-fab{background:#000;border:1px solid var(--primary);box-shadow:none}
+[data-theme="amoled"] .modal,[data-theme="amoled"] #modal-inner{background:#000}
+/* picker de tema com 6 opções */
+.theme-grid{grid-template-columns:1fr 1fr}
+
+.pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 4px}
+.pager .btn{padding:10px 12px;font-size:13px}
+.pager span{text-align:center;font-size:13px;font-weight:700;display:flex;flex-direction:column;line-height:1.3}
+.pager small{font-size:11px;color:var(--text-dim);font-weight:500}
+
+.stat[onclick],.stat-mini[onclick],.chart-card[onclick],.act-card[onclick],#pf-weight-chart-slot[onclick]{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.stat[onclick]:active,.stat-mini[onclick]:active,.chart-card[onclick]:active,.act-card[onclick]:active{transform:scale(.985)}
+#scr-home #card-feriado{order:13}
+.tapdica{font-size:11px;color:var(--text-mute);text-align:right;margin:6px 6px 0}
+
+.nxchips{display:flex;flex-wrap:wrap;gap:6px}
+.nxchip{padding:8px 11px;border-radius:99px;background:var(--surface-2);border:1px solid var(--border);font-size:12.5px;font-weight:700;color:var(--text-dim)}
+.nxchip.on{background:var(--primary);color:var(--on-primary);border-color:transparent}
 </style>
 </head>
 <body>
@@ -1004,12 +1053,10 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     <div class="list-row" onclick="openMuralAdmin()">📢 <span>Mural e logo do app</span></div>
     <div class="list-row hidden" id="adm-special-row" onclick="openSpecialAwardAdmin()">💍 <span>Conquista especial</span></div>
     <div class="list-row" onclick="openContactAdmin()">📞 <span>Contato (WhatsApp / e-mail)</span></div>
-    <div class="list-row hidden" onclick="openAdminsList()" id="adm-row-admins">👑 <span>Administradores</span></div>
     <div class="list-row" onclick="openNewExercise()">➕ <span>Novo exercício</span></div>
     <div class="list-row" onclick="openVideoAdmin()">🎬 <span>Vídeos dos exercícios</span><span id="adm-video-count" style="margin-left:auto;font-size:11px;color:var(--text-dim)"></span></div>
     <div class="list-row" onclick="openSuggestions()">💬 <span>Feedback dos alunos</span><span id="adm-feedback-badge" style="display:none;margin-left:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:2px 8px">0</span><span id="adm-sug-count" style="margin-left:8px;font-size:11px;color:var(--text-dim)"></span></div>
-    <div class="list-row warn" onclick="openModal('broadcast')">📢 <span>Mensagem em massa (WhatsApp)</span></div>
-
+    
     <div class="section-head" style="margin-top:22px"><h2>Alunos</h2><span class="text-dim" style="font-size:13px" id="adm-list-count">0</span></div>
     <input class="search" placeholder="🔍 Buscar por e-mail ou nome..." id="adm-search" oninput="admPage=0;renderAdminList()">
     <div class="chips-row" id="adm-filter-chips" style="margin:12px 0">
@@ -1217,6 +1264,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
       <div class="avatar" id="home-avatar">A</div>
       <div><h1 id="home-hi">Bom dia, Atleta! 👋</h1><div class="greet-sub" id="home-goal">Objetivo: —</div></div>
     </div>
+    <div class="card hidden" id="card-feriado"></div>
     <div class="quick" id="home-quick"></div>
     <div class="metrics" id="home-metrics"></div>
     <div class="quote"><div class="quote-label">FRASE DO DIA</div><div class="quote-txt" id="daily-quote">🌱 Pequeno hoje, grande amanhã. Confie no processo.</div></div>
@@ -1367,15 +1415,15 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     </div>
 
     <div class="stat-grid" style="margin-top:16px">
-      <div class="stat"><div class="stat-lbl" id="s1-lbl">Treinos</div><div class="stat-val" id="s1-val">0<small>/3</small></div><div class="stat-note" id="s1-note">0%</div></div>
-      <div class="stat"><div class="stat-lbl" id="s2-lbl">Volume</div><div class="stat-val" id="s2-val">0<small>kg</small></div><div class="stat-note" id="s2-note">—</div></div>
-      <div class="stat"><div class="stat-lbl" id="s3-lbl">Recordes (PRs)</div><div class="stat-val" id="s3-val">0</div><div class="stat-note" id="s3-note">registrados</div></div>
+      <div class="stat" onclick="openPerfDetail('treinos')"><div class="stat-lbl" id="s1-lbl">Treinos</div><div class="stat-val" id="s1-val">0<small>/3</small></div><div class="stat-note" id="s1-note">0%</div></div>
+      <div class="stat" onclick="openPerfDetail('volume')"><div class="stat-lbl" id="s2-lbl">Volume</div><div class="stat-val" id="s2-val">0<small>kg</small></div><div class="stat-note" id="s2-note">—</div></div>
+      <div class="stat" onclick="openPerfDetail('prs')"><div class="stat-lbl" id="s3-lbl">Recordes (PRs)</div><div class="stat-val" id="s3-val">0</div><div class="stat-note" id="s3-note">registrados</div></div>
     </div>
 
     <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
-      <div class="stat-mini"><div class="stat-mini-emo">🔥</div><div class="stat-mini-val" id="m-streak">0</div><div class="stat-mini-lbl">Streak atual</div></div>
-      <div class="stat-mini"><div class="stat-mini-emo">⏱️</div><div class="stat-mini-val" id="m-total">0h</div><div class="stat-mini-lbl">Total treinado</div></div>
-      <div class="stat-mini"><div class="stat-mini-emo">🏆</div><div class="stat-mini-val" id="m-best">0</div><div class="stat-mini-lbl">Melhor sequência</div></div>
+      <div class="stat-mini" onclick="openPerfDetail('streak')"><div class="stat-mini-emo">🔥</div><div class="stat-mini-val" id="m-streak">0</div><div class="stat-mini-lbl">Streak atual</div></div>
+      <div class="stat-mini" onclick="openPerfDetail('total')"><div class="stat-mini-emo">⏱️</div><div class="stat-mini-val" id="m-total">0h</div><div class="stat-mini-lbl">Total treinado</div></div>
+      <div class="stat-mini" onclick="openPerfDetail('melhor')"><div class="stat-mini-emo">🏆</div><div class="stat-mini-val" id="m-best">0</div><div class="stat-mini-lbl">Melhor sequência</div></div>
     </div>
 
     <div class="chart-card">
@@ -1383,7 +1431,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
       <div id="goals-box"></div>
     </div>
 
-    <div class="chart-card">
+    <div class="chart-card" onclick="openPerfDetail('constancia')">
       <div class="chart-head"><div class="chart-title">Constância — treinos por semana</div><div class="filter-chip on">4 semanas</div></div>
       <svg class="chart" viewBox="0 0 400 180" preserveAspectRatio="none" width="100%">
         <line x1="0" y1="20" x2="400" y2="20" stroke="rgba(148,163,184,0.14)"/>
@@ -1402,7 +1450,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
       <div class="text-dim" style="font-size:11.5px;margin-top:6px">% da meta semanal cumprida em cada uma das últimas 4 semanas</div>
     </div>
 
-    <div class="chart-card">
+    <div class="chart-card" onclick="openPerfDetail('dist')">
       <div class="chart-title" style="margin-bottom:14px">Distribuição das atividades (7 dias)</div>
       <div class="row" style="gap:20px">
         <svg width="120" height="120" viewBox="0 0 120 120" id="dist-donut">
@@ -1539,6 +1587,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     <div class="section-lbl" style="margin:18px 0 8px">🎛️ APLICATIVO</div>
     <div class="list-row" onclick="toggleThemePicker()" id="theme-row"><span>🎨</span> <span>Aparência</span><span id="theme-row-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">Premium ›</span></div>
     <div class="theme-grid hidden" id="theme-grid"></div>
+    <div class="list-row" onclick="openEmojiTone()"><span>👋</span> <span>Tom dos emojis</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">opcional ›</span></div>
     <div class="list-row" onclick="toggleDeco()"><span>🎨</span> <span id="deco-row-label">Fundo decorativo (ligado)</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">tocar para trocar</span></div>
     <div class="section-lbl" style="margin:18px 0 8px">👤 CONTA</div>
     <div class="list-row" onclick="openModal('edit-profile')">✏️ <span>Editar dados pessoais</span></div>
@@ -1550,7 +1599,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 3</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 4</span>
     </div>
   </div>
 </div>
@@ -1593,9 +1642,9 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=2027.1-beta.3"></script>
+<script src="./app.js?v=2027.1-beta.4"></script>
 <script>
-const APP_VERSION = '2027.1-beta.3';
+const APP_VERSION = '2027.1-beta.4';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {

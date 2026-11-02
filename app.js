@@ -1,5 +1,5 @@
 // ===== MetaTreino 2027.1 Beta 1 =====
-const APP_VERSION = '2027.1-beta.3';
+const APP_VERSION = '2027.1-beta.4';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -812,8 +812,99 @@ function rotacionarBlocoLift(){
     return true;
   }catch(e){ console.log('rotação de bloco falhou', e); return false; }
 }
+// ===== FERIADOS NACIONAIS: academia fechada não pode virar "falta" =====
+function _pascoa(ano){
+  const a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1;
+  return new Date(ano,mes-1,dia);
+}
+function chaveDia(date){ const d=new Date(date); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function feriadosBR(ano){
+  const f = {}; const add=(m,d,n)=>{ f[ano+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0')] = n; };
+  add(1,1,'Confraternização Universal'); add(4,21,'Tiradentes'); add(5,1,'Dia do Trabalho'); add(9,7,'Independência do Brasil');
+  add(10,12,'Nossa Senhora Aparecida'); add(11,2,'Finados'); add(11,15,'Proclamação da República'); add(11,20,'Consciência Negra'); add(12,25,'Natal');
+  const p = _pascoa(ano); const mv=(off,n)=>{ const d=new Date(p); d.setDate(d.getDate()+off); add(d.getMonth()+1,d.getDate(),n); };
+  mv(-48,'Carnaval'); mv(-47,'Carnaval'); mv(-2,'Sexta-feira Santa'); mv(60,'Corpus Christi');
+  return f;
+}
+function feriadoDe(date){ const d=new Date(date); return feriadosBR(d.getFullYear())[chaveDia(d)] || null; }
+// treino em casa só no feriado: a ficha volta ao normal no dia seguinte
+function restauraTreinoFeriado(){
+  try{
+    const b = state.feriadoBackup; if(!b) return;
+    if(b.key === chaveDia(new Date())) return;
+    const mod = state.modules.lift;
+    if(mod && mod.plan && mod.setup){ mod.setup.equip = b.equip; mod.plan.workouts = b.workouts; }
+    state.feriadoBackup = null; saveData();
+  }catch(e){}
+}
+function renderFeriado(){
+  const card = $('card-feriado'); if(!card) return;
+  card.classList.add('hidden');
+  const mod = state.modules[state.active]; if(!mod || !mod.plan) return;
+  state.feriados = state.feriados || {};
+  const hoje = new Date(), amanha = new Date(Date.now()+86400000);
+  const kH = chaveDia(hoje), kA = chaveDia(amanha);
+  const fH = feriadoDe(hoje), fA = feriadoDe(amanha);
+  const ws = mod.plan.workouts||[];
+  const wHoje = ws.find(w=>w.dayIdx===getDayIdx());
+  const feito = wHoje && (mod.history||[]).some(x=>{ const t=new Date(x.at); t.setHours(0,0,0,0); const d0=new Date(); d0.setHours(0,0,0,0); return t.getTime()===d0.getTime(); });
+  const lift = state.active==='lift';
+  if(fH && wHoje && !feito && !state.feriados[kH]){
+    card.classList.remove('hidden');
+    card.innerHTML = `<div class="card-title">🎌 Hoje é feriado: ${fH}</div>
+      <div class="card-sub" style="margin-top:4px;line-height:1.5">${lift?'Muita academia fecha em feriado. O que você vai fazer com o treino de hoje?':'Feriado é um ótimo dia pra correr ao ar livre. Ou descansar sem culpa.'}</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        ${lift?`<button class="btn btn-primary" onclick="feriadoEscolha('casa')">🏠 Treinar em casa (peso do corpo)</button>
+        <button class="btn btn-ghost" onclick="feriadoEscolha('academia')">🏋️ Minha academia está aberta</button>`:`<button class="btn btn-primary" onclick="feriadoEscolha('academia')">🏃 Vou treinar</button>`}
+        <button class="btn btn-ghost" onclick="feriadoEscolha('descanso')">😴 Descansar hoje (sem perder a sequência)</button>
+      </div>`;
+    return;
+  }
+  if(fH && state.feriados[kH]==='casa' && lift && !feito){
+    card.classList.remove('hidden');
+    card.innerHTML = `<div class="card-title">🏠 Feriado: treino em casa ativado</div><div class="card-sub">Hoje seus exercícios estão na versão sem equipamento. Amanhã a ficha volta ao normal.</div>`;
+    return;
+  }
+  if(fA && !state.feriados['aviso-'+kA]){
+    const wAm = ws.find(w=>w.dayIdx===((getDayIdx()%7)+1));
+    if(wAm){
+      card.classList.remove('hidden');
+      card.innerHTML = `<div class="card-title">📅 Amanhã é feriado: ${fA}</div>
+        <div class="card-sub" style="margin-top:4px;line-height:1.5">Você tem ${lift?'Treino '+wAm.k:'treino'} amanhã. Se a academia fechar, dá pra antecipar pra hoje ou fazer em casa.</div>
+        <div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-primary" style="flex:1" onclick="goTab('sessions');setTimeout(()=>{try{selectSession('${wAm.k||wAm.dayIdx}')}catch(e){}},150)">Ver o treino</button>
+        <button class="btn btn-ghost" onclick="state.feriados['aviso-${kA}']=true;saveData();renderFeriado()">Ok</button></div>`;
+    }
+  }
+}
+function feriadoEscolha(op){
+  state.feriados = state.feriados || {};
+  const k = chaveDia(new Date());
+  const mod = state.modules[state.active];
+  const w = mod && mod.plan && (mod.plan.workouts||[]).find(x=>x.dayIdx===getDayIdx());
+  if(op==='academia'){ state.feriados[k]='academia'; saveData(); renderFeriado(); toast('💪 Boa! Bom treino.'); return; }
+  if(op==='descanso'){
+    state.feriados[k]='descanso'; saveData();
+    if(w) skipWorkout(w.k||w.dayIdx); else { renderFeriado(); }
+    toast('😴 Feriado de descanso: sua sequência está protegida.');
+    return;
+  }
+  if(op==='casa'){
+    const lm = state.modules.lift;
+    if(!lm || !lm.plan || !lm.setup){ toast('Crie um plano de musculação primeiro'); return; }
+    if(lm.setup.equip !== 'casa'){
+      state.feriadoBackup = { key:k, equip:lm.setup.equip, workouts: JSON.parse(JSON.stringify(lm.plan.workouts)) };
+      lm.setup.equip = 'casa';
+      try{ regenLiftExercises(); }catch(e){ console.log(e); }
+    }
+    state.feriados[k]='casa'; saveData();
+    toast('🏠 Treino de hoje adaptado pra fazer em casa. Amanhã volta ao normal.');
+    goTab('sessions');
+  }
+}
+function isFeriadoDescanso(date){ try{ return !!(state.feriados && state.feriados[chaveDia(date)]==='descanso'); }catch(e){ return false; } }
 function bootAfterAuth(){
   document.documentElement.classList.remove('restaurando');
+  try{ restauraTreinoFeriado(); }catch(e){}
   cleanupOldHistory();
   try{ if(rotacionarBlocoLift()) setTimeout(()=>toast('🔄 Novo bloco de 4 semanas! Treinos renovados, com exercícios novos pro seu plano.', 4500), 1500); }catch(e){}
   recalibrateRunPlan(); // semana avançou? plano acompanha
@@ -1584,6 +1675,8 @@ function buildLiftExercises(parts, setup){
     } else if(goalOffset>0 && compat.length>3){
       compat = [...compat.slice(goalOffset), ...compat.slice(0,goalOffset)];
     }
+    // exercícios cadastrados pelo treinador entram com prioridade (os iso ainda não lideram o grupo)
+    if(compat.some(e=>e.custom)) compat = [...compat].sort((a,b)=>(b.custom?1:0)-(a.custom?1:0));
     // BLOCO NOVO: exercícios do bloco anterior ficam por último (só repete se não houver alternativa)
     if(window.__evitarIds && window.__evitarIds.size && compat.length>3){
       const _ev = window.__evitarIds;
@@ -2096,7 +2189,7 @@ function renderWeekRecap(){
   card.classList.remove('hidden');
   card.classList.add('anim-pop');
   $('weekrecap-msg').textContent = partes.join(' · ') + '. Toque para ver o resumo completo.';
-  card.onclick = (ev)=>{ if(ev.target && ev.target.id==='weekrecap-dismiss') return; openWeekSummary(); };
+  card.onclick = (ev)=>{ if(ev.target && ev.target.id==='weekrecap-dismiss') return; openLastWeekDetail(); };
   const btn = $('weekrecap-dismiss');
   if(btn) btn.onclick = (ev)=>{ ev.stopPropagation(); state.ui.weekRecapSeen = chave; saveData(); card.classList.add('hidden'); };
 }
@@ -2298,40 +2391,85 @@ function _anel(r, pct, cor){
   const c = 2*Math.PI*r, p = Math.max(0, Math.min(1, pct||0));
   return `<circle class="trk" cx="60" cy="60" r="${r}"/><circle class="bar" cx="60" cy="60" r="${r}" stroke="${cor}" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c*(1-p)).toFixed(1)}"/>`;
 }
+// Dados da semana: aderência (treinos), progressão (séries) e constância (semanas seguidas na meta)
+function atividadeSemana(){
+  const mods = [state.modules.lift, state.modules.run].filter(Boolean);
+  const hist = mods.flatMap(m=>m.history||[]);
+  const ini = (typeof inicioSemanaTs==='function') ? inicioSemanaTs() : 0;
+  const sem = hist.filter(x=>x.at>=ini);
+  const planos = mods.flatMap(m=>((m.plan&&m.plan.workouts)||[]));
+  const planejados = planos.length;
+  const min = Math.round(sem.reduce((s,x)=>s+(x.duration||0),0));
+  const minPlan = planos.reduce((s,w)=>s+(w.duration||60),0);
+  const temLift = !!(state.modules.lift && state.modules.lift.plan);
+  let setsFeitas = 0; Object.values(state.progress||{}).forEach(arr=>(arr||[]).forEach(p=>{ if(p.date>=ini) setsFeitas += (p.sets||[]).length; }));
+  const setsPlan = temLift ? (state.modules.lift.plan.workouts||[]).reduce((s,w)=>s+(w.exercises||[]).reduce((t,e)=>t+(parseInt(e.sets,10)||0),0),0) : 0;
+  const usaSeries = temLift && setsPlan>0;
+  // constância: semanas seguidas com pelo menos 75% dos treinos planejados
+  const metaSem = Math.max(1, Math.ceil(planejados*0.75));
+  const DIA = 86400000; let semanas = 0;
+  const contaSem = k => hist.filter(x=>x.at>=ini-k*7*DIA && x.at<ini-(k-1)*7*DIA).length;
+  if(planejados && sem.length>=metaSem) semanas++;
+  if(planejados) for(let k=1;k<=26;k++){ if(contaSem(k)>=metaSem) semanas++; else break; }
+  const dias = [0,1,2,3,4,5,6].map(i=>{ const a=ini+i*DIA, b=a+DIA; return hist.filter(x=>x.at>=a&&x.at<b).length; });
+  return { sem, planejados, min, minPlan, setsFeitas, setsPlan, usaSeries, semanas, metaSem, dias, hist };
+}
 function renderQuickStats(){
   const el = $('home-quick'); if(!el) return;
   try{
-    const mods = [state.modules.lift, state.modules.run].filter(Boolean);
-    const hist = mods.flatMap(m=>m.history||[]);
-    const ini = (typeof inicioSemanaTs==='function') ? inicioSemanaTs() : 0;
-    const sem = hist.filter(x=>x.at>=ini);
-    const planos = mods.flatMap(m=>((m.plan&&m.plan.workouts)||[]));
-    const planejados = planos.length;
-    const minPlan = planos.reduce((s,w)=>s+(w.duration||60),0);
-    const min = Math.round(sem.reduce((s,x)=>s+(x.duration||0),0));
-    const _dias = new Set(hist.map(x=>new Date(x.at).toDateString()));
-    let streak = 0; const _c = new Date();
-    if(!_dias.has(_c.toDateString())) _c.setDate(_c.getDate()-1);   // hoje ainda não treinou: não zera a sequência
-    for(let g=0; g<3650; g++){
-      if(_dias.has(_c.toDateString())){ streak++; _c.setDate(_c.getDate()-1); continue; }
-      if(isVacationDay(_c) || isBirthday(_c)){ _c.setDate(_c.getDate()-1); continue; }
-      break;
-    }
-    const pT = planejados ? sem.length/planejados : 0, pM = minPlan ? min/minPlan : 0, pS = streak/7;
+    const d = atividadeSemana();
+    const n2 = d.usaSeries ? d.setsFeitas : d.min, m2 = d.usaSeries ? d.setsPlan : d.minPlan;
+    const pT = d.planejados ? d.sem.length/d.planejados : 0, pM = m2 ? n2/m2 : 0, pS = d.semanas/4;
     const pctGeral = Math.round(((Math.min(1,pT)+Math.min(1,pM)+Math.min(1,pS))/3)*100);
+    const pc = v => Math.round(Math.min(1,v)*100);
+    const linha = (cor,lbl,pct,val,sub)=>`<div class="act-row"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:${cor}"></i>${lbl}</div><span class="act-pct">${pct}%</span></div><div class="act-val">${val}<small>${sub}</small></div><div class="act-bar"><i style="width:${pct}%;background:${cor}"></i></div></div>`;
     el.innerHTML = `
-      <div class="act-head"><h3>Atividade da semana</h3><span>${sem.length} de ${planejados||'–'} treinos</span></div>
-      <div class="act-card">
+      <div class="act-head"><h3>Atividade da semana</h3><span>${d.sem.length} de ${d.planejados||'–'} treinos</span></div>
+      <div class="act-card" onclick="openAtividadeDetalhes()">
         <div class="act-rings"><svg viewBox="0 0 120 120">${_anel(52,pT,'var(--primary)')}${_anel(40,pM,'var(--accent)')}${_anel(28,pS,'var(--prep)')}</svg>
           <div class="act-center"><b>${pctGeral}%</b><span>da meta</span></div></div>
         <div class="act-legend">
-          <div class="act-row"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:var(--primary)"></i>Treinos</div><span class="act-pct">${Math.round(Math.min(1,pT)*100)}%</span></div><div class="act-val">${sem.length}<small> / ${planejados||'–'}</small></div><div class="act-bar"><i style="width:${Math.round(Math.min(1,pT)*100)}%;background:var(--primary)"></i></div></div>
-          <div class="act-row"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:var(--accent)"></i>Minutos</div><span class="act-pct">${Math.round(Math.min(1,pM)*100)}%</span></div><div class="act-val">${min}<small> / ${minPlan||'–'} min</small></div><div class="act-bar"><i style="width:${Math.round(Math.min(1,pM)*100)}%;background:var(--accent)"></i></div></div>
-          <div class="act-row"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:var(--prep)"></i>Sequência</div><span class="act-pct">${Math.round(Math.min(1,pS)*100)}%</span></div><div class="act-val">${streak}<small> ${streak===1?'dia':'dias'} · meta 7</small></div><div class="act-bar"><i style="width:${Math.round(Math.min(1,pS)*100)}%;background:var(--prep)"></i></div></div>
+          ${linha('var(--primary)','Treinos',pc(pT),d.sem.length,` / ${d.planejados||'–'}`)}
+          ${linha('var(--accent)', d.usaSeries?'Séries':'Minutos', pc(pM), n2, ` / ${m2||'–'}${d.usaSeries?'':' min'}`)}
+          ${linha('var(--prep)','Semanas na meta',pc(pS),d.semanas,` ${d.semanas===1?'semana':'semanas'} · meta 4`)}
         </div>
-      </div>`;
+      </div>
+      <div class="tapdica">Toque para ver os detalhes ›</div>`;
   }catch(e){ el.innerHTML=''; }
   try{ renderHomeMetrics(); }catch(e){}
+}
+function openAtividadeDetalhes(){
+  const d = atividadeSemana();
+  const falta = Math.max(0, d.planejados - d.sem.length);
+  const prox = (typeof proximoTreino==='function') ? proximoTreino() : null;
+  const dn = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const hojeI = getDayIdx()-1;
+  const barras = d.dias.map((n,i)=>`<div style="flex:1;text-align:center"><div style="height:44px;display:flex;align-items:flex-end;justify-content:center"><div style="width:68%;border-radius:6px;background:${n?'var(--primary)':'var(--surface-2)'};height:${n?Math.min(100,34+n*28):12}%"></div></div><div style="font-size:10.5px;margin-top:4px;color:${i===hojeI?'var(--primary-2)':'var(--text-dim)'};font-weight:${i===hojeI?800:500}">${dn[i]}</div></div>`).join('');
+  const bloco = (cor,tit,val,txt)=>`<div class="mealc" style="padding:13px 14px"><div style="display:flex;align-items:center;gap:8px"><i class="act-dot" style="background:${cor};margin:0"></i><b style="font-size:14px">${tit}</b><span style="margin-left:auto" class="mono">${val}</span></div><div style="font-size:12.5px;color:var(--text-dim);line-height:1.55;margin-top:6px">${txt}</div></div>`;
+  $('modal-inner').innerHTML = `<h3>📊 Atividade da semana</h3>
+    <div style="display:flex;gap:6px;margin:10px 0 12px">${barras}</div>
+    ${bloco('var(--primary)','Treinos',`${d.sem.length} / ${d.planejados||'–'}`, falta ? `Faltam <b>${falta}</b> ${falta===1?'treino':'treinos'} pra fechar a semana${prox?`. Próximo: <b>${prox.nome}</b> (${prox.quando}).`:'.'}` : 'Semana completa. Ótimo trabalho! 🎉')}
+    ${d.usaSeries
+      ? bloco('var(--accent)','Séries',`${d.setsFeitas} / ${d.setsPlan}`,'Séries registradas nos exercícios, contra o total que o seu plano prevê pra semana. É o que mostra se você está progredindo no volume.')
+      : bloco('var(--accent)','Minutos',`${d.min} / ${d.minPlan}`,'Tempo total de treino na semana contra o previsto no plano.')}
+    ${bloco('var(--prep)','Semanas na meta',`${d.semanas} ${d.semanas===1?'semana':'semanas'}`,`Quantas semanas seguidas você cumpriu pelo menos ${d.metaSem} dos ${d.planejados||0} treinos planejados (75%). Dia de descanso não quebra: a conta é por semana, não por dia.`)}
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function proximoTreino(){
+  try{
+    const mod = state.modules[state.active]; if(!mod || !mod.plan) return null;
+    const ws = (mod.plan.workouts||[]).slice().sort((a,b)=>a.dayIdx-b.dayIdx); if(!ws.length) return null;
+    const hoje = getDayIdx(); const d0 = new Date(); d0.setHours(0,0,0,0);
+    const feitoHoje = w => (mod.history||[]).some(x=>{ const t=new Date(x.at); t.setHours(0,0,0,0); return t.getTime()===d0.getTime() && (x.id===w.k || x.dayIdx===w.dayIdx); });
+    let w = ws.find(x=>x.dayIdx>hoje) || null, quando;
+    const hojeW = ws.find(x=>x.dayIdx===hoje && !feitoHoje(x) && !isSkippedToday(x));
+    if(hojeW){ w = hojeW; quando = 'hoje'; }
+    else if(w){ quando = w.dayName ? String(w.dayName).toLowerCase() : 'em breve'; }
+    else { w = ws[0]; quando = (w.dayName?String(w.dayName).toLowerCase():'próxima semana')+' (próxima semana)'; }
+    const nome = state.active==='lift' ? 'Treino '+w.k : String(w.name||'Treino').split('(')[0].trim();
+    return { w, nome, quando, dur:w.duration||0 };
+  }catch(e){ return null; }
 }
 function renderHomeMetrics(){
   const el = $('home-metrics'); if(!el) return;
@@ -2342,16 +2480,14 @@ function renderHomeMetrics(){
   if(pesos.length >= 2){ const d = pesos[pesos.length-1].weight - pesos[0].weight; if(Math.abs(d)>=0.1){ delta = `${d>0?'+':''}${d.toFixed(1).replace('.',',')} kg desde o início`; cls = d<0 ? 'up' : 'dn'; } }
   let nutriTxt = '<small>configurar</small>', nutriSub = 'Calorias e cardápio';
   try{ const pl = nutriCalcular(); if(!pl.erro){ nutriTxt = `${pl.kcal}<small>kcal</small>`; nutriSub = NUTRI_OBJ[pl.objetivo].replace(/^[^\s]+\s/,''); } }catch(e){}
-  let mesFeitos = 0, mesTotal = 0;
-  try{ ensureMonthly(); const g = desafiosDoMes(); mesTotal = g.length*3; mesFeitos = g.reduce((s,x)=>s+x.niveis.filter(c=>state.monthly.done.includes(c.id)).length,0); }catch(e){}
-  const tema = (typeof mesTema==='function') ? mesTema() : {emo:'🏅',nome:'Desafios'};
+  const pt = proximoTreino();
   el.innerHTML = `
     <div class="met" onclick="openModal('add-weight')"><div class="met-h"><i>⚖️</i>Peso</div>
       <div class="met-v">${atual?String(atual).replace('.',','):'–'}<small>kg</small></div><div class="met-s ${cls}">${delta||'Toque para registrar'}</div></div>
     <div class="met" onclick="openNutri()"><div class="met-h"><i>🥗</i>Alimentação</div>
       <div class="met-v">${nutriTxt}</div><div class="met-s">${nutriSub}</div></div>
-    <div class="met" onclick="openMonthly()"><div class="met-h"><i>${tema.emo}</i>Desafio do mês</div>
-      <div class="met-v">${mesFeitos}<small>/ ${mesTotal}</small></div><div class="met-s">${tema.nome}</div></div>
+    <div class="met" onclick="goTab('sessions')"><div class="met-h"><i>📅</i>Próximo treino</div>
+      <div class="met-v" style="font-size:${pt&&pt.nome.length>9?'21px':'30px'}">${pt?pt.nome:'–'}</div><div class="met-s">${pt?`${pt.quando}${pt.dur?` · ~${pt.dur} min`:''}`:'Crie seu plano'}</div></div>
     <div class="met" onclick="openTrophies()"><div class="met-h"><i>🏆</i>Conquistas</div>
       <div class="met-v">${(state.trophies||[]).length}<small>/ ${TROPHIES.length}</small></div><div class="met-s">Medalhas e selos</div></div>`;
 }
@@ -2381,7 +2517,7 @@ function goTab(tab){
   else if(tab==='sessions') renderSessions();
   else if(tab==='library') renderLibrary();
   else if(tab==='perf') renderPerf();
-  else if(tab==='history'){ histLimit = HIST_PAGE; renderHistory(); }
+  else if(tab==='history'){ histLimit = HIST_PAGE; histPage = 0; renderHistory(); }
   else if(tab==='plan') renderPlan();
   else if(tab==='profile') renderProfile();
 }
@@ -2435,8 +2571,17 @@ function renderHome(){
   $('home-goal').innerHTML = _glue(_linha) + ((_wl && _mostraClima) ? `<br><span style="opacity:${_naCapa?'.85':'.6'};font-size:.9em">${_glue(_wl)}</span>` : '');
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
   // 40% de chance de mostrar uma frase contextual (se houver); senão, uma do dia
-  const ctxQuote = _ps ? preStartQuote(_ps) : (Math.random() < 0.4 ? contextualQuote() : null);
   const qSeed = doy + hashStr((state.user && state.user.email) || 'x'); // cada pessoa tem a SUA frase no mesmo dia
+  // a frase do dia NÃO muda a cada toque: a escolha (e o texto contextual) fica fixa durante o dia
+  let ctxQuote = null;
+  if(_ps) ctxQuote = preStartQuote(_ps);
+  else if(qSeed % 10 < 4){
+    try{
+      const cache = JSON.parse(localStorage.getItem('metatreino_quote_ctx')||'null');
+      if(cache && cache.doy===doy) ctxQuote = cache.text;
+      else { ctxQuote = contextualQuote(); localStorage.setItem('metatreino_quote_ctx', JSON.stringify({doy, text:ctxQuote||''})); }
+    }catch(e){ ctxQuote = null; }
+  }
   $('daily-quote').textContent = ctxQuote || QUOTES[qSeed % QUOTES.length];
   renderCoachMural();
   try{ applyHeroCapa(); }catch(e){}
@@ -2715,6 +2860,7 @@ function renderHome(){
 
   renderWeekGrid(mod);
   try{ renderQuickStats(); }catch(e){}
+  try{ renderFeriado(); }catch(e){}
   renderYourList(mod);
 }
 
@@ -3553,6 +3699,9 @@ function markRunDone(dayIdx){
 // ---------- HISTORY ----------
 const HIST_PAGE = 14;      // dias carregados por vez
 let histLimit = HIST_PAGE;
+let histPage = 0;
+const HIST_POR_PAGINA = 10;
+function histGo(p){ histPage = p; renderHistory(); try{ window.scrollTo(0,0); }catch(e){} }
 function renderHistory(){
   if(!state || !state.user){ try{ showScreen('scr-auth'); }catch(e){} return; }   // logout no meio de um render
   // módulo ativo sem plano (ex.: trocou de módulo e não criou): não quebra a tela
@@ -3580,7 +3729,10 @@ function renderHistory(){
     // agrupa por dia, mais recente primeiro
     const sorted = h.slice().map((x,i)=>({...x,_idx:i})).sort((a,b)=>b.at-a.at);
     const groups = [];
-    sorted.forEach(x=>{
+    const totalPag = Math.max(1, Math.ceil(sorted.length/HIST_POR_PAGINA));
+    if(histPage >= totalPag) histPage = totalPag-1; if(histPage < 0) histPage = 0;
+    const naPagina = sorted.slice(histPage*HIST_POR_PAGINA, (histPage+1)*HIST_POR_PAGINA);
+    naPagina.forEach(x=>{
       const d = new Date(x.at);
       const key = d.toDateString();
       let g = groups.find(gr=>gr.key===key);
@@ -3592,7 +3744,7 @@ function renderHistory(){
     // Só desenha os dias mais recentes. Com meses de treino, renderizar tudo de uma vez
     // deixa a aba lenta no celular — o resto entra sob demanda no "Carregar mais".
     const totalDias = groups.length;
-    const visiveis = groups.slice(0, histLimit);
+    const visiveis = groups;
     $('history-list').innerHTML = visiveis.map(g=>{
       const lbl = g.key===todayKey ? 'Hoje' : g.key===yestKey ? 'Ontem' : g.date.toLocaleDateString('pt-BR',{weekday:'long', day:'2-digit', month:'2-digit'});
       const cards = g.items.map(x=>{
@@ -3617,9 +3769,12 @@ function renderHistory(){
         </div>`;
       }).join('');
       return `<div class="hist-day-lbl">${lbl}</div>${cards}`;
-    }).join('') + (totalDias > histLimit
-      ? `<button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="histShowMore()">⌄ Carregar mais (${totalDias - histLimit} ${totalDias-histLimit===1?'dia':'dias'} antes)</button>`
-      : (totalDias > HIST_PAGE ? `<div style="text-align:center;color:var(--text-mute);font-size:12px;margin-top:12px">Fim do histórico · ${totalDias} dias</div>` : ''));
+    }).join('') + (totalPag > 1 ? `
+      <div class="pager">
+        <button class="btn btn-ghost" ${histPage===0?'disabled style="opacity:.4"':''} onclick="histGo(${histPage-1})">‹ Mais novos</button>
+        <span>Página ${histPage+1} de ${totalPag}<small>${sorted.length} registros</small></span>
+        <button class="btn btn-ghost" ${histPage>=totalPag-1?'disabled style="opacity:.4"':''} onclick="histGo(${histPage+1})">Mais antigos ›</button>
+      </div>` : '');
   }
 }
 function histShowMore(){ histLimit += HIST_PAGE; renderHistory(); }
@@ -3627,6 +3782,7 @@ function histShowMore(){ histLimit += HIST_PAGE; renderHistory(); }
 function vacationActive(){ return !!(state.vacation && state.vacation.active); }
 function isVacationDay(date){
   const t = new Date(date); t.setHours(0,0,0,0); const tt = t.getTime();
+  if(isFeriadoDescanso(t)) return true;   // feriado escolhido como descanso protege a sequência
   const v = state.vacation; if(!v) return false;
   if(v.active && v.startedAt!=null && tt>=v.startedAt && tt<=Date.now()) return true;
   return (v.periods||[]).some(p=>tt>=p.start && tt<=p.end);
@@ -4056,7 +4212,7 @@ function renderProfile(){
   try{
     const ehAdm = !!(state.user && state.user.isAdmin);
     const lbl = $('pf-admin-lbl'); if(lbl) lbl.classList.toggle('hidden', !ehAdm);
-    const sa = $('adm-special-row'); if(sa) sa.classList.toggle('hidden', !ehDonoDoApp()); const sb = $('adm-row-admins'); if(sb) sb.classList.toggle('hidden', !ehDonoDoApp());
+    const sa = $('adm-special-row'); if(sa) sa.classList.toggle('hidden', !ehDonoDoApp());
     const bt = $('pf-admin-btn'); if(bt) bt.classList.toggle('hidden', !ehAdm);
   }catch(e){}
   const dEl = $('deco-row-label'); if(dEl) dEl.textContent = decoEnabled() ? 'Fundo decorativo (ligado)' : 'Fundo decorativo (desligado)';
@@ -4104,6 +4260,7 @@ function renderProfile(){
   `;
   // Chart
   $('pf-weight-chart-slot').innerHTML = renderWeightChart();
+  try{ const _ws=$('pf-weight-chart-slot'); _ws.setAttribute('onclick','openWeightHistory()'); _ws.insertAdjacentHTML('beforeend','<div class="tapdica">Toque para ver o histórico ›</div>'); }catch(e){}
 
   // Module
   const mod = state.modules[state.active];
@@ -5163,7 +5320,6 @@ const MODAL_CONTENT = {
     <div class="field"><label>Idade (usada se não informar a data)</label><input class="input mono" type="number" id="ep-age" value="${p.age||''}"></div><div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="ep-height" value="${p.height||''}"></div><div class="field"><label>WhatsApp</label><input class="input mono" id="ep-whats" value="${p.whatsapp||''}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveProfileEdit()">Salvar</button>`; },
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
   'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail ou usuário do aluno</label><input class="input" type="text" id="as-email" placeholder="aluno@email.com ou joao123" autocapitalize="none" spellcheck="false"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">Use o mesmo que ele digita pra entrar. Sem "@" vira login de usuário.</div></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="7">🎁 Teste 7 dias</div><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
-  'broadcast':`<h3>📢 Mensagem em massa (WhatsApp)</h3><p style="color:var(--text-dim);font-size:13px">Gera um link do WhatsApp Web para cada aluno com o texto abaixo. Os alunos precisam ter WhatsApp cadastrado.</p><div class="field"><label>Mensagem</label><textarea class="input" id="bc-msg" rows="4" style="resize:vertical">Olá, treinador aqui do MetaTreino! Passando pra lembrar...</textarea></div><button class="btn btn-primary btn-block" onclick="doBroadcast()">Abrir links WhatsApp</button>`,
   'restart':()=>`<h3>🔄 Começar do zero</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Apaga todo o seu progresso — treinos, séries registradas, recordes, histórico de peso e conquistas — e refaz o questionário inicial.<br><br>Sua <b>conta e seu acesso continuam ativos</b> (diferente de excluir a conta).<br><br>Essa ação <b>não pode ser desfeita</b> — mas dá pra guardar tudo antes num backup. 💾</p>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="exportMyData()">💾 Fazer backup antes</button>
     <button class="btn btn-outline btn-block" style="margin-top:16px;border-color:var(--accent);color:var(--accent-2)" onclick="doRestart()">🔄 Sim, começar do zero</button>
@@ -7065,7 +7221,6 @@ function maNudge(){
       return !!(m && m.plan && (m.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx())); }catch(e){ return false; } })();
     if(!vac && total>=4){ const dc = maDicaConcreta(); if(dc) return {text:dc.bolha, tone:'curio', dica:dc}; }
     if(!vac && temTreinoHoje && typeof fatigueInsight==='function' && fatigueInsight() && total>=4) return {text:`🧠 Dei uma olhada na sua recuperação — tenho uma dica pra hoje.`, tone:'curio'};
-    if(!vac && total>=6 && streak>=2) return {text:`💡 Descobri um padrão nos seus treinos. Posso te mostrar?`, tone:'curio'};
     return null;
   }catch(e){ return null; }
 }
@@ -7984,6 +8139,37 @@ function weekStats(){
     walks:runH.filter(r=>r.activity==='caminhada').length, bikes:runH.filter(r=>r.activity==='bike').length,
     kmRun:kmBy('corrida'), kmWalk:kmBy('caminhada'), kmBike:kmBy('bike'), totalMin, total:liftH.length+runH.length };
 }
+function openLastWeekDetail(){
+  const seg = new Date(); seg.setHours(0,0,0,0);
+  const dia = getDayIdx(); seg.setDate(seg.getDate()-(dia-1));          // segunda desta semana
+  const fim = seg.getTime(), ini = fim - 7*86400000, ini2 = ini - 7*86400000;
+  const todos = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
+  const H = todos.filter(x=>x.at>=ini && x.at<fim), H2 = todos.filter(x=>x.at>=ini2 && x.at<ini);
+  const treinos = H.length, min = Math.round(H.reduce((s,x)=>s+(x.duration||0),0));
+  const km = H.reduce((s,x)=>s+(x.distance||0),0);
+  const exs = H.reduce((s,x)=>s+((x.exercisesDone||[]).length),0);
+  const prsL = Object.entries(state.prs||{}).filter(([,p])=>p.at>=ini && p.at<fim).map(([id,p])=>({nome:nomeDoEx(id), p}));
+  let vol = 0; try{ vol = Math.round(calcVolumeBetween(ini,fim)); }catch(e){}
+  const dias = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const porDia = dias.map((d,i)=>{ const a=ini+i*86400000, b=a+86400000; const n=H.filter(x=>x.at>=a&&x.at<b).length; return {d,n}; });
+  const delta = treinos - H2.length;
+  const cmp = H2.length ? (delta>0?`📈 ${delta} a mais que na semana anterior`:delta<0?`📉 ${Math.abs(delta)} a menos que na semana anterior`:'➡️ Igual à semana anterior') : '';
+  const linhas = [`<div class="mrow"><span>💪 Treinos</span><span><b>${treinos}</b></span></div>`,
+    `<div class="mrow"><span>⏱️ Tempo total</span><span><b>${min} min</b></span></div>`];
+  if(exs) linhas.push(`<div class="mrow"><span>🏋️ Exercícios feitos</span><span><b>${exs}</b></span></div>`);
+  if(vol) linhas.push(`<div class="mrow"><span>📦 Volume levantado</span><span><b>${vol.toLocaleString('pt-BR')} kg</b></span></div>`);
+  if(km>0) linhas.push(`<div class="mrow"><span>📍 Distância</span><span><b>${km.toFixed(1).replace('.',',')} km</b></span></div>`);
+  linhas.push(`<div class="mrow"><span>🏆 Recordes</span><span><b>${prsL.length}</b></span></div>`);
+  const barras = porDia.map(x=>`<div style="flex:1;text-align:center"><div style="height:46px;display:flex;align-items:flex-end;justify-content:center"><div style="width:70%;border-radius:6px;background:${x.n?'var(--primary)':'var(--surface-2)'};height:${x.n?Math.min(100,30+x.n*30):12}%"></div></div><div style="font-size:10.5px;color:var(--text-dim);margin-top:4px">${x.d}</div></div>`).join('');
+  $('modal-inner').innerHTML = `<h3>📊 Sua semana passada</h3>
+    <div style="display:flex;gap:6px;margin:10px 0 6px">${barras}</div>
+    <div>${linhas.join('')}</div>
+    ${prsL.length?`<div style="margin-top:10px;font-size:12.5px;color:var(--text-dim);line-height:1.6">${prsL.slice(0,5).map(x=>`🏆 ${x.nome}`).join('<br>')}</div>`:''}
+    ${cmp?`<p style="color:var(--text-dim);font-size:13px;margin-top:10px">${cmp}</p>`:''}
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="shareWeekImage()">📤 Compartilhar</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
 function openWeekSummary(){
   const s = weekStats();
   const rows = [];
@@ -8565,6 +8751,7 @@ function dismissInstall(){
 // ---------- TEMAS (aurora · clássico · oceano · claro) ----------
 const THEME_KEY = 'metatreino_theme';
 const THEMES = {
+  amoled:   {nome:'AMOLED',   sub:'Preto total · economiza bateria', bar:'#000000', prev:{bg:'#000000', a:'#b6f23a', b:'#3de0ff', c:'#1a1a1a'}},
   zepp:     {nome:'Premium',  sub:'Preto e laranja · estilo relógio', bar:'#000000', prev:{bg:'#000000', a:'#ff6a2b', b:'#2fd4b5', c:'#212124'}},
   aurora:   {nome:'Aurora',   sub:'Escuro · índigo e coral',  bar:'#070a1a', prev:{bg:'#070a1a', a:'#7c6cff', b:'#ff7a59', c:'#1b2150'}},
   classico: {nome:'Clássico', sub:'Escuro · verde (o de antes)', bar:'#050914', prev:{bg:'#050914', a:'#10b981', b:'#f59e0b', c:'#10223a'}},
@@ -9128,38 +9315,50 @@ async function loadCustomExercises(){
   customExercises = lista || [];
   aplicaCustomNoBanco(customExercises);
 }
-function openNewExercise(){
+function openNewExercise(grupoSel, equipSel){
   if(!(state.user && state.user.isAdmin)){ toast('🔒 Recurso restrito a administradores.'); return; }
-  const grupos = EX_BANK.map(c=>`<option value="${c.name}">${c.emo} ${c.name}</option>`).join('');
-  const equips = EQUIP_CUSTOM_OPCOES.map(o=>`<option value="${o.id}">${o.lbl}</option>`).join('');
-  const lista = customExercises.length ? customExercises.map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px dashed var(--border)">
-      <div style="flex:1;font-size:13px"><b>${escHtml(d.nome)}</b><div style="font-size:11.5px;color:var(--text-mute)">${escHtml(d.grupo)} · ${escHtml(d.sub||'')}</div></div>
-      <button class="btn btn-ghost hl-danger" style="padding:6px 10px;font-size:12px" onclick="removeCustomExercise('${d._id}')">🗑️</button>
-    </div>`).join('') : '<div class="text-dim" style="font-size:12.5px;padding:8px 0">Nenhum exercício novo cadastrado ainda.</div>';
+  window.__nxGrupo = grupoSel || window.__nxGrupo || EX_BANK[0].name;
+  window.__nxEquip = equipSel || window.__nxEquip || 'academia';
+  const chips = EX_BANK.map(c=>`<button type="button" class="nxchip ${c.name===window.__nxGrupo?'on':''}" onclick="openNewExercise('${c.name}',null)">${c.emo} ${c.name}</button>`).join('');
+  const eqs = EQUIP_CUSTOM_OPCOES.map(o=>`<button type="button" class="seg ${o.id===window.__nxEquip?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nxSetEquip('${o.id}')">${o.id==='academia'?'🏋️ Academia':o.id==='halteres'?'💪 Halteres':'🤸 Em casa'}</button>`).join('');
+  const por = {}; customExercises.forEach(d=>{ (por[d.grupo]=por[d.grupo]||[]).push(d); });
+  const lista = Object.keys(por).length ? Object.keys(por).map(g=>`<div style="margin-top:10px"><div style="font-size:11px;letter-spacing:1px;color:var(--text-dim);font-weight:800">${escHtml(g).toUpperCase()}</div>${por[g].map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--border)"><span style="flex:1;font-size:13px">${escHtml(d.nome)}</span><button class="btn btn-ghost hl-danger" style="padding:4px 9px;font-size:12px" onclick="removeCustomExercise('${d._id}')">🗑️</button></div>`).join('')}</div>`).join('') : '<div class="text-dim" style="font-size:12.5px;padding:6px 0">Nenhum exercício novo cadastrado ainda.</div>';
+  // preserva o que já foi digitado ao trocar de grupo/equipamento
+  const v = id => { const e=$(id); return e ? e.value : ''; };
+  const keep = { nome:v('nx-nome'), url:v('nx-url'), cred:v('nx-cred'), sub:v('nx-sub'), iso:($('nx-iso')||{}).checked };
   $('modal-inner').innerHTML = `
     <h3>➕ Novo exercício</h3>
-    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Cadastre um exercício que ainda não existe. Ele entra no banco, pode ser sorteado nos treinos dos grupos que você marcar e aparece em “Trocar exercício” e na Biblioteca.</p>
-    <input class="input" id="nx-nome" placeholder="Título do exercício" style="margin-top:8px">
-    <input class="input" id="nx-url" placeholder="Link do vídeo (YouTube, Shorts...)" style="margin-top:8px">
-    <input class="input" id="nx-cred" placeholder="Perfil de quem gravou (opcional)" style="margin-top:8px">
-    <div class="section-lbl" style="margin:12px 0 4px">Parte do corpo (onde ele será distribuído)</div>
-    <select class="input" id="nx-grupo">${grupos}</select>
-    <div class="section-lbl" style="margin:12px 0 4px">Onde dá pra fazer</div>
-    <select class="input" id="nx-equip">${equips}</select>
-    <input class="input" id="nx-sub" placeholder="Foco (ex.: Peito Superior) — opcional" style="margin-top:8px">
-    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px"><input type="checkbox" id="nx-iso"> Isométrico (conta tempo, não repetições)</label>
-    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="saveNewExercise()">💾 Salvar exercício</button>
-    <div class="section-lbl" style="margin:16px 0 0">Cadastrados por você · ${customExercises.length}</div>
-    <div style="max-height:22vh;overflow-y:auto">${lista}</div>
-    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
+    <div style="max-height:68vh;overflow-y:auto;padding-right:2px">
+      <div class="section-lbl" style="margin:6px 0 6px">1 · Dados</div>
+      <input class="input" id="nx-nome" placeholder="Título do exercício" value="${escHtml(keep.nome||'')}">
+      <input class="input" id="nx-url" placeholder="Link do vídeo (YouTube, Shorts…)" style="margin-top:8px" value="${escHtml(keep.url||'')}">
+      <input class="input" id="nx-cred" placeholder="Perfil de quem gravou (opcional)" style="margin-top:8px" value="${escHtml(keep.cred||'')}">
+      <div class="section-lbl" style="margin:14px 0 6px">2 · Parte do corpo (onde ele entra nos treinos)</div>
+      <div class="nxchips">${chips}</div>
+      <input class="input" id="nx-sub" placeholder="Foco (ex.: Peito superior): opcional" style="margin-top:8px" value="${escHtml(keep.sub||'')}">
+      <div class="section-lbl" style="margin:14px 0 6px">3 · Onde dá pra fazer</div>
+      <div class="mod-toggle" style="margin:0">${eqs}</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px"><input type="checkbox" id="nx-iso" ${keep.iso?'checked':''}> Isométrico (conta tempo, não repetições)</label>
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="saveNewExercise()">💾 Salvar exercício</button>
+      <div class="section-lbl" style="margin:18px 0 0">Cadastrados · ${customExercises.length}</div>
+      ${lista}
+    </div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
+function aplicarCustomMeuTreino(){
+  try{
+    if(state.modules.lift && state.modules.lift.plan){ variarLiftExercises('semana'); saveData(); closeModal(); toast('🏋️ Treino atualizado. Veja em Sessões.'); goTab('sessions'); }
+    else { closeModal(); toast('Crie um plano de musculação para ver o exercício nos treinos.'); }
+  }catch(e){ closeModal(); }
+}
+function nxSetEquip(id){ window.__nxEquip = id; openNewExercise(null, id); }
 async function saveNewExercise(){
   const nome = ($('nx-nome').value||'').trim().replace(/\s+/g,' ');
   const url = ($('nx-url').value||'').trim();
   const cred = ($('nx-cred').value||'').trim();
-  const grupo = $('nx-grupo').value;
-  const eq = EQUIP_CUSTOM_OPCOES.find(o=>o.id===$('nx-equip').value) || EQUIP_CUSTOM_OPCOES[0];
+  const grupo = window.__nxGrupo || EX_BANK[0].name;
+  const eq = EQUIP_CUSTOM_OPCOES.find(o=>o.id===(window.__nxEquip||'academia')) || EQUIP_CUSTOM_OPCOES[0];
   const sub = ($('nx-sub').value||'').trim();
   const iso = !!$('nx-iso').checked;
   if(nome.length<3){ toast('⚠️ Dê um título ao exercício'); return; }
@@ -9177,8 +9376,12 @@ async function saveNewExercise(){
     }
     await loadCustomExercises();
     renderVideoCount();
-    toast('✅ Exercício criado: '+nome);
-    openNewExercise();
+    window.__nxGrupo = grupo;
+    $('modal-inner').innerHTML = `<h3>✅ Exercício criado</h3>
+      <p style="color:var(--text-dim);font-size:13.5px;line-height:1.6"><b>${escHtml(nome)}</b> já está no banco (${escHtml(grupo)}). Ele tem prioridade na próxima troca semanal de acessórios dos alunos, e já aparece em “Trocar exercício” e na Biblioteca.</p>
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="aplicarCustomMeuTreino()">🏋️ Aplicar no meu treino agora</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNewExercise()">➕ Cadastrar outro</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   }catch(e){ console.log('Erro ao criar exercício:', e); toast('⚠️ Não foi possível salvar. Confira as regras do Firestore (coleção exerciciosCustom).'); }
 }
 async function removeCustomExercise(id){
@@ -9190,78 +9393,6 @@ async function removeCustomExercise(id){
       openNewExercise();
     }catch(e){ console.log(e); toast('⚠️ Não foi possível remover. Confira as permissões do Firestore.'); }
   }, {title:'Remover exercício?', emo:'🗑️', okLabel:'Sim, remover', danger:true});
-}
-// ================= PROMOVER ALUNO A ADMINISTRADOR =================
-// Só o administrador principal promove/rebaixa. Doc: admins/{email} → { ativo:true }
-async function carregaSlotAdmin(email){
-  const slot = $('stud-admin-slot'); if(!slot) return;
-  if(!ehDonoDoApp()) return;
-  email = String(email).toLowerCase();
-  if(email===ADMIN_EMAIL){ slot.innerHTML=''; return; }
-  // o botão aparece SEMPRE para o dono; a leitura só decide qual dos dois mostrar
-  const pinta = (ehAdm, aviso)=>{
-    if($('stud-admin-slot') !== slot) return;
-    slot.innerHTML = `<div class="section-lbl">Administração</div>
-      ${ehAdm
-        ? `<div class="card card-ok" style="padding:10px 14px;margin-bottom:8px"><b>👑 Este aluno é administrador</b></div>
-           <button class="btn btn-ghost btn-block" onclick="rebaixarAdmin('${email}')">Remover permissão de administrador</button>`
-        : `<button class="btn btn-outline btn-block hl-primary" onclick="promoverAdmin('${email}')">👑 Promover a administrador</button>`}
-      ${aviso?`<div class="text-dim" style="font-size:11.5px;margin-top:6px">${aviso}</div>`:''}`;
-  };
-  pinta(false, '');
-  try{
-    const d = await db.collection('admins').doc(email).get();
-    pinta(d.exists && d.data().ativo===true, '');
-  }catch(e){ console.log('admins read', e); pinta(false, '⚠️ Não consegui ler a lista de administradores (regras do Firestore).'); }
-}
-// lista de administradores + promover por e-mail (tela do dono)
-async function openAdminsList(){
-  if(!ehDonoDoApp()){ toast('🔒 Recurso restrito ao administrador principal.'); return; }
-  $('modal-inner').innerHTML = `<h3>👑 Administradores</h3><div id="adm-list-body" class="text-dim" style="font-size:13px;padding:10px 0">Carregando…</div>`;
-  $('modal-back').classList.add('on');
-  let lista = [];
-  try{ const snap = await db.collection('admins').get(); snap.forEach(d=>{ const x=d.data(); lista.push({email:d.id, ativo:x.ativo===true}); }); }
-  catch(e){ console.log(e); }
-  const ativos = lista.filter(x=>x.ativo);
-  const linhas = ativos.length ? ativos.map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px dashed var(--border)">
-      <div style="flex:1;font-size:13px;overflow-wrap:anywhere">👑 ${escHtml(x.email)}</div>
-      <button class="btn btn-ghost hl-danger" style="padding:6px 10px;font-size:12px" onclick="rebaixarAdmin('${x.email}');setTimeout(openAdminsList,700)">Remover</button></div>`).join('')
-    : '<div class="text-dim" style="font-size:12.5px;padding:8px 0">Nenhum administrador promovido ainda (além de você).</div>';
-  $('modal-inner').innerHTML = `
-    <h3>👑 Administradores</h3>
-    <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Só você promove ou remove. O administrador promovido vê o painel de alunos, vídeos, exercícios e sugestões.</p>
-    <div style="margin-top:8px">${linhas}</div>
-    <div class="section-lbl" style="margin:16px 0 4px">Promover por e-mail</div>
-    <input class="input" id="adm-novo-email" type="email" placeholder="email@exemplo.com">
-    <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="promoverPorEmail()">👑 Promover</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
-}
-function promoverPorEmail(){
-  const e = (($('adm-novo-email')||{}).value||'').trim().toLowerCase();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ toast('⚠️ Digite um e-mail válido'); return; }
-  promoverAdmin(e);
-  setTimeout(openAdminsList, 900);
-}
-function promoverAdmin(email){
-  if(!ehDonoDoApp()){ toast('🔒 Só o administrador principal pode promover.'); return; }
-  appConfirm('Ele passa a ver o painel admin: alunos, vídeos, exercícios e sugestões.', async ()=>{
-    try{
-      await db.collection('admins').doc(String(email).toLowerCase()).set({ ativo:true, promovidoEm:Date.now(), promovidoPor:state.user.email });
-      toast('👑 Agora ele é administrador (vale no próximo login dele)');
-      carregaSlotAdmin(email);
-    }catch(e){ console.log(e); toast('⚠️ Não foi possível salvar. Confira as regras do Firestore (coleção admins).'); }
-  }, {title:'Promover a administrador?', emo:'👑', okLabel:'Sim, promover'});
-}
-function rebaixarAdmin(email){
-  if(!ehDonoDoApp()){ toast('🔒 Só o administrador principal pode remover.'); return; }
-  if(String(email).toLowerCase()===ADMIN_EMAIL){ toast('🛡️ O administrador principal não pode ser removido.'); return; }
-  appConfirm('Ele volta a ser aluno comum no próximo login.', async ()=>{
-    try{
-      await db.collection('admins').doc(String(email).toLowerCase()).set({ ativo:false, removidoEm:Date.now(), removidoPor:state.user.email }, {merge:true});
-      toast('Permissão removida');
-      carregaSlotAdmin(email);
-    }catch(e){ console.log(e); toast('⚠️ Não foi possível salvar. Confira as regras do Firestore.'); }
-  }, {title:'Remover administrador?', emo:'👑', okLabel:'Sim, remover', danger:true});
 }
 function testVideoLink(id, exName){
   const inp = $('vid-'+id); if(!inp) return;
@@ -9442,7 +9573,7 @@ async function goAdmin(){
   admVeioDoPick = !(state.modules.lift || state.modules.run);   // admin sem plano: volta pra escolha
   showScreen('scr-admin');
   // a conquista especial só aparece pro dono do app, nem pros outros admins
-  try{ const sa = $('adm-special-row'); if(sa) sa.classList.toggle('hidden', !ehDonoDoApp()); const sb = $('adm-row-admins'); if(sb) sb.classList.toggle('hidden', !ehDonoDoApp()); }catch(e){}
+  try{ const sa = $('adm-special-row'); if(sa) sa.classList.toggle('hidden', !ehDonoDoApp()); }catch(e){}
   const p = state.user.profile;
   $('adm-hi').textContent = 'Olá, '+((p&&p.nickname)||'Marcelo')+'!';
   $('adm-list').innerHTML = `<div class="rest-card"><div style="font-size:34px">⏳</div><div class="rest-sub">Carregando alunos...</div></div>`;
@@ -9596,7 +9727,6 @@ function openStudent(email){
     <button class="btn btn-ghost btn-block" onclick="toggleStudent('${email}')">${a.active?'🔒 Bloquear acesso':'🔓 Reativar acesso'}</button>
     <button class="btn btn-ghost btn-block danger" style="margin-top:8px;color:var(--danger-soft);border-color:var(--line-danger)" onclick="removeStudent('${email}')">🗑️ Remover aluno</button>
   `;
-  try{ carregaSlotAdmin(email); }catch(e){}
 }
 async function setLifetime(email){
   const a = allowCache[email]; if(!a) return;
@@ -9655,15 +9785,6 @@ async function removeStudent(email){
       toast('🗑️ Aluno removido'); goAdmin();
     }catch(e){ console.log('Erro ao remover aluno:', e); toast('⚠️ Não foi possível remover. Confira as permissões do Firestore.'); }
   }, {title:'Remover aluno?', emo:'🗑️', okLabel:'Sim, remover', danger:true});
-}
-function doBroadcast(){
-  const msg = $('bc-msg').value;
-  const phones = Object.values(allowCache).filter(a=>a.active && a.phone).map(a=>a.phone);
-  if(!phones.length){ toast('Nenhum aluno com WhatsApp cadastrado'); return; }
-  closeModal();
-  const links = phones.map(p=>`https://wa.me/${p.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`);
-  const w = window.open('','_blank');
-  w.document.write(`<html><head><title>Envio em massa</title><style>body{font-family:sans-serif;padding:20px;background:#070a1a;color:var(--text)}a{display:block;padding:12px 16px;background:var(--primary);color:var(--on-primary);text-decoration:none;border-radius:var(--radius-btn);margin:6px 0;font-weight:700}</style></head><body><h2>📢 Clique em cada link para abrir o WhatsApp:</h2>${links.map((l,i)=>`<a href="${l}" target="_blank">Aluno ${i+1} · abrir WhatsApp</a>`).join('')}</body></html>`);
 }
 async function exportData(){
   toast('📤 Preparando backup...');
@@ -10186,7 +10307,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{applyHeroCapa,processaMuralFoto,doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,listaPendentes,abrirPendente,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,doBroadcast,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{applyHeroCapa,processaMuralFoto,doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,listaPendentes,abrirPendente,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo pra garantir que `coachContact` já foi declarado.
@@ -10195,9 +10316,8 @@ loadCoachContact();
 // impede escolher uma data de nascimento no futuro
 (function(){ const b = document.getElementById('q-birth'); if(b) b.max = new Date().toISOString().slice(0,10); })();
 
-Object.assign(window,{openNewExercise,saveNewExercise,removeCustomExercise,promoverAdmin,rebaixarAdmin,carregaSlotAdmin,playExercise});
+Object.assign(window,{openNewExercise,saveNewExercise,removeCustomExercise,playExercise});
 
-Object.assign(window,{openAdminsList,promoverPorEmail});
 
 Object.assign(window,{setTheme,applyTheme,renderThemePicker});
 
@@ -10250,8 +10370,16 @@ const NUTRI_ALIMENTOS = {
   mel:      ['Mel', 309, 0.4, 84, 0, null, {g:7,nome:'col. de chá'}],
   amendoim: ['Pasta de amendoim', 590, 25, 20, 50, null, {g:15,nome:'col. de sopa'}],
   castanha: ['Castanhas', 570, 18, 25, 46, null, {g:10,nome:'punhado pequeno'}],
-  whey:     ['Whey protein', 400, 80, 8, 6, null, {g:30,nome:'scoop'}]
+  whey:     ['Whey protein', 400, 80, 8, 6, null, {g:30,nome:'scoop'}],
+  figado:   ['Fígado bovino grelhado', 225, 29.9, 4.2, 9, null, null],
+  acem:     ['Carne moída (acém) refogada', 212, 26.7, 0, 10.9, null, null],
+  sardinha: ['Sardinha em lata', 190, 24, 0, 10, null, null],
+  soja:     ['Soja texturizada (hidratada)', 110, 17, 11, 0.4, null, null]
 };
+// ingredientes mais caros: ficam de fora no modo econômico
+const NUTRI_CARO = ['whey','castanha','abacate','granola','ricota','peru','cottage','tofu','morango','atum'];
+const NUTRI_CATEG = { proteinas:['🍗 Proteínas',['frango','sobrecoxa','patinho','acem','figado','peixe','atum','sardinha','ovo','soja','tofu','peru','whey','lentilha','grao']], carbo:['🍚 Cereais, tubérculos e pães',['arroz','feijao','macarrao','batata','mandioca','cuscuz','pao','paoint','paodq','tapioca','aveia','granola']], frutas:['🍌 Frutas e hortifrúti',['banana','maca','laranja','mamao','abacaxi','morango','abacate','legumes','salada']], lat:['🥛 Laticínios',['leite','iogurte','minas','cottage','ricota','mucarela']], outros:['🫒 Outros',['azeite','amendoim','castanha','mel']] };
+const NUTRI_CRU = { arroz:3, feijao:2.5, macarrao:2.2, lentilha:2.5, grao:2.5, soja:3, frango:.75, sobrecoxa:.75, patinho:.75, acem:.75, peixe:.8, figado:.8 };   // quanto o cozido rende em relação ao cru
 // Cada refeição tem várias opções (n = nome do prato, i = itens). veg = versão vegetariana (ovo e leite liberados).
 const NUTRI_REFEICOES = [
   { id:'cafe', nome:'Café da manhã', icone:'☕', hora:'07:00', opcoes:[
@@ -10262,7 +10390,9 @@ const NUTRI_REFEICOES = [
     {n:'Iogurte com granola e frutas',i:[['iogurte',170],['granola',30],['morango',100],['banana',1]]},
     {n:'Panqueca de banana e aveia',  i:[['banana',2],['ovo',2],['aveia',30],['mel',7]]},
     {n:'Omelete de queijo com pão',   i:[['ovo',3],['mucarela',1],['pao',1],['laranja',1]]},
-    {n:'Vitamina de banana e whey',   i:[['leite',250],['banana',1],['aveia',30],['whey',30]]} ] },
+    {n:'Vitamina de banana e whey',   i:[['leite',250],['banana',1],['aveia',30],['whey',30]]},
+    {n:'Pão com ovo e leite',         i:[['pao',2],['ovo',2],['leite',200]]},
+    {n:'Cuscuz com leite e banana',   i:[['cuscuz',150],['leite',200],['banana',1],['ovo',1]]} ] },
   { id:'lanche1', nome:'Lanche da manhã', icone:'🍎', hora:'10:00', opcoes:[
     {n:'Iogurte com aveia e maçã',    i:[['iogurte',170],['aveia',20],['maca',1]]},
     {n:'Banana com castanhas',        i:[['banana',1],['castanha',20]]},
@@ -10279,14 +10409,19 @@ const NUTRI_REFEICOES = [
     {n:'Sobrecoxa com mandioca e feijão',   i:[['mandioca',120],['sobrecoxa',120],['feijao',80],['salada',100],['azeite',4]]},
     {n:'Carne moída com purê de batata-doce',i:[['batata',200],['patinho',100],['legumes',120],['salada',80],['azeite',4]]},
     {n:'Atum com arroz e feijão',           i:[['arroz',150],['feijao',100],['atum',100],['legumes',100],['salada',80],['azeite',4]]},
-    {n:'Frango com arroz e abacate',        i:[['arroz',130],['frango',130],['abacate',60],['salada',100],['legumes',80]]} ],
+    {n:'Frango com arroz e abacate',        i:[['arroz',130],['frango',130],['abacate',60],['salada',100],['legumes',80]]},
+    {n:'Arroz, feijão e fígado acebolado',  i:[['arroz',150],['feijao',100],['figado',100],['legumes',100],['salada',80],['azeite',4]]},
+    {n:'Acém moído com mandioca e feijão',  i:[['mandioca',150],['acem',100],['feijao',80],['salada',100],['azeite',4]]},
+    {n:'Arroz, feijão e sardinha',          i:[['arroz',150],['feijao',100],['sardinha',80],['legumes',80],['salada',100]]},
+    {n:'Arroz, feijão e soja com legumes',  i:[['arroz',150],['feijao',80],['soja',100],['legumes',120],['salada',80],['azeite',4]]} ],
     veg:[
     {n:'Arroz, feijão e ovos',              i:[['arroz',150],['feijao',120],['ovo',2],['legumes',100],['salada',80],['azeite',4]]},
     {n:'Arroz com lentilha e tofu',         i:[['arroz',120],['lentilha',120],['tofu',100],['salada',80],['azeite',4]]},
     {n:'Grão-de-bico com queijo',           i:[['arroz',100],['grao',120],['minas',50],['legumes',100],['salada',80],['azeite',4]]},
     {n:'Macarrão com ricota e grão-de-bico',i:[['macarrao',150],['ricota',60],['grao',80],['legumes',120],['salada',80],['azeite',4]]},
     {n:'Escondidinho de mandioca com tofu', i:[['mandioca',150],['tofu',120],['legumes',100],['salada',80],['azeite',4]]},
-    {n:'Arroz, feijão e omelete',           i:[['arroz',150],['feijao',100],['ovo',3],['legumes',100],['salada',80],['azeite',4]]} ] },
+    {n:'Arroz, feijão e omelete',           i:[['arroz',150],['feijao',100],['ovo',3],['legumes',100],['salada',80],['azeite',4]]},
+    {n:'Arroz, feijão e soja com legumes',  i:[['arroz',150],['feijao',80],['soja',100],['legumes',120],['salada',80],['azeite',4]]} ] },
   { id:'lanche2', nome:'Lanche da tarde', icone:'🥪', hora:'16:00', opcoes:[
     {n:'Sanduíche de ovo com banana',       i:[['pao',1],['ovo',2],['banana',1]]},
     {n:'Iogurte com banana e aveia',        i:[['banana',1],['aveia',30],['iogurte',170]]},
@@ -10295,7 +10430,8 @@ const NUTRI_REFEICOES = [
     {n:'Pão de queijo com fruta',           i:[['paodq',3],['banana',1],['iogurte',100]]},
     {n:'Batata-doce com frango desfiado',   i:[['batata',150],['frango',60]]},
     {n:'Vitamina de banana com whey',       i:[['leite',250],['banana',1],['whey',30]]},
-    {n:'Cuscuz com ovo e banana',           i:[['cuscuz',120],['ovo',1],['banana',1]]} ],
+    {n:'Cuscuz com ovo e banana',           i:[['cuscuz',120],['ovo',1],['banana',1]]},
+    {n:'Banana com aveia e leite',          i:[['leite',250],['banana',1],['aveia',30]]} ],
     veg:[
     {n:'Sanduíche de ovo com banana',       i:[['pao',1],['ovo',2],['banana',1]]},
     {n:'Iogurte com banana e aveia',        i:[['banana',1],['aveia',30],['iogurte',170]]},
@@ -10311,14 +10447,18 @@ const NUTRI_REFEICOES = [
     {n:'Sopa de legumes com frango',        i:[['legumes',250],['frango',100],['mandioca',100]]},
     {n:'Tapioca recheada de frango',        i:[['tapioca',70],['frango',100],['minas',30],['salada',100]]},
     {n:'Salada completa com atum e ovo',    i:[['salada',200],['atum',80],['ovo',2],['arroz',80],['azeite',4]]},
-    {n:'Sobrecoxa com mandioca',            i:[['sobrecoxa',120],['mandioca',120],['legumes',120],['azeite',4]]} ],
+    {n:'Sobrecoxa com mandioca',            i:[['sobrecoxa',120],['mandioca',120],['legumes',120],['azeite',4]]},
+    {n:'Ovos mexidos com mandioca',         i:[['ovo',3],['mandioca',120],['salada',100],['azeite',4]]},
+    {n:'Sopa de feijão com legumes',        i:[['feijao',150],['legumes',200],['mandioca',80]]} ],
     veg:[
     {n:'Omelete com legumes e arroz',       i:[['ovo',3],['legumes',120],['arroz',100],['salada',80],['azeite',4]]},
     {n:'Tofu com batata-doce',              i:[['tofu',120],['batata',150],['legumes',120],['azeite',4]]},
     {n:'Lentilha com arroz e salada',       i:[['lentilha',140],['arroz',100],['salada',100],['azeite',4]]},
     {n:'Sopa de legumes com ovo',           i:[['legumes',250],['ovo',2],['mandioca',100]]},
     {n:'Tapioca recheada de queijo e ovo',  i:[['tapioca',70],['ovo',2],['minas',30],['salada',100]]},
-    {n:'Salada completa com grão-de-bico',  i:[['salada',200],['grao',100],['ovo',2],['arroz',60],['azeite',4]]} ] },
+    {n:'Salada completa com grão-de-bico',  i:[['salada',200],['grao',100],['ovo',2],['arroz',60],['azeite',4]]},
+    {n:'Ovos mexidos com mandioca',         i:[['ovo',3],['mandioca',120],['salada',100],['azeite',4]]},
+    {n:'Sopa de feijão com legumes',        i:[['feijao',150],['legumes',200],['mandioca',80]]} ] },
   { id:'ceia', nome:'Ceia', icone:'🌜', hora:'21:30', opcoes:[
     {n:'Iogurte com castanhas',             i:[['iogurte',170],['castanha',15]]},
     {n:'Leite com aveia',                   i:[['leite',250],['aveia',30]]},
@@ -10349,6 +10489,7 @@ function nutriConfig(){
   if(n.vegetariano === undefined) n.vegetariano = false;
   if(!n.seed) n.seed = 0;
   if(!n.trocas) n.trocas = {};
+  if(n.economico === undefined) n.economico = true;   // padrão: ingredientes baratos e fáceis de achar
   return n;
 }
 // ajuste fino pela evolução real do peso (precisa de 2+ semanas de registros)
@@ -10414,7 +10555,7 @@ function nutriItem(id, qtdBase, f){
     if(id==='azeite') texto = `1 col. de chá (${gramas} g)`;
   }
   const k = gramas/100;
-  return { id, nome, texto, kcal:kcal100*k, p:p*k, c:c*k, g:g*k };
+  return { id, nome, texto, gramas, un: un ? gramas/un : 0, kcal:kcal100*k, p:p*k, c:c*k, g:g*k };
 }
 function nutriMontarPlano(diaIdx){
   const calc0 = nutriCalcular(); if(calc0.erro) return calc0;
@@ -10431,19 +10572,23 @@ function nutriMontarPlano(diaIdx){
   const calc = {...calc0, kcal:kcalDia, carb:carbDia};
   const shares = NUTRI_SHARE[n.refeicoes] || NUTRI_SHARE[5];
   const slots = NUTRI_REFEICOES.filter(r => shares[r.id]);
-  const refeicoes = slots.map((r,idx)=>{
-    const lista = (n.vegetariano && r.veg) ? r.veg : r.opcoes;
+  const montar = (gf)=> slots.map((r,idx)=>{
+    let lista = (n.vegetariano && r.veg) ? r.veg : r.opcoes;
+    if(n.economico){ const barato = lista.filter(op=>!op.i.some(([id])=>NUTRI_CARO.includes(id))); if(barato.length>=3) lista = barato; }
     const chave = r.id + (n.vegetariano?'v':'');
     const v = (diaIdx*3 + idx*2 + n.seed + (n.trocas[chave]||0)) % lista.length;
     const op = lista[v];
     const k0 = op.i.reduce((s,[id,q])=>{ const a=NUTRI_ALIMENTOS[id]; return s + a[1]*(a[5]? q*a[5] : q)/100; },0);
     const alvo = calc.kcal * shares[r.id];
-    const f = Math.min(2.0, Math.max(.55, alvo/k0));
+    const f = Math.min(2.4, Math.max(.55, alvo*gf/k0));
     const itens = op.i.map(([id,q])=>nutriItem(id,q,f));
     const tot = itens.reduce((t,i)=>({kcal:t.kcal+i.kcal,p:t.p+i.p,c:t.c+i.c,g:t.g+i.g}),{kcal:0,p:0,c:0,g:0});
     const preTreino = treino && r.id==='lanche2';
     return { id:r.id, chave, nome: preTreino ? 'Pré-treino' : r.nome, icone: preTreino ? '⚡' : r.icone, hora:r.hora, prato:op.n, itens, tot, variante:v+1, total:lista.length, preTreino };
   });
+  let refeicoes = montar(1);
+  const somaK = rs => rs.reduce((s,m)=>s+m.tot.kcal,0);
+  if(Math.abs(somaK(refeicoes)-calc.kcal)/calc.kcal > 0.03) refeicoes = montar(Math.min(1.35, Math.max(.75, calc.kcal/somaK(refeicoes))));
   const dia = refeicoes.reduce((t,m)=>({kcal:t.kcal+m.tot.kcal,p:t.p+m.tot.p,c:t.c+m.tot.c,g:t.g+m.tot.g}),{kcal:0,p:0,c:0,g:0});
   const dicas = [];
   const faltaP = calc.prot - dia.p;
@@ -10457,6 +10602,7 @@ function nutriMontarPlano(diaIdx){
 }
 // equivalências: quanto de cada alimento rende o mesmo macro (porções-base: 25 g de proteína, 30 g de carbo, 10 g de gordura, 15 g de carbo de fruta)
 function nutriEquivalencias(){
+  const ec = nutriConfig().economico;
   const g = (id, macroIdx, alvo)=>{
     const a = NUTRI_ALIMENTOS[id]; const por100 = a[macroIdx]; if(!por100) return null;
     let gramas = alvo/por100*100;
@@ -10465,15 +10611,59 @@ function nutriEquivalencias(){
     gramas = Math.max(passo, Math.round(gramas/passo)*passo);
     return `${a[0]}: ${gramas} ${id==='leite'||id==='iogurte'?'ml':'g'}`;
   };
-  const lista = (ids,m,alvo)=>ids.map(id=>g(id,m,alvo)).filter(Boolean);
+  const lista = (ids,m,alvo)=>ids.filter(id=>!(ec && NUTRI_CARO.includes(id))).map(id=>g(id,m,alvo)).filter(Boolean);
   return [
-    {t:'🍗 Proteínas', sub:'cada item ≈ 25 g de proteína', l:lista(['frango','sobrecoxa','patinho','peixe','atum','ovo','tofu','peru','cottage','whey'],2,25)},
+    {t:'🍗 Proteínas', sub:'cada item ≈ 25 g de proteína', l:lista(['frango','sobrecoxa','patinho','acem','figado','peixe','sardinha','atum','ovo','soja','tofu','peru','cottage','whey'],2,25)},
     {t:'🍚 Carboidratos', sub:'cada item ≈ 30 g de carboidrato', l:lista(['arroz','macarrao','batata','mandioca','cuscuz','pao','paoint','tapioca','aveia','feijao'],3,30)},
     {t:'🥑 Gorduras boas', sub:'cada item ≈ 10 g de gordura', l:lista(['azeite','amendoim','castanha','abacate','minas'],4,10)},
     {t:'🍌 Frutas', sub:'cada item ≈ 15 g de carboidrato', l:lista(['banana','maca','laranja','mamao','abacaxi','morango'],3,15)}
   ];
 }
 const NUTRI_OBJ = { emagrecer:'🔥 Emagrecer', massa:'💪 Ganhar massa', manter:'⚖️ Manter / recomposição' };
+function nutriListaCompras(){
+  const n = nutriConfig();
+  const tot = {};   // id -> {g, un}
+  for(let d=1; d<=7; d++){
+    const pl = nutriMontarPlano(d); if(pl.erro) continue;
+    pl.refeicoes.forEach(m=>m.itens.forEach(i=>{ const t = tot[i.id] = tot[i.id] || {g:0,un:0}; t.g += i.gramas; t.un += i.un||0; }));
+  }
+  const fmt = (id,t)=>{
+    const a = NUTRI_ALIMENTOS[id];
+    if(a[5]) return `${Math.round(t.un)} unid.`;
+    if(id==='leite'||id==='iogurte') return t.g>=1000 ? `${(t.g/1000).toFixed(1).replace('.',',')} L` : `${Math.round(t.g/50)*50} ml`;
+    let g = t.g, nota = '';
+    if(NUTRI_CRU[id]){ g = t.g/NUTRI_CRU[id]; nota = ' (cru)'; }
+    g = Math.max(50, Math.round(g/50)*50);
+    return (g>=1000 ? `${(g/1000).toFixed(1).replace('.',',')} kg` : `${g} g`) + nota;
+  };
+  const blocos = Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
+    const itens = ids.filter(id=>tot[id]).map(id=>`<div class="mrow"><span>${NUTRI_ALIMENTOS[id][0]}</span><span>${fmt(id,tot[id])}</span></div>`).join('');
+    return itens ? `<div class="section-lbl" style="margin:14px 0 2px">${titulo}</div>${itens}` : '';
+  }).join('');
+  const texto = Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
+    const l = ids.filter(id=>tot[id]).map(id=>`• ${NUTRI_ALIMENTOS[id][0]}: ${fmt(id,tot[id])}`); return l.length ? titulo+'\n'+l.join('\n') : '';
+  }).filter(Boolean).join('\n\n');
+  window.__nutriTextoCompras = '🛒 Lista de compras da semana (MetaTreino)\n\n'+texto;
+  $('modal-inner').innerHTML = `<h3>🛒 Lista de compras</h3>
+    <p style="color:var(--text-dim);font-size:12.5px;line-height:1.55;margin:4px 0 0">Tudo que o cardápio dos 7 dias usa${n.economico?', no modo econômico':''}. Arroz, feijão, macarrão, soja e carnes aparecem em peso cru (o cardápio usa peso cozido); o resto é como compra.</p>
+    <div style="max-height:56vh;overflow-y:auto">${blocos}</div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="nutriCopiarCompras()">📋 Copiar / compartilhar lista</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">‹ Voltar ao plano</button>`;
+  $('modal-back').classList.add('on');
+}
+function nutriCopiarCompras(){
+  const t = window.__nutriTextoCompras || '';
+  if(navigator.share){ navigator.share({text:t}).catch(()=>{}); return; }
+  try{ navigator.clipboard.writeText(t).then(()=>toast('📋 Lista copiada')); }catch(e){ toast('Não consegui copiar neste aparelho'); }
+}
+function nutriComi(id){
+  state.nutriLog = state.nutriLog || {};
+  const k = chaveDia(new Date()); const dia = state.nutriLog[k] = state.nutriLog[k] || {};
+  dia[id] = !dia[id];
+  Object.keys(state.nutriLog).sort().slice(0,-30).forEach(x=>delete state.nutriLog[x]);   // guarda só 30 dias
+  window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[id] = true;
+  saveData(); openNutri();
+}
 function nutriTog(id, aberto){ window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[id] = aberto; }
 function nutriDia(i){ window.__nutriDia = i; openNutri(); }
 function openNutri(){
@@ -10493,6 +10683,9 @@ function openNutri(){
     $('modal-back').classList.add('on'); return;
   }
   const c = plano.calc, ab = window.__nutriAbertos || {};
+  const hojeIdx = (typeof getDayIdx==='function') ? getDayIdx() : 1;
+  const comidas = ((state.nutriLog||{})[chaveDia(new Date())]) || {};
+  const kcalComido = Math.round(plano.refeicoes.filter(m=>comidas[m.id]).reduce((s,m)=>s+m.tot.kcal,0));
   const diasT = nutriDiasTreino();
   const chips = NUTRI_DIAS.map((d,i)=>`<button class="nd ${i+1===dIdx?'on':''}" onclick="nutriDia(${i+1})">${d}${diasT.has(i+1)?'<i>🏋️</i>':'<i></i>'}</button>`).join('');
   const kc = c.kcal||1, pP = Math.round(c.prot*4/kc*100), pG = Math.round(c.gord*9/kc*100), pC = Math.max(0,100-pP-pG);
@@ -10508,6 +10701,7 @@ function openNutri(){
         ${m.itens.map(i=>`<div class="mrow"><span>${i.nome}</span><span>${i.texto}</span></div>`).join('')}
         <div class="mfoot"><span>P ${Math.round(m.tot.p)}g · C ${Math.round(m.tot.c)}g · G ${Math.round(m.tot.g)}g</span>
           <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="nutriTrocar('${m.chave}')">🔄 Outro prato (${m.variante}/${m.total})</button></div>
+        ${dIdx===hojeIdx?`<button class="btn ${(comidas[m.id])?'btn-primary':'btn-ghost'} btn-block" style="margin-top:10px;padding:10px" onclick="nutriComi('${m.id}')">${comidas[m.id]?'✅ Já comi':'Marcar como comido'}</button>`:''}
       </div>
     </details>`).join('');
   const eq = nutriEquivalencias().map(g=>`<div style="margin-top:10px"><b style="font-size:13px">${g.t}</b> <span style="font-size:11px;color:var(--text-mute)">${g.sub}</span>
@@ -10523,6 +10717,7 @@ function openNutri(){
         </div>
         <div style="display:flex;align-items:baseline;gap:6px;margin-top:6px"><span style="font-size:44px;font-weight:300;line-height:1;font-family:'Outfit',system-ui,sans-serif">${c.kcal}</span><span style="color:var(--text-dim)">kcal</span>
           <span style="margin-left:auto;font-size:12px;color:var(--text-dim)">💧 ${c.agua.toString().replace('.',',')} L</span></div>
+        ${dIdx===hojeIdx?`<div style="font-size:12px;color:var(--text-dim);margin-top:6px">Já comi hoje: <b style="color:var(--text-strong)">${kcalComido} kcal</b> de ${c.kcal} (${plano.refeicoes.filter(m=>comidas[m.id]).length}/${plano.refeicoes.length} refeições)</div>`:''}
         <div class="macbar"><i style="width:${pP}%;background:var(--primary)"></i><i style="width:${pC}%;background:var(--accent)"></i><i style="width:${pG}%;background:var(--prep)"></i></div>
         <div class="maclg">
           <span><i style="background:var(--primary)"></i>Proteína <b>${c.prot}g</b></span>
@@ -10541,8 +10736,10 @@ function openNutri(){
             <button class="seg ${n.refeicoes===5?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('refeicoes',5)">5 refeições</button>
             <button class="seg ${n.refeicoes===6?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('refeicoes',6)">6 refeições</button>
           </div>
+          <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${n.economico?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('economico',${!n.economico})">💰 Econômico (ingredientes baratos)</button></div>
           <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${n.vegetariano?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('vegetariano',${!n.vegetariano})">🌱 Vegetariano (ovos e laticínios liberados)</button></div>
         </div></details>
+      <button class="btn btn-ghost btn-block" style="margin:0 0 8px" onclick="nutriListaCompras()">🛒 Lista de compras da semana</button>
       <details class="mealc"><summary><span class="mi">🔁</span><span class="mt"><b>Trocas equivalentes</b><small>mesma quantidade de nutriente</small></span></summary><div class="mb">${eq}</div></details>
       <details class="mealc"><summary><span class="mi">💡</span><span class="mt"><b>Dicas pra hoje</b><small>${plano.dicas.length} dicas</small></span></summary><div class="mb" style="font-size:12.5px;color:var(--text-dim);line-height:1.6">${plano.dicas.map(d=>`• ${d}`).join('<br>')}</div></details>
       <div style="font-size:11px;color:var(--text-mute);line-height:1.5;padding:10px 4px">Cardápio de ${NUTRI_DIAS[dIdx-1]}: ~${Math.round(plano.dia.kcal)} kcal · P ${Math.round(plano.dia.p)}g · C ${Math.round(plano.dia.c)}g · G ${Math.round(plano.dia.g)}g. Valores aproximados (tabelas brasileiras de composição). É uma orientação geral e não substitui um nutricionista; se tiver doença, alergia ou usar medicação, procure um profissional.</div>
@@ -10554,6 +10751,7 @@ function nutriSet(k, v){
   const n = nutriConfig();
   if(k==='refeicoes') n.refeicoes = parseInt(v,10);
   else if(k==='vegetariano') n.vegetariano = (v===true || v==='true');
+  else if(k==='economico') n.economico = (v===true || v==='true');
   else n[k] = v;
   window.__nutriAbertos = Object.assign(window.__nutriAbertos||{}, {});
   saveData(); openNutri();
@@ -10573,3 +10771,111 @@ function nutriResumoMA(){
 
 Object.assign(window,{openNutri,nutriSet,nutriTrocar,nutriDia,nutriTog});
 MA_ANSWERS.plano_alimentar = nutriResumoMA;
+
+// ===== DETALHES AO TOCAR NOS NÚMEROS E GRÁFICOS =====
+function _modalLista(titulo, intro, linhas, rodape){
+  $('modal-inner').innerHTML = `<h3>${titulo}</h3>${intro?`<p style="color:var(--text-dim);font-size:13px;line-height:1.55;margin:6px 0 10px">${intro}</p>`:''}
+    <div style="max-height:50vh;overflow-y:auto">${linhas.length?linhas.map(l=>`<div class="mrow"><span>${l[0]}</span><span>${l[1]}</span></div>`).join(''):'<div class="text-dim" style="padding:10px 0;font-size:13px">Nada registrado ainda.</div>'}</div>
+    ${rodape||''}<button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function _fmtDia(t){ const d=new Date(t); return d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'}); }
+function openPerfDetail(kind){
+  const mod = state.modules[state.active]; if(!mod) return;
+  const h = mod.history||[], isLift = state.active==='lift', DIA=86400000, agora=Date.now();
+  if(kind==='treinos'){
+    const l = h.filter(x=>x.at>=agora-7*DIA).sort((a,b)=>b.at-a.at).map(x=>[`${_fmtDia(x.at)} · ${String(x.name||'Treino').replace(/^[🚶🚴🏃]\s*/u,'')}`, `${x.duration||0} min`]);
+    return _modalLista(isLift?'💪 Treinos dos últimos 7 dias':'🏃 Atividades dos últimos 7 dias', `Meta da semana: ${(mod.plan.workouts||[]).length}. Toque numa sessão no Histórico pra ver os detalhes.`, l);
+  }
+  if(kind==='volume'){
+    const ini = agora-7*DIA, v = [];
+    Object.entries(state.progress||{}).forEach(([id,arr])=>{ let t=0; (arr||[]).forEach(p=>{ if(p.date>=ini) (p.sets||[]).forEach(s=>{ t += (+s.peso||0)*(+s.reps||0); }); }); if(t>0) v.push([nomeDoEx(id), Math.round(t)]); });
+    v.sort((a,b)=>b[1]-a[1]);
+    return _modalLista('📦 Volume dos últimos 7 dias','Volume = carga × repetições de todas as séries. Aqui estão os exercícios que mais pesaram.', v.slice(0,10).map(x=>[x[0], x[1].toLocaleString('pt-BR')+' kg']));
+  }
+  if(kind==='prs'){
+    const l = Object.entries(state.prs||{}).map(([id,p])=>({id,p})).sort((a,b)=>b.p.at-a.p.at).slice(0,12).map(x=>[`${nomeDoEx(x.id)}<br><small style="color:var(--text-mute)">${_fmtDia(x.p.at)}</small>`, `${x.p.peso}kg × ${x.p.reps}`]);
+    return _modalLista('🏆 Seus recordes','Um recorde (PR) é a sua melhor série naquele exercício. Os mais recentes aparecem primeiro.', l);
+  }
+  if(kind==='streak'){
+    const s = calcStreak(h);
+    return _modalLista('🔥 Sequência atual','', [['Dias seguidos', `<b>${s}</b>`]], `<p style="color:var(--text-dim);font-size:13px;line-height:1.55;margin-top:10px">A sequência conta dias seguidos com atividade. Dia de descanso do plano e feriado marcado como descanso não quebram a conta. Se treina 4x por semana, olhe também as <b>semanas na meta</b> na tela inicial: é a medida que combina com a sua rotina.</p>`);
+  }
+  if(kind==='melhor'){
+    return _modalLista('🏆 Melhor sequência','', [['Maior sequência', `<b>${Math.max(calcBestStreak(h), state.stats.bestStreak||0)}</b> dias`],['Sequência atual', `${calcStreak(h)} dias`]], `<p style="color:var(--text-dim);font-size:13px;line-height:1.55;margin-top:10px">É o seu recorde de dias seguidos treinando. Quebrar essa marca rende conquista.</p>`);
+  }
+  if(kind==='total'){
+    const meses = {}; h.forEach(x=>{ const d=new Date(x.at); const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); meses[k]=(meses[k]||0)+(x.duration||0); });
+    const l = Object.keys(meses).sort().reverse().slice(0,6).map(k=>{ const [y,m]=k.split('-'); return [new Date(+y,+m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}), `${(meses[k]/60).toFixed(1)} h`]; });
+    return _modalLista('⏱️ Tempo treinado por mês','', l);
+  }
+  if(kind==='constancia'){
+    const ini = (typeof inicioSemanaTs==='function')?inicioSemanaTs():agora, meta = (mod.plan.workouts||[]).length;
+    const l = [3,2,1,0].map(k=>{ const a=ini-k*7*DIA, b=a+7*DIA; const n=h.filter(x=>x.at>=a&&x.at<b).length; const d=new Date(a); return [`Semana de ${d.getDate()}/${d.getMonth()+1}${k===0?' (atual)':''}`, `${n} de ${meta} · ${meta?Math.round(Math.min(1,n/meta)*100):0}%`]; });
+    return _modalLista('📈 Constância por semana','Quanto da meta semanal você cumpriu nas últimas 4 semanas.', l);
+  }
+  if(kind==='dist'){
+    const c = {}; h.filter(x=>x.at>=agora-7*DIA).forEach(x=>{ const k=x.activity==='caminhada'?'🚶 Caminhada':x.activity==='bike'?'🚴 Bike':x.module==='run'?'🏃 Corrida':'💪 Musculação'; c[k]=(c[k]||0)+1; });
+    return _modalLista('🧩 Distribuição dos últimos 7 dias','', Object.entries(c).map(([k,v])=>[k, `${v} ${v===1?'sessão':'sessões'}`]));
+  }
+}
+// ===== PERFIL: histórico de peso =====
+function openWeightHistory(){
+  const w = (state.weights||[]).slice().sort((a,b)=>b.date-a.date);
+  const linhas = w.slice(0,20).map((x,i)=>{ const prev = w[i+1]; const d = prev ? x.weight-prev.weight : 0; const dtxt = prev ? ` <small style="color:${d<0?'var(--accent)':d>0?'var(--primary-2)':'var(--text-mute)'}">${d>0?'+':''}${d.toFixed(1).replace('.',',')}</small>` : '';
+    return `<div class="mrow"><span>${_fmtDia(x.date)}</span><span><b>${String(x.weight).replace('.',',')} kg</b>${dtxt} <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px;margin-left:6px" onclick="removerPeso(${x.date})">🗑️</button></span></div>`; }).join('');
+  const vals = w.map(x=>x.weight);
+  const resumo = vals.length>=2 ? `<div style="display:flex;gap:8px;margin:8px 0"><div class="qs" style="flex:1;padding:8px"><div class="qs-v" style="font-size:16px">${Math.min(...vals).toFixed(1).replace('.',',')}</div><div class="qs-l">menor</div></div><div class="qs" style="flex:1;padding:8px"><div class="qs-v" style="font-size:16px">${Math.max(...vals).toFixed(1).replace('.',',')}</div><div class="qs-l">maior</div></div><div class="qs" style="flex:1;padding:8px"><div class="qs-v" style="font-size:16px">${(vals[0]-vals[vals.length-1]>0?'+':'')+(vals[0]-vals[vals.length-1]).toFixed(1).replace('.',',')}</div><div class="qs-l">desde o início</div></div></div>` : '';
+  $('modal-inner').innerHTML = `<h3>⚖️ Histórico de peso</h3>${resumo}<div style="max-height:44vh;overflow-y:auto">${linhas||'<div class="text-dim" style="padding:10px 0;font-size:13px">Nenhum registro ainda.</div>'}</div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();openModal('add-weight')">➕ Registrar peso</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function removerPeso(ts){
+  appConfirm('Remover esse registro de peso?', ()=>{ state.weights = (state.weights||[]).filter(x=>x.date!==ts); const u=state.weights.slice().sort((a,b)=>a.date-b.date).pop(); if(u) state.user.profile.currentWeight = u.weight; saveData(); openWeightHistory(); try{ renderProfile(); }catch(e){} }, {title:'Remover registro?', emo:'🗑️', okLabel:'Remover', danger:true});
+}
+
+// ===== TOM DOS EMOJIS (opcional) =====
+// Os emojis de pessoa vêm amarelos por padrão (é o tom neutro oficial do Unicode). Quem quiser
+// pode escolher um tom de pele em Perfil → Aparência; vale para todo o app neste aparelho.
+const EMOJI_TONES = [{id:'',nome:'Padrão (amarelo)',mod:''},{id:'1',nome:'Claro',mod:'\u{1F3FB}'},{id:'2',nome:'Médio-claro',mod:'\u{1F3FC}'},{id:'3',nome:'Médio',mod:'\u{1F3FD}'},{id:'4',nome:'Médio-escuro',mod:'\u{1F3FE}'},{id:'5',nome:'Escuro',mod:'\u{1F3FF}'}];
+const EMOJI_BASES = ['💪','👋','🏃','🚶','🚴','👏','🙌','👍','🤸','🧘','✊','👊','🙏'];
+let _emojiTone = '';
+function getEmojiTone(){ try{ return localStorage.getItem('metatreino_emojitone') || ''; }catch(e){ return ''; } }
+const _reMod = '[\\u{1F3FB}-\\u{1F3FF}]';
+const _reBase = new RegExp('(🏋\\uFE0F?|'+EMOJI_BASES.join('|')+')(?!'+_reMod+')','gu');
+const _reStrip = new RegExp('(🏋|'+EMOJI_BASES.join('|')+')'+_reMod,'gu');
+function _aplicaTomTexto(t, mod){
+  if(!mod) return t.replace(_reStrip,'$1');
+  return t.replace(_reBase,(m,b)=> (b.startsWith('🏋')?'🏋':b)+mod);
+}
+function aplicaTomEmoji(root){
+  const mod = (EMOJI_TONES.find(x=>x.id===_emojiTone)||EMOJI_TONES[0]).mod;
+  const w = document.createTreeWalker(root||document.body, NodeFilter.SHOW_TEXT, { acceptNode:n=>{ const p=n.parentNode&&n.parentNode.nodeName; return (p==='SCRIPT'||p==='STYLE'||p==='TEXTAREA'||p==='NOSCRIPT') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; } });
+  const lista = []; let n; while(n = w.nextNode()) lista.push(n);
+  lista.forEach(t=>{ const novo = _aplicaTomTexto(t.nodeValue, mod); if(novo !== t.nodeValue) t.nodeValue = novo; });
+}
+function iniciaTomEmoji(){
+  _emojiTone = getEmojiTone();
+  if(_emojiTone){
+    aplicaTomEmoji(document.body);
+    let agendado = false;
+    const obs = new MutationObserver(()=>{ if(agendado) return; agendado = true; requestAnimationFrame(()=>{ agendado = false; try{ obs.disconnect(); aplicaTomEmoji(document.body); }finally{ obs.observe(document.body,{childList:true,subtree:true,characterData:true}); } }); });
+    obs.observe(document.body,{childList:true,subtree:true,characterData:true});
+    window.__tomObs = obs;
+  }
+}
+function openEmojiTone(){
+  const cur = getEmojiTone();
+  $('modal-inner').innerHTML = `<h3>👋 Tom dos emojis</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.55">Os emojis de pessoas (💪 🏃 👋 …) aparecem no tom amarelo padrão. Se preferir, escolha um tom de pele. Vale só neste aparelho.</p>
+    ${EMOJI_TONES.map(t=>`<div class="list-row" style="${t.id===cur?'border:1px solid var(--primary)':''}" onclick="setEmojiTone('${t.id}')"><span>💪${t.mod}</span> <span>${t.nome}${t.id===cur?' ✓':''}</span></div>`).join('')}
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function setEmojiTone(id){
+  try{ localStorage.setItem('metatreino_emojitone', id); }catch(e){}
+  closeModal(); toast('✅ Tom dos emojis atualizado');
+  setTimeout(()=>location.reload(), 600);
+}
+setTimeout(iniciaTomEmoji, 400);
