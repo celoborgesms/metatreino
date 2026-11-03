@@ -1,5 +1,5 @@
 // ===== MetaTreino 2027.1 Beta 1 =====
-const APP_VERSION = '2027.1-beta.4';
+const APP_VERSION = '2027.1-beta.5';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -991,7 +991,21 @@ function cleanupOldHistory(){
       state.modules[m].history = state.modules[m].history.filter(h=>h.at >= cutoff);
     }
   });
-  // clean progress old
+  // antes de apagar as séries antigas, guarda um RESUMO compacto (data, melhor carga, volume, reps): o gráfico de evolução vai a 2 anos
+  state.progResumo = state.progResumo || {};
+  Object.keys(state.progress).forEach(k=>{
+    const velhos = state.progress[k].filter(p=>p.date < cutoff);
+    if(velhos.length){
+      const arr = state.progResumo[k] = state.progResumo[k] || [];
+      velhos.forEach(p=>{
+        if(arr.some(r=>r[0]===p.date)) return;
+        const sets = p.sets||[];
+        arr.push([p.date, Math.max(0,...sets.map(s=>+s.peso||0)), Math.round(sets.reduce((t,x)=>t+(+x.peso||0)*(+x.reps||0),0)), sets.reduce((t,x)=>t+(+x.reps||0),0)]);
+      });
+      arr.sort((a,b)=>a[0]-b[0]);
+      state.progResumo[k] = arr.filter(r=>r[0] >= Date.now()-730*86400000);
+    }
+  });
   Object.keys(state.progress).forEach(k=>{
     state.progress[k] = state.progress[k].filter(p=>p.date >= cutoff);
     if(!state.progress[k].length) delete state.progress[k];
@@ -2486,8 +2500,10 @@ function renderHomeMetrics(){
       <div class="met-v">${atual?String(atual).replace('.',','):'–'}<small>kg</small></div><div class="met-s ${cls}">${delta||'Toque para registrar'}</div></div>
     <div class="met" onclick="openNutri()"><div class="met-h"><i>🥗</i>Alimentação</div>
       <div class="met-v">${nutriTxt}</div><div class="met-s">${nutriSub}</div></div>
-    <div class="met" onclick="goTab('sessions')"><div class="met-h"><i>📅</i>Próximo treino</div>
-      <div class="met-v" style="font-size:${pt&&pt.nome.length>9?'21px':'30px'}">${pt?pt.nome:'–'}</div><div class="met-s">${pt?`${pt.quando}${pt.dur?` · ~${pt.dur} min`:''}`:'Crie seu plano'}</div></div>
+    <div class="met" onclick="openAgua()"><div class="met-h"><i>💧</i>Água</div>
+      <div class="met-v">${fmtL(aguaHoje())}<small>L</small></div>
+      <div class="act-bar" style="margin:0"><i style="width:${Math.min(100,Math.round(aguaHoje()/aguaMeta()*100))}%;background:var(--accent)"></i></div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="met-s">meta ${fmtL(aguaMeta())} L</span><button class="aguabtn" onclick="event.stopPropagation();aguaAdd(250)">+250</button></div></div>
     <div class="met" onclick="openTrophies()"><div class="met-h"><i>🏆</i>Conquistas</div>
       <div class="met-v">${(state.trophies||[]).length}<small>/ ${TROPHIES.length}</small></div><div class="met-s">Medalhas e selos</div></div>`;
 }
@@ -3321,6 +3337,7 @@ function renderExerciseCard(ex, idx){
             : `<button class="btn ${doneToday?'btn-ghost':'btn-primary'}" style="padding:8px 14px;font-size:13px" onclick="openSetLog('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">${doneToday?'✏️ Editar séries':'📝 Registrar'}</button>`}
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="playExercise('${ex.name.replace(/'/g,"\\'")}')">▶ Ver como fazer</button>
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="openSwapExercise('${ex.id}')">🔄 Trocar</button>
+          ${temEvolucaoEx(ex.id)?`<button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="openExProgress('${ex.id}')">📈 Evolução</button>`:''}
         </div>
       </div>
     </div>`;
@@ -7219,6 +7236,11 @@ function maNudge(){
     // Dica de "pegar leve hoje" só faz sentido se existir treino hoje.
     const temTreinoHoje = (()=>{ try{ const m=state.modules[state.active];
       return !!(m && m.plan && (m.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx())); }catch(e){ return false; } })();
+    try{   // só avisa de água quem já usa o contador, depois das 15h e com menos de 40% da meta
+      const usa = Object.keys(state.agua||{}).some(k=>k!==chaveDia(new Date()) && state.agua[k]>0);
+      if(!vac && usa && new Date().getHours()>=15){ const meta=aguaMeta(), ml=aguaHoje(); if(ml < meta*0.4){
+        return {text:`💧 Você bebeu só ${fmtL(ml)} L hoje. Meta: ${fmtL(meta)} L.`, tone:'curio', dica:{bolha:`💧 Você bebeu só ${fmtL(ml)} L hoje. Meta: ${fmtL(meta)} L.`, completa:`💧 Até agora você registrou <b>${fmtL(ml)} L</b> de água, e a meta de hoje é <b>${fmtL(meta)} L</b>. Um copo agora já ajuda. Quer registrar?<br><br><button class="btn btn-primary" style="padding:9px 16px;font-size:13px" onclick="aguaAdd(250);closeAssistant()">+250 ml</button> <button class="btn btn-ghost" style="padding:9px 16px;font-size:13px" onclick="aguaAdd(500);closeAssistant()">+500 ml</button>`}}; } }
+    }catch(e){}
     if(!vac && total>=4){ const dc = maDicaConcreta(); if(dc) return {text:dc.bolha, tone:'curio', dica:dc}; }
     if(!vac && temTreinoHoje && typeof fatigueInsight==='function' && fatigueInsight() && total>=4) return {text:`🧠 Dei uma olhada na sua recuperação — tenho uma dica pra hoje.`, tone:'curio'};
     return null;
@@ -7291,7 +7313,8 @@ function nudgeResposta(n){
       const partes = [];
       const prs = Object.entries(state.prs||{}).filter(([,x])=>{ if(!x||!x.at) return false; const d=new Date(x.at); d.setHours(0,0,0,0); const h=new Date(); h.setHours(0,0,0,0); return d.getTime()===h.getTime(); });
       if(prs.length){
-        partes.push('🏆 <b>Recordes de hoje:</b><br>' + prs.slice(0,4).map(([id,x])=>`• ${nomeDoEx(id)}: <b>${exBankIsIso(id) ? ((x.peso||x.weight||0)>0?(x.peso||x.weight)+'kg · ':'')+fmtTempo(x.reps) : (x.peso||x.weight||'—')+'kg × '+(x.reps||'—')}</b>`).join('<br>'));
+        partes.push(prs.slice(0,3).map(([id])=>`<button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;margin:2px 4px 2px 0" onclick="closeAssistant();setTimeout(()=>openExProgress('${id}'),200)">📈 ${nomeDoEx(id)}</button>`).join(''));
+        partes.unshift('🏆 <b>Recordes de hoje:</b><br>' + prs.slice(0,4).map(([id,x])=>`• ${nomeDoEx(id)}: <b>${exBankIsIso(id) ? ((x.peso||x.weight||0)>0?(x.peso||x.weight)+'kg · ':'')+fmtTempo(x.reps) : (x.peso||x.weight||'—')+'kg × '+(x.reps||'—')}</b>`).join('<br>'));
       }
       const ins = (typeof maInsight==='function') ? maInsight() : null;
       if(ins) partes.push(ins);
@@ -10379,6 +10402,8 @@ const NUTRI_ALIMENTOS = {
 // ingredientes mais caros: ficam de fora no modo econômico
 const NUTRI_CARO = ['whey','castanha','abacate','granola','ricota','peru','cottage','tofu','morango','atum'];
 const NUTRI_CATEG = { proteinas:['🍗 Proteínas',['frango','sobrecoxa','patinho','acem','figado','peixe','atum','sardinha','ovo','soja','tofu','peru','whey','lentilha','grao']], carbo:['🍚 Cereais, tubérculos e pães',['arroz','feijao','macarrao','batata','mandioca','cuscuz','pao','paoint','paodq','tapioca','aveia','granola']], frutas:['🍌 Frutas e hortifrúti',['banana','maca','laranja','mamao','abacaxi','morango','abacate','legumes','salada']], lat:['🥛 Laticínios',['leite','iogurte','minas','cottage','ricota','mucarela']], outros:['🫒 Outros',['azeite','amendoim','castanha','mel']] };
+const NUTRI_LACTOSE = ['leite','iogurte','minas','cottage','ricota','mucarela','whey','paodq'];
+const NUTRI_GLUTEN = ['pao','paoint','aveia','granola','macarrao'];
 const NUTRI_CRU = { arroz:3, feijao:2.5, macarrao:2.2, lentilha:2.5, grao:2.5, soja:3, frango:.75, sobrecoxa:.75, patinho:.75, acem:.75, peixe:.8, figado:.8 };   // quanto o cozido rende em relação ao cru
 // Cada refeição tem várias opções (n = nome do prato, i = itens). veg = versão vegetariana (ovo e leite liberados).
 const NUTRI_REFEICOES = [
@@ -10391,6 +10416,9 @@ const NUTRI_REFEICOES = [
     {n:'Panqueca de banana e aveia',  i:[['banana',2],['ovo',2],['aveia',30],['mel',7]]},
     {n:'Omelete de queijo com pão',   i:[['ovo',3],['mucarela',1],['pao',1],['laranja',1]]},
     {n:'Vitamina de banana e whey',   i:[['leite',250],['banana',1],['aveia',30],['whey',30]]},
+    {n:'Tapioca com ovo e banana',    i:[['tapioca',60],['ovo',2],['banana',1]]},
+    {n:'Cuscuz com ovo e mamão',      i:[['cuscuz',150],['ovo',2],['mamao',150]]},
+    {n:'Ovos mexidos com batata-doce',i:[['ovo',3],['batata',150],['laranja',1]]},
     {n:'Pão com ovo e leite',         i:[['pao',2],['ovo',2],['leite',200]]},
     {n:'Cuscuz com leite e banana',   i:[['cuscuz',150],['leite',200],['banana',1],['ovo',1]]} ] },
   { id:'lanche1', nome:'Lanche da manhã', icone:'🍎', hora:'10:00', opcoes:[
@@ -10400,7 +10428,9 @@ const NUTRI_REFEICOES = [
     {n:'Ovos cozidos e laranja',      i:[['ovo',2],['laranja',1]]},
     {n:'Queijo minas com abacaxi',    i:[['minas',50],['abacaxi',150]]},
     {n:'Vitamina de morango',         i:[['leite',250],['morango',150],['aveia',20]]},
-    {n:'Banana com pasta de amendoim',i:[['banana',1],['amendoim',15],['aveia',15]]} ] },
+    {n:'Banana com pasta de amendoim',i:[['banana',1],['amendoim',15],['aveia',15]]},
+    {n:'Maçã com pasta de amendoim',  i:[['maca',1],['amendoim',20]]},
+    {n:'Batata-doce com ovo cozido',  i:[['batata',120],['ovo',1]]} ] },
   { id:'almoco', nome:'Almoço', icone:'🍛', hora:'12:30', opcoes:[
     {n:'Prato feito com frango',            i:[['arroz',150],['feijao',100],['frango',120],['legumes',100],['salada',80],['azeite',4]]},
     {n:'Prato feito com patinho',           i:[['arroz',150],['feijao',80],['patinho',110],['legumes',100],['salada',80],['azeite',4]]},
@@ -10431,7 +10461,9 @@ const NUTRI_REFEICOES = [
     {n:'Batata-doce com frango desfiado',   i:[['batata',150],['frango',60]]},
     {n:'Vitamina de banana com whey',       i:[['leite',250],['banana',1],['whey',30]]},
     {n:'Cuscuz com ovo e banana',           i:[['cuscuz',120],['ovo',1],['banana',1]]},
-    {n:'Banana com aveia e leite',          i:[['leite',250],['banana',1],['aveia',30]]} ],
+    {n:'Banana com aveia e leite',          i:[['leite',250],['banana',1],['aveia',30]]},
+    {n:'Tapioca com ovo e banana',          i:[['tapioca',50],['ovo',2],['banana',1]]},
+    {n:'Batata-doce com ovos',              i:[['batata',150],['ovo',2]]} ],
     veg:[
     {n:'Sanduíche de ovo com banana',       i:[['pao',1],['ovo',2],['banana',1]]},
     {n:'Iogurte com banana e aveia',        i:[['banana',1],['aveia',30],['iogurte',170]]},
@@ -10463,7 +10495,9 @@ const NUTRI_REFEICOES = [
     {n:'Iogurte com castanhas',             i:[['iogurte',170],['castanha',15]]},
     {n:'Leite com aveia',                   i:[['leite',250],['aveia',30]]},
     {n:'Cottage com morango',               i:[['cottage',100],['morango',100]]},
-    {n:'Banana com pasta de amendoim',      i:[['banana',1],['amendoim',15]]} ] }
+    {n:'Banana com pasta de amendoim',      i:[['banana',1],['amendoim',15]]},
+    {n:'Maçã com pasta de amendoim',        i:[['maca',1],['amendoim',20]]},
+    {n:'Ovo cozido com banana',             i:[['ovo',1],['banana',1]]} ] }
 ];
 // quanto cada refeição pesa no dia, conforme o nº de refeições
 const NUTRI_SHARE = {
@@ -10489,6 +10523,8 @@ function nutriConfig(){
   if(n.vegetariano === undefined) n.vegetariano = false;
   if(!n.seed) n.seed = 0;
   if(!n.trocas) n.trocas = {};
+  if(n.semLactose === undefined) n.semLactose = false;
+  if(n.semGluten === undefined) n.semGluten = false;
   if(n.economico === undefined) n.economico = true;   // padrão: ingredientes baratos e fáceis de achar
   return n;
 }
@@ -10574,7 +10610,9 @@ function nutriMontarPlano(diaIdx){
   const slots = NUTRI_REFEICOES.filter(r => shares[r.id]);
   const montar = (gf)=> slots.map((r,idx)=>{
     let lista = (n.vegetariano && r.veg) ? r.veg : r.opcoes;
-    if(n.economico){ const barato = lista.filter(op=>!op.i.some(([id])=>NUTRI_CARO.includes(id))); if(barato.length>=3) lista = barato; }
+    const proib = new Set([...(n.semLactose?NUTRI_LACTOSE:[]), ...(n.semGluten?NUTRI_GLUTEN:[])]);
+    if(proib.size){ const livre = lista.filter(op=>!op.i.some(([id])=>proib.has(id))); if(livre.length) lista = livre; }   // restrição vem antes do preço
+    if(n.economico){ const barato = lista.filter(op=>!op.i.some(([id])=>NUTRI_CARO.includes(id))); if(barato.length>=2) lista = barato; }
     const chave = r.id + (n.vegetariano?'v':'');
     const v = (diaIdx*3 + idx*2 + n.seed + (n.trocas[chave]||0)) % lista.length;
     const op = lista[v];
@@ -10602,7 +10640,8 @@ function nutriMontarPlano(diaIdx){
 }
 // equivalências: quanto de cada alimento rende o mesmo macro (porções-base: 25 g de proteína, 30 g de carbo, 10 g de gordura, 15 g de carbo de fruta)
 function nutriEquivalencias(){
-  const ec = nutriConfig().economico;
+  const _cfg = nutriConfig(), ec = _cfg.economico;
+  const proib = new Set([...(_cfg.semLactose?NUTRI_LACTOSE:[]), ...(_cfg.semGluten?NUTRI_GLUTEN:[])]);
   const g = (id, macroIdx, alvo)=>{
     const a = NUTRI_ALIMENTOS[id]; const por100 = a[macroIdx]; if(!por100) return null;
     let gramas = alvo/por100*100;
@@ -10611,7 +10650,7 @@ function nutriEquivalencias(){
     gramas = Math.max(passo, Math.round(gramas/passo)*passo);
     return `${a[0]}: ${gramas} ${id==='leite'||id==='iogurte'?'ml':'g'}`;
   };
-  const lista = (ids,m,alvo)=>ids.filter(id=>!(ec && NUTRI_CARO.includes(id))).map(id=>g(id,m,alvo)).filter(Boolean);
+  const lista = (ids,m,alvo)=>ids.filter(id=>!(ec && NUTRI_CARO.includes(id)) && !proib.has(id)).map(id=>g(id,m,alvo)).filter(Boolean);
   return [
     {t:'🍗 Proteínas', sub:'cada item ≈ 25 g de proteína', l:lista(['frango','sobrecoxa','patinho','acem','figado','peixe','sardinha','atum','ovo','soja','tofu','peru','cottage','whey'],2,25)},
     {t:'🍚 Carboidratos', sub:'cada item ≈ 30 g de carboidrato', l:lista(['arroz','macarrao','batata','mandioca','cuscuz','pao','paoint','tapioca','aveia','feijao'],3,30)},
@@ -10656,10 +10695,65 @@ function nutriCopiarCompras(){
   if(navigator.share){ navigator.share({text:t}).catch(()=>{}); return; }
   try{ navigator.clipboard.writeText(t).then(()=>toast('📋 Lista copiada')); }catch(e){ toast('Não consegui copiar neste aparelho'); }
 }
-function nutriComi(id){
+function nutriTextoQtd(id,q){ const f=NUTRI_ALIMENTOS[id]; if(f[5]) return `${q} unid.`; return `${q}${(id==='leite'||id==='iogurte')?' ml':' g'}`; }
+function nutriEfetivo(it, a){
+  if(a && a.x) return {...it, kcal:0, p:0, c:0, g:0, removido:true};
+  if(a && a.q!==undefined){ const f = NUTRI_ALIMENTOS[it.id]; const gramas = f[5] ? a.q*f[5] : a.q; const k = gramas/100;
+    return {...it, gramas, kcal:f[1]*k, p:f[2]*k, c:f[3]*k, g:f[4]*k, texto:nutriTextoQtd(it.id,a.q), editado:true}; }
+  return it;
+}
+function nutriMealLog(id, criar){
   state.nutriLog = state.nutriLog || {};
   const k = chaveDia(new Date()); const dia = state.nutriLog[k] = state.nutriLog[k] || {};
-  dia[id] = !dia[id];
+  let m = dia[id];
+  if(m===true) m = dia[id] = {ok:true, adj:{}};
+  if(!m){ if(!criar) return {ok:false, adj:{}}; m = dia[id] = {ok:false, adj:{}}; }
+  if(!m.adj) m.adj = {};
+  return m;
+}
+function nutriRemover(mid, fid){
+  const m = nutriMealLog(mid, true);
+  if(m.adj[fid] && m.adj[fid].x) delete m.adj[fid]; else m.adj[fid] = {x:1};
+  window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[mid] = true;
+  saveData(); openNutri();
+}
+function nutriEditar(mid, fid){
+  const plano = nutriMontarPlano(); if(plano.erro) return;
+  const meal = plano.refeicoes.find(m=>m.id===mid); const it = meal && meal.itens.find(i=>i.id===fid); if(!it) return;
+  const f = NUTRI_ALIMENTOS[fid]; const un = !!f[5];
+  const m = nutriMealLog(mid, false); const a = m.adj[fid];
+  const base = un ? Math.round(it.un) : Math.round(it.gramas);
+  const atual = (a && a.q!==undefined) ? a.q : base;
+  window.__ned = {mid, fid, base, un, passo: un ? 1 : ((fid==='leite'||fid==='iogurte') ? 50 : (base>=100 ? 10 : 5)), q:atual};
+  nutriEdRender();
+}
+function nutriEdRender(){
+  const e = window.__ned; const f = NUTRI_ALIMENTOS[e.fid];
+  const gramas = e.un ? e.q*f[5] : e.q, k = gramas/100, kcal = Math.round(f[1]*k);
+  const kBase = Math.round(f[1]*((e.un ? e.base*f[5] : e.base)/100)), d = kcal - kBase;
+  $('modal-inner').innerHTML = `<h3>✎ ${f[0]}</h3>
+    <p style="color:var(--text-dim);font-size:13px;margin:4px 0 12px">O plano previa <b>${nutriTextoQtd(e.fid,e.base)}</b>. Quanto você comeu de verdade?</p>
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px">
+      <button class="btn btn-ghost" style="width:52px;height:52px;font-size:24px;padding:0" onclick="nutriEdMais(-1)">−</button>
+      <div style="text-align:center;min-width:110px"><div style="font-size:38px;font-weight:300;font-family:'Outfit',system-ui,sans-serif;line-height:1">${e.q}</div><div style="font-size:12px;color:var(--text-dim)">${e.un?'unidades':((e.fid==='leite'||e.fid==='iogurte')?'ml':'gramas')}</div></div>
+      <button class="btn btn-ghost" style="width:52px;height:52px;font-size:24px;padding:0" onclick="nutriEdMais(1)">+</button>
+    </div>
+    <div style="text-align:center;margin:14px 0 4px;font-size:14px"><b>${kcal} kcal</b> <span style="color:${d>0?'var(--primary-2)':d<0?'var(--accent)':'var(--text-mute)'}">${d===0?'(como no plano)':`(${d>0?'+':''}${d} kcal vs plano)`}</span></div>
+    <div style="text-align:center;font-size:12px;color:var(--text-dim)">P ${Math.round(f[2]*k)}g · C ${Math.round(f[3]*k)}g · G ${Math.round(f[4]*k)}g</div>
+    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="nutriEdSalvar()">Salvar</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="nutriEdSalvar(true)">↩️ Voltar ao previsto</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+}
+function nutriEdMais(s){ const e = window.__ned; e.q = Math.max(0, e.q + s*e.passo); nutriEdRender(); }
+function nutriEdSalvar(reset){
+  const e = window.__ned; const m = nutriMealLog(e.mid, true);
+  if(reset || e.q===e.base) delete m.adj[e.fid]; else m.adj[e.fid] = e.q===0 ? {x:1} : {q:e.q};
+  window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[e.mid] = true;
+  saveData(); openNutri();
+}
+function nutriComi(id){
+  const m = nutriMealLog(id, true); m.ok = !m.ok;
   Object.keys(state.nutriLog).sort().slice(0,-30).forEach(x=>delete state.nutriLog[x]);   // guarda só 30 dias
   window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[id] = true;
   saveData(); openNutri();
@@ -10667,6 +10761,7 @@ function nutriComi(id){
 function nutriTog(id, aberto){ window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[id] = aberto; }
 function nutriDia(i){ window.__nutriDia = i; openNutri(); }
 function openNutri(){
+  window.__nutriAberto = true;
   const n = nutriConfig();
   const dIdx = window.__nutriDia || ((typeof getDayIdx==='function') ? getDayIdx() : 1);
   const plano = nutriMontarPlano(dIdx);
@@ -10684,8 +10779,19 @@ function openNutri(){
   }
   const c = plano.calc, ab = window.__nutriAbertos || {};
   const hojeIdx = (typeof getDayIdx==='function') ? getDayIdx() : 1;
-  const comidas = ((state.nutriLog||{})[chaveDia(new Date())]) || {};
-  const kcalComido = Math.round(plano.refeicoes.filter(m=>comidas[m.id]).reduce((s,m)=>s+m.tot.kcal,0));
+  const logHoje = ((state.nutriLog||{})[chaveDia(new Date())]) || {};
+  const mealLog = id => { const m = logHoje[id]; if(m===true) return {ok:true, adj:{}}; return m ? {ok:!!m.ok, adj:m.adj||{}} : {ok:false, adj:{}}; };
+  const comidas = {}; const consumo = {};
+  plano.refeicoes.forEach(m=>{
+    const lg = mealLog(m.id); comidas[m.id] = lg.ok;
+    const itens = m.itens.map(i=>nutriEfetivo(i, lg.adj[i.id]));
+    m._itens = itens; m._lg = lg;
+    m._real = itens.reduce((t,i)=>({kcal:t.kcal+i.kcal,p:t.p+i.p,c:t.c+i.c,g:t.g+i.g}),{kcal:0,p:0,c:0,g:0});
+  });
+  const comidasL = plano.refeicoes.filter(m=>comidas[m.id]);
+  const kcalComido = Math.round(comidasL.reduce((s,m)=>s+m._real.kcal,0));
+  const kcalPrevisto = Math.round(comidasL.reduce((s,m)=>s+m.tot.kcal,0));
+  const macComido = comidasL.reduce((t,m)=>({p:t.p+m._real.p,c:t.c+m._real.c,g:t.g+m._real.g}),{p:0,c:0,g:0});
   const diasT = nutriDiasTreino();
   const chips = NUTRI_DIAS.map((d,i)=>`<button class="nd ${i+1===dIdx?'on':''}" onclick="nutriDia(${i+1})">${d}${diasT.has(i+1)?'<i>🏋️</i>':'<i></i>'}</button>`).join('');
   const kc = c.kcal||1, pP = Math.round(c.prot*4/kc*100), pG = Math.round(c.gord*9/kc*100), pC = Math.max(0,100-pP-pG);
@@ -10695,13 +10801,13 @@ function openNutri(){
       <summary>
         <span class="mi">${m.icone}</span>
         <span class="mt"><b>${m.nome}</b><small>${m.hora} · ${m.prato}</small></span>
-        <span class="mk"><b>${Math.round(m.tot.kcal)}</b><small>kcal</small></span>
+        <span class="mk"><b>${Math.round(dIdx===hojeIdx && comidas[m.id] ? m._real.kcal : m.tot.kcal)}</b><small>${dIdx===hojeIdx && comidas[m.id] ? '✅ comi' : 'kcal'}</small></span>
       </summary>
       <div class="mb">
-        ${m.itens.map(i=>`<div class="mrow"><span>${i.nome}</span><span>${i.texto}</span></div>`).join('')}
-        <div class="mfoot"><span>P ${Math.round(m.tot.p)}g · C ${Math.round(m.tot.c)}g · G ${Math.round(m.tot.g)}g</span>
+        ${(dIdx===hojeIdx?m._itens:m.itens).map(i=>`<div class="mrow ${i.removido?'rm':''}"><span class="n">${i.nome}${i.editado?' <small style="color:var(--primary-2)">editado</small>':''}</span><span class="q">${i.removido?'não comi':i.texto}</span>${dIdx===hojeIdx?`<span class="ba"><button class="ib" onclick="nutriEditar('${m.id}','${i.id}')">✎</button><button class="ib" onclick="nutriRemover('${m.id}','${i.id}')">${i.removido?'↩':'✕'}</button></span>`:''}</div>`).join('')}
+        <div class="mfoot"><span>${dIdx===hojeIdx && (m._real.kcal!==m.tot.kcal) ? `Com seus ajustes: ${Math.round(m._real.kcal)} kcal · P ${Math.round(m._real.p)}g` : `P ${Math.round(m.tot.p)}g · C ${Math.round(m.tot.c)}g · G ${Math.round(m.tot.g)}g`}</span>
           <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="nutriTrocar('${m.chave}')">🔄 Outro prato (${m.variante}/${m.total})</button></div>
-        ${dIdx===hojeIdx?`<button class="btn ${(comidas[m.id])?'btn-primary':'btn-ghost'} btn-block" style="margin-top:10px;padding:10px" onclick="nutriComi('${m.id}')">${comidas[m.id]?'✅ Já comi':'Marcar como comido'}</button>`:''}
+        ${dIdx===hojeIdx?`<button class="btn ${(comidas[m.id])?'btn-primary':'btn-ghost'} btn-block" style="margin-top:10px;padding:10px" onclick="nutriComi('${m.id}')">${comidas[m.id]?'✅ Já comi (toque pra desfazer)':'Marcar como comido'}</button>`:''}
       </div>
     </details>`).join('');
   const eq = nutriEquivalencias().map(g=>`<div style="margin-top:10px"><b style="font-size:13px">${g.t}</b> <span style="font-size:11px;color:var(--text-mute)">${g.sub}</span>
@@ -10717,7 +10823,8 @@ function openNutri(){
         </div>
         <div style="display:flex;align-items:baseline;gap:6px;margin-top:6px"><span style="font-size:44px;font-weight:300;line-height:1;font-family:'Outfit',system-ui,sans-serif">${c.kcal}</span><span style="color:var(--text-dim)">kcal</span>
           <span style="margin-left:auto;font-size:12px;color:var(--text-dim)">💧 ${c.agua.toString().replace('.',',')} L</span></div>
-        ${dIdx===hojeIdx?`<div style="font-size:12px;color:var(--text-dim);margin-top:6px">Já comi hoje: <b style="color:var(--text-strong)">${kcalComido} kcal</b> de ${c.kcal} (${plano.refeicoes.filter(m=>comidas[m.id]).length}/${plano.refeicoes.length} refeições)</div>`:''}
+        ${dIdx===hojeIdx?`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-top:8px"><span>💧 Hoje: <b style="color:var(--text-strong)">${fmtL(aguaHoje())} L</b> de ${fmtL(aguaMeta())} L</span><button class="aguabtn" style="margin-left:auto" onclick="aguaAdd(250)">+250 ml</button></div>`:''}
+        ${dIdx===hojeIdx?`<div style="font-size:12px;color:var(--text-dim);margin-top:6px">Já comi hoje: <b style="color:var(--text-strong)">${kcalComido} kcal</b> de ${c.kcal} · restam ${Math.max(0,c.kcal-kcalComido)} (${comidasL.length}/${plano.refeicoes.length} refeições)</div>${comidasL.length?`<div style="font-size:11.5px;color:var(--text-dim);margin-top:3px">P ${Math.round(macComido.p)}g · C ${Math.round(macComido.c)}g · G ${Math.round(macComido.g)}g${kcalComido!==kcalPrevisto?` · <span style="color:${kcalComido>kcalPrevisto?'var(--primary-2)':'var(--accent)'}">${kcalComido>kcalPrevisto?'+':''}${kcalComido-kcalPrevisto} kcal vs o previsto</span>`:''}</div>`:''}`:''}
         <div class="macbar"><i style="width:${pP}%;background:var(--primary)"></i><i style="width:${pC}%;background:var(--accent)"></i><i style="width:${pG}%;background:var(--prep)"></i></div>
         <div class="maclg">
           <span><i style="background:var(--primary)"></i>Proteína <b>${c.prot}g</b></span>
@@ -10736,6 +10843,8 @@ function openNutri(){
             <button class="seg ${n.refeicoes===5?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('refeicoes',5)">5 refeições</button>
             <button class="seg ${n.refeicoes===6?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('refeicoes',6)">6 refeições</button>
           </div>
+          <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${n.semLactose?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('semLactose',${!n.semLactose})">🥛 Sem lactose</button><button class="seg ${n.semGluten?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('semGluten',${!n.semGluten})">🌾 Sem glúten</button></div>
+          ${(n.semLactose||n.semGluten)?'<div style="font-size:11px;color:var(--text-mute);line-height:1.5;margin-top:6px">Os pratos evitam esses ingredientes, mas não garantem ausência de traços. Se for alergia, intolerância grave ou doença celíaca, siga seu médico e confira os rótulos.</div>':''}
           <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${n.economico?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('economico',${!n.economico})">💰 Econômico (ingredientes baratos)</button></div>
           <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${n.vegetariano?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('vegetariano',${!n.vegetariano})">🌱 Vegetariano (ovos e laticínios liberados)</button></div>
         </div></details>
@@ -10752,12 +10861,15 @@ function nutriSet(k, v){
   if(k==='refeicoes') n.refeicoes = parseInt(v,10);
   else if(k==='vegetariano') n.vegetariano = (v===true || v==='true');
   else if(k==='economico') n.economico = (v===true || v==='true');
+  else if(k==='semLactose') n.semLactose = (v===true || v==='true');
+  else if(k==='semGluten') n.semGluten = (v===true || v==='true');
   else n[k] = v;
   window.__nutriAbertos = Object.assign(window.__nutriAbertos||{}, {});
   saveData(); openNutri();
 }
 function nutriTrocar(chave){
   const n = nutriConfig(); n.trocas[chave] = (n.trocas[chave]||0) + 1;
+  try{ const dia = (state.nutriLog||{})[chaveDia(new Date())]; if(dia) delete dia[chave.replace(/v$/,'')]; }catch(e){}
   window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[chave] = true;
   saveData(); openNutri();
 }
@@ -10775,7 +10887,7 @@ MA_ANSWERS.plano_alimentar = nutriResumoMA;
 // ===== DETALHES AO TOCAR NOS NÚMEROS E GRÁFICOS =====
 function _modalLista(titulo, intro, linhas, rodape){
   $('modal-inner').innerHTML = `<h3>${titulo}</h3>${intro?`<p style="color:var(--text-dim);font-size:13px;line-height:1.55;margin:6px 0 10px">${intro}</p>`:''}
-    <div style="max-height:50vh;overflow-y:auto">${linhas.length?linhas.map(l=>`<div class="mrow"><span>${l[0]}</span><span>${l[1]}</span></div>`).join(''):'<div class="text-dim" style="padding:10px 0;font-size:13px">Nada registrado ainda.</div>'}</div>
+    <div style="max-height:50vh;overflow-y:auto">${linhas.length?linhas.map(l=>`<div class="mrow" ${l[2]?`onclick="${l[2]}" style="cursor:pointer"`:''}><span>${l[0]}</span><span>${l[1]}${l[2]?' ›':''}</span></div>`).join(''):'<div class="text-dim" style="padding:10px 0;font-size:13px">Nada registrado ainda.</div>'}</div>
     ${rodape||''}<button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
@@ -10789,13 +10901,13 @@ function openPerfDetail(kind){
   }
   if(kind==='volume'){
     const ini = agora-7*DIA, v = [];
-    Object.entries(state.progress||{}).forEach(([id,arr])=>{ let t=0; (arr||[]).forEach(p=>{ if(p.date>=ini) (p.sets||[]).forEach(s=>{ t += (+s.peso||0)*(+s.reps||0); }); }); if(t>0) v.push([nomeDoEx(id), Math.round(t)]); });
-    v.sort((a,b)=>b[1]-a[1]);
-    return _modalLista('📦 Volume dos últimos 7 dias','Volume = carga × repetições de todas as séries. Aqui estão os exercícios que mais pesaram.', v.slice(0,10).map(x=>[x[0], x[1].toLocaleString('pt-BR')+' kg']));
+    Object.entries(state.progress||{}).forEach(([id,arr])=>{ let t=0; (arr||[]).forEach(p=>{ if(p.date>=ini) (p.sets||[]).forEach(s=>{ t += (+s.peso||0)*(+s.reps||0); }); }); if(t>0) v.push([nomeDoEx(id), id, Math.round(t)]); });
+    v.sort((a,b)=>b[2]-a[2]);
+    return _modalLista('📦 Volume dos últimos 7 dias','Volume = carga × repetições de todas as séries. Toque num exercício pra ver a evolução.', v.slice(0,10).map(x=>[x[0], x[2].toLocaleString('pt-BR')+' kg', `openExProgress('${x[1]}')`]));
   }
   if(kind==='prs'){
-    const l = Object.entries(state.prs||{}).map(([id,p])=>({id,p})).sort((a,b)=>b.p.at-a.p.at).slice(0,12).map(x=>[`${nomeDoEx(x.id)}<br><small style="color:var(--text-mute)">${_fmtDia(x.p.at)}</small>`, `${x.p.peso}kg × ${x.p.reps}`]);
-    return _modalLista('🏆 Seus recordes','Um recorde (PR) é a sua melhor série naquele exercício. Os mais recentes aparecem primeiro.', l);
+    const l = Object.entries(state.prs||{}).map(([id,p])=>({id,p})).sort((a,b)=>b.p.at-a.p.at).slice(0,12).map(x=>[`${nomeDoEx(x.id)}<br><small style="color:var(--text-mute)">${_fmtDia(x.p.at)}</small>`, `${x.p.peso}kg × ${x.p.reps}`, `openExProgress('${x.id}')`]);
+    return _modalLista('🏆 Seus recordes','Um recorde (PR) é a sua melhor série naquele exercício. Toque num deles pra ver a evolução.', l);
   }
   if(kind==='streak'){
     const s = calcStreak(h);
@@ -10879,3 +10991,100 @@ function setEmojiTone(id){
   setTimeout(()=>location.reload(), 600);
 }
 setTimeout(iniciaTomEmoji, 400);
+
+// ===== EVOLUÇÃO DE CARGA POR EXERCÍCIO =====
+function _pontosEx(exId){
+  const pts = [];
+  ((state.progResumo||{})[exId]||[]).forEach(r=>pts.push({date:r[0], peso:r[1], vol:r[2], reps:r[3], sets:null}));
+  ((state.progress||{})[exId]||[]).filter(p=>p.sets&&p.sets.length).forEach(p=>{
+    pts.push({date:p.date, peso:Math.max(0,...p.sets.map(s=>+s.peso||0)), vol:p.sets.reduce((t,x)=>t+(+x.peso||0)*(+x.reps||0),0), reps:p.sets.reduce((t,x)=>t+(+x.reps||0),0), melhorReps:Math.max(0,...p.sets.map(s=>+s.reps||0)), sets:p.sets});
+  });
+  return pts.sort((a,b)=>a.date-b.date);
+}
+function temEvolucaoEx(exId){ return _pontosEx(exId).length >= 1; }
+function openExProgress(exId){
+  const pts = _pontosEx(exId); const nome = nomeDoEx(exId);
+  if(!pts.length){ toast('Registre este exercício pra ver a evolução'); return; }
+  const iso = (typeof exBankIsIso==='function') && exBankIsIso(exId);
+  const comPeso = pts.some(p=>p.peso>0);
+  const metr = p => iso ? (p.melhorReps||p.reps) : (comPeso ? p.peso : p.reps);
+  const unid = iso ? 's' : (comPeso ? 'kg' : ' reps');
+  const rotulo = iso ? 'Melhor tempo' : (comPeso ? 'Carga máxima' : 'Repetições totais');
+  const ys = pts.map(metr), min = Math.min(...ys), max = Math.max(...ys);
+  const lo = Math.max(0, min - (max-min)*0.15 - (max===min?1:0)), hi = max + (max-min)*0.15 + (max===min?1:0);
+  const W=330,H=150,pl=34,pr=10,pt=12,pb=22;
+  const X = i => pts.length===1 ? W/2 : pl + (W-pl-pr)*i/(pts.length-1);
+  const Y = v => pt + (H-pt-pb)*(1-(v-lo)/(hi-lo||1));
+  const linha = pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(metr(p)).toFixed(1)}`).join(' ');
+  const area = `${linha} L${X(pts.length-1).toFixed(1)},${H-pb} L${X(0).toFixed(1)},${H-pb} Z`;
+  const fmt = d => { const t=new Date(d); return String(t.getDate()).padStart(2,'0')+'/'+String(t.getMonth()+1).padStart(2,'0'); };
+  window.__xpData = pts.map(p=>({d:fmt(p.date), v:metr(p), s:p.sets?p.sets.map(s=>iso?fmtTempo(s.reps):`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', '):'resumo antigo'}));
+  const pontos = pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(metr(p)).toFixed(1)}" r="${i===pts.length-1?5:3.5}" fill="${i===pts.length-1?'var(--primary)':'var(--bg-2)'}" stroke="var(--primary)" stroke-width="2" onclick="xpSel(${i})" style="cursor:pointer"/><circle cx="${X(i).toFixed(1)}" cy="${Y(metr(p)).toFixed(1)}" r="14" fill="transparent" onclick="xpSel(${i})"/>`).join('');
+  const prim = ys[0], ult = ys[ys.length-1], delta = ult - prim;
+  const pct = prim>0 ? Math.round(delta/prim*100) : 0;
+  let rm = '';
+  if(!iso && comPeso){ const e = Math.max(...pts.filter(p=>p.sets).map(p=>Math.max(...p.sets.map(s=>(+s.peso||0)*(1+(+s.reps||0)/30)))),0); if(e>0) rm = `<div class="qs" style="flex:1;padding:8px"><div class="qs-v" style="font-size:16px">${Math.round(e)}kg</div><div class="qs-l">1RM estimado</div></div>`; }
+  const ultimas = pts.slice(-6).reverse().map(p=>`<div class="mrow"><span>${fmt(p.date)}</span><span>${p.sets?p.sets.map(s=>iso?fmtTempo(s.reps):`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', '):`${metr(p)}${unid} (resumo)`}</span></div>`).join('');
+  $('modal-inner').innerHTML = `<h3>📈 ${escHtml(nome)}</h3>
+    <div style="font-size:12px;color:var(--text-dim);margin:2px 0 8px">${rotulo} por sessão · ${pts.length} ${pts.length===1?'registro':'registros'}</div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+      <defs><linearGradient id="xpg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--primary)" stop-opacity=".30"/><stop offset="1" stop-color="var(--primary)" stop-opacity="0"/></linearGradient></defs>
+      <line x1="${pl}" y1="${Y(hi).toFixed(1)}" x2="${W-pr}" y2="${Y(hi).toFixed(1)}" stroke="var(--border)" stroke-dasharray="3 4"/>
+      <line x1="${pl}" y1="${Y(lo).toFixed(1)}" x2="${W-pr}" y2="${Y(lo).toFixed(1)}" stroke="var(--border)" stroke-dasharray="3 4"/>
+      <text x="${pl-6}" y="${Y(hi)+4}" text-anchor="end" font-size="10" fill="var(--text-mute)">${Math.round(hi)}</text>
+      <text x="${pl-6}" y="${Y(lo)+4}" text-anchor="end" font-size="10" fill="var(--text-mute)">${Math.round(lo)}</text>
+      <text x="${pl}" y="${H-6}" font-size="10" fill="var(--text-mute)">${fmt(pts[0].date)}</text>
+      <text x="${W-pr}" y="${H-6}" text-anchor="end" font-size="10" fill="var(--text-mute)">${fmt(pts[pts.length-1].date)}</text>
+      ${pts.length>1?`<path d="${area}" fill="url(#xpg)"/><path d="${linha}" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`:''}
+      ${pontos}
+    </svg>
+    <div id="xp-sel" style="text-align:center;font-size:12.5px;color:var(--text-dim);min-height:18px;margin:4px 0 8px">Toque num ponto pra ver a sessão</div>
+    <div style="display:flex;gap:8px;margin-bottom:6px">
+      <div class="qs" style="flex:1;padding:8px"><div class="qs-v" style="font-size:16px">${ult}${unid}</div><div class="qs-l">última</div></div>
+      <div class="qs" style="flex:1;padding:8px"><div class="qs-v" style="font-size:16px">${pts.length>1?(delta>0?'+':'')+delta+unid:'–'}</div><div class="qs-l">${pts.length>1?(pct?(pct>0?'+':'')+pct+'% desde o início':'desde o início'):'registre mais'}</div></div>
+      ${rm}
+    </div>
+    <div style="max-height:22vh;overflow-y:auto">${ultimas}</div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function xpSel(i){ const d=(window.__xpData||[])[i]; const el=$('xp-sel'); if(d&&el) el.innerHTML=`<b style="color:var(--text-strong)">${d.d}</b> · ${d.s}`; }
+
+// ===== ÁGUA DO DIA =====
+function aguaMeta(){
+  let l = 2.5;
+  try{ const pl = nutriCalcular(); if(!pl.erro) l = pl.agua; else { const p = nutriDados().peso; if(p>=30 && p<=250) l = Math.round(p*35/250)*250/1000; } }catch(e){}
+  let treino = false; try{ treino = nutriDiasTreino().has(getDayIdx()); }catch(e){}
+  return Math.round(l*1000 + (treino?500:0));
+}
+function aguaHoje(){ return ((state.agua||{})[chaveDia(new Date())]) || 0; }
+function fmtL(ml){ return (ml/1000).toFixed(2).replace('.',',').replace(/0$/,''); }
+function aguaAdd(ml){
+  state.agua = state.agua || {}; const k = chaveDia(new Date());
+  state.agua[k] = Math.max(0, (state.agua[k]||0) + ml);
+  Object.keys(state.agua).sort().slice(0,-60).forEach(x=>delete state.agua[x]);   // guarda 60 dias
+  saveData();
+  try{ renderHomeMetrics(); }catch(e){}
+  const meta = aguaMeta(), tot = state.agua[k];
+  if(ml>0 && tot>=meta && tot-ml<meta) toast('💧 Meta de água batida! 🎉');
+  else if(ml>0) toast(`💧 +${ml} ml · hoje ${fmtL(tot)} L`);
+  if($('modal-back') && $('modal-back').classList.contains('on') && $('agua-modal-flag')) openAgua();
+  else if(window.__nutriAberto && $('modal-back').classList.contains('on')) openNutri();
+}
+function openAgua(){
+  const meta = aguaMeta(), ml = aguaHoje(), pct = Math.min(100, Math.round(ml/meta*100));
+  const dn = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const barras = [6,5,4,3,2,1,0].map(i=>{ const d=new Date(Date.now()-i*86400000); const v=((state.agua||{})[chaveDia(d)])||0; const p=Math.min(100,Math.round(v/meta*100)); return `<div style="flex:1;text-align:center"><div style="height:46px;display:flex;align-items:flex-end;justify-content:center"><div style="width:66%;border-radius:6px;background:${p>=100?'var(--accent)':v?'var(--primary)':'var(--surface-2)'};height:${v?Math.max(12,p):10}%"></div></div><div style="font-size:10.5px;color:${i===0?'var(--primary-2)':'var(--text-dim)'};margin-top:4px">${dn[d.getDay()]}</div></div>`; }).join('');
+  $('modal-inner').innerHTML = `<span id="agua-modal-flag"></span><h3>💧 Água de hoje</h3>
+    <div style="text-align:center;margin:8px 0 4px"><span style="font-size:44px;font-weight:300;font-family:'Outfit',system-ui,sans-serif">${fmtL(ml)}</span><span style="color:var(--text-dim)"> / ${fmtL(meta)} L</span></div>
+    <div class="act-bar" style="height:9px"><i style="width:${pct}%;background:var(--accent)"></i></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px">
+      ${[200,300,500,1000].map(v=>`<button class="btn btn-primary" style="padding:12px 0;font-size:13px" onclick="aguaAdd(${v})">+${v>=1000?'1 L':v+' ml'}</button>`).join('')}
+    </div>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="aguaAdd(-250)">↩️ Desfazer 250 ml</button>
+    <div class="section-lbl" style="margin:16px 0 6px">Últimos 7 dias</div>
+    <div style="display:flex;gap:6px">${barras}</div>
+    <p style="color:var(--text-mute);font-size:11.5px;line-height:1.5;margin-top:10px">Meta: 35 ml por kg de peso${aguaMeta()>2500?'':''}, mais 500 ml nos dias de treino. É uma estimativa geral; se tiver restrição médica, siga a orientação do seu médico.</p>
+    <button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
