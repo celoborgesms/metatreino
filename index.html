@@ -932,6 +932,28 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
 .mrow .ba{display:flex;gap:4px;flex:0 0 auto}
 .mrow.rm .n,.mrow.rm .q{text-decoration:line-through;opacity:.45}
 .ib{background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:3px 9px;font-size:13px;color:var(--text-dim);line-height:1.2}
+
+/* ---- Home: ritmo vertical único e cartões alinhados ---- */
+#scr-home .wrap{gap:14px}
+#scr-home .wrap > *{margin:0!important}
+.act-head{margin:0 4px 10px}
+#home-quick{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.act-card{position:relative}
+.act-card::after{content:'›';position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:28px;line-height:1;color:var(--text-mute)}
+.act-legend{padding-right:18px}
+.metrics{gap:14px;grid-auto-rows:1fr}
+.met{min-height:120px}
+.week{margin:0}
+.tapdica{display:none}
+#pf-weight-chart-slot .tapdica{display:block}
+
+.rpe{margin-top:12px}
+.rpe-bars{display:flex;align-items:flex-end;gap:5px;height:84px;padding:8px;border-radius:16px;background:var(--surface-2)}
+.rpe-b{flex:1;border:0;border-radius:7px;opacity:.38;color:#fff;font-weight:800;font-size:12px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;transition:.15s}
+.rpe-b span{text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.rpe-b.on{opacity:1;box-shadow:0 0 0 2px var(--text-strong)}
+.rpe-lbl{text-align:center;margin-top:10px;font-size:15px}
+.rpe-lbl small{display:block;color:var(--text-dim);font-size:12px;margin-top:2px}
 </style>
 </head>
 <body>
@@ -1595,6 +1617,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     <div class="section-lbl" style="margin:18px 0 8px">🎛️ APLICATIVO</div>
     <div class="list-row" onclick="toggleThemePicker()" id="theme-row"><span>🎨</span> <span>Aparência</span><span id="theme-row-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">Premium ›</span></div>
     <div class="theme-grid hidden" id="theme-grid"></div>
+    <div class="list-row" onclick="openSomFim()"><span>🔔</span> <span>Som do cronômetro</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">escolher ›</span></div>
     <div class="list-row" onclick="openEmojiTone()"><span>👋</span> <span>Tom dos emojis</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">opcional ›</span></div>
     <div class="list-row" onclick="toggleDeco()"><span>🎨</span> <span id="deco-row-label">Fundo decorativo (ligado)</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">tocar para trocar</span></div>
     <div class="section-lbl" style="margin:18px 0 8px">👤 CONTA</div>
@@ -1607,7 +1630,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 5</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 6</span>
     </div>
   </div>
 </div>
@@ -1650,10 +1673,54 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
   <div class="modal" id="modal-inner"></div>
 </div>
 
-<script src="./app.js?v=2027.1-beta.5"></script>
+<script>
+// Diagnóstico de abertura: se o app travar ao entrar, mostra o motivo e um botão de reparo (sem precisar limpar dados na mão)
+(function(){
+  var erros = []; window.__mtErros = erros;
+  function reg(m){ try{ if(erros.length < 6) erros.push(String(m).slice(0,180)); }catch(e){} }
+  window.addEventListener('error', function(e){ reg((e.message||'erro')+' ('+String(e.filename||'').split('/').pop()+':'+(e.lineno||'?')+')'); });
+  window.addEventListener('unhandledrejection', function(e){ var r=e.reason; reg('promise: '+((r&&(r.message||r.code))||r)); });
+  var n = 0;
+  try{ var o = JSON.parse(localStorage.getItem('mt_boot')||'{}'); var ag = Date.now(); n = (ag-(o.t||0) > 180000) ? 0 : (o.n||0); n++; localStorage.setItem('mt_boot', JSON.stringify({n:n,t:ag})); }catch(e){}
+  function limpaSW(){
+    try{ if(navigator.serviceWorker) navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); }); }catch(e){}
+    try{ if(window.caches) caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); }catch(e){}
+  }
+  // 3 aberturas seguidas sem chegar na tela inicial: desliga o modo offline (service worker) por 7 dias e limpa o cache
+  if(n >= 3){ try{ localStorage.setItem('mt_nosw', String(Date.now())); }catch(e){} limpaSW(); }
+  window.mtRepara = function(){
+    try{ localStorage.setItem('mt_nosw', String(Date.now())); localStorage.removeItem('mt_boot'); localStorage.removeItem('metatreino_sessao'); }catch(e){}
+    limpaSW(); setTimeout(function(){ location.reload(); }, 700);
+  };
+  function texto(){
+    return 'MetaTreino '+(typeof APP_VERSION!=='undefined'?APP_VERSION:'?')+'\nAparelho: '+navigator.userAgent+'\nOnline: '+navigator.onLine+'\nAberturas seguidas: '+n+'\nErros: '+(erros.join(' | ')||'nenhum registrado');
+  }
+  window.mtCopiaDiag = function(){ try{ navigator.clipboard.writeText(texto()); var b=document.getElementById('mt-diag-copy'); if(b) b.textContent='✅ Copiado'; }catch(e){ alert(texto()); } };
+  function mostra(){
+    if(window.__mtOk || document.getElementById('mt-diag')) return;
+    var d = document.createElement('div'); d.id = 'mt-diag';
+    d.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#000;color:#eee;padding:28px 20px;overflow:auto;font-family:system-ui,sans-serif;line-height:1.5';
+    var btn = 'display:block;width:100%;padding:15px;margin-top:10px;border-radius:14px;border:1px solid #444;background:#1c1c1e;color:#fff;font-size:15px;font-weight:700';
+    d.innerHTML = '<div style="font-size:40px">🛠️</div><h2 style="margin:6px 0 8px">O app demorou pra abrir</h2>'
+      + '<p style="color:#aaa;font-size:14px">Pode ser internet lenta ou um problema de cache neste aparelho. Toque em <b>Reparar</b>: ele limpa o cache e reabre. Seus treinos ficam salvos na sua conta.</p>'
+      + '<button onclick="mtRepara()" style="'+btn+';background:#ff6a2b;color:#1a0a02;border:0">🔧 Reparar e reabrir</button>'
+      + '<button onclick="location.reload()" style="'+btn+'">Tentar de novo</button>'
+      + '<button id="mt-diag-copy" onclick="mtCopiaDiag()" style="'+btn+'">📋 Copiar detalhes do erro</button>'
+      + '<pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;color:#888;margin-top:16px">'+texto().replace(/</g,'&lt;')+'</pre>';
+    document.body.appendChild(d);
+  }
+  setTimeout(function(){
+    var preso = window.__loginIniciado || document.documentElement.classList.contains('restaurando') || (typeof fbAuth === 'undefined');
+    if(!window.__mtOk && preso) mostra();
+  }, 16000);
+})();
+</script>
+<script src="./app.js?v=2027.1-beta.6"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
-if ('serviceWorker' in navigator) {
+var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();
+var _tinhaCtl = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+if ('serviceWorker' in navigator && !_semSW) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {
       // Verifica atualização a cada abertura
@@ -1673,7 +1740,7 @@ if ('serviceWorker' in navigator) {
     // recarrega quando novo SW assume o controle
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing) return;
+      if (refreshing || !_tinhaCtl) return;   // 1ª instalação: o app já está com o código novo, não recarrega no meio do login
       refreshing = true;
       window.location.reload();
     });

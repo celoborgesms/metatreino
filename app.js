@@ -1,5 +1,5 @@
 // ===== MetaTreino 2027.1 Beta 1 =====
-const APP_VERSION = '2027.1-beta.5';
+const APP_VERSION = '2027.1-beta.6';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -628,7 +628,7 @@ function doDeleteAccount(){
 }
 
 async function afterGoogleSignIn(user){
-  fbUser = user;
+  fbUser = user; window.__loginIniciado = true;
   try{ localStorage.setItem('metatreino_sessao','1'); }catch(e){}
   const email = (user.email||'').toLowerCase();
   showScreen('scr-auth');
@@ -724,8 +724,7 @@ async function afterGoogleSignIn(user){
   bootAfterAuth();
 }
 
-try{ fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{}); }catch(e){}
-setTimeout(()=>{ document.documentElement.classList.remove('restaurando'); }, 12000);   // segurança: nunca deixa o login escondido pra sempre
+setTimeout(()=>{ document.documentElement.classList.remove('restaurando'); }, 7000);   // segurança: nunca deixa o login escondido pra sempre
 fbAuth.onAuthStateChanged(function(user){
   if(user){
     afterGoogleSignIn(user);
@@ -903,6 +902,7 @@ function feriadoEscolha(op){
 }
 function isFeriadoDescanso(date){ try{ return !!(state.feriados && state.feriados[chaveDia(date)]==='descanso'); }catch(e){ return false; } }
 function bootAfterAuth(){
+  window.__mtOk = true; try{ localStorage.removeItem('mt_boot'); }catch(e){}
   document.documentElement.classList.remove('restaurando');
   try{ restauraTreinoFeriado(); }catch(e){}
   cleanupOldHistory();
@@ -991,6 +991,7 @@ function cleanupOldHistory(){
       state.modules[m].history = state.modules[m].history.filter(h=>h.at >= cutoff);
     }
   });
+  try{ Object.keys(state.extras||{}).sort().slice(0,-14).forEach(k=>delete state.extras[k]); }catch(e){}
   // antes de apagar as séries antigas, guarda um RESUMO compacto (data, melhor carga, volume, reps): o gráfico de evolução vai a 2 anos
   state.progResumo = state.progResumo || {};
   Object.keys(state.progress).forEach(k=>{
@@ -2103,6 +2104,7 @@ function forcaRank(ex){
 }
 function $(id){ return document.getElementById(id); }
 function showScreen(id){
+  if(id!=='scr-auth'){ window.__mtOk = true; try{ localStorage.removeItem('mt_boot'); }catch(e){} }
   if(id==='scr-auth'){ try{ resetAuthUI(); }catch(e){} } document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); window.scrollTo({top:0,behavior:'instant'}); }
 function toast(msg, ms){
   let wrap = document.getElementById('toast-wrap');
@@ -2439,7 +2441,7 @@ function renderQuickStats(){
     const linha = (cor,lbl,pct,val,sub)=>`<div class="act-row"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:${cor}"></i>${lbl}</div><span class="act-pct">${pct}%</span></div><div class="act-val">${val}<small>${sub}</small></div><div class="act-bar"><i style="width:${pct}%;background:${cor}"></i></div></div>`;
     el.innerHTML = `
       <div class="act-head"><h3>Atividade da semana</h3><span>${d.sem.length} de ${d.planejados||'–'} treinos</span></div>
-      <div class="act-card" onclick="openAtividadeDetalhes()">
+      <div class="act-card">
         <div class="act-rings"><svg viewBox="0 0 120 120">${_anel(52,pT,'var(--primary)')}${_anel(40,pM,'var(--accent)')}${_anel(28,pS,'var(--prep)')}</svg>
           <div class="act-center"><b>${pctGeral}%</b><span>da meta</span></div></div>
         <div class="act-legend">
@@ -2447,8 +2449,8 @@ function renderQuickStats(){
           ${linha('var(--accent)', d.usaSeries?'Séries':'Minutos', pc(pM), n2, ` / ${m2||'–'}${d.usaSeries?'':' min'}`)}
           ${linha('var(--prep)','Semanas na meta',pc(pS),d.semanas,` ${d.semanas===1?'semana':'semanas'} · meta 4`)}
         </div>
-      </div>
-      <div class="tapdica">Toque para ver os detalhes ›</div>`;
+      </div>`;
+    el.onclick = openAtividadeDetalhes;
   }catch(e){ el.innerHTML=''; }
   try{ renderHomeMetrics(); }catch(e){}
 }
@@ -3267,7 +3269,7 @@ function checkLiftDone(w){
   });
 }
 
-function renderLiftBlocks(w){
+function renderLiftBlocksBase(w){
   const groups = {};
   w.exercises.forEach(ex=>{
     const g = (ex.sub||'').split(/[\s\/]/)[0] || 'Principal';
@@ -3312,6 +3314,14 @@ function cardConcluidoAnterior(h){
   const dt = dias[d.getDay()]+', '+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
   return `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído</div><div class="card-sub">Feito ${dt}. Pra ajustar algo, edite pelo Histórico.</div></div>`;
 }
+function extrasDeHoje(){ return (((state.extras||{})[chaveDia(new Date())])||[]).map(e=>({...e})); }
+function renderLiftBlocks(w){
+  const base = renderLiftBlocksBase(w);
+  const ex = extrasDeHoje();
+  const feitos = ex.filter(e=>((state.progress[e.id]||[]).some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); const h=new Date(); h.setHours(0,0,0,0); return d.getTime()===h.getTime() && p.sets.length; }))).length;
+  const blocoExtras = ex.length ? `<div class="block open"><div class="block-head main" onclick="this.parentNode.classList.toggle('open')"><span style="font-size:22px">➕</span><div class="block-head-txt"><div class="block-name">Extras de hoje</div><div class="block-sub">${feitos}/${ex.length} registrados · fora do plano</div></div><div class="block-chev">▾</div></div><div class="block-body"><div class="block-inner">${ex.map((e,i)=>renderExerciseCard(e,i)).join('')}</div></div></div>` : '';
+  return base + blocoExtras + `<button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="openAddExtra()">➕ Adicionar exercício extra</button>`;
+}
 function renderExerciseCard(ex, idx){
   const last = getLastLog(ex.id);
   const pr = state.prs[ex.id];
@@ -3332,11 +3342,11 @@ function renderExerciseCard(ex, idx){
         ${doneToday?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px;font-weight:700">✅ Hoje: ${todayEntry.sets.map(s=>ex.unit==='tempo'?(s.peso>0?s.peso+'kg · ':'')+fmtTempo(s.reps):`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', ')}</div>`:''}
         <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
           ${ex.pinned?`<button class="btn btn-ghost" style="padding:6px 10px;font-size:11.5px" onclick="unpinExercise('${ex.id}')">↩️ Voltar à sugestão</button>`:''}
-          ${(curSessionLocked || _fa)
+          ${((curSessionLocked || _fa) && !ex.extra)
             ? `<span style="font-size:12px;color:var(--text-mute);padding:8px 4px">🔒 Concluído ${_fa?'':'hoje '}— edite pelo Histórico</span>`
             : `<button class="btn ${doneToday?'btn-ghost':'btn-primary'}" style="padding:8px 14px;font-size:13px" onclick="openSetLog('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">${doneToday?'✏️ Editar séries':'📝 Registrar'}</button>`}
           <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="playExercise('${ex.name.replace(/'/g,"\\'")}')">▶ Ver como fazer</button>
-          <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="openSwapExercise('${ex.id}')">🔄 Trocar</button>
+          ${ex.extra ? (doneToday ? '' : `<button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="removeExtra('${ex.id}')">🗑️ Remover</button>`) : `<button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="openSwapExercise('${ex.id}')">🔄 Trocar</button>`}
           ${temEvolucaoEx(ex.id)?`<button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="openExProgress('${ex.id}')">📈 Evolução</button>`:''}
         </div>
       </div>
@@ -3372,6 +3382,59 @@ function openSession(id){
 
 // ---------- SET LOGGER ----------
 let curLog = null;
+function removeExtra(id){
+  const k = chaveDia(new Date()); const arr = (state.extras||{})[k]; if(!arr) return;
+  state.extras[k] = arr.filter(e=>e.id!==id); saveData();
+  try{ renderSessions(); }catch(e){}
+}
+function addExtra(id){
+  const k = chaveDia(new Date()); state.extras = state.extras || {};
+  let found = null; EX_BANK.forEach(c=>c.items.forEach(it=>{ if(slug(it.name)===id) found = {name:it.name, sub:it.sub||c.name, part:c.name, iso:!!it.iso}; }));
+  if(!found){ toast('Exercício não encontrado'); return; }
+  closeModal();
+  const noPlano = (()=>{ const m = state.modules.lift; return m && m.plan && (m.plan.workouts||[]).some(w=>(w.exercises||[]).some(e=>e.id===id)); })();
+  const jaExtra = (state.extras[k]||[]).some(e=>e.id===id);
+  if(!noPlano && !jaExtra){
+    (state.extras[k] = state.extras[k] || []).push({ id, name:found.name, sub:found.sub, part:found.part, extra:true, sets:3, reps: found.iso ? '30-45s' : '12-15', rest:'60s', unit: found.iso ? 'tempo' : undefined });
+    saveData();
+  }
+  try{ renderSessions(); }catch(e){}
+  setTimeout(()=>openSetLog(id, found.name), 120);
+}
+function openAddExtra(){
+  window.__extraGrupo = window.__extraGrupo || 'Todos'; window.__extraBusca = window.__extraBusca || '';
+  const chips = ['Todos',...EX_BANK.map(c=>c.name)].map(g=>`<button type="button" class="nxchip ${g===window.__extraGrupo?'on':''}" onclick="window.__extraGrupo='${g}';openAddExtra()">${g==='Todos'?'🔎 Todos':(EX_BANK.find(c=>c.name===g).emo+' '+g)}</button>`).join('');
+  $('modal-inner').innerHTML = `<h3>➕ Exercício extra</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5;margin:4px 0 8px">Fez algo além do treino? Escolha o exercício e registre as séries. Ele entra no histórico de hoje.</p>
+    <input class="input" id="extra-busca" placeholder="Buscar (ex.: abdominal, flexão, prancha)" value="${escHtml(window.__extraBusca)}" oninput="window.__extraBusca=this.value;filtraExtras()">
+    <div class="nxchips" style="margin-top:10px;max-height:92px;overflow-y:auto">${chips}</div>
+    <div id="extra-lista" style="max-height:40vh;overflow-y:auto;margin-top:10px"></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on'); filtraExtras();
+}
+function filtraExtras(){
+  const q = (window.__extraBusca||'').trim().toLowerCase(), g = window.__extraGrupo;
+  const norm = s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const itens = []; EX_BANK.forEach(c=>{ if(g!=='Todos' && c.name!==g) return; c.items.forEach(it=>{ if(q && !norm(it.name+' '+(it.sub||'')+' '+c.name).includes(norm(q))) return; itens.push({id:slug(it.name), name:it.name, sub:it.sub||'', grupo:c.name, emo:c.emo}); }); });
+  const el = $('extra-lista'); if(!el) return;
+  el.innerHTML = itens.length ? itens.slice(0,60).map(i=>`<div class="mrow" style="cursor:pointer" onclick="addExtra('${i.id}')"><span class="n">${i.emo} ${escHtml(i.name)}<br><small style="color:var(--text-mute)">${escHtml(i.sub||i.grupo)}</small></span><span class="q">＋</span></div>`).join('') : '<div class="text-dim" style="padding:10px 0;font-size:13px">Nada encontrado.</div>';
+}
+function syncExtrasHistorico(){
+  const mod = state.modules.lift; if(!mod || !mod.history) return;
+  const extras = extrasDeHoje(); if(!extras.length) return;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const doDia = mod.history.filter(x=>x.module==='lift' && x.at>=hoje.getTime()); if(!doDia.length) return;
+  const h = doDia[doDia.length-1]; h.exercisesDone = h.exercisesDone || [];
+  extras.forEach(ex=>{
+    const p = (state.progress[ex.id]||[]).find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===hoje.getTime() && p.sets.length; });
+    const idx = h.exercisesDone.findIndex(e=>e.id===ex.id);
+    if(!p){ if(idx>=0) h.exercisesDone.splice(idx,1); return; }
+    const top = p.sets.reduce((b,s)=>((s.peso||0)*(s.reps||0) > (b.peso||0)*(b.reps||0) ? s : b), p.sets[0]);
+    const rec = { id:ex.id, name:ex.name, part:ex.part, sets:p.sets.length, best: top.peso>0 ? `${top.peso}kg×${top.reps}` : `${top.reps} reps`, extra:true };
+    if(idx>=0) h.exercisesDone[idx] = rec; else h.exercisesDone.push(rec);
+  });
+  saveData();
+}
 function openSetLog(exId, exName){
   requestWakeLock(); // mantém a tela ligada enquanto registra o exercício
   const today = new Date(); today.setHours(0,0,0,0);
@@ -3553,6 +3616,7 @@ function closeSetLog(save){
     state.progress[curLog.exId] = arr.filter(p=>p.sets.length>0);
     if(!state.progress[curLog.exId].length) delete state.progress[curLog.exId];
     saveData();
+    try{ syncExtrasHistorico(); }catch(e){}   // extra feito depois de fechar o treino também entra no histórico
     // refresh session view
     if(state.ui.tab==='sessions') renderSessions();
   }
@@ -3589,14 +3653,9 @@ function finishLiftWorkout(k){
   if(!checkLiftDone(w)){ toast('Registre ao menos uma série antes de salvar'); return; }
   // Pergunta como a pessoa terminou o treino (auto-regulação)
   const html = `
-    <h3>💪 Como você terminou o treino?</h3>
-    <p style="color:var(--text-dim);font-size:13px">Sua resposta ajuda a ajustar a sugestão do próximo treino.</p>
-    <div class="radio-grid" id="fl-feel" style="margin-top:12px">
-      <div class="opt" data-val="otimo">🚀 Muito bem, sobrou energia</div>
-      <div class="opt on" data-val="bem">😊 Bem, treino na medida</div>
-      <div class="opt" data-val="cansado">😮‍💨 Cansado, foi puxado</div>
-      <div class="opt" data-val="exausto">😩 Exausto, foi demais</div>
-    </div>
+    <h3>💪 Qual foi o esforço do treino?</h3>
+    <p style="color:var(--text-dim);font-size:13px">É o mesmo RPE que o relógio pergunta: de 1 (muito leve) a 10 (esforço máximo). Ajuda a ajustar o próximo treino.</p>
+    ${rpeHtml(5)}
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="confirmLiftWorkout('${k}')">✅ Salvar treino</button>`;
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');
@@ -3606,16 +3665,16 @@ function confirmLiftWorkout(k){
   const mod = state.modules.lift;
   const w = mod.plan.workouts.find(x=>x.k===k);
   if(!w) return;
-  const feel = readOpt('fl-feel') || 'bem';
+  const rpe = window.__rpe || 5; const feel = rpeToFeel(rpe);
   // captura o que foi feito hoje em cada exercício (pra histórico e compartilhamento)
   const today = new Date(); today.setHours(0,0,0,0);
   let firstLogAt = null;
-  const exercisesDone = (w.exercises||[]).map(ex=>{
+  const exercisesDone = [...(w.exercises||[]), ...extrasDeHoje()].map(ex=>{
     const entry = (state.progress[ex.id]||[]).find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime() && p.sets.length; });
     if(!entry) return null;
     if(!firstLogAt || entry.date < firstLogAt) firstLogAt = entry.date;
     const top = entry.sets.reduce((b,s)=>((s.peso||0)*(s.reps||0) > (b.peso||0)*(b.reps||0) ? s : b), entry.sets[0]);
-    return { id:ex.id, name:ex.name, part:ex.part, sets:entry.sets.length, best: top.peso>0 ? `${top.peso}kg×${top.reps}` : `${top.reps} reps` };
+    return { id:ex.id, name:ex.name, part:ex.part, sets:entry.sets.length, best: top.peso>0 ? `${top.peso}kg×${top.reps}` : `${top.reps} reps`, extra: ex.extra || undefined };
   }).filter(Boolean);
   // duração REAL: do primeiro registro de série até agora (com limites de sanidade);
   // se não der pra medir, usa a estimativa do plano
@@ -3627,7 +3686,7 @@ function confirmLiftWorkout(k){
   mod.history = mod.history || [];
   const adaptInfo = adaptMode();
   const _antecipou = adjustStartIfEarly(mod);
-  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:realDuration, plannedDuration:w.duration, module:'lift', feel, parts:[...(w.parts||[])], exercisesDone,
+  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:realDuration, plannedDuration:w.duration, module:'lift', feel, rpe, parts:[...(w.parts||[])], exercisesDone,
     adaptedWith: adaptInfo.active ? adaptReasonText() : null });
   ensureStats(); // deriva liftTotal do histórico — NÃO somar manualmente (contava em dobro)
   checkTrophies();
@@ -3773,7 +3832,7 @@ function renderHistory(){
         const nExs = (x.exercisesDone||[]).length;
         const meta = isRunEntry
           ? `<span>⏱️ <b>${fmtDur(x.duration)}</b></span>${x.distance?`<span>📍 <b>${x.distance}km</b></span>`:''}${x.pace?`<span>⚡ <b>${x.pace}</b></span>`:''}`
-          : `<span>⏱️ <b>${x.duration}min</b></span>${nExs?`<span>🏋️ <b>${nExs} exercícios</b></span>`:''}${feelEmo?`<span>${feelEmo}</span>`:''}`;
+          : `<span>⏱️ <b>${x.duration}min</b></span>${nExs?`<span>🏋️ <b>${nExs} exercícios</b></span>`:''}${x.rpe?`<span>💢 RPE <b>${x.rpe}</b></span>`:(feelEmo?`<span>${feelEmo}</span>`:'')}`;
         return `<div class="hist-card ${isRunEntry?'run':''}" onclick="openHistoryEntry(${x._idx})">
           <div class="hist-emo">${emo}</div>
           <div style="flex:1;min-width:0">
@@ -7611,7 +7670,7 @@ function unlockRestAudio(){
     g.gain.value = 0; o.connect(g); g.connect(restAudioCtx.destination); o.start(); o.stop(restAudioCtx.currentTime+0.01);
   }catch(e){}
 }
-function playRestBeep(){
+function playRestBeepAntigo(){
   // 4 apitos ascendentes, mais altos e longos — sinal forte de fim de descanso
   try{
     if(!restAudioCtx) return;
@@ -8661,7 +8720,7 @@ function shareWorkoutImage(histIdx){
   if(!x) return;
   const d = new Date(x.at);
   const isRun = x.module==='run';
-  const feelLbl = {otimo:'Muito bem 🚀', bem:'Bem 😊', cansado:'Cansado 😮‍💨', exausto:'Exausto 😩'}[x.feel];
+  const feelLbl = (x.rpe ? `RPE ${x.rpe} · ${RPE_LBL[x.rpe]||''}` : null) || {otimo:'Muito bem 🚀', bem:'Bem 😊', cansado:'Cansado 😮‍💨', exausto:'Exausto 😩'}[x.feel];
   if(isRun){
     const atv = x.activity==='caminhada'?'Caminhada':x.activity==='bike'?'Bike':'Corrida';
     const emo = x.activity==='caminhada'?'🚶':x.activity==='bike'?'🚴':'🏃';
@@ -10173,8 +10232,8 @@ function openRunLog(dayIdx){
     </div>
     <div class="field"><label>Distância percorrida (km)</label><input class="input mono" type="number" step="0.1" id="rl-km" placeholder="Ex: 5.2"></div>
     <div class="field"><label>Tempo total (min:seg ou h:min:seg)</label><input class="input mono" type="text" inputmode="numeric" id="rl-min" placeholder="Ex: 44:30 ou 44.30 (min seg)"${livre?'':` value="${w.duration}"`}></div>
-    <div class="field"><label>Como se sentiu?</label>
-      <div class="radio-grid g3" id="rl-rate"><div class="opt" data-val="1">😩 Difícil</div><div class="opt on" data-val="3">😊 Normal</div><div class="opt" data-val="5">🚀 Ótimo</div></div>
+    <div class="field"><label>Esforço percebido (RPE, de 1 a 10)</label>
+      ${rpeHtml(5)}
     </div>
     <div class="row" style="gap:8px;margin-top:14px">
       <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
@@ -10188,7 +10247,7 @@ const ACTIVITY_META = { corrida:{emo:'🏃',lbl:'Corrida'}, caminhada:{emo:'🚶
 function saveRunLog(dayIdx){
   const km = parseFloat($('rl-km').value);
   const min = parseTimeToMin($('rl-min').value);
-  const rate = parseInt(readOpt('rl-rate')) || 3;
+  const rpe = window.__rpe || 5; const rate = rpe<=3 ? 5 : (rpe<=7 ? 3 : 1);   // mantém o campo antigo (rating) coerente
   const type = readOpt('rl-type') || 'corrida';
   if(!km || km<=0){ toast('Distância inválida'); return; }
   if(!min || min<=0){ toast('Tempo inválido'); return; }
@@ -10206,7 +10265,7 @@ function saveRunLog(dayIdx){
   const _riSave = (typeof raceInfo==='function') ? raceInfo() : null;
   const _ehProvaAgora = !!(_riSave && _riSave.hoje && type==='corrida' && !raceEntryToday());
   mod.history.push({ id:w.k, name: _ehProvaAgora ? '🏅 '+(_riSave.dataFmt ? 'Prova' : 'Prova')+' — '+km+'km' : name,
-    at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, module:'run', activity:type,
+    at:Date.now(), duration:min, distance:km, pace:paceStr, rating:rate, rpe, module:'run', activity:type,
     isRace: _ehProvaAgora || undefined,
     adaptedWith: adaptInfoRun.active ? adaptReasonText() : null });
   // Os contadores vitalícios são recalculados por ensureStats (histórico + reserva do que já
@@ -10397,11 +10456,12 @@ const NUTRI_ALIMENTOS = {
   figado:   ['Fígado bovino grelhado', 225, 29.9, 4.2, 9, null, null],
   acem:     ['Carne moída (acém) refogada', 212, 26.7, 0, 10.9, null, null],
   sardinha: ['Sardinha em lata', 190, 24, 0, 10, null, null],
-  soja:     ['Soja texturizada (hidratada)', 110, 17, 11, 0.4, null, null]
+  soja:     ['Soja texturizada (hidratada)', 110, 17, 11, 0.4, null, null],
+  oleo:     ['Óleo de soja', 884, 0, 0, 100, null, {g:4,nome:'col. de chá'}, true]
 };
 // ingredientes mais caros: ficam de fora no modo econômico
-const NUTRI_CARO = ['whey','castanha','abacate','granola','ricota','peru','cottage','tofu','morango','atum'];
-const NUTRI_CATEG = { proteinas:['🍗 Proteínas',['frango','sobrecoxa','patinho','acem','figado','peixe','atum','sardinha','ovo','soja','tofu','peru','whey','lentilha','grao']], carbo:['🍚 Cereais, tubérculos e pães',['arroz','feijao','macarrao','batata','mandioca','cuscuz','pao','paoint','paodq','tapioca','aveia','granola']], frutas:['🍌 Frutas e hortifrúti',['banana','maca','laranja','mamao','abacaxi','morango','abacate','legumes','salada']], lat:['🥛 Laticínios',['leite','iogurte','minas','cottage','ricota','mucarela']], outros:['🫒 Outros',['azeite','amendoim','castanha','mel']] };
+const NUTRI_CARO = ['patinho','acem','peixe','atum','minas','mucarela','ricota','cottage','whey','castanha','abacate','granola','peru','tofu','morango'];
+const NUTRI_CATEG = { proteinas:['🍗 Proteínas',['frango','sobrecoxa','patinho','acem','figado','peixe','atum','sardinha','ovo','soja','tofu','peru','whey','lentilha','grao']], carbo:['🍚 Cereais, tubérculos e pães',['arroz','feijao','macarrao','batata','mandioca','cuscuz','pao','paoint','paodq','tapioca','aveia','granola']], frutas:['🍌 Frutas e hortifrúti',['banana','maca','laranja','mamao','abacaxi','morango','abacate','legumes','salada']], lat:['🥛 Laticínios',['leite','iogurte','minas','cottage','ricota','mucarela']], outros:['🫒 Outros',['azeite','oleo','amendoim','castanha','mel']] };
 const NUTRI_LACTOSE = ['leite','iogurte','minas','cottage','ricota','mucarela','whey','paodq'];
 const NUTRI_GLUTEN = ['pao','paoint','aveia','granola','macarrao'];
 const NUTRI_CRU = { arroz:3, feijao:2.5, macarrao:2.2, lentilha:2.5, grao:2.5, soja:3, frango:.75, sobrecoxa:.75, patinho:.75, acem:.75, peixe:.8, figado:.8 };   // quanto o cozido rende em relação ao cru
@@ -10443,7 +10503,11 @@ const NUTRI_REFEICOES = [
     {n:'Arroz, feijão e fígado acebolado',  i:[['arroz',150],['feijao',100],['figado',100],['legumes',100],['salada',80],['azeite',4]]},
     {n:'Acém moído com mandioca e feijão',  i:[['mandioca',150],['acem',100],['feijao',80],['salada',100],['azeite',4]]},
     {n:'Arroz, feijão e sardinha',          i:[['arroz',150],['feijao',100],['sardinha',80],['legumes',80],['salada',100]]},
-    {n:'Arroz, feijão e soja com legumes',  i:[['arroz',150],['feijao',80],['soja',100],['legumes',120],['salada',80],['azeite',4]]} ],
+    {n:'Arroz, feijão e soja com legumes',  i:[['arroz',150],['feijao',80],['soja',100],['legumes',120],['salada',80],['azeite',4]]},
+    {n:'Arroz, feijão e ovo frito',         i:[['arroz',150],['feijao',100],['ovo',2],['legumes',100],['salada',80],['azeite',4]]},
+    {n:'Arroz com frango desfiado e legumes',i:[['arroz',150],['frango',120],['legumes',150],['azeite',4]]},
+    {n:'Macarrão com ovo e legumes',        i:[['macarrao',150],['ovo',2],['legumes',120],['salada',80],['azeite',4]]},
+    {n:'Cuscuz com frango e legumes',       i:[['cuscuz',200],['frango',120],['legumes',100],['azeite',4]]} ],
     veg:[
     {n:'Arroz, feijão e ovos',              i:[['arroz',150],['feijao',120],['ovo',2],['legumes',100],['salada',80],['azeite',4]]},
     {n:'Arroz com lentilha e tofu',         i:[['arroz',120],['lentilha',120],['tofu',100],['salada',80],['azeite',4]]},
@@ -10588,7 +10652,7 @@ function nutriItem(id, qtdBase, f){
     gramas = Math.max(passo, Math.round(q/passo)*passo);
     texto = `${gramas}${id==='leite'||id==='iogurte'?' ml':' g'}`;
     if(med){ const n = Math.round(gramas/med.g*2)/2; if(n>=1 && med.g>=15) texto += ` (≈ ${String(n).replace('.5',',5')} ${med.nome})`; }
-    if(id==='azeite') texto = `1 col. de chá (${gramas} g)`;
+    if(id==='azeite' || id==='oleo') texto = `1 col. de chá (${gramas} g)`;
   }
   const k = gramas/100;
   return { id, nome, texto, gramas, un: un ? gramas/un : 0, kcal:kcal100*k, p:p*k, c:c*k, g:g*k };
@@ -10619,7 +10683,7 @@ function nutriMontarPlano(diaIdx){
     const k0 = op.i.reduce((s,[id,q])=>{ const a=NUTRI_ALIMENTOS[id]; return s + a[1]*(a[5]? q*a[5] : q)/100; },0);
     const alvo = calc.kcal * shares[r.id];
     const f = Math.min(2.4, Math.max(.55, alvo*gf/k0));
-    const itens = op.i.map(([id,q])=>nutriItem(id,q,f));
+    const itens = op.i.map(([id,q])=>nutriItem((n.economico && id==='azeite') ? 'oleo' : id, q, f));
     const tot = itens.reduce((t,i)=>({kcal:t.kcal+i.kcal,p:t.p+i.p,c:t.c+i.c,g:t.g+i.g}),{kcal:0,p:0,c:0,g:0});
     const preTreino = treino && r.id==='lanche2';
     return { id:r.id, chave, nome: preTreino ? 'Pré-treino' : r.nome, icone: preTreino ? '⚡' : r.icone, hora:r.hora, prato:op.n, itens, tot, variante:v+1, total:lista.length, preTreino };
@@ -10846,6 +10910,7 @@ function openNutri(){
           <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${n.semLactose?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('semLactose',${!n.semLactose})">🥛 Sem lactose</button><button class="seg ${n.semGluten?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('semGluten',${!n.semGluten})">🌾 Sem glúten</button></div>
           ${(n.semLactose||n.semGluten)?'<div style="font-size:11px;color:var(--text-mute);line-height:1.5;margin-top:6px">Os pratos evitam esses ingredientes, mas não garantem ausência de traços. Se for alergia, intolerância grave ou doença celíaca, siga seu médico e confira os rótulos.</div>':''}
           <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${n.economico?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('economico',${!n.economico})">💰 Econômico (ingredientes baratos)</button></div>
+          ${n.economico?'<div style="font-size:11px;color:var(--text-mute);line-height:1.5;margin-top:6px">Sem carne bovina, peixe, queijos, whey, castanhas e outros itens caros; usa óleo de soja no lugar do azeite. Baseado em preços de 2026 (DIEESE e Procon-SP); o valor muda de cidade pra cidade.</div>':''}
           <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${n.vegetariano?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('vegetariano',${!n.vegetariano})">🌱 Vegetariano (ovos e laticínios liberados)</button></div>
         </div></details>
       <button class="btn btn-ghost btn-block" style="margin:0 0 8px" onclick="nutriListaCompras()">🛒 Lista de compras da semana</button>
@@ -11088,3 +11153,60 @@ function openAgua(){
     <button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
+
+// ===== RPE: esforço percebido (1-10), igual ao do relógio =====
+const RPE_LBL = {1:'Muito leve',2:'Leve',3:'Leve a moderado',4:'Moderado',5:'Moderado a puxado',6:'Puxado',7:'Difícil',8:'Muito difícil',9:'Quase no limite',10:'Esforço máximo'};
+const RPE_DESC = {1:'Dava pra conversar sem esforço',2:'Conversava com folga',3:'Conversava com folga',4:'Conversava, mas já sentia',5:'Conversava com algum esforço',6:'Frases mais curtas',7:'Só frases curtas',8:'Quase sem conseguir falar',9:'Muito perto do limite',10:'Não dava pra fazer mais nada'};
+function rpeToFeel(n){ return n<=3 ? 'otimo' : (n<=6 ? 'bem' : (n<=8 ? 'cansado' : 'exausto')); }   // compatível com o que o app já usava
+function rpeHtml(def){
+  window.__rpe = def;
+  const barras = [1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="rpe-b ${n===def?'on':''}" data-n="${n}" onclick="rpeSet(${n})" style="height:${26+n*4}px;background:hsl(${142-(n-1)*14},68%,44%)"><span>${n}</span></button>`).join('');
+  return `<div class="rpe"><div class="rpe-bars" id="rpe-bars">${barras}</div><div class="rpe-lbl" id="rpe-lbl"><b>${def}</b> · ${RPE_LBL[def]}<small>${RPE_DESC[def]}</small></div></div>`;
+}
+function rpeSet(n){
+  window.__rpe = n;
+  document.querySelectorAll('#rpe-bars .rpe-b').forEach(b=>b.classList.toggle('on', +b.dataset.n===n));
+  const l = document.getElementById('rpe-lbl'); if(l) l.innerHTML = `<b>${n}</b> · ${RPE_LBL[n]}<small>${RPE_DESC[n]}</small>`;
+}
+
+// ===== SOM DO FIM DO CRONÔMETRO (escolhível) =====
+const SONS_FIM = { sino:{nome:'Sino',emo:'🔔'}, gongo:{nome:'Gongo grave',emo:'🥁'}, digital:{nome:'Digital (relógio)',emo:'⌚'}, campainha:{nome:'Campainha ding-dong',emo:'🛎️'}, apitos:{nome:'Apitos (som antigo)',emo:'📣'} };
+function getSomFim(){ try{ const s = localStorage.getItem('metatreino_som'); return SONS_FIM[s] ? s : 'sino'; }catch(e){ return 'sino'; } }
+function _nota(ctx, freq, t0, dur, tipo, vol, ataque){
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = tipo; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t0 + (ataque||0.01));
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(ctx.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+}
+function tocaSomFim(id){
+  try{
+    if(!restAudioCtx) return;
+    if(restAudioCtx.state === 'suspended') restAudioCtx.resume();
+    const c = restAudioCtx, t = c.currentTime + 0.02;
+    if(id==='apitos'){ playRestBeepAntigo(); return; }
+    if(id==='sino'){       // sino metálico: parciais inarmônicos, duas batidas
+      [0, 0.95].forEach(off=>[[880,.55],[2429,.28],[4752,.12],[1320,.2]].forEach(([f,v])=>_nota(c,f,t+off,1.7,'sine',v,0.005)));
+    } else if(id==='gongo'){ // grave e longo
+      [[110,.8],[221,.45],[303,.3],[462,.18]].forEach(([f,v])=>_nota(c,f,t,2.8,'sine',v,0.03));
+    } else if(id==='digital'){ // três bips curtos agudos, duas vezes (estilo relógio)
+      [0,0.22,0.44,1.0,1.22,1.44].forEach(off=>_nota(c,1760,t+off,0.12,'triangle',.5,0.005));
+    } else if(id==='campainha'){ // ding-dong
+      [[784,0],[587,0.7]].forEach(([f,off])=>{ _nota(c,f,t+off,1.0,'sine',.6,0.01); _nota(c,f*2,t+off,0.6,'sine',.2,0.01); });
+    }
+  }catch(e){}
+}
+function playRestBeep(){
+  tocaSomFim(getSomFim());
+  try{ if(navigator.vibrate) navigator.vibrate([250,120,250,120,400]); }catch(e){}
+}
+function openSomFim(){
+  const cur = getSomFim();
+  $('modal-inner').innerHTML = `<h3>🔔 Som do cronômetro</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.55">Toca quando o descanso entre as séries termina. O celular também vibra (se o aparelho permitir).</p>
+    ${Object.keys(SONS_FIM).map(k=>`<div class="list-row" style="${k===cur?'border:1px solid var(--primary)':''}"><span onclick="setSomFim('${k}')" style="flex:1;display:flex;gap:10px;align-items:center"><span>${SONS_FIM[k].emo}</span><span>${SONS_FIM[k].nome}${k===cur?' ✓':''}</span></span><button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="unlockRestAudio();tocaSomFim('${k}')">▶ Ouvir</button></div>`).join('')}
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function setSomFim(k){ try{ localStorage.setItem('metatreino_som', k); }catch(e){} unlockRestAudio(); tocaSomFim(k); openSomFim(); }

@@ -1,4 +1,4 @@
-const APP_VERSION = '2027.1-beta.5';
+const APP_VERSION = '2027.1-beta.6';
 const CACHE = 'metatreino-' + APP_VERSION;
 // manifest.json entra aqui de propósito: é o arquivo que o Chrome consulta pra
 // detectar mudança de ícone/nome e reemitir o app instalado. Em cache-first ele
@@ -7,7 +7,7 @@ const CRITICAL = ['./index.html', './app.js', './manifest.json']; // network-fir
 const STATIC = ['./icon.svg', './icon-512.png']; // cache-first
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll([...CRITICAL, ...STATIC, './'])).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll([...CRITICAL, ...STATIC, './'])));
 });
 
 self.addEventListener('activate', (e) => {
