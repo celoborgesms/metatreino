@@ -278,6 +278,37 @@ let cloudSyncTimer = null;
 
 function localCacheKey(uid){ return DATA_PREFIX + uid; }
 
+// O Firestore não aceita arrays diretamente dentro de outros arrays.
+// Codificamos apenas esses arrays internos como objetos identificados e
+// restauramos a estrutura original ao carregar, sem alterar o estado local.
+const MT_NESTED_ARRAY_MARKER = '__metatreino_nested_array_v1__';
+function prepararEstadoFirestore(valor){
+  if(Array.isArray(valor)){
+    return valor.map(item => Array.isArray(item)
+      ? { [MT_NESTED_ARRAY_MARKER]: prepararEstadoFirestore(item) }
+      : prepararEstadoFirestore(item));
+  }
+  if(valor && typeof valor === 'object'){
+    const saida = {};
+    Object.keys(valor).forEach(chave => { saida[chave] = prepararEstadoFirestore(valor[chave]); });
+    return saida;
+  }
+  return valor;
+}
+function restaurarEstadoFirestore(valor){
+  if(Array.isArray(valor)) return valor.map(restaurarEstadoFirestore);
+  if(valor && typeof valor === 'object'){
+    const chaves = Object.keys(valor);
+    if(chaves.length === 1 && chaves[0] === MT_NESTED_ARRAY_MARKER && Array.isArray(valor[MT_NESTED_ARRAY_MARKER])){
+      return restaurarEstadoFirestore(valor[MT_NESTED_ARRAY_MARKER]);
+    }
+    const saida = {};
+    chaves.forEach(chave => { saida[chave] = restaurarEstadoFirestore(valor[chave]); });
+    return saida;
+  }
+  return valor;
+}
+
 function saveData(){
   if(!state.user || !fbUser) return;
   state._savedAt = Date.now(); // carimbo pra decidir quem é mais novo (nuvem × local)
@@ -294,7 +325,7 @@ function syncToCloud(){
     email: fbUser.email,
     nome: (state.user && state.user.profile && state.user.profile.nickname) || fbUser.displayName || '',
     atualizadoEm: state._savedAt || Date.now(),
-    estadoApp: state
+    estadoApp: prepararEstadoFirestore(state)
   }).catch(e=>console.log('Erro ao salvar na nuvem:', e));
 }
 // Ao minimizar/fechar o app, envia pra nuvem NA HORA (sem esperar o debounce) —
@@ -310,7 +341,7 @@ async function loadData(){
   let cloud = null, local = null;
   try{
     const doc = await fbTimeout(db.collection('usuarios').doc(fbUser.uid).get(), 5000);
-    if(doc.exists && doc.data().estadoApp) cloud = doc.data().estadoApp;
+    if(doc.exists && doc.data().estadoApp) cloud = restaurarEstadoFirestore(doc.data().estadoApp);
   }catch(e){ console.log('Sem conexão com a nuvem agora, usando cache local:', e); }
   try{ local = JSON.parse(localStorage.getItem(localCacheKey(fbUser.uid))||'null'); }catch(e){}
   // decide pela cópia mais recente — nunca deixa a nuvem antiga apagar treino recém-salvo no aparelho

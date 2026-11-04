@@ -1,5 +1,5 @@
 const APP_VERSION = '2027.1-beta.6';
-const CACHE = 'metatreino-' + APP_VERSION;
+const CACHE = 'metatreino-' + APP_VERSION + '-firestore-fix1';
 // manifest.json entra aqui de propósito: é o arquivo que o Chrome consulta pra
 // detectar mudança de ícone/nome e reemitir o app instalado. Em cache-first ele
 // recebia a versão antiga e o ícone nunca atualizava sozinho.
