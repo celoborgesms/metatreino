@@ -281,7 +281,7 @@ function localCacheKey(uid){ return DATA_PREFIX + uid; }
 // O Firestore não aceita arrays diretamente dentro de outros arrays.
 // Codificamos apenas esses arrays internos como objetos identificados e
 // restauramos a estrutura original ao carregar, sem alterar o estado local.
-const MT_NESTED_ARRAY_MARKER = '__metatreino_nested_array_v1__';
+const MT_NESTED_ARRAY_MARKER = 'metatreinoNestedArrayV1';
 function prepararEstadoFirestore(valor){
   if(Array.isArray(valor)){
     return valor.map(item => Array.isArray(item)
@@ -290,7 +290,12 @@ function prepararEstadoFirestore(valor){
   }
   if(valor && typeof valor === 'object'){
     const saida = {};
-    Object.keys(valor).forEach(chave => { saida[chave] = prepararEstadoFirestore(valor[chave]); });
+    Object.keys(valor).forEach(chave => {
+      // O Firestore reserva nomes que começam E terminam com __.
+      // São metadados internos/temporários e não devem ir para a nuvem.
+      if(/^__.*__$/.test(chave)) return;
+      saida[chave] = prepararEstadoFirestore(valor[chave]);
+    });
     return saida;
   }
   return valor;
@@ -546,14 +551,18 @@ function doGoogleSignIn(){
   });
 }
 function doLogout(){
+  const usuarioParaSair = fbUser;
   try{ localStorage.removeItem('metatreino_sessao'); }catch(e){}
-  syncToCloud(); // envia qualquer alteração pendente (ex: foto removida) ANTES de sair
-  fbAuth.signOut().catch(()=>{});
+  // A sincronização nunca pode impedir o encerramento da sessão.
+  // Firestore pode lançar erro síncrono ao validar dados antes de retornar a Promise.
+  try{ syncToCloud(); }catch(e){ console.log('Sincronização ignorada ao sair:', e); }
   fbUser = null;
   state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
   showScreen('scr-auth');
-  $('tabbar').classList.add('hidden');
+  const tabbar = $('tabbar'); if(tabbar) tabbar.classList.add('hidden');
   try{ resetAuthUI(); }catch(e){}
+  // O logout é independente do sucesso/falha da sincronização.
+  if(usuarioParaSair) fbAuth.signOut().catch(e=>console.log('Erro ao encerrar sessão:', e));
 }
 function appConfirm(msg, onOk, opts){
   opts = opts||{};
