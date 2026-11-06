@@ -17,6 +17,7 @@
     if(t==='dark') t = 'zepp'; if(t==='light') t = 'claro';
     if(['zepp','aurora','classico','oceano','claro','amoled'].indexOf(t)<0) t = 'zepp';
     document.documentElement.setAttribute('data-theme', t);
+    try{ if(localStorage.getItem('metatreino_estilo') !== 'colorido') document.documentElement.classList.add('sobrio'); }catch(e){ document.documentElement.classList.add('sobrio'); }
     try{ if(localStorage.getItem('metatreino_sessao')) document.documentElement.classList.add('restaurando'); }catch(e){}
     var cores = {amoled:'#000000', zepp:'#000000', aurora:'#070a1a', classico:'#050914', oceano:'#04111b', claro:'#f5f6fb'};
     var m = document.querySelector('meta[name="theme-color"]');
@@ -898,7 +899,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
 
 /* AMOLED: preto absoluto (pixels apagados), só bordas finas */
 [data-theme="amoled"] body{background:#000!important}
-[data-theme="amoled"] #app-deco{display:none}
+[data-theme="amoled"] #app-deco{opacity:.16;color:var(--primary)}
 [data-theme="amoled"] .card,[data-theme="amoled"] .week,[data-theme="amoled"] .plan-card,[data-theme="amoled"] #scr-home .quote,
 [data-theme="amoled"] .list-item,[data-theme="amoled"] .stat,[data-theme="amoled"] .stat-mini,[data-theme="amoled"] .list-row,
 [data-theme="amoled"] .trophy,[data-theme="amoled"] .hist-card,[data-theme="amoled"] .rest-card,[data-theme="amoled"] .act-card,
@@ -954,6 +955,21 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
 .rpe-b.on{opacity:1;box-shadow:0 0 0 2px var(--text-strong)}
 .rpe-lbl{text-align:center;margin-top:10px;font-size:15px}
 .rpe-lbl small{display:block;color:var(--text-dim);font-size:12px;margin-top:2px}
+
+.pillbtn{padding:6px 12px;border-radius:99px;background:var(--surface-2);border:1px solid var(--border-strong);font-size:12px;font-weight:700;color:var(--text-strong)}
+
+#scr-home #card-update{order:90;padding:14px 16px}
+.upd-row{display:flex;align-items:center;gap:12px}
+.upd-row > div{flex:1;min-width:0}
+.upd-row b{display:block;font-size:14px}
+.upd-row small{display:block;color:var(--text-dim);font-size:12px;margin-top:2px;line-height:1.4}
+.upd-row .btn{padding:9px 14px;font-size:13px;flex:0 0 auto}
+.upd-card.on{border-color:var(--line-primary);background:var(--tint-primary)}
+
+/* estilo sóbrio: emojis viram ícones de linha (ou ficam em tom neutro) */
+.ico{display:inline-block;width:1.12em;height:1.12em;vertical-align:-0.2em;line-height:1}
+.ico svg{width:100%;height:100%;display:block;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+html.sobrio .emo{filter:grayscale(1) contrast(1.1);opacity:.9}
 </style>
 </head>
 <body>
@@ -1295,6 +1311,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
       <div><h1 id="home-hi">Bom dia, Atleta! 👋</h1><div class="greet-sub" id="home-goal">Objetivo: —</div></div>
     </div>
     <div class="card hidden" id="card-feriado"></div>
+    <div class="card upd-card" id="card-update"></div>
     <div class="quick" id="home-quick"></div>
     <div class="metrics" id="home-metrics"></div>
     <div class="quote"><div class="quote-label">FRASE DO DIA</div><div class="quote-txt" id="daily-quote">🌱 Pequeno hoje, grande amanhã. Confie no processo.</div></div>
@@ -1618,6 +1635,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     <div class="list-row" onclick="toggleThemePicker()" id="theme-row"><span>🎨</span> <span>Aparência</span><span id="theme-row-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">Premium ›</span></div>
     <div class="theme-grid hidden" id="theme-grid"></div>
     <div class="list-row" onclick="openSomFim()"><span>🔔</span> <span>Som do cronômetro</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">escolher ›</span></div>
+    <div class="list-row" onclick="openEstiloIcones()"><span>✨</span> <span>Estilo dos ícones</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">sóbrio / colorido ›</span></div>
     <div class="list-row" onclick="openEmojiTone()"><span>👋</span> <span>Tom dos emojis</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">opcional ›</span></div>
     <div class="list-row" onclick="toggleDeco()"><span>🎨</span> <span id="deco-row-label">Fundo decorativo (ligado)</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">tocar para trocar</span></div>
     <div class="section-lbl" style="margin:18px 0 8px">👤 CONTA</div>
@@ -1630,7 +1648,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 6</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 7</span>
     </div>
   </div>
 </div>
@@ -1693,7 +1711,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
     limpaSW(); setTimeout(function(){ location.reload(); }, 700);
   };
   function texto(){
-    return 'MetaTreino '+(typeof APP_VERSION!=='undefined'?APP_VERSION:'?')+'\nAparelho: '+navigator.userAgent+'\nOnline: '+navigator.onLine+'\nAberturas seguidas: '+n+'\nErros: '+(erros.join(' | ')||'nenhum registrado');
+    return 'MetaTreino '+(typeof APP_VERSION!=='undefined'?APP_VERSION:'?')+'\nAparelho: '+navigator.userAgent+'\nOnline: '+navigator.onLine+'\nAberturas seguidas: '+n+'\nErros: '+(erros.join(' | ')||'nenhum registrado')+(function(){ try{ var s=localStorage.getItem('mt_sane'), e=localStorage.getItem('mt_syncerr'); return (s&&s!=='[]'?'\nCampos corrigidos: '+s:'')+(e?'\nÚltimo erro de nuvem: '+e:''); }catch(x){ return ''; } })();
   }
   window.mtCopiaDiag = function(){ try{ navigator.clipboard.writeText(texto()); var b=document.getElementById('mt-diag-copy'); if(b) b.textContent='✅ Copiado'; }catch(e){ alert(texto()); } };
   function mostra(){
@@ -1715,7 +1733,7 @@ body{padding-bottom:calc(118px + env(safe-area-inset-bottom))}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.6-firestore-fix1"></script>
+<script src="./app.js?v=2027.1-beta.7"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();

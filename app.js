@@ -1,5 +1,5 @@
 // ===== MetaTreino 2027.1 Beta 1 =====
-const APP_VERSION = '2027.1-beta.6';
+const APP_VERSION = '2027.1-beta.7';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -278,42 +278,6 @@ let cloudSyncTimer = null;
 
 function localCacheKey(uid){ return DATA_PREFIX + uid; }
 
-// O Firestore não aceita arrays diretamente dentro de outros arrays.
-// Codificamos apenas esses arrays internos como objetos identificados e
-// restauramos a estrutura original ao carregar, sem alterar o estado local.
-const MT_NESTED_ARRAY_MARKER = 'metatreinoNestedArrayV1';
-function prepararEstadoFirestore(valor){
-  if(Array.isArray(valor)){
-    return valor.map(item => Array.isArray(item)
-      ? { [MT_NESTED_ARRAY_MARKER]: prepararEstadoFirestore(item) }
-      : prepararEstadoFirestore(item));
-  }
-  if(valor && typeof valor === 'object'){
-    const saida = {};
-    Object.keys(valor).forEach(chave => {
-      // O Firestore reserva nomes que começam E terminam com __.
-      // São metadados internos/temporários e não devem ir para a nuvem.
-      if(/^__.*__$/.test(chave)) return;
-      saida[chave] = prepararEstadoFirestore(valor[chave]);
-    });
-    return saida;
-  }
-  return valor;
-}
-function restaurarEstadoFirestore(valor){
-  if(Array.isArray(valor)) return valor.map(restaurarEstadoFirestore);
-  if(valor && typeof valor === 'object'){
-    const chaves = Object.keys(valor);
-    if(chaves.length === 1 && chaves[0] === MT_NESTED_ARRAY_MARKER && Array.isArray(valor[MT_NESTED_ARRAY_MARKER])){
-      return restaurarEstadoFirestore(valor[MT_NESTED_ARRAY_MARKER]);
-    }
-    const saida = {};
-    chaves.forEach(chave => { saida[chave] = restaurarEstadoFirestore(valor[chave]); });
-    return saida;
-  }
-  return valor;
-}
-
 function saveData(){
   if(!state.user || !fbUser) return;
   state._savedAt = Date.now(); // carimbo pra decidir quem é mais novo (nuvem × local)
@@ -321,17 +285,58 @@ function saveData(){
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = setTimeout(syncToCloud, 800);
 }
+// O Firestore recusa o documento inteiro se existir UM campo inválido (chave "__x__", array dentro de array,
+// undefined...). Antes, isso estourava dentro do syncToCloud e travava o login e o botão Sair.
+// Agora o estado é higienizado antes de ir pra nuvem e qualquer falha fica contida.
+function limpaParaNuvem(v, path, achados){
+  if(v === null) return null;
+  if(v === undefined) return undefined;
+  const t = typeof v;
+  if(t === 'function' || t === 'symbol') return undefined;
+  if(t === 'number') return isFinite(v) ? v : null;
+  if(t !== 'object') return v;
+  if(Array.isArray(v)){
+    const out = [];
+    v.forEach((x,i)=>{
+      if(Array.isArray(x)){ achados.push(path+'['+i+'] array dentro de array'); out.push({a:limpaParaNuvem(x, path+'['+i+']', achados)}); return; }
+      const c = limpaParaNuvem(x, path+'['+i+']', achados);
+      out.push(c === undefined ? null : c);
+    });
+    return out;
+  }
+  if(v instanceof Date) return v.getTime();
+  const proto = Object.getPrototypeOf(v);
+  if(proto !== Object.prototype && proto !== null) return undefined;   // elementos do DOM, classes etc.
+  const out = {};
+  Object.keys(v).forEach(k=>{
+    let nk = k;
+    if(/^__.*__$/.test(k)){ nk = k.replace(/^_+/,'x_').replace(/_+$/,'_x'); achados.push(path+'.'+k+' (campo reservado)'); }
+    if(nk === ''){ nk = '_vazio'; achados.push(path+' (campo vazio)'); }
+    const c = limpaParaNuvem(v[k], path+'.'+nk, achados);
+    if(c !== undefined) out[nk] = c;
+  });
+  return out;
+}
 function syncToCloud(){
   if(!fbUser || !state.user) return;
   clearTimeout(cloudSyncTimer);
-  // set SEM merge: substitui o documento inteiro. Com merge, campos apagados
-  // localmente (ex: foto removida) "ressuscitavam" da nuvem no próximo login.
-  db.collection('usuarios').doc(fbUser.uid).set({
-    email: fbUser.email,
-    nome: (state.user && state.user.profile && state.user.profile.nickname) || fbUser.displayName || '',
-    atualizadoEm: state._savedAt || Date.now(),
-    estadoApp: prepararEstadoFirestore(state)
-  }).catch(e=>console.log('Erro ao salvar na nuvem:', e));
+  try{
+    const achados = [];
+    const limpo = limpaParaNuvem(state, 'estadoApp', achados);
+    try{ localStorage.setItem('mt_sane', JSON.stringify(achados.slice(0,8))); }catch(e){}
+    // set SEM merge: substitui o documento inteiro. Com merge, campos apagados
+    // localmente (ex: foto removida) "ressuscitavam" da nuvem no próximo login.
+    const p = db.collection('usuarios').doc(fbUser.uid).set({
+      email: fbUser.email,
+      nome: (state.user && state.user.profile && state.user.profile.nickname) || fbUser.displayName || '',
+      atualizadoEm: state._savedAt || Date.now(),
+      estadoApp: limpo
+    });
+    if(p && p.catch) p.catch(e=>{ console.log('Erro ao salvar na nuvem:', e); try{ localStorage.setItem('mt_syncerr', String(e&&e.message||e).slice(0,200)); }catch(_){} });
+  }catch(e){
+    console.log('Falha ao preparar o salvamento na nuvem:', e);
+    try{ localStorage.setItem('mt_syncerr', String(e&&e.message||e).slice(0,200)); }catch(_){}
+  }
 }
 // Ao minimizar/fechar o app, envia pra nuvem NA HORA (sem esperar o debounce) —
 // evita perder o treino de quem salva e fecha o app em seguida.
@@ -346,7 +351,7 @@ async function loadData(){
   let cloud = null, local = null;
   try{
     const doc = await fbTimeout(db.collection('usuarios').doc(fbUser.uid).get(), 5000);
-    if(doc.exists && doc.data().estadoApp) cloud = restaurarEstadoFirestore(doc.data().estadoApp);
+    if(doc.exists && doc.data().estadoApp) cloud = doc.data().estadoApp;
   }catch(e){ console.log('Sem conexão com a nuvem agora, usando cache local:', e); }
   try{ local = JSON.parse(localStorage.getItem(localCacheKey(fbUser.uid))||'null'); }catch(e){}
   // decide pela cópia mais recente — nunca deixa a nuvem antiga apagar treino recém-salvo no aparelho
@@ -551,18 +556,14 @@ function doGoogleSignIn(){
   });
 }
 function doLogout(){
-  const usuarioParaSair = fbUser;
   try{ localStorage.removeItem('metatreino_sessao'); }catch(e){}
-  // A sincronização nunca pode impedir o encerramento da sessão.
-  // Firestore pode lançar erro síncrono ao validar dados antes de retornar a Promise.
-  try{ syncToCloud(); }catch(e){ console.log('Sincronização ignorada ao sair:', e); }
+  try{ syncToCloud(); }catch(e){}   // envia qualquer alteração pendente (ex: foto removida) ANTES de sair
+  try{ const so = fbAuth.signOut(); if(so && so.catch) so.catch(()=>{}); }catch(e){}
   fbUser = null;
   state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
   showScreen('scr-auth');
-  const tabbar = $('tabbar'); if(tabbar) tabbar.classList.add('hidden');
+  $('tabbar').classList.add('hidden');
   try{ resetAuthUI(); }catch(e){}
-  // O logout é independente do sucesso/falha da sincronização.
-  if(usuarioParaSair) fbAuth.signOut().catch(e=>console.log('Erro ao encerrar sessão:', e));
 }
 function appConfirm(msg, onOk, opts){
   opts = opts||{};
@@ -1034,17 +1035,18 @@ function cleanupOldHistory(){
   try{ Object.keys(state.extras||{}).sort().slice(0,-14).forEach(k=>delete state.extras[k]); }catch(e){}
   // antes de apagar as séries antigas, guarda um RESUMO compacto (data, melhor carga, volume, reps): o gráfico de evolução vai a 2 anos
   state.progResumo = state.progResumo || {};
+  Object.keys(state.progResumo).forEach(k=>{ state.progResumo[k] = (state.progResumo[k]||[]).map(r=>Array.isArray(r)?{d:r[0],p:r[1],v:r[2],r:r[3]}:r).filter(r=>r&&r.d); });   // migra o formato antigo (arrays)
   Object.keys(state.progress).forEach(k=>{
     const velhos = state.progress[k].filter(p=>p.date < cutoff);
     if(velhos.length){
       const arr = state.progResumo[k] = state.progResumo[k] || [];
       velhos.forEach(p=>{
-        if(arr.some(r=>r[0]===p.date)) return;
+        if(arr.some(r=>r.d===p.date)) return;
         const sets = p.sets||[];
-        arr.push([p.date, Math.max(0,...sets.map(s=>+s.peso||0)), Math.round(sets.reduce((t,x)=>t+(+x.peso||0)*(+x.reps||0),0)), sets.reduce((t,x)=>t+(+x.reps||0),0)]);
+        arr.push({ d:p.date, p:Math.max(0,...sets.map(s=>+s.peso||0)), v:Math.round(sets.reduce((t,x)=>t+(+x.peso||0)*(+x.reps||0),0)), r:sets.reduce((t,x)=>t+(+x.reps||0),0) });
       });
-      arr.sort((a,b)=>a[0]-b[0]);
-      state.progResumo[k] = arr.filter(r=>r[0] >= Date.now()-730*86400000);
+      arr.sort((a,b)=>a.d-b.d);
+      state.progResumo[k] = arr.filter(r=>r.d >= Date.now()-730*86400000);
     }
   });
   Object.keys(state.progress).forEach(k=>{
@@ -2480,7 +2482,7 @@ function renderQuickStats(){
     const pc = v => Math.round(Math.min(1,v)*100);
     const linha = (cor,lbl,pct,val,sub)=>`<div class="act-row"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:${cor}"></i>${lbl}</div><span class="act-pct">${pct}%</span></div><div class="act-val">${val}<small>${sub}</small></div><div class="act-bar"><i style="width:${pct}%;background:${cor}"></i></div></div>`;
     el.innerHTML = `
-      <div class="act-head"><h3>Atividade da semana</h3><span>${d.sem.length} de ${d.planejados||'–'} treinos</span></div>
+      <div class="act-head"><h3>Atividade da semana</h3><button class="pillbtn" onclick="event.stopPropagation();ativLivre()">＋ Atividade</button></div>
       <div class="act-card">
         <div class="act-rings"><svg viewBox="0 0 120 120">${_anel(52,pT,'var(--primary)')}${_anel(40,pM,'var(--accent)')}${_anel(28,pS,'var(--prep)')}</svg>
           <div class="act-center"><b>${pctGeral}%</b><span>da meta</span></div></div>
@@ -2785,7 +2787,7 @@ function renderHome(){
       const isLift = mod.plan.type==='lift';
       if(pend.length===1){
         // 1 dia perdido: sugere encaixar hoje SE hoje for descanso, senão sugere no próximo descanso
-        $('missed-title').textContent = '📌 Um treino ficou para trás esta semana';
+        $('missed-title').textContent = 'Um treino ficou para trás esta semana';
         if(hasToday){
           $('missed-msg').textContent = `${pend[0].name.split(' — ')[0]} não aconteceu — e tudo bem, acontece com todo mundo. Hoje você já tem treino: foca nele. Se bater vontade de fazer o que ficou, toque aqui — mas sem obrigação.`;
         } else {
@@ -2798,7 +2800,7 @@ function renderHome(){
         };
       } else {
         // 2+ dias perdidos: NÃO sugere fazer tudo — orienta priorizar e seguir em frente
-        $('missed-title').textContent = `📌 ${pend.length} treinos ficaram para trás esta semana`;
+        $('missed-title').textContent = `${pend.length} treinos ficaram para trás esta semana`;
         $('missed-msg').textContent = `Semana cheia, acontece. Esses treinos não se pagam depois — e tudo bem: o que conta é o próximo. ${isLift?'Volte no ritmo normal do plano a partir de agora; na próxima semana o ciclo recomeça equilibrado.':'Retome o plano no próximo treino; a constância nas semanas seguintes é o que constrói o resultado.'} Toque se quiser ver o que ficou.`;
         missed.onclick = (ev)=>{
           if(ev.target && ev.target.id==='missed-dismiss') return;
@@ -2919,6 +2921,7 @@ function renderHome(){
   renderWeekGrid(mod);
   try{ renderQuickStats(); }catch(e){}
   try{ renderFeriado(); }catch(e){}
+  try{ renderUpdateCard(); }catch(e){}
   renderYourList(mod);
 }
 
@@ -3309,6 +3312,24 @@ function checkLiftDone(w){
   });
 }
 
+function toggleBloco(el, chave){
+  const b = el.parentNode; b.classList.toggle('open');
+  window.__blocosAbertos = window.__blocosAbertos || {}; window.__blocosAbertos[chave] = b.classList.contains('open');
+  // se esta foi a primeira vez que a pessoa mexeu, congela o estado dos outros blocos como estão na tela
+  const wk = chave.split('|')[0];
+  document.querySelectorAll('#session-detail-slot .block').forEach(bl=>{ const nm = bl.querySelector('.block-name'); if(!nm) return; const g = nm.childNodes[0] ? String(nm.childNodes[0].textContent).trim() : ''; const k = wk+'|'+g; if(window.__blocosAbertos[k]===undefined) window.__blocosAbertos[k] = bl.classList.contains('open'); });
+}
+function marcaBlocoAberto(exId){
+  try{
+    const m = state.modules.lift; if(!m || !m.plan) return;
+    const w = (m.plan.workouts||[]).find(x=>(x.exercises||[]).some(e=>e.id===exId)); if(!w) return;
+    const wk = String(w.k||w.dayIdx); const ex = w.exercises.find(e=>e.id===exId);
+    const g = (ex.sub||'').split(/[\s\/]/)[0] || 'Principal';
+    window.__blocosAbertos = window.__blocosAbertos || {};
+    const grupos = [...new Set(w.exercises.map(e=>(e.sub||'').split(/[\s\/]/)[0] || 'Principal'))];
+    grupos.forEach(x=>{ const k = wk+'|'+x; if(x===g) window.__blocosAbertos[k] = true; else if(window.__blocosAbertos[k]===undefined) window.__blocosAbertos[k] = false; });
+  }catch(e){}
+}
 function renderLiftBlocksBase(w){
   const groups = {};
   w.exercises.forEach(ex=>{
@@ -3324,9 +3345,13 @@ function renderLiftBlocksBase(w){
   const prontos = entradas.map(([,exs])=>exs.every(ex=>exFeito(ex)||feitoAntes(ex)));
   let abrir = prontos.findIndex(p=>!p);          // primeiro grupo pendente
   if(abrir === -1) abrir = entradas.length - 1;  // todos prontos: deixa o último aberto
+  window.__blocosAbertos = window.__blocosAbertos || {};
+  const wk = String(w.k||w.dayIdx);
+  const temEstado = entradas.some(([g])=>window.__blocosAbertos[wk+'|'+g]!==undefined);
+  const aberto = (g,i)=> temEstado ? !!window.__blocosAbertos[wk+'|'+g] : (i===abrir);
   return entradas.map(([g,exs],i)=>`
-    <div class="block ${i===abrir?'open':''}">
-      <div class="block-head main" onclick="this.parentNode.classList.toggle('open')">
+    <div class="block ${aberto(g,i)?'open':''}">
+      <div class="block-head main" onclick="toggleBloco(this,'${wk}|${g}')">
         <span style="font-size:20px">${prontos[i]?'✅':'🔥'}</span>
         <div class="block-head-txt"><div class="block-name">${g}${prontos[i]?' <span style="font-size:11px;color:var(--primary-2);font-weight:700">concluído</span>':''}</div><div class="block-sub">${exs.filter(ex=>exFeito(ex)||feitoAntes(ex)).length}/${exs.length} ${exs.length===1?'exercício':'exercícios'}</div></div>
         <div class="block-chev">▾</div>
@@ -3657,6 +3682,7 @@ function closeSetLog(save){
     if(!state.progress[curLog.exId].length) delete state.progress[curLog.exId];
     saveData();
     try{ syncExtrasHistorico(); }catch(e){}   // extra feito depois de fechar o treino também entra no histórico
+    try{ marcaBlocoAberto(curLog.exId); }catch(e){}   // continua no bloco em que você está treinando
     // refresh session view
     if(state.ui.tab==='sessions') renderSessions();
   }
@@ -6033,7 +6059,6 @@ const MA_ANSWERS = {
   insight(){ return (typeof maInsight==='function') ? maInsight() : 'Continue treinando que eu te trago observações! 💪'; }
 };
 const MA_SUGGESTIONS = [
-  {lbl:'🥗 Meu plano alimentar', key:'plano_alimentar'},
   {lbl:'📈 Análise da semana', key:'analise_semana'},
   {lbl:'💡 Um insight sobre meus treinos', key:'insight'},
   {lbl:'💪 Como foi meu treino?', key:'treino_hoje'},
@@ -7327,14 +7352,15 @@ function maNudge(){
     if([100,200,365].includes(total)) return {text:`🟣 Você chegou no seu ${total}º treino! Pouquíssima gente chega aqui. Bora comemorar?`, tone:'rare'};
     // 🟠 LARANJA — importante
     const prs=Object.values(state.prs||{}).map(x=>x&&x.at).filter(Boolean);
-    if(prs.some(t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()===hoje.getTime();})) return {text:`🏆 Você bateu um recorde hoje! Quer ver sua evolução?`, tone:'important'};
+    if(prs.some(t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()===hoje.getTime();})) return {text:`🏆 Você bateu um recorde hoje!`, tone:'important'};
     const prox=[10,25,50,100,200,365].find(m=>m>total);
-    if(prox && total>0 && (prox-total)<=2) return {text:`🎯 Falta ${prox-total===1?'1 treino':(prox-total)+' treinos'} pro seu ${prox}º! Quer ver?`, tone:'important'};
-    if(streak>=7) return {text:`🔥 ${streak} dias seguidos — sua melhor fase! Dá uma olhada no ritmo.`, tone:'important'};
+    if(prox && total>0 && (prox-total)<=2) return {text:`🎯 Falta ${prox-total===1?'1 treino':(prox-total)+' treinos'} pro seu ${prox}º treino!`, tone:'important', dica:{completa:`🎯 Você tem <b>${total}</b> treinos registrados e está a <b>${prox-total}</b> do marco de <b>${prox}</b>. Cada treino conta, inclusive um mais leve ou uma caminhada registrada como atividade.`}};
+    if(streak>=7) return {text:`🔥 ${streak} dias seguidos treinando`, tone:'important', dica:{completa:`🔥 Você está há <b>${streak} dias seguidos</b> com atividade. Pra manter sem se machucar: inclua um dia mais leve (caminhada ou mobilidade) e cuide do sono. Se todo dia for pesado, a recuperação cai e o rendimento também.`}};
     // 🟢 VERDE — curiosidade/insight (em férias não puxa, pra não parecer cobrança)
     // Dica de "pegar leve hoje" só faz sentido se existir treino hoje.
     const temTreinoHoje = (()=>{ try{ const m=state.modules[state.active];
       return !!(m && m.plan && (m.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx())); }catch(e){ return false; } })();
+    if(window.__updDisp && !updIgnorado()) return {text:`🆕 Tem uma versão nova do app`, tone:'curio', dica:{bolha:`🆕 Tem uma versão nova do app`, completa:`🆕 Tem uma versão nova do MetaTreino. Atualizar leva alguns segundos e seus dados ficam salvos.<br><br><button class="btn btn-primary" style="padding:9px 16px;font-size:13px" onclick="closeAssistant();mtCheckUpdate()">Atualizar agora</button> <button class="btn btn-ghost" style="padding:9px 16px;font-size:13px" onclick="updIgnorar();closeAssistant()">Agora não</button>`}};
     try{   // só avisa de água quem já usa o contador, depois das 15h e com menos de 40% da meta
       const usa = Object.keys(state.agua||{}).some(k=>k!==chaveDia(new Date()) && state.agua[k]>0);
       if(!vac && usa && new Date().getHours()>=15){ const meta=aguaMeta(), ml=aguaHoje(); if(ml < meta*0.4){
@@ -7400,6 +7426,7 @@ function nomeDoEx(id){
 // Monta a resposta CHEIA do aviso que acendeu o balão — com o dado real por trás
 function nudgeResposta(n){
   const t = n && n.tone;
+  if(n && n.dica && n.dica.completa) return n.dica.completa;
   const cab = (n && n.text) ? n.text + '<br><br>' : '';
   try{
     if(t==='curio' && n.dica){ return n.dica.completa; }
@@ -10424,7 +10451,7 @@ function daysToRace(){
 window.addEventListener('DOMContentLoaded', ()=>{
   // Update available listener
   document.addEventListener('mt:update-available', ()=>{
-    const b = $('update-banner'); if(b) b.style.display='block';
+    // (o aviso agora é o cartão discreto na Home e a notificação opcional do assistente)
   });
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
@@ -10497,13 +10524,25 @@ const NUTRI_ALIMENTOS = {
   acem:     ['Carne moída (acém) refogada', 212, 26.7, 0, 10.9, null, null],
   sardinha: ['Sardinha em lata', 190, 24, 0, 10, null, null],
   soja:     ['Soja texturizada (hidratada)', 110, 17, 11, 0.4, null, null],
-  oleo:     ['Óleo de soja', 884, 0, 0, 100, null, {g:4,nome:'col. de chá'}, true]
+  oleo:     ['Óleo de soja', 884, 0, 0, 100, null, {g:4,nome:'col. de chá'}, true],
+  paoforma: ['Pão de forma (fatia)', 253, 8, 49, 3.5, 25, null],
+  batataing:['Batata inglesa cozida', 52, 1.2, 11.9, 0, null, null],
+  milho:    ['Milho verde', 98, 3.2, 17, 1.2, null, null],
+  tomate:   ['Tomate', 15, 1.1, 3.1, 0.2, null, null, true],
+  melancia: ['Melancia', 33, 0.9, 8.1, 0, null, null],
+  uva:      ['Uva', 53, 0.7, 13.6, 0.2, null, null],
+  pera:     ['Pera', 53, 0.6, 14, 0.1, 150, null],
+  manteiga: ['Manteiga', 717, 0.5, 0.1, 81, null, {g:5,nome:'ponta de faca'}],
+  requeijao:['Requeijão', 260, 9, 3, 24, null, {g:30,nome:'col. de sopa'}],
+  queijoprato:['Queijo prato (fatia)', 360, 23, 2, 29, 20, null],
+  presunto: ['Presunto magro (fatia)', 120, 17, 1.5, 5, 15, null],
+  leiteint: ['Leite integral', 61, 3.2, 4.6, 3.3, null, {g:200,nome:'copo'}]
 };
 // ingredientes mais caros: ficam de fora no modo econômico
 const NUTRI_CARO = ['patinho','acem','peixe','atum','minas','mucarela','ricota','cottage','whey','castanha','abacate','granola','peru','tofu','morango'];
-const NUTRI_CATEG = { proteinas:['🍗 Proteínas',['frango','sobrecoxa','patinho','acem','figado','peixe','atum','sardinha','ovo','soja','tofu','peru','whey','lentilha','grao']], carbo:['🍚 Cereais, tubérculos e pães',['arroz','feijao','macarrao','batata','mandioca','cuscuz','pao','paoint','paodq','tapioca','aveia','granola']], frutas:['🍌 Frutas e hortifrúti',['banana','maca','laranja','mamao','abacaxi','morango','abacate','legumes','salada']], lat:['🥛 Laticínios',['leite','iogurte','minas','cottage','ricota','mucarela']], outros:['🫒 Outros',['azeite','oleo','amendoim','castanha','mel']] };
-const NUTRI_LACTOSE = ['leite','iogurte','minas','cottage','ricota','mucarela','whey','paodq'];
-const NUTRI_GLUTEN = ['pao','paoint','aveia','granola','macarrao'];
+const NUTRI_CATEG = { proteinas:['🍗 Proteínas',['presunto','frango','sobrecoxa','patinho','acem','figado','peixe','atum','sardinha','ovo','soja','tofu','peru','whey','lentilha','grao']], carbo:['🍚 Cereais, tubérculos e pães',['paoforma','batataing','milho','arroz','feijao','macarrao','batata','mandioca','cuscuz','pao','paoint','paodq','tapioca','aveia','granola']], frutas:['🍌 Frutas e hortifrúti',['tomate','melancia','uva','pera','banana','maca','laranja','mamao','abacaxi','morango','abacate','legumes','salada']], lat:['🥛 Laticínios',['leiteint','requeijao','queijoprato','leite','iogurte','minas','cottage','ricota','mucarela']], outros:['🫒 Outros',['manteiga','azeite','oleo','amendoim','castanha','mel']] };
+const NUTRI_LACTOSE = ['leiteint','requeijao','queijoprato','manteiga','leite','iogurte','minas','cottage','ricota','mucarela','whey','paodq'];
+const NUTRI_GLUTEN = ['paoforma','pao','paoint','aveia','granola','macarrao'];
 const NUTRI_CRU = { arroz:3, feijao:2.5, macarrao:2.2, lentilha:2.5, grao:2.5, soja:3, frango:.75, sobrecoxa:.75, patinho:.75, acem:.75, peixe:.8, figado:.8 };   // quanto o cozido rende em relação ao cru
 // Cada refeição tem várias opções (n = nome do prato, i = itens). veg = versão vegetariana (ovo e leite liberados).
 const NUTRI_REFEICOES = [
@@ -10763,111 +10802,243 @@ function nutriEquivalencias(){
   ];
 }
 const NUTRI_OBJ = { emagrecer:'🔥 Emagrecer', massa:'💪 Ganhar massa', manter:'⚖️ Manter / recomposição' };
-function nutriListaCompras(){
-  const n = nutriConfig();
-  const tot = {};   // id -> {g, un}
-  for(let d=1; d<=7; d++){
-    const pl = nutriMontarPlano(d); if(pl.erro) continue;
-    pl.refeicoes.forEach(m=>m.itens.forEach(i=>{ const t = tot[i.id] = tot[i.id] || {g:0,un:0}; t.g += i.gramas; t.un += i.un||0; }));
-  }
-  const fmt = (id,t)=>{
-    const a = NUTRI_ALIMENTOS[id];
-    if(a[5]) return `${Math.round(t.un)} unid.`;
-    if(id==='leite'||id==='iogurte') return t.g>=1000 ? `${(t.g/1000).toFixed(1).replace('.',',')} L` : `${Math.round(t.g/50)*50} ml`;
-    let g = t.g, nota = '';
-    if(NUTRI_CRU[id]){ g = t.g/NUTRI_CRU[id]; nota = ' (cru)'; }
-    g = Math.max(50, Math.round(g/50)*50);
-    return (g>=1000 ? `${(g/1000).toFixed(1).replace('.',',')} kg` : `${g} g`) + nota;
-  };
-  const blocos = Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
-    const itens = ids.filter(id=>tot[id]).map(id=>`<div class="mrow"><span>${NUTRI_ALIMENTOS[id][0]}</span><span>${fmt(id,tot[id])}</span></div>`).join('');
-    return itens ? `<div class="section-lbl" style="margin:14px 0 2px">${titulo}</div>${itens}` : '';
-  }).join('');
-  const texto = Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
-    const l = ids.filter(id=>tot[id]).map(id=>`• ${NUTRI_ALIMENTOS[id][0]}: ${fmt(id,tot[id])}`); return l.length ? titulo+'\n'+l.join('\n') : '';
-  }).filter(Boolean).join('\n\n');
-  window.__nutriTextoCompras = '🛒 Lista de compras da semana (MetaTreino)\n\n'+texto;
-  $('modal-inner').innerHTML = `<h3>🛒 Lista de compras</h3>
-    <p style="color:var(--text-dim);font-size:12.5px;line-height:1.55;margin:4px 0 0">Tudo que o cardápio dos 7 dias usa${n.economico?', no modo econômico':''}. Arroz, feijão, macarrão, soja e carnes aparecem em peso cru (o cardápio usa peso cozido); o resto é como compra.</p>
-    <div style="max-height:56vh;overflow-y:auto">${blocos}</div>
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="nutriCopiarCompras()">📋 Copiar / compartilhar lista</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">‹ Voltar ao plano</button>`;
-  $('modal-back').classList.add('on');
-}
-function nutriCopiarCompras(){
-  const t = window.__nutriTextoCompras || '';
-  if(navigator.share){ navigator.share({text:t}).catch(()=>{}); return; }
-  try{ navigator.clipboard.writeText(t).then(()=>toast('📋 Lista copiada')); }catch(e){ toast('Não consegui copiar neste aparelho'); }
-}
+// ---------- dia selecionado, datas e registro por dia (hoje e dias futuros da semana podem ser editados) ----------
+function nutriDiaSel(){ return window.__nutriDia || ((typeof getDayIdx==='function') ? getDayIdx() : 1); }
+function nutriDataDia(dIdx){ const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - ((typeof getDayIdx==='function' ? getDayIdx() : 1) - 1) + (dIdx - 1)); return d; }
+function nutriKeyDia(dIdx){ return chaveDia(nutriDataDia(dIdx)); }
 function nutriTextoQtd(id,q){ const f=NUTRI_ALIMENTOS[id]; if(f[5]) return `${q} unid.`; return `${q}${(id==='leite'||id==='iogurte')?' ml':' g'}`; }
 function nutriEfetivo(it, a){
   if(a && a.x) return {...it, kcal:0, p:0, c:0, g:0, removido:true};
   if(a && a.q!==undefined){ const f = NUTRI_ALIMENTOS[it.id]; const gramas = f[5] ? a.q*f[5] : a.q; const k = gramas/100;
-    return {...it, gramas, kcal:f[1]*k, p:f[2]*k, c:f[3]*k, g:f[4]*k, texto:nutriTextoQtd(it.id,a.q), editado:true}; }
+    return {...it, gramas, un: f[5] ? a.q : 0, kcal:f[1]*k, p:f[2]*k, c:f[3]*k, g:f[4]*k, texto:nutriTextoQtd(it.id,a.q), editado:true}; }
   return it;
 }
-function nutriMealLog(id, criar){
+// alimento que a pessoa ACRESCENTOU à refeição (da tabela ou digitado na mão)
+function nutriItemExtra(a, idx){
+  if(!a) return null;
+  if(a.custom) return { id:'c'+idx, nome:a.nome, texto:`${Math.round(a.kcal)} kcal`, gramas:0, un:0, kcal:+a.kcal||0, p:+a.p||0, c:+a.c||0, g:+a.g||0, adicionado:true, custom:true, idx };
+  const f = NUTRI_ALIMENTOS[a.id]; if(!f) return null;
+  const gramas = f[5] ? a.q*f[5] : a.q, k = gramas/100;
+  return { id:a.id, nome:f[0], texto:nutriTextoQtd(a.id,a.q), gramas, un: f[5] ? a.q : 0, kcal:f[1]*k, p:f[2]*k, c:f[3]*k, g:f[4]*k, adicionado:true, idx };
+}
+function nutriLogDe(dk){
+  const dia = ((state.nutriLog||{})[dk]) || {};
+  return id => { const m = dia[id]; if(m===true) return {ok:true, adj:{}, add:[]}; return m ? {ok:!!m.ok, adj:m.adj||{}, add:m.add||[]} : {ok:false, adj:{}, add:[]}; };
+}
+function nutriMealLog(id, criar, dk){
+  dk = dk || nutriKeyDia(nutriDiaSel());
+  const dia0 = ((state.nutriLog||{})[dk]) || {};
+  let m = dia0[id];
+  if(!m && !criar) return {ok:false, adj:{}, add:[]};
   state.nutriLog = state.nutriLog || {};
-  const k = chaveDia(new Date()); const dia = state.nutriLog[k] = state.nutriLog[k] || {};
-  let m = dia[id];
-  if(m===true) m = dia[id] = {ok:true, adj:{}};
-  if(!m){ if(!criar) return {ok:false, adj:{}}; m = dia[id] = {ok:false, adj:{}}; }
-  if(!m.adj) m.adj = {};
+  const dia = state.nutriLog[dk] = state.nutriLog[dk] || {};
+  if(m===true) m = dia[id] = {ok:true, adj:{}, add:[]};
+  if(!m) m = dia[id] = {ok:false, adj:{}, add:[]};
+  m.adj = m.adj || {}; m.add = m.add || [];
   return m;
 }
+function nutriLimpa(mid){
+  const dk = nutriKeyDia(nutriDiaSel()); const dia = (state.nutriLog||{})[dk]; if(!dia) return;
+  const m = dia[mid]; if(m && m!==true && !m.ok && !Object.keys(m.adj||{}).length && !(m.add||[]).length) delete dia[mid];
+  if(!Object.keys(dia).length) delete state.nutriLog[dk];
+}
+function nutriAbrirRef(mid){ window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[mid] = true; }
+function nutriSomaItens(itens){ return itens.reduce((t,i)=>({kcal:t.kcal+i.kcal,p:t.p+i.p,c:t.c+i.c,g:t.g+i.g}),{kcal:0,p:0,c:0,g:0}); }
+function nutriPasso(fid, base, un){ return un ? 1 : ((fid==='leite'||fid==='iogurte') ? 50 : (base>=100 ? 10 : 5)); }
+
+// ---------- remover / editar quantidade ----------
 function nutriRemover(mid, fid){
   const m = nutriMealLog(mid, true);
   if(m.adj[fid] && m.adj[fid].x) delete m.adj[fid]; else m.adj[fid] = {x:1};
-  window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[mid] = true;
-  saveData(); openNutri();
+  nutriLimpa(mid); nutriAbrirRef(mid); saveData(); openNutri();
 }
 function nutriEditar(mid, fid){
-  const plano = nutriMontarPlano(); if(plano.erro) return;
+  const plano = nutriMontarPlano(nutriDiaSel()); if(plano.erro) return;
   const meal = plano.refeicoes.find(m=>m.id===mid); const it = meal && meal.itens.find(i=>i.id===fid); if(!it) return;
   const f = NUTRI_ALIMENTOS[fid]; const un = !!f[5];
-  const m = nutriMealLog(mid, false); const a = m.adj[fid];
+  const a = nutriMealLog(mid,false).adj[fid];
   const base = un ? Math.round(it.un) : Math.round(it.gramas);
-  const atual = (a && a.q!==undefined) ? a.q : base;
-  window.__ned = {mid, fid, base, un, passo: un ? 1 : ((fid==='leite'||fid==='iogurte') ? 50 : (base>=100 ? 10 : 5)), q:atual};
+  window.__ned = {mode:'adj', mid, fid, base, un, passo:nutriPasso(fid,base,un), q:(a && a.q!==undefined) ? a.q : base};
+  nutriEdRender();
+}
+function nutriAddEscolher(mid, fid){
+  const f = NUTRI_ALIMENTOS[fid]; const un = !!f[5], med = f[6];
+  const q0 = un ? 1 : ((fid==='leite'||fid==='iogurte') ? 200 : (med && med.g>=15 ? med.g*2 : 100));
+  window.__ned = {mode:'add', mid, fid, base:0, un, passo:nutriPasso(fid,q0,un), q:q0};
+  nutriEdRender();
+}
+function nutriAddEditar(mid, idx){
+  const a = nutriMealLog(mid,false).add[idx]; if(!a) return;
+  if(a.custom){ nutriAddCustom(mid, idx); return; }
+  const f = NUTRI_ALIMENTOS[a.id];
+  window.__ned = {mode:'addedit', mid, fid:a.id, idx, base:0, un:!!f[5], passo:nutriPasso(a.id,a.q,!!f[5]), q:a.q};
   nutriEdRender();
 }
 function nutriEdRender(){
   const e = window.__ned; const f = NUTRI_ALIMENTOS[e.fid];
   const gramas = e.un ? e.q*f[5] : e.q, k = gramas/100, kcal = Math.round(f[1]*k);
-  const kBase = Math.round(f[1]*((e.un ? e.base*f[5] : e.base)/100)), d = kcal - kBase;
+  const kBase = e.mode==='adj' ? Math.round(f[1]*((e.un ? e.base*f[5] : e.base)/100)) : 0, d = kcal - kBase;
+  const unidade = e.un ? 'unidades' : ((e.fid==='leite'||e.fid==='iogurte') ? 'ml' : 'gramas');
+  const intro = e.mode==='adj' ? `O plano previa <b>${nutriTextoQtd(e.fid,e.base)}</b>. Quanto você vai comer de verdade?` : `Quanto você vai comer?`;
+  const deltaTxt = e.mode==='adj' ? (d===0 ? '(como no plano)' : `(${d>0?'+':''}${d} kcal vs recomendado)`) : `(soma ${kcal} kcal ao dia)`;
   $('modal-inner').innerHTML = `<h3>✎ ${f[0]}</h3>
-    <p style="color:var(--text-dim);font-size:13px;margin:4px 0 12px">O plano previa <b>${nutriTextoQtd(e.fid,e.base)}</b>. Quanto você comeu de verdade?</p>
+    <p style="color:var(--text-dim);font-size:13px;margin:4px 0 12px">${intro}</p>
     <div style="display:flex;align-items:center;justify-content:center;gap:14px">
       <button class="btn btn-ghost" style="width:52px;height:52px;font-size:24px;padding:0" onclick="nutriEdMais(-1)">−</button>
-      <div style="text-align:center;min-width:110px"><div style="font-size:38px;font-weight:300;font-family:'Outfit',system-ui,sans-serif;line-height:1">${e.q}</div><div style="font-size:12px;color:var(--text-dim)">${e.un?'unidades':((e.fid==='leite'||e.fid==='iogurte')?'ml':'gramas')}</div></div>
+      <div style="text-align:center;min-width:110px"><div style="font-size:38px;font-weight:300;font-family:'Outfit',system-ui,sans-serif;line-height:1">${e.q}</div><div style="font-size:12px;color:var(--text-dim)">${unidade}</div></div>
       <button class="btn btn-ghost" style="width:52px;height:52px;font-size:24px;padding:0" onclick="nutriEdMais(1)">+</button>
     </div>
-    <div style="text-align:center;margin:14px 0 4px;font-size:14px"><b>${kcal} kcal</b> <span style="color:${d>0?'var(--primary-2)':d<0?'var(--accent)':'var(--text-mute)'}">${d===0?'(como no plano)':`(${d>0?'+':''}${d} kcal vs plano)`}</span></div>
+    <div style="text-align:center;margin:14px 0 4px;font-size:14px"><b>${kcal} kcal</b> <span style="color:${d>0||e.mode!=='adj'?'var(--primary-2)':d<0?'var(--accent)':'var(--text-mute)'}">${deltaTxt}</span></div>
     <div style="text-align:center;font-size:12px;color:var(--text-dim)">P ${Math.round(f[2]*k)}g · C ${Math.round(f[3]*k)}g · G ${Math.round(f[4]*k)}g</div>
-    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="nutriEdSalvar()">Salvar</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="nutriEdSalvar(true)">↩️ Voltar ao previsto</button>
+    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="nutriEdSalvar()">${e.mode==='add'?'Adicionar à refeição':'Salvar'}</button>
+    ${e.mode==='adj' ? `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="nutriEdSalvar(true)">↩️ Voltar ao recomendado</button>` : ''}
+    ${e.mode==='addedit' ? `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="nutriEdSalvar(true)">🗑️ Tirar da refeição</button>` : ''}
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">Cancelar</button>`;
   $('modal-back').classList.add('on');
 }
 function nutriEdMais(s){ const e = window.__ned; e.q = Math.max(0, e.q + s*e.passo); nutriEdRender(); }
 function nutriEdSalvar(reset){
   const e = window.__ned; const m = nutriMealLog(e.mid, true);
-  if(reset || e.q===e.base) delete m.adj[e.fid]; else m.adj[e.fid] = e.q===0 ? {x:1} : {q:e.q};
-  window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[e.mid] = true;
+  if(e.mode==='adj'){ if(reset || e.q===e.base) delete m.adj[e.fid]; else m.adj[e.fid] = e.q===0 ? {x:1} : {q:e.q}; }
+  else if(e.mode==='add'){ if(e.q>0) m.add.push({id:e.fid, q:e.q}); }
+  else if(e.mode==='addedit'){ if(reset || e.q===0) m.add.splice(e.idx,1); else m.add[e.idx].q = e.q; }
+  nutriLimpa(e.mid); nutriAbrirRef(e.mid); saveData(); openNutri();
+}
+// ---------- acrescentar alimento ----------
+function nutriAddAbrir(mid){ window.__nutriAddMid = mid; window.__nutriAddCat = 'todos'; window.__nutriAddBusca = ''; nutriAddRender(); }
+function nutriAddRender(){
+  const cats = [['todos','Todos'], ...Object.entries(NUTRI_CATEG).map(([k,v])=>[k, v[0].replace(/^[^\s]+\s/,'')])];
+  $('modal-inner').innerHTML = `<h3>➕ Adicionar alimento</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5;margin:4px 0 8px">As calorias do dia sobem de acordo com o que você acrescentar.</p>
+    <input class="input" id="nadd-busca" placeholder="Buscar alimento" value="${escHtml(window.__nutriAddBusca||'')}" oninput="window.__nutriAddBusca=this.value;nutriAddFiltra()">
+    <div class="nxchips" style="margin-top:10px">${cats.map(([k,n])=>`<button type="button" class="nxchip ${k===window.__nutriAddCat?'on':''}" onclick="window.__nutriAddCat='${k}';nutriAddRender()">${n}</button>`).join('')}</div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px;padding:10px" onclick="nutriAddCustom('${window.__nutriAddMid}')">✍️ Outro alimento (digitar calorias)</button>
+    <div id="nadd-lista" style="max-height:38vh;overflow-y:auto;margin-top:8px"></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="openNutri()">Voltar</button>`;
+  $('modal-back').classList.add('on'); nutriAddFiltra();
+}
+function nutriAddFiltra(){
+  const q = (window.__nutriAddBusca||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const cat = window.__nutriAddCat || 'todos';
+  const ids = Object.keys(NUTRI_ALIMENTOS).filter(id=>{
+    if(cat!=='todos' && !(NUTRI_CATEG[cat] && NUTRI_CATEG[cat][1].includes(id))) return false;
+    return !q || NUTRI_ALIMENTOS[id][0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(q);
+  });
+  const el = $('nadd-lista'); if(!el) return;
+  el.innerHTML = ids.length ? ids.map(id=>{ const f = NUTRI_ALIMENTOS[id]; const ref = f[5] ? `${Math.round(f[1]*f[5]/100)} kcal por unid.` : `${f[1]} kcal por 100 g`;
+    return `<div class="mrow" style="cursor:pointer" onclick="nutriAddEscolher('${window.__nutriAddMid}','${id}')"><span class="n">${escHtml(f[0])}<br><small style="color:var(--text-mute)">${ref}</small></span><span class="q">＋</span></div>`; }).join('') : '<div class="text-dim" style="padding:10px 0;font-size:13px">Nada encontrado. Use “Outro alimento”.</div>';
+}
+function nutriAddCustom(mid, idx){
+  const m = nutriMealLog(mid,false); const a = (idx!==undefined) ? m.add[idx] : null;
+  window.__nutriAddMid = mid; window.__nutriAddIdx = idx;
+  $('modal-inner').innerHTML = `<h3>✍️ ${a?'Editar alimento':'Outro alimento'}</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5;margin:4px 0 8px">Comeu algo que não está na lista? Digite as calorias (as informações da embalagem servem). Proteína, carbo e gordura são opcionais.</p>
+    <input class="input" id="nc-nome" placeholder="O que foi? (ex.: fatia de pizza)" value="${a?escHtml(a.nome):''}">
+    <input class="input" id="nc-kcal" type="number" inputmode="numeric" placeholder="Calorias (kcal)" style="margin-top:8px" value="${a?Math.round(a.kcal):''}">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
+      <input class="input" id="nc-p" type="number" inputmode="decimal" placeholder="Prot. g" value="${a&&a.p?a.p:''}">
+      <input class="input" id="nc-c" type="number" inputmode="decimal" placeholder="Carbo g" value="${a&&a.c?a.c:''}">
+      <input class="input" id="nc-g" type="number" inputmode="decimal" placeholder="Gord. g" value="${a&&a.g?a.g:''}">
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="nutriAddCustomSalvar()">${a?'Salvar':'Adicionar à refeição'}</button>
+    ${a?`<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="nutriAddRemover('${mid}',${idx})">🗑️ Tirar da refeição</button>`:''}
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+}
+function nutriAddCustomSalvar(){
+  const mid = window.__nutriAddMid, idx = window.__nutriAddIdx;
+  const nome = (($('nc-nome').value)||'').trim() || 'Alimento extra';
+  const kcal = parseFloat($('nc-kcal').value);
+  if(!(kcal>0 && kcal<=4000)){ toast('Informe as calorias (entre 1 e 4000)'); return; }
+  const rec = { custom:true, nome:nome.slice(0,40), kcal, p:parseFloat($('nc-p').value)||0, c:parseFloat($('nc-c').value)||0, g:parseFloat($('nc-g').value)||0 };
+  const m = nutriMealLog(mid, true);
+  if(idx!==undefined && m.add[idx]) m.add[idx] = rec; else m.add.push(rec);
+  nutriAbrirRef(mid); saveData(); openNutri();
+}
+function nutriAddRemover(mid, idx){
+  const m = nutriMealLog(mid, true); m.add.splice(idx,1);
+  nutriLimpa(mid); nutriAbrirRef(mid); saveData(); openNutri();
+}
+// ---------- voltar ao recomendado ----------
+function nutriResetRefeicao(mid){
+  const dk = nutriKeyDia(nutriDiaSel()); const dia = (state.nutriLog||{})[dk]; if(!dia || !dia[mid]) return;
+  const ok = dia[mid]===true ? true : !!dia[mid].ok;
+  if(ok) dia[mid] = {ok:true, adj:{}, add:[]}; else delete dia[mid];
+  nutriLimpa(mid); nutriAbrirRef(mid); saveData(); openNutri();
+}
+function nutriResetDia(){
+  const dk = nutriKeyDia(nutriDiaSel()); const dia = (state.nutriLog||{})[dk]; if(!dia) return;
+  Object.keys(dia).forEach(mid=>{ const ok = dia[mid]===true ? true : !!dia[mid].ok; if(ok) dia[mid] = {ok:true, adj:{}, add:[]}; else delete dia[mid]; });
+  if(!Object.keys(dia).length) delete state.nutriLog[dk];
   saveData(); openNutri();
 }
+// ---------- lista de compras: só hoje em diante, já com as suas edições ----------
+function nutriListaCompras(escopo){
+  escopo = escopo || window.__comprasEsc || 'semana'; window.__comprasEsc = escopo;
+  const n = nutriConfig(), hojeIdx = getDayIdx();
+  const dias = []; if(escopo==='semana'){ for(let d=hojeIdx; d<=7; d++) dias.push({d, dk:nutriKeyDia(d)}); }
+  else { for(let k=0; k<7; k++) dias.push({d:((hojeIdx-1+k)%7)+1, dk:chaveDia(new Date(Date.now()+k*86400000))}); }
+  const tot = {}; const soma = (id,g)=>{ const t = tot[id] = tot[id] || {g:0}; t.g += g; };
+  let editados = 0, diasOk = 0;
+  dias.forEach(({d,dk})=>{
+    const pl = nutriMontarPlano(d); if(pl.erro) return; diasOk++;
+    const lg = nutriLogDe(dk);
+    pl.refeicoes.forEach(m=>{
+      const l = lg(m.id);
+      m.itens.forEach(i=>{ const e = nutriEfetivo(i, l.adj[i.id]); if(e.removido){ editados++; return; } if(e.editado) editados++; soma(e.id, e.gramas); });
+      (l.add||[]).forEach((a,idx)=>{ const x = nutriItemExtra(a,idx); if(x && !x.custom){ editados++; soma(x.id, x.gramas); } });
+    });
+  });
+  const semKey = chaveDia(nutriDataDia(1)); state.comprasOk = state.comprasOk || {}; const ok = state.comprasOk[semKey] = state.comprasOk[semKey] || {};
+  const fmt = id=>{
+    const a = NUTRI_ALIMENTOS[id]; const t = tot[id];
+    if(a[5]) return `${Math.max(1,Math.round(t.g/a[5]))} unid.`;
+    if(id==='leite'||id==='iogurte') return t.g>=1000 ? `${(t.g/1000).toFixed(1).replace('.',',')} L` : `${Math.max(50,Math.round(t.g/50)*50)} ml`;
+    let g = t.g, nota = '';
+    if(NUTRI_CRU[id]){ g = t.g/NUTRI_CRU[id]; nota = ' (cru)'; }
+    g = Math.max(50, Math.round(g/50)*50);
+    return (g>=1000 ? `${(g/1000).toFixed(1).replace('.',',')} kg` : `${g} g`) + nota;
+  };
+  const blocos = Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
+    const itens = ids.filter(id=>tot[id]).map(id=>`<div class="mrow ${ok[id]?'rm':''}" style="cursor:pointer" onclick="nutriCompraOk('${id}')"><span class="n">${ok[id]?'☑':'☐'} ${NUTRI_ALIMENTOS[id][0]}</span><span class="q">${fmt(id)}</span></div>`).join('');
+    return itens ? `<div class="section-lbl" style="margin:14px 0 2px">${titulo}</div>${itens}` : '';
+  }).join('');
+  window.__nutriTextoCompras = '🛒 Lista de compras (MetaTreino)\n\n' + Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
+    const l = ids.filter(id=>tot[id] && !ok[id]).map(id=>`• ${NUTRI_ALIMENTOS[id][0]}: ${fmt(id)}`); return l.length ? titulo+'\n'+l.join('\n') : '';
+  }).filter(Boolean).join('\n\n');
+  $('modal-inner').innerHTML = `<h3>🛒 Lista de compras</h3>
+    <div class="mod-toggle" style="margin:8px 0 6px">
+      <button class="seg ${escopo==='semana'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('semana')">Até domingo</button>
+      <button class="seg ${escopo==='7dias'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('7dias')">Próximos 7 dias</button>
+    </div>
+    <p style="color:var(--text-dim);font-size:12px;line-height:1.55;margin:4px 0 0">${diasOk} ${diasOk===1?'dia':'dias'} a partir de hoje${editados?`, já com ${editados===1?'a sua 1 edição':'as suas '+editados+' edições'}`:''}. Dias que já passaram não entram. Remova um alimento do cardápio e ele sai daqui. Toque num item pra marcar “já tenho”. Arroz, feijão, macarrão, soja e carnes estão em peso cru.</p>
+    <div style="max-height:54vh;overflow-y:auto">${blocos || '<div class="text-dim" style="padding:14px 0;font-size:13px">Nada a comprar neste período.</div>'}</div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="nutriCopiarCompras()">📋 Copiar / compartilhar lista</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">‹ Voltar ao plano</button>`;
+  $('modal-back').classList.add('on');
+}
+function nutriCompraOk(id){
+  const semKey = chaveDia(nutriDataDia(1)); state.comprasOk = state.comprasOk || {}; const ok = state.comprasOk[semKey] = state.comprasOk[semKey] || {};
+  if(ok[id]) delete ok[id]; else ok[id] = true;
+  Object.keys(state.comprasOk).sort().slice(0,-4).forEach(k=>delete state.comprasOk[k]);
+  saveData(); nutriListaCompras();
+}
+function nutriCopiarCompras(){
+  const t = window.__nutriTextoCompras || '';
+  if(navigator.share){ navigator.share({text:t}).catch(()=>{}); return; }
+  try{ navigator.clipboard.writeText(t).then(()=>toast('📋 Lista copiada')); }catch(e){ toast('Não consegui copiar neste aparelho'); }
+}
 function nutriComi(id){
-  const m = nutriMealLog(id, true); m.ok = !m.ok;
+  const m = nutriMealLog(id, true, chaveDia(new Date())); m.ok = !m.ok;
   Object.keys(state.nutriLog).sort().slice(0,-30).forEach(x=>delete state.nutriLog[x]);   // guarda só 30 dias
-  window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[id] = true;
-  saveData(); openNutri();
+  nutriLimpa(id); nutriAbrirRef(id); saveData(); openNutri();
 }
 function nutriTog(id, aberto){ window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[id] = aberto; }
 function nutriDia(i){ window.__nutriDia = i; openNutri(); }
 function openNutri(){
   window.__nutriAberto = true;
   const n = nutriConfig();
-  const dIdx = window.__nutriDia || ((typeof getDayIdx==='function') ? getDayIdx() : 1);
+  const dIdx = nutriDiaSel();
   const plano = nutriMontarPlano(dIdx);
   const fecha = `<button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
   if(plano.erro==='dados'){
@@ -10883,37 +11054,44 @@ function openNutri(){
   }
   const c = plano.calc, ab = window.__nutriAbertos || {};
   const hojeIdx = (typeof getDayIdx==='function') ? getDayIdx() : 1;
-  const logHoje = ((state.nutriLog||{})[chaveDia(new Date())]) || {};
-  const mealLog = id => { const m = logHoje[id]; if(m===true) return {ok:true, adj:{}}; return m ? {ok:!!m.ok, adj:m.adj||{}} : {ok:false, adj:{}}; };
-  const comidas = {}; const consumo = {};
+  const ehHoje = dIdx===hojeIdx, editavel = dIdx>=hojeIdx;
+  const lgFn = nutriLogDe(nutriKeyDia(dIdx));
+  const comidas = {}; let mudouDia = false;
   plano.refeicoes.forEach(m=>{
-    const lg = mealLog(m.id); comidas[m.id] = lg.ok;
-    const itens = m.itens.map(i=>nutriEfetivo(i, lg.adj[i.id]));
-    m._itens = itens; m._lg = lg;
-    m._real = itens.reduce((t,i)=>({kcal:t.kcal+i.kcal,p:t.p+i.p,c:t.c+i.c,g:t.g+i.g}),{kcal:0,p:0,c:0,g:0});
+    const lg = lgFn(m.id); comidas[m.id] = ehHoje && lg.ok;
+    const itens = [...m.itens.map(i=>nutriEfetivo(i, lg.adj[i.id])), ...lg.add.map((a,i)=>nutriItemExtra(a,i)).filter(Boolean)];
+    m._itens = itens; m._lg = lg; m._mudou = Object.keys(lg.adj).length>0 || lg.add.length>0; if(m._mudou) mudouDia = true;
+    m._real = nutriSomaItens(itens);
   });
+  const diaReal = nutriSomaItens(plano.refeicoes.map(m=>m._real));
+  const dKcal = Math.round(diaReal.kcal - plano.dia.kcal);
   const comidasL = plano.refeicoes.filter(m=>comidas[m.id]);
   const kcalComido = Math.round(comidasL.reduce((s,m)=>s+m._real.kcal,0));
   const kcalPrevisto = Math.round(comidasL.reduce((s,m)=>s+m.tot.kcal,0));
   const macComido = comidasL.reduce((t,m)=>({p:t.p+m._real.p,c:t.c+m._real.c,g:t.g+m._real.g}),{p:0,c:0,g:0});
   const diasT = nutriDiasTreino();
-  const chips = NUTRI_DIAS.map((d,i)=>`<button class="nd ${i+1===dIdx?'on':''}" onclick="nutriDia(${i+1})">${d}${diasT.has(i+1)?'<i>🏋️</i>':'<i></i>'}</button>`).join('');
+  const chips = NUTRI_DIAS.map((d,i)=>`<button class="nd ${i+1===dIdx?'on':''}" style="${i+1<hojeIdx?'opacity:.5':''}" onclick="nutriDia(${i+1})">${d}${diasT.has(i+1)?'<i>🏋️</i>':'<i></i>'}</button>`).join('');
   const kc = c.kcal||1, pP = Math.round(c.prot*4/kc*100), pG = Math.round(c.gord*9/kc*100), pC = Math.max(0,100-pP-pG);
   const objBtns = Object.keys(NUTRI_OBJ).map(k=>`<button class="seg ${n.objetivo===k?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('objetivo','${k}')">${NUTRI_OBJ[k]}</button>`).join('');
-  const refs = plano.refeicoes.map(m=>`
+  const refs = plano.refeicoes.map(m=>{
+    const kcalMostra = Math.round((comidas[m.id] || m._mudou) ? m._real.kcal : m.tot.kcal);
+    const dm = Math.round(m._real.kcal - m.tot.kcal);
+    return `
     <details class="mealc" ${ab[m.chave]?'open':''} ontoggle="nutriTog('${m.chave}',this.open)">
       <summary>
         <span class="mi">${m.icone}</span>
         <span class="mt"><b>${m.nome}</b><small>${m.hora} · ${m.prato}</small></span>
-        <span class="mk"><b>${Math.round(dIdx===hojeIdx && comidas[m.id] ? m._real.kcal : m.tot.kcal)}</b><small>${dIdx===hojeIdx && comidas[m.id] ? '✅ comi' : 'kcal'}</small></span>
+        <span class="mk"><b>${kcalMostra}</b><small>${comidas[m.id] ? '✅ comi' : (m._mudou ? `${dm>0?'+':''}${dm} kcal` : 'kcal')}</small></span>
       </summary>
       <div class="mb">
-        ${(dIdx===hojeIdx?m._itens:m.itens).map(i=>`<div class="mrow ${i.removido?'rm':''}"><span class="n">${i.nome}${i.editado?' <small style="color:var(--primary-2)">editado</small>':''}</span><span class="q">${i.removido?'não comi':i.texto}</span>${dIdx===hojeIdx?`<span class="ba"><button class="ib" onclick="nutriEditar('${m.id}','${i.id}')">✎</button><button class="ib" onclick="nutriRemover('${m.id}','${i.id}')">${i.removido?'↩':'✕'}</button></span>`:''}</div>`).join('')}
-        <div class="mfoot"><span>${dIdx===hojeIdx && (m._real.kcal!==m.tot.kcal) ? `Com seus ajustes: ${Math.round(m._real.kcal)} kcal · P ${Math.round(m._real.p)}g` : `P ${Math.round(m.tot.p)}g · C ${Math.round(m.tot.c)}g · G ${Math.round(m.tot.g)}g`}</span>
-          <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="nutriTrocar('${m.chave}')">🔄 Outro prato (${m.variante}/${m.total})</button></div>
-        ${dIdx===hojeIdx?`<button class="btn ${(comidas[m.id])?'btn-primary':'btn-ghost'} btn-block" style="margin-top:10px;padding:10px" onclick="nutriComi('${m.id}')">${comidas[m.id]?'✅ Já comi (toque pra desfazer)':'Marcar como comido'}</button>`:''}
+        ${m._itens.map(i=>`<div class="mrow ${i.removido?'rm':''}"><span class="n">${i.nome}${i.editado?' <small style="color:var(--primary-2)">editado</small>':''}${i.adicionado?' <small style="color:var(--accent)">acrescentado</small>':''}</span><span class="q">${i.removido?'não vou comer':i.texto}</span>${editavel?`<span class="ba"><button class="ib" onclick="${i.adicionado?`nutriAddEditar('${m.id}',${i.idx})`:`nutriEditar('${m.id}','${i.id}')`}">✎</button><button class="ib" onclick="${i.adicionado?`nutriAddRemover('${m.id}',${i.idx})`:`nutriRemover('${m.id}','${i.id}')`}">${i.removido?'↩':'✕'}</button></span>`:''}</div>`).join('')}
+        ${editavel?`<button class="btn btn-ghost btn-block" style="margin-top:8px;padding:9px;font-size:13px" onclick="nutriAddAbrir('${m.id}')">➕ Adicionar alimento</button>`:''}
+        <div class="mfoot"><span>${m._mudou ? `Com seus ajustes: ${Math.round(m._real.kcal)} kcal (${dm>0?'+':''}${dm} vs recomendado) · P ${Math.round(m._real.p)}g` : `P ${Math.round(m.tot.p)}g · C ${Math.round(m.tot.c)}g · G ${Math.round(m.tot.g)}g`}</span>
+          ${editavel?`<button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="nutriTrocar('${m.chave}')">🔄 Outro prato (${m.variante}/${m.total})</button>`:''}</div>
+        ${editavel && m._mudou ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;padding:9px;font-size:13px" onclick="nutriResetRefeicao('${m.id}')">↩️ Voltar ao recomendado</button>` : ''}
+        ${ehHoje?`<button class="btn ${comidas[m.id]?'btn-primary':'btn-ghost'} btn-block" style="margin-top:8px;padding:10px" onclick="nutriComi('${m.id}')">${comidas[m.id]?'✅ Já comi (toque pra desfazer)':'Marcar como comido'}</button>`:''}
       </div>
-    </details>`).join('');
+    </details>`; }).join('');
   const eq = nutriEquivalencias().map(g=>`<div style="margin-top:10px"><b style="font-size:13px">${g.t}</b> <span style="font-size:11px;color:var(--text-mute)">${g.sub}</span>
       <div class="eqgrid">${g.l.map(x=>`<span>${x}</span>`).join('')}</div></div>`).join('');
   $('modal-inner').innerHTML = `
@@ -10925,10 +11103,12 @@ function openNutri(){
           <span style="font-size:11.5px;letter-spacing:1px;color:var(--text-dim);font-weight:700">${plano.treino?'DIA DE TREINO 🏋️':'DIA DE DESCANSO 😴'}</span>
           <span style="font-size:11.5px;color:var(--text-dim)">${NUTRI_OBJ[c.objetivo].replace(/^[^\s]+\s/,'')}</span>
         </div>
-        <div style="display:flex;align-items:baseline;gap:6px;margin-top:6px"><span style="font-size:44px;font-weight:300;line-height:1;font-family:'Outfit',system-ui,sans-serif">${c.kcal}</span><span style="color:var(--text-dim)">kcal</span>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-top:6px"><span style="font-size:44px;font-weight:300;line-height:1;font-family:'Outfit',system-ui,sans-serif">${c.kcal}</span><span style="color:var(--text-dim)">kcal de meta</span>
           <span style="margin-left:auto;font-size:12px;color:var(--text-dim)">💧 ${c.agua.toString().replace('.',',')} L</span></div>
-        ${dIdx===hojeIdx?`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-top:8px"><span>💧 Hoje: <b style="color:var(--text-strong)">${fmtL(aguaHoje())} L</b> de ${fmtL(aguaMeta())} L</span><button class="aguabtn" style="margin-left:auto" onclick="aguaAdd(250)">+250 ml</button></div>`:''}
-        ${dIdx===hojeIdx?`<div style="font-size:12px;color:var(--text-dim);margin-top:6px">Já comi hoje: <b style="color:var(--text-strong)">${kcalComido} kcal</b> de ${c.kcal} · restam ${Math.max(0,c.kcal-kcalComido)} (${comidasL.length}/${plano.refeicoes.length} refeições)</div>${comidasL.length?`<div style="font-size:11.5px;color:var(--text-dim);margin-top:3px">P ${Math.round(macComido.p)}g · C ${Math.round(macComido.c)}g · G ${Math.round(macComido.g)}g${kcalComido!==kcalPrevisto?` · <span style="color:${kcalComido>kcalPrevisto?'var(--primary-2)':'var(--accent)'}">${kcalComido>kcalPrevisto?'+':''}${kcalComido-kcalPrevisto} kcal vs o previsto</span>`:''}</div>`:''}`:''}
+        ${mudouDia ? `<div style="margin-top:8px;font-size:13px">Cardápio com seus ajustes: <b>${Math.round(diaReal.kcal)} kcal</b> <span style="color:${dKcal>0?'var(--primary-2)':'var(--accent)'}">(${dKcal>0?'+':''}${dKcal} vs recomendado)</span></div>${editavel?`<button class="btn btn-ghost" style="margin-top:8px;padding:7px 12px;font-size:12px" onclick="nutriResetDia()">↩️ Voltar o dia ao recomendado</button>`:''}` : ''}
+        ${ehHoje?`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-top:8px"><span>💧 Hoje: <b style="color:var(--text-strong)">${fmtL(aguaHoje())} L</b> de ${fmtL(aguaMeta())} L</span><button class="aguabtn" style="margin-left:auto" onclick="aguaAdd(250)">+250 ml</button></div>`:''}
+        ${ehHoje?`<div style="font-size:12px;color:var(--text-dim);margin-top:6px">Já comi hoje: <b style="color:var(--text-strong)">${kcalComido} kcal</b> de ${c.kcal} · restam ${Math.max(0,c.kcal-kcalComido)} (${comidasL.length}/${plano.refeicoes.length} refeições)</div>${comidasL.length?`<div style="font-size:11.5px;color:var(--text-dim);margin-top:3px">P ${Math.round(macComido.p)}g · C ${Math.round(macComido.c)}g · G ${Math.round(macComido.g)}g${kcalComido!==kcalPrevisto?` · <span style="color:${kcalComido>kcalPrevisto?'var(--primary-2)':'var(--accent)'}">${kcalComido>kcalPrevisto?'+':''}${kcalComido-kcalPrevisto} kcal vs o previsto</span>`:''}</div>`:''}`:''}
+        ${!editavel?`<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px">Dia que já passou: só consulta.</div>`:''}
         <div class="macbar"><i style="width:${pP}%;background:var(--primary)"></i><i style="width:${pC}%;background:var(--accent)"></i><i style="width:${pG}%;background:var(--prep)"></i></div>
         <div class="maclg">
           <span><i style="background:var(--primary)"></i>Proteína <b>${c.prot}g</b></span>
@@ -10939,7 +11119,8 @@ function openNutri(){
       </div>
       ${c.avisos.map(a=>`<div class="card card-alert" style="padding:12px 14px;font-size:12.5px;line-height:1.5">⚠️ ${a}</div>`).join('')}
       ${refs}
-      <details class="mealc"><summary><span class="mi">⚙️</span><span class="mt"><b>Ajustar plano</b><small>objetivo, refeições, vegetariano</small></span></summary>
+      <button class="btn btn-ghost btn-block" style="margin:0 0 8px" onclick="nutriListaCompras()">🛒 Lista de compras</button>
+      <details class="mealc"><summary><span class="mi">⚙️</span><span class="mt"><b>Ajustar plano</b><small>objetivo, refeições, restrições</small></span></summary>
         <div class="mb">
           <div class="mod-toggle" style="margin:4px 0 8px">${objBtns}</div>
           <div class="mod-toggle" style="margin:0">
@@ -10953,10 +11134,9 @@ function openNutri(){
           ${n.economico?'<div style="font-size:11px;color:var(--text-mute);line-height:1.5;margin-top:6px">Sem carne bovina, peixe, queijos, whey, castanhas e outros itens caros; usa óleo de soja no lugar do azeite. Baseado em preços de 2026 (DIEESE e Procon-SP); o valor muda de cidade pra cidade.</div>':''}
           <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${n.vegetariano?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('vegetariano',${!n.vegetariano})">🌱 Vegetariano (ovos e laticínios liberados)</button></div>
         </div></details>
-      <button class="btn btn-ghost btn-block" style="margin:0 0 8px" onclick="nutriListaCompras()">🛒 Lista de compras da semana</button>
       <details class="mealc"><summary><span class="mi">🔁</span><span class="mt"><b>Trocas equivalentes</b><small>mesma quantidade de nutriente</small></span></summary><div class="mb">${eq}</div></details>
       <details class="mealc"><summary><span class="mi">💡</span><span class="mt"><b>Dicas pra hoje</b><small>${plano.dicas.length} dicas</small></span></summary><div class="mb" style="font-size:12.5px;color:var(--text-dim);line-height:1.6">${plano.dicas.map(d=>`• ${d}`).join('<br>')}</div></details>
-      <div style="font-size:11px;color:var(--text-mute);line-height:1.5;padding:10px 4px">Cardápio de ${NUTRI_DIAS[dIdx-1]}: ~${Math.round(plano.dia.kcal)} kcal · P ${Math.round(plano.dia.p)}g · C ${Math.round(plano.dia.c)}g · G ${Math.round(plano.dia.g)}g. Valores aproximados (tabelas brasileiras de composição). É uma orientação geral e não substitui um nutricionista; se tiver doença, alergia ou usar medicação, procure um profissional.</div>
+      <div style="font-size:11px;color:var(--text-mute);line-height:1.5;padding:10px 4px">Cardápio de ${NUTRI_DIAS[dIdx-1]}: ~${Math.round(plano.dia.kcal)} kcal recomendadas. As porções são calculadas a partir do seu peso, altura, idade, sexo, treinos e objetivo; os valores são aproximados (tabelas brasileiras de composição). É uma orientação geral e não substitui um nutricionista; se tiver doença, alergia ou usar medicação, procure um profissional.</div>
     </div>
     ${fecha}`;
   $('modal-back').classList.add('on');
@@ -10974,10 +11154,11 @@ function nutriSet(k, v){
 }
 function nutriTrocar(chave){
   const n = nutriConfig(); n.trocas[chave] = (n.trocas[chave]||0) + 1;
-  try{ const dia = (state.nutriLog||{})[chaveDia(new Date())]; if(dia) delete dia[chave.replace(/v$/,'')]; }catch(e){}
+  try{ const dia = (state.nutriLog||{})[nutriKeyDia(nutriDiaSel())]; if(dia) delete dia[chave.replace(/v$/,'')]; }catch(e){}   // os ajustes eram do prato anterior
   window.__nutriAbertos = window.__nutriAbertos || {}; window.__nutriAbertos[chave] = true;
   saveData(); openNutri();
 }
+
 function nutriResumoMA(){
   const plano = nutriMontarPlano();
   if(plano.erro==='dados') return `Pra montar seu plano alimentar eu preciso de <b>sexo, idade, altura e peso</b> no seu cadastro. Complete em Perfil → Editar dados pessoais e me chame de novo. 😊`;
@@ -11100,7 +11281,7 @@ setTimeout(iniciaTomEmoji, 400);
 // ===== EVOLUÇÃO DE CARGA POR EXERCÍCIO =====
 function _pontosEx(exId){
   const pts = [];
-  ((state.progResumo||{})[exId]||[]).forEach(r=>pts.push({date:r[0], peso:r[1], vol:r[2], reps:r[3], sets:null}));
+  ((state.progResumo||{})[exId]||[]).forEach(r=>{ if(Array.isArray(r)) r={d:r[0],p:r[1],v:r[2],r:r[3]}; pts.push({date:r.d, peso:r.p, vol:r.v, reps:r.r, sets:null}); });
   ((state.progress||{})[exId]||[]).filter(p=>p.sets&&p.sets.length).forEach(p=>{
     pts.push({date:p.date, peso:Math.max(0,...p.sets.map(s=>+s.peso||0)), vol:p.sets.reduce((t,x)=>t+(+x.peso||0)*(+x.reps||0),0), reps:p.sets.reduce((t,x)=>t+(+x.reps||0),0), melhorReps:Math.max(0,...p.sets.map(s=>+s.reps||0)), sets:p.sets});
   });
@@ -11212,11 +11393,20 @@ function rpeSet(n){
 // ===== SOM DO FIM DO CRONÔMETRO (escolhível) =====
 const SONS_FIM = { sino:{nome:'Sino',emo:'🔔'}, gongo:{nome:'Gongo grave',emo:'🥁'}, digital:{nome:'Digital (relógio)',emo:'⌚'}, campainha:{nome:'Campainha ding-dong',emo:'🛎️'}, apitos:{nome:'Apitos (som antigo)',emo:'📣'} };
 function getSomFim(){ try{ const s = localStorage.getItem('metatreino_som'); return SONS_FIM[s] ? s : 'sino'; }catch(e){ return 'sino'; } }
+const SOM_DURS = [{nome:'Curta',f:0.6},{nome:'Média',f:1},{nome:'Longa',f:1.7},{nome:'Extra',f:2.6}];
+const SOM_VOLS = [{nome:'Baixo',f:0.45},{nome:'Médio',f:0.8},{nome:'Alto',f:1.15}];
+function somCfg(){
+  let d = 1, v = 1;
+  try{ d = parseInt(localStorage.getItem('metatreino_som_dur')); v = parseInt(localStorage.getItem('metatreino_som_vol')); }catch(e){}
+  if(!(d>=0 && d<=3)) d = 1; if(!(v>=0 && v<=2)) v = 1;
+  return {d, v, dur:SOM_DURS[d].f, vol:SOM_VOLS[v].f};
+}
 function _nota(ctx, freq, t0, dur, tipo, vol, ataque){
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.type = tipo; o.frequency.value = freq;
+  const pico = Math.min(0.95, Math.max(0.0002, vol*(window.__somVol||1)));
   g.gain.setValueAtTime(0.0001, t0);
-  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t0 + (ataque||0.01));
+  g.gain.exponentialRampToValueAtTime(pico, t0 + (ataque||0.01));
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   o.connect(g); g.connect(ctx.destination); o.start(t0); o.stop(t0 + dur + 0.05);
 }
@@ -11224,29 +11414,169 @@ function tocaSomFim(id){
   try{
     if(!restAudioCtx) return;
     if(restAudioCtx.state === 'suspended') restAudioCtx.resume();
+    const cfg = somCfg(), D = cfg.dur; window.__somVol = cfg.vol;
     const c = restAudioCtx, t = c.currentTime + 0.02;
-    if(id==='apitos'){ playRestBeepAntigo(); return; }
-    if(id==='sino'){       // sino metálico: parciais inarmônicos, duas batidas
-      [0, 0.95].forEach(off=>[[880,.55],[2429,.28],[4752,.12],[1320,.2]].forEach(([f,v])=>_nota(c,f,t+off,1.7,'sine',v,0.005)));
+    if(id==='apitos'){ const r = Math.max(1, Math.round(D)); for(let i=0;i<r;i++) setTimeout(()=>{ try{ playRestBeepAntigo(); }catch(e){} }, i*1500); return; }
+    if(id==='sino'){       // sino metálico: parciais inarmônicos; a duração define quantas batidas e quanto ressoa
+      const batidas = Math.max(1, Math.round(2*D)), resso = 1.7*Math.min(1.8, Math.max(0.7, D));
+      for(let i=0;i<batidas;i++) [[880,.55],[2429,.28],[4752,.12],[1320,.2]].forEach(([f,v])=>_nota(c,f,t+i*0.95,resso,'sine',v,0.005));
     } else if(id==='gongo'){ // grave e longo
-      [[110,.8],[221,.45],[303,.3],[462,.18]].forEach(([f,v])=>_nota(c,f,t,2.8,'sine',v,0.03));
-    } else if(id==='digital'){ // três bips curtos agudos, duas vezes (estilo relógio)
-      [0,0.22,0.44,1.0,1.22,1.44].forEach(off=>_nota(c,1760,t+off,0.12,'triangle',.5,0.005));
+      const dur = Math.min(7, 2.8*D);
+      [[110,.8],[221,.45],[303,.3],[462,.18]].forEach(([f,v])=>_nota(c,f,t,dur,'sine',v,0.03));
+    } else if(id==='digital'){ // três bips curtos agudos por grupo (estilo relógio)
+      const grupos = Math.max(1, Math.round(2*D));
+      for(let gI=0; gI<grupos; gI++) [0,0.22,0.44].forEach(off=>_nota(c,1760,t+gI*0.95+off,0.12,'triangle',.5,0.005));
     } else if(id==='campainha'){ // ding-dong
-      [[784,0],[587,0.7]].forEach(([f,off])=>{ _nota(c,f,t+off,1.0,'sine',.6,0.01); _nota(c,f*2,t+off,0.6,'sine',.2,0.01); });
+      const pares = Math.max(1, Math.round(D));
+      for(let p=0;p<pares;p++) [[784,0],[587,0.7]].forEach(([f,off])=>{ _nota(c,f,t+p*1.5+off,1.0,'sine',.6,0.01); _nota(c,f*2,t+p*1.5+off,0.6,'sine',.2,0.01); });
     }
   }catch(e){}
 }
 function playRestBeep(){
   tocaSomFim(getSomFim());
-  try{ if(navigator.vibrate) navigator.vibrate([250,120,250,120,400]); }catch(e){}
+  try{ if(navigator.vibrate){ const r = Math.max(1, Math.round(somCfg().dur)); let pat = []; for(let i=0;i<r;i++) pat = pat.concat([250,120,250,120,400,300]); navigator.vibrate(pat); } }catch(e){}
 }
 function openSomFim(){
-  const cur = getSomFim();
+  const cur = getSomFim(), cfg = somCfg();
+  const seg = (lista, ativo, fn)=>`<div class="mod-toggle" style="margin:6px 0 0">${lista.map((x,i)=>`<button class="seg ${i===ativo?'on':''}" style="font-size:12px;padding:10px 4px" onclick="${fn}(${i})">${x.nome}</button>`).join('')}</div>`;
   $('modal-inner').innerHTML = `<h3>🔔 Som do cronômetro</h3>
     <p style="color:var(--text-dim);font-size:13px;line-height:1.55">Toca quando o descanso entre as séries termina. O celular também vibra (se o aparelho permitir).</p>
     ${Object.keys(SONS_FIM).map(k=>`<div class="list-row" style="${k===cur?'border:1px solid var(--primary)':''}"><span onclick="setSomFim('${k}')" style="flex:1;display:flex;gap:10px;align-items:center"><span>${SONS_FIM[k].emo}</span><span>${SONS_FIM[k].nome}${k===cur?' ✓':''}</span></span><button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="unlockRestAudio();tocaSomFim('${k}')">▶ Ouvir</button></div>`).join('')}
+    <div class="section-lbl" style="margin:14px 0 0">Duração</div>${seg(SOM_DURS,cfg.d,'setSomDur')}
+    <div class="section-lbl" style="margin:12px 0 0">Volume</div>${seg(SOM_VOLS,cfg.v,'setSomVol')}
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function setSomDur(i){ try{ localStorage.setItem('metatreino_som_dur', String(i)); }catch(e){} unlockRestAudio(); tocaSomFim(getSomFim()); openSomFim(); }
+function setSomVol(i){ try{ localStorage.setItem('metatreino_som_vol', String(i)); }catch(e){} unlockRestAudio(); tocaSomFim(getSomFim()); openSomFim(); }
+function setSomFim(k){ try{ localStorage.setItem('metatreino_som', k); }catch(e){} unlockRestAudio(); tocaSomFim(k); openSomFim(); }
+
+function ativLivre(){
+  try{ ensureActivityLog(); }catch(e){}
+  openRunLog('livre');
+}
+
+// ===== ATUALIZAÇÕES (cartão na Home + aviso discreto no assistente) =====
+function appVersaoLabel(){ return String(APP_VERSION).replace(/-beta\./,' Beta ').replace(/-/g,' '); }
+function updIgnorado(){ try{ return Date.now() < (+localStorage.getItem('mt_upd_ign')||0); }catch(e){ return false; } }
+function updIgnorar(){ try{ localStorage.setItem('mt_upd_ign', String(Date.now()+24*3600*1000)); }catch(e){} toast('Ok, aviso de atualização só amanhã.'); }
+function renderUpdateCard(){
+  const el = $('card-update'); if(!el) return;
+  let ult = ''; try{ const t = +localStorage.getItem('mt_upd_chk'); if(t) ult = 'Última checagem: '+new Date(t).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){}
+  if(window.__updDisp){
+    el.classList.add('on');
+    el.innerHTML = `<div class="upd-row"><div><b>Nova versão disponível</b><small>Atualize quando quiser. Seus treinos e dados ficam salvos.</small></div><button class="btn btn-primary" onclick="mtCheckUpdate()">Atualizar</button></div>`;
+  } else {
+    el.classList.remove('on');
+    el.innerHTML = `<div class="upd-row"><div><b>MetaTreino ${appVersaoLabel()}</b><small>${ult || 'Toque em buscar para ver se há novidades.'}</small></div><button class="btn btn-ghost" onclick="buscarAtualizacao()">Buscar atualização</button></div>`;
+  }
+}
+async function buscarAtualizacao(silencioso){
+  if(!silencioso) toast('Procurando atualização…');
+  try{
+    try{ const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if(reg) reg.update().catch(()=>{}); }catch(e){}
+    const r = await fetch('./app.js?_='+Date.now(), {cache:'no-store'});
+    const txt = await r.text();
+    const m = /const APP_VERSION = '([^']+)'/.exec(txt);
+    try{ localStorage.setItem('mt_upd_chk', String(Date.now())); }catch(e){}
+    if(m && m[1] !== APP_VERSION){ window.__updDisp = true; if(!silencioso) toast('🆕 Tem versão nova!'); }
+    else if(!silencioso) toast('✅ Você já está na versão mais recente');
+  }catch(e){ if(!silencioso) toast('Não consegui verificar agora. Confira a internet.'); }
+  try{ renderUpdateCard(); }catch(e){}
+}
+document.addEventListener('mt:update-available', ()=>{ window.__updDisp = true; try{ renderUpdateCard(); }catch(e){} });
+setTimeout(()=>{ try{ const t = +localStorage.getItem('mt_upd_chk')||0; if(Date.now()-t > 12*3600*1000) buscarAtualizacao(true); }catch(e){} }, 9000);
+
+// ===== ESTILO DOS ÍCONES: sóbrio (padrão) ou colorido =====
+// Sóbrio: os emojis mais usados viram ícones de linha da cor do texto; os demais ficam em tons de cinza.
+// Status coloridos (✅ 🟢 🟡 ⚪ medalhas) continuam como são.
+const ICO_SVG = {
+  dumbbell:'<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
+  run:'<circle cx="14.5" cy="4.5" r="1.7"/><path d="M9 21l2.5-5-2.5-2 2-4.5 3.5 2 2.5 2.5M6.5 12.5l3-3.5"/>',
+  bike:'<circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-8h5l3 8M10 8l3 8M9 6h3"/>',
+  flame:'<path d="M12 3c.8 3 4.5 4.8 4.5 9a4.5 4.5 0 0 1-9 0c0-1.8.8-3 1.8-4 .3 1.2 1 1.8 1.7 2 .2-2 .3-4.5 1-7z"/>',
+  scale:'<path d="M12 4v15M7 20h10M5 8h14M5 8l-2.5 6a3 3 0 0 0 5 0L5 8zM19 8l-2.5 6a3 3 0 0 0 5 0L19 8z"/>',
+  droplet:'<path d="M12 3.5s6 6.2 6 10.7a6 6 0 0 1-12 0C6 9.7 12 3.5 12 3.5z"/>',
+  leaf:'<path d="M5 19c0-8.5 5.5-14 15-14 0 8.5-5 14.5-14 14.5zM5 19c3-5 6-7.5 10-9.5"/>',
+  trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H4.5v1.5a3 3 0 0 0 3.5 3M16 6h3.5v1.5a3 3 0 0 1-3.5 3M12 13v4M8.5 20.5h7M10 17h4"/>',
+  calendar:'<rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
+  clock:'<circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.5l3 1.8M9.5 3h5"/>',
+  chart:'<path d="M4 4v16h16M8 15l3.5-4.5 3 3L19.5 7"/>',
+  target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8"/>',
+  bell:'<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.8 2H4.2l1.8-2zM10 21h4"/>',
+  pin:'<path d="M12 16.5V22M8.5 3.5h7l-1 5.5 3 3.5v2h-11v-2l3-3.5-1-5.5z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  trash:'<path d="M4.5 7h15M9.5 3.5h5M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/>',
+  refresh:'<path d="M20 11a8 8 0 0 0-14.5-3.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.5 3.5M20 20v-4.5h-4.5"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+  bulb:'<path d="M9 18h6M10 21h4M12 3.5a6 6 0 0 0-3.5 10.8c.7.6 1 1.3 1 2.2h5c0-.9.3-1.6 1-2.2A6 6 0 0 0 12 3.5z"/>',
+  clip:'<rect x="6" y="4.5" width="12" height="16" rx="2"/><path d="M9 4.5h6v2.5H9zM9 11h6M9 15h6"/>',
+  cart:'<circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/><path d="M3 4h2.5l2.2 11h10l2-8H7"/>',
+  flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+  home:'<path d="M4 11l8-7 8 7M6 10v10h12V10M10 20v-6h4v6"/>',
+  share:'<path d="M12 15V3.5M8 7l4-4 4 4M5 12v8h14v-8"/>',
+  note:'<path d="M6 3.5h9l3 3V20.5H6zM9 11h6M9 15h6"/>',
+  wrench:'<path d="M14.5 6.5a4 4 0 0 0-5 5L3.5 17.5l3 3 6-6a4 4 0 0 0 5-5l-2.5 2.5-2-.5-.5-2z"/>',
+  lock:'<rect x="5.5" y="10.5" width="13" height="10" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',
+  star:'<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8 6.8 19.6l1-5.8L3.5 9.7l5.9-.8z"/>',
+  moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',
+  coin:'<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5c0-1 1-1.7 2.5-1.7s2.5.7 2.5 1.7-1 1.5-2.5 1.8S9.5 12.5 9.5 14c0 1 1 1.8 2.5 1.8s2.5-.8 2.5-1.8"/>'
+};
+const ICO_MAPA = { dumbbell:'💪🏋', run:'🏃🚶', bike:'🚴', flame:'🔥', scale:'⚖', droplet:'💧', leaf:'🥗🌱', trophy:'🏆🏅🎖', calendar:'📅🗓', clock:'⏱⏰', chart:'📈📊', target:'🎯', bell:'🔔', pin:'📌', plus:'➕', trash:'🗑', refresh:'🔄', gear:'⚙', bulb:'💡', clip:'📋', cart:'🛒', flag:'🎌🏁', home:'🏠', share:'📤', note:'📝', wrench:'🛠🧰', lock:'🔒', star:'⭐🎉', moon:'😴🌙🌜', coin:'💰' };
+const ICO_POR_EMOJI = {}; Object.keys(ICO_MAPA).forEach(n=>{ Array.from(ICO_MAPA[n]).forEach(c=>{ ICO_POR_EMOJI[c] = n; }); });
+const ICO_MANTER = new Set(['✅','❌','⚪','🟢','🟡','🔴','🟣','🟠','🔵','🥇','🥈','🥉','❤','⚠','✔','✖']);
+const _reEmoji = /(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}])*)/gu;
+function _icoHtml(nome){ return `<i class="ico" aria-hidden="true"><svg viewBox="0 0 24 24">${ICO_SVG[nome]}</svg></i>`; }
+function sobrioProcessa(raiz){
+  if(!raiz || !raiz.nodeType) return;
+  const alvo = raiz.nodeType===3 ? raiz.parentNode : raiz; if(!alvo || !alvo.closest) return;
+  const walker = document.createTreeWalker(raiz.nodeType===3 ? raiz.parentNode : raiz, NodeFilter.SHOW_TEXT, { acceptNode:n=>{
+    const p = n.parentNode; if(!p) return NodeFilter.FILTER_REJECT;
+    const nm = p.nodeName; if(nm==='SCRIPT'||nm==='STYLE'||nm==='TEXTAREA'||nm==='OPTION'||nm==='NOSCRIPT'||nm==='TITLE'||nm==='svg'||nm==='text') return NodeFilter.FILTER_REJECT;
+    if(p.closest && p.closest('.emo,.ico,.trophy,[data-manter-emoji]')) return NodeFilter.FILTER_REJECT;
+    _reEmoji.lastIndex = 0; return _reEmoji.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+  }});
+  const nos = []; let n; while(n = walker.nextNode()) nos.push(n);
+  nos.forEach(no=>{
+    const txt = no.nodeValue; const frag = document.createDocumentFragment(); let ult = 0, mudou = false; _reEmoji.lastIndex = 0; let m;
+    while((m = _reEmoji.exec(txt))){
+      const em = m[0]; const base = em.replace(/[\uFE0F\u{1F3FB}-\u{1F3FF}]/gu,''); const primeiro = Array.from(base)[0];
+      if(m.index > ult) frag.appendChild(document.createTextNode(txt.slice(ult, m.index)));
+      if(ICO_MANTER.has(primeiro)){ frag.appendChild(document.createTextNode(em)); }
+      else if(ICO_POR_EMOJI[primeiro]){ const t = document.createElement('span'); t.innerHTML = _icoHtml(ICO_POR_EMOJI[primeiro]); frag.appendChild(t.firstChild); mudou = true; }
+      else { const s = document.createElement('span'); s.className = 'emo'; s.textContent = em; frag.appendChild(s); mudou = true; }
+      ult = m.index + em.length;
+    }
+    if(!mudou) return;
+    if(ult < txt.length) frag.appendChild(document.createTextNode(txt.slice(ult)));
+    no.parentNode.replaceChild(frag, no);
+  });
+}
+function iniciaEstiloSobrio(){
+  if(!document.documentElement.classList.contains('sobrio')) return;
+  try{
+    sobrioProcessa(document.body);
+    let agendado = false; const fila = new Set();
+    const obs = new MutationObserver(muts=>{
+      muts.forEach(mu=>{ mu.addedNodes && mu.addedNodes.forEach(nd=>{ if(nd.nodeType===1 || nd.nodeType===3) fila.add(nd); }); if(mu.type==='characterData') fila.add(mu.target); });
+      if(agendado) return; agendado = true;
+      requestAnimationFrame(()=>{ agendado = false; obs.disconnect(); try{ fila.forEach(nd=>{ if(document.body.contains(nd)) sobrioProcessa(nd); }); fila.clear(); }catch(e){} obs.observe(document.body,{childList:true,subtree:true,characterData:true}); });
+    });
+    obs.observe(document.body,{childList:true,subtree:true,characterData:true});
+    window.__sobrioObs = obs;
+  }catch(e){ console.log('estilo sóbrio desativado:', e); document.documentElement.classList.remove('sobrio'); }
+}
+function openEstiloIcones(){
+  const sobrio = document.documentElement.classList.contains('sobrio');
+  $('modal-inner').innerHTML = `<h3>Estilo dos ícones</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.55">Sóbrio troca os emojis coloridos por ícones de linha e tons neutros, para um visual mais limpo. Colorido mantém os emojis como são.</p>
+    <div class="list-row" style="${sobrio?'border:1px solid var(--primary)':''}" onclick="setEstiloIcones('sobrio')"><span>${_icoHtml('dumbbell')}</span> <span>Sóbrio${sobrio?' ✓':''}</span></div>
+    <div class="list-row" style="${!sobrio?'border:1px solid var(--primary)':''}" onclick="setEstiloIcones('colorido')"><span data-manter-emoji>💪</span> <span>Colorido${!sobrio?' ✓':''}</span></div>
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
-function setSomFim(k){ try{ localStorage.setItem('metatreino_som', k); }catch(e){} unlockRestAudio(); tocaSomFim(k); openSomFim(); }
+function setEstiloIcones(v){
+  try{ localStorage.setItem('metatreino_estilo', v); }catch(e){}
+  closeModal(); setTimeout(()=>location.reload(), 300);
+}
+setTimeout(iniciaEstiloSobrio, 350);
