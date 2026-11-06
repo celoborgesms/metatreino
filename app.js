@@ -1,5 +1,5 @@
 // ===== MetaTreino 2027.1 Beta 1 =====
-const APP_VERSION = '2027.1-beta.7';
+const APP_VERSION = '2027.1-beta.8';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2482,7 +2482,7 @@ function renderQuickStats(){
     const pc = v => Math.round(Math.min(1,v)*100);
     const linha = (cor,lbl,pct,val,sub)=>`<div class="act-row"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:${cor}"></i>${lbl}</div><span class="act-pct">${pct}%</span></div><div class="act-val">${val}<small>${sub}</small></div><div class="act-bar"><i style="width:${pct}%;background:${cor}"></i></div></div>`;
     el.innerHTML = `
-      <div class="act-head"><h3>Atividade da semana</h3><button class="pillbtn" onclick="event.stopPropagation();ativLivre()">＋ Atividade</button></div>
+      <div class="act-head"><h3>Atividade da semana</h3><span>${d.sem.length} de ${d.planejados||'–'} treinos</span></div>
       <div class="act-card">
         <div class="act-rings"><svg viewBox="0 0 120 120">${_anel(52,pT,'var(--primary)')}${_anel(40,pM,'var(--accent)')}${_anel(28,pS,'var(--prep)')}</svg>
           <div class="act-center"><b>${pctGeral}%</b><span>da meta</span></div></div>
@@ -4343,6 +4343,7 @@ function cancelRunPlan(){
 // ---------- PROFILE ----------
 function renderProfile(){
   try{ renderThemePicker(); }catch(e){}
+  try{ renderUpdateCard(); }catch(e){}
   if(!state || !state.user){ try{ showScreen('scr-auth'); }catch(e){} return; }   // logout no meio de um render
   try{ ensureStateShape(); }catch(e){}
   const u = state.user, p = u.profile || {};
@@ -6612,6 +6613,7 @@ function openActivityLog(){
       <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Distância (km)</label><input class="input" id="act-km" inputmode="decimal" placeholder="ex: 8" style="margin-top:4px"></div>
       <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Tempo (min:seg)</label><input class="input" id="act-min" inputmode="text" placeholder="ex: 30:45 ou 30.45" style="margin-top:4px"></div>
     </div>
+    <div class="field" style="margin-top:14px"><label style="font-size:12px;color:var(--text-dim)">Esforço percebido (RPE, de 1 a 10)</label>${rpeHtml(5)}</div>
     <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="saveActivityLog()">✅ Registrar</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Voltar</button>`;
   $('modal-back').classList.add('on');
@@ -6621,12 +6623,12 @@ function saveActivityLog(){
   const km = parseFloat(($('act-km').value||'').replace(',','.'));
   const min = parseTimeToMin($('act-min').value||'');
   if(!km || km<=0 || km>200 || !min || min<=0 || min>600){ toast('⚠️ Confira a distância e o tempo.'); return; }
-  const r = maLogActivity(actLogType, km, min);
+  const r = maLogActivity(actLogType, km, min, window.__rpe || 5);
   closeModal();
   toast(r && r.msg ? r.msg.replace(/<[^>]+>/g,'') : '✅ Atividade registrada!');
   if(state.ui.tab) goTab(state.ui.tab);
 }
-function maLogActivity(type, km, min){
+function maLogActivity(type, km, min, rpe){
   if(km<=0||km>200||min<=0||min>600) return {done:true, msg:'Esses números parecem estranhos 🤔. Tenta de novo, ex: "corri 5km em 30 minutos".'};
   const mod = ensureActivityLog();
   const paceNum = min/km;
@@ -6634,7 +6636,7 @@ function maLogActivity(type, km, min){
   const meta = {corrida:{emo:'🏃',lbl:'Corrida'},caminhada:{emo:'🚶',lbl:'Caminhada'},bike:{emo:'🚴',lbl:'Bike'}}[type];
   const name = type==='corrida' ? `${meta.emo} Corrida — ${km}km` : `${meta.emo} ${meta.lbl} — ${km}km`;
   mod.history = mod.history||[];
-  mod.history.push({ id:'ma', name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating:3, module:'run', activity:type });
+  mod.history.push({ id:'ma', name, at:Date.now(), duration:min, distance:km, pace:paceStr, rating: rpe ? (rpe<=3 ? 5 : (rpe<=7 ? 3 : 1)) : 3, rpe: rpe || undefined, module:'run', activity:type });
   ensureStats();
   if(type==='corrida' && typeof checkRunEvolution==='function') checkRunEvolution(km, paceStr);
   else if(type==='caminhada'){ if(km>=3)unlockTrophy('walk_3k'); if(km>=5)unlockTrophy('walk_5k'); }
@@ -11451,24 +11453,19 @@ function setSomDur(i){ try{ localStorage.setItem('metatreino_som_dur', String(i)
 function setSomVol(i){ try{ localStorage.setItem('metatreino_som_vol', String(i)); }catch(e){} unlockRestAudio(); tocaSomFim(getSomFim()); openSomFim(); }
 function setSomFim(k){ try{ localStorage.setItem('metatreino_som', k); }catch(e){} unlockRestAudio(); tocaSomFim(k); openSomFim(); }
 
-function ativLivre(){
-  try{ ensureActivityLog(); }catch(e){}
-  openRunLog('livre');
-}
 
 // ===== ATUALIZAÇÕES (cartão na Home + aviso discreto no assistente) =====
 function appVersaoLabel(){ return String(APP_VERSION).replace(/-beta\./,' Beta ').replace(/-/g,' '); }
 function updIgnorado(){ try{ return Date.now() < (+localStorage.getItem('mt_upd_ign')||0); }catch(e){ return false; } }
 function updIgnorar(){ try{ localStorage.setItem('mt_upd_ign', String(Date.now()+24*3600*1000)); }catch(e){} toast('Ok, aviso de atualização só amanhã.'); }
 function renderUpdateCard(){
-  const el = $('card-update'); if(!el) return;
-  let ult = ''; try{ const t = +localStorage.getItem('mt_upd_chk'); if(t) ult = 'Última checagem: '+new Date(t).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){}
-  if(window.__updDisp){
-    el.classList.add('on');
-    el.innerHTML = `<div class="upd-row"><div><b>Nova versão disponível</b><small>Atualize quando quiser. Seus treinos e dados ficam salvos.</small></div><button class="btn btn-primary" onclick="mtCheckUpdate()">Atualizar</button></div>`;
-  } else {
-    el.classList.remove('on');
-    el.innerHTML = `<div class="upd-row"><div><b>MetaTreino ${appVersaoLabel()}</b><small>${ult || 'Toque em buscar para ver se há novidades.'}</small></div><button class="btn btn-ghost" onclick="buscarAtualizacao()">Buscar atualização</button></div>`;
+  const row = $('upd-row'); if(!row) return;
+  const txt = $('upd-row-txt'), val = $('upd-row-val');
+  if(window.__updDisp){ row.onclick = ()=>mtCheckUpdate(); row.style.borderColor = 'var(--line-primary)'; txt.textContent = 'Atualizar agora'; val.textContent = 'nova versão'; val.style.color = 'var(--primary-2)'; }
+  else {
+    row.onclick = ()=>buscarAtualizacao(); row.style.borderColor = '';
+    let ult = ''; try{ const t = +localStorage.getItem('mt_upd_chk'); if(t) ult = ' · checado '+new Date(t).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); }catch(e){}
+    txt.textContent = 'Buscar atualização'; val.textContent = appVersaoLabel()+ult; val.style.color = '';
   }
 }
 async function buscarAtualizacao(silencioso){
@@ -11485,6 +11482,7 @@ async function buscarAtualizacao(silencioso){
   try{ renderUpdateCard(); }catch(e){}
 }
 document.addEventListener('mt:update-available', ()=>{ window.__updDisp = true; try{ renderUpdateCard(); }catch(e){} });
+setTimeout(()=>{ try{ renderUpdateCard(); }catch(e){} }, 800);
 setTimeout(()=>{ try{ const t = +localStorage.getItem('mt_upd_chk')||0; if(Date.now()-t > 12*3600*1000) buscarAtualizacao(true); }catch(e){} }, 9000);
 
 // ===== ESTILO DOS ÍCONES: sóbrio (padrão) ou colorido =====
@@ -11520,11 +11518,29 @@ const ICO_SVG = {
   lock:'<rect x="5.5" y="10.5" width="13" height="10" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',
   star:'<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8 6.8 19.6l1-5.8L3.5 9.7l5.9-.8z"/>',
   moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',
+  rocket:'<path d="M12 3c3 2 5 5.5 5 9l-2.5 3h-5L7 12c0-3.5 2-7 5-9zM9.5 15L7 19l4-1.5M14.5 15l2.5 4-4-1.5"/><circle cx="12" cy="10" r="1.5"/>',
+  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  bolt:'<path d="M13 3L5.5 13.5H11L10 21l7.5-10.5H12L13 3z"/>',
+  bandage:'<rect x="2.5" y="9" width="19" height="6" rx="3" transform="rotate(-40 12 12)"/><path d="M10.2 10.2l3.6 3.6"/>',
+  save:'<path d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6"/>',
+  chat:'<path d="M4 5h16v11H9l-4 4v-4H4z"/>',
+  book:'<path d="M5 4.5h10a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3V4.5zM5 17a3 3 0 0 1 3-3h10"/>',
+  shield:'<path d="M12 3l7 3v5.5c0 4.2-3 7.5-7 9.5-4-2-7-5.3-7-9.5V6l7-3z"/>',
+  ruler:'<path d="M3.5 15.5l12-12 5 5-12 12zM9 9l2 2M12 6l1.5 1.5M6 12l1.5 1.5"/>',
+  mail:'<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/>',
+  mappin:'<path d="M12 21s6-5.5 6-10.5a6 6 0 0 0-12 0C6 15.5 12 21 12 21z"/><circle cx="12" cy="10.5" r="2"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>',
+  gem:'<path d="M6.5 4h11l3 5-8.5 11L3.5 9l3-5zM3.5 9h17M9.5 4L8 9l4 11M14.5 4L16 9l-4 11"/>',
+  crown:'<path d="M4 8l4 4 4-7 4 7 4-4-1.5 10h-13L4 8z"/>',
+  layers:'<path d="M12 4l8 4-8 4-8-4 8-4zM4 12l8 4 8-4M4 16l8 4 8-4"/>',
+  compass:'<circle cx="12" cy="12" r="8.5"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  shuffle:'<path d="M4 7h4l8 10h4M4 17h4l2-2.5M14 9.5L16 7h4M18 5l2 2-2 2M18 15l2 2-2 2"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.6 0l3-3a4 4 0 0 0-5.6-5.6l-1 1M14 10a4 4 0 0 0-5.6 0l-3 3a4 4 0 0 0 5.6 5.6l1-1"/>',
   coin:'<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5c0-1 1-1.7 2.5-1.7s2.5.7 2.5 1.7-1 1.5-2.5 1.8S9.5 12.5 9.5 14c0 1 1 1.8 2.5 1.8s2.5-.8 2.5-1.8"/>'
 };
-const ICO_MAPA = { dumbbell:'💪🏋', run:'🏃🚶', bike:'🚴', flame:'🔥', scale:'⚖', droplet:'💧', leaf:'🥗🌱', trophy:'🏆🏅🎖', calendar:'📅🗓', clock:'⏱⏰', chart:'📈📊', target:'🎯', bell:'🔔', pin:'📌', plus:'➕', trash:'🗑', refresh:'🔄', gear:'⚙', bulb:'💡', clip:'📋', cart:'🛒', flag:'🎌🏁', home:'🏠', share:'📤', note:'📝', wrench:'🛠🧰', lock:'🔒', star:'⭐🎉', moon:'😴🌙🌜', coin:'💰' };
+const ICO_MAPA = { rocket:'🚀', heart:'💚💗❤💛💙💜🩷', bolt:'⚡', bandage:'🩹', save:'💾', chat:'💬', book:'📚', shield:'🛡', ruler:'📏', mail:'📧✉', mappin:'📍', sun:'☀🌅🌞', gem:'💎', crown:'👑', layers:'🧱📦', compass:'🧭', shuffle:'🔀', link:'🔗', dumbbell:'💪🏋🦵🦾', run:'🏃🚶', bike:'🚴', flame:'🔥💥', scale:'⚖', droplet:'💧', leaf:'🥗🌱🌴', trophy:'🏆🏅🎖', calendar:'📅🗓', clock:'⏱⏰🕐', chart:'📈📊', target:'🎯', bell:'🔔', pin:'📌', plus:'➕', trash:'🗑', refresh:'🔄🔁', gear:'⚙', bulb:'💡🧠', clip:'📋', cart:'🛒', flag:'🎌🏁', home:'🏠', share:'📤', note:'📝', wrench:'🛠🧰', lock:'🔒', star:'⭐🎉✨🌟🎂🎆', moon:'😴🌙🌜🦉', coin:'💰' };
 const ICO_POR_EMOJI = {}; Object.keys(ICO_MAPA).forEach(n=>{ Array.from(ICO_MAPA[n]).forEach(c=>{ ICO_POR_EMOJI[c] = n; }); });
-const ICO_MANTER = new Set(['✅','❌','⚪','🟢','🟡','🔴','🟣','🟠','🔵','🥇','🥈','🥉','❤','⚠','✔','✖']);
+const ICO_MANTER = new Set(['✅','❌','⚪','🟢','🟡','🔴','🟣','🟠','🔵','🥇','🥈','🥉','⚠','✔','✖']);
 const _reEmoji = /(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}])*)/gu;
 function _icoHtml(nome){ return `<i class="ico" aria-hidden="true"><svg viewBox="0 0 24 24">${ICO_SVG[nome]}</svg></i>`; }
 function sobrioProcessa(raiz){
@@ -11533,7 +11549,7 @@ function sobrioProcessa(raiz){
   const walker = document.createTreeWalker(raiz.nodeType===3 ? raiz.parentNode : raiz, NodeFilter.SHOW_TEXT, { acceptNode:n=>{
     const p = n.parentNode; if(!p) return NodeFilter.FILTER_REJECT;
     const nm = p.nodeName; if(nm==='SCRIPT'||nm==='STYLE'||nm==='TEXTAREA'||nm==='OPTION'||nm==='NOSCRIPT'||nm==='TITLE'||nm==='svg'||nm==='text') return NodeFilter.FILTER_REJECT;
-    if(p.closest && p.closest('.emo,.ico,.trophy,[data-manter-emoji]')) return NodeFilter.FILTER_REJECT;
+    if(p.closest && p.closest('.emo,.ico,[data-manter-emoji],#modal-back.award-dark')) return NodeFilter.FILTER_REJECT;   // comemorações ficam coloridas
     _reEmoji.lastIndex = 0; return _reEmoji.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
   }});
   const nos = []; let n; while(n = walker.nextNode()) nos.push(n);
