@@ -1,5 +1,5 @@
 // ===== MetaTreino 2027.1 Beta 1 =====
-const APP_VERSION = '2027.1-beta.8';
+const APP_VERSION = '2027.1-beta.9';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -11518,6 +11518,48 @@ const ICO_SVG = {
   lock:'<rect x="5.5" y="10.5" width="13" height="10" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',
   star:'<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8 6.8 19.6l1-5.8L3.5 9.7l5.9-.8z"/>',
   moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',
+
+  smile:'<circle cx="12" cy="12" r="9"/><path d="M8.5 14.3c1 1.5 2.2 2.2 3.5 2.2s2.5-.7 3.5-2.2M9 9.8h.01M15 9.8h.01"/>',
+  meh:'<circle cx="12" cy="12" r="9"/><path d="M9 15.2h6M9 9.8h.01M15 9.8h.01"/>',
+  sad:'<circle cx="12" cy="12" r="9"/><path d="M8.5 16.2c1-1.4 2.2-2 3.5-2s2.5.6 3.5 2M9 9.8h.01M15 9.8h.01"/>',
+  think:'<circle cx="12" cy="12" r="9"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1.1.9-1.1 1.7M12 16.8h.01"/>',
+  thumb:'<path d="M7 11v9H4v-9h3zM7 11l4-7c1.5 0 2.5 1.1 2.2 2.6L12.8 9H19a2 2 0 0 1 2 2.3l-1 6.5a2 2 0 0 1-2 1.7H7"/>',
+  hand:'<path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6h-1a5 5 0 0 1-4.3-2.5L4 14.5a1.5 1.5 0 0 1 2.6-1.5L8 15"/>',
+  cloudrain:'<path d="M7 14.5a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 5.5a4 4 0 0 1 .5 9M9 17.5l-1 2.5M13 17.5l-1 2.5M17 17.5l-1 2.5"/>',
+  cloud:'<path d="M7 18a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8.5 4 4 0 0 1 17.5 18H7z"/>',
+  thermo:'<path d="M14 14.5V5a2 2 0 0 0-4 0v9.5a4 4 0 1 0 4 0z"/>',
+  wind:'<path d="M3 9h10a2.5 2.5 0 1 0-2.5-2.5M3 13h14a2.5 2.5 0 1 1-2.5 2.5M3 17h6"/>',
+  wave:'<path d="M3 15c2-3 4-3 6 0s4 3 6 0 4-3 6 0M3 9c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/>',
+  mountain:'<path d="M3 19l6-11 4 7 2-3 6 7H3z"/>',
+  utensils:'<path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5M9 3v5M16 21V3c-2.5 1.5-3.5 4-3.5 7 0 1.5 1.5 3 3.5 3"/>',
+  cup:'<path d="M5 8h11v6a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5V8zM16 9h2a2.5 2.5 0 0 1 0 5h-2M8 3v2M12 3v2"/>',
+  apple:'<path d="M12 7c-2-2-6-1-6 4 0 4 2.5 8 5 8 .7 0 .9-.4 1-.4s.3.4 1 .4c2.5 0 5-4 5-8 0-5-4-6-6-4zM12 7c0-2 1-3 2.5-3.5"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>',
+  door:'<path d="M6 21V4h10v17M4 21h16M13 12h.01"/>',
+  briefcase:'<rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5M3.5 13h17"/>',
+  camera:'<path d="M4 8h3l1.5-2.5h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  phone:'<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>',
+  megaphone:'<path d="M4 10v4l10 5V5L4 10zM14 8c3 0 5 2 5 4s-2 4-5 4M7 14v5"/>',
+  search:'<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
+  pencil:'<path d="M4 20l1-4L16 5l3 3L8 19l-4 1zM14 7l3 3"/>',
+  user:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+  shoe:'<path d="M3 16c0-3 2-4 4-5l3-5 3 3c1 1 3 2 5 2.5 1.5.4 2 1.4 2 2.5v2H3z"/>',
+  music:'<path d="M9 18V6l10-2v12M9 18a2.5 2.5 0 1 1-2.5-2.5M19 16a2.5 2.5 0 1 1-2.5-2.5"/>',
+  gift:'<rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M4 13h16M12 9v11M12 9c-2.5 0-4-1-4-2.5S9.5 4 12 9zM12 9c2.5 0 4-1 4-2.5S14.5 4 12 9z"/>',
+  battery:'<rect x="3.5" y="8" width="16" height="8" rx="2"/><path d="M21 11v2M7 11v2M10.5 11v2"/>',
+  mute:'<path d="M5 9.5v5h3.5L13 18V6L8.5 9.5H5zM16.5 9.5l4 5M20.5 9.5l-4 5"/>',
+  chartdown:'<path d="M4 4v16h16M8 8l3.5 4.5 3-3L19.5 16"/>',
+  download:'<path d="M12 4v11M8 11l4 4 4-4M5 20h14"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  infinity:'<path d="M7 8a4 4 0 1 0 0 8c4 0 6-8 10-8a4 4 0 1 1 0 8c-4 0-6-8-10-8z"/>',
+  pulse:'<path d="M3 12h4l2-6 4 12 2-6h6"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  bed:'<path d="M3 18V7M3 14h18v4M21 14v-3a3 3 0 0 0-3-3h-7v6"/>',
+  route:'<path d="M8 21L10 3M16 21L14 3M12 7v2M12 12v2M12 17v2"/>',
+  stretch:'<circle cx="12" cy="5" r="2"/><path d="M12 7.5v5M6.5 10l5.5 2.5 5.5-2.5M8 20l4-7.5 4 7.5"/>',
+  palette:'<path d="M12 4a8 8 0 1 0 0 16c1.5 0 2-1 1.5-2-.6-1.2.2-2.5 1.7-2.5H17a3 3 0 0 0 3-3A8 8 0 0 0 12 4zM8 11h.01M12 8h.01M16 10h.01"/>',
+  tree:'<path d="M12 21v-6M12 15c-3.5 0-5-2.5-5-5 0-3 2.5-5 5-7 2.5 2 5 4 5 7 0 2.5-1.5 5-5 5z"/>',
+  dot:'<circle cx="12" cy="12" r="4"/>',
   rocket:'<path d="M12 3c3 2 5 5.5 5 9l-2.5 3h-5L7 12c0-3.5 2-7 5-9zM9.5 15L7 19l4-1.5M14.5 15l2.5 4-4-1.5"/><circle cx="12" cy="10" r="1.5"/>',
   heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
   bolt:'<path d="M13 3L5.5 13.5H11L10 21l7.5-10.5H12L13 3z"/>',
@@ -11538,11 +11580,14 @@ const ICO_SVG = {
   link:'<path d="M10 14a4 4 0 0 0 5.6 0l3-3a4 4 0 0 0-5.6-5.6l-1 1M14 10a4 4 0 0 0-5.6 0l-3 3a4 4 0 0 0 5.6 5.6l1-1"/>',
   coin:'<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5c0-1 1-1.7 2.5-1.7s2.5.7 2.5 1.7-1 1.5-2.5 1.8S9.5 12.5 9.5 14c0 1 1 1.8 2.5 1.8s2.5-.8 2.5-1.8"/>'
 };
-const ICO_MAPA = { rocket:'🚀', heart:'💚💗❤💛💙💜🩷', bolt:'⚡', bandage:'🩹', save:'💾', chat:'💬', book:'📚', shield:'🛡', ruler:'📏', mail:'📧✉', mappin:'📍', sun:'☀🌅🌞', gem:'💎', crown:'👑', layers:'🧱📦', compass:'🧭', shuffle:'🔀', link:'🔗', dumbbell:'💪🏋🦵🦾', run:'🏃🚶', bike:'🚴', flame:'🔥💥', scale:'⚖', droplet:'💧', leaf:'🥗🌱🌴', trophy:'🏆🏅🎖', calendar:'📅🗓', clock:'⏱⏰🕐', chart:'📈📊', target:'🎯', bell:'🔔', pin:'📌', plus:'➕', trash:'🗑', refresh:'🔄🔁', gear:'⚙', bulb:'💡🧠', clip:'📋', cart:'🛒', flag:'🎌🏁', home:'🏠', share:'📤', note:'📝', wrench:'🛠🧰', lock:'🔒', star:'⭐🎉✨🌟🎂🎆', moon:'😴🌙🌜🦉', coin:'💰' };
+const ICO_MAPA = { smile:'😊😌🙂😄😉😎🥹😁😃😀☺', meh:'😅😕🤫😔', sad:'😩😢😮😤🥵🤒', think:'🤔🤷❓❔', thumb:'👍👏🙌👊✊🙏🤝🤲🫸💯👎', hand:'👋✋🤚🖐', cloudrain:'🌧⛈🌦', cloud:'🌤🌫☁🌥', thermo:'🌡', wind:'💨', wave:'🌊', mountain:'⛰🏔🧗🌄', utensils:'🍗🍚🍛🍕🥪🥢🍽🥑🫒🌾🍌🍑', cup:'☕🥛', apple:'🍎', key:'🔑🔐🔓', door:'🚪', briefcase:'💼🎒', camera:'📷📸🎥🎬🖼', phone:'📱📲📞📴', megaphone:'📢📣', search:'🔎🔍', pencil:'✎✏✍', user:'👤👥👨👩', shoe:'👟🥾🦶🦿', music:'🎵🥁', gift:'🎁🎫🎗', battery:'🔋', mute:'🔇', chartdown:'📉', download:'📥', arrow:'↗➡➤↔🔙', infinity:'♾', pulse:'🫀🫁💓', globe:'🌍🌉', bed:'🛏🛋🪑', route:'🛣🛤', stretch:'🧘🤸🧎🧍🙆🤹🚵', palette:'🎨', tree:'🎄🎃🍀🌸🌻🌰', rocket:'🚀', heart:'💚💗❤💛💙💜🩷', bolt:'⚡', bandage:'🩹', save:'💾', chat:'💬', book:'📚', shield:'🛡', ruler:'📏', mail:'📧✉', mappin:'📍', sun:'☀🌅🌞🔆', gem:'💎💍', crown:'👑', layers:'🧱📦🧩🧬', compass:'🧭', shuffle:'🔀', link:'🔗', dumbbell:'💪🏋🦵🦾', run:'🏃🚶', bike:'🚴', flame:'🔥💥💢', scale:'⚖', droplet:'💧', leaf:'🥗🌱🌴🌿', trophy:'🏆🏅🎖', calendar:'📅🗓', clock:'⏱⏰🕐', chart:'📈📊', target:'🎯', bell:'🔔', pin:'📌', plus:'➕', trash:'🗑', refresh:'🔄🔁', gear:'⚙', bulb:'💡🧠', clip:'📋', cart:'🛒', flag:'🎌🏁🏟', home:'🏠', share:'📤', note:'📝', wrench:'🛠🧰🔧🔩🎛', lock:'🔒', star:'⭐🎉✨🌟🎂🎆🔮🎊', moon:'😴🌙🌜🦉', coin:'💰' };
 const ICO_POR_EMOJI = {}; Object.keys(ICO_MAPA).forEach(n=>{ Array.from(ICO_MAPA[n]).forEach(c=>{ ICO_POR_EMOJI[c] = n; }); });
 const ICO_MANTER = new Set(['✅','❌','⚪','🟢','🟡','🔴','🟣','🟠','🔵','🥇','🥈','🥉','⚠','✔','✖']);
 const _reEmoji = /(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}])*)/gu;
-function _icoHtml(nome){ return `<i class="ico" aria-hidden="true"><svg viewBox="0 0 24 24">${ICO_SVG[nome]}</svg></i>`; }
+const ICO_SO_EM_SLOT = new Set(['smile','meh','sad','think','thumb','hand']);
+const ICO_SLOTS = '.card-icon,.stat-mini-emo,.met-h,.mi,.trophy-emoji,.list-row,.block-head,.card-title,.section-lbl,h3,.btn,.tab,.nd,.today-label,.seg,.filter-chip,.nxchip,.chip,.list-badge,.opt';
+const ICO_ABERTOS = new Set(['plus','chart','chartdown','arrow','download','share','refresh','search','pulse','wave','wind','shuffle','route','link']);
+function _icoHtml(nome, extra){ return `<i class="ico${ICO_ABERTOS.has(nome)?' o':''}" aria-hidden="true"><svg viewBox="0 0 24 24" ${extra||''}>${ICO_SVG[nome]}</svg></i>`; }
 function sobrioProcessa(raiz){
   if(!raiz || !raiz.nodeType) return;
   const alvo = raiz.nodeType===3 ? raiz.parentNode : raiz; if(!alvo || !alvo.closest) return;
@@ -11558,10 +11603,14 @@ function sobrioProcessa(raiz){
     while((m = _reEmoji.exec(txt))){
       const em = m[0]; const base = em.replace(/[\uFE0F\u{1F3FB}-\u{1F3FF}]/gu,''); const primeiro = Array.from(base)[0];
       if(m.index > ult) frag.appendChild(document.createTextNode(txt.slice(ult, m.index)));
+      const nome = ICO_POR_EMOJI[primeiro];
+      const slot = no.parentNode.closest && no.parentNode.closest(ICO_SLOTS);
+      let fim = m.index + em.length;
       if(ICO_MANTER.has(primeiro)){ frag.appendChild(document.createTextNode(em)); }
-      else if(ICO_POR_EMOJI[primeiro]){ const t = document.createElement('span'); t.innerHTML = _icoHtml(ICO_POR_EMOJI[primeiro]); frag.appendChild(t.firstChild); mudou = true; }
-      else { const s = document.createElement('span'); s.className = 'emo'; s.textContent = em; frag.appendChild(s); mudou = true; }
-      ult = m.index + em.length;
+      else if(nome && (slot || !ICO_SO_EM_SLOT.has(nome))){ const t = document.createElement('span'); t.innerHTML = _icoHtml(nome); frag.appendChild(t.firstChild); mudou = true; }
+      else if(!nome && slot){ const t = document.createElement('span'); t.innerHTML = _icoHtml('dot'); frag.appendChild(t.firstChild); mudou = true; }
+      else { mudou = true; if(txt[fim]===' ') fim++; }   // texto corrido sem ícone: o emoji some (e o espaço dele)
+      ult = fim;
     }
     if(!mudou) return;
     if(ult < txt.length) frag.appendChild(document.createTextNode(txt.slice(ult)));
@@ -11582,12 +11631,22 @@ function iniciaEstiloSobrio(){
     window.__sobrioObs = obs;
   }catch(e){ console.log('estilo sóbrio desativado:', e); document.documentElement.classList.remove('sobrio'); }
 }
+const ICO_PACOTES = { fina:{nome:'Linha fina', sub:'traço delicado', sty:'stroke-width="1.15"'}, linha:{nome:'Linha', sub:'o padrão, equilibrado', sty:'stroke-width="1.7"'}, duo:{nome:'Duotone', sub:'traço com preenchimento suave', sty:'stroke-width="1.6" fill="currentColor" fill-opacity=".2"'} };
+function getPacote(){ try{ const p = localStorage.getItem('metatreino_pack'); return ICO_PACOTES[p] ? p : 'linha'; }catch(e){ return 'linha'; } }
+function setPacote(k){
+  try{ localStorage.setItem('metatreino_pack', k); }catch(e){}
+  const r = document.documentElement.classList; r.toggle('ico-fina', k==='fina'); r.toggle('ico-duo', k==='duo');
+  openEstiloIcones();
+}
 function openEstiloIcones(){
-  const sobrio = document.documentElement.classList.contains('sobrio');
+  const sobrio = document.documentElement.classList.contains('sobrio'), pk = getPacote();
+  const amostra = sty => ['dumbbell','flame','droplet','trophy','leaf'].map(n=>_icoHtml(n, sty)).join(' ');
   $('modal-inner').innerHTML = `<h3>Estilo dos ícones</h3>
-    <p style="color:var(--text-dim);font-size:13px;line-height:1.55">Sóbrio troca os emojis coloridos por ícones de linha e tons neutros, para um visual mais limpo. Colorido mantém os emojis como são.</p>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.55">Sóbrio troca os emojis por ícones de linha da cor do tema. Colorido mantém os emojis como são.</p>
     <div class="list-row" style="${sobrio?'border:1px solid var(--primary)':''}" onclick="setEstiloIcones('sobrio')"><span>${_icoHtml('dumbbell')}</span> <span>Sóbrio${sobrio?' ✓':''}</span></div>
     <div class="list-row" style="${!sobrio?'border:1px solid var(--primary)':''}" onclick="setEstiloIcones('colorido')"><span data-manter-emoji>💪</span> <span>Colorido${!sobrio?' ✓':''}</span></div>
+    ${sobrio?`<div class="section-lbl" style="margin:16px 0 6px">Pacote de ícones</div>
+    ${Object.keys(ICO_PACOTES).map(k=>`<div class="list-row" style="${k===pk?'border:1px solid var(--primary)':''};flex-direction:column;align-items:flex-start;gap:6px" onclick="setPacote('${k}')"><div style="display:flex;width:100%;justify-content:space-between"><b style="font-size:14px">${ICO_PACOTES[k].nome}${k===pk?' ✓':''}</b><small style="color:var(--text-mute)">${ICO_PACOTES[k].sub}</small></div><div style="font-size:22px;display:flex;gap:12px">${amostra(ICO_PACOTES[k].sty)}</div></div>`).join('')}`:''}
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
@@ -11596,3 +11655,205 @@ function setEstiloIcones(v){
   closeModal(); setTimeout(()=>location.reload(), 300);
 }
 setTimeout(iniciaEstiloSobrio, 350);
+
+// ===================================================================
+// FOTOS DE EVOLUÇÃO: antes e depois com slider
+// As fotos ficam SÓ NESTE APARELHO (IndexedDB): não vão pra nuvem, não entram no documento do Firebase
+// e ninguém mais vê. Trocar de celular ou limpar os dados do site apaga as fotos.
+// ===================================================================
+const FOTO_POSES = { frente:'Frente', lado:'Lado', costas:'Costas' };
+function fotoDB(){
+  return new Promise((res,rej)=>{
+    if(!window.indexedDB) return rej(new Error('IndexedDB indisponível'));
+    const r = indexedDB.open('metatreino_fotos', 1);
+    r.onupgradeneeded = ()=>{ r.result.createObjectStore('fotos', {keyPath:'id'}); };
+    r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error);
+  });
+}
+async function fotoListar(){
+  const db = await fotoDB();
+  return new Promise((res,rej)=>{ const rq = db.transaction('fotos').objectStore('fotos').getAll(); rq.onsuccess = ()=>res((rq.result||[]).sort((a,b)=>b.data-a.data)); rq.onerror = ()=>rej(rq.error); });
+}
+async function fotoSalvarRec(rec){
+  const db = await fotoDB();
+  return new Promise((res,rej)=>{ const tx = db.transaction('fotos','readwrite'); tx.objectStore('fotos').put(rec); tx.oncomplete = ()=>res(); tx.onerror = ()=>rej(tx.error); });
+}
+async function fotoApagarRec(id){
+  const db = await fotoDB();
+  return new Promise((res,rej)=>{ const tx = db.transaction('fotos','readwrite'); tx.objectStore('fotos').delete(id); tx.oncomplete = ()=>res(); tx.onerror = ()=>rej(tx.error); });
+}
+async function fotoApagarTodas(){
+  const db = await fotoDB();
+  return new Promise((res,rej)=>{ const tx = db.transaction('fotos','readwrite'); tx.objectStore('fotos').clear(); tx.oncomplete = ()=>res(); tx.onerror = ()=>rej(tx.error); });
+}
+function fotoLimpaURLs(){ (window.__fotoURLs||[]).forEach(u=>{ try{ URL.revokeObjectURL(u); }catch(e){} }); window.__fotoURLs = []; }
+function fotoURL(rec){ const u = URL.createObjectURL(rec.blob); (window.__fotoURLs = window.__fotoURLs||[]).push(u); return u; }
+function fotoDataTxt(ts, curto){ const d = new Date(ts); const dd = String(d.getDate()).padStart(2,'0'); if(!curto) return dd+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); return dd+' '+['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][d.getMonth()]+' '+String(d.getFullYear()).slice(2); }
+async function fotoComprimir(file){
+  let src, w, h;
+  try{ src = await createImageBitmap(file, {imageOrientation:'from-image'}); w = src.width; h = src.height; }
+  catch(e){
+    const url = URL.createObjectURL(file);
+    src = await new Promise((r,j)=>{ const i = new Image(); i.onload = ()=>r(i); i.onerror = j; i.src = url; });
+    w = src.naturalWidth; h = src.naturalHeight; URL.revokeObjectURL(url);
+  }
+  const k = Math.min(1, 1080/Math.max(w,h));
+  const cv = document.createElement('canvas'); cv.width = Math.round(w*k); cv.height = Math.round(h*k);
+  cv.getContext('2d').drawImage(src, 0, 0, cv.width, cv.height);
+  return new Promise(r=>cv.toBlob(b=>r({blob:b, w:cv.width, h:cv.height}), 'image/jpeg', 0.82));
+}
+async function openFotos(pose){
+  fotoLimpaURLs();
+  let lista = [];
+  try{ lista = await fotoListar(); }catch(e){ toast('Não consegui abrir as fotos neste aparelho'); return; }
+  window.__fotoPose = pose || window.__fotoPose || 'todas';
+  const filtro = window.__fotoPose === 'todas' ? lista : lista.filter(f=>f.pose===window.__fotoPose);
+  const chips = [['todas','Todas'], ...Object.entries(FOTO_POSES)].map(([k,n])=>`<button type="button" class="nxchip ${k===window.__fotoPose?'on':''}" onclick="openFotos('${k}')">${n}</button>`).join('');
+  const grade = filtro.length ? `<div class="fgrid">${filtro.map(f=>`<div class="fth" style="background-image:url('${fotoURL(f)}')" onclick="fotoVer('${f.id}')"><span>${fotoDataTxt(f.data,true)}${f.peso?' · '+String(f.peso).replace('.',',')+' kg':''}</span></div>`).join('')}</div>`
+    : `<div class="text-dim" style="padding:22px 6px;text-align:center;font-size:13.5px;line-height:1.6">${lista.length?'Nenhuma foto nesta posição.':'Registre a primeira foto pra começar a acompanhar sua evolução visual. Uma foto por mês, no mesmo local e com a mesma luz, já mostra bastante.'}</div>`;
+  $('modal-inner').innerHTML = `<h3>📷 Fotos de evolução</h3>
+    <p style="color:var(--text-mute);font-size:11.5px;line-height:1.5;margin:2px 0 10px">As fotos ficam só neste aparelho: não vão pra nuvem nem pra ninguém. Se trocar de celular ou limpar os dados do site, elas somem. Baixe as importantes.</p>
+    <div class="nxchips" style="margin-bottom:10px">${chips}</div>
+    <div style="max-height:46vh;overflow-y:auto">${grade}</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-primary" style="flex:1" onclick="fotoNova()">➕ Nova foto</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="openComparar()" ${lista.length<2?'disabled style="flex:1;opacity:.45"':''}>↔ Comparar</button>
+    </div>
+    ${lista.length?`<button class="btn btn-ghost btn-block" style="margin-top:8px;font-size:12px;padding:8px" onclick="fotoApagarTudoConfirma()">Apagar todas as fotos</button>`:''}
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="fotoLimpaURLs();closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function fotoNova(){
+  window.__fotoNova = null; window.__fotoNovaPose = window.__fotoNovaPose || 'frente';
+  const ult = ((state.weights||[]).slice().sort((a,b)=>b.date-a.date)[0]||{}).weight || '';
+  const hoje = new Date(); const dstr = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
+  const chips = Object.entries(FOTO_POSES).map(([k,n])=>`<button type="button" class="nxchip ${k===window.__fotoNovaPose?'on':''}" onclick="window.__fotoNovaPose='${k}';document.querySelectorAll('#fn-poses .nxchip').forEach(b=>b.classList.toggle('on',b.dataset.k==='${k}'))" data-k="${k}">${n}</button>`).join('');
+  $('modal-inner').innerHTML = `<h3>➕ Nova foto</h3>
+    <div id="fn-prev" style="aspect-ratio:3/4;max-height:34vh;margin:6px auto 10px;border-radius:16px;background:var(--surface-2) center/contain no-repeat;border:1px dashed var(--border-strong);display:flex;align-items:center;justify-content:center;color:var(--text-mute);font-size:13px">Nenhuma foto escolhida</div>
+    <label class="btn btn-ghost btn-block" style="display:block;text-align:center;margin-bottom:10px">📷 Tirar ou escolher foto<input type="file" accept="image/*" id="fn-file" style="display:none" onchange="fotoEscolhida(this)"></label>
+    <div class="section-lbl" style="margin:6px 0 6px">Posição</div>
+    <div class="nxchips" id="fn-poses">${chips}</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <div style="flex:1"><div class="section-lbl" style="margin:0 0 4px">Data</div><input class="input" type="date" id="fn-data" value="${dstr}" max="${dstr}"></div>
+      <div style="flex:1"><div class="section-lbl" style="margin:0 0 4px">Peso (kg)</div><input class="input" type="number" inputmode="decimal" step="0.1" id="fn-peso" placeholder="opcional" value="${ult}"></div>
+    </div>
+    <button class="btn btn-primary btn-block" id="fn-salvar" style="margin-top:14px" onclick="fotoSalvarNova()">💾 Salvar foto</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openFotos()">Voltar</button>`;
+  $('modal-back').classList.add('on');
+}
+async function fotoEscolhida(inp){
+  const f = inp.files && inp.files[0]; if(!f) return;
+  const prev = $('fn-prev'); prev.textContent = 'Preparando a foto…';
+  try{
+    const r = await fotoComprimir(f); window.__fotoNova = r;
+    window.__fotoPrevURL && URL.revokeObjectURL(window.__fotoPrevURL);
+    window.__fotoPrevURL = URL.createObjectURL(r.blob);
+    prev.textContent = ''; prev.style.backgroundImage = `url('${window.__fotoPrevURL}')`; prev.style.borderStyle = 'solid';
+  }catch(e){ console.log(e); prev.textContent = 'Não consegui ler essa foto. Tente outra.'; }
+}
+async function fotoSalvarNova(){
+  if(!window.__fotoNova){ toast('Escolha uma foto primeiro'); return; }
+  const dv = ($('fn-data').value||'').split('-'); const data = dv.length===3 ? new Date(+dv[0], +dv[1]-1, +dv[2], 12).getTime() : Date.now();
+  const peso = parseFloat($('fn-peso').value);
+  const rec = { id:'f'+Date.now()+Math.floor(Math.random()*1000), pose:window.__fotoNovaPose||'frente', data, peso:(peso>20&&peso<400)?peso:null, blob:window.__fotoNova.blob, w:window.__fotoNova.w, h:window.__fotoNova.h };
+  try{ await fotoSalvarRec(rec); window.__fotoNova = null; toast('✅ Foto salva neste aparelho'); openFotos(rec.pose); }
+  catch(e){ console.log(e); toast('Não consegui salvar (sem espaço no aparelho?)'); }
+}
+async function fotoVer(id){
+  const lista = await fotoListar(); const f = lista.find(x=>x.id===id); if(!f) return;
+  const u = fotoURL(f);
+  $('modal-inner').innerHTML = `<h3>${FOTO_POSES[f.pose]||'Foto'} · ${fotoDataTxt(f.data)}</h3>
+    <div style="font-size:12.5px;color:var(--text-dim);margin:2px 0 8px">${f.peso?String(f.peso).replace('.',',')+' kg':'Sem peso registrado'}</div>
+    <img src="${u}" style="width:100%;max-height:52vh;object-fit:contain;border-radius:16px;background:#000;display:block">
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-ghost" style="flex:1;font-size:13px" onclick="openComparar('${f.id}',null)">Usar como ANTES</button>
+      <button class="btn btn-ghost" style="flex:1;font-size:13px" onclick="openComparar(null,'${f.id}')">Usar como DEPOIS</button>
+    </div>
+    <a class="btn btn-ghost btn-block" style="display:block;text-align:center;margin-top:8px" href="${u}" download="metatreino-${f.pose}-${chaveDia(f.data)}.jpg">⬇️ Baixar foto</a>
+    <button class="btn btn-ghost btn-block hl-danger" style="margin-top:8px" onclick="fotoApagarConfirma('${f.id}')">🗑️ Apagar</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openFotos()">Voltar</button>`;
+  $('modal-back').classList.add('on');
+}
+function fotoApagarConfirma(id){
+  appConfirm('Essa foto será apagada deste aparelho e não dá pra recuperar.', async ()=>{ try{ await fotoApagarRec(id); toast('Foto apagada'); }catch(e){} openFotos(); }, {title:'Apagar foto?', emo:'🗑️', okLabel:'Apagar', danger:true});
+}
+function fotoApagarTudoConfirma(){
+  appConfirm('Todas as fotos de evolução serão apagadas deste aparelho. Não dá pra recuperar.', async ()=>{ try{ await fotoApagarTodas(); toast('Fotos apagadas'); }catch(e){} openFotos(); }, {title:'Apagar todas as fotos?', emo:'🗑️', okLabel:'Apagar tudo', danger:true});
+}
+// ---------- comparação ----------
+async function openComparar(aId, bId){
+  fotoLimpaURLs();
+  let lista = []; try{ lista = await fotoListar(); }catch(e){ return; }
+  if(lista.length < 2){ toast('Precisa de pelo menos 2 fotos pra comparar'); return; }
+  const c = window.__cmp = window.__cmp || {modo:'slider', pos:50};
+  const ref = lista.find(x=>x.id===(aId||bId));
+  if(ref) c.pose = ref.pose;
+  if(!c.pose || lista.filter(x=>x.pose===c.pose).length < 2){
+    const cont = {}; lista.forEach(x=>cont[x.pose]=(cont[x.pose]||0)+1);
+    c.pose = Object.keys(cont).sort((x,y)=>cont[y]-cont[x])[0];
+  }
+  const dessa = lista.filter(x=>x.pose===c.pose).sort((a,b)=>a.data-b.data);   // do mais antigo ao mais novo
+  if(dessa.length < 2){ toast('Você tem só 1 foto nessa posição. Registre outra pra comparar.'); openFotos(c.pose); return; }
+  if(aId) c.aId = aId; if(bId) c.bId = bId;
+  if(!dessa.some(x=>x.id===c.aId)) c.aId = dessa[0].id;
+  if(!dessa.some(x=>x.id===c.bId)) c.bId = dessa[dessa.length-1].id;
+  if(c.aId===c.bId) c.bId = dessa.find(x=>x.id!==c.aId).id;
+  const A = dessa.find(x=>x.id===c.aId), B = dessa.find(x=>x.id===c.bId);
+  const ua = fotoURL(A), ub = fotoURL(B);
+  const dias = Math.round(Math.abs(B.data-A.data)/86400000);
+  const dp = (A.peso && B.peso) ? B.peso - A.peso : null;
+  const opts = sel => dessa.map(x=>`<option value="${x.id}" ${x.id===sel?'selected':''}>${fotoDataTxt(x.data,true)}${x.peso?' · '+String(x.peso).replace('.',',')+' kg':''}</option>`).join('');
+  const poses = Object.entries(FOTO_POSES).filter(([k])=>lista.filter(x=>x.pose===k).length>=2).map(([k,n])=>`<button type="button" class="nxchip ${k===c.pose?'on':''}" onclick="window.__cmp.pose='${k}';window.__cmp.aId=null;window.__cmp.bId=null;openComparar()">${n}</button>`).join('');
+  const tagA = `ANTES · ${fotoDataTxt(A.data,true).toUpperCase()}`, tagB = `DEPOIS · ${fotoDataTxt(B.data,true).toUpperCase()}`;
+  const palco = c.modo==='slider'
+    ? `<div class="cmp" id="cmp"><img src="${ua}" alt=""><img id="cmp-b" src="${ub}" alt="" style="clip-path:inset(0 0 0 ${c.pos}%);-webkit-clip-path:inset(0 0 0 ${c.pos}%)"><div class="cmp-tag l">${tagA}</div><div class="cmp-tag r">${tagB}</div><div class="cmp-bar" id="cmp-bar" style="left:${c.pos}%"><span class="cmp-knob">‹ ›</span></div></div><div style="text-align:center;font-size:11.5px;color:var(--text-mute);margin-top:6px">Arraste sobre a foto para revelar o antes e o depois</div>`
+    : `<div class="cmp-duo"><div><img src="${ua}" alt=""><div class="cmp-tag l">${tagA}</div></div><div><img src="${ub}" alt=""><div class="cmp-tag l">${tagB}</div></div></div>`;
+  $('modal-inner').innerHTML = `<h3>↔ Comparar fotos</h3>
+    <div class="nxchips" style="margin:4px 0 8px">${poses}</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <select class="input" style="flex:1;font-size:13px" onchange="window.__cmp.aId=this.value;openComparar()">${opts(c.aId)}</select>
+      <select class="input" style="flex:1;font-size:13px" onchange="window.__cmp.bId=this.value;openComparar()">${opts(c.bId)}</select>
+    </div>
+    <div class="mod-toggle" style="margin:0 0 8px">
+      <button class="seg ${c.modo==='slider'?'on':''}" style="font-size:12px;padding:9px 4px" onclick="window.__cmp.modo='slider';openComparar()">Deslizar</button>
+      <button class="seg ${c.modo!=='slider'?'on':''}" style="font-size:12px;padding:9px 4px" onclick="window.__cmp.modo='lado';openComparar()">Lado a lado</button>
+    </div>
+    <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:8px">${dias} ${dias===1?'dia':'dias'} entre as fotos${dp!==null?` · ${dp>0?'+':''}${dp.toFixed(1).replace('.',',')} kg`:''}</div>
+    ${palco}
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="fotoCompartilhar()">📤 Compartilhar comparação</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openFotos(window.__cmp.pose)">Voltar</button>`;
+  $('modal-back').classList.add('on');
+  if(c.modo==='slider') cmpLiga();
+}
+function cmpLiga(){
+  const el = $('cmp'); if(!el) return;
+  const aplica = x=>{
+    const r = el.getBoundingClientRect(); const p = Math.max(0, Math.min(100, (x-r.left)/r.width*100));
+    window.__cmp.pos = p; const b = $('cmp-b'); const cp = `inset(0 0 0 ${p}%)`; b.style.clipPath = cp; b.style.webkitClipPath = cp; $('cmp-bar').style.left = p+'%';
+  };
+  let arrasta = false;
+  el.addEventListener('pointerdown', e=>{ arrasta = true; try{ el.setPointerCapture(e.pointerId); }catch(_){} aplica(e.clientX); });
+  el.addEventListener('pointermove', e=>{ if(arrasta) aplica(e.clientX); });
+  const fim = ()=>{ arrasta = false; };
+  el.addEventListener('pointerup', fim); el.addEventListener('pointercancel', fim);
+}
+async function fotoCompartilhar(){
+  try{
+    const lista = await fotoListar(); const c = window.__cmp;
+    const A = lista.find(x=>x.id===c.aId), B = lista.find(x=>x.id===c.bId); if(!A||!B) return;
+    const ia = await createImageBitmap(A.blob), ib = await createImageBitmap(B.blob);
+    const W = 540, H = 720, topo = 84, cv = document.createElement('canvas'); cv.width = W*2; cv.height = H + topo;
+    const g = cv.getContext('2d'); g.fillStyle = '#0b0b0d'; g.fillRect(0,0,cv.width,cv.height);
+    const desenha = (img, x)=>{ const k = Math.max(W/img.width, H/img.height); const w = img.width*k, h = img.height*k; g.save(); g.beginPath(); g.rect(x,topo,W,H); g.clip(); g.drawImage(img, x+(W-w)/2, topo+(H-h)/2, w, h); g.restore(); };
+    desenha(ia,0); desenha(ib,W);
+    g.fillStyle = '#fff'; g.font = '700 30px system-ui,sans-serif'; g.textBaseline = 'middle';
+    const dtxt = x=>fotoDataTxt(x.data,true).toUpperCase()+(x.peso?'  ·  '+String(x.peso).replace('.',',')+' kg':'');
+    g.fillText('ANTES  ·  '+dtxt(A), 22, topo/2); g.fillText('DEPOIS  ·  '+dtxt(B), W+22, topo/2);
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.font = '600 18px system-ui,sans-serif'; g.textAlign = 'right'; g.fillText('MetaTreino', cv.width-16, cv.height-16);
+    const blob = await new Promise(r=>cv.toBlob(r,'image/jpeg',0.9));
+    const file = new File([blob], 'meu-antes-e-depois.jpg', {type:'image/jpeg'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Meu antes e depois'}).catch(()=>{}); return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'meu-antes-e-depois.jpg'; document.body.appendChild(a); a.click(); a.remove();
+    toast('⬇️ Imagem salva nos downloads');
+  }catch(e){ console.log(e); toast('Não consegui gerar a imagem'); }
+}

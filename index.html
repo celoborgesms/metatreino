@@ -18,6 +18,7 @@
     if(['zepp','aurora','classico','oceano','claro','amoled'].indexOf(t)<0) t = 'zepp';
     document.documentElement.setAttribute('data-theme', t);
     try{ if(localStorage.getItem('metatreino_estilo') !== 'colorido') document.documentElement.classList.add('sobrio'); }catch(e){ document.documentElement.classList.add('sobrio'); }
+    try{ var pk = localStorage.getItem('metatreino_pack'); if(pk==='fina') document.documentElement.classList.add('ico-fina'); if(pk==='duo') document.documentElement.classList.add('ico-duo'); }catch(e){}
     try{ if(localStorage.getItem('metatreino_sessao')) document.documentElement.classList.add('restaurando'); }catch(e){}
     var cores = {amoled:'#000000', zepp:'#000000', aurora:'#070a1a', classico:'#050914', oceano:'#04111b', claro:'#f5f6fb'};
     var m = document.querySelector('meta[name="theme-color"]');
@@ -977,6 +978,26 @@ html.sobrio .trophy .ico{color:var(--text-mute)}
 html.sobrio .trophy.unlock .ico{color:var(--accent)}
 html.sobrio .trophy-emoji .ico{width:1.05em;height:1.05em}
 html.sobrio .card-icon .ico{color:var(--primary-2)}
+
+/* fotos de evolução */
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.fth{aspect-ratio:3/4;border-radius:14px;background:var(--surface-2) center/cover no-repeat;position:relative;overflow:hidden;border:1px solid var(--border)}
+.fth span{position:absolute;left:0;right:0;bottom:0;padding:14px 6px 5px;font-size:10.5px;font-weight:700;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.7));text-align:center}
+.cmp{position:relative;border-radius:20px;overflow:hidden;background:#000;touch-action:pan-y;user-select:none;-webkit-user-select:none;aspect-ratio:3/4;width:100%}
+.cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
+.cmp-bar{position:absolute;top:0;bottom:0;width:2px;background:#fff;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 8px rgba(0,0,0,.5)}
+.cmp-knob{position:absolute;top:50%;left:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.45)}
+.cmp-tag{position:absolute;top:10px;padding:5px 10px;border-radius:99px;background:rgba(15,15,18,.78);color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.5px;pointer-events:none}
+.cmp-tag.l{left:10px}.cmp-tag.r{right:10px}
+.cmp-duo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cmp-duo > div{position:relative;aspect-ratio:3/4;border-radius:16px;overflow:hidden;background:#000}
+.cmp-duo img{width:100%;height:100%;object-fit:cover}
+.cmp-duo .cmp-tag{top:8px}
+.cmp-duo .cmp-tag.l{left:8px;right:auto}
+
+html.ico-fina .ico svg{stroke-width:1.15}
+html.ico-duo .ico svg{fill:currentColor;fill-opacity:.2;stroke-width:1.6}
+html.ico-duo .ico.o svg{fill:none}
 </style>
 </head>
 <body>
@@ -1606,6 +1627,7 @@ html.sobrio .card-icon .ico{color:var(--primary-2)}
       <div id="pf-body-info"></div>
       <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="openModal('add-weight')">➕ Registrar peso hoje</button>
       <div id="pf-weight-chart-slot" style="margin-top:14px"></div>
+      <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="openFotos()">📷 Fotos de evolução (antes e depois)</button>
     </div>
 
     <div class="section-lbl">Módulo atual</div>
@@ -1656,7 +1678,7 @@ html.sobrio .card-icon .ico{color:var(--primary-2)}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 8</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 9</span>
     </div>
   </div>
 </div>
@@ -1741,7 +1763,7 @@ html.sobrio .card-icon .ico{color:var(--primary-2)}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.8"></script>
+<script src="./app.js?v=2027.1-beta.9"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();
