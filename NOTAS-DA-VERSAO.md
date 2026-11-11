@@ -1,4 +1,156 @@
-# MetaTreino 2027.1 Beta 10 — notas da versão
+# MetaTreino 2027.1 Beta 12 — Calistenia
+
+Modalidade completa de calistenia, integrada ao módulo de treino de força que já existia. Musculação, corrida, bike e caminhada continuam iguais.
+
+## Como foi integrada (e por quê)
+- O treino de força agora tem **Modalidade**: *Musculação tradicional*, *Calistenia* ou *Híbrido*. Fica gravada no plano de cada aluno (`setup.modalidade`).
+- A calistenia usa o mesmo registro de séries, histórico, sequência, conquistas, desafios, gráficos e sincronização. Não é um segundo app nem um módulo duplicado.
+- Alunos atuais continuam em Musculação. Nada muda para eles, a não ser que escolham outra modalidade.
+- Para trocar: na montagem do plano (o primeiro campo agora é "Modalidade") ou em **Perfil → Modalidade**. O plano é refeito e o histórico fica.
+- No botão Musculação/Corrida da Home, o nome passa a ser "Calistenia" ou "Híbrido", conforme o caso.
+
+## Biblioteca de calistenia
+- **99 exercícios** organizados em **25 cadeias de progressão**: Superior, Inferior, Core e Habilidades.
+- Por nível: 26 Iniciante, 27 Intermediário, 28 Avançado e 18 Especialista.
+- Cada exercício tem: nível, músculos trabalhados, como executar, erro comum, orientação de segurança, equipamentos necessários, prescrição sugerida (séries, repetições ou tempo, descanso), progressão e regressão, pré-requisitos (nas habilidades) e vídeo (cadastrável pelo painel).
+- Na Biblioteca: filtro "🤸 Calistenia" com área e nível. A busca geral também encontra exercícios de calistenia.
+- Habilidades com pré-requisitos de segurança:
+  - **Parada de mão**: Pike push-up e Hollow grupado.
+  - **Muscle-up**: Barra arqueiro e Dips negativo.
+  - **Front lever**: Barra fixa pronada e Hollow body.
+  - **Back lever**: Chin-up e Hollow body.
+  - **Planche**: Flexão tradicional e Dips negativo.
+  - **Human flag**: Barra fixa pronada, Prancha lateral com elevação e espaldar/poste.
+- Habilidades só entram no plano com o objetivo "Domínio de habilidades" ou nível Avançado ou superior, **e** com os pré-requisitos cumpridos.
+
+## Montagem do plano
+- Considera objetivo (força, hipertrofia, resistência, condicionamento ou habilidades), nível, dias por semana, tempo por sessão (30–75 min), equipamentos (barra, paralelas, argolas, elásticos, apoios, banco, espaldar), limitações (sem saltos, punhos, ombros, joelhos), dor registrada e um **teste rápido opcional** (flexões, barras, dips e prancha).
+- Divisões:
+  - 3 dias: Full Body.
+  - 4 dias: Upper/Lower.
+  - 5 dias: Push/Pull/Legs + Upper/Lower.
+  - 6 dias: Push/Pull/Legs ×2.
+- No **Híbrido**, a academia cuida de pernas e volume e a calistenia de puxar, empurrar e habilidades.
+- O administrador pode criar modelos próprios.
+- Cada sessão é montada por **padrões de movimento** (empurrar horizontal e vertical, paralelas, puxar vertical e horizontal, agachar, unilateral, posteriores, glúteos, panturrilhas, core), não por troca de aparelho.
+- Respeita o tempo disponível: quando precisa cortar, corta primeiro os acessórios e mantém empurrar, puxar e pernas.
+- Full body em dias seguidos: o segundo dia vem com uma série a menos.
+- Nunca exige equipamento que o aluno não marcou.
+- Sem barra, argolas ou elástico, o plano usa um exercício de costas sem equipamento e avisa que uma barra de porta faz diferença. Puxar sem equipamento é limitado, e o app diz isso.
+
+## Progressão e evolução
+- O registro de séries ganhou "Como foi a execução?" (*limpa* ou *com ajustes*).
+- **Domínio** = todas as séries no topo da faixa (repetições ou segundos), em 2 sessões seguidas, sem execução marcada "com ajustes". O critério (1 a 4 sessões) é configurável pelo admin.
+- O app progride em várias frentes: mais repetições ou tempo dentro da faixa, depois a próxima variação, com menos assistência (por exemplo, sair do elástico) e mais controle.
+- **Nada sobe sozinho.** Com o domínio confirmado, o app libera a próxima variação e o aluno confirma. Não dá para pular etapas.
+- Quando a maioria das séries fica abaixo da faixa em 2 sessões, o app sugere voltar uma variação.
+- Em calistenia, "Trocar" abre a escada de progressão: dá para voltar, avançar (se dominado) ou usar outra cadeia do mesmo movimento.
+- **Nível real** (Iniciante → Especialista): calculado pela posição do aluno nas cadeias principais. Especialista só com 2 habilidades no nível máximo. O nível do cadastro serve apenas de ponto de partida (no máximo Avançado).
+- Home: card "Calistenia" com nível e habilidades (etapas e o que falta para liberar).
+- Progresso: card "Progressões da calistenia" com as últimas mudanças, e no painel Evolução as métricas "Calistenia (repetições)" e "Isometria (segundos)".
+- A troca semanal e a rotação de bloco da musculação não mexem nos treinos de calistenia, que mudam por progressão.
+
+## Meta Assistente
+- "Minha calistenia": o que está pronto para avançar, o que está parado há mais de 3 semanas e onde vale regredir.
+- "Minhas habilidades": etapa atual e pré-requisitos de cada habilidade.
+- "Como fazer pistol squat" (e outros exercícios): execução, erro comum, segurança, variação mais fácil e mais difícil, com link para a ficha e o vídeo.
+
+## Painel administrativo (principal)
+- Painel → **Calistenia**:
+  - uso da modalidade (quantos alunos em calistenia, híbrido e musculação, e quais habilidades estão sendo treinadas);
+  - editar nível e textos e desativar exercícios;
+  - adicionar exercícios novos numa posição da cadeia;
+  - modelos de plano por dias e objetivo;
+  - critério de domínio;
+  - vídeos (a categoria "Calistenia" aparece no painel de vídeos existente).
+
+## Testes (Beta 12)
+- **800 combinações** do gerador: 4 níveis × 5 conjuntos de equipamentos × 4 frequências × 5 objetivos × 2 tempos.
+  - Verifiquei: nenhum exercício sem o equipamento informado, nenhum exercício mais de 1 nível acima do aluno, habilidades só com pré-requisitos, limitações respeitadas, pernas em toda semana e equilíbrio entre empurrar e puxar quando há equipamento de puxar.
+  - Resultado: **0 problemas**.
+- Fluxo completo pela tela: modalidade, teste rápido, montagem, Home, Treinos, registro com qualidade, domínio confirmado, avanço (com bloqueio de pular etapas), troca semanal sem afetar a calistenia, dor no ombro removendo os movimentos de risco, Biblioteca, ficha, assistente, plano híbrido, painel com exercício novo e modelo de plano aplicado ao gerador.
+- Alunos de musculação: plano e Home iguais aos de antes.
+- 6 temas, telas de 320 e 390 px, sem erros no console. Regressão da Beta 10 e 11 ok. Atualização automática testada de novo.
+
+### Não testado
+- Celular Android real e PWA instalada.
+- Vídeos: os exercícios de calistenia ainda **não têm vídeo cadastrado**. O aluno vê a busca no YouTube até o administrador cadastrar.
+- Regras do Firestore no emulador.
+
+### Limitações conhecidas
+- O tempo de descanso é prescrito e controlado pelo cronômetro existente, mas não fica registrado série a série.
+- A "execução limpa" é informada pelo aluno. O app não avalia vídeo nem movimento.
+
+## Configuração para publicar
+1. Firestore → Regras: adicionar `caliExercicios` e `caliModelos` (leitura para logados, escrita só do principal). Já está em `firestore.rules`, junto com o que ficou da Beta 10 e 11.
+2. O documento `config/calistenia` (critério de domínio) usa a regra de `config` que já existe.
+3. Publicar `index.html`, `app.js`, `app-plus.js` e `service-worker.js`. O app instalado atualiza sozinho.
+
+---
+
+# (anterior) MetaTreino 2027.1 Beta 11 — notas da versão
+
+Continuação da Beta 10. Mesma estrutura: correções pontuais no `app.js`/`index.html` e as novidades no `app-plus.js`
+(partes 12 a 17), sempre estendendo as funções existentes.
+
+## 23. Áudio dos vídeos
+- Perfil → Aplicativo → **Áudio dos vídeos**: *Iniciar vídeos no mudo* ou *Manter áudio original* (padrão = áudio original, como era antes).
+- A preferência fica no estado do aluno (`state.prefs.videoAudio`), que já é salvo no Firestore junto com o resto: vale depois de sair/entrar e em outro aparelho.
+- O player agora usa a **API oficial do YouTube (IFrame Player API)**: `mute=1` na abertura + `mute()`/`unMute()` no `onReady`. Botão **Sem som / Com som** no próprio player liga/desliga o som só daquele vídeo.
+- Não mexe no volume do celular. Se a API não carregar, o vídeo abre do jeito antigo e ainda respeita o mudo (`mute=1`).
+- **Limitação:** com o vídeo no mudo o Chrome normalmente não pede o "foco de áudio" do Android, então a música de outro app continua. Isso depende do aparelho, da versão do Android e do navegador, e **não foi testado em um celular real**. Ao ligar o som, o Android pode pausar a música — isso é do sistema.
+
+## 24. Vídeos indisponíveis
+- O player identifica pelos códigos oficiais do YouTube: **100** removido/privado · **101/150** incorporação desativada · **2** link inválido · **5** erro do player (tratado como possivelmente temporário).
+- Sem internet ou carregamento muito lento **não** é tratado como vídeo removido: aparece "Não foi possível carregar o vídeo agora" com **Tentar de novo**.
+- Vídeo indisponível: "Este vídeo não está disponível no momento." + **Buscar vídeo semelhante** (pesquisa no YouTube com nome, grupo muscular e equipamento) + **Avisar o treinador**.
+- Em toda ficha com vídeo há também "O vídeo não abre ou está errado? Avisar o treinador" (denúncia manual, para casos que o player não detecta).
+- Denúncias agrupadas por exercício (`videosReportados/{exercício}`), 1 relato por aluno (`relatos/{uid}`): o mesmo aluno não conta duas vezes; ao resolver, a contagem zera e um novo aviso reabre a ocorrência.
+- Painel admin → **Vídeos reportados** (com contador de pendentes): exercício, link original, quantos alunos avisaram, quem avisou e quando, abrir o exercício, **Trocar link** e **Marcar resolvido** (só o principal).
+- Pedido atendido: **apenas o administrador principal altera links de vídeos** (tela e regras do Firestore). Administradores secundários continuam vendo tudo, mas não editam links.
+
+## 26–30. Home, gráficos, alimentação e carregamentos
+- **Home**: "Seus treinos" começa recolhido com resumo (a lista completa está na aba Treinos), "Atividade da semana" pode ser recolhida, avisos longos mostram 2 linhas + "ver mais". A preferência de recolher fica salva no aparelho. A Home ficou mais curta (≈ 8% no teste) sem remover nada.
+- O card de desafios não repete mais o nome do tema: em cima o desafio temático, embaixo "Níveis do mês".
+- **Alimentação na Home**: próxima refeição com horário, andamento do dia (refeições marcadas) e botão **✓ Feita**. Sem dados no perfil, aparece um estado vazio explicando o que falta. No plano completo: barras com as refeições **marcadas** nos últimos 7 dias (não marcar não significa que não comeu — o texto deixa isso claro).
+- **Gráficos — painel Evolução (Progresso → Desempenho)**: Frequência (com linha da meta), Tempo de treino, Peso, Volume da musculação, Corrida (km e ritmo), Caminhada e Bike (km e velocidade), conforme o que o aluno pratica. Semana/Mês/Trimestre/Ano quando faz sentido, toque mostra o valor e a data, comparação com o período anterior (ou aviso de que ainda não há período anterior), estados vazios que dizem que falta dado, não que o desempenho é ruim. Cores do tema. O gráfico antigo de "constância 4 semanas" (texto distorcido) foi substituído pela Frequência.
+- **Peso no Perfil** usa o mesmo componente, com período ajustável e acesso ao histórico completo.
+- **Observação honesta:** o app guarda o detalhe dos treinos dos últimos 90 dias (regra que já existia). No período "Ano", os meses anteriores aparecem sem registros e o gráfico avisa isso. Peso e volume de carga têm histórico mais longo.
+- **Montagem de planos**: as mesmas etapas reais de antes, agora como lista que vai sendo concluída, nas cores do tema (antes o fundo era sempre azul-escuro, inclusive no Tema Claro). A barra conta etapas, não inventa porcentagem. Ficou mais rápida.
+- **Operações**: botões mostram "Salvando…"/"Carregando…" e ignoram toque duplo (cadastro de aluno, vídeos, exercícios, mural, contato, desafios, administradores, registros de atividade). Falha de conexão gera mensagem clara.
+- **Sincronização**: aviso discreto no topo quando cai a internet ("suas alterações ficam salvas neste aparelho") e quando volta ("Sincronizando…" → "Informações sincronizadas", usando o `waitForPendingWrites` do Firestore).
+- **Painel admin**: se a lista de alunos não carregar, aparece o motivo e "Tentar de novo" (antes ficava em "Carregando…").
+- Inicialização: **não foi alterada**.
+
+## Ajustes pedidos
+- Removida a linha "Meta Assistente" do Perfil (o botão flutuante já cobre).
+- Cores que não acompanhavam o tema: os desafios "da casa" (Consistência, Evolução, Reta Final) e o ✓ de "feito" agora usam a cor do tema. Os desafios festivos (Carnaval, Páscoa, Halloween, Natal…) mantêm paleta própria de propósito.
+- "Streak atual" → "Sequência atual".
+
+## Testes (Beta 11)
+Chromium (Playwright), Firebase e API do YouTube simulados localmente, 6 temas, telas de 390 e 320 px:
+- preferência de áudio salva e enviada ao player (`mute=1` + `mute()`), alternância de som no player;
+- vídeo removido (100), incorporação bloqueada (150), erro 5, carregamento travado e modo offline → mensagens corretas; offline não é marcado como removido;
+- busca de vídeo semelhante com nome + grupo; denúncia; mesmo aluno repetindo (não conta 2×); segundo aluno (conta 2); painel mostra contagem e quem avisou; trocar link + resolver (contagem zera, ciclo avança); novo aviso reabre;
+- tile de alimentação (sem dados e com plano), marcar refeição pela Home;
+- todos os gráficos com dados e sem dados suficientes, toque no ponto;
+- tela de montagem do plano até o fim;
+- regressão da Beta 10 (fotos, desafios, admin, assistente, temas) sem erros no console;
+- **atualização automática** com service worker real: Beta 11 aberta → publicada outra versão → o app trocou sozinho.
+
+### Não testado
+- Música tocando em segundo plano no Android, Chrome Android real e PWA instalada — precisa ser conferido no seu celular.
+- Vídeos reais do YouTube (o ambiente de teste não acessa o YouTube) — a API foi simulada com os mesmos códigos de erro oficiais.
+- Regras do Firestore no emulador.
+
+## Configuração necessária para publicar a Beta 11
+1. **Firestore → Regras**: adicionar o bloco `videosReportados` (com a subcoleção `relatos`) e trocar a escrita de `videosExercicios` para *somente o principal*. Está tudo em `firestore.rules`. Sem isso, a denúncia e o painel de vídeos reportados mostram erro de permissão.
+2. Nenhuma API paga, chave ou serviço externo novo. A API do YouTube usada é a pública do player (sem chave).
+3. Publicar `index.html`, `app.js`, `app-plus.js` e `service-worker.js`. O app instalado se atualiza sozinho.
+
+---
+
+# (anterior) MetaTreino 2027.1 Beta 10 — notas da versão
 
 Evolução feita **sobre o código da Beta 9** (nada foi recriado do zero). O `app.js` recebeu correções pontuais;
 as novidades estão em um arquivo novo, `app-plus.js`, carregado logo depois. Ele estende as funções existentes

@@ -1,10 +1,10 @@
 rules_version = '2';
 // =====================================================================
-// MetaTreino 2027.1 Beta 10 — regras do Firestore (PROPOSTA)
+// MetaTreino 2027.1 Beta 12 — regras do Firestore (PROPOSTA)
 //
 // IMPORTANTE: compare com as regras que estão publicadas hoje no console antes de
 // substituir. Se preferir a mudança mínima, copie só o bloco "desafiosTematicos"
-// e o bloco "admins" — são os únicos que a versão Beta 10 precisa de novo.
+// e o bloco "admins" (Beta 10) e "videosReportados" + a mudança em "videosExercicios" (Beta 11).
 //
 // Princípios:
 //  • o aluno só lê e grava os PRÓPRIOS dados;
@@ -56,9 +56,44 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if isAdmin();
     }
+    // Beta 11: só o administrador principal mantém os links dos vídeos (pedido do dono do app)
     match /videosExercicios/{id} {
       allow read: if signedIn();
-      allow write: if isAdmin();
+      allow write: if isPrincipal();
+    }
+
+    // ---- NOVO (Beta 11): vídeos reportados pelos alunos ----
+    // 1 documento por exercício (agrupa denúncias, sem dados pessoais) + 1 relato por aluno.
+    match /videosReportados/{exId} {
+      allow get: if signedIn();
+      allow list: if isAdmin();
+      // aluno: só cria/reabre como "pendente", soma no máximo 1 por vez e não mexe no ciclo
+      allow create: if signedIn() && request.resource.data.status == 'pendente'
+                    && request.resource.data.contagem == 1 && request.resource.data.ciclo == 1;
+      allow update: if isPrincipal() || (signedIn()
+                    && request.resource.data.status == 'pendente'
+                    && request.resource.data.ciclo == resource.data.ciclo
+                    && request.resource.data.contagem <= resource.data.contagem + 1
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['exId','exercicio','grupo','url','videoId','status','ultimoEm','ultimoMotivo','contagem']));
+      allow delete: if isPrincipal();
+
+      match /relatos/{uid} {
+        allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+        allow list: if isAdmin();
+        allow create, update: if signedIn() && request.auth.uid == uid;
+        allow delete: if isPrincipal();
+      }
+    }
+
+    // ---- NOVO (Beta 12): calistenia — exercícios extras/ajustes e modelos de plano ----
+    match /caliExercicios/{id} {
+      allow read: if signedIn();
+      allow write: if isPrincipal();
+    }
+    match /caliModelos/{id} {
+      allow read: if signedIn();
+      allow write: if isPrincipal();
     }
 
     // ---- perguntas que o assistente não soube responder (feedback) ----

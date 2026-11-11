@@ -1265,6 +1265,146 @@ html.ico-duo .tb-g{fill:var(--c);fill-opacity:.18}
 .list-row{min-height:48px}
 input,select,textarea{font-size:16px}  /* evita zoom automático do Android/iOS ao focar */
 .modal{max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
+
+/* =====================================================================
+   2027.1 BETA 11 — vídeos, gráficos, alimentação, carregamentos e home
+   ===================================================================== */
+/* botão ocupado */
+.btn-spin{display:inline-block;width:13px;height:13px;margin-right:7px;vertical-align:-2px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:maspin .8s linear infinite;opacity:.8}
+.btn[disabled]{cursor:default}
+.mt-loading{display:flex;align-items:center;gap:10px;color:var(--text-dim);font-size:13px;padding:18px 2px}
+/* pílula de sincronização */
+#mt-sync{position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:950;max-width:calc(100% - 32px);padding:7px 13px;border-radius:999px;font-size:12px;font-weight:700;background:var(--toast-bg,#1c1c1e);color:#f2f2f5;border:1px solid var(--border-strong);transition:transform .25s ease;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#mt-sync.on{transform:translate(-50%,0)}
+#mt-sync.off{color:#ffcf8a}
+#mt-sync.ok{color:var(--primary-2)}
+
+/* montagem de plano (mesmos passos de antes, nas cores do tema) */
+#building-ov.mt-build{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);opacity:0;transition:opacity .25s ease;backdrop-filter:none}
+#building-ov.mt-build.on{opacity:1}
+.mb-box{width:100%;max-width:400px}
+.mb-spin{width:34px;height:34px;border-radius:50%;border:3px solid rgba(var(--primary-rgb),.18);border-top-color:var(--primary);animation:maspin .9s linear infinite;margin-bottom:18px}
+.mb-t{font-size:21px;font-weight:800;letter-spacing:-.3px;color:var(--text-strong)}
+.mb-s{font-size:13px;color:var(--text-dim);line-height:1.5;margin:6px 0 18px}
+.mb-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.mb-list li{display:flex;gap:11px;align-items:flex-start;font-size:14px;line-height:1.45;color:var(--text-mute);transition:color .2s ease}
+.mb-list li b{color:inherit}
+.mb-list li.now{color:var(--text)}
+.mb-list li.ok{color:var(--text-dim)}
+.mb-ck{flex:0 0 18px;height:18px;border-radius:50%;border:2px solid var(--border-strong);margin-top:1px;position:relative}
+.mb-list li.now .mb-ck{border-color:var(--primary);border-right-color:transparent;animation:maspin .8s linear infinite}
+.mb-list li.ok .mb-ck{background:var(--primary);border-color:var(--primary)}
+.mb-list li.ok .mb-ck::after{content:'';position:absolute;left:4.5px;top:1.5px;width:4px;height:8px;border:solid var(--on-primary);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.mb-bar{height:4px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:20px}
+.mb-bar i{display:block;height:100%;width:0;background:var(--primary);transition:width .4s ease}
+.mb-n{font-size:11.5px;color:var(--text-mute);margin-top:6px}
+@media (prefers-reduced-motion:reduce){.mb-spin,.mb-list li.now .mb-ck{animation:none}}
+
+/* vídeo indisponível */
+.ex-stage.falha{display:flex;align-items:center;justify-content:center;aspect-ratio:16/9;height:auto;background:linear-gradient(160deg,var(--surface-2),var(--bg-2))}
+.ex-fail{padding:18px;text-align:center;max-width:420px}
+.ex-fail-t{font-weight:800;font-size:15.5px;color:var(--text-strong)}
+.ex-fail-s{font-size:12.5px;color:var(--text-dim);margin-top:5px;line-height:1.45}
+.ex-fail-a{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px}
+.ex-fail-a .btn{padding:8px 12px;font-size:12.5px}
+.ex-stage > div[id="ex-yt"]{position:absolute;inset:0}
+/* vídeos reportados (admin) */
+.vr-item{padding:12px 2px;border-top:1px solid var(--border)}
+.vr-item:first-child{border-top:0}
+.vr-n{min-width:30px;height:30px;border-radius:10px;background:var(--tint-primary);color:var(--primary-2);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+.vr-a{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-left:40px}
+.vr-a .btn{padding:6px 10px;font-size:12px}
+
+/* home: padronização e seções recolhíveis */
+#scr-home .card,#scr-home .plan-card,#scr-home .week,#scr-home .quick,#scr-home .smart,#scr-home #home-quick{border-radius:20px}
+#scr-home .wrap > *{margin-bottom:12px}
+#scr-home .section-head{margin:8px 2px 8px;align-items:center;gap:10px}
+.col-btn{border:1px solid var(--border-strong);background:var(--surface);color:var(--text-dim);font:inherit;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;cursor:pointer}
+.col-abs{position:static;display:block;margin:10px auto 0}
+#home-quick{position:relative}
+#home-quick.mt-col > *:not(:first-child):not(.col-btn){display:none!important}
+#home-quick.mt-col{padding-bottom:12px}
+.col-resumo{font-size:12.5px;color:var(--text-mute);padding:2px 4px 6px}
+#scr-home #home-tr-resumo{order:45}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.link-mais{background:none;border:0;padding:4px 0 0;color:var(--primary-2);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+/* alimentação na home */
+.met-nutri .met-next{margin-top:auto;display:flex;flex-direction:column;min-width:0}
+.met-nutri .met-next small{font-size:11px;color:var(--text-mute);font-weight:600}
+.met-nutri .met-next b{font-size:15px;font-weight:700;color:var(--text-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.met-empty{margin-top:auto;font-size:13px;line-height:1.35;color:var(--text);font-weight:600}
+.nutri-hist{margin:0 0 12px;padding:10px 12px;border-radius:14px;background:var(--surface);border:1px solid var(--border)}
+.nh-row{display:flex;gap:6px;align-items:flex-end}
+.nh-d{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.nh-d i{display:block;width:100%;max-width:22px;border-radius:5px;background:var(--primary)}
+.nh-d span{font-size:10.5px;color:var(--text-mute)}
+
+/* gráficos */
+.ch-wrap{position:relative;min-height:190px}
+.mt-ch{width:100%;height:auto;display:block;aspect-ratio:340/170;overflow:visible;cursor:pointer}
+.ch-grid{stroke:var(--border);stroke-width:1}
+.ch-ax{fill:var(--text-mute);font-size:9.5px;font-family:'Outfit',system-ui,sans-serif}
+.ch-bar{fill:rgba(var(--primary-rgb),.45)}
+.ch-bar.cur{fill:var(--primary)}
+.ch-line{fill:none;stroke:var(--primary);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ch-dot{fill:var(--bg-2);stroke:var(--primary);stroke-width:2}
+.ch-meta{stroke:var(--text-dim);stroke-width:1;stroke-dasharray:4 4;opacity:.7}
+.ch-hit{fill:transparent}
+.ch-hit.sel{fill:rgba(var(--primary-rgb),.10)}
+circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
+.ch-tip{min-height:20px;font-size:12.5px;color:var(--text-dim);margin:2px 0 6px}
+.ch-tip b{color:var(--text-strong)}
+.ch-comp{font-size:12.5px;color:var(--text-dim);margin-top:8px;line-height:1.5}
+.ch-comp b{color:var(--text-strong)}
+.ch-trend{font-weight:800}
+.ch-trend.up{color:var(--primary-2)} .ch-trend.dn{color:var(--text)} .ch-trend.neu{color:var(--text-dim)}
+.ch-empty{min-height:170px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:6px;padding:16px;border:1px dashed var(--border-strong);border-radius:14px}
+.ch-empty b{font-size:14px}
+.ch-empty span{font-size:12.5px;color:var(--text-dim);line-height:1.5;max-width:300px}
+.evo-chips{margin:0 0 10px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.evo-chips::-webkit-scrollbar{display:none}
+.evo-chips .nxchip{flex:0 0 auto}
+.seg-sm{margin:0 0 6px}
+.seg-sm button{font-size:12px;padding:7px 0}
+.seg-sm button[disabled]{opacity:.35;cursor:default}
+/* o gráfico antigo de "constância 4 semanas" foi substituído pelo painel Evolução (Frequência, com meta) */
+#scr-perf .chart-card[onclick="openPerfDetail('constancia')"]{display:none}
+/* check na cor do tema (antes era sempre verde) */
+.ico[data-i="check"]{color:var(--primary)}
+
+/* =====================================================================
+   2027.1 BETA 12 — calistenia
+   ===================================================================== */
+.cali-teste{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cali-teste label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-dim);font-weight:600;text-transform:none;letter-spacing:0;margin:0}
+#scr-home #home-cali{order:22}
+.cl-nv{display:inline-flex;align-items:center;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:.2px;white-space:nowrap}
+.cl-nv.n1{background:var(--surface-2);color:var(--text-dim)}
+.cl-nv.n2{background:rgba(var(--primary-rgb),.14);color:var(--primary-2)}
+.cl-nv.n3{background:var(--tint-warn);color:var(--accent-2)}
+.cl-nv.n4{background:var(--tint-prep);color:var(--prep-soft,var(--prep))}
+.cl-steps{display:flex;flex-direction:column;gap:6px}
+.cl-step{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface)}
+.cl-step b{font-size:13.5px}
+.cl-step small{display:block;font-size:11.5px;color:var(--text-mute)}
+.cl-step.on{border-color:var(--primary);background:var(--tint-primary)}
+.cl-step.off{opacity:.55}
+.cl-step .btn{padding:6px 10px;font-size:12px}
+.cl-qual{margin:12px 0 4px}
+.cl-qual .seg{font-size:12px;padding:9px 4px}
+.cl-skills{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.cl-sk{padding:10px;border-radius:14px;background:var(--surface-2);cursor:pointer;min-width:0}
+.cl-sk-t{font-weight:800;font-size:13px}
+.cl-sk small{display:block;font-size:11px;color:var(--text-dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cl-dots{display:flex;gap:3px;margin-top:6px}
+.cl-dots i{display:block;width:12px;height:5px;border-radius:3px;background:var(--border-strong)}
+.cl-dots i.ok{background:rgba(var(--primary-rgb),.55)}
+.cl-dots i.now{background:var(--primary)}
+.cl-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border);cursor:pointer}
+.cl-row:first-of-type{border-top:0}
+.cl-row b{font-size:13.5px;display:block}
+.cl-row small{font-size:12px;color:var(--text-dim)}
+.cl-row .cl-dots{margin-top:0}
 </style>
 </head>
 <body>
@@ -1449,7 +1589,68 @@ input,select,textarea{font-size:16px}  /* evita zoom automático do Android/iOS 
     <h1>Vamos montar seu plano</h1>
     <p class="sub">Responda pra receber um plano feito pra você.</p>
 
-    <div class="field"><label>Objetivo</label>
+    <div class="field"><label>Modalidade</label>
+      <div class="radio-grid g3" id="lift-modalidade">
+        <div class="opt on" data-val="musculacao">🏋️ Musculação</div>
+        <div class="opt" data-val="calistenia">🤸 Calistenia</div>
+        <div class="opt" data-val="hibrido">🔀 Híbrido</div>
+      </div>
+      <div id="lift-modal-hint" style="margin-top:8px;font-size:12.5px;color:var(--text-dim)"></div>
+    </div>
+
+    <div id="cali-setup" style="display:none">
+      <div class="field"><label>Objetivo na calistenia</label>
+        <div class="radio-grid" id="cali-goal">
+          <div class="opt on" data-val="hipertrofia">💪 Hipertrofia</div>
+          <div class="opt" data-val="forca">🔥 Força</div>
+          <div class="opt" data-val="resistencia">🎯 Resistência</div>
+          <div class="opt" data-val="condicionamento">⚡ Condicionamento</div>
+          <div class="opt" data-val="habilidades" style="grid-column:1/-1">🤸 Domínio de habilidades</div>
+        </div>
+      </div>
+      <div class="field"><label>Tempo por sessão</label>
+        <div class="radio-grid g4" id="cali-tempo" style="grid-template-columns:repeat(4,1fr)">
+          <div class="opt" data-val="30">30 min</div><div class="opt on" data-val="45">45 min</div><div class="opt" data-val="60">60 min</div><div class="opt" data-val="75">75 min</div>
+        </div>
+      </div>
+      <div class="field"><label>Nível na calistenia</label>
+        <div class="radio-grid" id="cali-nivel">
+          <div class="opt on" data-val="1">Iniciante</div><div class="opt" data-val="2">Intermediário</div>
+          <div class="opt" data-val="3">Avançado</div><div class="opt" data-val="4">Especialista</div>
+        </div>
+        <div style="margin-top:6px;font-size:12px;color:var(--text-mute);line-height:1.45">É só o ponto de partida. O nível real é recalculado pelas suas séries registradas.</div>
+      </div>
+      <div class="field"><label>Equipamentos que você tem</label>
+        <div class="radio-grid" id="cali-equip">
+          <div class="opt opt-multi" data-val="barra">Barra fixa</div>
+          <div class="opt opt-multi" data-val="paralelas">Barras paralelas</div>
+          <div class="opt opt-multi" data-val="argolas">Argolas</div>
+          <div class="opt opt-multi" data-val="elastico">Elásticos</div>
+          <div class="opt opt-multi" data-val="apoios">Apoios de flexão</div>
+          <div class="opt opt-multi" data-val="banco">Banco / caixa firme</div>
+          <div class="opt opt-multi" data-val="espaldar" style="grid-column:1/-1">Espaldar ou poste vertical</div>
+        </div>
+        <div style="margin-top:6px;font-size:12px;color:var(--text-mute)">Nada marcado = só o peso do corpo e o chão.</div>
+      </div>
+      <div class="field"><label>Teste rápido (opcional — deixa o plano mais preciso)</label>
+        <div class="cali-teste">
+          <label>Flexões seguidas<input class="input" type="number" min="0" max="100" inputmode="numeric" id="ct-flexao" placeholder="—"></label>
+          <label>Barras seguidas<input class="input" type="number" min="0" max="50" inputmode="numeric" id="ct-barra" placeholder="—"></label>
+          <label>Paralelas (dips) seguidas<input class="input" type="number" min="0" max="80" inputmode="numeric" id="ct-dips" placeholder="—"></label>
+          <label>Prancha (segundos)<input class="input" type="number" min="0" max="600" inputmode="numeric" id="ct-prancha" placeholder="—"></label>
+        </div>
+      </div>
+      <div class="field"><label>Limitações (opcional)</label>
+        <div class="radio-grid" id="cali-limites">
+          <div class="opt opt-multi" data-val="semimpacto">Evitar saltos</div>
+          <div class="opt opt-multi" data-val="punho">Punhos sensíveis</div>
+          <div class="opt opt-multi" data-val="ombro">Ombros sensíveis</div>
+          <div class="opt opt-multi" data-val="joelho">Joelhos sensíveis</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field gym-only"><label>Objetivo</label>
       <div class="radio-grid" id="lift-goal">
         <div class="opt on" data-val="hipertrofia">💪 Hipertrofia</div>
         <div class="opt" data-val="forca">🔥 Força</div>
@@ -1475,7 +1676,7 @@ input,select,textarea{font-size:16px}  /* evita zoom automático do Android/iOS 
         <div class="opt opt-multi" data-val="7">Dom</div>
       </div>
     </div></div>
-    <div class="field"><label>Equipamentos disponíveis</label>
+    <div class="field gym-only"><label>Equipamentos da academia / casa</label>
       <div class="radio-grid" id="lift-equip">
         <div class="opt on" data-val="academia">🏋️ Academia completa</div>
         <div class="opt" data-val="halteres">💪 Só halteres</div>
@@ -1488,7 +1689,7 @@ input,select,textarea{font-size:16px}  /* evita zoom automático do Android/iOS 
         <div id="equip-count" style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center"></div>
       </div>
     </div>
-    <div class="field"><label>Nível de experiência</label>
+    <div class="field gym-only"><label>Nível de experiência</label>
       <div class="radio-grid g3" id="lift-level">
         <div class="opt on" data-val="iniciante">Iniciante</div>
         <div class="opt" data-val="intermediario">Intermediário</div>
@@ -1768,7 +1969,7 @@ input,select,textarea{font-size:16px}  /* evita zoom automático do Android/iOS 
     </div>
 
     <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
-      <div class="stat-mini" onclick="openPerfDetail('streak')"><div class="stat-mini-emo">🔥</div><div class="stat-mini-val" id="m-streak">0</div><div class="stat-mini-lbl">Streak atual</div></div>
+      <div class="stat-mini" onclick="openPerfDetail('streak')"><div class="stat-mini-emo">🔥</div><div class="stat-mini-val" id="m-streak">0</div><div class="stat-mini-lbl">Sequência atual</div></div>
       <div class="stat-mini" onclick="openPerfDetail('total')"><div class="stat-mini-emo">⏱️</div><div class="stat-mini-val" id="m-total">0h</div><div class="stat-mini-lbl">Total treinado</div></div>
       <div class="stat-mini" onclick="openPerfDetail('melhor')"><div class="stat-mini-emo">🏆</div><div class="stat-mini-val" id="m-best">0</div><div class="stat-mini-lbl">Melhor sequência</div></div>
     </div>
@@ -1947,7 +2148,7 @@ input,select,textarea{font-size:16px}  /* evita zoom automático do Android/iOS 
     <div class="theme-grid hidden" id="theme-grid"></div>
     <div class="list-row" onclick="openSomFim()"><span>🔔</span> <span>Som do cronômetro</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">escolher ›</span></div>
     <div class="list-row" onclick="goTab('library')"><span>📚</span> <span>Biblioteca de exercícios</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span></div>
-    <div class="list-row" onclick="openAssistant()"><span>💬</span> <span>Meta Assistente</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span></div>
+    <div class="list-row" onclick="openAudioVideos()" id="audio-row"><span>🎬</span> <span>Áudio dos vídeos</span><span id="audio-row-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span></div>
     <div class="section-lbl" style="margin:18px 0 8px">👤 CONTA</div>
     <div class="list-row" onclick="openModal('edit-profile')">✏️ <span>Editar dados pessoais</span></div>
     <div class="list-row" onclick="openModal('backup')">💾 <span>Backup e restauração</span></div>
@@ -1958,7 +2159,7 @@ input,select,textarea{font-size:16px}  /* evita zoom automático do Android/iOS 
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 10</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 12</span>
     </div>
   </div>
 </div>
@@ -2036,8 +2237,8 @@ input,select,textarea{font-size:16px}  /* evita zoom automático do Android/iOS 
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.10"></script>
-<script src="./app-plus.js?v=2027.1-beta.10"></script>
+<script src="./app.js?v=2027.1-beta.12"></script>
+<script src="./app-plus.js?v=2027.1-beta.12"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();

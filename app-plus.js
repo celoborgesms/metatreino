@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 10 — app-plus.js
+// MetaTreino 2027.1 Beta 12 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -18,7 +18,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.10' };
+const MTP = { versao: '2027.1-beta.12' };
 const DIA_MS = 86400000;
 function mtNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function mtEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -237,20 +237,14 @@ function _videoDoExercicio(name, idKey){
 }
 function _palcoVideo(v){
   if(!v.id) return '';
-  const embed = `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&modestbranding=1&playsinline=1&autoplay=1`;
   return `<div class="ex-stage ${v.vertical?'v':'h'}" id="ex-stage">
       <div class="ex-load" id="ex-load"><div class="ex-spin"></div><span>Carregando vídeo…</span></div>
-      <iframe src="${embed}" title="Vídeo do exercício" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen onload="exVideoOk()"></iframe>
+      <div id="ex-yt"></div>
     </div>`;
 }
+// (mantidas por compatibilidade: o player agora é montado por mtMontarPlayer, em app-plus parte 12)
 function exVideoOk(){ const s = $('ex-stage'); if(s) s.classList.add('ok'); clearTimeout(window.__exVidT); }
-function _exVideoTimeout(){
-  clearTimeout(window.__exVidT);
-  window.__exVidT = setTimeout(()=>{
-    const l = $('ex-load'); const s = $('ex-stage');
-    if(l && s && !s.classList.contains('ok')) l.innerHTML = `<span style="max-width:260px;text-align:center;line-height:1.5">O vídeo está demorando. Pode ser a conexão — ou o vídeo pode ter sido removido do YouTube.</span><a class="btn btn-ghost" style="padding:7px 12px;font-size:12px;color:#fff" href="${mtEsc(window.__exVidUrl||'#')}" target="_blank" rel="noopener">Abrir no YouTube ↗</a>`;
-  }, 12000);
-}
+function _exVideoTimeout(){}
 function exTelaCheia(){
   const s = $('ex-stage'); if(!s) return;
   const fn = s.requestFullscreen || s.webkitRequestFullscreen;
@@ -279,7 +273,7 @@ function openExerciseSheet(name, idKey, opts){
       <div class="ex-head"><div style="min-width:0"><h3>${mtEsc(ex.name)}</h3>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${grupo?`<span class="pill on">${mtEsc(grupo)}</span>`:''}${(ex.equip||[]).filter(e=>EQUIP_LBL[e]).map(e=>`<span class="pill">${EQUIP_LBL[e]}</span>`).join('')}</div></div>
         <button class="ex-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
-      ${v.id?`<div class="ex-tools"><button class="btn btn-ghost" onclick="exTelaCheia()">⛶ Tela cheia</button><a class="btn btn-ghost" href="${mtEsc(v.url)}" target="_blank" rel="noopener">Abrir no YouTube ↗</a>${temEvo?`<button class="btn btn-ghost" onclick="closeModal();setTimeout(()=>openExProgress('${mtJsStr(exId)}'),80)">📈 Minha evolução</button>`:''}</div>`
+      ${v.id?`<div class="ex-tools"><button class="btn btn-ghost" id="ex-som" onclick="mtAlternarSom()">${videoMudoPref()?'🔇 Sem som':'🔊 Com som'}</button><button class="btn btn-ghost" onclick="exTelaCheia()">⛶ Tela cheia</button><a class="btn btn-ghost" href="${mtEsc(v.url)}" target="_blank" rel="noopener">YouTube ↗</a>${temEvo?`<button class="btn btn-ghost" onclick="closeModal();setTimeout(()=>openExProgress('${mtJsStr(exId)}'),80)">📈 Minha evolução</button>`:''}</div>`
         : (temEvo?`<div class="ex-tools"><button class="btn btn-ghost" onclick="closeModal();setTimeout(()=>openExProgress('${mtJsStr(exId)}'),80)">📈 Minha evolução</button></div>`:'')}
       ${info?`<a class="ex-credit" href="${mtEsc(v.cred)}" target="_blank" rel="noopener">🎥 Demonstração por <b>${mtEsc(info.handle)}</b> <span>${info.icon}</span></a>`:''}
       <div class="ex-sec"><h4>Músculos trabalhados</h4><p>${mtEsc(ficha.m)}${ex.sub && !mtNorm(ficha.m).includes(mtNorm(ex.sub.split(/[(/]/)[0]).trim())?` · ênfase: ${mtEsc(ex.sub)}`:''}</p></div>
@@ -287,10 +281,11 @@ function openExerciseSheet(name, idKey, opts){
       <div class="ex-sec"><h4>Dicas técnicas</h4><ul>${ficha.d.map(x=>`<li>${mtEsc(x)}</li>`).join('')}</ul></div>
       <div class="ex-sec"><h4>Erro comum</h4><p>${mtEsc(ficha.e)}</p></div>
       ${ex.improv?`<div class="note" style="margin-top:14px"><div class="note-line">Esta é uma adaptação para treinar em casa. Na academia, prefira a versão com equipamento.</div></div>`:''}
-      <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>
+      ${v.id?`<div style="text-align:center;margin-top:14px"><a href="#" onclick="mtReportarVideo('${mtJsStr(v.k)}','${mtJsStr(ex.name)}','manual');return false" style="font-size:12px;color:var(--text-mute)">O vídeo não abre ou está errado? Avisar o treinador</a></div>`:''}
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>
     </div>`;
   $('modal-back').classList.add('on');
-  if(v.id) _exVideoTimeout();
+  if(v.id) mtMontarPlayer(v, {nome: ex.name, grupo, equip: ex.equip||[]});
 }
 function openExercise(name){ openExerciseSheet(name); }
 // "Ver como fazer" (sessões, assistente): sem vídeo cadastrado, mantém o comportamento antigo (busca no YouTube)
@@ -304,7 +299,7 @@ const _closeModalOrig = closeModal;
 closeModal = function(){
   const mi = $('modal-inner');
   const tinhaEx = mi && mi.classList.contains('modal-ex');
-  if(tinhaEx){ const ifr = mi.querySelector('iframe'); if(ifr) ifr.src = 'about:blank'; mi.classList.remove('modal-ex'); clearTimeout(window.__exVidT); }
+  if(tinhaEx){ try{ mtDestruirPlayer(); }catch(e){} const ifr = mi.querySelector('iframe'); if(ifr) ifr.src = 'about:blank'; mi.classList.remove('modal-ex'); clearTimeout(window.__exVidT); }
   if($('modal-back').classList.contains('ex-open')) $('modal-back').classList.remove('ex-open');
   if(document.fullscreenElement){ try{ document.exitFullscreen(); }catch(e){} }
   return _closeModalOrig.apply(this, arguments);
@@ -317,7 +312,7 @@ closeModal = function(){
     if(back.classList.contains('on')) return;
     if(back.classList.contains('ex-open')) back.classList.remove('ex-open');   // só mexe se precisar (senão o observer se realimenta)
     const mi = document.getElementById('modal-inner');
-    if(mi && mi.classList.contains('modal-ex')){ const ifr = mi.querySelector('iframe'); if(ifr) ifr.src='about:blank'; mi.classList.remove('modal-ex'); }
+    if(mi && mi.classList.contains('modal-ex')){ try{ mtDestruirPlayer(); }catch(e){} const ifr = mi.querySelector('iframe'); if(ifr) ifr.src='about:blank'; mi.classList.remove('modal-ex'); }
   }).observe(back, {attributes:true, attributeFilter:['class']});
 })();
 
@@ -538,7 +533,10 @@ const EV_MESES = [
 ];
 // no Tema Claro, cores mais escuras para manter contraste
 const EV_CLARO = { anonovo:'#a16207', carnaval:'#be185d', consistencia:'#4d7c0f', pascoa:'#b45309', equilibrio:'#0f766e', evolucao:'#4d7c0f', arraia:'#c2410c', inverno:'#0369a1', superacao:'#c2410c', independencia:'#047857', primavera:'#be185d', halloween:'#c2410c', retafinal:'#4d7c0f', natal:'#b91c1c' };
-function evCor(arte){ const c = EV_CORES[arte] || EV_CORES.evolucao; try{ if(currentTheme()==='claro') return Object.assign({}, c, {ev: EV_CLARO[arte] || '#4d7c0f'}); }catch(e){} return c; }
+// desafios "da casa" (consistência, evolução, reta final) seguem a cor do tema; os festivos mantêm a própria paleta
+const EV_DO_TEMA = ['consistencia','evolucao','retafinal'];
+function evCor(arte){ if(EV_DO_TEMA.includes(arte)) return { ev:'var(--primary)', a:'rgba(var(--primary-rgb),.20)', b:'rgba(var(--primary-rgb),.06)' };
+  const c = EV_CORES[arte] || EV_CORES.evolucao; try{ if(currentTheme()==='claro') return Object.assign({}, c, {ev: EV_CLARO[arte] || '#4d7c0f'}); }catch(e){} return c; }
 function _d(y,m,d){ return new Date(y,m,d).getTime(); }
 function eventosDoAno(Y){
   const out = [];
@@ -812,7 +810,8 @@ function openHistoricoEventos(){
 // imagem para compartilhar (identidade MetaTreino)
 async function shareEventoImagem(key){
   const e = eventoPorKey(key); const reg = (state.eventos||{})[key]; if(!e || !reg) return;
-  const c = EV_CORES[e.arte] || EV_CORES.evolucao;   // imagem sempre escura: cor original
+  const c = Object.assign({}, EV_CORES[e.arte] || EV_CORES.evolucao);   // imagem sempre escura
+  if(EV_DO_TEMA.includes(e.arte)){ try{ const cs = getComputedStyle(document.documentElement); const pr = cs.getPropertyValue('--primary').trim(), rgb = cs.getPropertyValue('--primary-rgb').trim(); if(pr && currentTheme()!=='claro'){ c.ev = pr; c.a = `rgba(${rgb},.22)`; c.b = `rgba(${rgb},.08)`; } }catch(err){} }
   const W = 1080, H = 1350; const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
   g.fillStyle = '#050505'; g.fillRect(0,0,W,H);
   const rg = g.createRadialGradient(W*0.85, H*0.1, 20, W*0.85, H*0.1, W*0.9); rg.addColorStop(0, c.a.replace(/[\d.]+\)$/,'0.55)')); rg.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(0,0,W,H);
@@ -842,6 +841,7 @@ renderMonthlyCard = function(){
     const card = $('card-monthly'); if(!card) return;
     card.setAttribute('onclick', "goTab('challenges')");
     const e = eventoPrincipal(); if(!e) return;
+    try{ const mt = $('monthly-title'); if(mt) mt.textContent = 'Níveis do mês · ' + monthName(state.monthly.key).split('/')[0]; }catch(err){}
     const p = progressoEvento(e); const reg = (state.eventos||{})[e.key];
     let box = $('home-ev-row');
     if(!box){ box = document.createElement('div'); box.id = 'home-ev-row'; card.insertBefore(box, card.firstChild); }
@@ -1436,3 +1436,1638 @@ bootAfterAuth = function(){
 };
 Object.assign(window, { renderLibrary, setLibEquip, openExercise, openExerciseSheet, exTelaCheia, exVideoOk, openAparencia, setPacote, setTheme, openFotos, fotoToggleSel, fotoApagarSelConfirma, fotoApagarConfirma, fotoApagarTudoConfirma, fotoApagarTudoAgora, fotoVer,
   renderChallenges, participaEvento, sairDoEvento, shareEventoImagem, openHistoricoEventos, mtEvFoco, renderHomeSmart, mtPergunta, openAdminEventos, openAdminEventoForm, salvarEventoAdmin, openAdminEventoPart, openAdminPermissoes, admSetAdmin, trophyIco, trophyIcoLocked, mtLS, mtDia0 });
+
+// =====================================================================
+// 12. ÁUDIO DOS VÍDEOS + 13. VÍDEOS INDISPONÍVEIS (Beta 11)
+// =====================================================================
+// Preferência por aluno: fica em state.prefs (vai junto com o estadoApp para a nuvem,
+// então vale em qualquer aparelho e depois de sair/entrar) e num cache local.
+function videoMudoPref(){
+  try{ const p = state.prefs && state.prefs.videoAudio; if(p) return p === 'mudo'; }catch(e){}
+  return mtLS('mt_video_audio') === 'mudo';
+}
+function setVideoAudio(v){
+  state.prefs = state.prefs || {};
+  state.prefs.videoAudio = v === 'mudo' ? 'mudo' : 'som';
+  mtLS('mt_video_audio', state.prefs.videoAudio);
+  saveData();
+  openAudioVideos();
+  try{ renderProfile(); }catch(e){}
+}
+function openAudioVideos(){
+  const mudo = videoMudoPref();
+  const op = (k, t, d)=>`<div class="ap-pack ${((k==='mudo')===mudo)?'on':''}" onclick="setVideoAudio('${k}')"><div style="flex:1"><b style="font-size:14px">${t}</b>${((k==='mudo')===mudo)?' <span style="color:var(--primary-2)">✓</span>':''}<div style="font-size:12px;color:var(--text-mute);line-height:1.45;margin-top:2px">${d}</div></div></div>`;
+  $('modal-inner').innerHTML = `<h3>Áudio dos vídeos</h3>
+    <p class="mt-muted" style="margin:0 0 12px">Vale para os vídeos de demonstração dos exercícios. Você pode ligar ou desligar o som de cada vídeo a qualquer momento no próprio player.</p>
+    ${op('mudo','Iniciar vídeos no mudo','O vídeo começa sem som. Ideal para continuar ouvindo sua música enquanto confere a execução.')}
+    ${op('som','Manter áudio original','O vídeo toca normalmente, com o som do criador.')}
+    <div class="note" style="margin-top:10px"><div class="note-line" style="font-size:12px">O MetaTreino não mexe no volume do celular. Com o vídeo no mudo, o Android normalmente mantém a música de outros apps tocando — mas isso depende do aparelho, da versão do Android e do navegador. Ao ligar o som de um vídeo, o sistema pode pausar a música.</div></div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal()">Pronto</button>`;
+  $('modal-back').classList.add('on');
+}
+
+// --- Player com a API oficial do YouTube (IFrame Player API) ---
+// Carrega https://www.youtube.com/iframe_api só quando um vídeo é aberto (nada no início do app).
+let _ytApi = null;
+function mtCarregarYTApi(){
+  if(window.YT && window.YT.Player) return Promise.resolve(window.YT);
+  if(_ytApi) return _ytApi;
+  _ytApi = new Promise((res, rej)=>{
+    const anterior = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = function(){ try{ anterior && anterior(); }catch(e){} res(window.YT); };
+    const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; s.async = true;
+    s.onerror = ()=>{ _ytApi = null; s.remove(); rej(new Error('api')); };
+    document.head.appendChild(s);
+    setTimeout(()=>{ if(!(window.YT && window.YT.Player)){ _ytApi = null; rej(new Error('timeout')); } }, 9000);
+  });
+  return _ytApi;
+}
+const MT_PLAYER = { p:null, v:null, info:null, mudo:false, pronto:false, t:null };
+function mtDestruirPlayer(){
+  clearTimeout(MT_PLAYER.t);
+  try{ MT_PLAYER.p && MT_PLAYER.p.destroy && MT_PLAYER.p.destroy(); }catch(e){}
+  MT_PLAYER.p = null; MT_PLAYER.pronto = false; MT_PLAYER.v = null;
+}
+// Fallback sem a API (bloqueada/lenta): iframe simples; o parâmetro mute=1 ainda respeita a preferência.
+function _mtIframeSimples(v, mudo){
+  const alvo = $('ex-yt'); if(!alvo) return;
+  const src = `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&modestbranding=1&playsinline=1&autoplay=1&mute=${mudo?1:0}`;
+  alvo.outerHTML = `<iframe src="${src}" title="Vídeo do exercício" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen onload="exVideoOk()"></iframe>`;
+  const b = $('ex-som'); if(b){ b.disabled = true; b.title = 'Use o botão de som do próprio player'; b.style.opacity = '.5'; }
+}
+function mtMontarPlayer(v, info){
+  mtDestruirPlayer();
+  MT_PLAYER.v = v; MT_PLAYER.info = info; MT_PLAYER.mudo = videoMudoPref();
+  if(navigator.onLine === false){ mtVideoFalha(v, 'offline'); return; }
+  mtCarregarYTApi().then(YT=>{
+    if(MT_PLAYER.v !== v || !$('ex-yt')) return;   // o aluno já fechou ou abriu outro
+    MT_PLAYER.p = new YT.Player('ex-yt', {
+      videoId: v.id,
+      playerVars: { autoplay:1, playsinline:1, rel:0, modestbranding:1, mute: MT_PLAYER.mudo ? 1 : 0, origin: location.origin },
+      events: {
+        onReady: e=>{
+          MT_PLAYER.pronto = true; clearTimeout(MT_PLAYER.t);
+          try{ MT_PLAYER.mudo ? e.target.mute() : e.target.unMute(); e.target.playVideo(); }catch(err){}
+          exVideoOk(); _mtBotaoSom();
+        },
+        onError: e=>{ clearTimeout(MT_PLAYER.t); mtVideoFalha(v, e && e.data); }
+      }
+    });
+    const ifr = MT_PLAYER.p.getIframe && MT_PLAYER.p.getIframe(); if(ifr) ifr.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+    // pronto não chegou em 15 s: trata como conexão lenta, nunca como "vídeo removido"
+    MT_PLAYER.t = setTimeout(()=>{ if(!MT_PLAYER.pronto && MT_PLAYER.v===v) mtVideoFalha(v, 'lento'); }, 15000);
+  }).catch(()=>{
+    if(MT_PLAYER.v !== v) return;
+    if(navigator.onLine === false) mtVideoFalha(v, 'offline');
+    else _mtIframeSimples(v, MT_PLAYER.mudo);   // API indisponível: mostra o vídeo do jeito antigo
+  });
+}
+function _mtBotaoSom(){ const b = $('ex-som'); if(b) b.textContent = MT_PLAYER.mudo ? '🔇 Sem som' : '🔊 Com som'; }
+// liga/desliga o som SÓ deste vídeo (a preferência geral continua a mesma)
+function mtAlternarSom(){
+  const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
+  try{ if(MT_PLAYER.mudo){ p.unMute(); if(p.getVolume && p.getVolume()===0) p.setVolume(100); MT_PLAYER.mudo = false; } else { p.mute(); MT_PLAYER.mudo = true; } }catch(e){}
+  _mtBotaoSom();
+}
+// Códigos oficiais de erro do player do YouTube:
+//   2 = parâmetro/ID inválido · 5 = erro do player HTML5 (geralmente temporário)
+//   100 = vídeo não encontrado (removido ou privado) · 101 e 150 = dono não permite incorporar
+const VID_MOTIVO = {
+  '2':   {lbl:'Link inválido', confirmado:true},
+  '5':   {lbl:'Erro no player (pode ser temporário)', confirmado:false},
+  '100': {lbl:'Removido ou privado', confirmado:true},
+  '101': {lbl:'Incorporação desativada pelo dono', confirmado:true},
+  '150': {lbl:'Incorporação desativada pelo dono', confirmado:true},
+  'offline': {lbl:'Sem conexão', confirmado:false},
+  'lento': {lbl:'Demorou para carregar', confirmado:false},
+  'manual': {lbl:'Informado pelo aluno', confirmado:false}
+};
+function _buscaSemelhante(info){
+  const eq = (info.equip||[]).includes('academia') ? '' : (info.equip||[]).includes('halteres') ? 'com halteres' : (info.equip||[]).includes('casa') ? 'em casa' : '';
+  const q = ['como fazer', info.nome, info.grupo, eq, 'execução correta'].filter(Boolean).join(' ');
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
+}
+function mtVideoFalha(v, cod){
+  const st = $('ex-stage'); if(!st) return;
+  const info = MT_PLAYER.info || {nome:'', grupo:'', equip:[]};
+  const m = VID_MOTIVO[String(cod)] || VID_MOTIVO['5'];
+  const conexao = cod==='offline' || cod==='lento';
+  st.classList.remove('ok'); st.classList.add('falha');
+  st.innerHTML = `<div class="ex-fail">
+    <div class="ex-fail-t">${conexao ? 'Não foi possível carregar o vídeo agora.' : 'Este vídeo não está disponível no momento.'}</div>
+    <div class="ex-fail-s">${conexao ? (cod==='offline' ? 'Você parece estar sem internet. Isso não significa que o vídeo foi removido.' : 'A conexão está lenta. Tente de novo em instantes.') : m.lbl+'.'}</div>
+    <div class="ex-fail-a">
+      ${conexao ? `<button class="btn btn-primary" onclick="mtTentarVideo()">Tentar de novo</button>` : ''}
+      <a class="btn ${conexao?'btn-ghost':'btn-primary'}" href="${mtEsc(_buscaSemelhante(info))}" target="_blank" rel="noopener">Buscar vídeo semelhante</a>
+      ${conexao ? '' : `<button class="btn btn-ghost" id="ex-rep-btn" onclick="mtReportarVideo('${mtJsStr(v.k)}','${mtJsStr(info.nome)}','${mtJsStr(String(cod))}')">Avisar o treinador</button>`}
+    </div></div>`;
+  const b = $('ex-som'); if(b) b.style.display = 'none';
+}
+function mtTentarVideo(){
+  const v = MT_PLAYER.v, info = MT_PLAYER.info; if(!v) return;
+  const st = $('ex-stage'); if(!st) return;
+  st.classList.remove('falha'); st.innerHTML = `<div class="ex-load" id="ex-load"><div class="ex-spin"></div><span>Carregando vídeo…</span></div><div id="ex-yt"></div>`;
+  const b = $('ex-som'); if(b) b.style.display = '';
+  mtMontarPlayer(v, info);
+}
+
+// --- Denúncia de vídeo indisponível ---
+// Firestore:
+//   videosReportados/{exId}               → 1 documento por exercício (agrupa as denúncias; sem dados pessoais)
+//   videosReportados/{exId}/relatos/{uid} → 1 por aluno (o mesmo aluno não conta duas vezes no mesmo ciclo)
+// "ciclo" aumenta quando o administrador principal marca como resolvido: um relato novo depois disso conta de novo.
+async function mtReportarVideo(exId, nome, cod){
+  const url = videoLinks[exId] || '';
+  const chaveLocal = 'mt_vrep_'+exId+'_'+(ytVideoId(url)||'x');
+  if(mtLS(chaveLocal)){ toast('Você já avisou o treinador sobre este vídeo. Obrigado!'); return; }
+  if(!fbUser){ toast('Entre na sua conta para avisar o treinador.'); return; }
+  if(navigator.onLine === false){ toast('Sem conexão agora. Tente avisar quando a internet voltar.'); return; }
+  const aberto = $('modal-back').classList.contains('on');
+  const btn = aberto ? $('ex-rep-btn') : null; if(btn){ if(btn.disabled){ toast('O aviso já foi enviado.'); return; } btn.disabled = true; btn.textContent = 'Enviando…'; }
+  const ref = db.collection('videosReportados').doc(exId);
+  try{
+    const [pai, meu] = await Promise.all([ ref.get(), ref.collection('relatos').doc(fbUser.uid).get() ]);
+    const d = pai.exists ? pai.data() : null;
+    const ciclo = (d && d.ciclo) || 1;
+    const jaContou = meu.exists && (meu.data().ciclo||1) === ciclo;
+    const agora = Date.now();
+    const achado = (typeof exPorNome==='function') ? exPorNome(nome) : null;
+    const inc = firebase.firestore.FieldValue && firebase.firestore.FieldValue.increment;
+    const batch = db.batch();
+    batch.set(ref.collection('relatos').doc(fbUser.uid), {
+      uid: fbUser.uid, email: (state.user&&state.user.email)||'', nome: (state.user&&state.user.profile&&state.user.profile.nickname)||(state.user&&state.user.name)||'',
+      em: agora, ciclo, motivo: String(cod||'manual'), url
+    });
+    const dados = { exId, exercicio: nome, grupo: (achado&&achado.grupo)||'', url, videoId: ytVideoId(url)||'', status:'pendente', ultimoEm: agora, ultimoMotivo: String(cod||'manual') };
+    if(!d){ dados.primeiroEm = agora; dados.ciclo = 1; dados.contagem = 1; }
+    else if(!jaContou){ dados.contagem = inc ? inc(1) : ((d.contagem||0)+1); }
+    batch.set(ref, dados, {merge:true});
+    await batch.commit();
+    mtLS(chaveLocal, String(agora));
+    toast('✅ Treinador avisado. Obrigado por ajudar!');
+    if(btn){ btn.textContent = 'Treinador avisado ✓'; }
+  }catch(e){
+    console.log('denúncia de vídeo:', e);
+    toast('⚠️ Não consegui enviar agora. Tente de novo em instantes.');
+    if(btn){ btn.disabled = false; btn.textContent = 'Avisar o treinador'; }
+  }
+}
+
+// --- Painel do administrador: vídeos reportados ---
+let vidRepCache = [];
+async function loadVideosReportados(){
+  const snap = await db.collection('videosReportados').get();
+  const arr = []; snap.forEach(d=>arr.push(Object.assign({id:d.id}, d.data())));
+  vidRepCache = arr; return arr;
+}
+function _admVidBadge(){
+  const n = vidRepCache.filter(x=>x.status!=='resolvido').length;
+  const el = $('adm-vid-badge'); if(el){ el.textContent = n; el.style.display = n ? '' : 'none'; }
+}
+async function openVideosReportados(filtro){
+  filtro = filtro || window.__vrFiltro || 'pendente'; window.__vrFiltro = filtro;
+  $('modal-inner').innerHTML = `<h3>Vídeos reportados</h3><div class="mt-loading"><div class="ex-spin"></div><span>Carregando ocorrências…</span></div>`;
+  $('modal-back').classList.add('on');
+  try{ await loadVideosReportados(); }
+  catch(e){
+    $('modal-inner').innerHTML = `<h3>Vídeos reportados</h3><p class="mt-muted">Não consegui ler as ocorrências. Confira a conexão e se as regras do Firestore desta versão foram publicadas (coleção <b>videosReportados</b>).</p><button class="btn btn-primary btn-block" onclick="openVideosReportados()">Tentar de novo</button><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+    return;
+  }
+  _admVidBadge();
+  const princ = mtPrincipal();
+  const lista = vidRepCache.filter(x=> filtro==='todos' ? true : filtro==='resolvido' ? x.status==='resolvido' : x.status!=='resolvido')
+    .sort((a,b)=> (a.status==='resolvido') - (b.status==='resolvido') || (b.contagem||0)-(a.contagem||0) || (b.ultimoEm||0)-(a.ultimoEm||0));
+  const pend = vidRepCache.filter(x=>x.status!=='resolvido').length;
+  const chip = (k,l)=>`<button type="button" class="nxchip ${k===filtro?'on':''}" onclick="openVideosReportados('${k}')">${l}</button>`;
+  const linha = x=>{
+    const m = VID_MOTIVO[String(x.ultimoMotivo)] || {lbl:x.ultimoMotivo||'—'};
+    const mudou = x.url && videoLinks[x.id] && videoLinks[x.id] !== x.url;
+    return `<div class="vr-item">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <div class="vr-n">${x.contagem||1}</div>
+        <div style="flex:1;min-width:0"><b style="font-size:14px">${mtEsc(x.exercicio||x.id)}</b>
+          <div class="mt-muted" style="font-size:11.5px">${mtEsc(x.grupo||'')}${x.grupo?' · ':''}${mtEsc(m.lbl)} · último aviso ${x.ultimoEm?mtFmtData(x.ultimoEm,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}</div>
+          <div style="font-size:11.5px;margin-top:3px;word-break:break-all"><a href="${mtEsc(x.url||'#')}" target="_blank" rel="noopener" style="color:var(--primary-2)">${mtEsc(x.url||'sem link')}</a></div>
+          ${mudou?`<div style="font-size:11.5px;color:var(--accent);margin-top:3px">O link deste exercício já foi trocado depois dos avisos.</div>`:''}
+        </div>
+        <span class="pill ${x.status==='resolvido'?'':'on'}">${x.status==='resolvido'?'resolvido':'pendente'}</span>
+      </div>
+      <div class="vr-a">
+        <button class="btn btn-ghost" onclick="mtVerRelatos('${mtJsStr(x.id)}')">Quem avisou</button>
+        <button class="btn btn-ghost" onclick="closeModal();setTimeout(()=>openExerciseSheet('${mtJsStr(x.exercicio||x.id)}','${mtJsStr(x.id)}'),80)">Abrir exercício</button>
+        ${princ?`<button class="btn btn-ghost" onclick="mtEditarLinkVideo('${mtJsStr(x.id)}')">Trocar link</button>`:''}
+        ${princ && x.status!=='resolvido'?`<button class="btn btn-primary" onclick="mtResolverVideo('${mtJsStr(x.id)}')">Marcar resolvido</button>`:''}
+      </div></div>`;
+  };
+  $('modal-inner').innerHTML = `<h3>Vídeos reportados</h3>
+    <p class="mt-muted" style="margin:0 0 10px">${pend ? `<b>${pend}</b> ${pend===1?'vídeo com problema':'vídeos com problema'}. Cada exercício aparece uma vez só, com o número de alunos que avisaram.` : 'Nenhum vídeo pendente. 👌'}${princ?'':' Só o administrador principal troca links e resolve ocorrências.'}</p>
+    <div class="nxchips" style="margin-bottom:10px">${chip('pendente','Pendentes')}${chip('resolvido','Resolvidos')}${chip('todos','Todos')}</div>
+    <div style="max-height:56vh;overflow-y:auto">${lista.map(linha).join('') || '<div class="mt-muted" style="padding:14px 0;text-align:center">Nada por aqui.</div>'}</div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+}
+async function mtVerRelatos(exId){
+  $('modal-inner').innerHTML = `<h3>Quem avisou</h3><div class="mt-loading"><div class="ex-spin"></div><span>Carregando…</span></div>`;
+  try{
+    const snap = await db.collection('videosReportados').doc(exId).collection('relatos').get();
+    const arr = []; snap.forEach(d=>arr.push(d.data())); arr.sort((a,b)=>(b.em||0)-(a.em||0));
+    const x = vidRepCache.find(v=>v.id===exId) || {};
+    $('modal-inner').innerHTML = `<h3>${mtEsc(x.exercicio||exId)}</h3>
+      <div class="card" style="padding:6px 12px;max-height:50vh;overflow:auto">${arr.map(r=>`<div class="ev-list-item"><div style="flex:1;min-width:0"><b style="font-size:13px">${mtEsc(r.nome||r.email||'Aluno')}</b><div class="mt-muted" style="font-size:11.5px">${mtEsc(r.email||'')} · ${r.em?mtFmtData(r.em,{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):''}</div></div><span class="pill">${mtEsc((VID_MOTIVO[String(r.motivo)]||{lbl:r.motivo}).lbl)}</span>${(r.ciclo||1)!==(x.ciclo||1)?'<span class="pill" style="margin-left:4px">antes da última correção</span>':''}</div>`).join('') || '<div class="mt-muted" style="padding:10px 0">Sem relatos.</div>'}</div>
+      <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="openVideosReportados()">Voltar</button>`;
+  }catch(e){ toast('⚠️ Não consegui carregar os relatos.'); openVideosReportados(); }
+}
+function mtEditarLinkVideo(exId){
+  if(!mtPrincipal()){ toast('🔒 Somente o administrador principal.'); return; }
+  const x = vidRepCache.find(v=>v.id===exId) || {id:exId};
+  $('modal-inner').innerHTML = `<h3>Trocar vídeo</h3><p class="mt-muted" style="margin:0 0 6px"><b>${mtEsc(x.exercicio||exId)}</b></p>
+    <div class="adm-form"><label>Link atual</label><div style="font-size:12px;word-break:break-all;color:var(--text-dim)">${mtEsc(videoLinks[exId]||x.url||'—')}</div>
+    <label>Novo link do YouTube</label><input class="input" id="vr-url" inputmode="url" placeholder="https://youtube.com/..." value="">
+    <label>Perfil do criador (crédito, opcional)</label><input class="input" id="vr-cred" inputmode="url" value="${mtEsc(videoCredits[exId]||'')}"></div>
+    <a class="btn btn-ghost btn-block" style="margin-top:10px" href="${mtEsc(_buscaSemelhante({nome:x.exercicio||exId, grupo:x.grupo, equip:(exPorNome(x.exercicio||'')||{ex:{}}).ex.equip||[]}))}" target="_blank" rel="noopener">Procurar no YouTube ↗</a>
+    <button class="btn btn-primary btn-block" style="margin-top:8px" id="vr-salvar" onclick="mtSalvarLinkVideo('${mtJsStr(exId)}')">Salvar e marcar resolvido</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openVideosReportados()">Voltar</button>`;
+}
+async function mtSalvarLinkVideo(exId){
+  if(!mtPrincipal()) return;
+  const url = $('vr-url').value.trim(), cred = $('vr-cred').value.trim();
+  if(!ytVideoId(url)){ toast('⚠️ Cole um link de vídeo do YouTube válido'); return; }
+  if(cred && !/^https?:\/\//i.test(cred)){ toast('⚠️ O link do perfil precisa começar com http:// ou https://'); return; }
+  await mtComBotao('vr-salvar', 'Salvando…', async ()=>{
+    const x = vidRepCache.find(v=>v.id===exId) || {};
+    const data = { nome: x.exercicio || exId, url, atualizadoEm: Date.now() }; if(cred) data.credito = cred;
+    await db.collection('videosExercicios').doc(exId).set(data, {merge:true});
+    videoLinks[exId] = url; if(cred) videoCredits[exId] = cred;
+    mtLS('metatreino_videos', JSON.stringify(videoLinks));
+    await _resolver(exId, 'link substituído');
+    toast('✅ Vídeo trocado e ocorrência resolvida');
+    openVideosReportados();
+  });
+}
+async function _resolver(exId, como){
+  const x = vidRepCache.find(v=>v.id===exId) || {};
+  await db.collection('videosReportados').doc(exId).set({ status:'resolvido', resolvidoEm: Date.now(), resolvidoPor: state.user.email, resolucao: como||'', ciclo: (x.ciclo||1)+1, contagem: 0, contagemAnterior: x.contagem||0 }, {merge:true});
+}
+function mtResolverVideo(exId){
+  if(!mtPrincipal()) return;
+  appConfirm('Marque como resolvido depois de corrigir ou substituir o vídeo. Se algum aluno avisar de novo, a ocorrência volta como pendente.', async ()=>{
+    try{ await _resolver(exId, 'marcado como resolvido'); toast('✅ Ocorrência resolvida'); }catch(e){ toast('⚠️ O Firestore recusou. Confira as regras publicadas.'); }
+    openVideosReportados();
+  }, {title:'Marcar como resolvido?', emo:'🎬', okLabel:'Resolvido', onCancel:()=>openVideosReportados()});
+}
+// manutenção dos links: só o administrador principal (pedido do dono do app; as regras do Firestore garantem)
+['saveVideoLink','clearVideoLink'].forEach(n=>{
+  const orig = window[n]; if(typeof orig!=='function') return;
+  const w = function(){ if(!mtPrincipal()){ toast('🔒 Só o administrador principal altera os links dos vídeos.'); return; } return orig.apply(this, arguments); };
+  window[n] = w;
+  try{ if(n==='saveVideoLink') saveVideoLink = w; else clearVideoLink = w; }catch(e){}
+});
+
+// =====================================================================
+// 14. CARREGAMENTOS · 15. HOME · 16. ALIMENTAÇÃO · 17. GRÁFICOS (Beta 11)
+// =====================================================================
+
+// ---------- 14. CARREGAMENTOS E OPERAÇÕES ----------
+// Botão ocupado: desabilita, mostra o que está acontecendo e impede clique duplo.
+async function mtComBotao(btn, rotulo, fn){
+  const el = typeof btn==='string' ? $(btn) : btn;
+  if(el && el.dataset.ocupado === '1') return;
+  const antes = el ? el.innerHTML : '';
+  if(el){ el.dataset.ocupado = '1'; el.disabled = true; el.innerHTML = `<span class="btn-spin"></span>${rotulo||'Aguarde…'}`; }
+  try{ return await fn(); }
+  catch(e){ console.log(e); toast(navigator.onLine===false ? '📴 Sem conexão. Nada foi perdido — tente de novo quando a internet voltar.' : '⚠️ Não foi possível concluir. Tente de novo.'); }
+  finally{ if(el && document.body.contains(el)){ el.dataset.ocupado = ''; el.disabled = false; el.innerHTML = antes; } }
+}
+// Operações assíncronas do painel e do aluno: um segundo toque enquanto a primeira roda é ignorado.
+function mtSemDuplicar(nome){
+  const orig = window[nome]; if(typeof orig !== 'function' || orig.__semDup) return;
+  let rodando = false;
+  const w = async function(){ if(rodando) return; rodando = true; try{ return await orig.apply(this, arguments); } finally{ rodando = false; } };
+  w.__semDup = true; window[nome] = w;
+}
+['doAddStudent','saveVideoLink','clearVideoLink','saveNewExercise','saveMural','saveCoachContact','saveSpecialAward','salvarEventoAdmin','admSetAdmin','adjustDays','toggleStudent','saveRunLog','saveActivityLog','saveHistoryEntry'].forEach(mtSemDuplicar);
+
+// Indicador discreto de sincronização (só aparece quando há algo a dizer)
+const MT_SYNC = { el:null, t:null };
+function mtSyncPill(txt, tipo, ms){
+  if(!MT_SYNC.el){ MT_SYNC.el = document.createElement('div'); MT_SYNC.el.id = 'mt-sync'; MT_SYNC.el.setAttribute('role','status'); document.body.appendChild(MT_SYNC.el); }
+  clearTimeout(MT_SYNC.t);
+  if(!txt){ MT_SYNC.el.classList.remove('on'); return; }
+  MT_SYNC.el.className = 'on '+(tipo||'');
+  MT_SYNC.el.innerHTML = (tipo==='sync'?'<span class="btn-spin"></span>':'') + txt;
+  if(ms) MT_SYNC.t = setTimeout(()=>mtSyncPill(''), ms);
+}
+window.addEventListener('offline', ()=>{ if(fbUser) mtSyncPill('Sem conexão · suas alterações ficam salvas neste aparelho', 'off'); });
+window.addEventListener('online', ()=>{
+  if(!fbUser){ mtSyncPill(''); return; }
+  mtSyncPill('Sincronizando suas informações…', 'sync');
+  try{ syncToCloud(); }catch(e){}
+  const fim = ()=>mtSyncPill('Informações sincronizadas', 'ok', 2200);
+  try{ (db.waitForPendingWrites ? db.waitForPendingWrites() : Promise.resolve()).then(fim, fim); }catch(e){ fim(); }
+});
+
+// Montagem de planos: mesma função e mesmos passos REAIS de antes (buildingSteps), agora como lista
+// que vai sendo concluída, nas cores do tema escolhido. A barra mostra etapas concluídas (não inventa %).
+runBuildingScreen = function(m, steps, done, opts){
+  opts = opts || {};
+  if(steps.length > 6){
+    const r = steps.map((x,idx)=>({x, idx, pri:x.pri||2})).sort((a,b)=>a.pri-b.pri || a.idx-b.idx).slice(0,6).map(o=>o.idx).sort((a,b)=>a-b);
+    steps = r.map(i=>steps[i]);
+  }
+  let ov = document.getElementById('building-ov');
+  if(!ov){ ov = document.createElement('div'); ov.id = 'building-ov'; document.body.appendChild(ov); }
+  ov.className = 'mt-build'; ov.removeAttribute('style');
+  const titulo = String(opts.titulo || (m==='lift' ? 'Preparando seu plano de treinamento' : 'Preparando seu plano de corrida')).replace(/^\S+\s(?=[A-ZÁÉÍÓÚ])/,'');
+  ov.innerHTML = `<div class="mb-box"><div class="mb-spin"></div><div class="mb-t">${titulo}</div><div class="mb-s">${opts.sub || 'Organizando exercícios, dias e progressão com base nas suas escolhas.'}</div>
+    <ol class="mb-list">${steps.map((s,i)=>`<li id="mb-${i}"><span class="mb-ck"></span><span class="mb-tx">${s.txt}</span></li>`).join('')}</ol>
+    <div class="mb-bar"><i id="mb-bar"></i></div><div class="mb-n" id="mb-n">0 de ${steps.length} etapas</div></div>`;
+  requestAnimationFrame(()=>ov.classList.add('on'));
+  const passo = Math.min(opts.passo || 900, 1100);
+  let i = 0;
+  const tick = ()=>{
+    if(i > 0){ const prev = $('mb-'+(i-1)); if(prev){ prev.classList.remove('now'); prev.classList.add('ok'); } }
+    const bar = $('mb-bar'), n = $('mb-n');
+    if(bar) bar.style.width = Math.round(i/steps.length*100)+'%';
+    if(n) n.textContent = `${i} de ${steps.length} etapas`;
+    if(i >= steps.length){
+      setTimeout(()=>{ ov.classList.remove('on'); setTimeout(()=>{ ov.className=''; ov.innerHTML=''; ov.setAttribute('style','display:none'); if(typeof done==='function') done(); }, 260); }, 450);
+      return;
+    }
+    const li = $('mb-'+i); if(li) li.classList.add('now');
+    i++; setTimeout(tick, passo);
+  };
+  setTimeout(tick, 250);
+};
+
+// Painel admin: erro de carregamento vira mensagem clara com "Tentar de novo" (antes ficava "Carregando…")
+const _goAdminB11 = goAdmin;
+window.goAdmin = async function(){
+  const r = await _goAdminB11.apply(this, arguments);
+  try{
+    if(!admLoaded){
+      $('adm-list').innerHTML = `<div class="card" style="text-align:center"><b>Não consegui carregar os alunos.</b><div class="mt-muted" style="margin:6px 0 12px">${navigator.onLine===false?'Você está sem internet.':'Pode ser conexão lenta ou permissão do Firestore.'}</div><button class="btn btn-primary" id="adm-retry" onclick="mtComBotao('adm-retry','Carregando…',()=>goAdmin())">Tentar de novo</button></div>`;
+    }
+    _admLinhaVideos();
+    loadVideosReportados().then(_admVidBadge).catch(()=>{});
+  }catch(e){}
+  return r;
+};
+function _admLinhaVideos(){
+  if($('adm-vid-row')) return;
+  const ref = $('adm-ev-row') || [...document.querySelectorAll('#scr-admin .list-row')].find(r=>/Feedback/.test(r.textContent)); if(!ref) return;
+  const a = document.createElement('div'); a.className = 'list-row'; a.id = 'adm-vid-row'; a.onclick = ()=>openVideosReportados('pendente');
+  a.innerHTML = '🎬 <span>Vídeos reportados</span><span id="adm-vid-badge" style="display:none;margin-left:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:2px 8px">0</span>';
+  ref.after(a);
+}
+
+// ---------- 15. HOME: seções recolhíveis e avisos compactos ----------
+function mtColAberto(k, padrao){ const v = mtLS('mt_col_'+k); return v===null || v===undefined ? padrao : v==='1'; }
+function mtColToggle(k){ const novo = !mtColAberto(k, k!=='treinos'); mtLS('mt_col_'+k, novo?'1':'0'); _mtAplicaColapsos(); }
+function _mtAplicaColapsos(){
+  const wrap = document.querySelector('#scr-home .wrap'); if(!wrap) return;
+  // "Seus treinos": o mesmo conteúdo da aba Treinos → começa recolhido, com um resumo
+  const head = wrap.querySelector(':scope > .section-head'); const lista = $('your-list');
+  if(head && lista){
+    const aberto = mtColAberto('treinos', false);
+    let resumo = $('home-tr-resumo');
+    if(!resumo){ resumo = document.createElement('div'); resumo.id = 'home-tr-resumo'; resumo.className = 'col-resumo'; lista.after(resumo); }
+    const mod = state.modules[state.active]; const n = (mod && mod.plan && (mod.plan.workouts||[]).length) || lista.children.length;
+    resumo.innerHTML = aberto ? '' : `${n} ${n===1?'treino':'treinos'} no plano · toque em “Mostrar” para ver a lista`;
+    resumo.style.display = aberto ? 'none' : '';
+    lista.style.display = aberto ? '' : 'none';
+    let b = head.querySelector('.col-btn');
+    if(!b){ b = document.createElement('button'); b.type='button'; b.className = 'col-btn'; b.onclick = ()=>mtColToggle('treinos'); head.insertBefore(b, head.lastElementChild); }
+    b.textContent = aberto ? 'Recolher' : 'Mostrar';
+  }
+  // Atividade da semana: pode recolher para só o título e o placar
+  const q = $('home-quick');
+  if(q && q.firstElementChild){
+    const aberto = mtColAberto('semana', true);
+    q.classList.toggle('mt-col', !aberto);
+    let b = q.querySelector(':scope > .col-btn');
+    if(!b){ b = document.createElement('button'); b.type='button'; b.className='col-btn col-abs'; b.onclick = e=>{ e.stopPropagation(); mtColToggle('semana'); }; q.appendChild(b); }
+    b.textContent = aberto ? 'Recolher' : 'Mostrar';
+    b.setAttribute('aria-expanded', aberto?'true':'false');
+  }
+  // avisos longos: 2 linhas + "ver mais"
+  ['card-missed','card-weekrecap','card-coach-msg'].forEach(id=>{
+    const c = $(id); if(!c || c.classList.contains('hidden')) return;
+    const sub = c.querySelector('.card-sub'); if(!sub || sub.dataset.clamp) return;
+    if((sub.textContent||'').length < 140) return;
+    sub.dataset.clamp = '1'; sub.classList.add('clamp2');
+    const mais = document.createElement('button'); mais.type='button'; mais.className='link-mais'; mais.textContent='ver mais';
+    mais.onclick = e=>{ e.stopPropagation(); const fech = sub.classList.toggle('clamp2'); mais.textContent = fech ? 'ver mais' : 'ver menos'; };
+    sub.after(mais);
+  });
+}
+
+// ---------- 16. ALIMENTAÇÃO NA HOME ----------
+// Usa o plano que o app já calcula (estimativa educativa, não substitui nutricionista). Nada é inventado:
+// sem cadastro suficiente → estado vazio; refeições marcadas = as que o aluno marcou de verdade.
+function nutriHoje(){
+  if(!state.nutri) return { vazio:'novo' };
+  let pl; try{ pl = nutriMontarPlano(getDayIdx()); }catch(e){ return { vazio:'erro' }; }
+  if(!pl || pl.erro || !pl.refeicoes) return { vazio:'dados', msg: pl && pl.erro };
+  const log = nutriLogDe(chaveDia(new Date()));
+  const ref = pl.refeicoes.map(r=>Object.assign({}, r, { ok: log(r.id).ok }));
+  const agoraMin = new Date().getHours()*60 + new Date().getMinutes();
+  const min = h=>{ const [a,b] = String(h||'00:00').split(':').map(Number); return a*60+(b||0); };
+  const prox = ref.find(r=>!r.ok && min(r.hora) >= agoraMin - 60) || ref.find(r=>!r.ok) || null;
+  return { ref, feitas: ref.filter(r=>r.ok).length, total: ref.length, prox, kcal: pl.calc && pl.calc.kcal };
+}
+function nutriMarcarHome(id){
+  const m = nutriMealLog(id, true, chaveDia(new Date())); m.ok = !m.ok;
+  try{ Object.keys(state.nutriLog).sort().slice(0,-30).forEach(x=>delete state.nutriLog[x]); }catch(e){}
+  try{ nutriLimpa(id); }catch(e){}
+  saveData(); renderHomeMetrics();
+  toast(m.ok ? '✅ Refeição marcada' : 'Marcação desfeita');
+}
+function _nutriTile(){
+  const t = document.querySelector('#home-metrics .met[onclick="openNutri()"]'); if(!t) return;
+  const h = nutriHoje();
+  t.classList.add('met-nutri');
+  if(h.vazio){
+    const msg = h.msg==='menor' ? 'Plano alimentar disponível a partir de 18 anos' : h.vazio==='dados' ? 'Complete peso, altura, idade e sexo no perfil' : 'Nenhum plano alimentar disponível';
+    t.innerHTML = `<div class="met-h"><i>🥗</i>Alimentação</div><div class="met-empty">${msg}</div><div class="met-s">${h.msg==='menor'?'Converse com um nutricionista':'Toque para ver detalhes'}</div>`;
+    return;
+  }
+  const pct = h.total ? Math.round(h.feitas/h.total*100) : 0;
+  t.innerHTML = `<div class="met-h"><i>🥗</i>Alimentação</div>
+    ${h.prox ? `<div class="met-next"><small>Próxima · ${mtEsc(h.prox.hora||'')}</small><b>${mtEsc(h.prox.nome)}</b></div>` : `<div class="met-next"><small>Hoje</small><b>Refeições concluídas</b></div>`}
+    <div class="act-bar" style="margin:0"><i style="width:${pct}%;background:var(--primary)"></i></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span class="met-s">${h.feitas} de ${h.total}</span>${h.prox?`<button class="aguabtn" onclick="event.stopPropagation();nutriMarcarHome('${h.prox.id}')" aria-label="Marcar ${mtEsc(h.prox.nome)} como feita">✓ Feita</button>`:''}</div>`;
+}
+const _renderHomeMetricsB11 = renderHomeMetrics;
+window.renderHomeMetrics = function(){ const r = _renderHomeMetricsB11.apply(this, arguments); try{ _nutriTile(); }catch(e){ console.log('nutri tile', e); } return r; };
+// histórico honesto no plano alimentar: refeições MARCADAS (não marcar não quer dizer que não comeu)
+const _openNutriB11 = openNutri;
+window.openNutri = function(){
+  const r = _openNutriB11.apply(this, arguments);
+  try{
+    const total = (state.nutri && state.nutri.refeicoes) || 5;
+    const dias = []; for(let i=6;i>=0;i--){ const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i); const dk = chaveDia(d); const dia = (state.nutriLog||{})[dk]||{}; const n = Object.values(dia).filter(x=>x===true || (x && x.ok)).length; dias.push({d, n}); }
+    if(dias.some(x=>x.n>0)){
+      const h3 = document.querySelector('#modal-inner h3');
+      const box = document.createElement('div'); box.className = 'nutri-hist';
+      box.innerHTML = `<div class="mt-muted" style="font-size:11.5px;margin-bottom:6px">Refeições marcadas nos últimos 7 dias</div><div class="nh-row">${dias.map(x=>`<div class="nh-d" title="${x.n} de ${total}"><i style="height:${Math.max(4, Math.round(Math.min(1,x.n/total)*36))}px;${x.n?'':'opacity:.25'}"></i><span>${['D','S','T','Q','Q','S','S'][x.d.getDay()]}</span></div>`).join('')}</div>`;
+      if(h3) h3.after(box);
+    }
+  }catch(e){}
+  return r;
+};
+
+// ---------- 17. GRÁFICOS ----------
+// Componente único (SVG com proporção fixa, eixos com unidade, toque mostra o valor, cores do tema).
+// Os dados vêm só dos registros reais. Períodos sem registro aparecem como zero em barras de contagem
+// (zero treinos é um fato) — mas em peso e ritmo não se desenha ponto onde não houve medição.
+const MT_MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function _niceMax(v){ if(v<=0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v/p; return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p; }
+function _fmtNum(v, dec){ return (+v).toLocaleString('pt-BR', {maximumFractionDigits: dec==null?1:dec, minimumFractionDigits:0}); }
+function mtChart(cfg){
+  // cfg: {tipo:'bar'|'line', pts:[{v, rot, tip}], un, meta, dec, fmt, inverter}
+  const W = 340, H = 170, L = 34, R = 8, T = 12, B = 24;
+  const pts = cfg.pts; const vals = pts.map(p=>p.v).filter(v=>v!=null);
+  if(!vals.length) return '';
+  let max = Math.max(...vals, cfg.meta||0), min = cfg.tipo==='line' ? Math.min(...vals) : 0;
+  if(cfg.tipo==='line'){ const pad = Math.max((max-min)*0.15, (cfg.dec===0?1:0.5)); max += pad; min = Math.max(0, min-pad); }
+  else { max = _niceMax(max); if(cfg.dec===0 && max>1 && max%2) max += 1; }
+  const rng = (max-min) || 1;
+  const x = i => L + (pts.length===1 ? (W-L-R)/2 : i*(W-L-R)/(pts.length-1));
+  const y = v => T + (1-(v-min)/rng)*(H-T-B);
+  const fmt = cfg.fmt || (v=>_fmtNum(v, cfg.dec));
+  const axf = cfg.axFmt || fmt;
+  let g = '';
+  [0,0.5,1].forEach(f=>{ const v = min + rng*f; const yy = y(v); g += `<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" class="ch-grid"/><text x="${L-5}" y="${yy+3.5}" class="ch-ax" text-anchor="end">${axf(cfg.tipo==='line'?v:Math.round(v*10)/10)}</text>`; });
+  const step = Math.max(1, Math.ceil(pts.length/5));
+  pts.forEach((p,i)=>{ if(i%step===0 || i===pts.length-1 && (pts.length-1)%step>step/2) g += `<text x="${cfg.tipo==='bar'? L + (i+0.5)*(W-L-R)/pts.length : x(i)}" y="${H-7}" class="ch-ax" text-anchor="middle">${mtEsc(p.rot)}</text>`; });
+  if(cfg.meta){ const ym = y(cfg.meta); g += `<line x1="${L}" x2="${W-R}" y1="${ym}" y2="${ym}" class="ch-meta"/><text x="${W-R}" y="${ym-4}" class="ch-ax" text-anchor="end">meta ${fmt(cfg.meta)}</text>`; }
+  let marks = '';
+  if(cfg.tipo==='bar'){
+    const bw = (W-L-R)/pts.length;
+    pts.forEach((p,i)=>{ const v = p.v||0; const h = Math.max(v>0?2:0, (H-T-B)*(v-min)/rng); const bx = L + i*bw + bw*0.18;
+      marks += `<rect x="${bx}" y="${H-B-h}" width="${bw*0.64}" height="${h}" rx="${Math.min(4,bw*0.2)}" class="ch-bar${i===pts.length-1?' cur':''}"/><rect x="${L+i*bw}" y="${T}" width="${bw}" height="${H-T-B}" class="ch-hit" data-tip="${mtEsc(p.tip)}"/>`; });
+  } else {
+    const ok = pts.map((p,i)=>p.v==null?null:[x(i), y(p.v)]).filter(Boolean);
+    if(ok.length>1) marks += `<path d="M${ok.map(c=>c.join(' ')).join('L')}" class="ch-line"/>`;
+    pts.forEach((p,i)=>{ if(p.v==null) return; marks += `<circle cx="${x(i)}" cy="${y(p.v)}" r="3.2" class="ch-dot"/><circle cx="${x(i)}" cy="${y(p.v)}" r="12" class="ch-hit" data-tip="${mtEsc(p.tip)}"/>`; });
+  }
+  return `<div class="ch-tip" aria-live="polite">Toque no gráfico para ver os valores</div><svg class="mt-ch" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" onclick="mtChartTip(event)">${g}${marks}</svg>`;
+}
+function mtChartTip(ev){
+  const t = ev.target.closest && ev.target.closest('.ch-hit'); if(!t) return;
+  const svg = t.ownerSVGElement; svg.querySelectorAll('.ch-hit.sel').forEach(x=>x.classList.remove('sel')); t.classList.add('sel');
+  const tip = svg.previousElementSibling; if(tip) tip.innerHTML = t.getAttribute('data-tip');
+}
+// períodos
+const MT_PER = { semana:{n:7, passo:'dia', lbl:'Semana', dias:7}, mes:{n:5, passo:'semana', lbl:'Mês', dias:35}, tri:{n:13, passo:'semana', lbl:'Trimestre', dias:91}, ano:{n:12, passo:'mes', lbl:'Ano', dias:365} };
+function _buckets(per, voltar){
+  const P = MT_PER[per]; const out = [];
+  if(P.passo==='dia'){ const fim = mtDia0()+DIA_MS - (voltar?7*DIA_MS:0); for(let i=P.n-1;i>=0;i--){ const a = fim-(i+1)*DIA_MS; const d = new Date(a); out.push({a, b:a+DIA_MS, rot:['D','S','T','Q','Q','S','S'][d.getDay()], nome:d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})}); } }
+  else if(P.passo==='semana'){ const s0 = mtSemanaIni(Date.now()) - (voltar?P.n*7*DIA_MS:0); for(let i=P.n-1;i>=0;i--){ const a = s0 - i*7*DIA_MS; out.push({a, b:a+7*DIA_MS, rot:mtFmtData(a), nome:'semana de '+mtFmtData(a)}); } }
+  else { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); if(voltar) d.setMonth(d.getMonth()-12); for(let i=P.n-1;i>=0;i--){ const a = new Date(d.getFullYear(), d.getMonth()-i, 1).getTime(); const b = new Date(d.getFullYear(), d.getMonth()-i+1, 1).getTime(); const m = new Date(a).getMonth(); out.push({a, b, rot:MT_MESES[m], nome:MT_MESES[m]+'/'+new Date(a).getFullYear()}); } }
+  return out;
+}
+function _volumeEntre(a, b){
+  let v = 0;
+  Object.values(state.progress||{}).forEach(arr=>(arr||[]).forEach(p=>{ if(p.date>=a && p.date<b) v += (p.sets||[]).reduce((t,s)=>t+(+s.peso||0)*(+s.reps||0),0); }));
+  const vistos = new Set(); Object.values(state.progress||{}).forEach(arr=>(arr||[]).forEach(p=>vistos.add(p.date)));
+  Object.values(state.progResumo||{}).forEach(arr=>(arr||[]).forEach(r=>{ if(r && r.d>=a && r.d<b && !vistos.has(r.d)) v += (+r.v||0); }));
+  return Math.round(v);
+}
+// métricas disponíveis (só aparecem se fizer sentido para o aluno)
+function mtMetricas(){
+  const h = mtHist();
+  const tem = t=>h.some(x=>x._t===t);
+  const M = [];
+  M.push({k:'freq', lbl:'Frequência', tipo:'bar', un:'dias ativos', dec:0, pers:['mes','tri','ano'], serie:(bs)=>bs.map(b=>({v: mtDiasAtivos(b.a,b.b).size, b})), soma:true, meta: ()=>contextoAluno().planejados, metaPasso:'semana', mais:'mais dias ativos'});
+  M.push({k:'tempo', lbl:'Tempo de treino', tipo:'bar', un:'min', dec:0, pers:['semana','mes','tri','ano'], serie:(bs)=>bs.map(b=>({v: Math.round(h.filter(x=>x.at>=b.a&&x.at<b.b).reduce((s,x)=>s+(+x.duration||0),0)), b})), soma:true});
+  if((state.weights||[]).length) M.push({k:'peso', lbl:'Peso', tipo:'line', un:'kg', dec:1, pers:['mes','tri','ano'], pontos:true});
+  if(state.modules.lift) M.push({k:'volume', lbl:'Volume (musculação)', tipo:'bar', un:'kg', dec:0, pers:['semana','mes','tri','ano'], serie:(bs)=>bs.map(b=>({v:_volumeEntre(b.a,b.b), b})), soma:true, axFmt:v=>v>=1000?_fmtNum(v/1000,1)+' mil':_fmtNum(v,0)});
+  const km = t=>(bs)=>bs.map(b=>({v: Math.round(h.filter(x=>x._t===t && x.at>=b.a && x.at<b.b).reduce((s,x)=>s+(+x.distance||0),0)*10)/10, b}));
+  if(tem('corrida')){ M.push({k:'run', lbl:'Corrida (km)', tipo:'bar', un:'km', dec:1, pers:['semana','mes','tri','ano'], serie:km('corrida'), soma:true}); M.push({k:'pace', lbl:'Ritmo da corrida', tipo:'line', un:'min/km', dec:2, pers:['mes','tri','ano'], pontos:true, menorMelhor:true, fmt:v=>mtPaceStr(v).replace('/km','')}); }
+  if(tem('caminhada')) M.push({k:'walk', lbl:'Caminhada (km)', tipo:'bar', un:'km', dec:1, pers:['semana','mes','tri','ano'], serie:km('caminhada'), soma:true});
+  if(tem('bike')){ M.push({k:'bike', lbl:'Bike (km)', tipo:'bar', un:'km', dec:1, pers:['semana','mes','tri','ano'], serie:km('bike'), soma:true}); M.push({k:'bikev', lbl:'Velocidade na bike', tipo:'line', un:'km/h', dec:1, pers:['mes','tri','ano'], pontos:true}); }
+  return M;
+}
+function _pontosLinha(k, a, b){
+  if(k==='peso') return (state.weights||[]).filter(w=>w.weight>0 && w.date>=a && w.date<b).sort((x,y)=>x.date-y.date).map(w=>({t:w.date, v:+w.weight}));
+  const h = mtHist();
+  if(k==='pace') return h.filter(x=>x._t==='corrida' && +x.distance>0 && +x.duration>0 && x.at>=a && x.at<b).map(x=>({t:x.at, v:(+x.duration)/(+x.distance), extra:mtFmtKm(x.distance)+' km'}));
+  if(k==='bikev') return h.filter(x=>x._t==='bike' && +x.distance>0 && +x.duration>0 && x.at>=a && x.at<b).map(x=>({t:x.at, v:(+x.distance)/((+x.duration)/60), extra:mtFmtKm(x.distance)+' km'}));
+  return [];
+}
+function _desdeQuando(k){
+  if(k==='peso'){ const w = (state.weights||[]).filter(x=>x.weight>0).map(x=>x.date); return w.length?Math.min(...w):null; }
+  if(k==='volume'){ let m = Infinity; Object.values(state.progress||{}).forEach(a=>(a||[]).forEach(p=>m=Math.min(m,p.date))); Object.values(state.progResumo||{}).forEach(a=>(a||[]).forEach(r=>r&&(m=Math.min(m,r.d)))); return isFinite(m)?m:null; }
+  const h = mtHist(); return h.length ? h[0].at : null;
+}
+function renderEvolucao(){
+  const el = $('perf-evo'); if(!el) return;
+  const M = mtMetricas();
+  let k = mtLS('mt_evo_k') || 'freq'; if(!M.some(m=>m.k===k)) k = M[0].k;
+  const m = M.find(x=>x.k===k);
+  let per = mtLS('mt_evo_p') || 'mes'; if(!m.pers.includes(per)) per = m.pers.includes('mes') ? 'mes' : m.pers[0];
+  const P = MT_PER[per];
+  const fmt = m.fmt || (v=>_fmtNum(v, m.dec));
+  const chips = M.map(x=>`<button type="button" class="nxchip ${x.k===k?'on':''}" onclick="mtLS('mt_evo_k','${x.k}');renderEvolucao()">${x.lbl}</button>`).join('');
+  const pers = Object.keys(MT_PER).map(p=>`<button type="button" class="${p===per?'on':''}" ${m.pers.includes(p)?'':'disabled'} onclick="mtLS('mt_evo_p','${p}');renderEvolucao()">${MT_PER[p].lbl}</button>`).join('');
+  const desde = _desdeQuando(k);
+  const bs = _buckets(per), ant = _buckets(per, true);
+  const ini = bs[0].a, fim = bs[bs.length-1].b;
+  let corpo = '', comp = '', nota = '';
+  const retencao = (m.k!=='peso' && m.k!=='volume' && per==='ano') ? 'O app guarda o detalhe dos treinos dos últimos 90 dias; meses anteriores aparecem sem registros.' : '';
+  if(m.pontos){
+    const ps = _pontosLinha(k, ini, fim);
+    if(ps.length < 2){ corpo = _vazio(m, ps.length); }
+    else {
+      const pts = ps.map(p=>({v:p.v, rot: per==='ano' ? MT_MESES[new Date(p.t).getMonth()] : mtFmtData(p.t), tip:`<b>${fmt(p.v)} ${m.un}</b> · ${new Date(p.t).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})}${p.extra?' · '+p.extra:''}`}));
+      corpo = mtChart({tipo:'line', pts, un:m.un, dec:m.dec, fmt});
+      const d = ps[ps.length-1].v - ps[0].v;
+      const rel = ps[0].v ? d/ps[0].v : 0;
+      const lbl = m.k==='peso' ? `${d>0?'+':d<0?'−':''}${_fmtNum(Math.abs(d),1)} kg no período` : (Math.abs(rel)<0.02 ? 'estável no período' : ((m.menorMelhor ? d<0 : d>0) ? 'melhorando no período' : 'piorando no período'));
+      const det = m.k==='pace' ? ` (${mtPaceStr(ps[0].v)} → ${mtPaceStr(ps[ps.length-1].v)})` : m.k==='peso' ? ` (${_fmtNum(ps[0].v,1)} → ${_fmtNum(ps[ps.length-1].v,1)} kg)` : ` (${fmt(ps[0].v)} → ${fmt(ps[ps.length-1].v)} ${m.un})`;
+      comp = `<div class="ch-comp"><span class="ch-trend ${m.k==='peso'?'neu':(Math.abs(rel)<0.02?'neu':((m.menorMelhor ? d<0 : d>0)?'up':'dn'))}">${lbl}</span>${det}</div>`;
+    }
+  } else {
+    const s = m.serie(bs), sa = m.serie(ant);
+    const naoZero = s.filter(x=>x.v>0).length;
+    if(naoZero < 2){ corpo = _vazio(m, naoZero); }
+    else {
+      const pts = s.map(x=>({v:x.v, rot:x.b.rot, tip:`<b>${fmt(x.v)} ${m.un}</b> · ${x.b.nome}`}));
+      const meta = (m.meta && P.passo===m.metaPasso) ? m.meta() : null;
+      corpo = mtChart({tipo:'bar', pts, un:m.un, dec:m.dec, fmt, meta, axFmt:m.axFmt});
+      const tot = s.reduce((a,x)=>a+x.v,0), totA = sa.reduce((a,x)=>a+x.v,0);
+      const temAnterior = desde && desde < ini - 3*DIA_MS;
+      if(!temAnterior) comp = `<div class="ch-comp"><b>${fmt(tot)} ${m.un}</b> no período · ainda não há registros do período anterior para comparar</div>`;
+      else { const rel = totA ? (tot-totA)/totA : 1; const cls = Math.abs(rel)<0.05 ? 'neu' : rel>0 ? 'up' : 'dn';
+        comp = `<div class="ch-comp"><b>${fmt(tot)} ${m.un}</b> no período · <span class="ch-trend ${cls}">${cls==='neu'?'estável':(rel>0?'+':'−')+Math.round(Math.abs(rel)*100)+'%'}</span> vs. ${P.lbl==='Semana'?'semana':'período'} anterior (${fmt(totA)})</div>`; }
+      if(meta) nota = `Linha tracejada: sua meta de ${meta} dias por semana.`;
+    }
+  }
+  el.innerHTML = `<div class="chart-head" style="margin-bottom:8px"><div class="chart-title">Evolução</div></div>
+    <div class="nxchips evo-chips">${chips}</div>
+    <div class="seg-nav seg-sm">${pers}</div>
+    <div class="ch-wrap">${corpo}</div>${comp}
+    ${(nota||retencao)?`<div class="mt-muted" style="font-size:11.5px;margin-top:6px">${[nota, retencao].filter(Boolean).join(' ')}</div>`:''}`;
+}
+function _vazio(m, n){
+  const quanto = m.k==='peso' ? 'pelo menos 2 pesagens' : m.pontos ? 'pelo menos 2 registros' : 'registros em pelo menos 2 '+'períodos';
+  return `<div class="ch-empty"><b>Ainda não há dados suficientes</b><span>Para este gráfico são necessários ${quanto} neste intervalo${n?` (há ${n})`:''}. Isso não indica desempenho ruim — só falta histórico. Tente um período maior ou volte depois de registrar mais.</span></div>`;
+}
+const _renderPerfB11 = renderPerf;
+window.renderPerf = function(){
+  const r = _renderPerfB11.apply(this, arguments);
+  try{
+    let el = $('perf-evo');
+    if(!el){ el = document.createElement('div'); el.id = 'perf-evo'; el.className = 'chart-card'; const ref = document.querySelector('#scr-perf .chart-card'); if(ref) ref.before(el); }
+    renderEvolucao();
+  }catch(e){ console.log('evolução:', e); }
+  return r;
+};
+// Perfil: gráfico do peso com o mesmo componente (período ajustável); o histórico completo continua a um toque
+const _renderProfileB11 = renderProfile;
+window.renderProfile = function(){
+  const r = _renderProfileB11.apply(this, arguments);
+  try{
+    const slot = $('pf-weight-chart-slot'); if(!slot) return r;
+    slot.removeAttribute('onclick');
+    const per = mtLS('mt_pf_p') || 'tri';
+    const ini = _buckets(per)[0].a;
+    const ps = _pontosLinha('peso', ini, Date.now()+DIA_MS);
+    const pers = ['mes','tri','ano'].map(p=>`<button type="button" class="${p===per?'on':''}" onclick="mtLS('mt_pf_p','${p}');renderProfile()">${MT_PER[p].lbl}</button>`).join('');
+    const corpo = ps.length>=2 ? mtChart({tipo:'line', un:'kg', dec:1, pts: ps.map(p=>({v:p.v, rot: per==='ano'?MT_MESES[new Date(p.t).getMonth()]:mtFmtData(p.t), tip:`<b>${_fmtNum(p.v,1)} kg</b> · ${new Date(p.t).toLocaleDateString('pt-BR')}`}))})
+      : _vazio({k:'peso', pontos:true}, ps.length);
+    slot.innerHTML = `<div class="seg-nav seg-sm">${pers}</div><div class="ch-wrap">${corpo}</div><button type="button" class="btn btn-ghost btn-block" style="margin-top:8px;font-size:12.5px;padding:8px" onclick="openWeightHistory()">Ver todas as pesagens</button>`;
+  }catch(e){ console.log('peso:', e); }
+  return r;
+};
+
+// ---------- Tema: destaques que seguem a cor do tema ----------
+// ✅ (feito) vira um "check" na cor do tema no modo de ícones de linha
+try{
+  ICO_SVG.check = '<path d="M5 12.5l4.2 4.2L19 7"/>';
+  ICO_POR_EMOJI['✅'] = 'check'; ICO_POR_EMOJI['✔'] = 'check';
+  ICO_MANTER.delete('✅'); ICO_MANTER.delete('✔');
+  const _icoHtmlOrig = _icoHtml;
+  _icoHtml = function(nome, extra){ return _icoHtmlOrig(nome, extra).replace('<i class="ico', `<i data-i="${nome}" class="ico`); };
+}catch(e){}
+
+// ---------- Perfil: Áudio dos vídeos ----------
+const _renderProfileB11b = window.renderProfile;
+window.renderProfile = function(){
+  const r = _renderProfileB11b.apply(this, arguments);
+  try{ const v = $('audio-row-val'); if(v) v.textContent = (videoMudoPref() ? 'Iniciar no mudo' : 'Áudio original') + ' ›'; }catch(e){}
+  return r;
+};
+
+// ---------- Home: aplica os refinamentos depois de cada desenho ----------
+const _renderHomeB11 = renderHome;
+window.renderHome = function(){
+  const r = _renderHomeB11.apply(this, arguments);
+  try{ _mtAplicaColapsos(); }catch(e){ console.log('colapsos:', e); }
+  return r;
+};
+
+Object.assign(window, { setVideoAudio, openAudioVideos, mtAlternarSom, mtTentarVideo, mtReportarVideo, openVideosReportados, mtVerRelatos, mtEditarLinkVideo, mtSalvarLinkVideo, mtResolverVideo,
+  mtComBotao, mtColToggle, nutriMarcarHome, renderEvolucao, mtChartTip, videoMudoPref });
+
+// =====================================================================
+// 18. CALISTENIA (Beta 12)
+// Modalidade completa dentro do módulo de treino de força (state.modules.lift):
+//   setup.modalidade = 'musculacao' | 'calistenia' | 'hibrido'
+// Reaproveita o registro de séries, histórico, sequência, conquistas, desafios e gráficos.
+// O que é próprio da calistenia: cadeias de progressão, posição do aluno em cada cadeia,
+// domínio verificado antes de avançar, pré-requisitos das habilidades, equipamentos próprios.
+// =====================================================================
+const CALI_NIVEL = ['', 'Iniciante', 'Intermediário', 'Avançado', 'Especialista'];
+const CALI_EQUIP_LBL = { barra:'barra fixa', paralelas:'paralelas', argolas:'argolas', elastico:'elástico', apoios:'apoios de flexão', banco:'banco/caixa', espaldar:'espaldar ou poste' };
+// Cada item: [nome, nível 1-4, unidade r|t, equipamentos (precisa de UM deles; vazio = chão), grupo, faixa própria ('' = usa a do objetivo), músculos, execução[], erro comum, segurança]
+// A ordem dentro da cadeia é a ordem de progressão (fácil → difícil).
+const CALI_CADEIAS = [
+ {id:'flexao', pad:'empurrar_h', area:'Superior', titulo:'Flexões', itens:[
+  ['Flexão na parede',1,'r',[],'Peito','','Peitoral, tríceps e deltoide anterior',['Mãos na parede na altura do peito, corpo reto.','Aproxime o peito da parede dobrando os cotovelos a ~45°.','Empurre de volta sem perder o alinhamento.'],'Quadril para trás (corpo em “V”).',''],
+  ['Flexão inclinada',1,'r',['banco'],'Peito','','Peitoral, tríceps e deltoide anterior',['Mãos num banco ou caixa firme, corpo em prancha.','Desça até o peito quase tocar a borda.','Empurre mantendo abdômen e glúteos contraídos.'],'Deixar o quadril cair.','Use uma superfície que não deslize.'],
+  ['Flexão com joelhos',1,'r',[],'Peito','','Peitoral, tríceps e deltoide anterior',['Joelhos no chão, linha reta de joelho a cabeça.','Desça até o peito quase tocar o chão.','Empurre de volta com os cotovelos a ~45°.'],'Quadril dobrado, deixando o tronco fora da linha.',''],
+  ['Flexão tradicional',2,'r',[],'Peito','','Peitoral, tríceps, deltoide anterior e core',['Mãos um pouco mais abertas que os ombros, corpo em linha reta.','Desça até o peito ficar a um palmo do chão.','Empurre o chão afastando as escápulas no final.'],'Cotovelos abertos a 90° e cabeça caindo.',''],
+  ['Flexão declinada',2,'r',['banco'],'Peito','','Peitoral superior, deltoide anterior e tríceps',['Pés elevados num banco, mãos no chão.','Desça controlando até quase tocar o chão.','Empurre mantendo o corpo rígido.'],'Arquear a lombar.',''],
+  ['Flexão diamante',2,'r',[],'Tríceps','','Tríceps, peitoral e deltoide anterior',['Mãos juntas formando um losango sob o peito.','Desça com os cotovelos próximos ao corpo.','Empurre até estender os braços.'],'Cotovelos abrindo para os lados.','Se o punho incomodar, afaste um pouco as mãos.'],
+  ['Flexão arqueiro',3,'r',[],'Peito','3-8','Peitoral (unilateral), tríceps e core',['Mãos bem afastadas, um braço faz o trabalho e o outro fica quase estendido.','Desça em direção à mão que dobra.','Empurre e alterne o lado a cada série.'],'Girar o quadril.','Faixa de repetições por lado.'],
+  ['Flexão unilateral assistida',3,'r',['banco'],'Peito','3-6','Peitoral, tríceps e estabilizadores do core',['Uma mão no chão e a outra apoiada num banco baixo.','Desça devagar com o corpo firme.','Empurre usando ao máximo o braço de baixo.'],'Corpo torcendo durante a descida.',''],
+  ['Flexão unilateral',4,'r',[],'Peito','2-5','Peitoral, tríceps, ombro e core',['Pés afastados, uma mão sob o peito.','Desça devagar sem girar o tronco.','Empurre mantendo quadril alinhado.'],'Rotação do tronco.','Só depois de dominar a versão assistida.']]},
+ {id:'triceps', pad:'dips', area:'Superior', titulo:'Tríceps no chão', alt:true, itens:[
+  ['Flexão fechada',1,'r',[],'Tríceps','','Tríceps e peitoral',['Mãos na largura dos ombros, cotovelos colados ao corpo.','Desça controlando.','Empurre até estender.'],'Cotovelos abrindo.',''],
+  ['Flexão diamante',2,'r',[],'Tríceps','','Tríceps, peitoral e deltoide anterior',['Mãos juntas formando um losango sob o peito.','Desça com os cotovelos próximos ao corpo.','Empurre até estender os braços.'],'Cotovelos abrindo para os lados.',''],
+  ['Extensão de tríceps no chão',3,'r',[],'Tríceps','5-10','Tríceps (cabeça longa)',['Em prancha alta, mãos um pouco à frente da cabeça.','Dobre os cotovelos até os antebraços tocarem o chão.','Empurre o chão estendendo os cotovelos.'],'Deixar o quadril cair.','Comece com joelhos no chão se for pesado.']]},
+ {id:'dips', pad:'dips', area:'Superior', titulo:'Paralelas (dips)', itens:[
+  ['Mergulho no banco',1,'r',['banco'],'Tríceps','','Tríceps, peitoral inferior e deltoide anterior',['Mãos na borda do banco, pernas dobradas.','Desça até os cotovelos chegarem a ~90°.','Empurre até estender os braços.'],'Descer demais e forçar o ombro.','Pare se sentir pinçar na frente do ombro.'],
+  ['Dips negativo nas paralelas',2,'r',['paralelas'],'Tríceps','3-5','Tríceps, peitoral inferior e ombros',['Suba com um pulo e trave os braços.','Desça bem devagar (4–5 s) até ~90° de cotovelo.','Volte a subir com ajuda dos pés.'],'Descer rápido demais.','Ombros longe das orelhas o tempo todo.'],
+  ['Dips nas paralelas',2,'r',['paralelas'],'Tríceps','','Tríceps, peitoral inferior e ombros',['Braços estendidos, tronco levemente inclinado à frente.','Desça até os ombros ficarem na altura dos cotovelos.','Empurre até estender sem travar.'],'Ombros subindo em direção às orelhas.','Não desça além do confortável para o ombro.'],
+  ['Dips nas argolas',3,'r',['argolas'],'Tríceps','4-10','Tríceps, peitoral, ombros e estabilizadores',['Argolas próximas ao corpo, braços travados.','Desça controlando a instabilidade das argolas.','Suba girando levemente as palmas para fora no topo.'],'Argolas abrindo para os lados.','Domine 10+ dips nas paralelas antes.']]},
+ {id:'hspu', pad:'empurrar_v', area:'Superior', titulo:'Empurrar acima da cabeça', itens:[
+  ['Pike push-up inclinado',1,'r',['banco'],'Ombro','','Deltoides e tríceps',['Mãos num banco, quadril alto formando um “V” invertido.','Desça a cabeça à frente das mãos.','Empurre de volta.'],'Transformar em flexão comum (quadril baixo).',''],
+  ['Pike push-up',2,'r',[],'Ombro','','Deltoides, tríceps e trapézio',['Mãos no chão, quadril alto, pernas quase estendidas.','Desça a cabeça formando um triângulo com as mãos.','Empurre o chão até estender os braços.'],'Cotovelos abrindo demais.',''],
+  ['Pike push-up com pés elevados',2,'r',['banco'],'Ombro','','Deltoides e tríceps (mais carga)',['Pés num banco, quadril acima dos ombros.','Desça a cabeça em direção ao chão.','Empurre mantendo o tronco o mais vertical possível.'],'Pescoço forçando para olhar à frente.',''],
+  ['Handstand push-up negativo na parede',3,'r',[],'Ombro','3-5','Deltoides, tríceps e trapézio',['Em parada de mão de frente ou de costas para a parede.','Desça a cabeça devagar (3–5 s) até um apoio macio.','Desça as pernas e recomece.'],'Despencar no final.','Use uma almofada sob a cabeça; pré-requisito: parada na parede por 30 s.'],
+  ['Handstand push-up na parede',3,'r',[],'Ombro','3-8','Deltoides, tríceps e trapézio',['Parada de mão com apoio na parede.','Desça até a cabeça tocar levemente o apoio.','Empurre até estender os braços.'],'Arquear demais a lombar.','Pré-requisito: 5 negativas controladas.'],
+  ['Handstand push-up livre',4,'r',[],'Ombro','1-5','Ombros, tríceps e equilíbrio',['Parada de mão livre e estável.','Desça controlando o equilíbrio.','Empurre mantendo a linha do corpo.'],'Perder a linha do corpo na subida.','Só com parada livre consistente de 30 s+.']]},
+ {id:'barra', pad:'puxar_v', area:'Superior', titulo:'Barra fixa', itens:[
+  ['Pendurar na barra',1,'t',['barra','argolas'],'Costas','','Antebraços, dorsais e ombros',['Pegada firme na largura dos ombros.','Pendure com os braços estendidos e ombros ativos.','Respire controlado durante a sustentação.'],'Ombros “soltos” encostando nas orelhas.',''],
+  ['Retração escapular na barra',1,'r',['barra','argolas'],'Costas','8-12','Trapézio médio/inferior e dorsais',['Pendurado, braços estendidos.','Puxe as escápulas para baixo e para trás sem dobrar os cotovelos.','Volte devagar.'],'Dobrar os cotovelos.',''],
+  ['Barra negativa',2,'r',['barra','argolas'],'Costas','3-5','Dorsais, bíceps e romboides',['Suba com ajuda de um apoio até o queixo passar a barra.','Desça devagar (4–5 s) até estender os braços.','Repita com pausa curta.'],'Descer rápido.',''],
+  ['Barra com elástico',2,'r',['elastico'],'Costas','','Dorsais e bíceps (com assistência)',['Prenda o elástico na barra e apoie um pé/joelho nele.','Puxe até o queixo passar a barra.','Desça controlando.'],'Usar o elástico para dar impulso.','Confira se o elástico está bem preso. Precisa de barra também.'],
+  ['Chin-up (pegada supinada)',2,'r',['barra','argolas'],'Costas','','Dorsais e bíceps',['Palmas viradas para você, mãos na largura dos ombros.','Puxe até o queixo passar a barra.','Desça até estender os braços.'],'Balançar o corpo.',''],
+  ['Barra fixa pronada',2,'r',['barra','argolas'],'Costas','','Dorsais, redondo maior, bíceps e romboides',['Palmas para a frente, um pouco mais abertas que os ombros.','Puxe levando os cotovelos para baixo.','Desça até estender os braços.'],'Meia repetição e balanço.',''],
+  ['Barra arqueiro',3,'r',['barra','argolas'],'Costas','3-6','Dorsais (unilateral) e bíceps',['Pegada bem aberta.','Puxe em direção a uma das mãos, com o outro braço quase reto.','Alterne os lados.'],'Puxar com os dois braços igualmente.','Faixa por lado.'],
+  ['Barra unilateral assistida',4,'r',['barra','argolas'],'Costas','2-5','Dorsais, bíceps e antebraço',['Uma mão na barra e a outra segurando o próprio punho ou uma toalha mais abaixo.','Puxe usando principalmente o braço da barra.','Desça controlando.'],'Girar o corpo.','Pré-requisito: 12+ barras e arqueiro consistente.']]},
+ {id:'puxar_elastico', pad:'puxar_v', area:'Superior', titulo:'Puxar com elástico', alt:true, itens:[
+  ['Puxada com elástico',1,'r',['elastico'],'Costas','','Dorsais e bíceps',['Prenda o elástico no alto (porta).','Puxe levando os cotovelos em direção às costelas.','Volte devagar.'],'Encolher os ombros.','Confira a fixação do elástico.']]},
+ {id:'remada_elastico', pad:'puxar_h', area:'Superior', titulo:'Remada com elástico', alt:true, itens:[
+  ['Remada com elástico',1,'r',['elastico'],'Costas','','Romboides, dorsais e bíceps',['Elástico preso na altura do peito.','Puxe aproximando as escápulas.','Volte devagar.'],'Puxar só com os braços.','']]},
+ {id:'escapulas', pad:'puxar_v', area:'Superior', titulo:'Costas sem equipamento', alt:true, itens:[
+  ['Elevação Y-T-W deitado',1,'r',[],'Costas','10-15','Trapézio médio/inferior e romboides',['Deitado de barriga para baixo, braços à frente.','Eleve os braços formando Y, depois T, depois W.','Segure 1 s em cada posição.'],'Usar impulso da lombar.','Sem barra ou elástico, o treino de puxar fica limitado: uma barra de porta faz muita diferença.']]},
+ {id:'remada', pad:'puxar_h', area:'Superior', titulo:'Remada invertida', itens:[
+  ['Remada invertida alta',1,'r',['argolas','paralelas','barra'],'Costas','','Dorsais, romboides e bíceps',['Barra/argolas na altura do peito, corpo bem inclinado.','Puxe o peito até a barra mantendo o corpo reto.','Desça controlando.'],'Quadril caindo.','Use uma barra baixa e firme.'],
+  ['Australian pull-up (remada invertida)',2,'r',['argolas','paralelas','barra'],'Costas','','Dorsais, romboides, trapézio médio e bíceps',['Barra na altura da cintura, corpo reto sob ela.','Puxe o peito até a barra.','Desça até estender os braços.'],'Pescoço indo à frente.',''],
+  ['Remada invertida com pés elevados',2,'r',['argolas','paralelas','barra'],'Costas','','Dorsais e romboides (mais carga)',['Pés num apoio, corpo horizontal.','Puxe o peito até a barra.','Desça devagar.'],'Perder a linha do quadril.',''],
+  ['Remada arqueiro',3,'r',['argolas','barra'],'Costas','4-8','Dorsais (unilateral), romboides e bíceps',['Corpo sob a barra, pegada aberta.','Puxe em direção a uma mão, outro braço estendido.','Alterne os lados.'],'Girar o tronco.','Faixa por lado.']]},
+ {id:'agacha', pad:'agachar', area:'Inferior', titulo:'Agachamento', itens:[
+  ['Agachamento com apoio',1,'r',[],'Pernas','','Quadríceps e glúteos',['Segure um batente de porta ou encosto firme.','Desça o quadril para trás e para baixo.','Suba empurrando o chão.'],'Joelhos caindo para dentro.',''],
+  ['Agachamento livre',1,'r',[],'Pernas','','Quadríceps, glúteos e adutores',['Pés na largura dos ombros.','Desça até as coxas ficarem paralelas ao chão ou abaixo.','Suba mantendo o peito aberto.'],'Calcanhar saindo do chão.',''],
+  ['Agachamento pausado',2,'r',[],'Pernas','10-15','Quadríceps e glúteos',['Desça até o fundo do agachamento.','Segure 3 s embaixo.','Suba com força.'],'Relaxar no fundo.',''],
+  ['Agachamento com salto',2,'r',[],'Pernas','8-12','Quadríceps, glúteos e panturrilhas (potência)',['Agache até a metade.','Salte o mais alto possível.','Aterrisse suave e emende a próxima.'],'Aterrissar com os joelhos travados.','Evite se tiver dor no joelho ou se marcou “evitar saltos”.']]},
+ {id:'unilateral', pad:'agachar_uni', area:'Inferior', titulo:'Pernas unilateral', itens:[
+  ['Afundo estático',1,'r',[],'Pernas','','Quadríceps e glúteos',['Um pé à frente e outro atrás, tronco reto.','Desça até o joelho de trás quase tocar o chão.','Suba sem mudar os pés de lugar.'],'Joelho da frente ultrapassando muito a ponta do pé.','Faixa por perna.'],
+  ['Avanço alternado',1,'r',[],'Pernas','','Quadríceps, glúteos e estabilizadores',['Dê um passo largo à frente.','Desça até os dois joelhos ficarem a ~90°.','Volte e alterne.'],'Tronco inclinando demais.','Faixa por perna.'],
+  ['Bulgarian split squat',2,'r',['banco'],'Pernas','','Quadríceps e glúteos',['Pé de trás apoiado num banco.','Desça até a coxa da frente ficar paralela.','Suba empurrando com a perna da frente.'],'Pé da frente muito perto do banco.','Faixa por perna.'],
+  ['Agachamento unilateral no banco',2,'r',['banco'],'Pernas','5-10','Quadríceps, glúteos e equilíbrio',['De costas para um banco, uma perna estendida à frente.','Sente devagar no banco com uma perna só.','Levante sem impulso.'],'Despencar no banco.','Faixa por perna.'],
+  ['Pistol squat assistido',3,'r',[],'Pernas','4-8','Quadríceps, glúteos e equilíbrio',['Segure um batente de porta.','Desça numa perna só até o fundo.','Suba usando o mínimo de ajuda dos braços.'],'Joelho caindo para dentro.','Faixa por perna.'],
+  ['Pistol squat',3,'r',[],'Pernas','3-6','Quadríceps, glúteos e equilíbrio',['Uma perna estendida à frente, braços à frente.','Desça até o fundo controlando.','Suba sem tocar o outro pé no chão.'],'Arredondar a lombar no fundo.','Faixa por perna. Pare se o joelho doer.'],
+  ['Shrimp squat',4,'r',[],'Pernas','3-6','Quadríceps e glúteos',['Segure o pé de trás com a mão.','Desça até o joelho de trás tocar o chão.','Suba sem soltar o pé.'],'Perder o equilíbrio para a frente.','Faixa por perna.']]},
+ {id:'gluteo', pad:'gluteo', area:'Inferior', titulo:'Glúteos', itens:[
+  ['Ponte de glúteos',1,'r',[],'Glúteos','12-20','Glúteo máximo e posteriores',['Deitado, joelhos dobrados, pés no chão.','Eleve o quadril contraindo os glúteos.','Segure 1 s e desça.'],'Arquear a lombar no topo.',''],
+  ['Elevação pélvica unilateral',2,'r',[],'Glúteos','','Glúteos e posteriores (unilateral)',['Uma perna no chão e a outra estendida no ar.','Eleve o quadril sem girar.','Desça devagar.'],'Quadril caindo para um lado.','Faixa por perna.'],
+  ['Elevação pélvica unilateral com ombros no banco',3,'r',['banco'],'Glúteos','','Glúteos (maior amplitude)',['Costas apoiadas no banco, uma perna no chão.','Eleve o quadril até alinhar com o tronco.','Desça controlando.'],'Empurrar com a lombar.','Faixa por perna.']]},
+ {id:'nordic', pad:'posterior', area:'Inferior', titulo:'Posteriores (nordic)', itens:[
+  ['Ponte de glúteos com pés afastados',1,'r',[],'Pernas','12-20','Posteriores de coxa e glúteos',['Calcanhares mais longe do quadril que na ponte comum.','Eleve o quadril empurrando com os calcanhares.','Desça devagar.'],'Cãibra por subir rápido: vá devagar.',''],
+  ['Nordic curl negativo assistido',2,'r',[],'Pernas','3-6','Posteriores de coxa',['Ajoelhado, pés presos sob um sofá firme ou por um parceiro.','Incline o corpo à frente o mais devagar possível.','Use as mãos para amortecer e voltar.'],'Dobrar o quadril em vez de manter o corpo reto.','Prenda bem os pés; tenha algo macio para as mãos.'],
+  ['Nordic curl negativo',3,'r',[],'Pernas','3-5','Posteriores de coxa',['Mesma posição, sem ajuda.','Desça em 4–5 s até o chão.','Volte com as mãos.'],'Descer rápido no final.',''],
+  ['Nordic curl',4,'r',[],'Pernas','2-5','Posteriores de coxa (excêntrico e concêntrico)',['Desça devagar.','Volte à posição inicial usando os posteriores.','Mantenha quadril estendido.'],'Quebrar no quadril.','Volume baixo: gera muita dor muscular.']]},
+ {id:'panturrilha', pad:'panturrilha', area:'Inferior', titulo:'Panturrilhas', itens:[
+  ['Elevação de panturrilha',1,'r',[],'Panturrilha','15-25','Gastrocnêmio e sóleo',['De pé, apoio leve na parede.','Suba na ponta dos pés o mais alto possível.','Desça devagar.'],'Movimento curto e rápido.',''],
+  ['Elevação de panturrilha unilateral',2,'r',[],'Panturrilha','10-20','Gastrocnêmio e sóleo',['Uma perna só, apoio na parede.','Suba ao máximo e segure 1 s.','Desça devagar.'],'Dobrar o joelho para ajudar.','Faixa por perna.'],
+  ['Panturrilha unilateral no degrau com pausa',3,'r',[],'Panturrilha','8-15','Gastrocnêmio e sóleo (amplitude total)',['Ponta do pé num degrau, calcanhar livre.','Desça até alongar e pause 2 s.','Suba ao máximo.'],'Quicar embaixo.','Faixa por perna.']]},
+ {id:'core_anti', pad:'core_anti', area:'Core', titulo:'Core anti-extensão', itens:[
+  ['Prancha',1,'t',[],'Core','','Reto e transverso do abdômen',['Antebraços no chão, corpo reto.','Contraia abdômen e glúteos.','Respire sem perder a posição.'],'Quadril caindo.',''],
+  ['Hollow body grupado',1,'t',[],'Core','','Reto do abdômen e flexores do quadril',['Deitado, lombar colada no chão.','Joelhos dobrados e braços à frente, ombros fora do chão.','Segure sem a lombar descolar.'],'Lombar saindo do chão.',''],
+  ['Hollow body hold',2,'t',[],'Core','','Reto do abdômen e flexores do quadril',['Lombar colada no chão.','Pernas estendidas e braços acima da cabeça, perto do chão.','Segure formando uma “canoa”.'],'Prender a respiração.',''],
+  ['Dragon flag negativo',3,'r',['banco'],'Core','3-6','Core inteiro e dorsais',['Deitado no banco segurando atrás da cabeça.','Eleve o corpo reto até a vertical.','Desça devagar sem dobrar o quadril.'],'Dobrar o quadril na descida.','Pré-requisito: hollow body de 45 s.'],
+  ['Dragon flag',4,'r',['banco'],'Core','3-6','Core inteiro e dorsais',['Mesma posição.','Desça e suba com o corpo rígido.','Controle total.'],'Perder a linha no meio.','']]},
+ {id:'core_lat', pad:'core_lat', area:'Core', titulo:'Core lateral', itens:[
+  ['Prancha lateral com joelhos',1,'t',[],'Core','','Oblíquos e glúteo médio',['Deitado de lado, apoio no antebraço e nos joelhos.','Eleve o quadril em linha reta.','Segure e troque de lado.'],'Quadril caindo.','Tempo por lado.'],
+  ['Prancha lateral',1,'t',[],'Core','','Oblíquos e glúteo médio',['Apoio no antebraço e na lateral do pé.','Corpo reto, quadril alto.','Segure e troque de lado.'],'Girar o tronco.','Tempo por lado.'],
+  ['Prancha lateral com elevação de perna',2,'t',[],'Core','','Oblíquos, glúteo médio e abdutores',['Em prancha lateral.','Eleve a perna de cima e segure.','Troque de lado.'],'Quadril caindo.','Tempo por lado.']]},
+ {id:'core_ext', pad:'core_ext', area:'Core', titulo:'Core posterior', itens:[
+  ['Arch hold (superman)',1,'t',[],'Core','','Eretores da coluna, glúteos e trapézio',['Deitado de barriga para baixo.','Eleve braços e pernas, alongando o corpo.','Segure olhando para o chão.'],'Forçar o pescoço para cima.','']]},
+ {id:'core_flex', pad:'core_flex', area:'Core', titulo:'Elevação de pernas', itens:[
+  ['Elevação de pernas deitado',1,'r',[],'Core','','Reto do abdômen (inferior) e flexores do quadril',['Deitado, mãos ao lado do corpo.','Eleve as pernas até a vertical.','Desça devagar sem a lombar descolar.'],'Lombar arqueando.',''],
+  ['Hanging knee raises',2,'r',['barra','argolas'],'Core','','Abdômen e flexores do quadril',['Pendurado na barra, ombros ativos.','Eleve os joelhos até o peito.','Desça sem balançar.'],'Balanço do corpo.',''],
+  ['Hanging leg raises',3,'r',['barra','argolas'],'Core','6-12','Abdômen e flexores do quadril',['Pendurado, pernas estendidas.','Eleve as pernas até a altura do quadril ou mais.','Desça controlando.'],'Usar impulso.',''],
+  ['Toes to bar',3,'r',['barra'],'Core','5-10','Abdômen, flexores do quadril e dorsais',['Pendurado.','Leve a ponta dos pés até a barra.','Desça controlando o balanço.'],'Kipping descontrolado.','']]},
+ {id:'lsit', pad:'core_flex', area:'Core', titulo:'L-sit', itens:[
+  ['L-sit grupado',2,'t',[],'Core','10-20s','Abdômen, flexores do quadril e tríceps',['Mãos no chão (ou apoios) ao lado do quadril.','Empurre o chão e tire o quadril, joelhos no peito.','Segure com os ombros baixos.'],'Ombros encolhidos.','Apoios de flexão ou paralelas facilitam.'],
+  ['L-sit com uma perna estendida',3,'t',[],'Core','10-20s','Abdômen e flexores do quadril',['Igual ao grupado, uma perna estendida.','Alterne a perna a cada série.','Segure.'],'Perna estendida caindo.',''],
+  ['L-sit',3,'t',[],'Core','10-20s','Abdômen, flexores do quadril, tríceps e ombros',['Pernas estendidas à frente na altura do quadril.','Ombros baixos, braços travados.','Segure.'],'Joelhos dobrando.',''],
+  ['V-sit',4,'t',[],'Core','5-10s','Abdômen, flexores do quadril e ombros',['A partir do L-sit, eleve as pernas acima do quadril.','Empurre o chão forte.','Segure.'],'Perder a compressão.','Pré-requisito: L-sit de 20 s.']]},
+ // ---- habilidades (aparecem só com pré-requisitos cumpridos) ----
+ {id:'handstand', pad:'skill', area:'Habilidades', titulo:'Parada de mão', skill:true, req:[['hspu',1],['core_anti',1]], itens:[
+  ['Pike hold (suporte em pike)',1,'t',[],'Ombro','15-30s','Ombros e core',['Mãos no chão, quadril alto, pés próximos às mãos.','Empurre o chão levando o peso para os ombros.','Segure.'],'Ombros fugindo para trás.',''],
+  ['Caminhada na parede',2,'r',[],'Ombro','3-5','Ombros, tríceps e core',['De costas para a parede, em prancha.','Suba os pés pela parede enquanto aproxima as mãos.','Volte devagar.'],'Subir mais do que controla.','Espaço livre e chão sem obstáculos.'],
+  ['Parada de mão de frente para a parede',2,'t',[],'Ombro','20-40s','Ombros, trapézio e core',['Barriga para a parede, mãos a um palmo dela.','Corpo reto, empurre o chão.','Segure e desça como na caminhada.'],'Arquear a lombar (formato “banana”).','Aprenda a sair girando para o lado antes.'],
+  ['Parada de mão de costas para a parede',3,'t',[],'Ombro','20-40s','Ombros, trapézio e equilíbrio',['Chute para cima com as costas para a parede.','Afaste os calcanhares da parede por instantes.','Segure.'],'Encostar o corpo todo na parede.',''],
+  ['Handstand livre',4,'t',[],'Ombro','10-30s','Ombros, punhos e equilíbrio',['Entre na parada sem parede.','Corrija com os dedos das mãos.','Segure o máximo com boa linha.'],'Olhar entre as mãos com o pescoço dobrado.','Treine com espaço livre e saída segura.']]},
+ {id:'muscleup', pad:'skill', area:'Habilidades', titulo:'Muscle-up', skill:true, req:[['barra',6],['dips',2]], itens:[
+  ['Barra explosiva (peito na barra)',3,'r',['barra','argolas'],'Costas','3-6','Dorsais, bíceps e potência',['Puxe o mais rápido possível.','Leve o peito até a barra.','Desça controlando.'],'Perder a forma para ganhar altura.','Pré-requisito: 8+ barras e 10+ dips.'],
+  ['Muscle-up com elástico',3,'r',['elastico'],'Costas','3-5','Dorsais, peitoral, tríceps',['Elástico preso na barra, pés nele.','Puxe explosivo e passe o peito por cima.','Empurre até estender.'],'Passar um braço de cada vez com o corpo torto.',''],
+  ['Muscle-up negativo',3,'r',['barra','argolas'],'Costas','3-5','Dorsais, peitoral e tríceps',['Comece em cima da barra com os braços estendidos.','Desça devagar passando pela transição.','Termine pendurado.'],'Despencar na transição.',''],
+  ['Muscle-up',4,'r',['barra','argolas'],'Costas','1-5','Dorsais, peitoral, tríceps e ombros',['Puxada explosiva com leve balanço controlado.','Transição rápida com os punhos por cima.','Empurre até o topo.'],'Kipping exagerado.','']]},
+ {id:'frontlever', pad:'skill', area:'Habilidades', titulo:'Front lever', skill:true, req:[['barra',5],['core_anti',2]], itens:[
+  ['Tuck front lever',3,'t',['barra','argolas'],'Costas','8-15s','Dorsais, core e ombros',['Pendurado, braços estendidos.','Leve os joelhos ao peito e o tronco à horizontal.','Segure com as escápulas para baixo.'],'Braços dobrando.','Pré-requisito: 8+ barras e hollow sólido.'],
+  ['Advanced tuck front lever',3,'t',['barra','argolas'],'Costas','8-15s','Dorsais, core e ombros',['Igual ao tuck, com as costas retas e quadril mais aberto.','Segure.','Desça controlando.'],'Quadril caindo.',''],
+  ['Front lever com uma perna',4,'t',['barra','argolas'],'Costas','5-10s','Dorsais, core e ombros',['Uma perna estendida e outra grupada.','Corpo na horizontal.','Alterne as pernas.'],'Perder a horizontal.',''],
+  ['Straddle front lever',4,'t',['barra','argolas'],'Costas','5-10s','Dorsais, core e ombros',['Pernas abertas e estendidas.','Corpo na horizontal.','Segure.'],'Joelhos dobrando.',''],
+  ['Front lever',4,'t',['barra','argolas'],'Costas','3-10s','Dorsais, core, ombros e antebraços',['Corpo inteiro reto na horizontal.','Braços travados.','Segure.'],'Quadril abaixo da linha.','']]},
+ {id:'backlever', pad:'skill', area:'Habilidades', titulo:'Back lever', skill:true, req:[['barra',4],['core_anti',2]], itens:[
+  ['Skin the cat',3,'r',['barra','argolas'],'Costas','3-5','Ombros (mobilidade), dorsais e core',['Pendurado, leve as pernas por entre os braços.','Desça devagar até onde o ombro permite.','Volte pelo mesmo caminho.'],'Forçar além da mobilidade do ombro.','Vá devagar: alonga muito o ombro.'],
+  ['Tuck back lever',3,'t',['barra','argolas'],'Costas','8-15s','Ombros, bíceps e core',['A partir do skin the cat, pare com o tronco horizontal e joelhos grupados.','Braços travados.','Segure.'],'Braços dobrando.',''],
+  ['Advanced tuck back lever',4,'t',['barra','argolas'],'Costas','8-12s','Ombros, bíceps e core',['Costas retas, quadril mais aberto.','Segure.','Volte devagar.'],'Arredondar as costas.',''],
+  ['Back lever',4,'t',['barra','argolas'],'Costas','3-10s','Ombros, bíceps, peitoral e core',['Corpo reto na horizontal, de barriga para baixo.','Braços travados.','Segure.'],'Quadril caindo.','']]},
+ {id:'planche', pad:'skill', area:'Habilidades', titulo:'Planche', skill:true, req:[['flexao',3],['dips',2]], itens:[
+  ['Planche lean',2,'t',[],'Ombro','15-30s','Deltoide anterior, peitoral e punhos',['Em prancha alta, dedos para os lados ou para trás.','Incline o corpo à frente das mãos.','Segure com os braços travados.'],'Dobrar os cotovelos.','Aqueça bem os punhos.'],
+  ['Tuck planche',3,'t',['apoios','paralelas'],'Ombro','5-12s','Deltoides, peitoral, tríceps e core',['Mãos nos apoios, joelhos grupados.','Incline e tire os pés do chão.','Segure com braços travados.'],'Ombros fugindo para trás.','Pré-requisito: lean de 30 s e flexão arqueiro.'],
+  ['Advanced tuck planche',4,'t',['apoios','paralelas'],'Ombro','5-10s','Deltoides, peitoral e core',['Costas retas e quadril mais aberto.','Segure.','Desça controlando.'],'Arredondar as costas.',''],
+  ['Straddle planche',4,'t',['apoios','paralelas'],'Ombro','3-8s','Ombros, peitoral e core',['Pernas abertas e estendidas.','Corpo paralelo ao chão.','Segure.'],'Quadril caindo.','']]},
+ {id:'flag', pad:'skill', area:'Habilidades', titulo:'Human flag', skill:true, req:[['barra',5],['core_lat',2]], itens:[
+  ['Flag vertical (suporte lateral)',3,'t',['espaldar'],'Core','5-15s','Oblíquos, dorsais e ombros',['Mãos no poste, uma em cima e outra embaixo.','Empurre com a de baixo e puxe com a de cima.','Eleve o corpo na vertical.'],'Braço de baixo dobrando.','Poste bem fixo, sem quinas.'],
+  ['Tuck human flag',4,'t',['espaldar'],'Core','5-10s','Oblíquos, dorsais e ombros',['Mesma pegada.','Corpo lateral com joelhos grupados.','Segure.'],'Quadril caindo.',''],
+  ['Human flag',4,'t',['espaldar'],'Core','3-8s','Oblíquos, dorsais, ombros e core',['Corpo reto paralelo ao chão.','Braços travados.','Segure.'],'Perder a linha lateral.','']]}
+];
+// índices rápidos
+let CALI_EX = {};      // id → {nome, nivel, unit, equip, grupo, faixa, mus, exec, erro, seg, cadeia, idx}
+function caliIndexar(){
+  CALI_EX = {};
+  CALI_CADEIAS.forEach(c=>c.itens.forEach((it,i)=>{
+    const id = slug(it[0]);
+    const prev = CALI_EX[id];
+    const obj = { id, nome:it[0], nivel:it[1], unit:it[2], equip:it[3], grupo:it[4], faixa:it[5], mus:it[6], exec:it[7], erro:it[8], seg:it[9]||'', cadeia:c.id, idx:i, area:c.area, pad:c.pad, skill:!!c.skill, outras: prev ? [...(prev.outras||[]), prev.cadeia] : [] };
+    if(!prev) CALI_EX[id] = obj; else prev.outras = [...(prev.outras||[]), c.id];
+  }));
+}
+caliIndexar();
+function caliCadeia(id){ return CALI_CADEIAS.find(c=>c.id===id) || null; }
+function ehCali(exId){ return !!CALI_EX[exId]; }
+function modalidadeAtual(){ const st = state.modules.lift && state.modules.lift.setup; return (st && st.modalidade) || 'musculacao'; }
+function temCali(){ const m = modalidadeAtual(); return m==='calistenia' || m==='hibrido'; }
+
+// ---- equipamentos e limitações ----
+function caliEquipOk(item, st){
+  const req = item[3] || item.equip || [];
+  if(!req.length) return true;
+  const tenho = (st && st.caliEquip) || [];
+  if(req.includes('elastico') && req.length===1) return tenho.includes('elastico') && (tenho.includes('barra') || tenho.includes('argolas') || /puxada|remada/i.test(item[0]||item.nome));
+  return req.some(r=>tenho.includes(r));
+}
+const CALI_PAIN = { 'Ombro':['empurrar_v','dips','skill'], 'Punho/Cotovelo':['skill','empurrar_v'], 'Joelho':['agachar_uni','agachar'], 'Tornozelo':['agachar'], 'Lombar':['posterior'] };
+function caliPadroesBloqueados(st){
+  const b = new Set();
+  ((state.user && state.user.pain) || []).forEach(d=>(CALI_PAIN[d]||[]).forEach(p=>b.add(p)));
+  const lim = (st && st.caliLimites) || [];
+  if(lim.includes('ombro')) ['skill'].forEach(p=>b.add(p));
+  return b;
+}
+function caliItemPermitido(item, st){
+  const lim = (st && st.caliLimites) || [];
+  const nome = item[0];
+  if(lim.includes('semimpacto') && /salto|explosiv/i.test(nome)) return false;
+  if(lim.includes('punho') && /planche|handstand|parada de mão|pike hold/i.test(nome)) return false;
+  if(lim.includes('joelho') && /pistol|shrimp|salto/i.test(nome)) return false;
+  if(lim.includes('ombro') && /dips nas argolas|skin the cat|back lever|handstand push/i.test(nome)) return false;
+  return true;
+}
+// posição atual do aluno numa cadeia (índice), respeitando equipamento e limitações
+function caliPos(st, cid){
+  const c = caliCadeia(cid); if(!c) return -1;
+  st.caliPos = st.caliPos || {};
+  let i = st.caliPos[cid];
+  if(i==null) i = caliPosInicial(st, cid);
+  i = Math.max(0, Math.min(c.itens.length-1, i));
+  // se o item atual não é possível (equipamento/limitação), desce até um possível; se nenhum abaixo, sobe
+  for(let k=i; k>=0; k--) if(caliEquipOk(c.itens[k], st) && caliItemPermitido(c.itens[k], st)) return k;
+  for(let k=i+1; k<c.itens.length; k++) if(caliEquipOk(c.itens[k], st) && caliItemPermitido(c.itens[k], st) && c.itens[k][1] <= (st.caliNivelDecl||1)+1) return k;
+  return -1;
+}
+// posição inicial: nível declarado (no máximo Avançado para começar) + teste rápido quando informado
+function caliPosInicial(st, cid){
+  const c = caliCadeia(cid); const nv = Math.min(3, st.caliNivelDecl || 1);
+  const t = st.caliTeste || {};
+  const idxNome = n=>c.itens.findIndex(x=>x[0]===n);
+  if(cid==='flexao' && t.flexao!=null){ const f=t.flexao; return idxNome(f<1?'Flexão inclinada':f<5?'Flexão com joelhos':f<15?'Flexão tradicional':f<30?'Flexão declinada':'Flexão arqueiro'); }
+  if(cid==='barra' && t.barra!=null){ const b=t.barra; return idxNome(b<1?'Barra negativa':b<4?'Chin-up (pegada supinada)':b<12?'Barra fixa pronada':'Barra arqueiro'); }
+  if(cid==='dips' && t.dips!=null){ const d=t.dips; return idxNome(d<1?'Mergulho no banco':d<6?'Dips negativo nas paralelas':d<15?'Dips nas paralelas':'Dips nas argolas'); }
+  if(cid==='core_anti' && t.prancha!=null){ const p=t.prancha; return idxNome(p<30?'Prancha':p<60?'Hollow body grupado':'Hollow body hold'); }
+  // primeiro item do nível declarado (ou o último abaixo dele)
+  let i = c.itens.findIndex(x=>x[1]>=nv);
+  if(i<0) i = c.itens.length-1;
+  if(c.itens[i][1] > nv) i = Math.max(0, i-1);
+  return i;
+}
+// pré-requisitos das habilidades (posição mínima em outras cadeias)
+function caliReqOk(st, cid){
+  const c = caliCadeia(cid); if(!c || !c.req) return true;
+  return c.req.every(([outra, min])=>{ const p = caliPos(st, outra); return p >= min; });
+}
+function caliReqTexto(cid){
+  const c = caliCadeia(cid); if(!c || !c.req) return '';
+  return c.req.map(([o,min])=>{ const oc = caliCadeia(o); return `${oc.itens[min][0]} (${oc.titulo.toLowerCase()})`; }).join(' + ');
+}
+
+// ---- prescrição (séries, faixa, descanso) ----
+const CALI_PRESC = {
+  forca:          {sets:[0,4,4,5,5], r:'3-6',   t:'15-25s', rest:'2-3min'},
+  hipertrofia:    {sets:[0,3,4,4,4], r:'6-12',  t:'25-40s', rest:'90s'},
+  resistencia:    {sets:[0,3,3,3,4], r:'12-20', t:'40-60s', rest:'45-60s'},
+  condicionamento:{sets:[0,3,3,3,3], r:'10-15', t:'30-45s', rest:'30-45s'},
+  habilidades:    {sets:[0,3,3,4,4], r:'5-8',   t:'20-30s', rest:'2min'}
+};
+function caliPrescrever(item, st, slotSkill){
+  const g = st.caliGoal || 'hipertrofia';
+  const P = CALI_PRESC[g] || CALI_PRESC.hipertrofia;
+  const nv = Math.min(4, Math.max(1, st.caliNivelDecl || 1));
+  let sets = P.sets[nv];
+  let faixa = item[5] || (item[2]==='t' ? P.t : P.r);
+  if(item[2]==='t' && !/s$/.test(faixa)) faixa += 's';
+  let rest = P.rest;
+  if(slotSkill){ sets = item[2]==='t' ? 5 : 4; rest = '2min'; }
+  if(item[5] && /negativ|explosiv|unilateral|arqueiro|pistol|shrimp|nordic|muscle/i.test(item[0])) rest = g==='condicionamento' ? '60s' : '2min';
+  const porLado = /por (lado|perna)/i.test(item[9]||'') ? ' por lado' : '';
+  return { sets, reps: faixa + porLado, rest };
+}
+
+// ---- sessões ----
+const CALI_SESSOES = {
+  full:     {nome:'Corpo inteiro', slots:['skill','empurrar_h','puxar_v','agachar_uni','dips','puxar_h','posterior','core_anti','core_flex','gluteo','core_lat']},
+  superior: {nome:'Superior', slots:['skill','puxar_v','empurrar_h','empurrar_v','puxar_h','dips','core_flex','core_lat']},
+  inferior: {nome:'Inferior + core', slots:['agachar_uni','agachar','posterior','gluteo','panturrilha','core_anti','core_lat','core_ext']},
+  empurrar: {nome:'Empurrar', slots:['skill_push','empurrar_v','empurrar_h','dips','core_anti','core_lat']},
+  puxar:    {nome:'Puxar', slots:['skill_pull','puxar_v','puxar_h','core_flex','core_ext','core_lat']},
+  pernas:   {nome:'Pernas', slots:['agachar_uni','agachar','posterior','gluteo','panturrilha','core_anti']},
+  habilid:  {nome:'Habilidades + core', slots:['skill','skill','core_flex','core_anti','empurrar_h','puxar_h']}
+};
+const CALI_SPLITS = {
+  3:{nome:'Full Body', s:['full','full','full']},
+  4:{nome:'Upper/Lower', s:['superior','inferior','superior','inferior']},
+  5:{nome:'Push/Pull/Legs + Upper/Lower', s:['empurrar','puxar','pernas','superior','inferior']},
+  6:{nome:'Push/Pull/Legs ×2', s:['empurrar','puxar','pernas','empurrar','puxar','pernas']}
+};
+// Híbrido: musculação cuida de pernas e volume; calistenia de puxar, empurrar e habilidades
+const HIB_SPLITS = {
+  3:[{c:'superior'},{g:['Pernas','Glúteos','Panturrilha'],n:'Pernas + Glúteos'},{c:'full'}],
+  4:[{c:'superior'},{g:['Pernas','Glúteos','Panturrilha'],n:'Pernas + Glúteos'},{g:['Peito','Costas','Ombro'],n:'Peito + Costas + Ombro'},{c:'habilid'}],
+  5:[{c:'empurrar'},{c:'puxar'},{g:['Pernas','Glúteos','Panturrilha'],n:'Pernas + Glúteos'},{g:['Peito','Costas','Ombro'],n:'Peito + Costas + Ombro'},{c:'habilid'}],
+  6:[{c:'empurrar'},{c:'puxar'},{g:['Pernas','Glúteos','Panturrilha'],n:'Pernas + Glúteos'},{g:['Peito','Tríceps'],n:'Peito + Tríceps'},{g:['Costas','Bíceps'],n:'Costas + Bíceps'},{c:'habilid'}]
+};
+const SKILL_ORDEM = { skill:['handstand','frontlever','planche','muscleup','backlever','flag'], skill_push:['handstand','planche'], skill_pull:['frontlever','muscleup','backlever'] };
+function caliEscolherCadeia(pad, st, usados){
+  const bloqueados = caliPadroesBloqueados(st);
+  if(pad.startsWith('skill')){
+    if(bloqueados.has('skill')) return null;
+    const querSkill = st.caliGoal==='habilidades' || (st.caliNivelDecl||1) >= 3;
+    if(!querSkill) return null;
+    const pref = (st.caliSkills && st.caliSkills.length) ? st.caliSkills : SKILL_ORDEM[pad];
+    for(const cid of pref){ if(usados.has(cid) || !SKILL_ORDEM[pad].includes(cid) && pad!=='skill') continue; if(caliReqOk(st, cid) && caliPos(st, cid) >= 0){ return cid; } }
+    // nenhuma habilidade liberada: treina a preparação do handstand (sem pré-requisito de força alto)
+    if(!usados.has('handstand') && caliPos(st,'handstand')>=0 && !bloqueados.has('empurrar_v')) return caliReqOk(st,'handstand') ? 'handstand' : null;
+    return null;
+  }
+  if(bloqueados.has(pad)) return null;
+  const cands = CALI_CADEIAS.filter(c=>c.pad===pad && !c.skill);
+  const pref = st.caliPref && st.caliPref[pad];
+  const ord = [...cands].sort((a,b)=>(a.id===pref?-1:0)-(b.id===pref?-1:0) || (a.alt?1:0)-(b.alt?1:0));
+  for(const c of ord){ if(usados.has(c.id)) continue; if(caliPos(st, c.id) >= 0) return c.id; }
+  return null;
+}
+function caliMontarSessao(tipo, st, opts){
+  opts = opts || {};
+  const S = CALI_SESSOES[tipo];
+  const max = ({30:4, 45:5, 60:6, 75:7})[st.caliTempo||45] || 5;
+  const usados = new Set(); const ex = []; const avisos = [];
+  for(const pad of S.slots){
+    if(ex.length >= max) break;
+    const cid = caliEscolherCadeia(pad, st, usados);
+    if(!cid) continue;
+    usados.add(cid);
+    if(cid==='escapulas') avisos.push('Sem barra, argolas ou elástico, o treino de puxar fica limitado: uma barra de porta faz muita diferença.');
+    const c = caliCadeia(cid); const i = caliPos(st, cid); const it = c.itens[i];
+    const pr = caliPrescrever(it, st, pad.startsWith('skill'));
+    let sets = pr.sets;
+    if(opts.reduzir) sets = Math.max(2, sets-1);
+    ex.push({ id:slug(it[0]), name:it[0], sub:`${c.titulo} · ${CALI_NIVEL[it[1]]}`, sets, reps:pr.reps, rest:pr.rest, part:it[4], equip:it[3], unit: it[2]==='t'?'tempo':'reps', cali:true, cadeia:cid, nivel:it[1] });
+  }
+  // respeita o tempo disponível: tira os últimos exercícios (os menos prioritários) e, se preciso, uma série de cada
+  const limite = (st.caliTempo||45) + 5;
+  const fam = e=>{ const c = caliCadeia(e.cadeia); const p = c ? c.pad : ''; return /^empurrar|^dips/.test(p)?'push':/^puxar/.test(p)?'pull':/agachar|posterior|gluteo|panturrilha/.test(p)?'legs':/^core/.test(p)?'core':'skill'; };
+  const essencial = ()=>{ const vist = new Set(), idx = new Set(); ex.forEach((e,i)=>{ const f = fam(e); if(['push','pull','legs'].includes(f) && !vist.has(f)){ vist.add(f); idx.add(i); } if(f==='skill' && st.caliGoal==='habilidades' && !vist.has('skill')){ vist.add('skill'); idx.add(i); } }); return idx; };
+  while(ex.length > 3 && caliDuracao(ex) > limite){
+    const ess = essencial(); let k = -1;
+    for(let i=ex.length-1;i>=0;i--) if(!ess.has(i)){ k = i; break; }
+    if(k<0) break; ex.splice(k,1);
+  }
+  if(caliDuracao(ex) > limite) ex.forEach(e=>{ if(!/skill/.test(e.cadeia) && e.sets>3) e.sets--; });
+  return { ex, avisos:[...new Set(avisos)] };
+}
+function caliDuracao(exs){
+  const seg = exs.reduce((s,e)=>{ const rest = /3min/.test(e.rest)?150:/2min/.test(e.rest)?120:/90/.test(e.rest)?90:/60/.test(e.rest)?55:40; const work = e.unit==='tempo' ? (parseInt(String(e.reps).split('-')[1])||30) : 40; return s + (e.sets||3)*(rest+work); }, 0);
+  return Math.max(20, Math.min(90, Math.round(seg/60 + 8)));
+}
+function caliGerarWorkouts(st, wkDays){
+  const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+  const d = Math.max(3, Math.min(6, st.days||3));
+  const letras = 'ABCDEF';
+  const mk = (tipo, i, extra)=>{
+    // full body em dias seguidos: o segundo dia vem com uma série a menos (recuperação)
+    const prevDay = wkDays[i-1], dia = wkDays[i];
+    const reduzir = tipo==='full' && i>0 && dia-prevDay===1;
+    const r = caliMontarSessao(tipo, st, {reduzir});
+    const parts = [...new Set(r.ex.map(e=>e.part))];
+    return Object.assign({ k:letras[i], name:'Calistenia · '+CALI_SESSOES[tipo].nome, parts, originalParts:[...parts], cali:true, caliTipo:tipo,
+      dayIdx:dia, dayName:dayNames[dia-1], exercises:r.ex, duration:caliDuracao(r.ex), caliAvisos:r.avisos.concat(reduzir?['Dia seguido de outro corpo inteiro: uma série a menos em cada exercício.']:[]) }, extra||{});
+  };
+  if(st.modalidade==='hibrido'){
+    return HIB_SPLITS[d].map((x,i)=>{
+      if(x.c) return mk(x.c, i);
+      const exercises = buildLiftExercises(x.g, st);
+      return { k:letras[i], name:x.n, parts:x.g, dayIdx:wkDays[i], dayName:dayNames[wkDays[i]-1], duration:estimateLiftDuration(exercises, st.goal), exercises };
+    });
+  }
+  const modelo = caliModeloAdmin(st, d);
+  const tipos = modelo ? modelo.sessoes : CALI_SPLITS[d].s;
+  return tipos.map((t,i)=>{
+    if(typeof t === 'string') return mk(t, i);
+    // modelo do administrador: lista própria de padrões
+    CALI_SESSOES['adm_'+i] = { nome:t.nome||('Sessão '+(i+1)), slots:t.slots||[] };
+    return mk('adm_'+i, i);
+  });
+}
+function caliRegenWorkout(w, st){
+  if(!w || !w.cali) return;
+  if(w.caliTipo && w.caliTipo.startsWith('adm_') && !CALI_SESSOES[w.caliTipo]) w.caliTipo = 'full';
+  const a = (typeof adaptMode==='function') ? adaptMode() : {};
+  const r = caliMontarSessao(w.caliTipo || 'full', st, {reduzir: a.tpm || a.cramp || a.leve || (a.pain && a.pain.length)});
+  w.exercises = r.ex; w.caliAvisos = r.avisos;
+  w.parts = [...new Set(r.ex.map(e=>e.part))];
+  w.duration = caliDuracao(r.ex);
+}
+function caliRegenTudo(){
+  const mod = state.modules.lift; if(!mod || !mod.plan || !mod.setup) return;
+  (mod.plan.workouts||[]).forEach(w=>{ if(w.cali) caliRegenWorkout(w, mod.setup); });
+}
+
+// ---- integração com o gerador e as rotinas existentes ----
+const _generatePlanCali = generatePlan;
+window.generatePlan = function(module, setup){
+  if(module==='lift' && setup && window.__caliExtra){ Object.assign(setup, window.__caliExtra); window.__caliExtra = null; }
+  if(module==='lift' && setup && (setup.modalidade==='calistenia' || setup.modalidade==='hibrido')){
+    const days = Math.max(3, Math.min(6, setup.days||3));
+    const wkDays = (setup.selectedDays && setup.selectedDays.length===days) ? setup.selectedDays : ({3:[1,3,5],4:[1,2,4,5],5:[1,2,3,5,6],6:[1,2,3,4,5,6]}[days]);
+    return { type:'lift', goal:setup.goal, workouts: caliGerarWorkouts(setup, wkDays), totalWeeks:12, bloco:0, modalidade:setup.modalidade };
+  }
+  return _generatePlanCali.apply(this, arguments);
+};
+// rotinas da musculação (troca semanal, bloco, dor) não podem reescrever os treinos de calistenia
+function _semCali(fn){
+  return function(){
+    const mod = state.modules.lift;
+    if(!mod || !mod.plan || !(mod.plan.workouts||[]).some(w=>w.cali)) return fn.apply(this, arguments);
+    const todos = mod.plan.workouts;
+    mod.plan.workouts = todos.filter(w=>!w.cali);
+    let r;
+    try{ r = fn.apply(this, arguments); }
+    finally{ mod.plan.workouts = todos; }
+    caliRegenTudo();
+    return r;
+  };
+}
+window.regenLiftExercises = _semCali(regenLiftExercises);
+window.variarLiftExercises = _semCali(variarLiftExercises);
+const _restoreWorkoutCali = restoreWorkout;
+window.restoreWorkout = function(k){
+  const mod = state.modules.lift; const w = mod && mod.plan && (mod.plan.workouts||[]).find(x=>x.k===k);
+  if(w && w.cali){ caliRegenWorkout(w, mod.setup); saveData(); renderSessions(); toast('Treino recalculado com suas progressões atuais.'); return; }
+  return _restoreWorkoutCali.apply(this, arguments);
+};
+// "Trocar" num exercício de calistenia = progressão, regressão ou outra cadeia do mesmo padrão
+const _openSwapCali = openSwapExercise;
+window.openSwapExercise = function(exId){
+  const mod = state.modules.lift; const w = mod && mod.plan && (mod.plan.workouts||[]).find(x=>(x.exercises||[]).some(e=>e.id===exId));
+  const e = w && w.exercises.find(x=>x.id===exId);
+  if(!(w && w.cali && e && e.cadeia)) return _openSwapCali.apply(this, arguments);
+  caliAbrirTroca(e.cadeia);
+};
+function caliAbrirTroca(cid){
+  const st = state.modules.lift.setup; const c = caliCadeia(cid); const i = caliPos(st, cid);
+  const linha = (it, k)=>{ const ok = caliEquipOk(it, st) && caliItemPermitido(it, st); const atual = k===i;
+    return `<div class="cl-step ${atual?'on':''} ${ok?'':'off'}"><span class="cl-nv n${it[1]}">${CALI_NIVEL[it[1]]}</span><div style="flex:1;min-width:0"><b>${mtEsc(it[0])}</b>${ok?'':`<small>precisa de: ${(it[3]||[]).map(x=>CALI_EQUIP_LBL[x]).join(' ou ')}</small>`}</div>${atual?'<span class="pill on">atual</span>':(ok && k<i?`<button class="btn btn-ghost" onclick="caliDefinirPos('${cid}',${k},true)">Voltar</button>`:'')}</div>`; };
+  const prox = c.itens.slice(i+1).findIndex(it=>caliEquipOk(it,st) && caliItemPermitido(it,st));
+  const proxIdx = prox<0 ? -1 : i+1+prox;
+  const dom = caliDominio(slug(c.itens[i][0]));
+  const outras = CALI_CADEIAS.filter(x=>x.pad===c.pad && x.id!==cid && !x.skill && caliPos(st, x.id)>=0);
+  $('modal-inner').innerHTML = `<h3>${mtEsc(c.titulo)}</h3>
+    <p class="mt-muted" style="margin:0 0 10px">Na calistenia, “trocar” é subir ou descer na progressão. Avançar só é liberado quando você domina a variação atual (2 sessões seguidas no topo da faixa, com execução limpa).</p>
+    <div class="cl-steps">${c.itens.map(linha).join('')}</div>
+    ${proxIdx>=0 ? (dom.ok ? `<button class="btn btn-primary btn-block" style="margin-top:12px" onclick="caliDefinirPos('${cid}',${proxIdx})">Avançar para ${mtEsc(c.itens[proxIdx][0])}</button>`
+      : `<div class="note" style="margin-top:12px"><div class="note-line">${mtEsc(dom.motivo)}</div></div>`) : ''}
+    ${outras.length?`<div class="mt-sec">Outra opção para o mesmo movimento</div>${outras.map(o=>`<div class="list-row" onclick="caliPreferir('${c.pad}','${o.id}')">${mtEsc(o.titulo)}<span style="margin-left:auto;color:var(--text-mute);font-size:12px">${mtEsc(o.itens[caliPos(st,o.id)][0])} ›</span></div>`).join('')}`:''}
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function caliPreferir(pad, cid){ const st = state.modules.lift.setup; st.caliPref = st.caliPref || {}; st.caliPref[pad] = cid; caliRegenTudo(); saveData(); closeModal(); renderSessions(); toast('Treinos atualizados.'); }
+
+// ---- domínio e progressão (nada sobe sozinho sem domínio verificado) ----
+function caliSessoesEx(exId){ return ((state.progress||{})[exId]||[]).filter(p=>p.sets && p.sets.length).sort((a,b)=>a.date-b.date); }
+function caliDominio(exId){
+  const sess = caliSessoesEx(exId);
+  const plano = (state.modules.lift?.plan?.workouts||[]).flatMap(w=>w.exercises||[]).find(e=>e.id===exId);
+  const range = (typeof repRangeFor==='function') ? repRangeFor(exId) : {lo:8, hi:12};
+  const setsAlvo = plano ? (+plano.sets||3) : 3;
+  const precisa = (state.config_cali && state.config_cali.sessoesDominio) || caliConfig.sessoesDominio || 2;
+  if(sess.length < precisa) return { ok:false, motivo:`Registre esta variação em pelo menos ${precisa} sessões para o app avaliar o domínio.` };
+  const ult = sess.slice(-precisa);
+  const topo = s => s.sets.length >= setsAlvo && s.sets.every(x=>(+x.reps||0) >= range.hi);
+  if(ult.some(s=>s.qual==='ajuste')) return { ok:false, motivo:'Você marcou a execução como “com ajustes” recentemente. Domine a técnica antes de avançar.' };
+  if(!ult.every(topo)) return { ok:false, motivo:`Para avançar: ${setsAlvo} séries no topo da faixa (${range.hi}${plano && plano.unit==='tempo'?' s':' repetições'}) em ${precisa} sessões seguidas.` };
+  return { ok:true, motivo:'Domínio confirmado.' };
+}
+function caliDificuldade(exId){
+  const sess = caliSessoesEx(exId).slice(-2);
+  if(sess.length < 2) return false;
+  const range = repRangeFor(exId);
+  return sess.every(s=>s.sets.filter(x=>(+x.reps||0) < range.lo).length >= Math.ceil(s.sets.length/2) || s.qual==='ajuste');
+}
+function caliDefinirPos(cid, idx, regressao){
+  const mod = state.modules.lift; const st = mod.setup; const c = caliCadeia(cid);
+  const de = caliPos(st, cid);
+  if(!regressao && idx > de){
+    const dom = caliDominio(slug(c.itens[de][0]));
+    if(!dom.ok){ toast(dom.motivo); return; }
+    // nunca pula etapas: vai para a PRÓXIMA variação possível com o equipamento do aluno
+    const k = c.itens.slice(de+1).findIndex(it=>caliEquipOk(it,st) && caliItemPermitido(it,st));
+    if(k<0){ toast('Não há próxima variação disponível com seus equipamentos.'); return; }
+    idx = de+1+k;
+  }
+  st.caliPos = st.caliPos || {}; st.caliPos[cid] = idx;
+  st.caliHist = st.caliHist || []; st.caliHist.push({ c:cid, de, para:idx, at:Date.now() }); st.caliHist = st.caliHist.slice(-200);
+  caliRegenTudo(); saveData(); closeModal();
+  toast(regressao ? `Ajustado para ${c.itens[idx][0]}. Volte a subir quando estiver sólido.` : `🎉 Progressão: ${c.itens[idx][0]}`);
+  if(state.ui.tab==='sessions') renderSessions(); else if(state.ui.tab==='home') renderHome();
+}
+// dica no registro de séries + campo de qualidade da execução
+const _hintCali = smartProgressionHint;
+window.smartProgressionHint = function(exId){
+  if(!ehCali(exId) || !state.modules.lift || !state.modules.lift.setup) return _hintCali.apply(this, arguments);
+  const st = state.modules.lift.setup; const it0 = CALI_EX[exId];
+  const noPlano = (state.modules.lift.plan && state.modules.lift.plan.workouts || []).flatMap(w=>w.exercises||[]).find(e=>e.id===exId && e.cadeia);
+  const cid = noPlano ? noPlano.cadeia : it0.cadeia;
+  const c = caliCadeia(cid); const i = caliPos(st, cid);
+  const it = { nome: it0.nome, cadeia: cid };
+  const dom = caliDominio(exId);
+  const proxI = c.itens.slice(i+1).findIndex(x=>caliEquipOk(x,st) && caliItemPermitido(x,st));
+  const prox = proxI<0 ? null : c.itens[i+1+proxI];
+  if(dom.ok && prox) return { cls:'card-ok', txt:`📈 Domínio confirmado em <b>${mtEsc(it.nome)}</b>. Próxima variação: <b>${mtEsc(prox[0])}</b>. <button class="btn btn-primary" style="padding:6px 12px;font-size:12px;margin-top:6px" onclick="closeSetLog(true);setTimeout(()=>caliAbrirTroca('${it.cadeia}'),120)">Ver progressão</button>` };
+  if(caliDificuldade(exId) && i>0) return { cls:'card-warn', txt:`⚖️ Nas 2 últimas sessões a maioria das séries ficou abaixo da faixa (ou com ajustes). Vale voltar para <b>${mtEsc(c.itens[i-1][0])}</b> e consolidar. <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;margin-top:6px" onclick="closeSetLog(true);setTimeout(()=>caliAbrirTroca('${it.cadeia}'),120)">Ajustar</button>` };
+  const base = _hintCali.apply(this, arguments);
+  return { cls: base.cls, txt: base.txt.replace(/uma variação mais (difícil|avançada)/,'avançar de variação quando o app confirmar o domínio') };
+};
+const _renderSetLogCali = renderSetLogModal;
+window.renderSetLogModal = function(){
+  _renderSetLogCali.apply(this, arguments);
+  try{
+    const { exId, entry } = curLog; if(!ehCali(exId)) return;
+    const box = document.createElement('div'); box.className = 'cl-qual';
+    const q = entry.qual || '';
+    box.innerHTML = `<div class="mt-muted" style="font-size:12px;margin-bottom:6px">Como foi a execução hoje?</div><div class="mod-toggle" style="margin:0"><button class="seg ${q==='limpa'?'on':''}" onclick="caliQual('limpa')">Limpa, amplitude completa</button><button class="seg ${q==='ajuste'?'on':''}" onclick="caliQual('ajuste')">Com ajustes</button></div>`;
+    const ref = [...document.querySelectorAll('#modal-inner .btn-block')].find(b=>/Nova série/.test(b.textContent));
+    if(ref) ref.before(box);
+  }catch(e){}
+};
+function caliQual(v){ if(!curLog) return; curLog.entry.qual = v; saveData(); renderSetLogModal(); }
+// nome e "carga opcional" dos exercícios de calistenia
+const _nomeDoExCali = nomeDoEx;
+window.nomeDoEx = function(id){ return CALI_EX[id] ? CALI_EX[id].nome : _nomeDoExCali(id); };
+const _cargaOpcCali = exCargaOpcional;
+window.exCargaOpcional = function(id){ return CALI_EX[id] ? true : _cargaOpcCali(id); };
+
+// ---- configuração (tela de montagem) ----
+function caliMostrarSetup(){
+  const m = readOpt('lift-modalidade') || 'musculacao';
+  const box = $('cali-setup'); if(box) box.style.display = (m==='musculacao') ? 'none' : '';
+  document.querySelectorAll('#scr-setup-lift .gym-only').forEach(el=>{
+    const ehEquip = !!el.querySelector('#lift-equip'), ehNivel = !!el.querySelector('#lift-level');
+    el.style.display = (m==='calistenia') ? 'none' : (m==='hibrido' ? ((ehEquip||ehNivel||true) ? '' : 'none') : '');
+  });
+  try{ const bn = document.querySelector('#scr-setup-lift .brand-name'); if(bn) bn.textContent = ({musculacao:'MUSCULAÇÃO', calistenia:'CALISTENIA', hibrido:'HÍBRIDO'})[m]; }catch(e){}
+  const h = $('lift-modal-hint');
+  if(h) h.textContent = m==='calistenia' ? 'Peso do corpo como base: progressões por variação, isometrias e habilidades.' : m==='hibrido' ? 'Musculação para pernas e volume; calistenia para puxar, empurrar e habilidades.' : 'Academia, halteres ou peso do corpo, com progressão de carga.';
+}
+function caliLerSetup(){
+  const m = readOpt('lift-modalidade') || 'musculacao';
+  if(m==='musculacao') return { modalidade:'musculacao' };
+  const multi = id=>[...document.querySelectorAll('#'+id+' .opt-multi.on')].map(o=>o.dataset.val);
+  const num = id=>{ const v = ($(id)||{}).value; return v===''||v==null ? null : Math.max(0, parseInt(v,10)||0); };
+  const cg = readOpt('cali-goal') || 'hipertrofia';
+  const goalGym = {forca:'forca', hipertrofia:'hipertrofia', resistencia:'resistencia', condicionamento:'emagrecimento', habilidades:'forca'}[cg];
+  const nv = parseInt(readOpt('cali-nivel')||'1',10);
+  const ex = { modalidade:m, caliGoal:cg, caliTempo:parseInt(readOpt('cali-tempo')||'45',10), caliNivelDecl:nv, caliEquip:multi('cali-equip'), caliLimites:multi('cali-limites'),
+    caliTeste:{ flexao:num('ct-flexao'), barra:num('ct-barra'), dips:num('ct-dips'), prancha:num('ct-prancha') } };
+  if(m==='calistenia'){ ex.goal = goalGym; ex.level = ['','iniciante','intermediario','avancado','avancado'][nv]; ex.equip = 'casa'; }
+  // recriar: mantém posições e histórico de progressão já conquistados
+  const prev = state.modules.lift && state.modules.lift.setup;
+  if(prev && prev.caliPos){ ex.caliPos = prev.caliPos; ex.caliHist = prev.caliHist; ex.caliPref = prev.caliPref; }
+  return ex;
+}
+const _finishSetupCali = finishSetup;
+window.finishSetup = function(m){
+  if(m==='lift'){ try{ window.__caliExtra = caliLerSetup(); }catch(e){ window.__caliExtra = null; } }
+  return _finishSetupCali.apply(this, arguments);
+};
+const _buildingStepsCali = buildingSteps;
+window.buildingSteps = function(m, setup, prev){
+  if(m!=='lift' || !setup || !(setup.modalidade==='calistenia' || setup.modalidade==='hibrido')) return _buildingStepsCali.apply(this, arguments);
+  const eq = (setup.caliEquip||[]).map(x=>CALI_EQUIP_LBL[x]);
+  const d = Math.max(3, Math.min(6, setup.days||3));
+  const steps = [
+    {pri:1, txt:`Modalidade: <b>${setup.modalidade==='hibrido'?'Híbrido (musculação + calistenia)':'Calistenia'}</b>`},
+    {pri:1, txt:`Objetivo: <b>${({forca:'Força',hipertrofia:'Hipertrofia',resistencia:'Resistência',condicionamento:'Condicionamento',habilidades:'Domínio de habilidades'})[setup.caliGoal]}</b> · ${setup.caliTempo} min por sessão`},
+    {pri:2, txt:`Equipamentos: <b>${eq.length?eq.join(', '):'só o peso do corpo'}</b>`},
+    {pri:1, txt:`Divisão: <b>${setup.modalidade==='hibrido'?d+' dias, alternando academia e calistenia':CALI_SPLITS[d].nome}</b>`},
+    {pri:2, txt:`Ajustando cada movimento ao seu nível${setup.caliTeste && Object.values(setup.caliTeste).some(v=>v!=null)?' e ao seu <b>teste rápido</b>':''}`}
+  ];
+  if((setup.caliLimites||[]).length) steps.push({pri:1, txt:`Respeitando suas limitações: <b>${setup.caliLimites.map(x=>({semimpacto:'sem saltos',punho:'punhos',ombro:'ombros',joelho:'joelhos'})[x]).join(', ')}</b>`});
+  if(prev) steps.push({pri:1, txt:`Preservando seu <b>histórico</b> e suas <b>progressões</b>`});
+  steps.push({pri:1, txt:`<b>Seu plano de ${setup.modalidade==='hibrido'?'treino híbrido':'calistenia'} está pronto!</b>`});
+  return steps;
+};
+const _openSetupCali = openSetupScreen;
+window.openSetupScreen = function(m){
+  const r = _openSetupCali.apply(this, arguments);
+  if(m==='lift'){
+    try{
+      const st = state.modules.lift && state.modules.lift.setup;
+      const setOn = (gid,val)=>{ const g=$(gid); if(!g||val==null) return; const t=g.querySelector(`.opt[data-val="${val}"]`); if(!t) return; g.querySelectorAll('.opt:not(.opt-multi)').forEach(o=>o.classList.remove('on')); t.classList.add('on'); };
+      const pre = window.__caliPreMod || (st && st.modalidade) || 'musculacao'; window.__caliPreMod = null;
+      setOn('lift-modalidade', pre);
+      if(st && st.caliGoal){ setOn('cali-goal', st.caliGoal); setOn('cali-tempo', st.caliTempo); setOn('cali-nivel', st.caliNivelDecl);
+        ['cali-equip','cali-limites'].forEach(id=>{ const lista = id==='cali-equip'?(st.caliEquip||[]):(st.caliLimites||[]); document.querySelectorAll('#'+id+' .opt-multi').forEach(o=>o.classList.toggle('on', lista.includes(o.dataset.val))); }); }
+      document.querySelectorAll('#lift-modalidade .opt').forEach(o=>o.addEventListener('click', ()=>setTimeout(caliMostrarSetup, 0)));
+      // equipamentos e limitações: seleção livre (o binding padrão da tela limita pelos dias da semana)
+      document.querySelectorAll('#cali-equip .opt-multi, #cali-limites .opt-multi').forEach(o=>{ o.onclick = ()=>o.classList.toggle('on'); });
+      caliMostrarSetup();
+    }catch(e){ console.log('setup cali', e); }
+  }
+  return r;
+};
+// trocar de modalidade a qualquer momento (o histórico fica)
+function openModalidade(){
+  const m = modalidadeAtual();
+  const op = (k, t, d)=>`<div class="ap-pack ${k===m?'on':''}" onclick="closeModal();window.__caliPreMod='${k}';openSetupScreen('lift')"><div style="flex:1"><b style="font-size:14px">${t}</b>${k===m?' <span style="color:var(--primary-2)">✓ atual</span>':''}<div style="font-size:12px;color:var(--text-mute);margin-top:2px">${d}</div></div></div>`;
+  $('modal-inner').innerHTML = `<h3>Modalidade de treino</h3><p class="mt-muted" style="margin:0 0 10px">Ao trocar, o plano é refeito. Histórico, recordes, conquistas e progressões continuam salvos.</p>
+    ${op('musculacao','Musculação tradicional','Academia, halteres ou casa, com progressão de carga.')}
+    ${op('calistenia','Calistenia','Peso do corpo, progressões por variação e habilidades.')}
+    ${op('hibrido','Híbrido','Academia para pernas e volume, calistenia para puxar, empurrar e habilidades.')}
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+}
+
+// ---- nível real (pelas progressões registradas, não pelo cadastro) ----
+function caliNivelReal(){
+  const st = state.modules.lift && state.modules.lift.setup; if(!st) return null;
+  const base = ['flexao','barra','dips','unilateral','core_anti','hspu'];
+  const niveis = base.map(cid=>{ const i = caliPos(st, cid); return i>=0 ? caliCadeia(cid).itens[i][1] : null; }).filter(Boolean).sort((a,b)=>a-b);
+  if(!niveis.length) return null;
+  let nv = niveis[Math.floor(niveis.length/2)];
+  const skillsAv = ['frontlever','planche','backlever','flag','muscleup','handstand'].filter(cid=>caliReqOk(st,cid) && caliPos(st,cid)>=0 && caliCadeia(cid).itens[caliPos(st,cid)][1]===4).length;
+  if(nv>=3 && skillsAv>=2) nv = 4; else nv = Math.min(nv, 3);
+  // só conta como "real" o que tem registro: sem séries registradas, mostra o nível de partida
+  const registrou = Object.keys(state.progress||{}).some(id=>ehCali(id) && caliSessoesEx(id).length);
+  return { nivel:nv, nome:CALI_NIVEL[nv], medido: registrou };
+}
+function caliResumoHabilidades(){
+  const st = state.modules.lift.setup;
+  return CALI_CADEIAS.filter(c=>c.skill).map(c=>{ const i = caliPos(st, c.id); const lib = caliReqOk(st, c.id) && i>=0; return { c, i, lib, total:c.itens.length, atual: i>=0 ? c.itens[i][0] : null }; });
+}
+
+// ---- Home, Progresso e textos da modalidade ----
+const _renderModToggleCali = renderModToggle;
+window.renderModToggle = function(){
+  _renderModToggleCali.apply(this, arguments);
+  try{ const m = modalidadeAtual(); if(m==='musculacao') return; const b = [...document.querySelectorAll('#mod-toggle .seg')].find(x=>/Muscula/.test(x.textContent)); if(b) b.innerHTML = b.innerHTML.replace('Musculação', m==='calistenia'?'Calistenia':'Híbrido'); }catch(e){}
+};
+function renderHomeCali(){
+  const wrap = document.querySelector('#scr-home .wrap'); if(!wrap) return;
+  let el = $('home-cali');
+  if(!temCali() || !state.modules.lift || state.active!=='lift'){ if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('div'); el.id = 'home-cali'; el.className = 'card'; wrap.appendChild(el); }
+  const nr = caliNivelReal();
+  const hs = caliResumoHabilidades();
+  const lib = hs.filter(h=>h.lib);
+  const prox = hs.filter(h=>!h.lib).slice(0,2);
+  el.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div class="card-title" style="margin:0">Calistenia</div>${nr?`<span class="pill on">${nr.nome}${nr.medido?'':' (inicial)'}</span>`:''}</div>
+    ${lib.length ? `<div class="cl-skills">${lib.map(h=>`<div class="cl-sk" onclick="caliAbrirTroca('${h.c.id}')"><div class="cl-sk-t">${mtEsc(h.c.titulo)}</div><div class="cl-dots">${h.c.itens.map((_,k)=>`<i class="${k<h.i?'ok':k===h.i?'now':''}"></i>`).join('')}</div><small>${mtEsc(h.atual)}</small></div>`).join('')}</div>`
+      : `<div class="mt-muted" style="margin-top:6px">Nenhuma habilidade liberada ainda — a base de força vem primeiro.</div>`}
+    ${prox.length?`<div class="mt-muted" style="font-size:11.5px;margin-top:8px">Para liberar ${prox.map(p=>`<b>${mtEsc(p.c.titulo)}</b>: ${mtEsc(caliReqTexto(p.c.id))}`).join(' · ')}</div>`:''}`;
+}
+const _renderHomeCali = window.renderHome;
+window.renderHome = function(){ const r = _renderHomeCali.apply(this, arguments); try{ renderHomeCali(); }catch(e){ console.log('home cali', e); } return r; };
+// Progresso: métricas próprias (repetições e tempo de isometria em calistenia)
+const _mtMetricasCali = mtMetricas;
+window.mtMetricas = function(){
+  const M = _mtMetricasCali.apply(this, arguments);
+  if(!Object.keys(state.progress||{}).some(ehCali)) return M;
+  const soma = (bs, unidade)=>bs.map(b=>{ let v = 0; Object.keys(state.progress||{}).forEach(id=>{ const it = CALI_EX[id]; if(!it || (it.unit==='t') !== (unidade==='t')) return; (state.progress[id]||[]).forEach(p=>{ if(p.date>=b.a && p.date<b.b) v += (p.sets||[]).reduce((t,s)=>t+(+s.reps||0),0); }); }); return {v, b}; });
+  M.push({k:'cali_reps', lbl:'Calistenia (repetições)', tipo:'bar', un:'reps', dec:0, pers:['semana','mes','tri','ano'], serie:bs=>soma(bs,'r'), soma:true});
+  M.push({k:'cali_iso', lbl:'Isometria (segundos)', tipo:'bar', un:'s', dec:0, pers:['semana','mes','tri','ano'], serie:bs=>soma(bs,'t'), soma:true});
+  return M;
+};
+const _renderPerfCali = window.renderPerf;
+window.renderPerf = function(){
+  const r = _renderPerfCali.apply(this, arguments);
+  try{
+    let el = $('perf-cali');
+    if(!temCali() || !state.modules.lift){ if(el) el.remove(); return r; }
+    if(!el){ el = document.createElement('div'); el.id = 'perf-cali'; el.className = 'chart-card'; const ev = $('perf-evo'); if(ev) ev.after(el); else return r; }
+    const st = state.modules.lift.setup;
+    const base = CALI_CADEIAS.filter(c=>!c.alt && caliPos(st,c.id)>=0 && (!c.skill || caliReqOk(st,c.id)));
+    const hist = (st.caliHist||[]).slice(-5).reverse();
+    el.innerHTML = `<div class="chart-title" style="margin-bottom:10px">Progressões da calistenia</div>
+      ${base.map(c=>{ const i = caliPos(st,c.id); return `<div class="cl-row" onclick="caliAbrirTroca('${c.id}')"><div style="flex:1;min-width:0"><b>${mtEsc(c.titulo)}</b><small>${mtEsc(c.itens[i][0])}</small></div><div class="cl-dots">${c.itens.map((_,k)=>`<i class="${k<i?'ok':k===i?'now':''}"></i>`).join('')}</div></div>`; }).join('')}
+      ${hist.length?`<div class="mt-sec" style="margin-top:12px">Últimas mudanças</div>${hist.map(h=>{ const c = caliCadeia(h.c); return c?`<div class="mt-muted" style="font-size:12px;padding:3px 0">${mtFmtData(h.at)} · ${h.para>h.de?'↑':'↓'} ${mtEsc(c.itens[h.para][0])}</div>`:''; }).join('')}`:'<div class="mt-muted" style="font-size:12px;margin-top:8px">As mudanças de variação aparecem aqui conforme você evolui.</div>'}`;
+  }catch(e){ console.log('perf cali', e); }
+  return r;
+};
+// Treinos: avisos da sessão de calistenia (equipamento faltando, recuperação)
+const _renderSessionsCali = window.renderSessions;
+window.renderSessions = function(){
+  const r = _renderSessionsCali.apply(this, arguments);
+  try{
+    const mod = state.modules.lift; if(state.active!=='lift' || !mod || !mod.plan) return r;
+    const t = $('sessions-title'); const m = modalidadeAtual();
+    if(t && m!=='musculacao') t.textContent = t.textContent.replace(/Musculação|Treinos/,'').trim() + (m==='calistenia' ? ' Calistenia' : ' Híbrido');
+    const avisos = [...new Set((mod.plan.workouts||[]).flatMap(w=>w.caliAvisos||[]))];
+    let box = $('sess-cali-avisos');
+    if(!avisos.length){ if(box) box.remove(); return r; }
+    if(!box){ box = document.createElement('div'); box.id = 'sess-cali-avisos'; const slot = $('session-detail-slot'); if(slot) slot.before(box); }
+    box.innerHTML = `<div class="note" style="margin-top:10px">${avisos.map(a=>`<div class="note-line">${mtEsc(a)}</div>`).join('')}</div>`;
+  }catch(e){}
+  return r;
+};
+// Perfil: linha "Modalidade"
+const _renderProfileCali = window.renderProfile;
+window.renderProfile = function(){
+  const r = _renderProfileCali.apply(this, arguments);
+  try{
+    if(!state.modules.lift) return r;
+    let row = $('pf-modalidade-row');
+    if(!row){ const ref = [...document.querySelectorAll('#scr-profile .list-row')].find(x=>/Meu plano de treino/.test(x.textContent)); if(!ref) return r;
+      row = document.createElement('div'); row.className = 'list-row'; row.id = 'pf-modalidade-row'; row.onclick = openModalidade; ref.after(row); }
+    const m = modalidadeAtual(); const nr = temCali() ? caliNivelReal() : null;
+    row.innerHTML = `<span>🤸</span> <span>Modalidade</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">${({musculacao:'Musculação',calistenia:'Calistenia',hibrido:'Híbrido'})[m]}${nr?' · '+nr.nome:''} ›</span>`;
+  }catch(e){}
+  return r;
+};
+
+// ---- Biblioteca e ficha ----
+const CALI_AREAS = ['Superior','Inferior','Core','Habilidades'];
+const _exPorNomeCali = exPorNome;
+window.exPorNome = function(nome){
+  const r = _exPorNomeCali(nome); if(r) return r;
+  const it = CALI_EX[slug(nome)]; if(!it) return null;
+  return { ex:{ name:it.nome, sub:`${caliCadeia(it.cadeia).titulo} · ${CALI_NIVEL[it.nivel]}`, equip:[], caliEquip:it.equip }, grupo:it.grupo, cali:it };
+};
+const _musculoCali = musculoDoExercicio;
+window.musculoDoExercicio = function(ex, grupo){
+  const it = ex && CALI_EX[slug(ex.name||'')];
+  if(it){ const map = {Peito:'peito', Costas:'costas', Ombro:'ombros', 'Tríceps':'triceps', Pernas:'quadriceps', 'Glúteos':'gluteos', Panturrilha:'panturrilhas', Core:'abdomen'}; if(it.cadeia==='nordic') return 'posteriores'; return map[it.grupo] || 'abdomen'; }
+  return _musculoCali(ex, grupo);
+};
+const _fichaCali = fichaExercicio;
+window.fichaExercicio = function(ex, grupo){
+  const it = ex && CALI_EX[slug(ex.name||'')];
+  if(!it) return _fichaCali(ex, grupo);
+  return { m: it.mus, ex: it.exec, d: [it.seg || 'Qualidade antes de quantidade: amplitude completa e controle em toda repetição.'], e: it.erro };
+};
+// informação extra da calistenia na ficha (nível, prescrição, progressão, pré-requisitos, equipamentos)
+const _openSheetCali = openExerciseSheet;
+window.openExerciseSheet = function(name, idKey, opts){
+  _openSheetCali.apply(this, arguments);
+  try{
+    const it = CALI_EX[slug(name)]; if(!it) return;
+    const c = caliCadeia(it.cadeia); const st = (state.modules.lift && state.modules.lift.setup) || {caliGoal:'hipertrofia', caliNivelDecl:it.nivel};
+    const pr = caliPrescrever(c.itens[it.idx], Object.assign({}, st, {caliGoal: st.caliGoal || 'hipertrofia'}), c.skill);
+    const ant = it.idx>0 ? c.itens[it.idx-1][0] : null, prox = it.idx<c.itens.length-1 ? c.itens[it.idx+1][0] : null;
+    const box = document.createElement('div');
+    box.innerHTML = `<div class="ex-sec"><h4>Calistenia</h4>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span class="cl-nv n${it.nivel}">${CALI_NIVEL[it.nivel]}</span><span class="pill">${mtEsc(c.titulo)}</span><span class="pill">${it.equip.length?it.equip.map(x=>CALI_EQUIP_LBL[x]).join(' ou '):'sem equipamento'}</span></div>
+      <p><b>Prescrição sugerida:</b> ${pr.sets} séries × ${mtEsc(pr.reps)} · descanso ${mtEsc(pr.rest)}</p>
+      ${ant?`<p style="margin-top:6px"><b>Regressão:</b> <a href="#" onclick="openExerciseSheet('${mtJsStr(ant)}');return false" style="color:var(--primary-2)">${mtEsc(ant)}</a></p>`:''}
+      ${prox?`<p style="margin-top:4px"><b>Progressão:</b> <a href="#" onclick="openExerciseSheet('${mtJsStr(prox)}');return false" style="color:var(--primary-2)">${mtEsc(prox)}</a></p>`:''}
+      ${c.req && it.idx===0?`<p style="margin-top:6px"><b>Pré-requisitos:</b> ${mtEsc(caliReqTexto(c.id))}</p>`:''}</div>`;
+    const ref = document.querySelector('#modal-inner .ex-sec'); if(ref) ref.before(box.firstElementChild);
+  }catch(e){}
+};
+const _renderLibraryCali = renderLibrary;
+window.renderLibrary = function(){
+  // a Biblioteca ganha as categorias de calistenia (e o filtro por nível dentro delas)
+  const cal = typeof libFilter==='string' && libFilter.startsWith('Calistenia');
+  if(!cal){
+    _renderLibraryCali.apply(this, arguments);
+    const chips = $('lib-chips'); if(chips) chips.insertAdjacentHTML('beforeend', `<div class="filter-chip" onclick="setLibFilter('Calistenia')">🤸 Calistenia</div>`);
+    const cnt = $('lib-count'); if(cnt && libFilter==='Todos' && !($('lib-search')||{}).value) cnt.textContent = cnt.textContent + ` + ${Object.keys(CALI_EX).length} de calistenia`;
+    // busca também encontra calistenia
+    const q = mtNorm(($('lib-search')||{}).value||'').trim();
+    if(q){ const achados = Object.values(CALI_EX).filter(it=>mtNorm(it.nome+' '+it.mus+' '+caliCadeia(it.cadeia).titulo).includes(q));
+      if(achados.length) $('lib-list').insertAdjacentHTML('beforeend', `<div class="lx-cat">${muscleIco('abdomen')}<div><b>Calistenia</b><small>${achados.length} exercício${achados.length>1?'s':''}</small></div></div>` + achados.map(_caliLibItem).join('')); }
+    return;
+  }
+  const area = libFilter.split('·')[1] ? libFilter.split('·')[1].trim() : null;
+  const nvSel = window.__caliNvLib || 0;
+  $('lib-chips').innerHTML = `<div class="filter-chip" onclick="setLibFilter('Todos')">← Musculação</div>` + ['Calistenia', ...CALI_AREAS.map(a=>'Calistenia · '+a)].map(f=>`<div class="filter-chip ${f===libFilter?'on':''}" onclick="setLibFilter('${f}')">${f==='Calistenia'?'Todos':f.split('·')[1].trim()}</div>`).join('');
+  const eq = $('lib-equip'); if(eq) eq.innerHTML = [0,1,2,3,4].map(n=>`<div class="filter-chip ${n===nvSel?'on':''}" onclick="window.__caliNvLib=${n};renderLibrary()">${n?CALI_NIVEL[n]:'Todos os níveis'}</div>`).join('');
+  const q = mtNorm(($('lib-search')||{}).value||'').trim();
+  let html = '', total = 0;
+  CALI_CADEIAS.filter(c=>!area || c.area===area).forEach(c=>{
+    const its = c.itens.map(it=>CALI_EX[slug(it[0])]).filter((it,k,arr)=>it && arr.indexOf(it)===k && it.cadeia===c.id && (!nvSel || it.nivel===nvSel) && (!q || mtNorm(it.nome+' '+it.mus).includes(q)));
+    if(!its.length) return; total += its.length;
+    html += `<div class="lx-cat">${muscleIco(window.musculoDoExercicio({name:its[0].nome}))}<div><b>${mtEsc(c.titulo)}</b><small>${c.area} · ${its.length} ${its.length===1?'variação':'variações'}${c.req?' · pré-requisitos: '+mtEsc(caliReqTexto(c.id)):''}</small></div></div>` + its.map(_caliLibItem).join('');
+  });
+  $('lib-count').textContent = `Calistenia · ${total} exercícios`;
+  $('lib-list').innerHTML = html || `<div class="lx-empty">Nenhum exercício com esses filtros.</div>`;
+};
+function _caliLibItem(it){
+  const temVideo = !!(videoLinks && videoLinks[it.id]);
+  return `<div class="lx-item" onclick="openExercise('${mtJsStr(it.nome)}')">${muscleIco(window.musculoDoExercicio({name:it.nome}))}<div class="lx-info"><div class="lx-name">${mtEsc(it.nome)}</div><div class="lx-sub">${mtEsc(it.mus)}</div><div class="lx-tags"><span class="cl-nv n${it.nivel}">${CALI_NIVEL[it.nivel]}</span><span class="lx-tag">${it.equip.length?it.equip.map(x=>CALI_EQUIP_LBL[x]).join(' ou '):'sem equipamento'}</span>${temVideo?'<span class="lx-tag v">▶ vídeo</span>':''}</div></div><span class="lx-go">›</span></div>`;
+}
+// Admin: vídeos dos exercícios de calistenia entram no painel de vídeos existente
+const _openVideoAdminCali = openVideoAdmin;
+window.openVideoAdmin = async function(){
+  const extra = { name:'Calistenia', emo:'🤸', color:'', items: Object.values(CALI_EX).map(it=>({name:it.nome, sub:`${caliCadeia(it.cadeia).titulo} · ${CALI_NIVEL[it.nivel]}`, equip:['casa'], _cali:true})) };
+  EX_BANK.push(extra);
+  try{ return await _openVideoAdminCali.apply(this, arguments); }
+  finally{ const i = EX_BANK.indexOf(extra); if(i>=0) EX_BANK.splice(i,1); }
+};
+
+// ---- Meta Assistente ----
+function caliAnalise(){
+  if(!temCali()) return 'Você está na musculação tradicional. Se quiser treinar calistenia, troque em Perfil → Modalidade (seu histórico continua). 🤸';
+  const st = state.modules.lift.setup; const nr = caliNivelReal();
+  const linhas = []; const estag = []; const prontos = []; const dificeis = [];
+  Object.values(CALI_EX).forEach(it=>{
+    if(caliPos(st, it.cadeia) !== it.idx) return;
+    const sess = caliSessoesEx(it.id); if(!sess.length) return;
+    if(caliDominio(it.id).ok) prontos.push(it.nome);
+    else if(caliDificuldade(it.id)) dificeis.push(it.nome);
+    else if(sess.length >= 4 && sess[sess.length-1].date - sess[0].date > 21*DIA_MS){
+      const tot = s=>s.sets.reduce((a,x)=>a+(+x.reps||0),0);
+      const a = tot(sess[sess.length-4]), b = tot(sess[sess.length-1]);
+      if(b <= a) estag.push(it.nome);
+    }
+  });
+  let t = `<b>Sua calistenia</b>${nr?` — nível ${nr.medido?'atual':'de partida'}: <b>${nr.nome}</b>`:''}.<br><br>`;
+  if(prontos.length) t += `📈 <b>Pronto para avançar:</b> ${prontos.map(mtEsc).join(', ')}. Abra o exercício no treino e toque em “Trocar” para ver a próxima variação.<br><br>`;
+  if(estag.length) t += `➖ <b>Sem evolução há 3+ semanas:</b> ${estag.map(mtEsc).join(', ')}. Experimente pausas de 2 s no ponto mais difícil, descida em 3–4 s ou mais uma série — e confira sono e recuperação.<br><br>`;
+  if(dificeis.length) t += `⚖️ <b>Abaixo da faixa nas últimas sessões:</b> ${dificeis.map(mtEsc).join(', ')}. Uma variação mais fácil por 1–2 semanas costuma destravar com segurança.<br><br>`;
+  if(!prontos.length && !estag.length && !dificeis.length) t += 'Ainda não há registros suficientes para uma análise. Registre repetições (ou tempo) de cada série e me pergunte de novo depois de algumas sessões.<br><br>';
+  t += 'Regra da casa: só avançamos de variação depois de 2 sessões no topo da faixa com execução limpa.';
+  return t;
+}
+function caliMetas(){
+  if(!temCali()) return caliAnalise();
+  const hs = caliResumoHabilidades();
+  return `<b>Suas habilidades</b><br><br>` + hs.map(h=>h.lib ? `✅ <b>${mtEsc(h.c.titulo)}</b>: etapa ${h.i+1} de ${h.total} (${mtEsc(h.atual)})` : `🔒 <b>${mtEsc(h.c.titulo)}</b>: libera com ${mtEsc(caliReqTexto(h.c.id))}${(h.c.itens[0][3]||[]).length && !caliEquipOk(h.c.itens[0], state.modules.lift.setup)?` (precisa de ${(h.c.itens[0][3]).map(x=>CALI_EQUIP_LBL[x]).join(' ou ')})`:''}`).join('<br>') + '<br><br>Os pré-requisitos existem por segurança: alavancas e paradas exigem força de base nos ombros, punhos e costas.';
+}
+function caliComoFazer(txt){
+  const t = mtNorm(txt);
+  const it = Object.values(CALI_EX).find(x=>t.includes(mtNorm(x.nome).replace(/\(.*\)/,'').trim())) || Object.values(CALI_EX).find(x=>{ const w = mtNorm(x.nome).split(' ').filter(p=>p.length>3); return w.length && w.every(p=>t.includes(p)); });
+  if(!it) return null;
+  const c = caliCadeia(it.cadeia);
+  return `<b>${mtEsc(it.nome)}</b> (${CALI_NIVEL[it.nivel]} · ${mtEsc(c.titulo)})<br><br>${it.exec.map((x,i)=>`${i+1}. ${mtEsc(x)}`).join('<br>')}<br><br>⚠️ Erro comum: ${mtEsc(it.erro)}${it.seg?'<br>🛡️ '+mtEsc(it.seg):''}${it.idx>0?`<br><br>Mais fácil: ${mtEsc(c.itens[it.idx-1][0])}`:''}${it.idx<c.itens.length-1?` · Mais difícil: ${mtEsc(c.itens[it.idx+1][0])}`:''}<br><br><button class="btn btn-ghost" style="padding:7px 12px;font-size:12.5px" onclick="closeAssistant();openExercise('${mtJsStr(it.nome)}')">Abrir ficha e vídeo</button>`;
+}
+Object.assign(MA_ANSWERS, { cali_analise: caliAnalise, cali_metas: caliMetas });
+const _maInterpretCali = maInterpret;
+maInterpret = function(txt){
+  const t = mtNorm(txt); const has = (...w)=>w.some(x=>t.includes(x));
+  if(has('calistenia','progressao','progressão','regressao','proxima variacao','próxima variação') && has('como estou','analis','evolu','progress','regress','avanc','estagn')) return 'cali_analise';
+  if(has('front lever','planche','muscle up','muscle-up','human flag','back lever','handstand','parada de mao','l-sit','habilidade') && has('quando','libera','falta','meta','pre-requisito','prerequisito','consigo','progresso')) return 'cali_metas';
+  if(has('como faz','como fazer','como executar','execucao','execução','tecnica','técnica')){ const r = caliComoFazer(txt); if(r){ window.__caliResp = r; return 'cali_como'; } }
+  return _maInterpretCali(txt);
+};
+MA_ANSWERS.cali_como = ()=>window.__caliResp || 'Me diga o nome do exercício.';
+const _sugCali = MA_SUGGESTIONS.slice();
+function caliAjustarSugestoes(){
+  const tem = MA_SUGGESTIONS.some(s=>s.key==='cali_analise');
+  if(temCali() && !tem) MA_SUGGESTIONS.splice(0, 0, {lbl:'🤸 Minha calistenia', key:'cali_analise'}, {lbl:'🎯 Minhas habilidades', key:'cali_metas'});
+  if(!temCali() && tem){ for(let i=MA_SUGGESTIONS.length-1;i>=0;i--) if(/^cali_/.test(MA_SUGGESTIONS[i].key)) MA_SUGGESTIONS.splice(i,1); }
+}
+const _openAssistantCali = openAssistant;
+window.openAssistant = function(){ try{ caliAjustarSugestoes(); }catch(e){} return _openAssistantCali.apply(this, arguments); };
+
+// ---- Admin: exercícios, modelos, progressão e uso ----
+const caliConfig = { sessoesDominio: 2 };
+let caliModelos = [];
+try{ caliModelos = JSON.parse(mtLS('mt_cali_modelos')||'[]'); }catch(e){}
+function caliModeloAdmin(st, d){
+  const m = caliModelos.find(x=>x.ativo!==false && +x.dias===d && (!x.objetivo || x.objetivo===st.caliGoal) && (x.sessoes||[]).length===d);
+  return m || null;
+}
+async function loadCaliAdmin(){
+  try{
+    const [ex, mo, cf] = await Promise.all([ db.collection('caliExercicios').get(), db.collection('caliModelos').get(), db.collection('config').doc('calistenia').get() ]);
+    const exs = []; ex.forEach(d=>exs.push(Object.assign({id:d.id}, d.data())));
+    const mods = []; mo.forEach(d=>mods.push(Object.assign({id:d.id}, d.data())));
+    caliModelos = mods; mtLS('mt_cali_modelos', JSON.stringify(mods));
+    if(cf.exists && cf.data().sessoesDominio) caliConfig.sessoesDominio = Math.max(1, Math.min(4, +cf.data().sessoesDominio));
+    mtLS('mt_cali_ex', JSON.stringify(exs)); caliAplicarAdmin(exs);
+  }catch(e){ try{ caliAplicarAdmin(JSON.parse(mtLS('mt_cali_ex')||'[]')); }catch(err){} }
+}
+// exercícios do administrador entram na cadeia escolhida, na posição escolhida; também permite ajustar/desativar os padrões
+const _CALI_ORIG = JSON.parse(JSON.stringify(CALI_CADEIAS.map(c=>c.itens)));
+function caliAplicarAdmin(lista){
+  CALI_CADEIAS.forEach((c,i)=>{ c.itens = JSON.parse(JSON.stringify(_CALI_ORIG[i])); });
+  (lista||[]).forEach(x=>{
+    const c = caliCadeia(x.cadeia); if(!c) return;
+    const k = c.itens.findIndex(it=>slug(it[0])===x.id);
+    if(k>=0){
+      if(x.ativo===false && c.itens.length>1){ c.itens.splice(k,1); return; }
+      if(x.nivel) c.itens[k][1] = +x.nivel;
+      if(x.execucao) c.itens[k][7] = String(x.execucao).split('\n').filter(Boolean);
+      if(x.erro) c.itens[k][8] = x.erro;
+      return;
+    }
+    if(x.ativo===false || !x.nome) return;
+    const it = [x.nome, +x.nivel||1, x.unidade==='t'?'t':'r', x.equip||[], x.grupo||c.itens[0][4], x.faixa||'', x.musculos||'', String(x.execucao||'').split('\n').filter(Boolean), x.erro||'', x.seguranca||''];
+    const pos = Math.max(0, Math.min(c.itens.length, x.posicao==null ? c.itens.length : +x.posicao));
+    c.itens.splice(pos, 0, it);
+  });
+  caliIndexar();
+}
+async function openCaliAdmin(){
+  $('modal-inner').innerHTML = `<h3>Calistenia</h3><div class="mt-loading"><div class="ex-spin"></div><span>Carregando…</span></div>`; $('modal-back').classList.add('on');
+  await loadCaliAdmin();
+  const princ = mtPrincipal();
+  const us = Object.values(usuariosCache||{}).map(u=>u.estadoApp && u.estadoApp.modules && u.estadoApp.modules.lift && u.estadoApp.modules.lift.setup).filter(Boolean);
+  const cont = {musculacao:0, calistenia:0, hibrido:0}; us.forEach(s=>cont[s.modalidade||'musculacao']++);
+  const skills = {}; us.filter(s=>s.caliPos).forEach(s=>CALI_CADEIAS.filter(c=>c.skill).forEach(c=>{ if(s.caliPos[c.id]!=null) skills[c.titulo] = (skills[c.titulo]||0)+1; }));
+  $('modal-inner').innerHTML = `<h3>Calistenia</h3>
+    <div class="adm-kpis"><div class="adm-kpi"><b>${cont.calistenia}</b><small>em calistenia</small></div><div class="adm-kpi"><b>${cont.hibrido}</b><small>no híbrido</small></div><div class="adm-kpi"><b>${cont.musculacao}</b><small>só musculação</small></div></div>
+    ${Object.keys(skills).length?`<div class="mt-muted" style="font-size:12px;margin:6px 2px 0">Habilidades em treino: ${Object.entries(skills).map(([k,v])=>`${mtEsc(k)} (${v})`).join(' · ')}</div>`:''}
+    <div class="mt-sec">Ferramentas</div>
+    <div class="list-row" onclick="openCaliCadeias()">🧗 <span>Exercícios e progressões</span><span style="margin-left:auto;font-size:12px;color:var(--text-mute)">${Object.keys(CALI_EX).length} ›</span></div>
+    <div class="list-row" onclick="openCaliModelos()">🗂️ <span>Modelos de plano</span><span style="margin-left:auto;font-size:12px;color:var(--text-mute)">${caliModelos.length} ›</span></div>
+    <div class="list-row" onclick="openVideoAdmin()">🎬 <span>Vídeos dos exercícios</span><span style="margin-left:auto;font-size:12px;color:var(--text-mute)">categoria Calistenia ›</span></div>
+    ${princ?`<div class="list-row" onclick="caliConfigDominio()">⚙️ <span>Critério de domínio</span><span style="margin-left:auto;font-size:12px;color:var(--text-mute)">${caliConfig.sessoesDominio} sessões no topo ›</span></div>`:''}
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+}
+function openCaliCadeias(){
+  const princ = mtPrincipal();
+  $('modal-inner').innerHTML = `<h3>Exercícios e progressões</h3><p class="mt-muted" style="margin:0 0 8px">A ordem é a ordem de progressão. ${princ?'Toque num exercício para editar nível e textos, ou adicione um novo numa posição da cadeia.':'Somente o administrador principal edita.'}</p>
+    <div style="max-height:58vh;overflow:auto">${CALI_CADEIAS.map(c=>`<div class="mt-sec">${mtEsc(c.titulo)} · ${c.area}${c.req?' · pré-req.':''}</div>${c.itens.map((it,k)=>`<div class="cl-step" ${princ?`onclick="caliEditarEx('${c.id}',${k})"`:''}><span class="cl-nv n${it[1]}">${CALI_NIVEL[it[1]]}</span><b style="flex:1;font-size:13px">${k+1}. ${mtEsc(it[0])}</b></div>`).join('')}${princ?`<button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;margin:4px 0 8px" onclick="caliEditarEx('${c.id}',-1)">+ Adicionar em ${mtEsc(c.titulo)}</button>`:''}`).join('')}</div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="openCaliAdmin()">Voltar</button>`;
+}
+function caliEditarEx(cid, k){
+  if(!mtPrincipal()) return;
+  const c = caliCadeia(cid); const it = k>=0 ? c.itens[k] : ['',1,'r',[],c.itens[0][4],'','',[],'',''];
+  const novo = k<0;
+  $('modal-inner').innerHTML = `<h3>${novo?'Novo exercício':'Editar exercício'}</h3><p class="mt-muted" style="margin:0">${mtEsc(c.titulo)}</p>
+    <div class="adm-form">
+      <label>Nome</label><input class="input" id="ce-nome" value="${mtEsc(it[0])}" ${novo?'':'disabled'}>
+      <div style="display:flex;gap:8px"><div style="flex:1"><label>Nível</label><select class="input" id="ce-nivel">${[1,2,3,4].map(n=>`<option value="${n}" ${it[1]===n?'selected':''}>${CALI_NIVEL[n]}</option>`).join('')}</select></div>
+      ${novo?`<div style="flex:1"><label>Unidade</label><select class="input" id="ce-un"><option value="r">Repetições</option><option value="t">Tempo (s)</option></select></div>`:''}</div>
+      ${novo?`<label>Posição na progressão</label><select class="input" id="ce-pos">${c.itens.map((x,i)=>`<option value="${i+1}">depois de ${mtEsc(x[0])}</option>`).join('')}<option value="0">no início</option></select>
+      <label>Equipamentos (precisa de um deles)</label><div style="display:flex;flex-wrap:wrap;gap:6px">${Object.entries(CALI_EQUIP_LBL).map(([kk,l])=>`<label style="text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--text);margin:0"><input type="checkbox" class="ce-eq" value="${kk}"> ${l}</label>`).join('')}</div>
+      <label>Músculos trabalhados</label><input class="input" id="ce-mus">`:''}
+      <label>Como executar (uma etapa por linha)</label><textarea class="input" id="ce-exec">${mtEsc((it[7]||[]).join('\n'))}</textarea>
+      <label>Erro comum</label><input class="input" id="ce-erro" value="${mtEsc(it[8]||'')}">
+      ${novo?'':`<label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)"><input type="checkbox" id="ce-off"> Desativar este exercício (sai dos planos novos)</label>`}
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" id="ce-salvar" onclick="caliSalvarEx('${cid}',${k})">Salvar</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openCaliCadeias()">Voltar</button>`;
+}
+async function caliSalvarEx(cid, k){
+  if(!mtPrincipal()) return;
+  const c = caliCadeia(cid); const novo = k<0;
+  const nome = novo ? $('ce-nome').value.trim() : c.itens[k][0];
+  if(nome.length < 3){ toast('Dê um nome ao exercício'); return; }
+  const id = slug(nome);
+  if(novo && CALI_EX[id]){ toast('Já existe um exercício com esse nome'); return; }
+  const dados = { cadeia:cid, nivel:+$('ce-nivel').value, execucao:$('ce-exec').value.trim(), erro:$('ce-erro').value.trim(), atualizadoEm:Date.now(), atualizadoPor:state.user.email };
+  if(novo) Object.assign(dados, { nome, unidade:$('ce-un').value, posicao:+$('ce-pos').value, equip:[...document.querySelectorAll('.ce-eq:checked')].map(x=>x.value), musculos:$('ce-mus').value.trim(), grupo:c.itens[0][4], ativo:true });
+  else dados.ativo = !$('ce-off').checked;
+  await mtComBotao('ce-salvar','Salvando…', async ()=>{
+    await db.collection('caliExercicios').doc(id).set(dados, {merge:true});
+    await loadCaliAdmin(); toast('✅ Salvo. Vale para os próximos planos gerados.'); openCaliCadeias();
+  });
+}
+function openCaliModelos(){
+  const princ = mtPrincipal();
+  $('modal-inner').innerHTML = `<h3>Modelos de plano</h3><p class="mt-muted" style="margin:0 0 8px">Quando existe um modelo ativo para o número de dias (e objetivo) do aluno, ele substitui a divisão padrão (${Object.entries(CALI_SPLITS).map(([d,s])=>d+' dias: '+s.nome).join(' · ')}).</p>
+    ${caliModelos.map(m=>`<div class="list-row" ${princ?`onclick="caliEditarModelo('${m.id}')"`:''}>${mtEsc(m.nome||'Modelo')}<span style="margin-left:auto;font-size:12px;color:var(--text-mute)">${m.dias} dias${m.objetivo?' · '+m.objetivo:''}${m.ativo===false?' · inativo':''}</span></div>`).join('') || '<div class="mt-muted" style="padding:8px 0">Nenhum modelo criado. Os planos usam as divisões padrão.</div>'}
+    ${princ?`<button class="btn btn-primary btn-block" style="margin-top:10px" onclick="caliEditarModelo()">+ Novo modelo</button>`:''}
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openCaliAdmin()">Voltar</button>`;
+}
+const CALI_PAD_LBL = { skill:'Habilidade', empurrar_h:'Empurrar horizontal (flexões)', empurrar_v:'Empurrar vertical (pike/HSPU)', dips:'Paralelas / tríceps', puxar_v:'Puxar vertical (barra)', puxar_h:'Puxar horizontal (remada)', agachar:'Agachamento', agachar_uni:'Perna unilateral', posterior:'Posteriores', gluteo:'Glúteos', panturrilha:'Panturrilhas', core_anti:'Core anti-extensão', core_lat:'Core lateral', core_flex:'Elevação de pernas / L-sit', core_ext:'Core posterior' };
+function caliEditarModelo(id){
+  if(!mtPrincipal()) return;
+  const m = caliModelos.find(x=>x.id===id) || { nome:'', dias:3, objetivo:'', ativo:true, sessoes:[] };
+  window.__cmDias = +m.dias || 3;
+  const sess = k=>{ const s = (m.sessoes||[])[k] || {nome:'Sessão '+(k+1), slots:[]};
+    return `<div class="adm-ms"><input class="input cm-nome" value="${mtEsc(s.nome)}" style="margin-bottom:6px"><div style="display:flex;flex-wrap:wrap;gap:4px 10px">${Object.entries(CALI_PAD_LBL).map(([p,l])=>`<label style="font-size:12px;display:flex;gap:5px;align-items:center"><input type="checkbox" class="cm-p" data-s="${k}" value="${p}" ${(s.slots||[]).includes(p)?'checked':''}> ${l}</label>`).join('')}</div></div>`; };
+  $('modal-inner').innerHTML = `<h3>${id?'Editar':'Novo'} modelo</h3><div class="adm-form">
+    <label>Nome</label><input class="input" id="cm-nome" value="${mtEsc(m.nome)}" placeholder="Ex.: Full body 3x — iniciantes">
+    <div style="display:flex;gap:8px"><div style="flex:1"><label>Dias</label><select class="input" id="cm-dias" onchange="window.__cmDias=+this.value;caliEditarModelo('${id||''}')">${[3,4,5,6].map(d=>`<option ${d===window.__cmDias?'selected':''}>${d}</option>`).join('')}</select></div>
+    <div style="flex:1"><label>Objetivo</label><select class="input" id="cm-obj"><option value="">Qualquer</option>${Object.keys(CALI_PRESC).map(o=>`<option value="${o}" ${m.objetivo===o?'selected':''}>${o}</option>`).join('')}</select></div></div>
+    <label>Sessões (a ordem de cima para baixo é a ordem dos exercícios; o tempo da sessão corta os últimos)</label>
+    ${Array.from({length:window.__cmDias},(_,k)=>sess(k)).join('')}
+    <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)"><input type="checkbox" id="cm-ativo" ${m.ativo!==false?'checked':''}> Ativo</label></div>
+    <button class="btn btn-primary btn-block" style="margin-top:10px" id="cm-salvar" onclick="caliSalvarModelo('${id||''}')">Salvar</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openCaliModelos()">Voltar</button>`;
+}
+async function caliSalvarModelo(id){
+  if(!mtPrincipal()) return;
+  const dias = +$('cm-dias').value;
+  const nomes = [...document.querySelectorAll('.cm-nome')].map(x=>x.value.trim());
+  const ordem = Object.keys(CALI_PAD_LBL);
+  const sessoes = nomes.map((n,k)=>({ nome:n||('Sessão '+(k+1)), slots: ordem.filter(p=>document.querySelector(`.cm-p[data-s="${k}"][value="${p}"]`).checked) }));
+  if(sessoes.some(s=>s.slots.length<3)){ toast('Cada sessão precisa de pelo menos 3 movimentos'); return; }
+  const dados = { nome:$('cm-nome').value.trim()||'Modelo', dias, objetivo:$('cm-obj').value, ativo:$('cm-ativo').checked, sessoes, atualizadoEm:Date.now(), atualizadoPor:state.user.email };
+  await mtComBotao('cm-salvar','Salvando…', async ()=>{
+    await db.collection('caliModelos').doc(id || ('m'+Date.now().toString(36))).set(dados, {merge:true});
+    await loadCaliAdmin(); toast('✅ Modelo salvo. Vale para planos criados ou recriados a partir de agora.'); openCaliModelos();
+  });
+}
+function caliConfigDominio(){
+  if(!mtPrincipal()) return;
+  $('modal-inner').innerHTML = `<h3>Critério de domínio</h3><p class="mt-muted">Quantas sessões seguidas no topo da faixa (com execução limpa) o aluno precisa para liberar a próxima variação.</p>
+    <select class="input" id="cd-n">${[1,2,3,4].map(n=>`<option ${n===caliConfig.sessoesDominio?'selected':''}>${n}</option>`).join('')}</select>
+    <button class="btn btn-primary btn-block" style="margin-top:10px" id="cd-salvar" onclick="mtComBotao('cd-salvar','Salvando…',async()=>{ await db.collection('config').doc('calistenia').set({sessoesDominio:+$('cd-n').value, atualizadoEm:Date.now()}, {merge:true}); await loadCaliAdmin(); toast('✅ Salvo'); openCaliAdmin(); })">Salvar</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openCaliAdmin()">Voltar</button>`;
+}
+const _goAdminCali = window.goAdmin;
+window.goAdmin = async function(){
+  const r = await _goAdminCali.apply(this, arguments);
+  try{
+    if(!$('adm-cali-row')){ const ref = $('adm-vid-row') || $('adm-ev-row'); if(ref){ const a = document.createElement('div'); a.className = 'list-row'; a.id = 'adm-cali-row'; a.onclick = openCaliAdmin; a.innerHTML = '🤸 <span>Calistenia</span><span style="margin-left:auto;font-size:11px;color:var(--text-dim)">exercícios, modelos e uso</span>'; ref.after(a); } }
+  }catch(e){}
+  return r;
+};
+const _bootCali = bootAfterAuth;
+window.bootAfterAuth = function(){ const r = _bootCali.apply(this, arguments); setTimeout(()=>{ loadCaliAdmin().then(()=>{ try{ if(temCali()){ caliRegenTudo(); } }catch(e){} }); }, 2200); return r; };
+try{ caliAplicarAdmin(JSON.parse(mtLS('mt_cali_ex')||'[]')); }catch(e){}
+
+Object.assign(window, { caliAbrirTroca, caliDefinirPos, caliPreferir, caliQual, caliMostrarSetup, openModalidade, openCaliAdmin, openCaliCadeias, caliEditarEx, caliSalvarEx, openCaliModelos, caliEditarModelo, caliSalvarModelo, caliConfigDominio,
+  caliGerarWorkouts, caliNivelReal, caliDominio, CALI_CADEIAS });
