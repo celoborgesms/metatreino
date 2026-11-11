@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 1 =====
-const APP_VERSION = '2027.1-beta.9';
+// ===== MetaTreino 2027.1 Beta 10 =====
+const APP_VERSION = '2027.1-beta.10';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -217,10 +217,10 @@ const TROPHIES = [
   { id:'first_workout', emoji:'🥇', name:'Primeiro treino', desc:'Concluiu seu primeiro treino', cat:'geral' },
   { id:'week_goal', emoji:'🎯', name:'Meta da semana', desc:'Bateu a meta semanal', cat:'geral' },
   // STREAKS
-  { id:'streak_3', emoji:'🔥', name:'Streak 3 dias', desc:'3 dias seguidos treinando', cat:'streak' },
-  { id:'streak_7', emoji:'⚡', name:'Streak 7 dias', desc:'Uma semana firme!', cat:'streak' },
-  { id:'streak_14', emoji:'🌟', name:'Streak 14 dias', desc:'Duas semanas de disciplina', cat:'streak' },
-  { id:'streak_30', emoji:'💎', name:'Streak 30 dias', desc:'Um mês inteiro sem falhar', cat:'streak' },
+  { id:'streak_3', emoji:'🔥', name:'Sequência de 3 dias', desc:'3 dias seguidos treinando', cat:'streak' },
+  { id:'streak_7', emoji:'⚡', name:'Sequência de 7 dias', desc:'Uma semana firme!', cat:'streak' },
+  { id:'streak_14', emoji:'🌟', name:'Sequência de 14 dias', desc:'Duas semanas de disciplina', cat:'streak' },
+  { id:'streak_30', emoji:'💎', name:'Sequência de 30 dias', desc:'Um mês inteiro sem falhar', cat:'streak' },
   // MUSCULAÇÃO
   { id:'lift_10', emoji:'💪', name:'10 treinos', desc:'10 treinos de musculação', cat:'lift' },
   { id:'lift_25', emoji:'🏋️', name:'25 treinos', desc:'25 treinos de musculação', cat:'lift' },
@@ -2564,11 +2564,16 @@ function switchModuleUI(){ switchModule(state.active==='lift'?'run':'lift'); }
 
 // ---------- TAB NAV ----------
 function goTab(tab){
+  // 2027.1 β10 — barra com 5 posições. Telas secundárias acendem a aba "dona":
+  // plano/biblioteca → Treinos · desempenho/histórico → Progresso
+  const DONO = {home:'home', sessions:'sessions', plan:'sessions', library:'sessions', challenges:'challenges', perf:'progress', history:'progress', profile:'profile'};
+  if(!DONO[tab]) tab = 'home';
+  if(tab==='library' && state.active!=='lift' && !state.modules.lift) tab = 'sessions';
   state.ui.tab = tab; saveData();
-  $('tab-library').style.display = state.active==='lift' ? 'flex' : 'none';
-  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+  if(tab==='perf' || tab==='history') window.__ultProg = tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===DONO[tab]));
   $('tabbar').classList.remove('hidden');
-  const map = {home:'scr-home',sessions:'scr-sessions',library:'scr-library',perf:'scr-perf',history:'scr-history',plan:'scr-plan',profile:'scr-profile'};
+  const map = {home:'scr-home',sessions:'scr-sessions',library:'scr-library',perf:'scr-perf',history:'scr-history',plan:'scr-plan',profile:'scr-profile',challenges:'scr-challenges'};
   showScreen(map[tab] || 'scr-home');
   updateDeco(tab);
   updateFab(tab);
@@ -2580,6 +2585,7 @@ function goTab(tab){
   else if(tab==='history'){ histLimit = HIST_PAGE; histPage = 0; renderHistory(); }
   else if(tab==='plan') renderPlan();
   else if(tab==='profile') renderProfile();
+  else if(tab==='challenges'){ try{ renderChallenges(); }catch(e){ console.log('desafios:', e); } }
 }
 
 // tela de escolha quando o módulo de corrida existe só como registro de atividades (sem plano)
@@ -2886,7 +2892,7 @@ function renderHome(){
   $('plan-week').textContent = mod.plan.type==='lift' && cw.cycle>1 ? `Semana ${wk} de ${total} · ${cw.cycle}º ciclo` : `Semana ${wk} de ${total}`;
   $('plan-progress').style.width = Math.min(100,(wk/total)*100)+'%';
   const phase = wk<=Math.floor(total*0.6)?'BUILD':wk<=Math.floor(total*0.85)?'PEAK':'TAPER';
-  $('plan-phase').textContent = phase;
+  $('plan-phase').textContent = phase==='BUILD' ? 'Construção' : phase==='PEAK' ? (mod.plan.type==='lift'?'Intensificação':'Pico') : (mod.plan.type==='lift'?'Consolidação':'Polimento');
   const isLiftPlan = mod.plan.type==='lift';
   // plano com início programado pra frente: avisa em vez de fingir que já começou
   // (NUNCA sair da função aqui — o card do dia é desenhado mais abaixo)
@@ -2903,7 +2909,7 @@ function renderHome(){
     }
   }catch(e){}
   if(_preStartMsg){ $('plan-foot').textContent = _preStartMsg; }
-  else $('plan-foot').textContent = cw.done ? '🏁 Programa concluído! Toque em "Trocar plano" pra começar um novo ciclo.' : phase==='BUILD'?`🏗️ Fase de construção · ${isLiftPlan?'Ganhando base muscular':'Aumentando base aeróbica'}. ${total-wk} semanas até o pico.`:phase==='PEAK'?`🚀 Fase de pico · Alta intensidade. ${total-wk} semanas restantes.`:isLiftPlan?`🎯 Fase de consolidação · Na semana ${total} o ciclo recomeça renovado.`:`🎯 Fase de afinação (taper) · Recuperação e afinação final.`;
+  else $('plan-foot').textContent = cw.done ? '🏁 Programa concluído! Toque em "Trocar plano" pra começar um novo ciclo.' : phase==='BUILD'?`🏗️ Fase de construção · ${isLiftPlan?'Ganhando base muscular':'Aumentando base aeróbica'}. ${total-wk} semanas até o pico.`:phase==='PEAK'?`🚀 Fase de pico · Alta intensidade. ${total-wk} semanas restantes.`:isLiftPlan?`🎯 Fase de consolidação · Na semana ${total} o ciclo recomeça renovado.`:`🎯 Fase de polimento · Volume menor pra chegar descansado e afiado na prova.`;
 
   const today = getDayIdx();
   const todayWk = mod.plan.workouts.find(w=>w.dayIdx===today);
@@ -4960,7 +4966,7 @@ function renderAward(){
     </div>
     ${n>1?`<div style="display:flex;justify-content:center;gap:5px;margin:12px 0 4px">${dots}</div>
       <div style="text-align:center;font-size:11.5px;color:var(--text-mute)">${awardIdx+1} de ${n} conquistas</div>`:''}
-    <button class="btn btn-primary btn-block anim-glow" style="margin-top:14px" onclick="closeAwards();openTrophies()">🏆 Ver meus conquistas</button>
+    <button class="btn btn-primary btn-block anim-glow" style="margin-top:14px" onclick="closeAwards();openTrophies()">🏆 Ver minhas conquistas</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeAwards()">Fechar</button>`;
   $('modal-back').classList.add('on','award-dark');
 }
@@ -4994,7 +5000,7 @@ function unlockTrophy(id){
   saveData();
   const t = TROPHIES.find(x=>x.id===id);
   if(!t) return;
-  queueAward({ id:'t_'+t.id, emo:t.emoji, tipo: t.secret ? 'SEGREDO REVELADO' : 'TROFÉU DESBLOQUEADO', nome:t.name, desc:t.desc, secreto: !!t.secret });
+  queueAward({ id:'t_'+t.id, emo:(typeof trophyIco==='function'?trophyIco(t):t.emoji), tipo: t.secret ? 'SEGREDO REVELADO' : 'TROFÉU DESBLOQUEADO', nome:t.name, desc:t.desc, secreto: !!t.secret });
 }
 // Garante que os contadores vitalícios existem; migra dados de quem já tinha histórico
 function ensureStats(){
@@ -5288,7 +5294,7 @@ function openTrophyDetail(id){
     </div>
     <div style="text-align:center">
       ${t.secret?'<div style="font-size:11px;letter-spacing:2px;color:var(--accent-2);font-weight:800">✨ CONQUISTA SECRETA ✨</div>':''}
-      <div class="anim-check" style="font-size:66px;line-height:1.1${t.secret?';filter:drop-shadow(0 0 18px rgba(var(--accent-rgb),0.5))':''}">${t.emoji}</div>
+      <div class="anim-check" style="font-size:66px;line-height:1.1${t.secret?';filter:drop-shadow(0 0 18px rgba(var(--accent-rgb),0.5))':''}">${trophyIco(t)}</div>
       <h3 style="margin:8px 0 2px">${t.name}</h3>
       <div style="color:var(--text-dim);font-size:13.5px;line-height:1.5">${t.desc}</div>
     </div>
@@ -5299,7 +5305,7 @@ function openTrophyDetail(id){
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();shareTrophyImage('${t.id}')">📤 Compartilhar esta conquista</button>
     <button class="btn btn-outline btn-block hl-primary" style="margin-top:8px" onclick="closeModal();shareTrophiesImage()">🏆 Compartilhar coleção inteira</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();openTrophiesKeepScroll()">← Voltar aos conquistas</button>`;
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();openTrophiesKeepScroll()">← Voltar às conquistas</button>`;
   $('modal-back').classList.add('on');
 }
 // Ordena os conquistas de um grupo: os conquistados sobem pro topo (mais recentes primeiro),
@@ -5343,7 +5349,7 @@ function openTrophies(){
         const revealed = ordenarTrofeus(g.items.filter(t=>state.trophies.includes(t.id)));
         const lockedN = g.items.length - revealed.length;
         return `<div style="margin-top:18px"><div class="section-lbl" style="margin:0 0 8px">✨ Secretas reveladas · ${revealed.length}/${g.items.length}</div>
-          ${revealed.length?`<div class="trophy-grid">${revealed.map(t=>`<div class="trophy unlock" onclick="openTrophyDetail('${t.id}')"><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div></div>`).join('')}</div>`:`<div style="font-size:12.5px;color:var(--text-dim)">Nenhuma revelada ainda… elas aparecem sozinhas quando você as merece.</div>`}
+          ${revealed.length?`<div class="trophy-grid">${revealed.map(t=>`<div class="trophy unlock" onclick="openTrophyDetail('${t.id}')"><div class="trophy-emoji">${trophyIco(t)}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div></div>`).join('')}</div>`:`<div style="font-size:12.5px;color:var(--text-dim)">Nenhuma revelada ainda… elas aparecem sozinhas quando você as merece.</div>`}
           ${lockedN?`<div style="margin-top:10px;text-align:center;font-size:12.5px;color:var(--text-mute)">🔒 Ainda restam <b>${lockedN}</b> segredos por descobrir… continue treinando 😉</div>`:''}
         </div>`;
       }
@@ -5361,10 +5367,10 @@ function openTrophies(){
           // Troféus "secretos" (os de humor/persistência) ficam ocultos até serem conquistados:
           // guardam a surpresa. Os de progresso continuam visíveis, pra a pessoa saber o que perseguir.
           if(!ul && t.secret){
-            return `<div class="trophy" style="opacity:.55"><div class="trophy-emoji" style="filter:grayscale(1)">🔒</div><div class="trophy-name">Conquista secreta</div><div class="trophy-desc">Descubra treinando 😉</div></div>`;
+            return `<div class="trophy" style="opacity:.55"><div class="trophy-emoji">${trophyIcoLocked()}</div><div class="trophy-name">Conquista secreta</div><div class="trophy-desc">Descubra treinando 😉</div></div>`;
           }
           const clique = ul ? ` onclick="openTrophyDetail('${t.id}')" style="cursor:pointer"` : '';
-          return `<div class="trophy ${ul?'unlock':''}"${clique}><div class="trophy-emoji">${t.emoji}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div>${bar}</div>`;
+          return `<div class="trophy ${ul?'unlock':''}"${clique}><div class="trophy-emoji">${trophyIco(t, !ul)}</div><div class="trophy-name">${t.name}</div><div class="trophy-desc">${t.desc}</div>${bar}</div>`;
         }).join('')}</div></div>`;
     }).join('')}
     ${state.specialTrophy ? `<div onclick="showSpecialReveal(state.specialTrophy)" style="margin-top:20px;padding:18px;border-radius:var(--radius-card);background:var(--tint-prep);border:1px solid rgba(var(--prep-rgb),0.30);text-align:center;cursor:pointer">
@@ -5959,7 +5965,7 @@ const MA_ANSWERS = {
   proximo_trofeu(){
     const unlocked = (state.trophies||[]).length, total = TROPHIES.length;
     const falta = TROPHIES.filter(t=>!t.secret && !(state.trophies||[]).includes(t.id));
-    if(!falta.length) return `🏆 Você já desbloqueou todos os conquistas visíveis (${unlocked}/${total})! Ainda há secretos escondidos por aí... 🤫`;
+    if(!falta.length) return `🏆 Você já desbloqueou todas as conquistas visíveis (${unlocked}/${total})! Ainda há secretos escondidos por aí... 🤫`;
     const alvo = falta[0];
     return `Você tem <b>${unlocked}/${total}</b> conquistas. Um ao seu alcance: <b>${alvo.emoji} ${alvo.name}</b> — ${alvo.desc}. E ainda há conquistas secretas pra descobrir treinando! 🤫`;
   },
@@ -6931,7 +6937,7 @@ const MA_SOCIAL = {
 <b>⚙️ Mudar meu plano</b><br>• "quero treinar segunda, quarta e sexta"<br>• "minha academia só tem halteres"<br><br>
 <b>▶️ Aprender</b><br>• "como fazer supino reto" (abre o vídeo)<br><br>
 <b>💡 Falar com quem criou o app</b><br>• "quero mandar uma sugestão"<br>• "gostaria que tivesse tal função"`; },
-  _ajuda(){ return 'Posso te contar: 📈 sua evolução, 💪 como foi seu treino, 🏃 sua corrida, 🏆 seus conquistas, 🎯 sua meta, qual músculo você treina menos, sua maior pausa, recordes, quanto tempo usa o app, peso, calorias e ainda te motivar. É só tocar numa sugestão ou digitar!'; }
+  _ajuda(){ return 'Posso te contar: 📈 sua evolução, 💪 como foi seu treino, 🏃 sua corrida, 🏆 suas conquistas, 🎯 sua meta, qual músculo você treina menos, sua maior pausa, recordes, quanto tempo usa o app, peso, calorias e ainda te motivar. É só tocar numa sugestão ou digitar!'; }
 };
 function maSaudacao(){ const h=new Date().getHours(); return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'; }
 let maThread = [];
@@ -7362,7 +7368,7 @@ function maNudge(){
     // Dica de "pegar leve hoje" só faz sentido se existir treino hoje.
     const temTreinoHoje = (()=>{ try{ const m=state.modules[state.active];
       return !!(m && m.plan && (m.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx())); }catch(e){ return false; } })();
-    if(window.__updDisp && !updIgnorado()) return {text:`🆕 Tem uma versão nova do app`, tone:'curio', dica:{bolha:`🆕 Tem uma versão nova do app`, completa:`🆕 Tem uma versão nova do MetaTreino. Atualizar leva alguns segundos e seus dados ficam salvos.<br><br><button class="btn btn-primary" style="padding:9px 16px;font-size:13px" onclick="closeAssistant();mtCheckUpdate()">Atualizar agora</button> <button class="btn btn-ghost" style="padding:9px 16px;font-size:13px" onclick="updIgnorar();closeAssistant()">Agora não</button>`}};
+    // (2027.1 β10) aviso de versão nova removido: o app se atualiza sozinho (ver mtAutoUpdate em app-plus.js)
     try{   // só avisa de água quem já usa o contador, depois das 15h e com menos de 40% da meta
       const usa = Object.keys(state.agua||{}).some(k=>k!==chaveDia(new Date()) && state.agua[k]>0);
       if(!vac && usa && new Date().getHours()>=15){ const meta=aguaMeta(), ml=aguaHoje(); if(ml < meta*0.4){

@@ -1,0 +1,84 @@
+rules_version = '2';
+// =====================================================================
+// MetaTreino 2027.1 Beta 10 — regras do Firestore (PROPOSTA)
+//
+// IMPORTANTE: compare com as regras que estão publicadas hoje no console antes de
+// substituir. Se preferir a mudança mínima, copie só o bloco "desafiosTematicos"
+// e o bloco "admins" — são os únicos que a versão Beta 10 precisa de novo.
+//
+// Princípios:
+//  • o aluno só lê e grava os PRÓPRIOS dados;
+//  • administradores autorizados (coleção admins, ativo == true) gerenciam alunos,
+//    exercícios e vídeos;
+//  • só o administrador principal cria desafios temáticos e mexe em permissões —
+//    verificado aqui no servidor, não só na tela.
+// =====================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()   { return request.auth != null; }
+    function myEmail()    { return signedIn() && request.auth.token.email != null ? request.auth.token.email.lower() : ''; }
+    function isPrincipal(){ return myEmail() == 'celoborgesms@gmail.com'; }
+    function isAdmin()    {
+      return isPrincipal() ||
+        (signedIn() && exists(/databases/$(database)/documents/admins/$(myEmail())) &&
+         get(/databases/$(database)/documents/admins/$(myEmail())).data.ativo == true);
+    }
+
+    // ---- dados do aluno (estadoApp) ----
+    match /usuarios/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ---- liberação de acesso ----
+    match /usuariosAutorizados/{email} {
+      allow get: if signedIn() && (myEmail() == email || isAdmin());
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ---- administradores: o próprio usuário confere se é admin; só o principal altera ----
+    match /admins/{email} {
+      allow get: if signedIn() && (myEmail() == email || isAdmin());
+      allow list: if isPrincipal();
+      allow write: if isPrincipal() && email != 'celoborgesms@gmail.com';
+    }
+
+    // ---- configurações (contato aparece na tela de login, antes de entrar) ----
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if doc == 'specialAward' ? isPrincipal() : isAdmin();
+    }
+
+    // ---- catálogo ----
+    match /exerciciosCustom/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /videosExercicios/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---- perguntas que o assistente não soube responder (feedback) ----
+    match /perguntasNaoRespondidas/{id} {
+      allow get: if signedIn();
+      allow create, update: if signedIn();
+      allow list, delete: if isAdmin();
+    }
+
+    // ---- NOVO (Beta 10): desafios temáticos ----
+    match /desafiosTematicos/{eventoId} {
+      allow read: if signedIn();
+      allow write: if isPrincipal();
+
+      // participação real de cada aluno (só ele grava a própria)
+      match /participantes/{uid} {
+        allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+        allow list: if isAdmin();
+        allow create, update, delete: if signedIn() && request.auth.uid == uid;
+      }
+    }
+  }
+}

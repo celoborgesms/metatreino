@@ -1,9 +1,9 @@
-const APP_VERSION = '2027.1-beta.9';
+const APP_VERSION = '2027.1-beta.10';
 const CACHE = 'metatreino-' + APP_VERSION;
 // manifest.json entra aqui de propósito: é o arquivo que o Chrome consulta pra
 // detectar mudança de ícone/nome e reemitir o app instalado. Em cache-first ele
 // recebia a versão antiga e o ícone nunca atualizava sozinho.
-const CRITICAL = ['./index.html', './app.js', './manifest.json']; // network-first
+const CRITICAL = ['./index.html', './app.js', './app-plus.js', './manifest.json']; // network-first
 const STATIC = ['./icon.svg', './icon-512.png']; // cache-first
 
 self.addEventListener('install', (e) => {
@@ -28,7 +28,7 @@ self.addEventListener('fetch', (e) => {
   const okHost = url.origin === self.location.origin || /(^|\.)gstatic\.com$/.test(url.hostname) || url.hostname === 'fonts.googleapis.com';
   if (!okHost) return;
   const path = url.pathname.replace(/^.*\//, './');
-  const isCritical = CRITICAL.includes(path) || url.pathname === '/' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/app.js') || url.pathname.endsWith('/manifest.json');
+  const isCritical = CRITICAL.includes(path) || url.pathname === '/' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/app.js') || url.pathname.endsWith('/app-plus.js') || url.pathname.endsWith('/manifest.json');
 
   if (isCritical) {
     // Network-first com revalidação forçada (GitHub Pages usa cache HTTP de 10min)
