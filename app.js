@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 16 =====
-const APP_VERSION = '2027.1-beta.16';
+// ===== MetaTreino 2027.1 Beta 17 =====
+const APP_VERSION = '2027.1-beta.17';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -8686,6 +8686,7 @@ async function shareCanvas(canvas, filename, shareText){
   canvas.toBlob(async blob=>{
     if(!blob){ toast('⚠️ Não foi possível gerar a imagem'); return; }
     _lastShareBlob = blob; _lastShareName = filename;
+    window._lastShareText = shareText || ''; // texto fora do atributo: aspas no texto quebravam o botão
     // mostra um modal com as duas opções: compartilhar OU salvar no celular
     // A foto de fundo era o 3º botão da fila — o recurso mais legal ficava escondido.
     // Agora ela é uma faixa em destaque logo abaixo da prévia.
@@ -8700,7 +8701,7 @@ async function shareCanvas(canvas, filename, shareText){
         <div style="color:var(--prep-soft);font-size:18px">›</div>
       </div>
       <input type="file" id="share-photo-input" accept="image/*" style="display:none" onchange="onSharePhotoPicked(event)">`:''}
-      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="doShareNow('${shareText.replace(/'/g,"\\'")}')">📲 Compartilhar agora</button>
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="doShareNow(window._lastShareText)">📲 Compartilhar agora</button>
       <div class="row" style="gap:8px;margin-top:8px">
         <button class="btn btn-ghost" style="flex:1;font-size:13px" onclick="doSaveToDevice()">💾 Salvar</button>
         <button class="btn btn-ghost" style="flex:1;font-size:13px" onclick="closeModal()">Fechar</button>

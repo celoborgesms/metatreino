@@ -1498,6 +1498,56 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
 .ex-noVideo .exnv-t{font-size:14px;font-weight:700;color:var(--text)}
 .ex-noVideo .exnv-s{font-size:12.5px;line-height:1.5;color:var(--text-dim);max-width:300px}
 .ex-noVideo .exnv-b{padding:8px 14px;font-size:12.5px;margin-top:4px}
+
+/* ===== Beta 17: conquistas ===== */
+.tr-medal{position:relative;display:grid;place-items:center;width:128px;height:128px;margin:2px auto 0}
+.tr-medal .tr-ico{position:relative;z-index:2;animation:trIn .75s cubic-bezier(.2,.9,.25,1.15) both}
+.tr-glow{position:absolute;inset:14px;border-radius:50%;background:radial-gradient(circle,rgba(var(--primary-rgb),.30) 0%,rgba(var(--primary-rgb),.10) 45%,transparent 70%);animation:trGlow 2.6s ease-out .15s both, trBreath 4.5s ease-in-out 2.8s 2}
+.tr-ring{position:absolute;inset:26px;border-radius:50%;border:1.5px solid rgba(var(--primary-rgb),.55);opacity:0;animation:trRing 1.1s ease-out .25s both}
+.tr-medal i{position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:rgba(var(--primary-rgb),.85);box-shadow:0 0 6px rgba(var(--primary-rgb),.8);opacity:0;transform:rotate(var(--a)) translateY(0);animation:trSpark .95s ease-out calc(.3s + var(--d)) both}
+.tr-secreta .tr-glow{background:radial-gradient(circle,rgba(var(--accent-rgb),.32) 0%,rgba(var(--accent-rgb),.10) 45%,transparent 70%)}
+.tr-secreta .tr-ring{border-color:rgba(var(--accent-rgb),.55)}
+.tr-secreta i{background:rgba(var(--accent-rgb),.85);box-shadow:0 0 6px rgba(var(--accent-rgb),.8)}
+h3.tr-nome{font-size:21px;letter-spacing:-.2px;margin:6px 0 4px!important;animation:trNome .6s ease-out .35s both}
+h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3px;margin:8px auto 2px;background:rgba(var(--primary-rgb),.75)}
+@keyframes trIn{0%{opacity:0;transform:scale(.55) translateY(8px)}60%{opacity:1;transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes trGlow{0%{opacity:0;transform:scale(.6)}35%{opacity:1;transform:scale(1.08)}100%{opacity:.75;transform:scale(1)}}
+@keyframes trBreath{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:.45;transform:scale(.96)}}
+@keyframes trRing{0%{opacity:.8;transform:scale(.7)}100%{opacity:0;transform:scale(1.35)}}
+@keyframes trSpark{0%{opacity:0;transform:rotate(var(--a)) translateY(-18px) scale(.6)}25%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateY(-60px) scale(1)}}
+@keyframes trNome{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.sa-card{cursor:pointer;transition:transform .2s,box-shadow .2s}
+.sa-card:hover,.sa-card:focus-visible{transform:translateY(-1px);box-shadow:0 6px 20px rgba(var(--prep-rgb),.18)}
+.sa-x{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;z-index:3;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:rgba(255,255,255,.75);font-size:16px;cursor:pointer}
+.sa-x:hover,.sa-x:focus-visible{background:rgba(255,255,255,.14);color:#fff}
+.sa-actions{padding:0 16px}
+.sa-actions > .btn{flex:1 1 0;min-width:0;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sa-acoes-col{display:flex;flex-direction:column;align-items:center;gap:8px;width:min(340px,calc(100vw - 32px))}
+.sa-acoes-row{display:flex;gap:8px;width:100%}
+.sa-acoes-row .btn{flex:1;min-width:0}
+.sa-actions .btn.sa-reviver{width:100%;min-width:0;padding:14px 18px;font-size:15px;box-shadow:0 0 0 1px rgba(242,198,109,.6),0 8px 28px rgba(242,198,109,.25)}
+.sa-opc{font-size:11.5px;color:rgba(232,230,240,.6);text-align:center}
+.sa-intro{flex-direction:column}
+.sa-intro.saindo{opacity:0}
+.sa-ctrl{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:10px;opacity:.42;transition:opacity .3s;padding:0 12px}
+.sa-ctrl:hover,.sa-ctrl:focus-within,.sa-intro.pausado .sa-ctrl{opacity:1}
+.sa-prog{display:flex;gap:5px}
+.sa-prog i{width:18px;height:3px;border-radius:2px;background:rgba(255,255,255,.18)}
+.sa-prog i.ok{background:rgba(242,198,109,.75)}
+.sa-prog i.now{background:#f2c66d}
+.sa-ctrl-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:420px}
+.sa-ctrl [data-a=pausa]{width:34px;padding:0}
+.sa-ctrl button{display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:rgba(236,232,223,.9);border-radius:99px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;min-height:32px}
+.sa-ctrl button:hover,.sa-ctrl button:focus-visible{background:rgba(255,255,255,.12)}
+.sa-vel{display:inline-flex;gap:2px;padding:2px;border-radius:99px;border:1px solid rgba(255,255,255,.12)}
+.sa-vel button{border:0;padding:4px 9px;min-height:28px;background:transparent}
+.sa-vel button.on{background:#f2c66d;color:#1a1408}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion: reduce){
+  .tr-medal .tr-ico,.tr-glow,.tr-ring,.tr-medal i,h3.tr-nome{animation:none!important}
+  .tr-ring,.tr-medal i{display:none}
+  .sa-stage,.sa-intro,.sa-frase,.sa-actions{transition:none!important}
+}
 </style>
 </head>
 <body>
@@ -2334,7 +2384,7 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 16</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 17</span>
     </div>
   </div>
 </div>
@@ -2412,8 +2462,8 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.16"></script>
-<script src="./app-plus.js?v=2027.1-beta.16"></script>
+<script src="./app.js?v=2027.1-beta.17"></script>
+<script src="./app-plus.js?v=2027.1-beta.17"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();

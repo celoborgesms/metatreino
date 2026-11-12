@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 16 — app-plus.js
+// MetaTreino 2027.1 Beta 17 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -16,11 +16,11 @@
 // 10. Painel administrativo (indicadores, desafios, administradores)
 // 11. Atualização automática (sem botão)
 // 18. Calistenia · 19–22. Beta 13 (retomada, mensagens, conquista especial, recolher)
-// 23–26. Beta 14 (corrida do iniciante ao competitivo) · 27. Beta 15 (prova removível, encerrar plano de musculação)
+// 23–26. Beta 14 (corrida do iniciante ao competitivo) · 27. Beta 15 (prova removível, encerrar plano de musculação) · 28. Beta 17 (conquistas)
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.16' };
+const MTP = { versao: '2027.1-beta.17' };
 const DIA_MS = 86400000;
 function mtNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function mtEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -3401,41 +3401,142 @@ function saNome(sa){
     return n ? String(n).split(' ')[0] : '';
   }catch(e){ return ''; }
 }
-// palco animado em tela cheia (prévia do admin e revelação para a pessoa)
+// palco animado em tela cheia (prévia do admin, conquista da pessoa e final da história).
+// Um palco por vez; o requestAnimationFrame para ao fechar, quando o app vai para segundo plano
+// e 30 s depois do fim da animação. Com "movimento reduzido" no aparelho, mostra direto o quadro final.
+function _saReduz(){ try{ return window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }
 function saPalco(sa, opts){
   opts = opts || {};
+  document.querySelectorAll('.sa-stage').forEach(o=>{ try{ o.__parar && o.__parar(); }catch(e){} o.remove(); });
+  const reduz = _saReduz(); const vel = opts.vel || 1;
   const ov = document.createElement('div'); ov.className = 'sa-stage'; ov.id = opts.id || 'sa-stage';
-  ov.innerHTML = `<canvas></canvas><div class="sa-actions">${opts.acoes||''}</div>`;
+  ov.setAttribute('role','dialog'); ov.setAttribute('aria-label', 'Conquista especial: ' + (sa.titulo||''));
+  ov.innerHTML = `<canvas aria-hidden="true"></canvas><div class="sr-only">${mtEsc((sa.emo||'')+' '+(sa.titulo||'')+'. '+(sa.descricao||''))}</div>${opts.topo||''}<div class="sa-actions">${opts.acoes||''}</div>`;
   document.body.appendChild(ov);
   const cv = ov.querySelector('canvas');
   const dpr = Math.min(2, window.devicePixelRatio||1);
-  const fit = ()=>{ const h = window.innerHeight, w = Math.min(window.innerWidth, h*9/16); cv.style.width = w+'px'; cv.style.height = (w*16/9)+'px'; cv.width = Math.round(w*dpr); cv.height = Math.round(w*16/9*dpr); };
-  fit(); window.addEventListener('resize', fit);
-  const g = cv.getContext('2d'); const t0 = performance.now();
+  const g = cv.getContext('2d');
   const dados = Object.assign({}, sa, { nome: saNome(sa) });
-  const loop = ()=>{ if(!document.body.contains(ov)){ window.removeEventListener('resize', fit); return; } const t = (performance.now()-t0)/1000; saFrame(g, cv.width, cv.height, Math.min(t, SA_DUR+60), dados); if(t > 6.3) ov.classList.add('fim'); requestAnimationFrame(loop); };
-  requestAnimationFrame(loop);
+  let raf = 0, vivo = true, pausa = 0, ocultoEm = null; const t0 = performance.now();
+  const tempo = ()=> reduz ? SA_DUR : ((performance.now() - t0 - pausa)/1000) * vel;
+  const desenha = ()=>{ const t = tempo(); saFrame(g, cv.width, cv.height, Math.min(t, SA_DUR+60), dados); if(t > (opts.acoesEm||6.3)) ov.classList.add('fim'); return t; };
+  // os botões ficam ABAIXO do quadro quando há espaço; em telas baixas o quadro encolhe para não cobri-los
+  const reserva = opts.reserva != null ? opts.reserva : 76;
+  ov.style.flexDirection = 'column'; ov.style.justifyContent = 'flex-start';
+  const fit = ()=>{ const H = window.innerHeight, util = Math.max(H*0.62, H - reserva); const w = Math.min(window.innerWidth, util*9/16); const h = w*16/9;
+    cv.style.width = w+'px'; cv.style.height = h+'px'; cv.style.marginTop = Math.max(0, (util - h)/2)+'px'; cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); if(!raf) desenha(); };
+  const loop = ()=>{ raf = 0; if(!vivo || !document.body.contains(ov)){ parar(); return; } const t = desenha(); if(t < SA_DUR + 30) raf = requestAnimationFrame(loop); };
+  const vis = ()=>{ if(!vivo) return; if(document.hidden){ if(raf){ cancelAnimationFrame(raf); raf = 0; } ocultoEm = performance.now(); } else { if(ocultoEm){ pausa += performance.now() - ocultoEm; ocultoEm = null; } if(!raf && !reduz) raf = requestAnimationFrame(loop); } };
+  function parar(){ vivo = false; if(raf){ cancelAnimationFrame(raf); raf = 0; } window.removeEventListener('resize', fit); document.removeEventListener('visibilitychange', vis); }
+  ov.__parar = parar; ov.__aoFechar = opts.aoFechar || null;
+  window.addEventListener('resize', fit); document.addEventListener('visibilitychange', vis);
+  fit();
+  if(reduz){ desenha(); ov.classList.add('fim'); } else raf = requestAnimationFrame(loop);
   requestAnimationFrame(()=>ov.classList.add('on'));
+  setTimeout(()=>{ const b = ov.querySelector('.sa-actions .btn, .sa-x'); try{ b && b.focus({preventScroll:true}); }catch(e){} }, 300);
   return ov;
 }
-function saFecharPalco(){ const ov = document.querySelector('.sa-stage'); if(ov){ ov.classList.remove('on'); setTimeout(()=>ov.remove(), 400); } try{ releaseWakeLock && releaseWakeLock(); }catch(e){} }
-// revelação para a pessoa: mantém as frases pessoais e, no fim, a nova apresentação (sem chuva de emojis)
-showSpecialReveal = function(sa){
+function saFecharPalco(){
+  document.querySelectorAll('.sa-stage').forEach(ov=>{ try{ ov.__parar && ov.__parar(); }catch(e){} const f = ov.__aoFechar; ov.classList.remove('on'); setTimeout(()=>ov.remove(), 400); try{ f && f(); }catch(e){} });
+  try{ releaseWakeLock && releaseWakeLock(); }catch(e){}
+}
+
+// ---- história da conquista (frases pessoais) com pausar, velocidade e pular ----
+// Um único timer por vez, com o tempo restante guardado: pausar congela de verdade, a velocidade
+// muda a espera que está correndo e as transições. Ao sair, nada fica agendado.
+let _saHist = null;
+const SA_ICO_PAUSA = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+const SA_ICO_PLAY = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+function _saDadosTrofeu(sp){
+  sp = sp || state.specialTrophy || {};
+  return { emo: sp.emo||'💍', titulo: sp.titulo||'', descricao: sp.descricao||'', nome: sp.nome || (((state.user && state.user.profile && state.user.profile.nickname) || (state.user && state.user.name) || '').split(' ')[0]), data: sp.data || '', atualizadoEm: sp.at || Date.now(), frases: (sp.frases||[]).slice() };
+}
+function _saHistParar(){
+  const H = _saHist; if(!H) return;
+  if(H.timer){ clearTimeout(H.timer); H.timer = null; }
+  H.fn = null; H.vivo = false;
+  document.removeEventListener('keydown', H.tecla);
+  if(H.ov && H.ov.parentNode) H.ov.remove();
+  _saHist = null;
+}
+function saHistoriaFechar(){ _saHistParar(); saFecharPalco(); }
+showSpecialReveal = function(sa, opts){
+  opts = opts || {};
+  _saHistParar();
   try{ requestWakeLock && requestWakeLock(); }catch(e){}
-  try{
-    state.specialTrophy = { emo: sa.emo||'💍', titulo: sa.titulo||'', descricao: sa.descricao||'', frases: (sa.frases && sa.frases.length) ? sa.frases.slice() : ((state.specialTrophy && state.specialTrophy.frases) || []), at: (state.specialTrophy && state.specialTrophy.at) || Date.now() };
-    saveData();
-  }catch(e){}
-  const frases = (sa.frases && sa.frases.length) ? sa.frases : ['Toda jornada é melhor quando compartilhada...','E existem pessoas que transformam a nossa vida...','Hoje você desbloqueou a conquista mais importante de todas...'];
-  const ov = document.createElement('div'); ov.className = 'sa-intro'; ov.innerHTML = '<div class="sa-frase"></div>';
-  document.body.appendChild(ov); requestAnimationFrame(()=>ov.classList.add('on'));
-  const ph = ov.querySelector('.sa-frase'); let i = 0;
-  const prox = ()=>{
-    if(i < frases.length){ ph.classList.remove('on'); setTimeout(()=>{ ph.textContent = frases[i]; ph.classList.add('on'); const dwell = Math.min(9000, Math.max(3000, (frases[i]||'').length*90)); i++; setTimeout(prox, dwell); }, 700); }
-    else { ph.classList.remove('on'); setTimeout(()=>{ saPalco(sa, { id:'special-reveal', acoes:`<button class="btn btn-primary" onclick="saFecharPalco()">Guardar para sempre</button>` }); ov.remove(); }, frases.length?800:200); }
+  if(!opts.reviver){
+    try{
+      const ant = state.specialTrophy || {};
+      state.specialTrophy = { emo: sa.emo||'💍', titulo: sa.titulo||'', descricao: sa.descricao||'', frases: (sa.frases && sa.frases.length) ? sa.frases.slice() : (ant.frases || []),
+        nome: sa.nome || ant.nome || '', data: sa.data || ant.data || '', at: ant.at || Date.now(), revelada: opts.chave || ant.revelada || null };
+      saveData();
+    }catch(e){}
+  }
+  const dados = opts.reviver ? _saDadosTrofeu() : Object.assign({}, sa);
+  const frases = (dados.frases && dados.frases.length) ? dados.frases : ['Toda jornada é melhor quando compartilhada...','E existem pessoas que transformam a nossa vida...','Hoje você desbloqueou a conquista mais importante de todas...'];
+  const reduz = _saReduz();
+  const ov = document.createElement('div'); ov.className = 'sa-intro'; ov.setAttribute('role','dialog'); ov.setAttribute('aria-label','História da conquista especial');
+  ov.innerHTML = `<button class="sa-x" aria-label="Fechar a história" title="Fechar">✕</button>
+    <div class="sa-frase" aria-live="polite"></div>
+    <div class="sa-ctrl" role="toolbar" aria-label="Controles da história">
+      <div class="sa-prog" aria-hidden="true">${frases.map(()=>'<i></i>').join('')}</div>
+      <div class="sa-ctrl-row">
+        <button data-a="pausa" aria-label="Pausar">${SA_ICO_PAUSA}</button>
+        <span class="sa-vel">${[1,1.5,2].map(v=>`<button data-v="${v}" class="${v===1?'on':''}" aria-label="Velocidade ${String(v).replace('.',',')}x">${String(v).replace('.',',')}x</button>`).join('')}</span>
+        <button data-a="frase" aria-label="Pular frase">Pular frase ›</button>
+        <button data-a="tudo" aria-label="Pular a história e ver a conquista">Pular história</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  const ph = ov.querySelector('.sa-frase');
+  const H = _saHist = { ov, i:-1, vel:1, pausado:false, timer:null, fn:null, restante:0, inicio:0, vivo:true, total:frases.length };
+  const trans = ()=>{ const d = reduz ? 0 : 1/H.vel; ph.style.transitionDuration = d+'s'; ov.style.transitionDuration = (reduz ? 0 : 1.2/H.vel)+'s'; };
+  const exec = ()=>{ H.timer = null; const f = H.fn; H.fn = null; if(H.vivo && f) f(); };
+  const agenda = (fn, msBase)=>{ if(H.timer) clearTimeout(H.timer); H.timer = null; H.fn = fn; H.restante = msBase / H.vel; H.inicio = performance.now(); if(!H.pausado) H.timer = setTimeout(exec, H.restante); };
+  const prog = ()=>{ ov.querySelectorAll('.sa-prog i').forEach((d,k)=>{ d.className = k < H.i ? 'ok' : k === H.i ? 'now' : ''; }); };
+  const mostrar = ()=>{
+    ph.classList.remove('on');
+    agenda(()=>{ ph.textContent = frases[H.i]; ph.classList.add('on'); prog();
+      agenda(proxima, Math.min(9000, Math.max(3000, (frases[H.i]||'').length*90))); }, reduz ? 50 : 700);
   };
-  setTimeout(prox, frases.length ? 1200 : 300);
+  function proxima(){ if(!H.vivo) return; H.i++; if(H.i < frases.length) mostrar(); else final(); }
+  function final(){
+    if(!H.vivo) return;
+    if(H.timer){ clearTimeout(H.timer); H.timer = null; } H.fn = null;
+    H.pausado = false; ph.classList.remove('on'); ov.classList.add('saindo');
+    setTimeout(()=>{ if(_saHist !== H) return; _saHistParar(); saFinalConquista(dados); }, reduz ? 50 : 650);
+  }
+  const pausar = ()=>{ if(H.pausado) return; H.pausado = true; if(H.timer){ clearTimeout(H.timer); H.timer = null; H.restante -= performance.now() - H.inicio; } ov.classList.add('pausado'); const b = ov.querySelector('[data-a=pausa]'); b.innerHTML = SA_ICO_PLAY; b.setAttribute('aria-label','Continuar'); };
+  const continuar = ()=>{ if(!H.pausado) return; H.pausado = false; if(H.fn){ H.inicio = performance.now(); H.timer = setTimeout(exec, Math.max(0, H.restante)); } ov.classList.remove('pausado'); const b = ov.querySelector('[data-a=pausa]'); b.innerHTML = SA_ICO_PAUSA; b.setAttribute('aria-label','Pausar'); };
+  const setVel = v=>{
+    if(v === H.vel) return;
+    if(H.fn){ let rest = H.restante; if(H.timer){ rest -= performance.now() - H.inicio; clearTimeout(H.timer); H.timer = null; } H.restante = Math.max(0, rest * H.vel / v); if(!H.pausado){ H.inicio = performance.now(); H.timer = setTimeout(exec, H.restante); } }
+    H.vel = v; trans();
+    ov.querySelectorAll('.sa-vel button').forEach(b=>b.classList.toggle('on', +b.dataset.v === v));
+  };
+  const pularFrase = ()=>{ if(H.timer){ clearTimeout(H.timer); H.timer = null; } H.fn = null; if(H.pausado) continuar(); proxima(); };
+  H.pausar = pausar; H.continuar = continuar; H.setVel = setVel; H.pularFrase = pularFrase; H.pularTudo = final;
+  ov.querySelector('.sa-x').onclick = saHistoriaFechar;
+  ov.querySelector('[data-a=pausa]').onclick = ()=> H.pausado ? continuar() : pausar();
+  ov.querySelector('[data-a=frase]').onclick = pularFrase;
+  ov.querySelector('[data-a=tudo]').onclick = final;
+  ov.querySelectorAll('.sa-vel button').forEach(b=>b.onclick = ()=>setVel(+b.dataset.v));
+  H.tecla = e=>{ if(e.key==='Escape') saHistoriaFechar(); else if(e.key===' '){ e.preventDefault(); H.pausado ? continuar() : pausar(); } else if(e.key==='ArrowRight') pularFrase(); };
+  document.addEventListener('keydown', H.tecla);
+  trans();
+  requestAnimationFrame(()=>ov.classList.add('on'));
+  agenda(proxima, reduz ? 200 : 1200);
 };
+// final da história (e "pular história"): o mesmo palco animado, com guardar e compartilhar
+function saFinalConquista(dados){
+  const podeCompartilhar = !!(state.specialTrophy && typeof saFormatoVideo === 'function');
+  saPalco(dados, { id:'special-reveal', topo:`<button class="sa-x" aria-label="Fechar" onclick="saFecharPalco()">✕</button>`,
+    acoes:`<button class="btn btn-primary" onclick="saGuardarParaSempre()">Guardar para sempre</button>${podeCompartilhar ? `<button class="btn btn-ghost" onclick="saFecharPalco();setTimeout(openMinhaConquistaShare,350)">Compartilhar</button>` : ''}` });
+}
+function saGuardarParaSempre(){
+  try{ if(state.specialTrophy){ state.specialTrophy.guardadaEm = state.specialTrophy.guardadaEm || Date.now(); saveData(); } }catch(e){}
+  saFecharPalco(); toast('💛 Guardada para sempre nas suas conquistas');
+}
 // ---- vídeo 9:16 ----
 function saFormatoVideo(){
   if(!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) return null;
@@ -3630,7 +3731,7 @@ _mtAplicaColapsos = function(){
   });
 };
 
-Object.assign(window, { estadoTreino, cargaRetomada, mtColAnimar, openSpecialShare, saGerarECompartilhar, saCompartilharImagem, saPrevia, saFecharPalco, saFrame, saFormatoVideo, saGravarVideo });
+Object.assign(window, { estadoTreino, cargaRetomada, mtColAnimar, saHistoriaFechar, saGuardarParaSempre, saFinalConquista, openSpecialShare, saGerarECompartilhar, saCompartilharImagem, saPrevia, saFecharPalco, saFrame, saFormatoVideo, saGravarVideo });
 
 // =====================================================================
 // 23. CORRIDA — DO PRIMEIRO PASSO À PREPARAÇÃO PARA PROVAS (Beta 14)
@@ -5266,3 +5367,110 @@ maInterpret = function(txt){
   if(!/por ?que/.test(t) && /^(qual|qual e|o que|oque|que)?\s*(e\s*)?(o\s*|meu\s*|o meu\s*)?treino (de|pra|para) hoje\??$|qual (e )?(o )?meu treino (de|pra|para) hoje/.test(t.trim())) return 'proximo';
   return _maInterpretB15.apply(this, arguments);
 };
+
+// =====================================================================
+// 28. CONQUISTAS — detalhe animado e Conquista Especial em duas etapas (Beta 17)
+// Nada muda nos critérios, datas, ids ou no desbloqueio: só a apresentação.
+// =====================================================================
+// --- conquista normal: medalha entra com brilho discreto (não é a celebração de desbloqueio) ---
+const _openTrophyDetailB17 = window.openTrophyDetail;
+window.openTrophyDetail = function(id){
+  const r = _openTrophyDetailB17.apply(this, arguments);
+  try{
+    const box = $('modal-inner'); const med = box && box.querySelector('.anim-check'); if(!med) return r;
+    const t = TROPHIES.find(x=>x.id===id) || {};
+    med.classList.remove('anim-check');
+    const wrap = document.createElement('div');
+    wrap.className = 'tr-medal' + (t.secret ? ' tr-secreta' : '');
+    wrap.innerHTML = `<span class="tr-glow" aria-hidden="true"></span><span class="tr-ring" aria-hidden="true"></span>${Array.from({length:8},(_,i)=>`<i style="--a:${i*45+22}deg;--d:${(i%3)*60}ms" aria-hidden="true"></i>`).join('')}`;
+    med.parentNode.insertBefore(wrap, med); wrap.appendChild(med); med.classList.add('tr-ico');
+    const h3 = wrap.parentNode.querySelector('h3'); if(h3) h3.classList.add('tr-nome');
+  }catch(e){}
+  return r;
+};
+
+// --- Conquista Especial: primeiro a conquista; a história é opcional ---
+function openSpecialTrophy(){
+  const sp = state.specialTrophy; if(!sp){ toast('Nenhuma conquista especial por aqui.'); return; }
+  try{ closeModal(); }catch(e){}
+  const dados = _saDadosTrofeu(sp);
+  saPalco(dados, { id:'special-view', vel: 2.2, acoesEm: 5.8, reserva: 150,
+    topo:`<button class="sa-x" aria-label="Fechar" onclick="saFecharPalco()">✕</button>`,
+    acoes:`<div class="sa-acoes-col"><button class="btn btn-primary sa-reviver" onclick="saReviverHistoria()">✨ Reviver minha história</button>
+      <div class="sa-opc">A história completa é opcional — leva cerca de ${Math.max(1, Math.round(((dados.frases||[]).length||3) * 6 / 60))} min.</div>
+      <div class="sa-acoes-row">${typeof saFormatoVideo==='function' ? `<button class="btn btn-ghost" onclick="saFecharPalco();setTimeout(openMinhaConquistaShare,350)">Compartilhar</button>` : ''}<button class="btn btn-ghost" onclick="saFecharPalco()">Fechar</button></div></div>` });
+}
+function saReviverHistoria(){
+  document.querySelectorAll('.sa-stage').forEach(ov=>{ try{ ov.__parar && ov.__parar(); }catch(e){} ov.remove(); });
+  showSpecialReveal(state.specialTrophy, { reviver:true });
+}
+// cartão na tela de Conquistas: abre a conquista, não a história
+const _openTrophiesB17 = window.openTrophies;
+window.openTrophies = function(){
+  const r = _openTrophiesB17.apply(this, arguments);
+  try{
+    const card = [...document.querySelectorAll('#modal-inner [onclick*="showSpecialReveal"]')][0];
+    if(card){
+      card.setAttribute('onclick', 'openSpecialTrophy()'); card.setAttribute('role','button'); card.setAttribute('tabindex','0');
+      card.classList.add('sa-card');
+      card.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openSpecialTrophy(); } });
+      const leg = [...card.querySelectorAll('div')].find(d=>/reviver este momento/i.test(d.textContent));
+      if(leg) leg.textContent = 'Toque para ver sua conquista · a história completa é opcional';
+    }
+  }catch(e){}
+  return r;
+};
+// a revelação automática acontece uma vez por conquista — também registrada na conta (não só no aparelho)
+const _checkSpecialB17 = window.checkSpecialAward;
+window.checkSpecialAward = function(trigger){
+  try{
+    const sa = specialAward;
+    if(sa && sa.titulo){
+      const chave = 'metatreino_special_shown_'+(sa.data||'now')+'_'+(sa.atualizadoEm||'');
+      if(state.specialTrophy && state.specialTrophy.revelada === chave){ try{ localStorage.setItem(chave, '1'); }catch(e){} return; }
+      window.__saChave = chave;
+    }
+  }catch(e){}
+  return _checkSpecialB17.apply(this, arguments);
+};
+// a chave da revelação vai junto quando a revelação automática salva a conquista
+const _showRevealB17 = showSpecialReveal;
+showSpecialReveal = function(sa, opts){
+  opts = Object.assign({}, opts||{});
+  if(!opts.reviver && !opts.chave && window.__saChave) opts.chave = window.__saChave;
+  return _showRevealB17.call(this, sa, opts);
+};
+
+// --- compartilhar a própria conquista (quem recebeu) ---
+// Usa só o que é da conquista: símbolo, nome, título, mensagem e data. Sem e-mail ou outro dado pessoal.
+function openMinhaConquistaShare(){
+  const sp = state.specialTrophy; if(!sp){ return; }
+  const dados = _saDadosTrofeu(sp); const fmt = saFormatoVideo();
+  $('modal-inner').innerHTML = `<h3>Compartilhar conquista</h3>
+    <p class="mt-muted" style="margin:0 0 10px">Vídeo vertical 9:16 (${String(SA_DUR).replace('.',',')} s) com seu nome, a conquista, a mensagem e a data — sem e-mail nem outros dados.</p>
+    <div class="adm-form"><label>Nome que aparece</label><input class="input" id="sa-nome-minha" maxlength="40" value="${mtEsc(dados.nome)}"></div>
+    ${fmt ? `<button class="btn btn-primary btn-block" style="margin-top:12px" id="sa-vid-minha" onclick="saMinhaVideo()">🎬 Gerar vídeo${fmt.ext==='mp4'?' (MP4)':''}</button>`
+      : `<div class="note" style="margin-top:12px"><div class="note-line">Este navegador não consegue gravar vídeo. Use a imagem — ou abra o MetaTreino no Chrome atualizado.</div></div>`}
+    ${fmt && fmt.ext!=='mp4' ? `<p class="mt-muted" style="font-size:11.5px;margin-top:6px">Este navegador grava em WebM. O WhatsApp e o Instagram nem sempre aceitam WebM — se não abrir lá, use a imagem.</p>`:''}
+    <div id="sa-prog-minha" class="mt-muted" style="font-size:12px;margin-top:8px;min-height:18px"></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="saMinhaImagem()">🖼️ Compartilhar como imagem</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="closeModal();setTimeout(openSpecialTrophy,250)">Voltar à conquista</button>`;
+  $('modal-back').classList.add('on');
+}
+function _saMinhaDados(){ const d = _saDadosTrofeu(); const n = ($('sa-nome-minha')||{}).value; if(n != null) d.nome = String(n).trim().slice(0,40); delete d.frases; return d; }
+async function saMinhaVideo(){
+  const d = _saMinhaDados();
+  await mtComBotao('sa-vid-minha', 'Gravando vídeo…', async ()=>{
+    const p = $('sa-prog-minha');
+    const r = await saGravarVideo(d, f=>{ if(p) p.textContent = `Gravando… ${Math.round(f*SA_DUR*10)/10} de ${String(SA_DUR).replace('.',',')} s`; });
+    if(p) p.textContent = `Vídeo pronto (${(r.blob.size/1048576).toFixed(1).replace('.',',')} MB, ${r.ext.toUpperCase()}).`;
+    const res = await saCompartilharArquivo(r.blob, `minha-conquista-metatreino.${r.ext}`, `${d.titulo} — MetaTreino`);
+    if(res==='baixado') toast('Vídeo salvo nos downloads do aparelho.');
+  });
+}
+async function saMinhaImagem(){
+  const d = _saMinhaDados(); const b = await saImagemFinal(d);
+  const res = await saCompartilharArquivo(b, 'minha-conquista-metatreino.png', `${d.titulo} — MetaTreino`);
+  if(res==='baixado') toast('Imagem salva nos downloads do aparelho.');
+}
+Object.assign(window, { openSpecialTrophy, saReviverHistoria, openMinhaConquistaShare, saMinhaVideo, saMinhaImagem });

@@ -1,3 +1,18 @@
+# MetaTreino 2027.1 Beta 17 — Conquistas e Conquista Especial
+
+Nada mudou nos critérios, ids, datas, desbloqueio ou progresso: só a apresentação.
+
+1. **Detalhe da conquista:** a medalha entra com uma animação suave, brilho discreto ao redor, um anel de luz e 8 partículas que aparecem uma vez. O nome ganha destaque. Data, categoria, coleção, navegação ‹ › e compartilhamento continuam iguais. Não é a celebração de desbloqueio (o fundo escuro e a festa continuam só no momento do desbloqueio). Conquistas secretas usam a cor de destaque.
+2. **Conquista Especial em duas etapas:** o cartão (tela Conquistas) agora abre só a conquista, em tela cheia, com a animação acelerada (~3 s): símbolo, nome de quem recebeu, título, mensagem, data e marca MetaTreino. Botões: **✨ Reviver minha história** (destaque), Compartilhar e Fechar. O texto do cartão diz que a história é opcional.
+3. **História com controles:** pausar/continuar, velocidade 1x, 1,5x e 2x (muda de verdade a espera e as transições), pular frase e pular história (vai direto para a conquista, sem fechar). Barra de progresso das frases. Teclado: espaço pausa, → pula frase, Esc fecha. Pausar congela o tempo: nenhum timer avança em segundo plano.
+4. **Final:** o mesmo palco animado da Beta 13 (sem segundo mecanismo), com "Guardar para sempre" e "Compartilhar".
+5. **Revelação automática:** acontece uma vez por conquista. A marca agora fica também na conta, então não se repete em outro aparelho. Se o administrador alterar a conquista, ela é revelada de novo, uma vez.
+6. **Compartilhar:** quem recebeu passa a poder compartilhar a própria conquista (vídeo 9:16 ou imagem), usando só símbolo, nome, título, mensagem e data — nunca o e-mail. O compartilhamento do administrador continua igual.
+7. **Desempenho e acessibilidade:** um palco por vez; a animação para ao fechar, quando o app vai para segundo plano e 30 s após o fim; ao sair da história nada fica agendado; Wake Lock liberado ao fechar. Com "movimento reduzido" no aparelho, sem animações (o quadro final aparece direto e as frases trocam sem transição). Texto alternativo para leitores de tela. Em telas baixas o quadro encolhe para os botões não cobrirem o conteúdo.
+8. **Bug antigo corrigido:** em qualquer compartilhamento de imagem com aspas no texto (ex.: "Compartilhar esta conquista"), o botão "Compartilhar agora" não fazia nada. Agora funciona.
+
+---
+
 # MetaTreino 2027.1 Beta 16 — Ajustes e correções
 
 1. **Atividade da semana — Ocultar / Mostrar:** o texto voltou (a seta da Beta 13 saiu), num rótulo pequeno e discreto ao lado do título. Mostra "Ocultar" com o conteúdo aberto e "Mostrar" quando recolhido. Mesma animação; a escolha é lembrada. "Seus treinos" não mudou.
