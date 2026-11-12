@@ -1430,6 +1430,7 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
 /* ===== Beta 14: corrida do iniciante ao avançado ===== */
 #scr-setup-run .run-col1{grid-template-columns:1fr}
 #scr-setup-run .row .input{min-width:0}
+.run-race-clear{margin-top:8px;background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:99px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer}
 .run-hint-sm{color:var(--text-mute);font-size:11.5px;margin-top:5px;line-height:1.45}
 .tempo-hms{display:flex;align-items:center;gap:6px}
 .tempo-hms .input{flex:1;min-width:0;text-align:center;padding-left:6px;padding-right:6px}
@@ -2289,7 +2290,7 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
     <div class="row" style="gap:10px;margin-top:8px">
       <button class="btn btn-ghost btn-block" onclick="regenPlan()">🔄 Trocar plano</button>
     </div>
-    <button class="btn btn-ghost btn-block hidden" id="pf-cancel-run" style="margin-top:8px;color:var(--text-dim);font-size:13px" onclick="cancelRunPlan()">🗑️ Cancelar plano de corrida (manter só registros)</button>
+    <button class="btn btn-ghost btn-block hidden" id="pf-cancel-run" style="margin-top:8px;color:var(--text-dim);font-size:13px" onclick="cancelRunPlan()">🗑️ Encerrar plano de corrida (manter só registros)</button>
 
     <div id="pf-admin-lbl" class="section-lbl">Meu perfil</div>
     <div class="list-row hidden" id="pf-admin-btn" onclick="goAdmin()" style="color:var(--accent-2);border-color:var(--line-warn);background:var(--tint-warn)">🛠️ <span>Acessar Painel ADM</span><span id="pf-adm-badge" style="display:none;margin-left:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:2px 8px">0</span></div>
@@ -2324,7 +2325,7 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 14</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 15</span>
     </div>
   </div>
 </div>
@@ -2402,8 +2403,8 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.14"></script>
-<script src="./app-plus.js?v=2027.1-beta.14"></script>
+<script src="./app.js?v=2027.1-beta.15"></script>
+<script src="./app-plus.js?v=2027.1-beta.15"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();

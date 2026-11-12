@@ -1,3 +1,13 @@
+# MetaTreino 2027.1 Beta 15 — Ajustes de plano
+
+- **Prova alvo removível:** na configuração da corrida, quando há data, aparece o botão "✕ Sem prova (remover data)". Ele limpa a data e o horário (no celular o campo de data não tinha como ficar em branco). Ao salvar, o plano deixa de ter polimento e dia da prova.
+- Remover ou trocar a data pelo Meta Assistente ("não tenho mais prova") agora refaz a semana na hora.
+- **Encerrar plano de musculação:** Perfil → "Encerrar plano de musculação (manter histórico)", igual à opção que a corrida já tinha. Histórico, cargas, recordes, fotos e conquistas ficam. Com plano de corrida ativo, o app passa a mostrar a corrida. Sem plano, a musculação mostra uma tela própria com "Montar plano de musculação" e "Ver histórico".
+- O botão da corrida passou a se chamar "Encerrar plano de corrida (manter só registros)".
+- Meta Assistente: entende "qual meu treino de hoje?". Com a musculação ativa, "por que o treino de hoje?" não cai mais na resposta da corrida.
+
+---
+
 # MetaTreino 2027.1 Beta 14 — Corrida do iniciante ao avançado
 
 O módulo de corrida não foi recriado: o plano continua no mesmo formato (treinos com aquecimento, principal e desaquecimento), com o mesmo histórico, as mesmas telas e as mesmas integrações. O que mudou é *como* cada semana é montada.

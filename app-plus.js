@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 14 — app-plus.js
+// MetaTreino 2027.1 Beta 15 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -16,11 +16,11 @@
 // 10. Painel administrativo (indicadores, desafios, administradores)
 // 11. Atualização automática (sem botão)
 // 18. Calistenia · 19–22. Beta 13 (retomada, mensagens, conquista especial, recolher)
-// 23–26. Beta 14 (corrida do iniciante ao competitivo)
+// 23–26. Beta 14 (corrida do iniciante ao competitivo) · 27. Beta 15 (prova removível, encerrar plano de musculação)
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.14' };
+const MTP = { versao: '2027.1-beta.15' };
 const DIA_MS = 86400000;
 function mtNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function mtEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -4423,6 +4423,10 @@ function runSync(force){
   if(M.retomada && !M.retomada.fim && semAtual >= M.retomada.inicio + M.retomada.N*7*DIA_MS){
     M.retomada.fim = true; M.vol = Math.round((M.retomada.volBase||M.vol) * 0.85); mudou = rebuild = true;
   }
+  // a data da prova mudou (marcada, trocada ou removida): refaz a semana na hora
+  const rk = ((run.setup||{}).raceDate||'') + '|' + ((run.setup||{}).raceTime||'');
+  if(M.raceKey === undefined) M.raceKey = rk;
+  else if(M.raceKey !== rk){ M.raceKey = rk; mudou = rebuild = true; }
   // 3) cansaço registrado nesta semana: o resto da semana fica leve
   const fad = rFadiga(ctx);
   const infoSem = M.semanas[semAtual] || {};
@@ -5040,7 +5044,7 @@ MA_ANSWERS.run_ritmos = function(){
 const _maInterpretRunB14 = maInterpret;
 maInterpret = function(txt){
   const t = mtNorm(txt);
-  const run = /corr|treino de hoje|longao|tiro|ritmo|pace|prova|5 ?km|10 ?km|21|42|maratona|caminhada/.test(t) || state.active==='run';
+  const run = /corr|longao|tiro|ritmo|pace|prova|5 ?km|10 ?km|21 ?km|42 ?km|maratona|caminhada/.test(t) || state.active==='run';
   if(run){
     if(/por ?que .*(treino|hoje)|por que (esse|este|o) treino|motivo do treino|explica.*treino/.test(t)) return 'run_hoje';
     if(/(o que|oque) (estou|to|eu estou) (desenvolvendo|trabalhando|treinando)|desenvolv/.test(t)) return 'run_desenvolve';
@@ -5139,4 +5143,104 @@ MA_ANSWERS.retomada = function(){
     }
   }catch(e){}
   return _maRetomadaRunB14.apply(this, arguments);
+};
+
+// =====================================================================
+// 27. DATA DA PROVA REMOVÍVEL + ENCERRAR PLANO DE MUSCULAÇÃO (Beta 15)
+// =====================================================================
+// --- prova alvo: botão para tirar a data (no celular o campo de data não tem "limpar") ---
+function runLimparProva(){
+  const d = $('run-race-date'), t = $('run-race-time');
+  if(d) d.value = ''; if(t) t.value = '';
+  _runProvaBtn();
+  try{ runAtualizaDicaNivel(); }catch(e){}
+  toast('Data da prova removida. Ela sai do plano ao salvar.');
+}
+function _runProvaBtn(){
+  const d = $('run-race-date'); if(!d) return;
+  let b = $('run-race-clear');
+  if(!b){
+    b = document.createElement('button'); b.type = 'button'; b.id = 'run-race-clear'; b.className = 'run-race-clear';
+    b.textContent = '✕ Sem prova (remover data)'; b.onclick = runLimparProva;
+    const row = d.closest('.row'); if(row) row.after(b);
+  }
+  b.style.display = d.value ? '' : 'none';
+}
+const _openSetupProvaB15 = window.openSetupScreen;
+window.openSetupScreen = function(m){
+  const r = _openSetupProvaB15.apply(this, arguments);
+  if(m === 'run'){ try{ const d = $('run-race-date'); if(d && !d._b15){ d._b15 = true; ['input','change'].forEach(ev=>d.addEventListener(ev, _runProvaBtn)); } _runProvaBtn(); }catch(e){} }
+  return r;
+};
+
+// --- encerrar o plano de musculação (igual ao que a corrida já tinha) ---
+// O plano sai; histórico, cargas, recordes, fotos e conquistas ficam.
+function encerrarPlanoLift(){
+  const lift = state.modules.lift;
+  if(!lift || !lift.plan){ toast('Você não tem um plano de musculação ativo.'); return; }
+  const temCorrida = !!(state.modules.run && state.modules.run.plan);
+  appConfirm(`Seu histórico de treinos, cargas, recordes, fotos e conquistas são mantidos. ${temCorrida ? 'O app passa a mostrar o seu plano de corrida.' : 'Você pode montar um novo plano quando quiser.'}`, ()=>{
+    lift.planoEncerrado = { at: Date.now(), setup: lift.setup ? JSON.parse(JSON.stringify(lift.setup)) : null };
+    lift.plan = null;
+    if(temCorrida) state.active = 'run';
+    saveData();
+    toast('✅ Plano de musculação encerrado. Seu histórico foi mantido. 💚');
+    goTab('home');
+  }, {title:'Encerrar plano de musculação?', emo:'🏋️', okLabel:'Sim, encerrar plano', danger:true});
+}
+// a tela "sem plano" era só da corrida: agora se adapta ao módulo
+let _runlogHtmlOrig = null;
+const _renderRunLogB15 = renderRunLogScreen;
+window.renderRunLogScreen = function(){
+  const scr = $('scr-runlog'); if(!scr) return _renderRunLogB15.apply(this, arguments);
+  if(_runlogHtmlOrig === null) _runlogHtmlOrig = scr.innerHTML;
+  if(state.active !== 'lift'){
+    if(scr.dataset.modo === 'lift'){ scr.innerHTML = _runlogHtmlOrig; scr.dataset.modo = ''; }
+    return _renderRunLogB15.apply(this, arguments);
+  }
+  const lift = state.modules.lift || {};
+  const n = (lift.history||[]).length;
+  const quando = lift.planoEncerrado ? new Date(lift.planoEncerrado.at).toLocaleDateString('pt-BR') : null;
+  const temCorrida = !!(state.modules.run && state.modules.run.plan);
+  scr.dataset.modo = 'lift';
+  scr.innerHTML = `<div class="wrap" style="padding-left:16px;padding-right:16px"><div id="runlog-toggle-wrap"></div>
+    <div style="text-align:center;margin-top:14px">
+      <div style="font-size:52px">🏋️</div>
+      <h2 style="margin:8px 0 4px">Musculação sem plano</h2>
+      <p style="color:var(--text-dim);font-size:14px;line-height:1.5">${quando ? `Plano encerrado em ${quando}. ` : ''}${n ? `Seus ${n} treinos registrados, cargas, recordes e conquistas continuam salvos.` : 'Seu histórico e suas conquistas continuam salvos.'}</p>
+    </div>
+    <div class="card" style="margin-top:18px;padding:16px">
+      <div class="card-title" style="margin-bottom:4px">🎯 Quer voltar a ter treinos guiados?</div>
+      <div class="card-sub" style="margin-bottom:12px">Monte um novo plano de musculação, calistenia ou híbrido. A progressão parte das cargas que você já registrou.</div>
+      <button class="btn btn-primary btn-block" onclick="openSetupScreen('lift')">🏋️ Montar plano de musculação</button>
+    </div>
+    <div class="card" style="margin-top:12px;padding:16px">
+      <div class="card-title" style="margin-bottom:4px">📊 Seu histórico</div>
+      <div class="card-sub" style="margin-bottom:12px">Treinos antigos, cargas e evolução continuam no Histórico e no Progresso.</div>
+      <button class="btn btn-outline btn-block" style="border-color:rgba(var(--primary-rgb),.4)" onclick="goTab('history')">📅 Ver histórico</button>
+    </div>
+    ${temCorrida ? `<button class="btn btn-ghost btn-block" style="margin-top:14px;color:var(--text-dim)" onclick="switchModule('run')">🏃 Ir para o plano de corrida</button>` : ''}</div>`;
+  try{ renderModToggle(); }catch(e){}
+};
+// Perfil: o botão de encerrar aparece para o módulo ativo (corrida ou musculação)
+const _renderProfileB15 = window.renderProfile;
+window.renderProfile = function(){
+  const r = _renderProfileB15.apply(this, arguments);
+  try{
+    const b = $('pf-cancel-run'); if(!b) return r;
+    const mod = state.modules[state.active];
+    const tem = !!(mod && mod.plan);
+    b.classList.toggle('hidden', !tem);
+    if(state.active === 'lift'){ b.textContent = '🗑️ Encerrar plano de musculação (manter histórico)'; b.onclick = encerrarPlanoLift; }
+    else { b.textContent = '🗑️ Encerrar plano de corrida (manter só registros)'; b.onclick = cancelRunPlan; }
+  }catch(e){}
+  return r;
+};
+Object.assign(window, { runLimparProva, encerrarPlanoLift });
+// "qual meu treino de hoje?" / "treino de hoje" → mesma resposta de "qual o treino de hoje?"
+const _maInterpretB15 = maInterpret;
+maInterpret = function(txt){
+  const t = mtNorm(txt);
+  if(!/por ?que/.test(t) && /^(qual|qual e|o que|oque|que)?\s*(e\s*)?(o\s*|meu\s*|o meu\s*)?treino (de|pra|para) hoje\??$|qual (e )?(o )?meu treino (de|pra|para) hoje/.test(t.trim())) return 'proximo';
+  return _maInterpretB15.apply(this, arguments);
 };
