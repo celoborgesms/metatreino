@@ -1,3 +1,26 @@
+# MetaTreino 2027.1 Beta 19 — Histórico sem perda, relatório em PDF, seus dados e início enxuto
+
+1. **Arquivo anual (nada mais se perde depois de 90 dias):** o documento principal do aluno (usuarios/{uid}) continua com o detalhe dos últimos 90 dias, para o app abrir leve. Antes de a limpeza apagar algo, o app agora grava em **usuarios/{uid}/arquivo/{ano-semestre}** (ex.: 2026-1, 2026-2): sessões de musculação e corrida, séries de cada exercício e o resumo de cargas com mais de 2 anos.
+   - **Só sai do app o que a nuvem confirmou.** Sem internet, o dado continua no aparelho e o app tenta de novo depois.
+   - **Proteções:** se o arquivamento falhar por 365 dias seguidos, ou se o documento passar de 85% do limite de 1 MB, volta a limpeza antiga (para nunca travar o salvamento).
+   - Gravar duas vezes não duplica nada (cada registro tem a própria chave).
+   - **Regras do Firestore: nada muda.** O caminho já está coberto por `usuarios/{userId}/{subdocumentos=**}`: só o próprio aluno e os administradores leem e gravam.
+   - "Começar do zero" e "Excluir minha conta" apagam o arquivo também.
+   - O arquivo **só é lido quando o aluno pede** (Histórico completo, gráficos do ano, relatório, backup). Abrir o app continua igual em consumo.
+   - Treinos anteriores a esta versão que já tinham passado dos 90 dias não voltam (já tinham sido resumidos); o resumo de cargas dos últimos 2 anos continua nos gráficos.
+2. **Histórico completo** (Histórico → cartão "📚 Histórico completo"): ano a ano, musculação (treinos, horas, volume) e corrida (corridas, km, tempo, melhor ritmo, maior corrida), caminhada e bike. Mostra também a evolução de carga dos exercícios, do primeiro ao último registro. Tocar num exercício abre o gráfico.
+3. **Gráficos com anos anteriores:** no gráfico de evolução do exercício aparece "📚 Incluir anos anteriores"; com período de mais de 10 meses, as datas mostram o ano. Em Progresso → Evolução → Ano, a frequência, o tempo, os km e o ritmo passam a usar o arquivo quando ele está carregado (link "Carregar arquivo").
+4. **Relatório em PDF** (Perfil → Relatório em PDF, Histórico ou Seus dados): período de 3 meses, 6 meses, 1 ano ou todo o histórico; musculação e/ou corrida; lista de sessões opcional.
+   - Conteúdo: resumo; treinos e volume por semana ou mês; tabela e gráficos de evolução de carga; km por período; ritmo por corrida; maior corrida; recordes; provas; peso corporal; conquistas e todas as sessões. Páginas numeradas.
+   - Gerado no próprio aparelho, sem servidor e sem custo. A biblioteca jsPDF 2.5.2 (licença MIT) vai junto do app (**jspdf.umd.min.js**) e só é baixada quando alguém pede um relatório.
+   - Depois de gerado: "Baixar PDF" ou "Compartilhar" (Google Drive, WhatsApp, e-mail…, quando o aparelho permite).
+5. **Seus dados** (Perfil): espaço usado do documento (barra com % de 1 MB), semestres no arquivo, data do último arquivamento e avisos. O **backup .json** agora leva o arquivo anual junto, e restaurar o backup devolve o arquivo para a nuvem.
+6. **Painel ADM → 📦 Tamanho dos dados:** tamanho do documento de cada aluno (do maior para o menor, com alerta acima de 60% e de 85%), total, média e uma estimativa do download mensal frente aos 10 GB gratuitos.
+7. **Início enxuto** (Perfil → Aplicativo): esconde a frase do dia, os desafios do mês, a sugestão inteligente, "Seus treinos", o cartão de conquistas, o rodapé de ajuda e o aviso de acesso (que volta quando faltam 7 dias ou menos). Ficam o treino de hoje, a semana, os indicadores e os avisos importantes. No fim da tela aparece "mostrar tudo".
+8. **Correção de um erro antigo (desde a Beta 13):** quando "Feedback dos alunos" virou "Mensagens dos alunos", quatro atalhos do painel ADM pararam de aparecer: **Desafios temáticos**, **Administradores e permissões**, **Vídeos reportados** e **Calistenia**. Voltaram.
+
+---
+
 # MetaTreino 2027.1 Beta 18 — Ajustes visuais, mural, destaques do dia e temas
 
 1. **Legenda da semana** (✅ feito · 🟢 parcial · 🟡 hoje · ⚪ planejado · – faltou): sempre numa linha só, alinhada; o texto se ajusta à largura da tela (antes "– faltou" caía para a linha de baixo). A grade da semana também ficou alinhada: o ✓ e as bolinhas de status ficam todos na mesma altura, com um ou dois ícones no dia.

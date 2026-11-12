@@ -1647,6 +1647,45 @@ h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3
 .dn-rest{margin-top:6px;background:none;border:0;padding:4px 0;color:var(--primary-2);font-size:12px;font-weight:600;cursor:pointer}
 .dn-nota{font-size:11px;color:var(--text-mute);margin-top:6px;line-height:1.4}
 .cal-day .dn-mark{position:absolute;top:1px;right:3px;font-size:8px;line-height:1;color:var(--primary-2)}
+
+/* ===== Beta 19: início enxuto, histórico completo, seus dados ===== */
+.enx-aviso{display:none;text-align:center;font-size:11.5px;color:var(--text-mute);margin:14px 0 0}
+.enx-aviso a{color:var(--primary);font-weight:600;text-decoration:none}
+html.inicio-enxuto #scr-home .hx,
+html.inicio-enxuto #home-smart,
+html.inicio-enxuto #scr-home .wrap > .section-head,
+html.inicio-enxuto #your-list,
+html.inicio-enxuto #home-tr-resumo,
+html.inicio-enxuto #card-access-info.enx-ok{display:none!important}
+html.inicio-enxuto #home-enxuto-aviso{display:block}
+.arq-card{margin-top:16px;padding:14px;border-radius:16px;border:1px solid var(--border);background:var(--bg-2)}
+.arq-card h4{margin:0 0 4px;font-size:14.5px;color:var(--text-strong)}
+.arq-card p{margin:0 0 10px;font-size:12px;color:var(--text-dim);line-height:1.5}
+.arq-card .arq-btns{display:flex;gap:8px;flex-wrap:wrap}
+.arq-card .arq-btns .btn{flex:1 1 140px;min-width:0;font-size:13px;padding:10px 12px}
+.arq-ano{border:1px solid var(--border);border-radius:14px;padding:12px;margin-top:10px;background:var(--bg-2)}
+.arq-ano h4{margin:0 0 8px;font-size:15px;color:var(--text-strong);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.arq-ano h4 small{font-size:11px;color:var(--text-mute);font-weight:500}
+.arq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px}
+.arq-grid .qs{padding:8px 6px;min-width:0}
+.arq-grid .qs-v{font-size:15px}
+.arq-sub{font-size:11.5px;color:var(--text-mute);margin:8px 0 2px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+.arq-evo{display:flex;justify-content:space-between;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);font-size:12.5px;cursor:pointer}
+.arq-evo:last-child{border-bottom:0}
+.arq-evo b{color:var(--text-strong);font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arq-evo span{color:var(--text-dim);white-space:nowrap}
+.arq-evo .up{color:var(--primary);font-weight:700}
+.dados-barra{height:10px;border-radius:6px;background:var(--border);overflow:hidden;margin:8px 0 4px}
+.dados-barra i{display:block;height:100%;border-radius:6px;background:var(--primary)}
+.dados-barra.alerta i{background:#f59e0b}.dados-barra.critico i{background:#ef4444}
+.pdf-opts{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.pdf-opts button{flex:1 1 70px;min-width:0;padding:9px 6px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);font:inherit;font-size:12.5px;cursor:pointer}
+.pdf-opts button.on{border-color:var(--primary);background:rgba(var(--primary-rgb),.14);color:var(--text-strong);font-weight:700}
+.pdf-chk{display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13.5px;cursor:pointer}
+.pdf-chk input{width:18px;height:18px;accent-color:var(--primary)}
+.adm-tam{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 2px;border-bottom:1px solid var(--border);font-size:12.5px}
+.adm-tam b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-strong);font-weight:600}
+.adm-tam .dados-barra{grid-column:1/-1;margin:2px 0 0;height:6px}
 </style>
 </head>
 <body>
@@ -2134,7 +2173,7 @@ h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3
     
     <div class="quick" id="home-quick"></div>
     <div class="metrics" id="home-metrics"></div>
-    <div class="quote"><div class="quote-label">FRASE DO DIA</div><div class="quote-txt" id="daily-quote">🌱 Pequeno hoje, grande amanhã. Confie no processo.</div></div>
+    <div class="quote hx"><div class="quote-label">FRASE DO DIA</div><div class="quote-txt" id="daily-quote">🌱 Pequeno hoje, grande amanhã. Confie no processo.</div></div>
     <div class="card card-alert card-row hidden" id="card-birthday" style="border-color:rgba(var(--accent-rgb),0.45)">
       <div class="card-icon">🎂</div>
       <div><div class="card-title warn" id="bday-title">Feliz aniversário!</div><div class="card-sub" id="bday-msg"></div></div>
@@ -2182,7 +2221,7 @@ h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3
     </div>
 
     <!-- Desafio do mês (destaque — logo após o treino de hoje) -->
-    <div class="card hidden" id="card-monthly" onclick="openMonthly()" style="margin-top:14px;cursor:pointer;border-color:var(--line-warn)">
+    <div class="card hidden hx" id="card-monthly" onclick="openMonthly()" style="margin-top:14px;cursor:pointer;border-color:var(--line-warn)">
       <div style="display:flex;align-items:center;gap:10px">
         <div class="card-icon">🎖️</div>
         <div style="flex:1"><div class="card-title warn" id="monthly-title">Desafios do mês</div><div class="card-sub" id="monthly-sub"></div></div>
@@ -2219,7 +2258,7 @@ h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3
     </div>
 
     <!-- Conquistas -->
-    <div class="card card-info card-row" style="margin-top:14px" onclick="openTrophies()"><div class="card-icon">🏆</div><div style="flex:1"><div class="card-title info">Suas conquistas</div><div class="card-sub" id="trophy-count">0 conquistas desbloqueadas</div></div><div class="card-chev">›</div></div>
+    <div class="card card-info card-row hx" id="home-trofeus" style="margin-top:14px" onclick="openTrophies()"><div class="card-icon">🏆</div><div style="flex:1"><div class="card-title info">Suas conquistas</div><div class="card-sub" id="trophy-count">0 conquistas desbloqueadas</div></div><div class="card-chev">›</div></div>
 
     <!-- Ferramenta de apoio (aviso legal — discreto de propósito) -->
     <div class="note" onclick="openModal('support-info')" style="border-color:var(--border);background:transparent;cursor:pointer">
@@ -2227,11 +2266,12 @@ h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3
     </div>
 
     <!-- Acesso ao plano (por último) -->
+    <div class="enx-aviso" id="home-enxuto-aviso">🏠 Início enxuto ativo · <a href="#" onclick="toggleInicioEnxuto();return false">mostrar tudo</a></div>
     <div class="card card-info card-row" id="card-access-info" style="margin-top:14px">
       <div class="card-icon">🎫</div>
       <div style="flex:1"><div class="card-title info">Acesso ativo</div><div class="card-sub" id="access-days">— dias restantes</div></div>
     </div>
-    <div class="help"><p>Precisa de ajuda?</p><a href="mailto:metatreinooficial@gmail.com" class="help-btn" style="display:grid;text-decoration:none">✉️</a><div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div></div>
+    <div class="help hx"><p>Precisa de ajuda?</p><a href="mailto:metatreinooficial@gmail.com" class="help-btn" style="display:grid;text-decoration:none">✉️</a><div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div></div>
   </div>
 </div>
 
@@ -2361,6 +2401,8 @@ h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3
 
     <div id="history-list"></div>
 
+    <div id="hist-arq"></div>
+
     <div id="history-empty">
       <div class="rest-card" style="margin-top:22px">
         <div style="font-size:56px;margin-bottom:8px">📭</div>
@@ -2470,11 +2512,14 @@ h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3
     <div class="section-lbl" style="margin:18px 0 8px">🎛️ APLICATIVO</div>
     <div class="list-row" onclick="openAparencia()" id="theme-row"><span>🎨</span> <span>Aparência</span><span id="theme-row-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">Tema Noturno ›</span></div>
     <div class="theme-grid hidden" id="theme-grid"></div>
+    <div class="list-row" onclick="toggleInicioEnxuto()" id="enxuto-row"><span>🏠</span> <span>Início enxuto</span><span id="enxuto-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">desligado</span></div>
     <div class="list-row" onclick="openSomFim()"><span>🔔</span> <span>Som do cronômetro</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">escolher ›</span></div>
     <div class="list-row" onclick="goTab('library')"><span>📚</span> <span>Biblioteca de exercícios</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span></div>
     <div class="list-row" onclick="openAudioVideos()" id="audio-row"><span>🎬</span> <span>Áudio dos vídeos</span><span id="audio-row-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span></div>
     <div class="section-lbl" style="margin:18px 0 8px">👤 CONTA</div>
     <div class="list-row" onclick="openModal('edit-profile')">✏️ <span>Editar dados pessoais</span></div>
+    <div class="list-row" onclick="arqRelatorio()">📄 <span>Relatório em PDF</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">gráficos e dados ›</span></div>
+    <div class="list-row" onclick="arqSeusDados()">📦 <span>Seus dados</span><span id="pf-dados-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">espaço e arquivo ›</span></div>
     <div class="list-row" onclick="openModal('backup')">💾 <span>Backup e restauração</span></div>
     <div class="list-row danger" onclick="doLogout()">🚪 Sair da conta</div>
     <details style="margin-top:14px"><summary class="section-lbl" style="cursor:pointer;list-style:none;margin:0 0 8px">⚙️ AVANÇADO <span class="det-hint" style="font-weight:400;color:var(--text-mute);text-transform:none;letter-spacing:0;font-size:11.5px">(tocar para abrir)</span><span class="det-hint-open" style="font-weight:400;color:var(--text-mute);text-transform:none;letter-spacing:0;font-size:11.5px">(tocar para fechar)</span></summary>
@@ -2483,7 +2528,7 @@ h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 18</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 19</span>
     </div>
   </div>
 </div>
@@ -2561,8 +2606,8 @@ h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.18"></script>
-<script src="./app-plus.js?v=2027.1-beta.18"></script>
+<script src="./app.js?v=2027.1-beta.19"></script>
+<script src="./app-plus.js?v=2027.1-beta.19"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();

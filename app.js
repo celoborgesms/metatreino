@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 18 =====
-const APP_VERSION = '2027.1-beta.18';
+// ===== MetaTreino 2027.1 Beta 19 =====
+const APP_VERSION = '2027.1-beta.19';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -585,6 +585,7 @@ function doRestart(){
   if(!state.user || !fbUser) return;
   appConfirm('Todo o progresso será apagado (treinos, séries e conquistas), mas sua conta e acesso continuam.', ()=>{
     const keep = { name:state.user.name, email:state.user.email, isAdmin:state.user.isAdmin };
+    try{ if(typeof arqApagarTudo==='function') arqApagarTudo(fbUser.uid); }catch(e){}   // o arquivo anual também faz parte do progresso
     state = { user:keep, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
     saveData(); syncToCloud();
     $('tabbar').classList.add('hidden');
@@ -644,6 +645,7 @@ function doDeleteAccount(){
   appConfirm('Todo o seu progresso será apagado para sempre e você sairá da conta.', ()=>{
     const uid = fbUser.uid;
     const _u = fbUser;
+    try{ if(typeof arqApagarTudo==='function') arqApagarTudo(uid); }catch(e){}   // arquivo anual (usuarios/{uid}/arquivo) — apagado antes do login sair
     db.collection('usuarios').doc(uid).delete().catch(e=>console.log('Erro ao excluir na nuvem:', e));
     try{ localStorage.removeItem(localCacheKey(uid)); }catch(e){}
     // Antes só saíamos da conta: o login continuava valendo e a pessoa "voltava"
@@ -1024,9 +1026,11 @@ function accessLabel(days){
 }
 
 // ---------- CLEANUP HISTORY (90 days) ----------
-function cleanupOldHistory(){
+function cleanupOldHistory(corte, corteResumo){
   ensureStats(); // captura os totais vitalícios ANTES de apagar o histórico antigo
-  const cutoff = Date.now() - HISTORY_RETENTION_DAYS*86400000;
+  // Beta 19: o corte pode vir mais antigo que 90 dias — só sai do app o que já está guardado no arquivo anual (usuarios/{uid}/arquivo)
+  const cutoff = (+corte > 0) ? Math.min(+corte, Date.now() - HISTORY_RETENTION_DAYS*86400000) : Date.now() - HISTORY_RETENTION_DAYS*86400000;
+  const cutoffResumo = (+corteResumo > 0) ? Math.min(+corteResumo, Date.now()-730*86400000) : Date.now()-730*86400000;
   ['lift','run'].forEach(m=>{
     if(state.modules[m] && state.modules[m].history){
       state.modules[m].history = state.modules[m].history.filter(h=>h.at >= cutoff);
@@ -1046,7 +1050,7 @@ function cleanupOldHistory(){
         arr.push({ d:p.date, p:Math.max(0,...sets.map(s=>+s.peso||0)), v:Math.round(sets.reduce((t,x)=>t+(+x.peso||0)*(+x.reps||0),0)), r:sets.reduce((t,x)=>t+(+x.reps||0),0) });
       });
       arr.sort((a,b)=>a.d-b.d);
-      state.progResumo[k] = arr.filter(r=>r.d >= Date.now()-730*86400000);
+      state.progResumo[k] = arr.filter(r=>r.d >= cutoffResumo);
     }
   });
   Object.keys(state.progress).forEach(k=>{
@@ -3871,7 +3875,7 @@ function renderHistory(){
   if(!h.length){
     $('history-list').innerHTML=''; $('history-empty').classList.remove('hidden');
     $('he-title').textContent = isLift?'Nenhum treino registrado ainda':'Nenhuma corrida registrada';
-    $('he-sub').textContent = 'Cada sessão que você finalizar vai aparecer aqui (guardamos últimos 90 dias).';
+    $('he-sub').textContent = 'Cada sessão que você finalizar vai aparecer aqui. Os meses mais antigos ficam no Histórico completo.';
   } else {
     $('history-empty').classList.add('hidden');
     // agrupa por dia, mais recente primeiro
@@ -5464,7 +5468,7 @@ const MODAL_CONTENT = {
       ${optsFinal.map(o=>`<div class="list-row" style="${o.v===cur?'border:1px solid var(--primary);border-radius:var(--radius-note)':''}" onclick="quickChangeEquip('${o.v}')">${o.emo} <span><b>${o.t}</b>${o.v===cur?' ✓ atual':''}<br><span style="font-size:12px;color:var(--text-dim)">${o.s}</span></span></div>`).join('')}
       <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Cancelar</button>`;
   },
-  'faq':`<h3>❓ FAQ / Sobre</h3><p><b>MetaTreino</b> gera planos de treino inteligentes de musculação e corrida, personalizados.<br><br><b>Como funciona?</b> Escolha o módulo, responda o questionário e receba um plano progressivo.<br><br><b>Meus dados ficam salvos?</b> Sim, na nuvem, vinculados à sua conta (Google ou e-mail/usuário) — você pode entrar de qualquer aparelho. Histórico de treinos guardado por 90 dias.<br><br><b>Contato:</b> metatreinooficial@gmail.com</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
+  'faq':`<h3>❓ FAQ / Sobre</h3><p><b>MetaTreino</b> gera planos de treino inteligentes de musculação e corrida, personalizados.<br><br><b>Como funciona?</b> Escolha o módulo, responda o questionário e receba um plano progressivo.<br><br><b>Meus dados ficam salvos?</b> Sim, na nuvem, vinculados à sua conta (Google ou e-mail/usuário) — você pode entrar de qualquer aparelho. Os últimos 90 dias ficam detalhados no app; o histórico mais antigo vai para o seu arquivo anual na nuvem e aparece em Histórico → Histórico completo e no relatório em PDF.<br><br><b>Contato:</b> metatreinooficial@gmail.com</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
   'edit-profile':()=>{ const p = state.user.profile||{}; return `<h3>✏️ Editar perfil</h3><div class="field"><label>Como quer ser chamado</label><input class="input" id="ep-nick" value="${p.nickname||''}"></div><div class="field"><label>Data de nascimento</label><input class="input mono" type="date" id="ep-birth" value="${p.birth||''}" max="${new Date().toISOString().slice(0,10)}"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">${p.birth?`Idade: ${ageFromBirth(p.birth)} anos`:'Preencha para receber os parabéns no seu aniversário 🎂'}</div></div>
     <div class="field"><label>Idade (usada se não informar a data)</label><input class="input mono" type="number" id="ep-age" value="${p.age||''}"></div><div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="ep-height" value="${p.height||''}"></div><div class="field"><label>WhatsApp</label><input class="input mono" id="ep-whats" value="${p.whatsapp||''}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveProfileEdit()">Salvar</button>`; },
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
@@ -7720,6 +7724,7 @@ function importMyData(ev){
         if(!state.modules || typeof state.modules !== 'object') state.modules = {lift:null, run:null};
         try{ migrateExerciseIds(); }catch(e){ console.log('Erro ao sanear o backup:', e); }  // normaliza números e planos do arquivo
         ensureStats(); saveData(); syncToCloud();
+        try{ if(data.arquivo && typeof arqRestaurar==='function') arqRestaurar(data.arquivo); }catch(e){ console.log('arquivo do backup:', e); }
         toast('✅ Backup restaurado com sucesso!'); goTab('home');
       }, {title:'Restaurar backup?', emo:'📥', okLabel:'Sim, restaurar', danger:true});
     }catch(e){ toast('⚠️ Não foi possível ler o arquivo'); }
@@ -11328,7 +11333,8 @@ function openExProgress(exId){
   const Y = v => pt + (H-pt-pb)*(1-(v-lo)/(hi-lo||1));
   const linha = pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(metr(p)).toFixed(1)}`).join(' ');
   const area = `${linha} L${X(pts.length-1).toFixed(1)},${H-pb} L${X(0).toFixed(1)},${H-pb} Z`;
-  const fmt = d => { const t=new Date(d); return String(t.getDate()).padStart(2,'0')+'/'+String(t.getMonth()+1).padStart(2,'0'); };
+  const _comAno = pts.length>1 && (pts[pts.length-1].date - pts[0].date) > 300*86400000;   // mais de ~10 meses: mostra o ano também
+  const fmt = d => { const t=new Date(d); return String(t.getDate()).padStart(2,'0')+'/'+String(t.getMonth()+1).padStart(2,'0')+(_comAno?'/'+String(t.getFullYear()).slice(2):''); };
   window.__xpData = pts.map(p=>({d:fmt(p.date), v:metr(p), s:p.sets?p.sets.map(s=>iso?fmtTempo(s.reps):`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', '):'resumo antigo'}));
   const pontos = pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(metr(p)).toFixed(1)}" r="${i===pts.length-1?5:3.5}" fill="${i===pts.length-1?'var(--primary)':'var(--bg-2)'}" stroke="var(--primary)" stroke-width="2" onclick="xpSel(${i})" style="cursor:pointer"/><circle cx="${X(i).toFixed(1)}" cy="${Y(metr(p)).toFixed(1)}" r="14" fill="transparent" onclick="xpSel(${i})"/>`).join('');
   const prim = ys[0], ult = ys[ys.length-1], delta = ult - prim;
