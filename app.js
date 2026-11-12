@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 19 =====
-const APP_VERSION = '2027.1-beta.19';
+// ===== MetaTreino 2027.1 Beta 20 =====
+const APP_VERSION = '2027.1-beta.20';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 

@@ -1649,15 +1649,6 @@ h3.tr-nome::after{content:'';display:block;width:34px;height:3px;border-radius:3
 .cal-day .dn-mark{position:absolute;top:1px;right:3px;font-size:8px;line-height:1;color:var(--primary-2)}
 
 /* ===== Beta 19: início enxuto, histórico completo, seus dados ===== */
-.enx-aviso{display:none;text-align:center;font-size:11.5px;color:var(--text-mute);margin:14px 0 0}
-.enx-aviso a{color:var(--primary);font-weight:600;text-decoration:none}
-html.inicio-enxuto #scr-home .hx,
-html.inicio-enxuto #home-smart,
-html.inicio-enxuto #scr-home .wrap > .section-head,
-html.inicio-enxuto #your-list,
-html.inicio-enxuto #home-tr-resumo,
-html.inicio-enxuto #card-access-info.enx-ok{display:none!important}
-html.inicio-enxuto #home-enxuto-aviso{display:block}
 .arq-card{margin-top:16px;padding:14px;border-radius:16px;border:1px solid var(--border);background:var(--bg-2)}
 .arq-card h4{margin:0 0 4px;font-size:14.5px;color:var(--text-strong)}
 .arq-card p{margin:0 0 10px;font-size:12px;color:var(--text-dim);line-height:1.5}
@@ -1686,6 +1677,80 @@ html.inicio-enxuto #home-enxuto-aviso{display:block}
 .adm-tam{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 2px;border-bottom:1px solid var(--border);font-size:12.5px}
 .adm-tam b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-strong);font-weight:600}
 .adm-tam .dados-barra{grid-column:1/-1;margin:2px 0 0;height:6px}
+
+/* ===== Beta 20: personalizar início ===== */
+#scr-home #home-personalizar{order:99;text-align:center;font-size:11.5px;color:var(--text-mute);margin:6px 0 4px}
+#home-personalizar a{color:var(--text-dim);font-weight:600;text-decoration:none;border-bottom:1px dotted var(--text-mute)}
+.metrics .met.met-full{grid-column:1/-1}
+.metrics.met-vazio{display:none!important}
+.pi-presets{display:flex;gap:8px;margin:2px 0 10px}
+.pi-presets button{flex:1;padding:10px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.pi-fixos{font-size:11.5px;color:var(--text-mute);line-height:1.5;margin:0 2px 6px}
+.pi-lista{padding:2px 14px!important;margin:6px 0 4px!important}
+.pi-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.pi-row:last-child{border-bottom:0}
+.pi-txt{flex:1;min-width:0;font-size:13.5px;line-height:1.3}
+.pi-txt b{font-weight:600;color:var(--text-strong);display:block}
+.pi-txt small{display:block;font-size:11.5px;color:var(--text-mute);margin-top:2px}
+.pi-sw{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:26px;border-radius:99px;background:var(--border-strong);position:relative;cursor:pointer;transition:background .18s ease;margin:0}
+.pi-sw::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .18s ease}
+.pi-sw:checked{background:var(--primary)}
+.pi-sw:checked::after{transform:translateX(18px)}
+.pi-sw:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* ===== Beta 20: versão para computador (tela larga + mouse) ===== */
+html.mt-desk #app-deco{display:none}
+/* menu lateral */
+html.mt-desk .tabbar{left:0!important;right:auto!important;top:0!important;bottom:0!important;width:228px!important;max-width:none!important;margin:0!important;
+  flex-direction:column!important;justify-content:flex-start!important;align-items:stretch!important;gap:4px!important;padding:26px 14px!important;
+  border-radius:0!important;border:0!important;border-right:1px solid var(--border)!important;box-shadow:none!important}
+html.mt-desk .tabbar::before{content:'METATREINO';display:block;font-weight:800;letter-spacing:2px;font-size:13px;color:var(--text-strong);padding:0 12px 18px;margin-bottom:6px;border-bottom:1px solid var(--border)}
+html.mt-desk .tabbar .tab,html.mt-desk .tabbar .tab.active{flex:0 0 auto!important;flex-direction:row!important;justify-content:flex-start!important;gap:12px!important;padding:10px 12px!important;border-radius:12px!important}
+html.mt-desk .tabbar .tab:hover{background:var(--surface-2)!important}
+html.mt-desk .tabbar .tab.active{background:var(--tint-primary)!important;color:var(--text-strong)}
+html.mt-desk .tabbar .tab span{font-size:14px!important;font-weight:600}
+html.mt-desk .tabbar .tab .tab-icon{padding:0!important;width:22px;height:22px;background:transparent!important}
+html.mt-desk body:has(#tabbar:not(.hidden)) .screen{padding-left:228px}
+html.mt-desk body:has(#tabbar:not(.hidden)) #toast-wrap{left:228px}
+/* largura do conteúdo */
+html.mt-desk .screen .wrap{max-width:860px;padding:30px 36px 60px!important}
+html.mt-desk #scr-home .wrap,html.mt-desk #scr-perf .wrap,html.mt-desk #scr-history .wrap,html.mt-desk #scr-profile .wrap,html.mt-desk #scr-admin .wrap{max-width:1200px}
+html.mt-desk .modal{max-width:540px}
+/* duas colunas: cada cartão inteiro numa coluna */
+html.mt-desk #scr-home .wrap,html.mt-desk #scr-perf .wrap,html.mt-desk #scr-history .wrap,html.mt-desk #scr-profile .wrap{display:block!important;column-count:2;column-gap:26px}
+html.mt-desk #scr-home .wrap > *,html.mt-desk #scr-perf .wrap > *,html.mt-desk #scr-history .wrap > *,html.mt-desk #scr-profile .wrap > *{break-inside:avoid;-webkit-column-break-inside:avoid}
+html.mt-desk #scr-home .wrap > *:not(.hidden){margin-top:0;margin-bottom:16px}
+html.mt-desk #scr-home .wrap > #home-brand-row,html.mt-desk #scr-home .wrap > #home-hero,html.mt-desk #scr-home .wrap > .greet,html.mt-desk #scr-home .wrap > #home-smart,html.mt-desk #scr-home .wrap > #mod-toggle,
+html.mt-desk #scr-perf .wrap > .seg-nav,html.mt-desk #scr-perf .wrap > .seg-nav + div,
+html.mt-desk #scr-history .wrap > .seg-nav,html.mt-desk #scr-history .wrap > .brand,html.mt-desk #scr-history .wrap > #hist-title,
+html.mt-desk #scr-profile .wrap > .brand{column-span:all;-webkit-column-span:all}
+html.mt-desk #scr-home .wrap > #mod-toggle,html.mt-desk .seg-nav{max-width:440px}
+html.mt-desk #scr-home .wrap > #home-personalizar{column-span:all;margin-top:8px}
+html.mt-desk #scr-home .wrap > .section-head{break-after:avoid}
+html.mt-desk #scr-profile .section-lbl{break-after:avoid}
+/* histórico: a lista corre pelas duas colunas, mas cada dia fica inteiro */
+html.mt-desk #scr-history .wrap > #history-list{break-inside:auto}
+html.mt-desk #history-list > *{break-inside:avoid}
+html.mt-desk #scr-history .wrap > .stat-grid,html.mt-desk #scr-history .wrap > .btn{margin-bottom:14px}
+/* painel do treinador: ferramentas à esquerda, alunos à direita */
+html.mt-desk #scr-admin .wrap{column-count:2;column-gap:26px}
+html.mt-desk #scr-admin .wrap > *{break-inside:avoid}
+html.mt-desk #scr-admin .wrap > .brand,html.mt-desk #scr-admin .wrap > .row,html.mt-desk #scr-admin .wrap > .stat-grid,html.mt-desk #scr-admin .wrap > #adm-kpis,html.mt-desk #scr-admin .wrap > .btn{column-span:all;-webkit-column-span:all}
+html.mt-desk #scr-admin .wrap > .btn{margin-bottom:18px}
+html.mt-desk #scr-admin .wrap > .section-head{break-before:column;-webkit-column-break-before:always;margin-top:0}
+html.mt-desk #scr-admin .stat-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+html.mt-desk #scr-admin .wrap > .btn{display:block;width:100%}
+html.mt-desk #scr-admin .adm-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:1279px){
+  html.mt-desk .tabbar{width:196px!important}
+  html.mt-desk body:has(#tabbar:not(.hidden)) .screen{padding-left:196px}
+  html.mt-desk body:has(#tabbar:not(.hidden)) #toast-wrap{left:196px}
+  html.mt-desk .screen .wrap{padding:24px 24px 60px!important}
+  html.mt-desk #scr-home .wrap,html.mt-desk #scr-perf .wrap,html.mt-desk #scr-history .wrap,html.mt-desk #scr-profile .wrap,html.mt-desk #scr-admin .wrap{column-gap:18px}
+}
+/* cursores e foco para mouse */
+html.mt-desk .list-row,html.mt-desk .card[onclick],html.mt-desk .met,html.mt-desk .day{cursor:pointer}
+html.mt-desk .list-row:hover{border-color:var(--border-strong)}
 </style>
 </head>
 <body>
@@ -2266,7 +2331,6 @@ html.inicio-enxuto #home-enxuto-aviso{display:block}
     </div>
 
     <!-- Acesso ao plano (por último) -->
-    <div class="enx-aviso" id="home-enxuto-aviso">🏠 Início enxuto ativo · <a href="#" onclick="toggleInicioEnxuto();return false">mostrar tudo</a></div>
     <div class="card card-info card-row" id="card-access-info" style="margin-top:14px">
       <div class="card-icon">🎫</div>
       <div style="flex:1"><div class="card-title info">Acesso ativo</div><div class="card-sub" id="access-days">— dias restantes</div></div>
@@ -2512,7 +2576,7 @@ html.inicio-enxuto #home-enxuto-aviso{display:block}
     <div class="section-lbl" style="margin:18px 0 8px">🎛️ APLICATIVO</div>
     <div class="list-row" onclick="openAparencia()" id="theme-row"><span>🎨</span> <span>Aparência</span><span id="theme-row-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">Tema Noturno ›</span></div>
     <div class="theme-grid hidden" id="theme-grid"></div>
-    <div class="list-row" onclick="toggleInicioEnxuto()" id="enxuto-row"><span>🏠</span> <span>Início enxuto</span><span id="enxuto-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">desligado</span></div>
+    <div class="list-row" onclick="openPersonalizarInicio()" id="inicio-row"><span>🏠</span> <span>Personalizar início</span><span id="inicio-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">escolher ›</span></div>
     <div class="list-row" onclick="openSomFim()"><span>🔔</span> <span>Som do cronômetro</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">escolher ›</span></div>
     <div class="list-row" onclick="goTab('library')"><span>📚</span> <span>Biblioteca de exercícios</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span></div>
     <div class="list-row" onclick="openAudioVideos()" id="audio-row"><span>🎬</span> <span>Áudio dos vídeos</span><span id="audio-row-val" style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span></div>
@@ -2528,7 +2592,7 @@ html.inicio-enxuto #home-enxuto-aviso{display:block}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 19</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 20</span>
     </div>
   </div>
 </div>
@@ -2606,8 +2670,8 @@ html.inicio-enxuto #home-enxuto-aviso{display:block}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.19"></script>
-<script src="./app-plus.js?v=2027.1-beta.19"></script>
+<script src="./app.js?v=2027.1-beta.20"></script>
+<script src="./app-plus.js?v=2027.1-beta.20"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();

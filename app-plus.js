@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 19 — app-plus.js
+// MetaTreino 2027.1 Beta 20 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -16,11 +16,11 @@
 // 10. Painel administrativo (indicadores, desafios, administradores)
 // 11. Atualização automática (sem botão)
 // 18. Calistenia · 19–22. Beta 13 (retomada, mensagens, conquista especial, recolher)
-// 23–26. Beta 14 (corrida do iniciante ao competitivo) · 27. Beta 15 (prova removível, encerrar plano de musculação) · 28. Beta 17 (conquistas) · 29. Beta 18 (assistente, mural, destaques do dia, temas) · 30. Beta 19 (arquivo anual, histórico completo, relatório PDF, seus dados, início enxuto)
+// 23–26. Beta 14 (corrida do iniciante ao competitivo) · 27. Beta 15 (prova removível, encerrar plano de musculação) · 28. Beta 17 (conquistas) · 29. Beta 18 (assistente, mural, destaques do dia, temas) · 30. Beta 19 (arquivo anual, histórico completo, relatório PDF, seus dados, início enxuto) · 31. Beta 20 (personalizar início, versão para computador)
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.19' };
+const MTP = { versao: '2027.1-beta.20' };
 const DIA_MS = 86400000;
 function mtNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function mtEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -6214,22 +6214,6 @@ function admTamanhos(){
   $('modal-back').classList.add('on');
 }
 
-// ---------- Início enxuto ----------
-function aplicaInicioEnxuto(){
-  const on = !!(state && state.inicioEnxuto);
-  document.documentElement.classList.toggle('inicio-enxuto', on);
-  const v = $('enxuto-val'); if(v) v.textContent = on ? 'ligado' : 'desligado';
-  try{ const c = $('card-access-info'); if(c){ const d = accessDaysLeft(); c.classList.toggle('enx-ok', d > 7); } }catch(e){}
-}
-function toggleInicioEnxuto(){
-  state.inicioEnxuto = !state.inicioEnxuto; saveData(); aplicaInicioEnxuto();
-  toast(state.inicioEnxuto ? '🏠 Início enxuto: só o essencial na tela inicial' : '🏠 Início completo de volta');
-}
-const _renderHomeB19 = window.renderHome;
-window.renderHome = function(){ const r = _renderHomeB19.apply(this, arguments); try{ aplicaInicioEnxuto(); }catch(e){} return r; };
-const _renderProfileB19 = window.renderProfile;
-if(typeof _renderProfileB19 === 'function') window.renderProfile = function(){ const r = _renderProfileB19.apply(this, arguments); try{ aplicaInicioEnxuto(); const v = $('pf-dados-val'); if(v){ const pct = Math.round(arqTamanhoDoc()/DOC_LIMITE*100); v.textContent = pct + '% usado ›'; } }catch(e){} return r; };
-
 // =====================================================================
 // RELATÓRIO EM PDF (jsPDF 2.5.2, MIT — arquivo local jspdf.umd.min.js,
 // carregado só quando o aluno pede o relatório)
@@ -6569,4 +6553,141 @@ function arqMontarPDF(jsPDF, opt, aviso){
 }
 
 Object.assign(window, { arqArquivar, arqCarregar, arqApagarTudo, arqRestaurar, arqDados, arqAbrirHistorico, arqSeusDados, arqRelatorio, arqGerarPDF, arqCarregarEvo, arqNotaRetencao,
-  pdfBaixar, pdfCompartilhar, toggleInicioEnxuto, aplicaInicioEnxuto, admTamanhos, arqTamanhoDoc });
+  pdfBaixar, pdfCompartilhar, admTamanhos, arqTamanhoDoc });
+
+// =====================================================================
+// 31. Beta 20 — Personalizar início + versão para computador
+// =====================================================================
+
+// ---------- Personalizar início ----------
+// Cada bloco pode ser escondido. Os essenciais ficam sempre: treino de hoje, avisos
+// (treinos pendentes, férias, recado do treinador, aniversário…), mural e aviso de saúde.
+// Implementado só com CSS (uma <style> gerada): sobrevive a qualquer redesenho da tela.
+const INICIO_BLOCOS = [
+  { k:'atividade',   nome:'Atividade da semana', desc:'anéis de treinos, séries e metas', sel:['#home-quick'] },
+  { k:'semana',      nome:'Semana',              desc:'os 7 dias com o status de cada treino', sel:['#scr-home .week'] },
+  { k:'peso',        nome:'Peso',                grupo:'ind', sel:['#home-metrics .met[onclick*="add-weight"]'] },
+  { k:'alimentacao', nome:'Alimentação',         grupo:'ind', sel:['#home-metrics .met-nutri', '#home-metrics .met[onclick*="openNutri"]'] },
+  { k:'agua',        nome:'Água',                grupo:'ind', sel:['#home-metrics .met[onclick*="openAgua"]'] },
+  { k:'conquistas',  nome:'Conquistas',          grupo:'ind', sel:['#home-metrics .met[onclick*="openTrophies"]', '#home-trofeus'] },
+  { k:'plano',       nome:'Fase do plano',       desc:'semana do ciclo e fase atual', sel:['#scr-home .plan-card'] },
+  { k:'sugestao',    nome:'Sugestão inteligente', desc:'dica do dia e plano de retomada', sel:['#home-smart'] },
+  { k:'desafio',     nome:'Desafio do mês',      sel:['#card-monthly'] },
+  { k:'evento',      nome:'Desafio temático',    desc:'quando houver um ativo', sel:['#home-event'] },
+  { k:'treinos',     nome:'Seus treinos',        desc:'lista do plano (também na aba Treinos)', sel:['#scr-home .wrap > .section-head', '#your-list', '#home-tr-resumo'] },
+  { k:'calistenia',  nome:'Calistenia',          desc:'nível e progressões, se você usa', sel:['#home-cali'] },
+  { k:'frase',       nome:'Frase do dia',        sel:['#scr-home .quote'] },
+  { k:'ajuda',       nome:'Ajuda e contato',     sel:['#scr-home .help'] },
+  { k:'acesso',      nome:'Aviso de acesso',     desc:'volta sozinho quando faltar 7 dias ou menos', sel:['#card-access-info.ac-ok'] }
+];
+const INICIO_ESSENCIAL = ['sugestao','desafio','evento','treinos','frase','ajuda','acesso'];
+
+function inicioOcultos(){
+  if(!state) return [];
+  // quem ligou o "Início enxuto" da Beta 19 continua com a mesma tela
+  if(state.inicioEnxuto && !Array.isArray(state.inicioOcultos)){ state.inicioOcultos = INICIO_ESSENCIAL.slice(); delete state.inicioEnxuto; }
+  if(!Array.isArray(state.inicioOcultos)) return [];
+  return state.inicioOcultos.filter(k=>INICIO_BLOCOS.some(b=>b.k===k));
+}
+function aplicaInicio(){
+  const oc = inicioOcultos();
+  let st = document.getElementById('inicio-ocultos-css');
+  if(!st){ st = document.createElement('style'); st.id = 'inicio-ocultos-css'; document.head.appendChild(st); }
+  const sels = INICIO_BLOCOS.filter(b=>oc.includes(b.k)).flatMap(b=>b.sel);
+  st.textContent = sels.length ? sels.join(',\n') + '{display:none!important}' : '';
+  try{ const c = $('card-access-info'); if(c) c.classList.toggle('ac-ok', accessDaysLeft() > 7); }catch(e){}
+  // indicadores: com número ímpar visível, o último ocupa a linha inteira; sem nenhum, some o bloco
+  try{
+    const m = $('home-metrics');
+    if(m){
+      const tiles = [...m.children]; tiles.forEach(t=>t.classList.remove('met-full'));
+      const vis = tiles.filter(t=>getComputedStyle(t).display !== 'none');
+      if(vis.length % 2 === 1 && vis.length > 1) vis[vis.length-1].classList.add('met-full');
+      m.classList.toggle('met-vazio', tiles.length > 0 && !vis.length);
+    }
+  }catch(e){}
+  // rodapé da Home: atalho discreto para personalizar
+  try{
+    const wrap = document.querySelector('#scr-home .wrap');
+    if(wrap){
+      let a = $('home-personalizar');
+      if(!a){ a = document.createElement('div'); a.id = 'home-personalizar'; wrap.appendChild(a); }
+      a.innerHTML = `<a href="#" onclick="openPersonalizarInicio();return false">⚙️ Personalizar início</a>${oc.length ? ` · ${oc.length} ${oc.length===1?'bloco oculto':'blocos ocultos'}` : ''}`;
+    }
+  }catch(e){}
+  const v = $('inicio-val'); if(v) v.textContent = oc.length ? `${oc.length} ${oc.length===1?'oculto':'ocultos'} ›` : 'completo ›';
+}
+function openPersonalizarInicio(){
+  const oc = inicioOcultos();
+  const linha = b=>`<label class="pi-row"><span class="pi-txt"><b>${b.nome}</b>${b.desc?`<small>${b.desc}</small>`:''}</span>
+      <input type="checkbox" class="pi-sw" data-k="${b.k}" ${oc.includes(b.k)?'':'checked'} onchange="piAlterar(this)"></label>`;
+  const princ = INICIO_BLOCOS.filter(b=>b.grupo!=='ind'), ind = INICIO_BLOCOS.filter(b=>b.grupo==='ind');
+  $('modal-inner').classList.remove('modal-video');
+  $('modal-inner').innerHTML = `<h3>🏠 Personalizar início</h3>
+    <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Escolha o que aparece na tela inicial. Vale na hora e é salvo na sua conta (aparece igual em outro aparelho).</p>
+    <div class="pi-presets">
+      <button type="button" onclick="piPreset('completo')">Tudo</button>
+      <button type="button" onclick="piPreset('essencial')">Só o essencial</button>
+    </div>
+    <div class="pi-fixos">Sempre aparecem: <b>treino de hoje</b>, avisos importantes (treinos pendentes, férias, recado do treinador), mural e aviso de saúde.</div>
+    <div class="arq-sub">Blocos</div>
+    <div class="card pi-lista">${princ.map(linha).join('')}</div>
+    <div class="arq-sub">Indicadores</div>
+    <div class="card pi-lista">${ind.map(linha).join('')}</div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();goTab('home')">Pronto</button>`;
+  $('modal-back').classList.add('on');
+}
+function piAlterar(el){
+  const k = el.dataset.k; let oc = inicioOcultos();
+  oc = el.checked ? oc.filter(x=>x!==k) : [...new Set([...oc, k])];
+  state.inicioOcultos = oc; saveData(); aplicaInicio();
+}
+function piPreset(p){
+  state.inicioOcultos = p === 'essencial' ? INICIO_ESSENCIAL.slice() : [];
+  saveData(); aplicaInicio();
+  document.querySelectorAll('.pi-sw').forEach(i=>{ i.checked = !state.inicioOcultos.includes(i.dataset.k); });
+  toast(p === 'essencial' ? '🏠 Só o essencial na tela inicial' : '🏠 Tela inicial completa');
+}
+// compatibilidade com a Beta 19 (botões antigos)
+function toggleInicioEnxuto(){ openPersonalizarInicio(); }
+
+const _renderHomeB20 = window.renderHome;
+window.renderHome = function(){ const r = _renderHomeB20.apply(this, arguments); try{ aplicaInicio(); mtDeskOrdenaHome(); }catch(e){ console.log('início', e); } return r; };
+const _renderHomeMetricsB20 = window.renderHomeMetrics;
+if(typeof _renderHomeMetricsB20 === 'function') window.renderHomeMetrics = function(){ const r = _renderHomeMetricsB20.apply(this, arguments); try{ aplicaInicio(); }catch(e){} return r; };
+const _renderProfileB20 = window.renderProfile;
+if(typeof _renderProfileB20 === 'function') window.renderProfile = function(){
+  const r = _renderProfileB20.apply(this, arguments);
+  try{ aplicaInicio(); const v = $('pf-dados-val'); if(v){ const pct = Math.round(arqTamanhoDoc()/DOC_LIMITE*100); v.textContent = pct + '% usado ›'; } }catch(e){}
+  return r;
+};
+
+// ---------- Versão para computador ----------
+// Só em tela larga com mouse (computador/notebook). Celular e tablet não mudam.
+// Mesmo app, mesmos dados: só a disposição muda (menu lateral, colunas, gráficos maiores).
+const MT_DESK_MQ = '(min-width: 1024px) and (hover: hover) and (pointer: fine)';
+function mtDesk(){ return document.documentElement.classList.contains('mt-desk'); }
+function mtDeskAplica(){
+  let on = false; try{ on = window.matchMedia(MT_DESK_MQ).matches; }catch(e){}
+  document.documentElement.classList.toggle('mt-desk', on);
+  if(on) try{ mtDeskOrdenaHome(); }catch(e){}
+}
+// No celular a Home ordena os blocos com "order" do CSS (flex). No computador ela vira
+// colunas, que seguem a ordem do HTML — então alinhamos a ordem do HTML à mesma ordem.
+// (Mexe só na sequência dos irmãos; os blocos continuam no mesmo lugar da árvore.)
+function mtDeskOrdenaHome(){
+  if(!mtDesk()) return;
+  const wrap = document.querySelector('#scr-home .wrap'); if(!wrap) return;
+  const kids = [...wrap.children];
+  const ord = kids.map((el, i)=>({ el, i, o: parseInt(getComputedStyle(el).order, 10) || 0 }));
+  const sorted = ord.slice().sort((a,b)=>(a.o - b.o) || (a.i - b.i));
+  if(sorted.every((x, i)=>x.el === kids[i])) return;
+  sorted.forEach(x=>wrap.appendChild(x.el));
+}
+try{
+  const mq = window.matchMedia(MT_DESK_MQ);
+  if(mq.addEventListener) mq.addEventListener('change', mtDeskAplica); else if(mq.addListener) mq.addListener(mtDeskAplica);
+}catch(e){}
+mtDeskAplica();
+
+Object.assign(window, { openPersonalizarInicio, piAlterar, piPreset, aplicaInicio, toggleInicioEnxuto, mtDeskAplica, mtDeskOrdenaHome });

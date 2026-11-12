@@ -1,4 +1,26 @@
+# MetaTreino 2027.1 Beta 20 — Personalizar início e versão para computador
+
+1. **Personalizar início** (substitui o "Início enxuto" da Beta 19):
+   - Fica em dois lugares: **Perfil → Aplicativo → Personalizar início** e um atalho discreto no fim da tela inicial ("⚙️ Personalizar início · N blocos ocultos").
+   - Um interruptor para cada bloco: Atividade da semana, Semana, Fase do plano, Sugestão inteligente, Desafio do mês, Desafio temático, Seus treinos, Calistenia, Frase do dia, Ajuda e contato, Aviso de acesso. Também há um interruptor para cada indicador: Peso, Alimentação, Água e Conquistas.
+   - Atalhos: **Tudo** e **Só o essencial**.
+   - **Sempre aparecem:** treino de hoje, avisos importantes (treinos pendentes, férias, recado do treinador, aniversário), mural e aviso de saúde.
+   - Muda na hora e fica salvo na conta, então aparece igual em outro aparelho. O padrão continua sendo a tela completa.
+   - Com número ímpar de indicadores, o último ocupa a linha inteira; sem nenhum, o bloco some.
+   - O aviso de acesso volta sozinho quando faltam 7 dias ou menos.
+   - Quem tinha ligado o "Início enxuto" continua com a mesma tela.
+2. **Versão para computador:** só em tela larga com mouse (computador ou notebook, a partir de 1024 px). Celular e tablet não mudam. É o mesmo endereço e são os mesmos dados; muda só a disposição:
+   - Menu lateral fixo no lugar da barra de baixo.
+   - **Início, Progresso, Histórico e Perfil em duas colunas.** Cada cartão aparece inteiro, e os gráficos ficam lado a lado.
+   - **Painel ADM:** números em uma linha, ferramentas à esquerda e lista de alunos à direita.
+   - Janelas um pouco mais largas. Treinos, Desafios e Biblioteca ficam numa coluna central confortável.
+   - Diminuindo a janela, volta ao layout do celular na hora.
+
+---
+
 # MetaTreino 2027.1 Beta 19 — Histórico sem perda, relatório em PDF, seus dados e início enxuto
+
+> O "Início enxuto" (item 7) foi substituído na Beta 20 pelo "Personalizar início".
 
 1. **Arquivo anual (nada mais se perde depois de 90 dias):** o documento principal do aluno (usuarios/{uid}) continua com o detalhe dos últimos 90 dias, para o app abrir leve. Antes de a limpeza apagar algo, o app agora grava em **usuarios/{uid}/arquivo/{ano-semestre}** (ex.: 2026-1, 2026-2): sessões de musculação e corrida, séries de cada exercício e o resumo de cargas com mais de 2 anos.
    - **Só sai do app o que a nuvem confirmou.** Sem internet, o dado continua no aparelho e o app tenta de novo depois.
