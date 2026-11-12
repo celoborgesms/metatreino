@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 18 =====
-const APP_VERSION = '2027.1-beta.18';
+// ===== MetaTreino 2027.1 Beta 15 =====
+const APP_VERSION = '2027.1-beta.15';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2633,7 +2633,7 @@ function renderHome(){
   const _linha = _ps ? preStartStatusLine(_ps) : homeStatusLine();
   // com plano agendado pra frente, o clima entra só se for útil (não "boa noite pra descansar")
   const _mostraClima = !_ps || _ps.dias <= 3;
-  const _naCapa = !!(coachMural && coachMural.capa && (coachMural.capaFoto || coachMural.foto));
+  const _naCapa = !!(coachMural && coachMural.foto && coachMural.capa);
   $('home-goal').innerHTML = _glue(_linha) + ((_wl && _mostraClima) ? `<br><span style="opacity:${_naCapa?'.85':'.6'};font-size:.9em">${_glue(_wl)}</span>` : '');
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
   // 40% de chance de mostrar uma frase contextual (se houver); senão, uma do dia
@@ -8686,7 +8686,6 @@ async function shareCanvas(canvas, filename, shareText){
   canvas.toBlob(async blob=>{
     if(!blob){ toast('⚠️ Não foi possível gerar a imagem'); return; }
     _lastShareBlob = blob; _lastShareName = filename;
-    window._lastShareText = shareText || ''; // texto fora do atributo: aspas no texto quebravam o botão
     // mostra um modal com as duas opções: compartilhar OU salvar no celular
     // A foto de fundo era o 3º botão da fila — o recurso mais legal ficava escondido.
     // Agora ela é uma faixa em destaque logo abaixo da prévia.
@@ -8701,7 +8700,7 @@ async function shareCanvas(canvas, filename, shareText){
         <div style="color:var(--prep-soft);font-size:18px">›</div>
       </div>
       <input type="file" id="share-photo-input" accept="image/*" style="display:none" onchange="onSharePhotoPicked(event)">`:''}
-      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="doShareNow(window._lastShareText)">📲 Compartilhar agora</button>
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="doShareNow('${shareText.replace(/'/g,"\\'")}')">📲 Compartilhar agora</button>
       <div class="row" style="gap:8px;margin-top:8px">
         <button class="btn btn-ghost" style="flex:1;font-size:13px" onclick="doSaveToDevice()">💾 Salvar</button>
         <button class="btn btn-ghost" style="flex:1;font-size:13px" onclick="closeModal()">Fechar</button>
@@ -8914,13 +8913,8 @@ const THEMES = {
   aurora:   {nome:'Aurora',   sub:'Escuro · índigo e coral',  bar:'#070a1a', prev:{bg:'#070a1a', a:'#7c6cff', b:'#ff7a59', c:'#1b2150'}},
   classico: {nome:'Clássico', sub:'Escuro · verde (o de antes)', bar:'#050914', prev:{bg:'#050914', a:'#10b981', b:'#f59e0b', c:'#10223a'}},
   oceano:   {nome:'Oceano',   sub:'Escuro · azul e dourado',  bar:'#04111b', prev:{bg:'#04111b', a:'#06b6d4', b:'#fbbf24', c:'#0b2c3f'}},
-  rubi:     {nome:'Rubi',     sub:'Escuro · grafite e vermelho', bar:'#0c0d10', prev:{bg:'#0c0d10', a:'#ff3d5a', b:'#ffc857', c:'#1d2026'}},
-  claro:    {nome:'Claro',    sub:'Claro · índigo',            bar:'#f5f6fb', prev:{bg:'#f5f6fb', a:'#5b4bdb', b:'#c2410c', c:'#dfe2f2'}},
-  areia:    {nome:'Areia',    sub:'Claro · areia e verde-petróleo', bar:'#f6f1e8', prev:{bg:'#f6f1e8', a:'#0f766e', b:'#c2410c', c:'#e7dfd0'}}
+  claro:    {nome:'Claro',    sub:'Claro · índigo',            bar:'#f5f6fb', prev:{bg:'#f5f6fb', a:'#5b4bdb', b:'#c2410c', c:'#dfe2f2'}}
 };
-// temas claros (os ajustes de contraste valem para todos eles)
-const TEMAS_CLAROS = ['claro','areia'];
-function temaClaro(t){ return TEMAS_CLAROS.includes(t || currentTheme()); }
 function normalizaTema(t){ if(t==='dark') return 'zepp'; if(t==='light') return 'claro'; return THEMES[t] ? t : 'zepp'; }
 function currentTheme(){
   const attr = document.documentElement.getAttribute('data-theme');
@@ -8929,7 +8923,6 @@ function currentTheme(){
 function applyTheme(t){
   t = normalizaTema(t);
   document.documentElement.setAttribute('data-theme', t);
-  document.documentElement.classList.toggle('tema-claro', TEMAS_CLAROS.includes(t));
   const meta = document.querySelector('meta[name="theme-color"]');
   if(meta) meta.setAttribute('content', THEMES[t].bar);
   try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
@@ -8937,7 +8930,7 @@ function applyTheme(t){
 }
 function setTheme(t){ applyTheme(t); const g=document.getElementById('theme-grid'); if(g) g.classList.add('hidden'); renderThemePicker(); toast('🎨 Tema '+THEMES[normalizaTema(t)].nome+' ativado'); }
 function toggleThemePicker(){ const g=document.getElementById('theme-grid'); if(!g) return; g.classList.toggle('hidden'); renderThemePicker(); }
-function toggleTheme(){ setTheme(temaClaro() ? 'zepp' : 'claro'); }   // compatibilidade
+function toggleTheme(){ setTheme(currentTheme()==='claro' ? 'zepp' : 'claro'); }   // compatibilidade
 function renderThemePicker(){
   const g = document.getElementById('theme-grid'); if(!g) return;
   const cur = currentTheme();
@@ -11252,18 +11245,15 @@ function removerPeso(ts){
 // Os emojis de pessoa vêm amarelos por padrão (é o tom neutro oficial do Unicode). Quem quiser
 // pode escolher um tom de pele em Perfil → Aparência; vale para todo o app neste aparelho.
 const EMOJI_TONES = [{id:'',nome:'Padrão (amarelo)',mod:''},{id:'1',nome:'Claro',mod:'\u{1F3FB}'},{id:'2',nome:'Médio-claro',mod:'\u{1F3FC}'},{id:'3',nome:'Médio',mod:'\u{1F3FD}'},{id:'4',nome:'Médio-escuro',mod:'\u{1F3FE}'},{id:'5',nome:'Escuro',mod:'\u{1F3FF}'}];
-// Todos os emojis de pessoa/mão/parte do corpo que aceitam tom de pele (Unicode Emoji_Modifier_Base)
-// e aparecem no app. Emojis sem variação de tom (🦾, 🏆, 🔥…) nunca são alterados.
-const EMOJI_BASES = ['💪','👋','🏃','🚶','🚴','🚵','👏','🙌','👍','👎','👌','👇','👆','👉','👈','☝','✌','🤞','🤙','🤘','🤟','🤏','🤌','🤸','🧘','🧗','🧍','🧎','🤷','🙆','🙅','🙋','🙇','💁','🤦','🤹','🤾','🤽','🏊','🏄','🚣','⛹','🏌','✊','👊','🤛','🤜','🙏','✋','🤚','🖐','✍','🤝','🤲','🫶','🫸','🫷','🦵','🦶','👨','👩','🧑','💃','🕺'];
+const EMOJI_BASES = ['💪','👋','🏃','🚶','🚴','👏','🙌','👍','🤸','🧘','✊','👊','🙏'];
 let _emojiTone = '';
 function getEmojiTone(){ try{ return localStorage.getItem('metatreino_emojitone') || ''; }catch(e){ return ''; } }
 const _reMod = '[\\u{1F3FB}-\\u{1F3FF}]';
-// a variação "emoji" (U+FE0F) sai quando entra o tom: ✍️ → ✍🏽, 🏋️ → 🏋🏽
-const _reBase = new RegExp('(🏋|'+EMOJI_BASES.join('|')+')\\uFE0F?(?!'+_reMod+')','gu');
+const _reBase = new RegExp('(🏋\\uFE0F?|'+EMOJI_BASES.join('|')+')(?!'+_reMod+')','gu');
 const _reStrip = new RegExp('(🏋|'+EMOJI_BASES.join('|')+')'+_reMod,'gu');
 function _aplicaTomTexto(t, mod){
   if(!mod) return t.replace(_reStrip,'$1');
-  return t.replace(_reBase,(m,b)=> b+mod);
+  return t.replace(_reBase,(m,b)=> (b.startsWith('🏋')?'🏋':b)+mod);
 }
 function aplicaTomEmoji(root){
   const mod = (EMOJI_TONES.find(x=>x.id===_emojiTone)||EMOJI_TONES[0]).mod;
@@ -11274,13 +11264,6 @@ function aplicaTomEmoji(root){
 function iniciaTomEmoji(){
   _emojiTone = getEmojiTone();
   if(_emojiTone){
-    // imagens geradas no app (compartilhar treino/semana) usam o mesmo tom
-    try{
-      const mod = (EMOJI_TONES.find(x=>x.id===_emojiTone)||EMOJI_TONES[0]).mod;
-      const C = CanvasRenderingContext2D.prototype;
-      if(!C.__tomEmoji){ C.__tomEmoji = true;
-        ['fillText','strokeText','measureText'].forEach(fn=>{ const o = C[fn]; C[fn] = function(t, ...a){ return o.call(this, typeof t==='string' ? _aplicaTomTexto(t, mod) : t, ...a); }; }); }
-    }catch(e){}
     aplicaTomEmoji(document.body);
     let agendado = false;
     const obs = new MutationObserver(()=>{ if(agendado) return; agendado = true; requestAnimationFrame(()=>{ agendado = false; try{ obs.disconnect(); aplicaTomEmoji(document.body); }finally{ obs.observe(document.body,{childList:true,subtree:true,characterData:true}); } }); });
