@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 15 — app-plus.js
+// MetaTreino 2027.1 Beta 16 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -20,7 +20,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.15' };
+const MTP = { versao: '2027.1-beta.16' };
 const DIA_MS = 86400000;
 function mtNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function mtEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -268,7 +268,7 @@ function openExerciseSheet(name, idKey, opts){
   const exId = slug(name);
   const temEvo = (typeof temEvolucaoEx==='function') && temEvolucaoEx(exId);
   const palco = v.id ? _palcoVideo(v)
-    : `<div class="ex-noVideo">${muscleIco(musculoDoExercicio(ex, grupo))}<div>O treinador ainda não cadastrou um vídeo para este exercício.</div><a class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" href="${mtEsc(ytLink(name))}" target="_blank" rel="noopener">Buscar demonstração no YouTube ↗</a></div>`;
+    : exSemVideoHtml(ex, grupo, v);
   const mi = $('modal-inner');
   mi.classList.remove('modal-video','short'); mi.classList.add('modal-ex');
   $('modal-back').classList.add('ex-open');
@@ -292,12 +292,22 @@ function openExerciseSheet(name, idKey, opts){
   if(v.id) mtMontarPlayer(v, {nome: ex.name, grupo, equip: ex.equip||[]});
 }
 function openExercise(name){ openExerciseSheet(name); }
-// "Ver como fazer" (sessões, assistente): sem vídeo cadastrado, mantém o comportamento antigo (busca no YouTube)
-const _playExerciseOrig = playExercise;
+// Sem vídeo: aviso discreto + busca no YouTube SÓ se o aluno tocar no botão. As instruções em texto
+// continuam logo abaixo. Uma única função serve Treinos, Biblioteca e Meta Assistente.
+function exBuscaYoutube(nome){ return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(String(nome||'').trim() + ' como fazer execução correta'); }
+function exSemVideoHtml(ex, grupo, v){
+  const outro = v && v.url && !v.id;   // o treinador cadastrou um link que não é vídeo do YouTube
+  const href = outro ? v.url : exBuscaYoutube(ex.name);
+  return `<div class="ex-noVideo">${muscleIco(musculoDoExercicio(ex, grupo))}
+    <div class="exnv-t">Ainda não há vídeo disponível para este exercício.</div>
+    <div class="exnv-s">${outro ? 'O treinador indicou uma demonstração fora do app. Ela abre em outra página.' : 'Se quiser ver uma demonstração, você será direcionado ao YouTube para buscar este exercício. As orientações estão logo abaixo.'}</div>
+    <a class="btn btn-ghost exnv-b" href="${mtEsc(href)}" target="_blank" rel="noopener">${outro ? 'Abrir demonstração ↗' : 'Buscar vídeo no YouTube ↗'}</a></div>`;
+}
+// "Ver como fazer" (Treinos, assistente): abre sempre a ficha do exercício — com o vídeo quando existe,
+// com o aviso e as instruções quando não existe. Nunca redireciona sozinho para o YouTube.
 playExercise = function(name, idKey){
   const v = _videoDoExercicio(name, idKey);
-  if(!v.id){ return _playExerciseOrig(name, idKey); }
-  openExerciseSheet(name, idKey, {video:true});
+  openExerciseSheet(name, idKey, v.id ? {video:true} : {});
 };
 const _closeModalOrig = closeModal;
 closeModal = function(){
@@ -3537,7 +3547,9 @@ window.saveSpecialAward = async function(){
 // =====================================================================
 const CHEV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>';
 function _colBotao(k, aberto, rotulo){
-  return `<button type="button" class="col-chev ${aberto?'':'fechado'}" aria-expanded="${aberto}" aria-label="${aberto?'Recolher':'Mostrar'} ${rotulo}" title="${aberto?'Recolher':'Mostrar'}" onclick="event.stopPropagation();mtColAnimar('${k}')">${CHEV}</button>`;
+  // Atividade da semana: texto "Ocultar"/"Mostrar" discreto ao lado do título. Seus treinos: seta.
+  if(k === 'semana') return `<button type="button" class="col-txt" data-col="${k}" aria-expanded="${aberto}" aria-label="${aberto?'Ocultar':'Mostrar'} ${rotulo}" onclick="event.stopPropagation();mtColAnimar('${k}')">${aberto?'Ocultar':'Mostrar'}</button>`;
+  return `<button type="button" class="col-chev ${aberto?'':'fechado'}" data-col="${k}" aria-expanded="${aberto}" aria-label="${aberto?'Recolher':'Mostrar'} ${rotulo}" title="${aberto?'Recolher':'Mostrar'}" onclick="event.stopPropagation();mtColAnimar('${k}')">${CHEV}</button>`;
 }
 function _colCorpo(k){
   if(k==='treinos') return $('your-list');
@@ -3549,8 +3561,12 @@ function mtColAnimar(k){
   const corpo = _colCorpo(k);
   mtLS('mt_col_'+k, abertoAntes ? '0' : '1');
   if(!corpo){ _mtAplicaColapsos(); return; }
-  const btn = document.querySelector(`.col-chev[onclick*="'${k}'"]`);
-  if(btn){ btn.classList.toggle('fechado', abertoAntes); btn.setAttribute('aria-expanded', String(!abertoAntes)); btn.title = abertoAntes ? 'Mostrar' : 'Recolher'; }
+  const btn = document.querySelector(`[data-col="${k}"]`);
+  if(btn){
+    btn.setAttribute('aria-expanded', String(!abertoAntes));
+    if(btn.classList.contains('col-txt')){ btn.textContent = abertoAntes ? 'Mostrar' : 'Ocultar'; btn.setAttribute('aria-label', (abertoAntes ? 'Mostrar' : 'Ocultar') + ' Atividade da semana'); }
+    else { btn.classList.toggle('fechado', abertoAntes); btn.title = abertoAntes ? 'Mostrar' : 'Recolher'; }
+  }
   const resumo = k==='treinos' ? $('home-tr-resumo') : null;
   if(abertoAntes){
     corpo.style.maxHeight = corpo.scrollHeight + 'px'; corpo.offsetHeight;
@@ -3590,11 +3606,17 @@ _mtAplicaColapsos = function(){
       q.appendChild(body);
     }
     const header = q.firstElementChild;
-    header.querySelectorAll('.col-chev').forEach(b=>b.remove());
+    header.querySelectorAll('.col-chev, .col-txt').forEach(b=>b.remove());
     header.classList.add('col-head');
     const aberto = mtColAberto('semana', true);
-    header.insertAdjacentHTML('beforeend', _colBotao('semana', aberto, 'Atividade da semana'));
+    const h3 = header.querySelector('h3');
+    if(h3) h3.insertAdjacentHTML('afterend', _colBotao('semana', aberto, 'Atividade da semana'));
+    else header.insertAdjacentHTML('beforeend', _colBotao('semana', aberto, 'Atividade da semana'));
     body.style.display = aberto ? '' : 'none';
+    // os gráficos abrem só pela área dos anéis; o título e "X de Y treinos" são apenas informativos
+    q.onclick = null; q.style.cursor = 'default';
+    body.onclick = ()=>openAtividadeDetalhes();
+    body.style.cursor = 'pointer'; body.setAttribute('role','button'); body.setAttribute('aria-label','Ver detalhes da atividade da semana');
   }
   // avisos longos: 2 linhas + "ver mais" (mesmo comportamento de antes)
   ['card-missed','card-weekrecap','card-coach-msg'].forEach(id=>{

@@ -1,3 +1,12 @@
+# MetaTreino 2027.1 Beta 16 — Ajustes e correções
+
+1. **Atividade da semana — Ocultar / Mostrar:** o texto voltou (a seta da Beta 13 saiu), num rótulo pequeno e discreto ao lado do título. Mostra "Ocultar" com o conteúdo aberto e "Mostrar" quando recolhido. Mesma animação; a escolha é lembrada. "Seus treinos" não mudou.
+2. **Atividade da semana — clique:** o cartão inteiro abria os gráficos, inclusive o título e o "X de Y treinos". Agora só a área dos anéis/legenda abre os detalhes; título e quantidade são apenas informativos.
+3. **Tom de pele dos emojis:** a função central (Perfil → Aparência → Tom dos emojis) só conhecia 14 emojis. O card "Treino de hoje" usa 🦵 🦶 🧗 🙆 🤷, que ficavam sempre amarelos. A lista foi ampliada na mesma função, para todos os emojis de pessoa/mão/corpo que aceitam tom. Vale para o app inteiro e também para as imagens de compartilhar treino/semana. Emojis sem variação de tom (🦾 🔥 🏆…) não mudam.
+4. **"Como fazer" sem vídeo:** Treinos, Biblioteca e Meta Assistente usam a mesma ficha. Com vídeo, nada mudou. Sem vídeo, não abre mais o YouTube sozinho: mostra o aviso "Ainda não há vídeo disponível para este exercício", a explicação de que o aluno será direcionado ao YouTube e o botão "Buscar vídeo no YouTube" (busca pelo nome exato + "como fazer execução correta"). As instruções em texto continuam logo abaixo. Se o treinador cadastrou um link que não é do YouTube, o botão vira "Abrir demonstração".
+
+---
+
 # MetaTreino 2027.1 Beta 15 — Ajustes de plano
 
 - **Prova alvo removível:** na configuração da corrida, quando há data, aparece o botão "✕ Sem prova (remover data)". Ele limpa a data e o horário (no celular o campo de data não tinha como ficar em branco). Ao salvar, o plano deixa de ter polimento e dia da prova.

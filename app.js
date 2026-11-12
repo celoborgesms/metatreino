@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 15 =====
-const APP_VERSION = '2027.1-beta.15';
+// ===== MetaTreino 2027.1 Beta 16 =====
+const APP_VERSION = '2027.1-beta.16';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -11245,15 +11245,18 @@ function removerPeso(ts){
 // Os emojis de pessoa vêm amarelos por padrão (é o tom neutro oficial do Unicode). Quem quiser
 // pode escolher um tom de pele em Perfil → Aparência; vale para todo o app neste aparelho.
 const EMOJI_TONES = [{id:'',nome:'Padrão (amarelo)',mod:''},{id:'1',nome:'Claro',mod:'\u{1F3FB}'},{id:'2',nome:'Médio-claro',mod:'\u{1F3FC}'},{id:'3',nome:'Médio',mod:'\u{1F3FD}'},{id:'4',nome:'Médio-escuro',mod:'\u{1F3FE}'},{id:'5',nome:'Escuro',mod:'\u{1F3FF}'}];
-const EMOJI_BASES = ['💪','👋','🏃','🚶','🚴','👏','🙌','👍','🤸','🧘','✊','👊','🙏'];
+// Todos os emojis de pessoa/mão/parte do corpo que aceitam tom de pele (Unicode Emoji_Modifier_Base)
+// e aparecem no app. Emojis sem variação de tom (🦾, 🏆, 🔥…) nunca são alterados.
+const EMOJI_BASES = ['💪','👋','🏃','🚶','🚴','🚵','👏','🙌','👍','👎','👌','👇','👆','👉','👈','☝','✌','🤞','🤙','🤘','🤟','🤏','🤌','🤸','🧘','🧗','🧍','🧎','🤷','🙆','🙅','🙋','🙇','💁','🤦','🤹','🤾','🤽','🏊','🏄','🚣','⛹','🏌','✊','👊','🤛','🤜','🙏','✋','🤚','🖐','✍','🤝','🤲','🫶','🫸','🫷','🦵','🦶','👨','👩','🧑','💃','🕺'];
 let _emojiTone = '';
 function getEmojiTone(){ try{ return localStorage.getItem('metatreino_emojitone') || ''; }catch(e){ return ''; } }
 const _reMod = '[\\u{1F3FB}-\\u{1F3FF}]';
-const _reBase = new RegExp('(🏋\\uFE0F?|'+EMOJI_BASES.join('|')+')(?!'+_reMod+')','gu');
+// a variação "emoji" (U+FE0F) sai quando entra o tom: ✍️ → ✍🏽, 🏋️ → 🏋🏽
+const _reBase = new RegExp('(🏋|'+EMOJI_BASES.join('|')+')\\uFE0F?(?!'+_reMod+')','gu');
 const _reStrip = new RegExp('(🏋|'+EMOJI_BASES.join('|')+')'+_reMod,'gu');
 function _aplicaTomTexto(t, mod){
   if(!mod) return t.replace(_reStrip,'$1');
-  return t.replace(_reBase,(m,b)=> (b.startsWith('🏋')?'🏋':b)+mod);
+  return t.replace(_reBase,(m,b)=> b+mod);
 }
 function aplicaTomEmoji(root){
   const mod = (EMOJI_TONES.find(x=>x.id===_emojiTone)||EMOJI_TONES[0]).mod;
@@ -11264,6 +11267,13 @@ function aplicaTomEmoji(root){
 function iniciaTomEmoji(){
   _emojiTone = getEmojiTone();
   if(_emojiTone){
+    // imagens geradas no app (compartilhar treino/semana) usam o mesmo tom
+    try{
+      const mod = (EMOJI_TONES.find(x=>x.id===_emojiTone)||EMOJI_TONES[0]).mod;
+      const C = CanvasRenderingContext2D.prototype;
+      if(!C.__tomEmoji){ C.__tomEmoji = true;
+        ['fillText','strokeText','measureText'].forEach(fn=>{ const o = C[fn]; C[fn] = function(t, ...a){ return o.call(this, typeof t==='string' ? _aplicaTomTexto(t, mod) : t, ...a); }; }); }
+    }catch(e){}
     aplicaTomEmoji(document.body);
     let agendado = false;
     const obs = new MutationObserver(()=>{ if(agendado) return; agendado = true; requestAnimationFrame(()=>{ agendado = false; try{ obs.disconnect(); aplicaTomEmoji(document.body); }finally{ obs.observe(document.body,{childList:true,subtree:true,characterData:true}); } }); });

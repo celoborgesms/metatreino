@@ -1489,6 +1489,15 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
 .rp-req .ok{color:var(--primary-2)}
 .rp-dec{padding:7px 0;border-top:1px solid var(--border);font-size:13px}
 .rp-dec:first-of-type{border-top:0}
+
+/* ===== Beta 16: ajustes ===== */
+.col-txt{margin:0 auto 0 8px;padding:2px 9px;border:1px solid var(--border);border-radius:99px;background:transparent;color:var(--text-mute);font-size:11.5px;font-weight:600;letter-spacing:.2px;line-height:1.5;cursor:pointer;flex:0 0 auto;transition:color .2s,border-color .2s,background .2s}
+.col-txt:hover,.col-txt:focus-visible{color:var(--text);border-color:var(--border-strong);background:var(--surface-2)}
+#home-quick .act-head.col-head > span{cursor:default}
+.ex-noVideo{aspect-ratio:auto;min-height:200px;gap:8px;padding:22px 20px}
+.ex-noVideo .exnv-t{font-size:14px;font-weight:700;color:var(--text)}
+.ex-noVideo .exnv-s{font-size:12.5px;line-height:1.5;color:var(--text-dim);max-width:300px}
+.ex-noVideo .exnv-b{padding:8px 14px;font-size:12.5px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -2325,7 +2334,7 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 15</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 16</span>
     </div>
   </div>
 </div>
@@ -2403,8 +2412,8 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.15"></script>
-<script src="./app-plus.js?v=2027.1-beta.15"></script>
+<script src="./app.js?v=2027.1-beta.16"></script>
+<script src="./app-plus.js?v=2027.1-beta.16"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();
