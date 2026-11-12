@@ -1,3 +1,44 @@
+# MetaTreino 2027.1 Beta 18 — Ajustes visuais, mural, destaques do dia e temas
+
+1. **Legenda da semana** (✅ feito · 🟢 parcial · 🟡 hoje · ⚪ planejado · – faltou): sempre numa linha só, alinhada; o texto se ajusta à largura da tela (antes "– faltou" caía para a linha de baixo). A grade da semana também ficou alinhada: o ✓ e as bolinhas de status ficam todos na mesma altura, com um ou dois ícones no dia.
+2. **Mural e logo (painel admin):**
+   - Logo e capa agora são imagens separadas (antes a foto da capa larga também virava o logo cortado de todos os cabeçalhos).
+   - Prévias grandes e no tamanho real em que aparecem no app (logo no cabeçalho; capa com a saudação por cima, na mesma proporção da tela Hoje).
+   - Enquadramento: zoom, ajuste horizontal e vertical; para o logo, "Preencher (corta)" ou "Inteira (sem cortar)".
+   - Proporções recomendadas na tela: logo quadrada 1:1, 512 × 512 px ou maior (PNG transparente fica melhor); capa horizontal 2,4 : 1, ex.: 1440 × 600 px.
+   - Avisos automáticos: imagem pequena (vai borrar), não quadrada, vertical ou larga demais, e o tamanho total (limite de 1 MB do Firestore).
+   - Logo em PNG com fundo transparente mantém a transparência (antes virava JPEG com fundo preto).
+   - A capa é salva na proporção real da tela (2,4 : 1; antes 2 : 1, com corte extra que o admin não via). Dados no formato antigo continuam funcionando.
+3. **Balão do Meta Assistente:** cada aviso aparece uma vez, por 5 a 9 segundos (conforme o tamanho do texto), e some com suavidade. Trocar de aba não o faz voltar. O botão continua colorido; tocando nele, o assistente abre começando pelo aviso. Um aviso novo aparece uma vez.
+4. **Destaques automáticos no calendário:** ao abrir um dia, aparecem os destaques gerados pelos registros: treino em TPM, com cólica, com dor ou no modo leve; carga que subiu (de → para); recorde; treino puxado; prova; melhor marca na corrida; maior distância; meta da corrida; volta depois de pausa; conquistas do dia. Cada um pode ser removido (✕) ou levado para a anotação (✏️), onde se edita e acrescenta. Dias com destaque ganham uma marca discreta ✦. **Nada novo é gravado no banco** — os destaques são calculados na hora a partir do que já está salvo; só ao remover um destaque fica uma marca de poucos bytes.
+5. **Temas novos:** **Rubi** (escuro · grafite e vermelho) e **Areia** (claro · areia e verde-petróleo). Agora são 6 noturnos e 2 claros. Os ajustes de contraste do tema claro passaram a valer para todos os temas claros.
+
+---
+
+# MetaTreino 2027.1 Beta 17 — Conquistas e Conquista Especial
+
+Nada mudou nos critérios, ids, datas, desbloqueio ou progresso: só a apresentação.
+
+1. **Detalhe da conquista:** a medalha entra com uma animação suave, brilho discreto ao redor, um anel de luz e 8 partículas que aparecem uma vez. O nome ganha destaque. Data, categoria, coleção, navegação ‹ › e compartilhamento continuam iguais. Não é a celebração de desbloqueio (o fundo escuro e a festa continuam só no momento do desbloqueio). Conquistas secretas usam a cor de destaque.
+2. **Conquista Especial em duas etapas:** o cartão (tela Conquistas) agora abre só a conquista, em tela cheia, com a animação acelerada (~3 s): símbolo, nome de quem recebeu, título, mensagem, data e marca MetaTreino. Botões: **✨ Reviver minha história** (destaque), Compartilhar e Fechar. O texto do cartão diz que a história é opcional.
+3. **História com controles:** pausar/continuar, velocidade 1x, 1,5x e 2x (muda de verdade a espera e as transições), pular frase e pular história (vai direto para a conquista, sem fechar). Barra de progresso das frases. Teclado: espaço pausa, → pula frase, Esc fecha. Pausar congela o tempo: nenhum timer avança em segundo plano.
+4. **Final:** o mesmo palco animado da Beta 13 (sem segundo mecanismo), com "Guardar para sempre" e "Compartilhar".
+5. **Revelação automática:** acontece uma vez por conquista. A marca agora fica também na conta, então não se repete em outro aparelho. Se o administrador alterar a conquista, ela é revelada de novo, uma vez.
+6. **Compartilhar:** quem recebeu passa a poder compartilhar a própria conquista (vídeo 9:16 ou imagem), usando só símbolo, nome, título, mensagem e data — nunca o e-mail. O compartilhamento do administrador continua igual.
+7. **Desempenho e acessibilidade:** um palco por vez; a animação para ao fechar, quando o app vai para segundo plano e 30 s após o fim; ao sair da história nada fica agendado; Wake Lock liberado ao fechar. Com "movimento reduzido" no aparelho, sem animações (o quadro final aparece direto e as frases trocam sem transição). Texto alternativo para leitores de tela. Em telas baixas o quadro encolhe para os botões não cobrirem o conteúdo.
+8. **Bug antigo corrigido:** em qualquer compartilhamento de imagem com aspas no texto (ex.: "Compartilhar esta conquista"), o botão "Compartilhar agora" não fazia nada. Agora funciona.
+
+---
+
+# MetaTreino 2027.1 Beta 16 — Ajustes e correções
+
+1. **Atividade da semana — Ocultar / Mostrar:** o texto voltou (a seta da Beta 13 saiu), num rótulo pequeno e discreto ao lado do título. Mostra "Ocultar" com o conteúdo aberto e "Mostrar" quando recolhido. Mesma animação; a escolha é lembrada. "Seus treinos" não mudou.
+2. **Atividade da semana — clique:** o cartão inteiro abria os gráficos, inclusive o título e o "X de Y treinos". Agora só a área dos anéis/legenda abre os detalhes; título e quantidade são apenas informativos.
+3. **Tom de pele dos emojis:** a função central (Perfil → Aparência → Tom dos emojis) só conhecia 14 emojis. O card "Treino de hoje" usa 🦵 🦶 🧗 🙆 🤷, que ficavam sempre amarelos. A lista foi ampliada na mesma função, para todos os emojis de pessoa/mão/corpo que aceitam tom. Vale para o app inteiro e também para as imagens de compartilhar treino/semana. Emojis sem variação de tom (🦾 🔥 🏆…) não mudam.
+4. **"Como fazer" sem vídeo:** Treinos, Biblioteca e Meta Assistente usam a mesma ficha. Com vídeo, nada mudou. Sem vídeo, não abre mais o YouTube sozinho: mostra o aviso "Ainda não há vídeo disponível para este exercício", a explicação de que o aluno será direcionado ao YouTube e o botão "Buscar vídeo no YouTube" (busca pelo nome exato + "como fazer execução correta"). As instruções em texto continuam logo abaixo. Se o treinador cadastrou um link que não é do YouTube, o botão vira "Abrir demonstração".
+
+---
+
 # MetaTreino 2027.1 Beta 15 — Ajustes de plano
 
 - **Prova alvo removível:** na configuração da corrida, quando há data, aparece o botão "✕ Sem prova (remover data)". Ele limpa a data e o horário (no celular o campo de data não tinha como ficar em branco). Ao salvar, o plano deixa de ter polimento e dia da prova.

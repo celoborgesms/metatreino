@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 15 — app-plus.js
+// MetaTreino 2027.1 Beta 18 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -16,11 +16,11 @@
 // 10. Painel administrativo (indicadores, desafios, administradores)
 // 11. Atualização automática (sem botão)
 // 18. Calistenia · 19–22. Beta 13 (retomada, mensagens, conquista especial, recolher)
-// 23–26. Beta 14 (corrida do iniciante ao competitivo) · 27. Beta 15 (prova removível, encerrar plano de musculação)
+// 23–26. Beta 14 (corrida do iniciante ao competitivo) · 27. Beta 15 (prova removível, encerrar plano de musculação) · 28. Beta 17 (conquistas) · 29. Beta 18 (assistente, mural, destaques do dia, temas)
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.15' };
+const MTP = { versao: '2027.1-beta.18' };
 const DIA_MS = 86400000;
 function mtNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function mtEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -268,7 +268,7 @@ function openExerciseSheet(name, idKey, opts){
   const exId = slug(name);
   const temEvo = (typeof temEvolucaoEx==='function') && temEvolucaoEx(exId);
   const palco = v.id ? _palcoVideo(v)
-    : `<div class="ex-noVideo">${muscleIco(musculoDoExercicio(ex, grupo))}<div>O treinador ainda não cadastrou um vídeo para este exercício.</div><a class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" href="${mtEsc(ytLink(name))}" target="_blank" rel="noopener">Buscar demonstração no YouTube ↗</a></div>`;
+    : exSemVideoHtml(ex, grupo, v);
   const mi = $('modal-inner');
   mi.classList.remove('modal-video','short'); mi.classList.add('modal-ex');
   $('modal-back').classList.add('ex-open');
@@ -292,12 +292,22 @@ function openExerciseSheet(name, idKey, opts){
   if(v.id) mtMontarPlayer(v, {nome: ex.name, grupo, equip: ex.equip||[]});
 }
 function openExercise(name){ openExerciseSheet(name); }
-// "Ver como fazer" (sessões, assistente): sem vídeo cadastrado, mantém o comportamento antigo (busca no YouTube)
-const _playExerciseOrig = playExercise;
+// Sem vídeo: aviso discreto + busca no YouTube SÓ se o aluno tocar no botão. As instruções em texto
+// continuam logo abaixo. Uma única função serve Treinos, Biblioteca e Meta Assistente.
+function exBuscaYoutube(nome){ return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(String(nome||'').trim() + ' como fazer execução correta'); }
+function exSemVideoHtml(ex, grupo, v){
+  const outro = v && v.url && !v.id;   // o treinador cadastrou um link que não é vídeo do YouTube
+  const href = outro ? v.url : exBuscaYoutube(ex.name);
+  return `<div class="ex-noVideo">${muscleIco(musculoDoExercicio(ex, grupo))}
+    <div class="exnv-t">Ainda não há vídeo disponível para este exercício.</div>
+    <div class="exnv-s">${outro ? 'O treinador indicou uma demonstração fora do app. Ela abre em outra página.' : 'Se quiser ver uma demonstração, você será direcionado ao YouTube para buscar este exercício. As orientações estão logo abaixo.'}</div>
+    <a class="btn btn-ghost exnv-b" href="${mtEsc(href)}" target="_blank" rel="noopener">${outro ? 'Abrir demonstração ↗' : 'Buscar vídeo no YouTube ↗'}</a></div>`;
+}
+// "Ver como fazer" (Treinos, assistente): abre sempre a ficha do exercício — com o vídeo quando existe,
+// com o aviso e as instruções quando não existe. Nunca redireciona sozinho para o YouTube.
 playExercise = function(name, idKey){
   const v = _videoDoExercicio(name, idKey);
-  if(!v.id){ return _playExerciseOrig(name, idKey); }
-  openExerciseSheet(name, idKey, {video:true});
+  openExerciseSheet(name, idKey, v.id ? {video:true} : {});
 };
 const _closeModalOrig = closeModal;
 closeModal = function(){
@@ -422,12 +432,12 @@ renderSessions = function(){
 };
 
 // ---------- 6. APARÊNCIA ----------
-const TEMAS_NOTURNOS = ['zepp','amoled','aurora','classico','oceano'];
+const TEMAS_NOTURNOS = ['zepp','amoled','aurora','classico','oceano','rubi'];
 function openAparencia(){
   const cur = currentTheme();
   const opt = k=>{ const t = THEMES[k], p = t.prev;
     return `<button type="button" class="ap-opt ${k===cur?'on':''}" onclick="setTheme('${k}');openAparencia()">
-      <div class="ap-prev" style="background:${p.bg};${k==='claro'?'border:1px solid #dfe2f2':''}"><b style="background:${p.a}"></b><i style="background:${p.a}"></i><i style="background:${p.b}"></i><i style="background:${p.c}"></i></div>
+      <div class="ap-prev" style="background:${p.bg};${TEMAS_CLAROS.includes(k)?'border:1px solid '+p.c:''}"><b style="background:${p.a}"></b><i style="background:${p.a}"></i><i style="background:${p.b}"></i><i style="background:${p.c}"></i></div>
       <div class="ap-name"><span>${t.nome}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}</div><small style="color:var(--text-mute);font-size:11px;margin-top:-4px">${t.sub}</small></button>`; };
   const sobrio = document.documentElement.classList.contains('sobrio');
   const pk = (typeof getPacote==='function') ? getPacote() : 'linha';
@@ -438,7 +448,7 @@ function openAparencia(){
     <div class="mt-sec" style="margin-top:6px">Tema Noturno</div>
     <div class="ap-grid">${TEMAS_NOTURNOS.filter(k=>THEMES[k]).map(opt).join('')}</div>
     <div class="mt-sec">Tema Claro</div>
-    <div class="ap-grid">${opt('claro')}</div>
+    <div class="ap-grid">${TEMAS_CLAROS.filter(k=>THEMES[k]).map(opt).join('')}</div>
     <div class="mt-sec">Ícones</div>
     <div class="mod-toggle" style="margin:0 0 10px">
       <button class="seg ${sobrio?'on':''}" style="font-size:12.5px;padding:9px 4px" onclick="${sobrio?'':"setEstiloIcones('sobrio')"}">Ícones de linha</button>
@@ -450,7 +460,7 @@ function openAparencia(){
     <div class="ap-switch" onclick="toggleDeco();openAparencia()"><div><b style="font-size:14px">Fundo decorativo</b><div style="font-size:11.5px;color:var(--text-mute)">Desenho discreto no fundo de cada aba</div></div><span class="ap-tog ${deco?'on':''}"></span></div>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();renderProfile()">Pronto</button>`;
   $('modal-back').classList.add('on');
-  const rv = $('theme-row-val'); if(rv) rv.textContent = (cur==='claro'?'Tema Claro':'Tema Noturno')+' · '+THEMES[cur].nome+' ›';
+  const rv = $('theme-row-val'); if(rv) rv.textContent = (temaClaro(cur)?'Tema Claro':'Tema Noturno')+' · '+THEMES[cur].nome+' ›';
 }
 setPacote = function(k){
   try{ localStorage.setItem('metatreino_pack', k); }catch(e){}
@@ -464,7 +474,7 @@ const _renderThemePickerOrig = renderThemePicker;
 renderThemePicker = function(){
   _renderThemePickerOrig();
   const rv = document.getElementById('theme-row-val'); const cur = currentTheme();
-  if(rv) rv.textContent = (cur==='claro'?'Tema Claro':'Tema Noturno')+' · '+THEMES[cur].nome+' ›';
+  if(rv) rv.textContent = (temaClaro(cur)?'Tema Claro':'Tema Noturno')+' · '+THEMES[cur].nome+' ›';
 };
 openEstiloIcones = function(){ openAparencia(); };
 
@@ -540,7 +550,7 @@ const EV_CLARO = { anonovo:'#a16207', carnaval:'#be185d', consistencia:'#4d7c0f'
 // desafios "da casa" (consistência, evolução, reta final) seguem a cor do tema; os festivos mantêm a própria paleta
 const EV_DO_TEMA = ['consistencia','evolucao','retafinal'];
 function evCor(arte){ if(EV_DO_TEMA.includes(arte)) return { ev:'var(--primary)', a:'rgba(var(--primary-rgb),.20)', b:'rgba(var(--primary-rgb),.06)' };
-  const c = EV_CORES[arte] || EV_CORES.evolucao; try{ if(currentTheme()==='claro') return Object.assign({}, c, {ev: EV_CLARO[arte] || '#4d7c0f'}); }catch(e){} return c; }
+  const c = EV_CORES[arte] || EV_CORES.evolucao; try{ if(temaClaro()) return Object.assign({}, c, {ev: EV_CLARO[arte] || '#4d7c0f'}); }catch(e){} return c; }
 function _d(y,m,d){ return new Date(y,m,d).getTime(); }
 function eventosDoAno(Y){
   const out = [];
@@ -815,7 +825,7 @@ function openHistoricoEventos(){
 async function shareEventoImagem(key){
   const e = eventoPorKey(key); const reg = (state.eventos||{})[key]; if(!e || !reg) return;
   const c = Object.assign({}, EV_CORES[e.arte] || EV_CORES.evolucao);   // imagem sempre escura
-  if(EV_DO_TEMA.includes(e.arte)){ try{ const cs = getComputedStyle(document.documentElement); const pr = cs.getPropertyValue('--primary').trim(), rgb = cs.getPropertyValue('--primary-rgb').trim(); if(pr && currentTheme()!=='claro'){ c.ev = pr; c.a = `rgba(${rgb},.22)`; c.b = `rgba(${rgb},.08)`; } }catch(err){} }
+  if(EV_DO_TEMA.includes(e.arte)){ try{ const cs = getComputedStyle(document.documentElement); const pr = cs.getPropertyValue('--primary').trim(), rgb = cs.getPropertyValue('--primary-rgb').trim(); if(pr && !temaClaro()){ c.ev = pr; c.a = `rgba(${rgb},.22)`; c.b = `rgba(${rgb},.08)`; } }catch(err){} }
   const W = 1080, H = 1350; const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
   g.fillStyle = '#050505'; g.fillRect(0,0,W,H);
   const rg = g.createRadialGradient(W*0.85, H*0.1, 20, W*0.85, H*0.1, W*0.9); rg.addColorStop(0, c.a.replace(/[\d.]+\)$/,'0.55)')); rg.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(0,0,W,H);
@@ -3391,41 +3401,142 @@ function saNome(sa){
     return n ? String(n).split(' ')[0] : '';
   }catch(e){ return ''; }
 }
-// palco animado em tela cheia (prévia do admin e revelação para a pessoa)
+// palco animado em tela cheia (prévia do admin, conquista da pessoa e final da história).
+// Um palco por vez; o requestAnimationFrame para ao fechar, quando o app vai para segundo plano
+// e 30 s depois do fim da animação. Com "movimento reduzido" no aparelho, mostra direto o quadro final.
+function _saReduz(){ try{ return window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }
 function saPalco(sa, opts){
   opts = opts || {};
+  document.querySelectorAll('.sa-stage').forEach(o=>{ try{ o.__parar && o.__parar(); }catch(e){} o.remove(); });
+  const reduz = _saReduz(); const vel = opts.vel || 1;
   const ov = document.createElement('div'); ov.className = 'sa-stage'; ov.id = opts.id || 'sa-stage';
-  ov.innerHTML = `<canvas></canvas><div class="sa-actions">${opts.acoes||''}</div>`;
+  ov.setAttribute('role','dialog'); ov.setAttribute('aria-label', 'Conquista especial: ' + (sa.titulo||''));
+  ov.innerHTML = `<canvas aria-hidden="true"></canvas><div class="sr-only">${mtEsc((sa.emo||'')+' '+(sa.titulo||'')+'. '+(sa.descricao||''))}</div>${opts.topo||''}<div class="sa-actions">${opts.acoes||''}</div>`;
   document.body.appendChild(ov);
   const cv = ov.querySelector('canvas');
   const dpr = Math.min(2, window.devicePixelRatio||1);
-  const fit = ()=>{ const h = window.innerHeight, w = Math.min(window.innerWidth, h*9/16); cv.style.width = w+'px'; cv.style.height = (w*16/9)+'px'; cv.width = Math.round(w*dpr); cv.height = Math.round(w*16/9*dpr); };
-  fit(); window.addEventListener('resize', fit);
-  const g = cv.getContext('2d'); const t0 = performance.now();
+  const g = cv.getContext('2d');
   const dados = Object.assign({}, sa, { nome: saNome(sa) });
-  const loop = ()=>{ if(!document.body.contains(ov)){ window.removeEventListener('resize', fit); return; } const t = (performance.now()-t0)/1000; saFrame(g, cv.width, cv.height, Math.min(t, SA_DUR+60), dados); if(t > 6.3) ov.classList.add('fim'); requestAnimationFrame(loop); };
-  requestAnimationFrame(loop);
+  let raf = 0, vivo = true, pausa = 0, ocultoEm = null; const t0 = performance.now();
+  const tempo = ()=> reduz ? SA_DUR : ((performance.now() - t0 - pausa)/1000) * vel;
+  const desenha = ()=>{ const t = tempo(); saFrame(g, cv.width, cv.height, Math.min(t, SA_DUR+60), dados); if(t > (opts.acoesEm||6.3)) ov.classList.add('fim'); return t; };
+  // os botões ficam ABAIXO do quadro quando há espaço; em telas baixas o quadro encolhe para não cobri-los
+  const reserva = opts.reserva != null ? opts.reserva : 76;
+  ov.style.flexDirection = 'column'; ov.style.justifyContent = 'flex-start';
+  const fit = ()=>{ const H = window.innerHeight, util = Math.max(H*0.62, H - reserva); const w = Math.min(window.innerWidth, util*9/16); const h = w*16/9;
+    cv.style.width = w+'px'; cv.style.height = h+'px'; cv.style.marginTop = Math.max(0, (util - h)/2)+'px'; cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); if(!raf) desenha(); };
+  const loop = ()=>{ raf = 0; if(!vivo || !document.body.contains(ov)){ parar(); return; } const t = desenha(); if(t < SA_DUR + 30) raf = requestAnimationFrame(loop); };
+  const vis = ()=>{ if(!vivo) return; if(document.hidden){ if(raf){ cancelAnimationFrame(raf); raf = 0; } ocultoEm = performance.now(); } else { if(ocultoEm){ pausa += performance.now() - ocultoEm; ocultoEm = null; } if(!raf && !reduz) raf = requestAnimationFrame(loop); } };
+  function parar(){ vivo = false; if(raf){ cancelAnimationFrame(raf); raf = 0; } window.removeEventListener('resize', fit); document.removeEventListener('visibilitychange', vis); }
+  ov.__parar = parar; ov.__aoFechar = opts.aoFechar || null;
+  window.addEventListener('resize', fit); document.addEventListener('visibilitychange', vis);
+  fit();
+  if(reduz){ desenha(); ov.classList.add('fim'); } else raf = requestAnimationFrame(loop);
   requestAnimationFrame(()=>ov.classList.add('on'));
+  setTimeout(()=>{ const b = ov.querySelector('.sa-actions .btn, .sa-x'); try{ b && b.focus({preventScroll:true}); }catch(e){} }, 300);
   return ov;
 }
-function saFecharPalco(){ const ov = document.querySelector('.sa-stage'); if(ov){ ov.classList.remove('on'); setTimeout(()=>ov.remove(), 400); } try{ releaseWakeLock && releaseWakeLock(); }catch(e){} }
-// revelação para a pessoa: mantém as frases pessoais e, no fim, a nova apresentação (sem chuva de emojis)
-showSpecialReveal = function(sa){
+function saFecharPalco(){
+  document.querySelectorAll('.sa-stage').forEach(ov=>{ try{ ov.__parar && ov.__parar(); }catch(e){} const f = ov.__aoFechar; ov.classList.remove('on'); setTimeout(()=>ov.remove(), 400); try{ f && f(); }catch(e){} });
+  try{ releaseWakeLock && releaseWakeLock(); }catch(e){}
+}
+
+// ---- história da conquista (frases pessoais) com pausar, velocidade e pular ----
+// Um único timer por vez, com o tempo restante guardado: pausar congela de verdade, a velocidade
+// muda a espera que está correndo e as transições. Ao sair, nada fica agendado.
+let _saHist = null;
+const SA_ICO_PAUSA = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+const SA_ICO_PLAY = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+function _saDadosTrofeu(sp){
+  sp = sp || state.specialTrophy || {};
+  return { emo: sp.emo||'💍', titulo: sp.titulo||'', descricao: sp.descricao||'', nome: sp.nome || (((state.user && state.user.profile && state.user.profile.nickname) || (state.user && state.user.name) || '').split(' ')[0]), data: sp.data || '', atualizadoEm: sp.at || Date.now(), frases: (sp.frases||[]).slice() };
+}
+function _saHistParar(){
+  const H = _saHist; if(!H) return;
+  if(H.timer){ clearTimeout(H.timer); H.timer = null; }
+  H.fn = null; H.vivo = false;
+  document.removeEventListener('keydown', H.tecla);
+  if(H.ov && H.ov.parentNode) H.ov.remove();
+  _saHist = null;
+}
+function saHistoriaFechar(){ _saHistParar(); saFecharPalco(); }
+showSpecialReveal = function(sa, opts){
+  opts = opts || {};
+  _saHistParar();
   try{ requestWakeLock && requestWakeLock(); }catch(e){}
-  try{
-    state.specialTrophy = { emo: sa.emo||'💍', titulo: sa.titulo||'', descricao: sa.descricao||'', frases: (sa.frases && sa.frases.length) ? sa.frases.slice() : ((state.specialTrophy && state.specialTrophy.frases) || []), at: (state.specialTrophy && state.specialTrophy.at) || Date.now() };
-    saveData();
-  }catch(e){}
-  const frases = (sa.frases && sa.frases.length) ? sa.frases : ['Toda jornada é melhor quando compartilhada...','E existem pessoas que transformam a nossa vida...','Hoje você desbloqueou a conquista mais importante de todas...'];
-  const ov = document.createElement('div'); ov.className = 'sa-intro'; ov.innerHTML = '<div class="sa-frase"></div>';
-  document.body.appendChild(ov); requestAnimationFrame(()=>ov.classList.add('on'));
-  const ph = ov.querySelector('.sa-frase'); let i = 0;
-  const prox = ()=>{
-    if(i < frases.length){ ph.classList.remove('on'); setTimeout(()=>{ ph.textContent = frases[i]; ph.classList.add('on'); const dwell = Math.min(9000, Math.max(3000, (frases[i]||'').length*90)); i++; setTimeout(prox, dwell); }, 700); }
-    else { ph.classList.remove('on'); setTimeout(()=>{ saPalco(sa, { id:'special-reveal', acoes:`<button class="btn btn-primary" onclick="saFecharPalco()">Guardar para sempre</button>` }); ov.remove(); }, frases.length?800:200); }
+  if(!opts.reviver){
+    try{
+      const ant = state.specialTrophy || {};
+      state.specialTrophy = { emo: sa.emo||'💍', titulo: sa.titulo||'', descricao: sa.descricao||'', frases: (sa.frases && sa.frases.length) ? sa.frases.slice() : (ant.frases || []),
+        nome: sa.nome || ant.nome || '', data: sa.data || ant.data || '', at: ant.at || Date.now(), revelada: opts.chave || ant.revelada || null };
+      saveData();
+    }catch(e){}
+  }
+  const dados = opts.reviver ? _saDadosTrofeu() : Object.assign({}, sa);
+  const frases = (dados.frases && dados.frases.length) ? dados.frases : ['Toda jornada é melhor quando compartilhada...','E existem pessoas que transformam a nossa vida...','Hoje você desbloqueou a conquista mais importante de todas...'];
+  const reduz = _saReduz();
+  const ov = document.createElement('div'); ov.className = 'sa-intro'; ov.setAttribute('role','dialog'); ov.setAttribute('aria-label','História da conquista especial');
+  ov.innerHTML = `<button class="sa-x" aria-label="Fechar a história" title="Fechar">✕</button>
+    <div class="sa-frase" aria-live="polite"></div>
+    <div class="sa-ctrl" role="toolbar" aria-label="Controles da história">
+      <div class="sa-prog" aria-hidden="true">${frases.map(()=>'<i></i>').join('')}</div>
+      <div class="sa-ctrl-row">
+        <button data-a="pausa" aria-label="Pausar">${SA_ICO_PAUSA}</button>
+        <span class="sa-vel">${[1,1.5,2].map(v=>`<button data-v="${v}" class="${v===1?'on':''}" aria-label="Velocidade ${String(v).replace('.',',')}x">${String(v).replace('.',',')}x</button>`).join('')}</span>
+        <button data-a="frase" aria-label="Pular frase">Pular frase ›</button>
+        <button data-a="tudo" aria-label="Pular a história e ver a conquista">Pular história</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  const ph = ov.querySelector('.sa-frase');
+  const H = _saHist = { ov, i:-1, vel:1, pausado:false, timer:null, fn:null, restante:0, inicio:0, vivo:true, total:frases.length };
+  const trans = ()=>{ const d = reduz ? 0 : 1/H.vel; ph.style.transitionDuration = d+'s'; ov.style.transitionDuration = (reduz ? 0 : 1.2/H.vel)+'s'; };
+  const exec = ()=>{ H.timer = null; const f = H.fn; H.fn = null; if(H.vivo && f) f(); };
+  const agenda = (fn, msBase)=>{ if(H.timer) clearTimeout(H.timer); H.timer = null; H.fn = fn; H.restante = msBase / H.vel; H.inicio = performance.now(); if(!H.pausado) H.timer = setTimeout(exec, H.restante); };
+  const prog = ()=>{ ov.querySelectorAll('.sa-prog i').forEach((d,k)=>{ d.className = k < H.i ? 'ok' : k === H.i ? 'now' : ''; }); };
+  const mostrar = ()=>{
+    ph.classList.remove('on');
+    agenda(()=>{ ph.textContent = frases[H.i]; ph.classList.add('on'); prog();
+      agenda(proxima, Math.min(9000, Math.max(3000, (frases[H.i]||'').length*90))); }, reduz ? 50 : 700);
   };
-  setTimeout(prox, frases.length ? 1200 : 300);
+  function proxima(){ if(!H.vivo) return; H.i++; if(H.i < frases.length) mostrar(); else final(); }
+  function final(){
+    if(!H.vivo) return;
+    if(H.timer){ clearTimeout(H.timer); H.timer = null; } H.fn = null;
+    H.pausado = false; ph.classList.remove('on'); ov.classList.add('saindo');
+    setTimeout(()=>{ if(_saHist !== H) return; _saHistParar(); saFinalConquista(dados); }, reduz ? 50 : 650);
+  }
+  const pausar = ()=>{ if(H.pausado) return; H.pausado = true; if(H.timer){ clearTimeout(H.timer); H.timer = null; H.restante -= performance.now() - H.inicio; } ov.classList.add('pausado'); const b = ov.querySelector('[data-a=pausa]'); b.innerHTML = SA_ICO_PLAY; b.setAttribute('aria-label','Continuar'); };
+  const continuar = ()=>{ if(!H.pausado) return; H.pausado = false; if(H.fn){ H.inicio = performance.now(); H.timer = setTimeout(exec, Math.max(0, H.restante)); } ov.classList.remove('pausado'); const b = ov.querySelector('[data-a=pausa]'); b.innerHTML = SA_ICO_PAUSA; b.setAttribute('aria-label','Pausar'); };
+  const setVel = v=>{
+    if(v === H.vel) return;
+    if(H.fn){ let rest = H.restante; if(H.timer){ rest -= performance.now() - H.inicio; clearTimeout(H.timer); H.timer = null; } H.restante = Math.max(0, rest * H.vel / v); if(!H.pausado){ H.inicio = performance.now(); H.timer = setTimeout(exec, H.restante); } }
+    H.vel = v; trans();
+    ov.querySelectorAll('.sa-vel button').forEach(b=>b.classList.toggle('on', +b.dataset.v === v));
+  };
+  const pularFrase = ()=>{ if(H.timer){ clearTimeout(H.timer); H.timer = null; } H.fn = null; if(H.pausado) continuar(); proxima(); };
+  H.pausar = pausar; H.continuar = continuar; H.setVel = setVel; H.pularFrase = pularFrase; H.pularTudo = final;
+  ov.querySelector('.sa-x').onclick = saHistoriaFechar;
+  ov.querySelector('[data-a=pausa]').onclick = ()=> H.pausado ? continuar() : pausar();
+  ov.querySelector('[data-a=frase]').onclick = pularFrase;
+  ov.querySelector('[data-a=tudo]').onclick = final;
+  ov.querySelectorAll('.sa-vel button').forEach(b=>b.onclick = ()=>setVel(+b.dataset.v));
+  H.tecla = e=>{ if(e.key==='Escape') saHistoriaFechar(); else if(e.key===' '){ e.preventDefault(); H.pausado ? continuar() : pausar(); } else if(e.key==='ArrowRight') pularFrase(); };
+  document.addEventListener('keydown', H.tecla);
+  trans();
+  requestAnimationFrame(()=>ov.classList.add('on'));
+  agenda(proxima, reduz ? 200 : 1200);
 };
+// final da história (e "pular história"): o mesmo palco animado, com guardar e compartilhar
+function saFinalConquista(dados){
+  const podeCompartilhar = !!(state.specialTrophy && typeof saFormatoVideo === 'function');
+  saPalco(dados, { id:'special-reveal', topo:`<button class="sa-x" aria-label="Fechar" onclick="saFecharPalco()">✕</button>`,
+    acoes:`<button class="btn btn-primary" onclick="saGuardarParaSempre()">Guardar para sempre</button>${podeCompartilhar ? `<button class="btn btn-ghost" onclick="saFecharPalco();setTimeout(openMinhaConquistaShare,350)">Compartilhar</button>` : ''}` });
+}
+function saGuardarParaSempre(){
+  try{ if(state.specialTrophy){ state.specialTrophy.guardadaEm = state.specialTrophy.guardadaEm || Date.now(); saveData(); } }catch(e){}
+  saFecharPalco(); toast('💛 Guardada para sempre nas suas conquistas');
+}
 // ---- vídeo 9:16 ----
 function saFormatoVideo(){
   if(!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) return null;
@@ -3537,7 +3648,9 @@ window.saveSpecialAward = async function(){
 // =====================================================================
 const CHEV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>';
 function _colBotao(k, aberto, rotulo){
-  return `<button type="button" class="col-chev ${aberto?'':'fechado'}" aria-expanded="${aberto}" aria-label="${aberto?'Recolher':'Mostrar'} ${rotulo}" title="${aberto?'Recolher':'Mostrar'}" onclick="event.stopPropagation();mtColAnimar('${k}')">${CHEV}</button>`;
+  // Atividade da semana: texto "Ocultar"/"Mostrar" discreto ao lado do título. Seus treinos: seta.
+  if(k === 'semana') return `<button type="button" class="col-txt" data-col="${k}" aria-expanded="${aberto}" aria-label="${aberto?'Ocultar':'Mostrar'} ${rotulo}" onclick="event.stopPropagation();mtColAnimar('${k}')">${aberto?'Ocultar':'Mostrar'}</button>`;
+  return `<button type="button" class="col-chev ${aberto?'':'fechado'}" data-col="${k}" aria-expanded="${aberto}" aria-label="${aberto?'Recolher':'Mostrar'} ${rotulo}" title="${aberto?'Recolher':'Mostrar'}" onclick="event.stopPropagation();mtColAnimar('${k}')">${CHEV}</button>`;
 }
 function _colCorpo(k){
   if(k==='treinos') return $('your-list');
@@ -3549,8 +3662,12 @@ function mtColAnimar(k){
   const corpo = _colCorpo(k);
   mtLS('mt_col_'+k, abertoAntes ? '0' : '1');
   if(!corpo){ _mtAplicaColapsos(); return; }
-  const btn = document.querySelector(`.col-chev[onclick*="'${k}'"]`);
-  if(btn){ btn.classList.toggle('fechado', abertoAntes); btn.setAttribute('aria-expanded', String(!abertoAntes)); btn.title = abertoAntes ? 'Mostrar' : 'Recolher'; }
+  const btn = document.querySelector(`[data-col="${k}"]`);
+  if(btn){
+    btn.setAttribute('aria-expanded', String(!abertoAntes));
+    if(btn.classList.contains('col-txt')){ btn.textContent = abertoAntes ? 'Mostrar' : 'Ocultar'; btn.setAttribute('aria-label', (abertoAntes ? 'Mostrar' : 'Ocultar') + ' Atividade da semana'); }
+    else { btn.classList.toggle('fechado', abertoAntes); btn.title = abertoAntes ? 'Mostrar' : 'Recolher'; }
+  }
   const resumo = k==='treinos' ? $('home-tr-resumo') : null;
   if(abertoAntes){
     corpo.style.maxHeight = corpo.scrollHeight + 'px'; corpo.offsetHeight;
@@ -3590,11 +3707,17 @@ _mtAplicaColapsos = function(){
       q.appendChild(body);
     }
     const header = q.firstElementChild;
-    header.querySelectorAll('.col-chev').forEach(b=>b.remove());
+    header.querySelectorAll('.col-chev, .col-txt').forEach(b=>b.remove());
     header.classList.add('col-head');
     const aberto = mtColAberto('semana', true);
-    header.insertAdjacentHTML('beforeend', _colBotao('semana', aberto, 'Atividade da semana'));
+    const h3 = header.querySelector('h3');
+    if(h3) h3.insertAdjacentHTML('afterend', _colBotao('semana', aberto, 'Atividade da semana'));
+    else header.insertAdjacentHTML('beforeend', _colBotao('semana', aberto, 'Atividade da semana'));
     body.style.display = aberto ? '' : 'none';
+    // os gráficos abrem só pela área dos anéis; o título e "X de Y treinos" são apenas informativos
+    q.onclick = null; q.style.cursor = 'default';
+    body.onclick = ()=>openAtividadeDetalhes();
+    body.style.cursor = 'pointer'; body.setAttribute('role','button'); body.setAttribute('aria-label','Ver detalhes da atividade da semana');
   }
   // avisos longos: 2 linhas + "ver mais" (mesmo comportamento de antes)
   ['card-missed','card-weekrecap','card-coach-msg'].forEach(id=>{
@@ -3608,7 +3731,7 @@ _mtAplicaColapsos = function(){
   });
 };
 
-Object.assign(window, { estadoTreino, cargaRetomada, mtColAnimar, openSpecialShare, saGerarECompartilhar, saCompartilharImagem, saPrevia, saFecharPalco, saFrame, saFormatoVideo, saGravarVideo });
+Object.assign(window, { estadoTreino, cargaRetomada, mtColAnimar, saHistoriaFechar, saGuardarParaSempre, saFinalConquista, openSpecialShare, saGerarECompartilhar, saCompartilharImagem, saPrevia, saFecharPalco, saFrame, saFormatoVideo, saGravarVideo });
 
 // =====================================================================
 // 23. CORRIDA — DO PRIMEIRO PASSO À PREPARAÇÃO PARA PROVAS (Beta 14)
@@ -5244,3 +5367,436 @@ maInterpret = function(txt){
   if(!/por ?que/.test(t) && /^(qual|qual e|o que|oque|que)?\s*(e\s*)?(o\s*|meu\s*|o meu\s*)?treino (de|pra|para) hoje\??$|qual (e )?(o )?meu treino (de|pra|para) hoje/.test(t.trim())) return 'proximo';
   return _maInterpretB15.apply(this, arguments);
 };
+
+// =====================================================================
+// 28. CONQUISTAS — detalhe animado e Conquista Especial em duas etapas (Beta 17)
+// Nada muda nos critérios, datas, ids ou no desbloqueio: só a apresentação.
+// =====================================================================
+// --- conquista normal: medalha entra com brilho discreto (não é a celebração de desbloqueio) ---
+const _openTrophyDetailB17 = window.openTrophyDetail;
+window.openTrophyDetail = function(id){
+  const r = _openTrophyDetailB17.apply(this, arguments);
+  try{
+    const box = $('modal-inner'); const med = box && box.querySelector('.anim-check'); if(!med) return r;
+    const t = TROPHIES.find(x=>x.id===id) || {};
+    med.classList.remove('anim-check');
+    const wrap = document.createElement('div');
+    wrap.className = 'tr-medal' + (t.secret ? ' tr-secreta' : '');
+    wrap.innerHTML = `<span class="tr-glow" aria-hidden="true"></span><span class="tr-ring" aria-hidden="true"></span>${Array.from({length:8},(_,i)=>`<i style="--a:${i*45+22}deg;--d:${(i%3)*60}ms" aria-hidden="true"></i>`).join('')}`;
+    med.parentNode.insertBefore(wrap, med); wrap.appendChild(med); med.classList.add('tr-ico');
+    const h3 = wrap.parentNode.querySelector('h3'); if(h3) h3.classList.add('tr-nome');
+  }catch(e){}
+  return r;
+};
+
+// --- Conquista Especial: primeiro a conquista; a história é opcional ---
+function openSpecialTrophy(){
+  const sp = state.specialTrophy; if(!sp){ toast('Nenhuma conquista especial por aqui.'); return; }
+  try{ closeModal(); }catch(e){}
+  const dados = _saDadosTrofeu(sp);
+  saPalco(dados, { id:'special-view', vel: 2.2, acoesEm: 5.8, reserva: 150,
+    topo:`<button class="sa-x" aria-label="Fechar" onclick="saFecharPalco()">✕</button>`,
+    acoes:`<div class="sa-acoes-col"><button class="btn btn-primary sa-reviver" onclick="saReviverHistoria()">✨ Reviver minha história</button>
+      <div class="sa-opc">A história completa é opcional — leva cerca de ${Math.max(1, Math.round(((dados.frases||[]).length||3) * 6 / 60))} min.</div>
+      <div class="sa-acoes-row">${typeof saFormatoVideo==='function' ? `<button class="btn btn-ghost" onclick="saFecharPalco();setTimeout(openMinhaConquistaShare,350)">Compartilhar</button>` : ''}<button class="btn btn-ghost" onclick="saFecharPalco()">Fechar</button></div></div>` });
+}
+function saReviverHistoria(){
+  document.querySelectorAll('.sa-stage').forEach(ov=>{ try{ ov.__parar && ov.__parar(); }catch(e){} ov.remove(); });
+  showSpecialReveal(state.specialTrophy, { reviver:true });
+}
+// cartão na tela de Conquistas: abre a conquista, não a história
+const _openTrophiesB17 = window.openTrophies;
+window.openTrophies = function(){
+  const r = _openTrophiesB17.apply(this, arguments);
+  try{
+    const card = [...document.querySelectorAll('#modal-inner [onclick*="showSpecialReveal"]')][0];
+    if(card){
+      card.setAttribute('onclick', 'openSpecialTrophy()'); card.setAttribute('role','button'); card.setAttribute('tabindex','0');
+      card.classList.add('sa-card');
+      card.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openSpecialTrophy(); } });
+      const leg = [...card.querySelectorAll('div')].find(d=>/reviver este momento/i.test(d.textContent));
+      if(leg) leg.textContent = 'Toque para ver sua conquista · a história completa é opcional';
+    }
+  }catch(e){}
+  return r;
+};
+// a revelação automática acontece uma vez por conquista — também registrada na conta (não só no aparelho)
+const _checkSpecialB17 = window.checkSpecialAward;
+window.checkSpecialAward = function(trigger){
+  try{
+    const sa = specialAward;
+    if(sa && sa.titulo){
+      const chave = 'metatreino_special_shown_'+(sa.data||'now')+'_'+(sa.atualizadoEm||'');
+      if(state.specialTrophy && state.specialTrophy.revelada === chave){ try{ localStorage.setItem(chave, '1'); }catch(e){} return; }
+      window.__saChave = chave;
+    }
+  }catch(e){}
+  return _checkSpecialB17.apply(this, arguments);
+};
+// a chave da revelação vai junto quando a revelação automática salva a conquista
+const _showRevealB17 = showSpecialReveal;
+showSpecialReveal = function(sa, opts){
+  opts = Object.assign({}, opts||{});
+  if(!opts.reviver && !opts.chave && window.__saChave) opts.chave = window.__saChave;
+  return _showRevealB17.call(this, sa, opts);
+};
+
+// --- compartilhar a própria conquista (quem recebeu) ---
+// Usa só o que é da conquista: símbolo, nome, título, mensagem e data. Sem e-mail ou outro dado pessoal.
+function openMinhaConquistaShare(){
+  const sp = state.specialTrophy; if(!sp){ return; }
+  const dados = _saDadosTrofeu(sp); const fmt = saFormatoVideo();
+  $('modal-inner').innerHTML = `<h3>Compartilhar conquista</h3>
+    <p class="mt-muted" style="margin:0 0 10px">Vídeo vertical 9:16 (${String(SA_DUR).replace('.',',')} s) com seu nome, a conquista, a mensagem e a data — sem e-mail nem outros dados.</p>
+    <div class="adm-form"><label>Nome que aparece</label><input class="input" id="sa-nome-minha" maxlength="40" value="${mtEsc(dados.nome)}"></div>
+    ${fmt ? `<button class="btn btn-primary btn-block" style="margin-top:12px" id="sa-vid-minha" onclick="saMinhaVideo()">🎬 Gerar vídeo${fmt.ext==='mp4'?' (MP4)':''}</button>`
+      : `<div class="note" style="margin-top:12px"><div class="note-line">Este navegador não consegue gravar vídeo. Use a imagem — ou abra o MetaTreino no Chrome atualizado.</div></div>`}
+    ${fmt && fmt.ext!=='mp4' ? `<p class="mt-muted" style="font-size:11.5px;margin-top:6px">Este navegador grava em WebM. O WhatsApp e o Instagram nem sempre aceitam WebM — se não abrir lá, use a imagem.</p>`:''}
+    <div id="sa-prog-minha" class="mt-muted" style="font-size:12px;margin-top:8px;min-height:18px"></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="saMinhaImagem()">🖼️ Compartilhar como imagem</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="closeModal();setTimeout(openSpecialTrophy,250)">Voltar à conquista</button>`;
+  $('modal-back').classList.add('on');
+}
+function _saMinhaDados(){ const d = _saDadosTrofeu(); const n = ($('sa-nome-minha')||{}).value; if(n != null) d.nome = String(n).trim().slice(0,40); delete d.frases; return d; }
+async function saMinhaVideo(){
+  const d = _saMinhaDados();
+  await mtComBotao('sa-vid-minha', 'Gravando vídeo…', async ()=>{
+    const p = $('sa-prog-minha');
+    const r = await saGravarVideo(d, f=>{ if(p) p.textContent = `Gravando… ${Math.round(f*SA_DUR*10)/10} de ${String(SA_DUR).replace('.',',')} s`; });
+    if(p) p.textContent = `Vídeo pronto (${(r.blob.size/1048576).toFixed(1).replace('.',',')} MB, ${r.ext.toUpperCase()}).`;
+    const res = await saCompartilharArquivo(r.blob, `minha-conquista-metatreino.${r.ext}`, `${d.titulo} — MetaTreino`);
+    if(res==='baixado') toast('Vídeo salvo nos downloads do aparelho.');
+  });
+}
+async function saMinhaImagem(){
+  const d = _saMinhaDados(); const b = await saImagemFinal(d);
+  const res = await saCompartilharArquivo(b, 'minha-conquista-metatreino.png', `${d.titulo} — MetaTreino`);
+  if(res==='baixado') toast('Imagem salva nos downloads do aparelho.');
+}
+Object.assign(window, { openSpecialTrophy, saReviverHistoria, openMinhaConquistaShare, saMinhaVideo, saMinhaImagem });
+
+// =====================================================================
+// 29. AJUSTES DA BETA 18
+//   a. balão do Meta Assistente: cada aviso aparece uma vez, por alguns segundos
+//   b. mural e logo: enquadramento, prévias no tamanho real e proporções recomendadas
+//   c. anotações automáticas do dia no calendário (calculadas, sem gravar nada novo)
+// =====================================================================
+
+// ---------- a. balão do Meta Assistente ----------
+// Antes: o balão voltava a cada troca de aba (a função roda em toda navegação), ficando quase fixo.
+// Agora: cada aviso aparece UMA vez por alguns segundos e some; o botão continua colorido e, ao tocar,
+// o assistente abre começando pelo aviso.
+const FAB_VISTOS_KEY = 'mt_fab_vistos';
+function _fabVistos(){ try{ const o = JSON.parse(localStorage.getItem(FAB_VISTOS_KEY)||'{}'); const lim = Date.now() - 24*3600000; Object.keys(o).forEach(k=>{ if(o[k] < lim) delete o[k]; }); return o; }catch(e){ return {}; } }
+function _fabEsconde(imediato){
+  const b = document.getElementById('fab-bubble'); if(!b) return;
+  clearTimeout(window._fabBubbleT);
+  if(imediato){ b.classList.remove('on'); b.style.display = 'none'; return; }
+  b.classList.remove('on'); setTimeout(()=>{ if(!b.classList.contains('on')) b.style.display = 'none'; }, 320);
+}
+window.updateFabNudge = function(){
+  const fab = document.getElementById('ma-fab'); if(!fab) return;
+  let n = null; try{ n = maNudge(); }catch(e){}
+  fab.classList.remove('fab-curio','fab-important','fab-rare','fab-special','fab-alert');
+  if(!n){ maNudgeAtivo = null; _fabEsconde(true); return; }
+  fab.classList.add('fab-alert','fab-'+(n.tone||'important'));
+  maNudgeAtivo = n;
+  const naSessao = (state.ui && state.ui.tab) === 'sessions';
+  const vistos = _fabVistos();
+  const chave = String(n.text||'').slice(0,120);
+  if(naSessao || vistos[chave]) return;               // já mostrado: só o botão colorido indica que há algo
+  vistos[chave] = Date.now(); try{ localStorage.setItem(FAB_VISTOS_KEY, JSON.stringify(vistos)); }catch(e){}
+  let bubble = document.getElementById('fab-bubble');
+  if(!bubble){ bubble = document.createElement('div'); bubble.id = 'fab-bubble'; bubble.setAttribute('role','status'); document.body.appendChild(bubble); bubble.onclick = function(){ _fabEsconde(true); openAssistant(); }; }
+  bubble.textContent = n.text;
+  bubble.style.display = 'block';
+  requestAnimationFrame(()=>bubble.classList.add('on'));
+  clearTimeout(window._fabBubbleT);
+  const dur = Math.min(9000, Math.max(5000, 3500 + String(n.text).length*45));   // tempo de leitura
+  window._fabBubbleT = setTimeout(()=>_fabEsconde(false), dur);
+};
+// abrir o assistente também recolhe o balão
+const _openAssistantB18 = window.openAssistant;
+window.openAssistant = function(){ _fabEsconde(true); return _openAssistantB18.apply(this, arguments); };
+
+// ---------- b. mural e logo ----------
+const MUR = { LOGO:256, CAPA_W:1440, CAPA_H:600, CAPA_AR:2.4, LIMITE_KB:900 };
+let _murEd = null;
+function _murAtuais(){
+  const m = coachMural || {};
+  // dados antigos: uma única foto servia de logo e de capa
+  const capa = m.capaFoto || (m.capa ? m.foto : null);
+  const logo = m.capaFoto ? (m.foto || null) : (m.capa ? null : (m.foto || null));
+  return { capa, logo, usarCapa: !!(m.capa && capa) };
+}
+window.openMuralAdmin = function(){
+  const m = coachMural || {}; const at = _murAtuais();
+  _murEd = { logo:{ img:null, out:undefined, atual:at.logo, modo:'preencher', zoom:1, x:50, y:50, w:0, h:0 },
+             capa:{ img:null, out:undefined, atual:at.capa, zoom:1, x:50, y:50, w:0, h:0 }, usarCapa: at.usarCapa };
+  const sl = (id, rot, min, max, val, step)=>`<label class="mur-sl"><span>${rot}</span><input type="range" id="${id}" min="${min}" max="${max}" step="${step||1}" value="${val}"></label>`;
+  $('modal-inner').innerHTML = `
+    <h3>📢 Mural e logo do app</h3>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.5;margin-top:4px">A mensagem fica fixada na tela Hoje de todos os alunos. O logo substitui o "M" dos cabeçalhos; a capa (opcional) vira um banner na tela Hoje.</p>
+    <div class="field" style="margin-top:12px"><label>Mensagem fixada (vazio = sem mensagem)</label><textarea class="input" id="mural-msg" rows="3" style="resize:vertical">${(m.mensagem||'').replace(/</g,'&lt;')}</textarea></div>
+
+    <div class="mur-sec">
+      <div class="mur-h">Logo do app</div>
+      <div class="mur-logo-row">
+        <div class="mur-logo-big" id="mur-logo-big"></div>
+        <div class="mur-logo-real"><div class="mur-logo-mini" id="mur-logo-mini"></div><div class="mur-logo-hdr"><div class="mur-logo-mini sm" id="mur-logo-mini2"></div><b>METATREINO</b></div><small>como aparece no app</small></div>
+      </div>
+      <div class="mur-dica">📐 <b>Quadrada (1:1)</b>, de <b>512 × 512 px</b> ou maior. PNG com fundo transparente fica melhor. Abaixo de 160 × 160 px a imagem fica borrada.</div>
+      <div class="mur-info" id="mur-logo-info"></div>
+      <div id="mur-logo-aj" class="mur-aj" hidden>
+        <div class="mod-toggle" style="margin:0 0 8px"><button class="seg on" id="mur-logo-m1" onclick="murLogoModo('preencher')">Preencher (corta)</button><button class="seg" id="mur-logo-m2" onclick="murLogoModo('inteira')">Inteira (sem cortar)</button></div>
+        <div id="mur-logo-sls">${sl('mur-logo-z','Zoom',100,300,100)}${sl('mur-logo-x','Horizontal',0,100,50)}${sl('mur-logo-y','Vertical',0,100,50)}</div>
+      </div>
+      <div class="row" style="gap:8px;margin-top:8px"><button class="btn btn-ghost" style="flex:1" onclick="$('mur-logo-file').click()">📷 Escolher logo</button><button class="btn btn-ghost" id="mur-logo-rm" onclick="murRemover('logo')">🗑️ Remover</button></div>
+      <input type="file" id="mur-logo-file" accept="image/*" style="display:none" onchange="murArquivo(event,'logo')">
+    </div>
+
+    <div class="mur-sec">
+      <div class="list-row" style="margin:0;padding:10px 0;border:0;background:none" onclick="murToggleCapa()">
+        <span style="font-size:17px">🖼️</span>
+        <div style="flex:1"><div style="font-weight:700;font-size:13.5px">Capa larga na tela Hoje</div><div style="font-size:11.5px;color:var(--text-mute);line-height:1.45">Banner com a saudação por cima. Usa uma imagem própria, separada do logo.</div></div>
+        <input type="checkbox" id="mur-capa-on" ${_murEd.usarCapa?'checked':''} style="pointer-events:none">
+      </div>
+      <div id="mur-capa-box" ${_murEd.usarCapa?'':'hidden'}>
+        <div class="mur-capa-prev" id="mur-capa-prev"><div class="mur-capa-bg" id="mur-capa-bg"></div><div class="hero-scrim"></div><div class="mur-capa-txt"><b>Bom dia, ${mtEsc(((state.user&&state.user.name)||'Aluno').split(' ')[0])}! 👋</b><small>Treino de hoje: Peito e Tríceps</small></div></div>
+        <div class="mur-dica">📐 <b>Horizontal, proporção 2,4 : 1</b> — por exemplo <b>1440 × 600 px</b> (2 : 1 também serve). Deixe o assunto principal no centro e no alto: a parte de baixo recebe a saudação, e as bordas podem variar um pouco entre celulares. Evite textos na imagem.</div>
+        <div class="mur-info" id="mur-capa-info"></div>
+        <div id="mur-capa-aj" class="mur-aj" hidden>${sl('mur-capa-z','Zoom',100,300,100)}${sl('mur-capa-x','Horizontal',0,100,50)}${sl('mur-capa-y','Vertical',0,100,50)}</div>
+        <div class="row" style="gap:8px;margin-top:8px"><button class="btn btn-ghost" style="flex:1" onclick="$('mur-capa-file').click()">📷 Escolher capa</button><button class="btn btn-ghost" id="mur-capa-rm" onclick="murRemover('capa')">🗑️ Remover</button></div>
+        <input type="file" id="mur-capa-file" accept="image/*" style="display:none" onchange="murArquivo(event,'capa')">
+      </div>
+    </div>
+    <div class="mur-info" id="mur-peso" style="text-align:center"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveMural()">💾 Publicar pra todos os alunos</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+  ['logo','capa'].forEach(t=>['z','x','y'].forEach(c=>{ const el = $(`mur-${t}-${c}`); if(el) el.addEventListener('input', ()=>{ const E = _murEd[t]; E[c==='z'?'zoom':c] = c==='z' ? (+el.value)/100 : +el.value; murProcessar(t); }); }));
+  murPrevias();
+};
+function murToggleCapa(){ const c = $('mur-capa-on'); c.checked = !c.checked; _murEd.usarCapa = c.checked; $('mur-capa-box').hidden = !c.checked; murPrevias(); }
+function murLogoModo(m){ _murEd.logo.modo = m; $('mur-logo-m1').classList.toggle('on', m==='preencher'); $('mur-logo-m2').classList.toggle('on', m==='inteira'); $('mur-logo-sls').style.display = m==='preencher' ? '' : 'none'; murProcessar('logo'); }
+function murRemover(t){ const E = _murEd[t]; E.out = null; E.img = null; const aj = $(`mur-${t}-aj`); if(aj) aj.hidden = true; const i = $(`mur-${t}-info`); if(i) i.textContent = t==='logo' ? 'Logo removido: os cabeçalhos voltam a mostrar o "M".' : 'Capa removida.'; murPrevias(); }
+function murArquivo(ev, t){
+  const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{ const img = new Image(); img.onload = ()=>{ const E = _murEd[t]; E.img = img; E.w = img.naturalWidth; E.h = img.naturalHeight; E.png = /png|webp|gif|svg/i.test(f.type); E.zoom = 1; E.x = 50; E.y = 50;
+      ['z','x','y'].forEach(c=>{ const el = $(`mur-${t}-${c}`); if(el) el.value = c==='z' ? 100 : 50; });
+      const aj = $(`mur-${t}-aj`); if(aj) aj.hidden = false; murProcessar(t); };
+    img.onerror = ()=>toast('Não consegui abrir essa imagem. Tente JPG ou PNG.'); img.src = r.result; };
+  r.readAsDataURL(f);
+}
+// recorte: maior área com a proporção pedida (cobre), com zoom e posição escolhidos pelo admin
+function _murRecorte(E, ar){
+  let cw = E.w, ch = cw/ar; if(ch > E.h){ ch = E.h; cw = ch*ar; }
+  cw /= E.zoom; ch /= E.zoom;
+  return { sx:(E.w-cw)*E.x/100, sy:(E.h-ch)*E.y/100, cw, ch };
+}
+function _murTemAlfa(cv){ try{ const d = cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data; for(let i=3;i<d.length;i+=16) if(d[i] < 250) return true; }catch(e){} return false; }
+let _murT = null;
+function murProcessar(t){ clearTimeout(_murT); _murT = setTimeout(()=>_murProcessarJa(t), 60); }
+function _murProcessarJa(t){
+  const E = _murEd && _murEd[t]; if(!E || !E.img) return;
+  const cv = document.createElement('canvas'); const g = cv.getContext('2d');
+  const info = $(`mur-${t}-info`); const msgs = [];
+  if(t === 'logo'){
+    cv.width = MUR.LOGO; cv.height = MUR.LOGO;
+    if(E.modo === 'inteira'){
+      const esc = Math.min(MUR.LOGO/E.w, MUR.LOGO/E.h); const w = E.w*esc, h = E.h*esc;
+      g.drawImage(E.img, (MUR.LOGO-w)/2, (MUR.LOGO-h)/2, w, h);
+      if(Math.min(E.w, E.h) < 160) msgs.push(`⚠️ Imagem pequena (${E.w} × ${E.h} px): pode ficar borrada. Ideal: 512 × 512 px ou maior.`);
+    } else {
+      const c = _murRecorte(E, 1); g.drawImage(E.img, c.sx, c.sy, c.cw, c.ch, 0, 0, MUR.LOGO, MUR.LOGO);
+      if(c.cw < 160) msgs.push(`⚠️ A área usada tem ${Math.round(c.cw)} × ${Math.round(c.ch)} px: vai ficar borrada. Ideal: 512 × 512 px ou maior.`);
+      if(Math.abs(E.w/E.h - 1) > 0.08) msgs.push(`ℹ️ A imagem não é quadrada (${E.w} × ${E.h} px): parte dela fica de fora. Ajuste o enquadramento ou use "Inteira".`);
+    }
+    const alfa = E.png && _murTemAlfa(cv);
+    E.out = alfa ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', 0.86);
+    if(!msgs.length) msgs.push(`✅ Boa resolução (${E.w} × ${E.h} px)${alfa ? ' · fundo transparente mantido' : ''}.`);
+  } else {
+    const c = _murRecorte(E, MUR.CAPA_AR);
+    const W = Math.round(Math.min(MUR.CAPA_W, Math.max(720, c.cw))), H = Math.round(W/MUR.CAPA_AR);
+    cv.width = W; cv.height = H; g.drawImage(E.img, c.sx, c.sy, c.cw, c.ch, 0, 0, W, H);
+    E.out = cv.toDataURL('image/jpeg', 0.80);
+    if(c.cw < 900) msgs.push(`⚠️ A área usada tem ${Math.round(c.cw)} × ${Math.round(c.ch)} px: pode ficar borrada em telas maiores. Ideal: 1440 × 600 px ou maior.`);
+    const ar = E.w/E.h;
+    if(ar < 1.9) msgs.push(`ℹ️ Imagem ${ar < 1 ? 'vertical' : 'pouco larga'} (${E.w} × ${E.h} px): boa parte de cima e de baixo fica de fora. Use o ajuste vertical para escolher o trecho.`);
+    else if(ar > 2.9) msgs.push(`ℹ️ Imagem muito larga (${E.w} × ${E.h} px): as laterais ficam de fora.`);
+    if(!msgs.length) msgs.push(`✅ Boa resolução e proporção (${E.w} × ${E.h} px).`);
+  }
+  if(info) info.innerHTML = msgs.join('<br>');
+  murPrevias();
+}
+function _murImgLogo(){ const E = _murEd.logo; return E.out === null ? null : (E.out || E.atual); }
+function _murImgCapa(){ const E = _murEd.capa; return E.out === null ? null : (E.out || E.atual); }
+function murPrevias(){
+  if(!_murEd) return;
+  const lg = _murImgLogo();
+  const htmlLogo = lg ? `<img src="${lg}" alt="">` : 'M';
+  ['mur-logo-big','mur-logo-mini','mur-logo-mini2'].forEach(id=>{ const el = $(id); if(el){ el.innerHTML = htmlLogo; el.classList.toggle('vazio', !lg); } });
+  const rmL = $('mur-logo-rm'); if(rmL) rmL.disabled = !lg;
+  const cp = _murImgCapa();
+  const bg = $('mur-capa-bg'); if(bg) bg.style.backgroundImage = cp ? `url('${cp}')` : 'none';
+  const pv = $('mur-capa-prev'); if(pv) pv.classList.toggle('vazio', !cp);
+  const rmC = $('mur-capa-rm'); if(rmC) rmC.disabled = !cp;
+  // tamanho total (o documento do Firestore aceita até 1 MB)
+  const kb = Math.round(((lg||'').length + ((_murEd.usarCapa && cp) ? cp.length : 0) + 2000)/1024);
+  const p = $('mur-peso'); if(p) p.innerHTML = kb > MUR.LIMITE_KB ? `⚠️ Total ${kb} KB — passa do limite. Use imagens menores ou aumente o zoom.` : `Tamanho total: ${kb} KB ✅`;
+}
+window.saveMural = async function(){
+  if(!_murEd){ return; }
+  const msg = $('mural-msg').value.trim();
+  const logo = _murImgLogo(), capa = _murImgCapa();
+  const usarCapa = !!(_murEd.usarCapa && capa);
+  const kb = Math.round(((logo||'').length + (usarCapa ? capa.length : 0))/1024);
+  if(kb > MUR.LIMITE_KB){ toast('⚠️ Imagens grandes demais para publicar. Ajuste e tente de novo.'); return; }
+  const data = { mensagem: msg, atualizadoEm: Date.now(), foto: logo || null, capa: usarCapa, capaFoto: usarCapa ? capa : null };
+  try{
+    await db.collection('config').doc('mural').set(data);
+    coachMural = data; _murEd = null;
+    try{ localStorage.setItem('metatreino_mural', JSON.stringify(coachMural)); }catch(e){}
+    renderCoachMural(); try{ applyHeroCapa(); }catch(e){}
+    closeModal(); toast('📢 Mural publicado pra todos os alunos!');
+  }catch(e){ console.log('Erro ao salvar mural:', e); toast('⚠️ Não foi possível publicar. Confira a conexão e as regras do Firestore (coleção config).'); }
+};
+// capa e logo agora podem ser imagens diferentes
+window.applyHeroCapa = function(){
+  try{
+    const hero = $('home-hero'); if(!hero) return;
+    const foto = coachMural && (coachMural.capaFoto || coachMural.foto);
+    const usar = !!(foto && coachMural && coachMural.capa);
+    hero.classList.toggle('hidden', !usar);
+    const brandRow = $('home-brand-row'), greetRow = $('home-greet-row');
+    if(brandRow) brandRow.classList.toggle('hidden', usar);
+    if(greetRow) greetRow.classList.toggle('hidden', usar);
+    if(!usar) return;
+    const bg = $('home-hero-bg'); if(bg) bg.style.backgroundImage = `url('${foto}')`;
+    const hi = $('home-hi'), sub = $('home-goal');
+    if(hi && $('hero-hi')) $('hero-hi').innerHTML = hi.innerHTML;
+    if(sub && $('hero-sub')) $('hero-sub').innerHTML = sub.innerHTML;
+  }catch(e){ console.log('Erro na capa:', e); }
+};
+
+// ---------- c. anotações automáticas do dia ----------
+// Calculadas na hora a partir do que o app JÁ guarda (treinos, cargas, recordes, provas, conquistas, metas).
+// Nada novo vai para o banco: só quando o aluno remove um destaque fica uma marca curta (ex.: "carga:supino").
+function _dia0(t){ const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); }
+function _nomeEx(id){ try{ return nomeDoEx(id); }catch(e){ return id; } }
+function dayAutoNotes(ts){
+  const out = []; const ini = _dia0(ts), fim = ini + DIA_MS;
+  const noDia = t => t >= ini && t < fim;
+  const lifts = ((state.modules.lift && state.modules.lift.history)||[]).filter(h=>h && noDia(h.at));
+  const ativ = ((state.modules.run && state.modules.run.history)||[]).filter(h=>h && noDia(h.at));
+  // modo adaptado registrado no próprio treino (TPM, cólica, dor, cansaço)
+  const ad = lifts.map(h=>h.adaptedWith).filter(Boolean)[0];
+  if(ad){
+    const tpm = /TPM/.test(ad), col = /cólica/.test(ad), dor = /dor/.test(ad), cans = /cansaço/.test(ad);
+    const emo = (tpm||col) ? '💗' : dor ? '🩹' : '😮‍💨';
+    out.push({ k:'adapt', emo, txt: `Treinou ${[tpm?'em TPM':'', col?'com cólica':'', dor ? 'com '+((ad.match(/dor \([^)]*\)/)||['dor'])[0]) : '', cans?'cansado(a), no modo leve':''].filter(Boolean).join(' e ')} — e foi mesmo assim.` });
+  }
+  if(lifts.some(h=>h.feel==='exausto')) out.push({ k:'feel', emo:'🥵', txt:'Treino muito puxado: você marcou "exausto".' });
+  // recordes e cargas
+  const prs = state.prs || {}; const prHoje = new Set();
+  Object.keys(prs).forEach(id=>{ const p = prs[id]; if(p && p.at && noDia(p.at)){ prHoje.add(id); out.push({ k:'pr:'+id, emo:'🏆', txt:`Recorde em ${_nomeEx(id)}: ${p.peso>0 ? String(p.peso).replace('.',',')+' kg × '+p.reps : p.reps+' repetições'}` }); } });
+  const subidas = [];
+  Object.keys(state.progress||{}).forEach(id=>{
+    if(prHoje.has(id)) return;
+    try{ if(typeof exBankIsIso==='function' && exBankIsIso(id)) return; }catch(e){}
+    const arr = (state.progress[id]||[]).filter(p=>p && p.date && p.sets && p.sets.length);
+    const hoje = arr.filter(p=>noDia(p.date)); if(!hoje.length) return;
+    const antes = arr.filter(p=>p.date < ini).sort((a,b)=>b.date-a.date)[0]; if(!antes) return;
+    const max = l => Math.max(0, ...l.sets.map(s=>+s.peso||0));
+    const de = max(antes), para = Math.max(...hoje.map(max));
+    if(de > 0 && para > de) subidas.push({ id, de, para });
+  });
+  subidas.slice(0,3).forEach(s=>out.push({ k:'carga:'+s.id, emo:'⬆️', txt:`Subiu carga em ${_nomeEx(s.id)}: ${String(s.de).replace('.',',')} → ${String(s.para).replace('.',',')} kg` }));
+  if(subidas.length > 3) out.push({ k:'carga+', emo:'⬆️', txt:`Subiu carga em mais ${subidas.length-3} exercício${subidas.length-3>1?'s':''}: ${subidas.slice(3).map(s=>_nomeEx(s.id)).join(', ')}` });
+  // corrida
+  const S = state.corridaStats || {};
+  ativ.filter(r=>r.isRace).forEach(r=>out.push({ k:'prova', emo:'🏅', txt:`Prova: ${mtFmtKm(r.distance)} km em ${typeof rFmtMin==='function' ? rFmtMin(r.duration) : Math.round(r.duration)+' min'}` }));
+  [['3','3 km'],['5','5 km'],['10','10 km'],['21','21 km'],['42','42 km']].forEach(([k,n])=>{ const r = (S.recordes||{})[k]; if(r && noDia(r.at)) out.push({ k:'rec'+k, emo:'⏱️', txt:`Melhor marca nos ${n}: ${typeof rFmtMin==='function' ? rFmtMin(r.min) : Math.round(r.min)+' min'}` }); });
+  const corr = ((state.modules.run && state.modules.run.history)||[]).filter(r=>(!r.activity || r.activity==='corrida') && +r.distance>0);
+  const maiorHoje = Math.max(0, ...ativ.filter(r=>(!r.activity || r.activity==='corrida')).map(r=>+r.distance||0));
+  const anteriores = corr.filter(r=>r.at < ini);
+  if(maiorHoje >= 3 && anteriores.length >= 3 && maiorHoje > Math.max(...anteriores.map(r=>+r.distance))) out.push({ k:'maiorkm', emo:'📏', txt:`Sua maior distância até aqui: ${mtFmtKm(maiorHoje)} km` });
+  if(typeof RUN_METAS !== 'undefined') RUN_METAS.forEach(m=>{ const at = (S.metas||{})[m.k]; if(at && typeof at === 'number' && noDia(at)) out.push({ k:'meta:'+m.k, emo:'🎯', txt:`Meta alcançada: ${m.nome}` }); });
+  // volta depois de uma pausa (primeiro treino após 7+ dias)
+  if(lifts.length || ativ.length){
+    const todas = [...((state.modules.lift && state.modules.lift.history)||[]), ...((state.modules.run && state.modules.run.history)||[])].map(h=>h && h.at).filter(t=>t && t < ini);
+    const ult = todas.length ? Math.max(...todas) : null;
+    if(ult){ const dias = Math.round((ini - _dia0(ult))/DIA_MS); if(dias >= 7) out.push({ k:'volta', emo:'🔁', txt:`Voltou a treinar depois de ${dias} dias parado(a).` }); }
+  }
+  // conquistas
+  const tds = state.trophyDates || {};
+  const tHoje = Object.keys(tds).filter(id=>noDia(tds[id]));
+  tHoje.slice(0,3).forEach(id=>{ const t = (typeof TROPHIES!=='undefined' ? TROPHIES.find(x=>x.id===id) : null); if(t) out.push({ k:'trofeu:'+id, emo:'🎖️', txt:`Conquista desbloqueada: ${t.name}` }); });
+  if(tHoje.length > 3) out.push({ k:'trofeu+', emo:'🎖️', txt:`E mais ${tHoje.length-3} conquista${tHoje.length-3>1?'s':''} neste dia.` });
+  const ocultas = new Set(((state.dayNotesOcultas||{})[ini])||[]);
+  return out.map(n=>Object.assign(n, { oculta: ocultas.has(n.k) }));
+}
+let _dnPend = null;   // destaques passados para o texto (só valem se a anotação for salva)
+const _openDayDetailB18 = window.openDayDetail;
+window.openDayDetail = function(ts){
+  const r = _openDayDetailB18.apply(this, arguments);
+  try{ _dnRender(ts); }catch(e){ console.log('anotações automáticas', e); }
+  return r;
+};
+function _dnRender(ts){
+  const ini = _dia0(ts);
+  _dnPend = _dnPend && _dnPend.ts === ini ? _dnPend : { ts:ini, ocultar:[] };
+  const todas = dayAutoNotes(ini).filter(n=>!_dnPend.ocultar.includes(n.k));
+  const vis = todas.filter(n=>!n.oculta), ocultas = todas.filter(n=>n.oculta);
+  const area = $('day-note'); if(!area) return;
+  const campo = area.closest('.field');
+  let box = $('dn-auto'); if(box) box.remove();
+  if(!vis.length && !ocultas.length) return;
+  box = document.createElement('div'); box.id = 'dn-auto'; box.className = 'dn-auto';
+  box.innerHTML = `<div class="dn-h">✨ Destaques do dia <small>automáticos</small></div>
+    ${vis.map(n=>`<div class="dn-item"><span class="dn-emo">${n.emo}</span><span class="dn-txt">${mtEsc(n.txt)}</span>
+      <button class="dn-b" title="Editar no texto" aria-label="Editar: ${mtEsc(n.txt)}" onclick="dnEditar(${ini},'${mtJsStr(n.k)}')">✏️</button><button class="dn-b" title="Remover" aria-label="Remover: ${mtEsc(n.txt)}" onclick="dnRemover(${ini},'${mtJsStr(n.k)}')">✕</button></div>`).join('')}
+    ${ocultas.length ? `<button class="dn-rest" onclick="dnRestaurar(${ini})">Mostrar ${ocultas.length} destaque${ocultas.length>1?'s':''} removido${ocultas.length>1?'s':''}</button>` : ''}
+    <div class="dn-nota">Gerados pelos seus registros. ✏️ leva o texto para a sua anotação, onde você edita e acrescenta.</div>`;
+  campo.parentNode.insertBefore(box, campo);
+  const lbl = campo.querySelector('label'); if(lbl) lbl.textContent = '📝 Sua anotação';
+}
+function _dnOcultar(ts, k, salvar){
+  state.dayNotesOcultas = state.dayNotesOcultas || {};
+  const l = state.dayNotesOcultas[ts] = state.dayNotesOcultas[ts] || [];
+  if(!l.includes(k)) l.push(k);
+  if(salvar) saveData();
+}
+function dnRemover(ts, k){ _dnOcultar(ts, k, true); _dnRender(ts); try{ renderCalendar(); }catch(e){} toast('Destaque removido. Dá para mostrar de novo aqui mesmo.'); }
+function dnRestaurar(ts){ if(state.dayNotesOcultas){ delete state.dayNotesOcultas[ts]; saveData(); } _dnPend = null; _dnRender(ts); try{ renderCalendar(); }catch(e){} }
+function dnEditar(ts, k){
+  const n = dayAutoNotes(ts).find(x=>x.k===k); if(!n) return;
+  const area = $('day-note'); const linha = `${n.emo} ${n.txt}`;
+  area.value = area.value.trim() ? area.value.trim() + '\n' + linha : linha;
+  _dnPend.ocultar.push(k);
+  _dnRender(ts);
+  area.focus(); try{ area.setSelectionRange(area.value.length, area.value.length); }catch(e){}
+}
+const _saveDayNoteB18 = window.saveDayNote;
+window.saveDayNote = function(ts){
+  try{ const ini = _dia0(ts); if(_dnPend && _dnPend.ts === ini && _dnPend.ocultar.length){ _dnPend.ocultar.forEach(k=>_dnOcultar(ini, k, false)); } }catch(e){}
+  _dnPend = null;
+  return _saveDayNoteB18.apply(this, arguments);
+};
+// marca discreta ✦ nos dias com destaque (quando não há anotação escrita)
+const _renderCalendarB18 = window.renderCalendar;
+window.renderCalendar = function(){
+  const r = _renderCalendarB18.apply(this, arguments);
+  try{
+    document.querySelectorAll('.cal-day[onclick*="openDayDetail"]').forEach(c=>{
+      const m = (c.getAttribute('onclick')||'').match(/openDayDetail\((\d+)\)/); if(!m) return;
+      if(c.querySelector('.dn-mark')) return;
+      if(((state.dayNotes||{})[+m[1]])) return;
+      const vis = dayAutoNotes(+m[1]).filter(n=>!n.oculta);
+      if(vis.length){ const s = document.createElement('span'); s.className = 'dn-mark'; s.textContent = '✦'; s.title = vis.length + ' destaque' + (vis.length>1?'s':''); c.appendChild(s); }
+    });
+  }catch(e){}
+  return r;
+};
+Object.assign(window, { murToggleCapa, murLogoModo, murRemover, murArquivo, dayAutoNotes, dnRemover, dnRestaurar, dnEditar });
