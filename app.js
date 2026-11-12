@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 17 =====
-const APP_VERSION = '2027.1-beta.17';
+// ===== MetaTreino 2027.1 Beta 18 =====
+const APP_VERSION = '2027.1-beta.18';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2633,7 +2633,7 @@ function renderHome(){
   const _linha = _ps ? preStartStatusLine(_ps) : homeStatusLine();
   // com plano agendado pra frente, o clima entra só se for útil (não "boa noite pra descansar")
   const _mostraClima = !_ps || _ps.dias <= 3;
-  const _naCapa = !!(coachMural && coachMural.foto && coachMural.capa);
+  const _naCapa = !!(coachMural && coachMural.capa && (coachMural.capaFoto || coachMural.foto));
   $('home-goal').innerHTML = _glue(_linha) + ((_wl && _mostraClima) ? `<br><span style="opacity:${_naCapa?'.85':'.6'};font-size:.9em">${_glue(_wl)}</span>` : '');
   const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 86400000);
   // 40% de chance de mostrar uma frase contextual (se houver); senão, uma do dia
@@ -8914,8 +8914,13 @@ const THEMES = {
   aurora:   {nome:'Aurora',   sub:'Escuro · índigo e coral',  bar:'#070a1a', prev:{bg:'#070a1a', a:'#7c6cff', b:'#ff7a59', c:'#1b2150'}},
   classico: {nome:'Clássico', sub:'Escuro · verde (o de antes)', bar:'#050914', prev:{bg:'#050914', a:'#10b981', b:'#f59e0b', c:'#10223a'}},
   oceano:   {nome:'Oceano',   sub:'Escuro · azul e dourado',  bar:'#04111b', prev:{bg:'#04111b', a:'#06b6d4', b:'#fbbf24', c:'#0b2c3f'}},
-  claro:    {nome:'Claro',    sub:'Claro · índigo',            bar:'#f5f6fb', prev:{bg:'#f5f6fb', a:'#5b4bdb', b:'#c2410c', c:'#dfe2f2'}}
+  rubi:     {nome:'Rubi',     sub:'Escuro · grafite e vermelho', bar:'#0c0d10', prev:{bg:'#0c0d10', a:'#ff3d5a', b:'#ffc857', c:'#1d2026'}},
+  claro:    {nome:'Claro',    sub:'Claro · índigo',            bar:'#f5f6fb', prev:{bg:'#f5f6fb', a:'#5b4bdb', b:'#c2410c', c:'#dfe2f2'}},
+  areia:    {nome:'Areia',    sub:'Claro · areia e verde-petróleo', bar:'#f6f1e8', prev:{bg:'#f6f1e8', a:'#0f766e', b:'#c2410c', c:'#e7dfd0'}}
 };
+// temas claros (os ajustes de contraste valem para todos eles)
+const TEMAS_CLAROS = ['claro','areia'];
+function temaClaro(t){ return TEMAS_CLAROS.includes(t || currentTheme()); }
 function normalizaTema(t){ if(t==='dark') return 'zepp'; if(t==='light') return 'claro'; return THEMES[t] ? t : 'zepp'; }
 function currentTheme(){
   const attr = document.documentElement.getAttribute('data-theme');
@@ -8924,6 +8929,7 @@ function currentTheme(){
 function applyTheme(t){
   t = normalizaTema(t);
   document.documentElement.setAttribute('data-theme', t);
+  document.documentElement.classList.toggle('tema-claro', TEMAS_CLAROS.includes(t));
   const meta = document.querySelector('meta[name="theme-color"]');
   if(meta) meta.setAttribute('content', THEMES[t].bar);
   try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
@@ -8931,7 +8937,7 @@ function applyTheme(t){
 }
 function setTheme(t){ applyTheme(t); const g=document.getElementById('theme-grid'); if(g) g.classList.add('hidden'); renderThemePicker(); toast('🎨 Tema '+THEMES[normalizaTema(t)].nome+' ativado'); }
 function toggleThemePicker(){ const g=document.getElementById('theme-grid'); if(!g) return; g.classList.toggle('hidden'); renderThemePicker(); }
-function toggleTheme(){ setTheme(currentTheme()==='claro' ? 'zepp' : 'claro'); }   // compatibilidade
+function toggleTheme(){ setTheme(temaClaro() ? 'zepp' : 'claro'); }   // compatibilidade
 function renderThemePicker(){
   const g = document.getElementById('theme-grid'); if(!g) return;
   const cur = currentTheme();

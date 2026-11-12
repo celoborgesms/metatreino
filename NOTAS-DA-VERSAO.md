@@ -1,3 +1,20 @@
+# MetaTreino 2027.1 Beta 18 — Ajustes visuais, mural, destaques do dia e temas
+
+1. **Legenda da semana** (✅ feito · 🟢 parcial · 🟡 hoje · ⚪ planejado · – faltou): sempre numa linha só, alinhada; o texto se ajusta à largura da tela (antes "– faltou" caía para a linha de baixo). A grade da semana também ficou alinhada: o ✓ e as bolinhas de status ficam todos na mesma altura, com um ou dois ícones no dia.
+2. **Mural e logo (painel admin):**
+   - Logo e capa agora são imagens separadas (antes a foto da capa larga também virava o logo cortado de todos os cabeçalhos).
+   - Prévias grandes e no tamanho real em que aparecem no app (logo no cabeçalho; capa com a saudação por cima, na mesma proporção da tela Hoje).
+   - Enquadramento: zoom, ajuste horizontal e vertical; para o logo, "Preencher (corta)" ou "Inteira (sem cortar)".
+   - Proporções recomendadas na tela: logo quadrada 1:1, 512 × 512 px ou maior (PNG transparente fica melhor); capa horizontal 2,4 : 1, ex.: 1440 × 600 px.
+   - Avisos automáticos: imagem pequena (vai borrar), não quadrada, vertical ou larga demais, e o tamanho total (limite de 1 MB do Firestore).
+   - Logo em PNG com fundo transparente mantém a transparência (antes virava JPEG com fundo preto).
+   - A capa é salva na proporção real da tela (2,4 : 1; antes 2 : 1, com corte extra que o admin não via). Dados no formato antigo continuam funcionando.
+3. **Balão do Meta Assistente:** cada aviso aparece uma vez, por 5 a 9 segundos (conforme o tamanho do texto), e some com suavidade. Trocar de aba não o faz voltar. O botão continua colorido; tocando nele, o assistente abre começando pelo aviso. Um aviso novo aparece uma vez.
+4. **Destaques automáticos no calendário:** ao abrir um dia, aparecem os destaques gerados pelos registros: treino em TPM, com cólica, com dor ou no modo leve; carga que subiu (de → para); recorde; treino puxado; prova; melhor marca na corrida; maior distância; meta da corrida; volta depois de pausa; conquistas do dia. Cada um pode ser removido (✕) ou levado para a anotação (✏️), onde se edita e acrescenta. Dias com destaque ganham uma marca discreta ✦. **Nada novo é gravado no banco** — os destaques são calculados na hora a partir do que já está salvo; só ao remover um destaque fica uma marca de poucos bytes.
+5. **Temas novos:** **Rubi** (escuro · grafite e vermelho) e **Areia** (claro · areia e verde-petróleo). Agora são 6 noturnos e 2 claros. Os ajustes de contraste do tema claro passaram a valer para todos os temas claros.
+
+---
+
 # MetaTreino 2027.1 Beta 17 — Conquistas e Conquista Especial
 
 Nada mudou nos critérios, ids, datas, desbloqueio ou progresso: só a apresentação.
