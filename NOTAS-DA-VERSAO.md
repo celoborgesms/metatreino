@@ -1,3 +1,100 @@
+# MetaTreino 2027.1 Beta 14 — Corrida do iniciante ao avançado
+
+O módulo de corrida não foi recriado: o plano continua no mesmo formato (treinos com aquecimento, principal e desaquecimento), com o mesmo histórico, as mesmas telas e as mesmas integrações. O que mudou é *como* cada semana é montada.
+
+## Como funciona agora
+- O plano é gerado **semana a semana**. Ao fim de cada semana o app avalia: treinos feitos x planejados, se foram completados, esforço (1–10), cansaço, pausas e bike/caminhada da semana. Só então decide **uma** mudança: subir volume (no máximo ~10%), deixar os treinos de qualidade um pouco mais longos, manter ou aliviar.
+- Tudo é calculado em **minutos de corrida**. Km e ritmos só aparecem quando há dados confiáveis.
+- Hierarquia igual ao resto do app: **retomada > recuperação/cansaço > progressão > normal**.
+
+## Seis níveis
+Iniciante (caminhada + corrida em 7 estágios até 10 min sem parar) · Iniciante avançado (corrida contínua de 10 → 30 min) · Intermediário · Intermediário avançado · Avançado · Competitivo.
+- O nível considera tempo correndo sem parar, minutos por semana, regularidade, experiência, esforço nos treinos leves e, nos níveis altos, resultado de prova/teste. Não é só distância.
+- Sobe de nível apenas com evolução comprovada nos registros (critérios visíveis no painel e no assistente), com no mínimo 3 semanas no nível e nunca perto da prova.
+
+## Avaliação inicial (tela "Bora correr?")
+Objetivo (agora com **Começar a correr** e **Condicionamento**), experiência, quanto corre sem parar, km por semana, um tempo recente (opcional, em h:min:seg), tempo por treino e no treino longo, se está parado, dores/limitações, dias, prova, terreno. O ponto de partida aparece na hora, com avisos de prazo curto e de meta acima do nível. Iniciante não faz teste de desempenho.
+
+## Treinos
+Caminhada ativa, caminhada + corrida, regenerativo, corrida contínua, leve, longão, fartlek, subida, tempo run, limiar, tiros longos, tiros curtos, velocidade, ritmo de prova, dia da prova e semana de recuperação. Cada sessão mostra aquecimento, principal, desaquecimento, duração, distância (quando há ritmo confiável), intensidade, **por que este treino** e orientações.
+- Cada tipo tem nível mínimo: iniciante nunca recebe tiros, mesmo escolhendo maratona.
+- Com limitação informada, saem subidas e tiros curtos/velocidade.
+- O treino respeita o tempo disponível.
+
+## Periodização
+Adaptação → Resistência → Velocidade e ritmo → Preparação para a prova → Polimento (1 semana para 5/10 km, 2 para 21 km, 3 para 42 km) → Recuperação pós-prova. Semana de recuperação a cada 4 (exceto perto da prova). Sem prova, ciclos de 4 semanas.
+
+## Situações reais
+- **Perdeu um treino:** segue o de hoje, sem compensar. Se foi o longão, pode trocar — nunca os dois.
+- **Retomada** (7+ dias sem correr): 1 a 4 semanas conforme a pausa (10 dias: 1 semana a ~70%; 2 meses: 4 semanas de 40% a 85%), só treinos leves. Pausas de 90+ dias descem um nível. Os ritmos calculados também descontam a pausa.
+- **Esforço muito alto / treino não completado:** o resto da semana fica leve na hora.
+- **Não consegue completar:** o plano alivia (estágio anterior, menos minutos ou menos volume).
+- **Semana com menos tempo:** botão na tela Treinos reorganiza só aquela semana.
+- **Prova:** a semana da prova tem o dia da prova e nada pesado na véspera.
+
+## Integração
+- Treino de qualidade e longão evitam o dia seguinte ao de pernas na musculação; quando não dá, o treino vira leve e o motivo aparece.
+- Com plano de musculação de 3+ dias, níveis até Intermediário avançado têm no máximo 1 treino de qualidade por semana.
+- Bike e caminhada contam como carga complementar, não como corrida.
+
+## Ritmos
+Calculados pelo método VDOT (Jack Daniels) a partir de: tempo informado ou prova (confiança alta), treino forte registrado (média) ou ritmo dos treinos leves (baixa — avisado como aproximação). Sem dados, os treinos vão por esforço. Iniciantes treinam por esforço e tempo.
+
+## Registro
+Tempo em **horas, minutos e segundos** com ritmo (min/km) e velocidade (km/h) calculados na hora. Pergunta se completou o treino e se correu sem parar. Iniciantes podem marcar "Não medi a distância". Valores impossíveis são recusados.
+
+## Painel de evolução
+Em Treinos → Evolução e em Progresso → Evolução da corrida: km e tempo da semana e do mês, tempo total, frequência, cumprimento do plano, km por semana, ritmo médio por semana, maior corrida sem parar, melhores marcas (3/5/10/21/42 km) **registradas** separadas das **estimadas**, ritmos de treino, metas, critérios para o próximo nível, histórico de provas e "como o plano se ajustou". Recordes, provas e resumo semanal ficam guardados mesmo depois da limpeza de 90 dias.
+
+## Metas
+10, 20 e 30 min sem parar · 3 km · 5 km · melhorar os 5 km (−3%) · 10 km · 21 km · 42 km. Só se conquistam com registros reais; as maiores mostram a preparação exigida (ex.: 21 km pede 10 km concluídos, longão de 95 min e regularidade).
+
+## Meta Assistente
+Explica com os dados do aluno: por que o treino de hoje, o que está desenvolvendo, por que a carga mudou, quando vai avançar, se é hora de recuperar, como está a meta (com estimativa só se houver dados) e quais são os ritmos. Durante a retomada, o cartão da Home e o assistente usam o mesmo cálculo da corrida.
+
+## Administração
+No perfil do aluno: nível, fase, última corrida, média semanal, cumprimento, próxima meta, confiança dos ritmos, alertas de cansaço e o painel completo (somente leitura). Mesmas permissões de antes; nenhuma regra do Firestore mudou.
+
+## Alunos atuais
+O plano antigo é convertido automaticamente na primeira abertura, usando o nível antigo e o histórico real. Histórico, totais e prova são mantidos. A tela Treinos sugere refazer a avaliação para mais precisão.
+
+---
+
+# MetaTreino 2027.1 Beta 13 — Correções e ajustes prioritários
+
+## 34. Retomada após pausa
+- Uma só fonte de verdade (`estadoTreino()`) para TODAS as recomendações, com hierarquia: **1. Retomada → 2. Recuperação/fadiga → 3. Progressão → 4. Normal**. A de maior prioridade vence em todo o app.
+- Retomada = pausa de **7 dias ou mais**; vale por até 2 semanas depois da volta (semana 1 e semana 2). Pausa de 4–6 dias não é mais tratada como retomada.
+- A carga parte de ~70%, mas é **ajustada**: +5% se a pessoa treinava com regularidade antes, +5% avançado, −5% iniciante, −5% a cada faixa de pausa longa (21, 42, 90 dias). Limite 55–85%. Semana 2: +15%.
+- Usa a **última carga real** de cada exercício antes da pausa e o número de séries que a pessoa fazia (uma série a menos na semana 1).
+- Durante a retomada nada sugere subir carga: card do treino, dica no registro de séries, primeira série já preenchida com a carga de retomada (editável), card da Home, corrida (60–70% do volume, sem tiros) e Meta Assistente.
+- O Meta Assistente entende "fiquei 10 dias sem treinar, como volto?" e mostra o plano com as cargas da pessoa. Qualquer resposta que fale em subir/manter carga ganha antes o aviso da retomada.
+- Removido o "Mantenha a mesma carga" automático após treino "puxado": agora "Não suba a carga hoje; se pesar mais que o normal, reduza ~5%".
+
+## 35. Administradores
+- Tela de Administradores: quando o Firestore recusa a leitura, mostra o motivo, o UID, o e-mail e se o e-mail está verificado, com "Tentar de novo".
+- Causa provável do erro: a regra reconhecia o dono só pelo UID; login por outro método gera outro UID. A regra nova aceita o UID **ou** o e-mail do dono **verificado**.
+- Dois níveis: **principal** (tudo + administradores + Conquista Especial) e **secundários** (alunos, exercícios, vídeos, calistenia, desafios temáticos, conteúdo e ferramentas). Secundários não concedem/revogam administradores, não se promovem e não acessam a Conquista Especial — na tela e nas regras.
+- Secundários voltam a adicionar, editar e remover vídeos e exercícios.
+
+## 36. Regras do Firestore
+- Arquivo completo `firestore.rules`. Firebase Storage não é usado pelo app → não há regras de Storage.
+
+## 37. Feedback dos alunos
+- Verificado: há envio pelo Meta Assistente ("quero mandar uma sugestão", "seria legal se…", perguntas não respondidas). A seção foi **mantida** e renomeada "Mensagens dos alunos", com explicação. Atalho "✉️ Enviar sugestão" no assistente (usa o fluxo que já existia; sem formulário novo). Coleção e registros intactos.
+- Regras: quando outro aluno manda a mesma mensagem, o contador agora soma (antes era recusado).
+
+## 38. Conquista Especial
+- Nova apresentação animada: anel dourado se desenhando, emblema, nome da pessoa, nome da conquista, mensagem, data e marca MetaTreino, com partículas discretas (sem chuva de emojis).
+- Campo "Nome que aparece na apresentação".
+- **Ver apresentação** (prévia) e **Compartilhar conquista**: vídeo vertical 1080×1920 (8,5 s). MP4 (H.264) quando o navegador grava MP4 (Chrome atual); senão WebM, com aviso. Alternativa: imagem PNG 9:16. Usa o compartilhamento do aparelho ou salva o arquivo. Sem e-mail ou dados privados.
+- Tudo exclusivo do administrador principal.
+
+## 39. Botões de recolher
+- "Seus treinos" e "Atividade da semana": mesmo botão (seta discreta ao lado do título), mesma direção e mesma animação.
+
+---
+
 # MetaTreino 2027.1 Beta 12 — Calistenia
 
 Modalidade completa de calistenia, integrada ao módulo de treino de força que já existia. Musculação, corrida, bike e caminhada continuam iguais.

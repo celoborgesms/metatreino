@@ -1,119 +1,286 @@
 rules_version = '2';
-// =====================================================================
-// MetaTreino 2027.1 Beta 12 — regras do Firestore (PROPOSTA)
-//
-// IMPORTANTE: compare com as regras que estão publicadas hoje no console antes de
-// substituir. Se preferir a mudança mínima, copie só o bloco "desafiosTematicos"
-// e o bloco "admins" (Beta 10) e "videosReportados" + a mudança em "videosExercicios" (Beta 11).
-//
-// Princípios:
-//  • o aluno só lê e grava os PRÓPRIOS dados;
-//  • administradores autorizados (coleção admins, ativo == true) gerenciam alunos,
-//    exercícios e vídeos;
-//  • só o administrador principal cria desafios temáticos e mexe em permissões —
-//    verificado aqui no servidor, não só na tela.
-// =====================================================================
+
+// =============================================================
+// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 13)
+// Onde colar: Firebase Console → Firestore Database → Regras
+// Nenhuma coleção é pública (exceto a leitura de config/contato,
+// que já era pública e é usada na tela de login).
+// =============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn()   { return request.auth != null; }
-    function myEmail()    { return signedIn() && request.auth.token.email != null ? request.auth.token.email.lower() : ''; }
-    function isPrincipal(){ return myEmail() == 'celoborgesms@gmail.com'; }
-    function isAdmin()    {
-      return isPrincipal() ||
-        (signedIn() && exists(/databases/$(database)/documents/admins/$(myEmail())) &&
-         get(/databases/$(database)/documents/admins/$(myEmail())).data.ativo == true);
+    // =========================================================
+    // IDENTIFICACAO E PERMISSOES
+    // =========================================================
+
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // ---- dados do aluno (estadoApp) ----
-    match /usuarios/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow create, update, delete: if signedIn() && request.auth.uid == uid;
+    function userEmail() {
+      return signedIn() && request.auth.token.email != null
+        ? request.auth.token.email.lower()
+        : "";
     }
 
-    // ---- liberação de acesso ----
-    match /usuariosAutorizados/{email} {
-      allow get: if signedIn() && (myEmail() == email || isAdmin());
+    // ADMINISTRADOR PRINCIPAL (DONO DO METATREINO)
+    // Reconhecido pelo UID da conta OU pelo e-mail do dono com
+    // e-mail VERIFICADO (cobre o login com Google e com e-mail/senha,
+    // que geram UIDs diferentes). Ninguem consegue "verificar" um
+    // e-mail que nao e seu, entao isso nao abre brecha.
+    function isOwner() {
+      return signedIn() && (
+        request.auth.uid == "CJpmKyaTYtgR9I7FpigMPuXwICG2"
+        || (
+          request.auth.token.email != null
+          && request.auth.token.email.lower() == "celoborgesms@gmail.com"
+          && request.auth.token.email_verified == true
+        )
+      );
+    }
+
+    // ADMINISTRADOR PRINCIPAL OU ADMINISTRADOR SECUNDARIO ATIVO
+    function isAdmin() {
+      return isOwner()
+        || (
+          signedIn()
+          && request.auth.token.email != null
+          && exists(/databases/$(database)/documents/admins/$(userEmail()))
+          && get(/databases/$(database)/documents/admins/$(userEmail())).data.ativo == true
+        );
+    }
+
+    function isOwnerUser(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+
+    // =========================================================
+    // USUARIOS E SEUS DADOS
+    // (aluno: so os proprios dados · administradores: todos)
+    // =========================================================
+
+    match /usuarios/{userId} {
+      allow read, create, update, delete:
+        if isOwnerUser(userId) || isAdmin();
+
+      match /{subdocumentos=**} {
+        allow read, create, update, delete:
+          if isOwnerUser(userId) || isAdmin();
+      }
+    }
+
+
+    // =========================================================
+    // USUARIOS AUTORIZADOS (liberacao de acesso dos alunos)
+    // =========================================================
+
+    match /usuariosAutorizados/{emailDoc} {
+
+      allow read: if isAdmin() || (
+        signedIn()
+        && request.auth.token.email != null
+        && userEmail() == emailDoc
+        && (
+          request.auth.token.email_verified == true
+          || emailDoc.matches('.*@aluno[.]metatreino[.]app')
+        )
+      );
+
+      allow create, update, delete: if isAdmin();
+    }
+
+
+    // =========================================================
+    // ADMINISTRADORES
+    // - O principal le a lista inteira e e o UNICO que concede,
+    //   altera ou revoga administradores.
+    // - Cada pessoa le somente o proprio documento (o app usa isso
+    //   para saber se a conta e administradora).
+    // - Administrador secundario nao consegue se promover, promover
+    //   outra pessoa nem mexer no documento do dono.
+    // =========================================================
+
+    match /admins/{emailDoc} {
+
+      allow read: if isOwner() || (
+        signedIn()
+        && request.auth.token.email != null
+        && userEmail() == emailDoc
+      );
+
+      allow create, update, delete: if isOwner()
+        && emailDoc != "celoborgesms@gmail.com";
+    }
+
+
+    // =========================================================
+    // VIDEOS DE EXERCICIOS
+    // (Beta 13: TODOS os administradores voltam a adicionar,
+    //  editar e remover links de video)
+    // =========================================================
+
+    match /videosExercicios/{exercicioDoc} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+
+    // =========================================================
+    // VIDEOS REPORTADOS PELOS ALUNOS
+    // 1 documento por exercicio (sem dados pessoais) + 1 relato
+    // por aluno na subcolecao "relatos".
+    // =========================================================
+
+    match /videosReportados/{exercicioDoc} {
+
+      // Aluno consulta o documento do exercicio (para nao contar 2x).
+      allow get: if signedIn();
+
+      // Somente administradores listam as ocorrencias.
       allow list: if isAdmin();
-      allow write: if isAdmin();
+
+      // Aluno cria a ocorrencia sempre como "pendente", contando 1.
+      allow create: if isAdmin() || (
+        signedIn()
+        && request.resource.data.status == 'pendente'
+        && request.resource.data.contagem == 1
+        && request.resource.data.ciclo == 1
+      );
+
+      // Aluno so reabre como "pendente", soma no maximo 1 por vez,
+      // nao mexe no ciclo e so altera os campos da denuncia.
+      // Resolver (status "resolvido"): qualquer administrador.
+      allow update: if isAdmin() || (
+        signedIn()
+        && request.resource.data.status == 'pendente'
+        && request.resource.data.ciclo == resource.data.ciclo
+        && request.resource.data.contagem <= resource.data.contagem + 1
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['exId', 'exercicio', 'grupo', 'url', 'videoId',
+                       'status', 'ultimoEm', 'ultimoMotivo', 'contagem'])
+      );
+
+      allow delete: if isAdmin();
+
+      match /relatos/{userId} {
+        allow get: if isOwnerUser(userId) || isAdmin();
+        allow list: if isAdmin();
+        allow create, update: if isOwnerUser(userId);
+        allow delete: if isAdmin();
+      }
     }
 
-    // ---- administradores: o próprio usuário confere se é admin; só o principal altera ----
-    match /admins/{email} {
-      allow get: if signedIn() && (myEmail() == email || isAdmin());
-      allow list: if isPrincipal();
-      allow write: if isPrincipal() && email != 'celoborgesms@gmail.com';
+
+    // =========================================================
+    // EXERCICIOS PERSONALIZADOS
+    // =========================================================
+
+    match /exerciciosCustom/{exercicioDoc} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
     }
 
-    // ---- configurações (contato aparece na tela de login, antes de entrar) ----
-    match /config/{doc} {
+
+    // =========================================================
+    // CALISTENIA (exercicios extras/ajustes e modelos de plano)
+    // =========================================================
+
+    match /caliExercicios/{exercicioDoc} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /caliModelos/{modeloDoc} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+
+    // =========================================================
+    // DESAFIOS TEMATICOS
+    // =========================================================
+
+    match /desafiosTematicos/{desafioDoc} {
+
+      // Todos os alunos logados veem os desafios.
+      allow read: if signedIn();
+
+      // Administradores criam, editam ou desativam desafios.
+      allow create, update, delete: if isAdmin();
+
+      // Participacao de cada aluno: cada um grava so a propria.
+      match /participantes/{userId} {
+        allow get: if isOwnerUser(userId) || isAdmin();
+        allow list: if isAdmin();
+        allow create, update, delete: if isOwnerUser(userId);
+      }
+    }
+
+
+    // =========================================================
+    // CONFIGURACOES
+    // =========================================================
+
+    // Contato do treinador: leitura publica (tela de login).
+    match /config/contato {
       allow read: if true;
-      allow write: if doc == 'specialAward' ? isPrincipal() : isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
-    // ---- catálogo ----
-    match /exerciciosCustom/{id} {
+    // CONQUISTA ESPECIAL: exclusiva do administrador principal.
+    // Os alunos logados precisam LER (o app confere se a conquista
+    // e para eles), mas so o dono cria, edita ou apaga.
+    match /config/specialAward {
       allow read: if signedIn();
-      allow write: if isAdmin();
+      allow create, update, delete: if isOwner();
     }
-    // Beta 11: só o administrador principal mantém os links dos vídeos (pedido do dono do app)
-    match /videosExercicios/{id} {
+
+    // Demais configuracoes (mural, calistenia...).
+    match /config/{configDoc} {
       allow read: if signedIn();
-      allow write: if isPrincipal();
+      allow create, update, delete: if isAdmin() && configDoc != "specialAward";
     }
 
-    // ---- NOVO (Beta 11): vídeos reportados pelos alunos ----
-    // 1 documento por exercício (agrupa denúncias, sem dados pessoais) + 1 relato por aluno.
-    match /videosReportados/{exId} {
-      allow get: if signedIn();
-      allow list: if isAdmin();
-      // aluno: só cria/reabre como "pendente", soma no máximo 1 por vez e não mexe no ciclo
-      allow create: if signedIn() && request.resource.data.status == 'pendente'
-                    && request.resource.data.contagem == 1 && request.resource.data.ciclo == 1;
-      allow update: if isPrincipal() || (signedIn()
-                    && request.resource.data.status == 'pendente'
-                    && request.resource.data.ciclo == resource.data.ciclo
-                    && request.resource.data.contagem <= resource.data.contagem + 1
-                    && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['exId','exercicio','grupo','url','videoId','status','ultimoEm','ultimoMotivo','contagem']));
-      allow delete: if isPrincipal();
 
-      match /relatos/{uid} {
-        allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
-        allow list: if isAdmin();
-        allow create, update: if signedIn() && request.auth.uid == uid;
-        allow delete: if isPrincipal();
-      }
+    // =========================================================
+    // MENSAGENS DOS ALUNOS (sugestoes, problemas e perguntas
+    // enviadas pelo Meta Assistente)
+    // =========================================================
+
+    match /perguntasNaoRespondidas/{docId} {
+
+      // Qualquer aluno logado pode enviar.
+      allow create: if signedIn();
+
+      // Quando outro aluno envia a MESMA mensagem, o app soma +1 no
+      // documento existente. O aluno so pode mexer nesses campos,
+      // somar no maximo 1, sem trocar o texto e assinando com o
+      // proprio e-mail. Nao consegue ler nem apagar nada.
+      allow update: if isAdmin() || (
+        signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['texto', 'tipo', 'modulo', 'ultimoEmail', 'ultimoNome',
+                       'ultimaVersao', 'ultimo', 'visto', 'n', 'versoes'])
+        && request.resource.data.texto == resource.data.texto
+        && request.resource.data.ultimoEmail.lower() == userEmail()
+        && request.resource.data.n <= resource.data.get('n', 0) + 1
+      );
+
+      // Somente administradores visualizam e apagam.
+      allow read: if isAdmin();
+      allow delete: if isAdmin();
     }
 
-    // ---- NOVO (Beta 12): calistenia — exercícios extras/ajustes e modelos de plano ----
-    match /caliExercicios/{id} {
-      allow read: if signedIn();
-      allow write: if isPrincipal();
-    }
-    match /caliModelos/{id} {
-      allow read: if signedIn();
-      allow write: if isPrincipal();
+
+    // =========================================================
+    // BLOQUEIO DE COLECOES NAO PREVISTAS
+    // =========================================================
+
+    match /{documento=**} {
+      allow read, write: if false;
     }
 
-    // ---- perguntas que o assistente não soube responder (feedback) ----
-    match /perguntasNaoRespondidas/{id} {
-      allow get: if signedIn();
-      allow create, update: if signedIn();
-      allow list, delete: if isAdmin();
-    }
-
-    // ---- NOVO (Beta 10): desafios temáticos ----
-    match /desafiosTematicos/{eventoId} {
-      allow read: if signedIn();
-      allow write: if isPrincipal();
-
-      // participação real de cada aluno (só ele grava a própria)
-      match /participantes/{uid} {
-        allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
-        allow list: if isAdmin();
-        allow create, update, delete: if signedIn() && request.auth.uid == uid;
-      }
-    }
   }
 }

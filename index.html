@@ -1405,6 +1405,89 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
 .cl-row b{font-size:13.5px;display:block}
 .cl-row small{font-size:12px;color:var(--text-dim)}
 .cl-row .cl-dots{margin-top:0}
+
+/* ===== Beta 13: recolher padronizado + conquista especial ===== */
+.col-chev{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;margin:0 auto 0 6px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--text-mute);cursor:pointer;flex:0 0 auto;transition:background .2s,color .2s}
+.col-chev:hover,.col-chev:focus-visible{background:var(--surface-2);color:var(--text)}
+.col-chev svg{transition:transform .26s ease}
+.col-chev.fechado svg{transform:rotate(180deg)}
+.col-anim{overflow:hidden;transition:max-height .26s ease,opacity .22s ease}
+#home-quick .act-head.col-head{display:flex;align-items:center}
+#home-quick .act-head.col-head > span{margin-left:auto}
+.sa-stage{position:fixed;inset:0;z-index:99999;background:#05060b;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .5s}
+.sa-stage.on{opacity:1}
+.sa-stage canvas{display:block}
+.sa-actions{position:absolute;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:10px;opacity:0;transform:translateY(8px);transition:opacity .6s,transform .6s;pointer-events:none}
+.sa-stage.fim .sa-actions{opacity:1;transform:none;pointer-events:auto}
+.sa-actions .btn{min-width:180px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(242,198,109,.45);box-shadow:none;backdrop-filter:blur(6px)}
+.sa-actions .btn-primary{background:#f2c66d;color:#1a1408;border-color:#f2c66d}
+.sa-intro{position:fixed;inset:0;z-index:99998;background:#05060b;display:flex;align-items:center;justify-content:center;padding:32px;opacity:0;transition:opacity 1.2s}
+.sa-intro.on{opacity:1}
+.sa-frase{font-size:19px;line-height:1.6;color:#ece8df;max-width:340px;text-align:center;opacity:0;transform:translateY(8px);transition:opacity 1s,transform 1s}
+.sa-frase.on{opacity:1;transform:none}
+.sa-rec-canvas{position:fixed;left:-99999px;top:0;width:10px;height:10px;opacity:0;pointer-events:none}
+
+/* ===== Beta 14: corrida do iniciante ao avançado ===== */
+#scr-setup-run .run-col1{grid-template-columns:1fr}
+#scr-setup-run .row .input{min-width:0}
+.run-hint-sm{color:var(--text-mute);font-size:11.5px;margin-top:5px;line-height:1.45}
+.tempo-hms{display:flex;align-items:center;gap:6px}
+.tempo-hms .input{flex:1;min-width:0;text-align:center;padding-left:6px;padding-right:6px}
+.tempo-hms span{color:var(--text-mute);font-weight:700}
+.run-nivel-hint{margin:6px 0 4px;padding:12px 14px;border-radius:14px;background:var(--tint-primary);border:1px solid var(--line-primary);font-size:13px;line-height:1.55;color:var(--text)}
+.run-nivel-hint:empty{display:none}
+.run-nivel-hint div+div{margin-top:6px;color:var(--text-dim)}
+.rl-chk{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--text-dim);font-weight:500}
+.rl-chk input{width:18px;height:18px;accent-color:var(--primary)}
+.rl-calc{margin:-2px 0 12px;padding:10px 12px;border-radius:12px;background:var(--surface-2);font-size:12.5px;color:var(--text-dim);line-height:1.5}
+.rl-calc b{color:var(--text)}
+.opt.opt-off{opacity:.35;pointer-events:none}
+.run-why{margin:12px 0 10px;padding:13px 14px;border-radius:16px;background:var(--surface);border:1px solid var(--border)}
+.run-why-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.run-int{font-size:11px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:3px 9px;border-radius:99px;background:var(--tint-primary);color:var(--primary-2);border:1px solid var(--line-primary)}
+.run-int-forte,.run-int-muitoforte,.run-int-moderadoaforte{background:var(--tint-warn);color:var(--accent-2);border-color:var(--line-warn)}
+.run-fase{font-size:11.5px;color:var(--text-mute);font-weight:600}
+.run-why-t{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--text-mute);margin-top:8px}
+.run-why-p{font-size:13.5px;line-height:1.5;color:var(--text);margin-top:2px}
+.run-orient{margin:10px 0;padding:12px 14px;border-radius:16px;background:var(--surface);border:1px solid var(--border)}
+.run-orient-l{font-size:13px;line-height:1.5;color:var(--text-dim);margin-top:4px}
+.run-st{margin-top:12px;padding:14px;border-radius:var(--radius-card,18px);background:var(--surface);border:1px solid var(--border)}
+.run-st-top{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.run-st-k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text-mute)}
+.run-st-v{font-size:15px;font-weight:800;color:var(--text-strong,var(--text));margin-top:2px}
+.run-st-p{font-size:13px;line-height:1.5;color:var(--text-dim);margin-top:8px}
+.run-st-mig{font-size:12.5px;color:var(--text-dim);margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--surface-2)}
+.run-st-a{display:flex;gap:8px;margin-top:12px}
+.run-st-a .btn{flex:1;padding:10px 8px;font-size:13px}
+.rp-head{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 10px}
+.rp-head small,.rp-k{display:block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text-mute)}
+.rp-head b{font-size:15px}
+.rp-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.rp-tile{padding:11px 12px;border-radius:14px;background:var(--surface-2);min-width:0}
+.rp-v{font-size:17px;font-weight:800;margin-top:3px;font-family:var(--font-mono,inherit)}
+.rp-s{font-size:11.5px;color:var(--text-mute);margin-top:2px}
+.rp-card{padding:12px 14px;border-radius:16px;background:var(--surface);border:1px solid var(--border);margin-bottom:10px}
+.rp-t{font-weight:800;font-size:14px;margin-bottom:8px}
+.rp-tab{width:100%;border-collapse:collapse;font-size:13px}
+.rp-tab th{font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-mute);text-align:left;padding:4px 0;font-weight:700}
+.rp-tab td{padding:7px 0;border-top:1px solid var(--border);vertical-align:top}
+.rp-tab td small,.rp-z small,.rp-meta small,.rp-dec small{display:block;font-size:11px;color:var(--text-mute);margin-top:1px}
+.rp-z{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--border);font-size:13px}
+.rp-z:first-of-type{border-top:0}
+.rp-z .mono{white-space:nowrap;font-weight:700}
+.rp-meta{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13px;color:var(--text-dim)}
+.rp-meta:first-of-type{border-top:0}
+.rp-meta.ok{color:var(--text)}
+.rp-meta.prox{color:var(--text-strong,var(--text));font-weight:600}
+.rp-meta-ic{width:20px;height:20px;border-radius:50%;flex:0 0 20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;border:1.5px solid var(--border-strong)}
+.rp-meta.ok .rp-meta-ic{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.rp-meta.prox .rp-meta-ic{border-color:var(--primary);color:var(--primary-2)}
+.rp-bar{height:6px;border-radius:99px;background:var(--surface-2);margin:7px 0 4px;overflow:hidden}
+.rp-bar i{display:block;height:100%;background:var(--primary);border-radius:99px}
+.rp-req{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--text-dim);font-weight:500}
+.rp-req .ok{color:var(--primary-2)}
+.rp-dec{padding:7px 0;border-top:1px solid var(--border);font-size:13px}
+.rp-dec:first-of-type{border-top:0}
 </style>
 </head>
 <body>
@@ -1712,17 +1795,98 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
     <button class="btn btn-ghost" style="align-self:flex-start;padding:8px 12px;font-size:13px;margin-bottom:8px" onclick="sairDoSetup()">← Voltar</button>
     <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">CORRIDA</div><div class="brand-tag">Configure seu plano</div></div></div>
     <h1>Bora correr?</h1>
-    <p class="sub">Configuramos seu plano em segundos.</p>
+    <p class="sub">Responda com sinceridade: o plano parte do seu nível de hoje e evolui com você.</p>
 
     <div class="field"><label>Objetivo</label>
       <div class="radio-grid" id="run-goal">
+        <div class="opt" data-val="comecar">🌱 Começar a correr</div>
+        <div class="opt" data-val="condicionamento">💪 Condicionamento</div>
         <div class="opt on" data-val="5km">🏁 5 km</div>
         <div class="opt" data-val="10km">🎽 10 km</div>
         <div class="opt" data-val="21km">🥇 Meia (21k)</div>
         <div class="opt" data-val="42km">🏆 Maratona (42k)</div>
       </div>
     </div>
-    <div class="field"><label>Nível</label>
+    <div class="field"><label>Sua experiência com corrida</label>
+      <div class="radio-grid run-col1" id="run-exp">
+        <div class="opt" data-val="nunca">Nunca corri / estou sedentário(a)</div>
+        <div class="opt on" data-val="caminho">Caminho, mas quase não corro</div>
+        <div class="opt" data-val="pouco">Corro um pouco, sem regularidade</div>
+        <div class="opt" data-val="regular">Corro com regularidade</div>
+        <div class="opt" data-val="experiente">Corro há anos / faço provas</div>
+      </div>
+    </div>
+    <div class="field"><label>Hoje, quanto tempo você consegue correr sem parar?</label>
+      <div class="radio-grid" id="run-cont">
+        <div class="opt on" data-val="0">Ainda não consigo</div>
+        <div class="opt" data-val="5">1 a 5 min</div>
+        <div class="opt" data-val="10">5 a 10 min</div>
+        <div class="opt" data-val="20">10 a 20 min</div>
+        <div class="opt" data-val="30">20 a 30 min</div>
+        <div class="opt" data-val="60">30 a 60 min</div>
+        <div class="opt" data-val="90">Mais de 1 hora</div>
+      </div>
+      <div class="run-hint-sm">Sem teste: responda pelo que você fez nas últimas semanas.</div>
+    </div>
+    <div class="field run-exp-mais" id="run-kmsem-wrap"><label>Quantos km por semana, em média, nas últimas semanas?</label>
+      <div class="radio-grid g3" id="run-kmsem">
+        <div class="opt on" data-val="0">Quase nada</div>
+        <div class="opt" data-val="8">Até 10 km</div>
+        <div class="opt" data-val="15">10 a 20 km</div>
+        <div class="opt" data-val="28">20 a 35 km</div>
+        <div class="opt" data-val="42">35 a 50 km</div>
+        <div class="opt" data-val="60">Mais de 50 km</div>
+      </div>
+    </div>
+    <div class="field run-exp-mais" id="run-marca-wrap"><label>Um tempo seu recente em alguma distância (opcional)</label>
+      <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap">
+        <select class="input" id="run-marca-dist" style="flex:1.2;min-width:96px"><option value="">Distância</option><option value="3">3 km</option><option value="5">5 km</option><option value="10">10 km</option><option value="21.0975">21 km</option><option value="42.195">42 km</option></select>
+        <div class="tempo-hms" style="flex:2"><input class="input mono" type="number" min="0" max="9" inputmode="numeric" id="run-marca-h" placeholder="h"><span>:</span><input class="input mono" type="number" min="0" max="59" inputmode="numeric" id="run-marca-m" placeholder="min"><span>:</span><input class="input mono" type="number" min="0" max="59" inputmode="numeric" id="run-marca-s" placeholder="seg"></div>
+      </div>
+      <div class="run-hint-sm">Dos últimos 3 meses, correndo forte (prova ou teste). Com ele eu calculo seus ritmos de treino. Sem ele, os treinos vão por esforço até eu ter dados seus.</div>
+    </div>
+    <div class="field"><label>Tempo disponível por treino</label>
+      <div class="radio-grid g3" id="run-tempo">
+        <div class="opt" data-val="20">20 min</div>
+        <div class="opt" data-val="30">30 min</div>
+        <div class="opt on" data-val="45">45 min</div>
+        <div class="opt" data-val="60">1 hora</div>
+        <div class="opt" data-val="90">1h30</div>
+        <div class="opt" data-val="120">2 horas</div>
+      </div>
+    </div>
+    <div class="field run-exp-mais" id="run-tempolongo-wrap"><label>No dia do treino mais longo, até quanto tempo?</label>
+      <div class="radio-grid g3" id="run-tempolongo">
+        <div class="opt on" data-val="0">O mesmo</div>
+        <div class="opt" data-val="75">1h15</div>
+        <div class="opt" data-val="100">1h40</div>
+        <div class="opt" data-val="130">2h10</div>
+        <div class="opt" data-val="160">2h40</div>
+        <div class="opt" data-val="200">3h20</div>
+      </div>
+    </div>
+    <div class="field"><label>Está parado(a) agora?</label>
+      <div class="radio-grid" id="run-parado">
+        <div class="opt on" data-val="0">Não, estou treinando</div>
+        <div class="opt" data-val="10">1 a 2 semanas parado</div>
+        <div class="opt" data-val="35">3 a 8 semanas parado</div>
+        <div class="opt" data-val="75">2 meses ou mais</div>
+      </div>
+      <div class="run-hint-sm">Se você já registra corridas no app, eu uso o seu histórico real.</div>
+    </div>
+    <div class="field"><label>Alguma dor ou limitação? (marque quantas quiser)</label>
+      <div class="radio-grid" id="run-lim">
+        <div class="opt opt-multi" data-val="joelho">Joelho</div>
+        <div class="opt opt-multi" data-val="tornozelo">Tornozelo / pé</div>
+        <div class="opt opt-multi" data-val="canela">Canela</div>
+        <div class="opt opt-multi" data-val="quadril">Quadril</div>
+        <div class="opt opt-multi" data-val="lombar">Lombar</div>
+        <div class="opt opt-multi" data-val="outra">Outra</div>
+      </div>
+      <div class="run-hint-sm">Com limitação, o plano tira subidas e tiros fortes e controla o impacto. Dor que persiste ou piora correndo precisa de avaliação profissional — o app não diagnostica lesões.</div>
+    </div>
+    <div class="run-nivel-hint" id="run-nivel-hint"></div>
+    <div class="field" style="display:none"><label>Nível</label>
       <div class="radio-grid g3" id="run-level">
         <div class="opt on" data-val="iniciante">Iniciante</div>
         <div class="opt" data-val="intermediario">Intermediário</div>
@@ -1731,6 +1895,7 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
     </div>
     <div class="field"><label>Dias por semana</label>
       <div class="radio-grid g3" id="run-days">
+        <div class="opt" data-val="2">2 dias</div>
         <div class="opt" data-val="3">3 dias</div>
         <div class="opt on" data-val="4">4 dias</div>
         <div class="opt" data-val="5">5 dias</div><div class="opt" data-val="6">6 dias</div>
@@ -2159,7 +2324,7 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
     </details>
 
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 12</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 14</span>
     </div>
   </div>
 </div>
@@ -2237,8 +2402,8 @@ circle.ch-hit.sel{fill:rgba(var(--primary-rgb),.22)}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.12"></script>
-<script src="./app-plus.js?v=2027.1-beta.12"></script>
+<script src="./app.js?v=2027.1-beta.14"></script>
+<script src="./app-plus.js?v=2027.1-beta.14"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();
