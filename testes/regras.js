@@ -90,5 +90,23 @@ t('sequência inclui hoje quando treinou hoje', app.calcStreak(h4) === 2, app.ca
 const h0 = app.__get(`([{at:${hoje12.getTime()-3*DIA}}])`);
 t('sequência zera com 2 dias sem treinar', app.calcStreak(h0) === 0, app.calcStreak(h0));
 
+// ---------- descanso por exercício e intensidade (Beta 34) ----------
+const DS = (tier, goal, senior, reps)=>app.parseRestSeconds(app.liftDescanso(tier, goal, senior, reps));
+t('composto pesado (4-6) descansa mais que composto moderado (8-12)', DS('principal','forca',false,'4-6') > DS('principal','hipertrofia',false,'8-12'));
+t('isolado descansa menos que composto no mesmo objetivo', DS('acessorio','hipertrofia',false,'8-12') < DS('principal','hipertrofia',false,'8-12'));
+t('emagrecimento NÃO dá descanso curto automático no composto (≥ 75 s)', DS('principal','emagrecimento',false,'12-15') >= 75, DS('principal','emagrecimento',false,'12-15'));
+t('hipertrofia NÃO dá descanso longo automático no isolado (≤ 75 s)', DS('acessorio','hipertrofia',false,'8-12') <= 75, DS('acessorio','hipertrofia',false,'8-12'));
+t('mesmo exercício e repetições: o objetivo não muda o descanso', DS('principal','emagrecimento',false,'8-12') === DS('principal','hipertrofia',false,'8-12'));
+t('50+ anos descansa mais', DS('principal','hipertrofia',true,'8-12') > DS('principal','hipertrofia',false,'8-12'));
+// ---------- tipo de registro (Beta 34) ----------
+const TR = id=>app.exTipoRegistro(id);
+t('agachamento com barra: carga', TR('agachamento-livre-com-barra') === 'carga', TR('agachamento-livre-com-barra'));
+t('flexão de braço: peso do corpo', TR('flexao-de-braco') === 'corpo', TR('flexao-de-braco'));
+t('barra fixa: peso do corpo', TR('barra-fixa') === 'corpo');
+t('prancha: tempo', TR('prancha-plank') === 'tempo', TR('prancha-plank'));
+t('mountain climber: cardio', TR('mountain-climber') === 'cardio', TR('mountain-climber'));
+t('supino com halteres: carga', TR('supino-reto-com-halteres') === 'carga');
+t('mobilidade: mobilidade', TR('mob-quadril') === 'mobilidade');
+
 console.log(`\n${ok} testes aprovados, ${falhou} reprovados.`);
 process.exitCode = falhou ? 1 : 0;

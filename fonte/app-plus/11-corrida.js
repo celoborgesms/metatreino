@@ -609,6 +609,14 @@ function rAtribuirDias(tipos, dias, pernas, nota){
   tipos.forEach((t,i)=>{ if(i===iLongo || RT[t].q) return;
     if(t==='regenerativo' && dLongo){ const prox = dLongo===7 ? 1 : dLongo+1; if(livres.includes(prox)){ livres.splice(livres.indexOf(prox),1); out[prox] = t; return; } }
     pega(t, d=>-Math.abs(d-4)*0.1); });
+  // Beta 34: dois treinos fortes em dias seguidos (qualidade colada no longão ou em outra qualidade, o que
+  // acontece quando o aluno só tem dias seguidos): o segundo vira corrida leve, com aviso
+  const forte = t => t==='longao' || (RT[t] && RT[t].q);
+  Object.keys(out).map(Number).sort((a,b)=>a-b).forEach(d=>{
+    const t = out[d]; if(!(RT[t] && RT[t].q)) return;
+    const viz = [d-1, d+1].filter(x=>out[x] && forte(out[x]));
+    if(viz.length){ nota[d] = `${RT[t].nome} virou corrida leve: com ${out[viz[0]]==='longao'?'o longão':'outro treino forte'} no dia ${viz[0]<d?'anterior':'seguinte'}, dois esforços seguidos aumentam o risco de lesão.`; out[d] = 'leve'; }
+  });
   // conflito inevitável com pernas: troca a qualidade de impacto por leve e avisa
   Object.keys(out).forEach(k=>{ const d = +k; const t = out[d];
     if(RT[t].q && pen(d) >= 3){ nota[d] = `Ontem tem treino de pernas na musculação: ${RT[t].nome.toLowerCase()} virou corrida leve para não somar cansaço nas pernas.`; out[d] = 'leve'; }
@@ -623,7 +631,15 @@ function rMontarSemana(ctx, M, semTs, opts){
   const tempos = rTempos(setup);
   const F = rSemanaFase(ctx, M, semTs);
   let dias = (setup.selectedDays && setup.selectedDays.length) ? setup.selectedDays.slice() : ({2:[3,6],3:[2,4,6],4:[1,3,5,7],5:[1,2,4,5,7],6:[1,2,3,4,5,6]}[setup.days] || [2,4,6]);
-  if(M.especial && M.especial.sem === semTs && (M.especial.dias||[]).length) dias = M.especial.dias.slice();
+  // Beta 34: na semana com menos tempo, nenhum treino fica mais longo que o mesmo tipo de treino na semana normal
+  // (os dias que sobram não compensam os que saíram)
+  let tetoTipo = null;
+  if(M.especial && M.especial.sem === semTs && (M.especial.dias||[]).length){
+    dias = M.especial.dias.slice();
+    try{ const S0 = rMontarSemana(ctx, Object.assign({}, M, { especial:null }), semTs, opts); tetoTipo = {};
+      S0.workouts.forEach(w=>{ const t = w.motor && w.motor.tipo; const mn = (w.blocks && w.blocks[1]) ? w.blocks[1].exs.reduce((x,e)=>x+(e.min||0),0) : 0; if(t){ tetoTipo[t] = Math.max(tetoTipo[t]||0, mn); tetoTipo['dur_'+t] = Math.max(tetoTipo['dur_'+t]||0, +w.duration||0); } }); }catch(e){ tetoTipo = null; }
+  }
+  const teto = (t, v)=> (tetoTipo && tetoTipo[t]) ? Math.min(v, tetoTipo[t]) : v;
   dias.sort((a,b)=>a-b);
   // semana da prova
   const rd = setup.raceDate ? new Date(setup.raceDate+'T12:00:00') : null;
@@ -672,7 +688,7 @@ function rMontarSemana(ctx, M, semTs, opts){
   } else {
     const kLongo = Object.keys(mapa).find(k=>mapa[k]==='longao');
     let longo = 0;
-    if(kLongo){ longo = _clamp(Math.round(V*share), 30, longCap); if(opts.fadiga) longo = Math.round(longo*0.85);
+    if(kLongo){ longo = teto('longao', _clamp(Math.round(V*share), 30, longCap)); if(opts.fadiga) longo = Math.round(longo*0.85);
       const mp = nv >= 3 && (goal==='42km' || goal==='21km') && F.fase==='especifica' && !opts.fadiga;
       sess[kLongo] = rSessao('longao', Object.assign({}, base, { min: longo, mp })); usado += longo; }
     const leves = Object.keys(mapa).filter(k=>mapa[k]==='leve' || mapa[k]==='regenerativo');
@@ -681,8 +697,11 @@ function rMontarSemana(ctx, M, semTs, opts){
     leves.forEach((k,i)=>{ const t = mapa[k];
       let min = Math.round(resto * pesos[i]/somaP);
       min = t==='regenerativo' ? _clamp(min, 20, 40) : _clamp(min, nv>=4 ? 30 : 20, Math.min(tempos.sessao - 11, longo ? longo-5 : 90));
+      if(tetoTipo) min = Math.min(min, Math.max(tetoTipo.leve||0, tetoTipo.regenerativo||0, 20));
       const strides = t==='leve' && nv >= 2 && i===0 && ['adaptacao','base','recuperacao'].includes(F.fase) && !lim && !opts.fadiga;
-      sess[k] = rSessao(t, Object.assign({}, base, { min: Math.round(min), strides })); });
+      sess[k] = rSessao(t, Object.assign({}, base, { min: Math.round(min), strides }));
+      const tetoDur = tetoTipo ? Math.max(tetoTipo.dur_leve||0, tetoTipo.dur_regenerativo||0) : 0;
+      if(tetoDur && sess[k].duration > tetoDur){ sess[k] = rSessao(t, Object.assign({}, base, { min: Math.max(20, Math.round(min - (sess[k].duration - tetoDur))), strides })); } });
   }
   // por que cada treino
   const pernas = rDiasPerna(ctx);
@@ -773,16 +792,19 @@ function runAtualizaStats(){
 
 // ---------- sincronização semanal ----------
 let _rSyncAt = 0;
-function runSync(force){
+// refazer (Beta 34): remonta a semana atual mantendo os dias que já passaram (usado pela "semana com menos tempo")
+function runSync(force, refazer){
   const run = state && state.modules && state.modules.run;
   if(!run || !run.plan || run.plan.type!=='run' || (run.setup||{}).logOnly) return false;
-  if(!force && Date.now() - _rSyncAt < 1500) return false;
+  if(!force && !refazer && Date.now() - _rSyncAt < 1500) return false;
   _rSyncAt = Date.now();
   const ctx = runCtx();
-  let M = run.plan.motor, mudou = false, rebuild = !!force;
+  let M = run.plan.motor, mudou = false, rebuild = !!force || !!refazer;
+  const semanaJaMontada = !!(M && M.semanaRef);   // conferido antes de avançar as semanas (abaixo)
   const inicioPlano = (typeof planStartTs==='function' && planStartTs(run)) || run.createdAt || Date.now();
   if(!M){ M = run.plan.motor = rMotorNovo(ctx, run.setup||{}, inicioPlano); M.migrado = !(run.setup||{}).aval; mudou = rebuild = true; }
   const semAtual = rSem(Math.max(Date.now(), inicioPlano));
+  const eraEstaSemana = semanaJaMontada && M.semanaRef === semAtual;   // Beta 34: semana nova não herda os dias da anterior
   // 1) avalia cada semana que terminou
   let guard = 0;
   while(M.semanaRef && M.semanaRef < semAtual && guard++ < 60){
@@ -829,7 +851,7 @@ function runSync(force){
   if(fad && infoSem.fadigaAt !== fadKey && rSem(fad.at) === semAtual){ rebuild = true; }
   // 4) monta a semana
   if(rebuild || M.semanaRef !== semAtual || !(run.plan.workouts||[]).length || !(run.plan.workouts[0]||{}).motor){
-    const mesmaSemana = M.semanaRef === semAtual && (run.plan.workouts||[]).length && (run.plan.workouts[0]||{}).motor;
+    const mesmaSemana = eraEstaSemana && (run.plan.workouts||[]).length && (run.plan.workouts[0]||{}).motor;
     const hoje = getDayIdx();
     const fadAtiva = fad && rSem(fad.at) === semAtual;
     const S = rMontarSemana(ctx, Object.assign(M, { semanaRef: semAtual }), semAtual, fadAtiva ? { fadiga: fad.motivo, aPartir: hoje+1 } : {});
@@ -1221,19 +1243,53 @@ function openRunSemana(){
   $('modal-inner').innerHTML = `<h3>📅 Semana com menos tempo</h3>
     <p class="mt-muted" style="margin:4px 0 10px">Marque os dias em que você <b>consegue</b> treinar até domingo. Eu reorganizo a semana priorizando o mais importante — sem empilhar treinos e sem compensar depois.</p>
     <div class="radio-grid" id="rs-dias" style="grid-template-columns:repeat(4,1fr)">${RUN_DIAS.map((d,i)=>{ const di = i+1; const pass = di < hoje; return `<div class="opt opt-multi ${!pass && atuais.includes(di)?'on':''} ${pass?'opt-off':''}" data-val="${di}" ${pass?'aria-disabled="true"':''}>${d.slice(0,3)}</div>`; }).join('')}</div>
-    <div class="row" style="gap:8px;margin-top:14px"><button class="btn btn-ghost btn-block" onclick="runSemanaNormal()">Voltar ao normal</button><button class="btn btn-primary btn-block" onclick="runSemanaAplicar()">Reorganizar</button></div>`;
+    <div class="row" style="gap:8px;margin-top:14px"><button class="btn btn-ghost btn-block" onclick="runSemanaNormal()">Voltar ao normal</button><button class="btn btn-primary btn-block" onclick="runSemanaPrevia()">Ver como fica</button></div>`;
   $('modal-back').classList.add('on');
   document.querySelectorAll('#rs-dias .opt-multi').forEach(o=>{ if(o.classList.contains('opt-off')) return; o.onclick = ()=>o.classList.toggle('on'); });
 }
-function runSemanaAplicar(){
-  const run = state.modules.run; const M = run.plan.motor; const hoje = getDayIdx();
-  const dias = [...document.querySelectorAll('#rs-dias .opt-multi.on')].map(o=>+o.dataset.val).filter(d=>d >= hoje);
-  if(!dias.length){ toast('Marque pelo menos um dia'); return; }
-  const passados = (run.plan.workouts||[]).map(w=>w.dayIdx).filter(d=>d < hoje);
-  M.especial = { sem: rSem(), dias: passados.concat(dias) };
-  _rSyncAt = 0; runSync(); closeModal(); toast('Semana reorganizada ✅'); try{ goTab(state.ui.tab||'sessions'); }catch(e){}
+// Beta 34: antes de aplicar, mostra como a semana fica (o que continua, o que muda e o que sai).
+// Antes, "Reorganizar" não remontava a semana (a mudança só aparecia num recálculo posterior).
+function _rsDiasEscolhidos(){
+  const hoje = getDayIdx();
+  return [...document.querySelectorAll('#rs-dias .opt-multi.on')].map(o=>+o.dataset.val).filter(d=>d >= hoje).sort((a,b)=>a-b);
 }
-function runSemanaNormal(){ const M = state.modules.run.plan.motor; M.especial = null; _rSyncAt = 0; runSync(); closeModal(); toast('Semana normal de volta'); try{ goTab(state.ui.tab||'sessions'); }catch(e){} }
+function _rsSessaoTxt(w){ const t = w.motor ? w.motor.tipo : ''; return `${(RT[t]||{}).nome || w.name} · ${w.duration} min${w.distance?` · ${w.distance}`:''}`; }
+function runSemanaPrevia(){
+  const run = state.modules.run; const M = run.plan.motor; const hoje = getDayIdx();
+  const dias = _rsDiasEscolhidos();
+  if(!dias.length){ toast('Marque pelo menos um dia a partir de hoje'); return; }
+  const feitosHoje = (run.history||[]).some(h=>mtDia0(h.at)===mtDia0());
+  const passados = (run.plan.workouts||[]).map(w=>w.dayIdx).filter(d=>d < hoje || (d===hoje && feitosHoje));
+  const sem = rSem();
+  const teste = JSON.parse(JSON.stringify(M)); teste.especial = { sem, dias: [...new Set(passados.concat(dias))] };
+  let S; try{ S = rMontarSemana(runCtx(), teste, sem, {}); }catch(e){ console.log('prévia da semana:', e); toast('Não consegui montar a prévia agora'); return; }
+  const futuro = ws => ws.filter(w=>w.dayIdx > hoje || (w.dayIdx===hoje && !feitosHoje));
+  const antes = futuro(run.plan.workouts||[]), depois = futuro(S.workouts||[]);
+  const tiposDepois = depois.map(w=>w.motor && w.motor.tipo);
+  const saem = antes.filter(w=>w.motor && !tiposDepois.includes(w.motor.tipo));
+  const minA = antes.reduce((t,w)=>t+(+w.duration||0),0), minD = depois.reduce((t,w)=>t+(+w.duration||0),0);
+  const notas = depois.filter(w=>w.motor && w.motor.nota).map(w=>`${w.dayName}: ${w.motor.nota}`);
+  window.__rsDias = teste.especial.dias;
+  $('modal-inner').innerHTML = `<h3>📅 Como fica a semana</h3>
+    <div class="section-lbl" style="margin:6px 0 4px">Antes</div>
+    ${antes.length ? antes.map(w=>`<div class="mrow"><span>${w.dayName}</span><b style="text-align:right">${mtEsc(_rsSessaoTxt(w))}</b></div>`).join('') : '<p class="mt-muted">Nenhum treino restante.</p>'}
+    <div class="section-lbl" style="margin:12px 0 4px">Depois</div>
+    ${depois.length ? depois.map(w=>`<div class="mrow"><span>${w.dayName}</span><b style="text-align:right">${mtEsc(_rsSessaoTxt(w))}</b></div>`).join('') : '<p class="mt-muted">Nenhum treino.</p>'}
+    <div class="note note-info" style="margin-top:12px"><div class="note-line" style="font-size:12.5px;line-height:1.55">
+      ${tiposDepois.includes('longao') ? 'O <b>longão</b> continua: é o treino que mais sustenta a sua evolução. ' : ''}${tiposDepois.some(t=>RT[t]&&RT[t].q) ? 'O treino de <b>qualidade</b> continua, longe do longão. ' : ''}
+      ${saem.length ? `Sai${saem.length>1?'em':''}: ${saem.map(w=>mtEsc((RT[w.motor.tipo]||{}).nome||w.name).toLowerCase()).join(', ')} — ${saem.length>1?'os de menor prioridade':'o de menor prioridade'}. ` : ''}
+      Tempo total: ${minA} → ${minD} min. Os outros dias <b>não</b> ficam mais longos para compensar, e a semana que vem volta ao plano normal.
+      ${notas.length ? '<br><br>' + notas.map(mtEsc).join('<br>') : ''}</div></div>
+    <div class="row" style="gap:8px;margin-top:14px"><button class="btn btn-ghost btn-block" onclick="openRunSemana()">Escolher outros dias</button><button class="btn btn-primary btn-block" onclick="runSemanaAplicar()">Aplicar</button></div>`;
+}
+function runSemanaAplicar(){
+  const run = state.modules.run; const M = run.plan.motor;
+  const dias = window.__rsDias; if(!dias || !dias.length){ runSemanaPrevia(); return; }
+  M.especial = { sem: rSem(), dias };
+  window.__rsDias = null;
+  runSync(false, true); closeModal(); toast('Semana reorganizada ✅'); try{ goTab(state.ui.tab||'sessions'); }catch(e){}
+}
+function runSemanaNormal(){ const M = state.modules.run.plan.motor; M.especial = null; runSync(false, true); closeModal(); toast('Semana normal de volta'); try{ goTab(state.ui.tab||'sessions'); }catch(e){} }
 
 // ---------- painel de evolução ----------
 function openRunPainel(dados){
@@ -1468,7 +1524,7 @@ mtGancho('openStudent', { depois(email){
   }catch(e){ console.log('admin corrida', e); }
 }});
 
-Object.assign(window, { runSync, openRunPainel, openRunSemana, runSemanaAplicar, runSemanaNormal, runLogCalc, runAtualizaDicaNivel, rMontarSemana, rNivelPotencial, rReferencia, rPerfil, rMetas, runCtx, rCriteriosNivel, rSemanaFase });
+Object.assign(window, { runSync, openRunPainel, openRunSemana, runSemanaPrevia, runSemanaAplicar, runSemanaNormal, runLogCalc, runAtualizaDicaNivel, rMontarSemana, rNivelPotencial, rReferencia, rPerfil, rMetas, runCtx, rCriteriosNivel, rSemanaFase });
 const _selectSessionRunB14 = window.selectSession;
 window.selectSession = function(){ const r = _selectSessionRunB14.apply(this, arguments); try{ _runSelos(); }catch(e){} return r; };
 

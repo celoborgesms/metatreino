@@ -64,6 +64,7 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `28-inicio-cena-ordem.js` | Desenho do Início por horário, clima e datas (`cenaInicio`), selo do clima, ordem dos blocos do Início (`state.inicioOrdem`) |
 | `29-modo-computador.js` | Modo computador: grade de duas colunas (`DK_LAYOUT`, `dkMontar`), faixa de números, painel lateral, atalhos |
 | `30-auditoria-beta33.js` | Correção única das fichas salvas (`b33CorrigeFichas`, marca `state.b33Fichas`) |
+| `31-sincronizacao-videos-parceiros.js` | Arquivo anual dos logins antigos, tela de Sincronização (`openSincronizacao`, `syncAgora`), parceiros e créditos dos vídeos (`openParceiros`, `pcProjecao`) |
 
 Parte nova: próximo número livre (ex.: `20-nome-da-funcao.js`).
 
@@ -98,13 +99,15 @@ Embrulhar a função inteira (`window.f = function(){...}`) só quando for preci
 
 | Caminho | O que guarda | Quem lê/grava |
 |---|---|---|
-| `usuarios/{uid}` | Tudo do aluno (`estadoApp`): planos, últimos 90 dias de histórico, recordes, preferências | o próprio aluno e admins |
+| `usuarios/{uid}` | Tudo do aluno (`estadoApp`): planos, últimos 90 dias de histórico, recordes, preferências. O `{uid}` é o de `contas/{email}.uid` (Beta 34), que pode ser de outro login da mesma pessoa | o próprio aluno (qualquer login com o mesmo e-mail verificado) e admins |
+| `contas/{email}` | Beta 34: `{ uid, uids }` — qual documento de `usuarios` é o da pessoa | a própria pessoa (e-mail verificado) |
+| `parceiros/{id}` | Beta 34: cadastro completo dos criadores dos vídeos (inclui contato privado) | só admins |
 | `usuarios/{uid}/arquivo/{ano-semestre}` | Histórico com mais de 90 dias (cada registro como texto JSON) | o próprio aluno e admins |
 | `usuariosAutorizados/{email}` | Acesso liberado pelo treinador (ativo, validade) | admins (o aluno lê o próprio) |
 | `admins/{email}` | Administradores secundários | administrador principal |
 | `config/mural`, `config/contato`, `config/calistenia`, `config/specialAward` | Mural/logo, contato, ajustes da calistenia, Conquista Especial | todos leem; admins gravam |
 | `desafiosTematicos/{id}` e `.../participantes/{uid}` | Desafios criados e quem participa | ver regras |
-| `videosExercicios`, `exerciciosCustom`, `caliExercicios`, `caliModelos` | Vídeos e exercícios cadastrados pelos admins | todos leem; admins gravam |
+| `videosExercicios`, `exerciciosCustom`, `caliExercicios`, `caliModelos` | Vídeos e exercícios cadastrados pelos admins. `videosExercicios.creditos` = só o que o admin liberou do parceiro (ficha/Biblioteca) | todos leem; admins gravam |
 | `perguntasNaoRespondidas`, `relatos`, `videosReportados` | Mensagens e relatos dos alunos | aluno cria; admins leem |
 
 O dono do app (administrador principal) é reconhecido pelo e-mail definido em `ADMIN_EMAIL` (app.js) e nas regras.
@@ -132,12 +135,16 @@ Nenhum elemento pode passar da borda da tela no celular (deixa a página mais la
 
 | Sistema | Onde | Como usar |
 |---|---|---|
+| Tipo de registro | app.js | `exTipoRegistro(id)`: carga · corpo · tempo · cardio · mobilidade (decide as colunas do registro de séries). Descanso do exercício: `descansoDoExercicio(id)`; regra em `liftDescanso(tier, objetivo, 50+, reps)`. |
 | Descanso | app.js, "TIMER DE DESCANSO" | `startRestTimer(seg, nome)`, `stopRestTimer()`, `restAjusta(±s)`, `restPausa()`. Conta pelo horário (`restFimEm`), não por `left--`. `restTimerInt` ≠ null = descanso rodando. |
 | Tela ligada | app.js, "TELA LIGADA" | `telaLigadaPedir('motivo')` / `telaLigadaSoltar('motivo')`. Uma trava só para o app; volta sozinha ao reabrir. `requestWakeLock()`/`releaseWakeLock()` = motivo `'especial'`. |
 | Treino ativo | app.js | `treinoAtivoIniciar()`, `treinoAtivoEncerrar()`. Mantém a tela ligada na aba Treinos; termina ao salvar, sair, virar o dia ou 20 min parado. |
 | Som do fim | app.js | `tocaSomFim(id, atrasoSeg)`. Respeita `restMuted` (salvo em `mt_descanso_mudo`) e `restVibrarLigado()` (`mt_descanso_vibrar`). |
 | Semana | app.js | `semanaLocalId()` (segunda a domingo, horário do aparelho). Não use `Math.floor(Date.now()/7 dias)`. |
 | Fichas | app.js | `buildLiftExercises(parts, setup, {indice, jaNaSemana, usadosSemana})`. Papéis em `LIFT_PAPEIS`/`liftSequencia`, descanso em `liftDescanso`, quantidade em `liftQuantos`, teto em `LIFT_TETO_SERIES`. |
+| Documento de dados | app.js | **Sempre `uidDados()`**, nunca `fbUser.uid`, para ler/gravar `usuarios/{...}` e o arquivo anual. `resolveContaUnica()` liga o e-mail verificado a um documento só (`contas/{email}`). |
+| Nuvem em tempo real | app.js | `ouveNuvem()` (começa no login). Nuvem mais nova → passa a valer aqui e o que só existe neste aparelho é juntado; mais antiga → junta o que falta. `salvarLocal()` grava só no aparelho (trocar de aba). |
+| Vídeos | parte 07 / 02 | `mtMontarPlayer` (modo limpo, `_mtPlayerVars`), controles `mtTocarPausar/mtBuscar/mtVolume/mtVelocidade`. Créditos: `creditosHtml(id, 'ficha'|'biblioteca')` lê `videoCreditos` (campo `creditos` do vídeo). |
 | Duas cópias do aluno | app.js | `mesclaEstado(base, outra, {desde})` junta histórico/séries/peso/conquistas. Ao excluir um registro do histórico, chame `marcaExcluido(modulo, registro)`. |
 | HTML com dado do aluno | app.js / parte 00 | `escHtml()` / `mtEsc()` para texto; `jsAttr()` dentro de `onclick="f('...')"`. |
 
@@ -154,6 +161,10 @@ node testes/migracao-fichas.js PASTA_DA_BETA_32   # correção única dos planos
 python3 testes/navegador.py URL       # abas, janelas e 8 temas: erros, largura, contraste
 python3 testes/cronometro.py URL      # descanso, tela ligada, som e vibração
 python3 testes/atualizacao.py PASTA_ANTIGA PASTA_NOVA   # atualização automática + modo avião
+python3 testes/dois-aparelhos.py PASTA_DO_PROJETO   # celular (Google) × computador (e-mail/senha), nuvem compartilhada simulada com as regras
+python3 testes/videos-creditos.py PASTA_DO_PROJETO  # player limpo, parceiros, créditos e permissões
+node testes/semana-menos-tempo.js     # corrida: semana com menos tempo
+python3 testes/registro-series.py URL # registro de séries (carga/corpo/tempo), 1ª série e descanso, ficha, seleção de texto
 ```
 Os testes de navegador usam `testes/mock-firebase.js` (Firebase simulado, sem conta real) e `testes/semente.js` (aluno de exemplo). Para servir o site de teste: copie o projeto, troque os `<script>` do Firebase do `index.html` por `mock-firebase.js` e rode `python3 -m http.server`.
 

@@ -122,12 +122,36 @@ function renderLibrary(){
     html += items.map(ex=>{
       const temVideo = !!(videoLinks && videoLinks[slug(ex.name)]);
       const tags = (ex.equip||[]).filter(e=>EQUIP_LBL[e]).map(e=>`<span class="lx-tag">${EQUIP_LBL[e]}</span>`).join('') + (temVideo?'<span class="lx-tag v">▶ vídeo</span>':'');
-      return `<div class="lx-item" onclick="openExercise('${mtJsStr(ex.name)}')">${muscleIco(musculoDoExercicio(ex, cat.name))}<div class="lx-info"><div class="lx-name">${mtEsc(ex.name)}</div><div class="lx-sub">${mtEsc(ex.sub||'')}</div><div class="lx-tags">${tags}</div></div><span class="lx-go">›</span></div>`;
+      const cred = temVideo ? creditosHtml(slug(ex.name), 'biblioteca') : '';
+      return `<div class="lx-item" onclick="openExercise('${mtJsStr(ex.name)}')">${muscleIco(musculoDoExercicio(ex, cat.name))}<div class="lx-info"><div class="lx-name">${mtEsc(ex.name)}</div><div class="lx-sub">${mtEsc(ex.sub||'')}</div><div class="lx-tags">${tags}</div>${cred}</div><span class="lx-go">›</span></div>`;
     }).join('');
   });
   const totalCat = EX_BANK.reduce((s,c)=>s+c.items.length,0);
   const cnt = $('lib-count'); if(cnt) cnt.textContent = (termos.length || libFilter!=='Todos' || libEquip!=='todos') ? `${total} de ${totalCat} exercícios` : `Catálogo completo · ${totalCat} exercícios`;
   $('lib-list').innerHTML = html || `<div class="lx-empty">Nenhum exercício encontrado${q?` para “${mtEsc(q)}”`:''}.<br><span style="font-size:12px;color:var(--text-mute)">Tente outro termo ou limpe os filtros.</span></div>`;
+}
+
+// ---------- Beta 34: créditos do vídeo (parceiros) ----------
+// O documento do vídeo guarda SÓ o que o administrador liberou para cada lugar (ficha e Biblioteca).
+// Os dados completos do parceiro (inclusive contato privado) ficam em "parceiros", só para admins.
+function _fmtFone(d){ d = String(d||'').replace(/\D/g,''); if(d.length===13 && d.startsWith('55')) d = d.slice(2);
+  return d.length===11 ? `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}` : d.length===10 ? `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}` : d; }
+function _waLink(d){ d = String(d||'').replace(/\D/g,''); if(!d) return ''; if(d.length<=11) d = '55' + d; return 'https://wa.me/' + d; }
+function creditosHtml(k, onde){
+  const c = (typeof videoCreditos==='object' && videoCreditos) ? videoCreditos[k] : null;
+  if(!c || !c.nome) return '';
+  const o = c[onde]; if(!o || typeof o !== 'object') return '';
+  const nome = mtEsc(c.nome) + (o.empresa ? ` · ${mtEsc(o.empresa)}` : '');
+  if(onde === 'biblioteca'){
+    const ig = o.instagram ? ` · @${mtEsc(String(o.instagram).replace(/^@/,''))}` : '';
+    return `<div class="lx-cred">🎥 Vídeo: ${nome}${ig}</div>`;
+  }
+  const linhas = [];
+  if(o.texto) linhas.push(`<span class="vc-l">${mtEsc(o.texto)}</span>`);
+  if(o.instagram){ const h = String(o.instagram).replace(/^@/,''); linhas.push(`<span class="vc-l">Instagram: <a href="https://instagram.com/${encodeURIComponent(h)}" target="_blank" rel="noopener">@${mtEsc(h)}</a></span>`); }
+  if(o.contato) linhas.push(`<span class="vc-l">Contato profissional: <a href="${mtEsc(_waLink(o.contato))}" target="_blank" rel="noopener">${mtEsc(_fmtFone(o.contato))}</a></span>`);
+  if(o.site && /^https?:\/\//i.test(o.site)) linhas.push(`<span class="vc-l"><a href="${mtEsc(o.site)}" target="_blank" rel="noopener">${mtEsc(String(o.site).replace(/^https?:\/\/(www\.)?/i,'').replace(/\/$/,''))} ↗</a></span>`);
+  return `<div class="vc-cred"><div class="vc-t">Conteúdo demonstrativo</div>Créditos: <b>${nome}</b>${linhas.join('')}</div>`;
 }
 
 // ---------- 3. FICHA DO EXERCÍCIO + PLAYER IMERSIVO ----------
@@ -174,14 +198,14 @@ function openExerciseSheet(name, idKey, opts){
       <div class="ex-head"><div style="min-width:0"><h3>${mtEsc(ex.name)}</h3>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${grupo?`<span class="pill on">${mtEsc(grupo)}</span>`:''}${(ex.equip||[]).filter(e=>EQUIP_LBL[e]).map(e=>`<span class="pill">${EQUIP_LBL[e]}</span>`).join('')}</div></div>
         <button class="ex-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
-      ${v.id?`<div class="ex-tools"><button class="btn btn-ghost" id="ex-som" onclick="mtAlternarSom()">${videoMudoPref()?'🔇 Sem som':'🔊 Com som'}</button><button class="btn btn-ghost" onclick="exTelaCheia()">⛶ Tela cheia</button><a class="btn btn-ghost" href="${mtEsc(v.url)}" target="_blank" rel="noopener">YouTube ↗</a>${temEvo?`<button class="btn btn-ghost" onclick="closeModal();setTimeout(()=>openExProgress('${mtJsStr(exId)}'),80)">📈 Minha evolução</button>`:''}</div>`
+      ${v.id?`<div class="ex-tools"><button class="btn btn-ghost" id="ex-som" onclick="mtAlternarSom()">${videoMudoPref()?'🔇 Sem som':'🔊 Com som'}</button><button class="btn btn-ghost" onclick="exTelaCheia()">⛶ Tela cheia</button>${mtAdmin()?`<a class="btn btn-ghost" href="${mtEsc(v.url)}" target="_blank" rel="noopener" title="Só administradores veem">YouTube ↗</a>`:''}${temEvo?`<button class="btn btn-ghost" onclick="closeModal();setTimeout(()=>openExProgress('${mtJsStr(exId)}'),80)">📈 Minha evolução</button>`:''}</div>`
         : (temEvo?`<div class="ex-tools"><button class="btn btn-ghost" onclick="closeModal();setTimeout(()=>openExProgress('${mtJsStr(exId)}'),80)">📈 Minha evolução</button></div>`:'')}
-      ${info?`<a class="ex-credit" href="${mtEsc(v.cred)}" target="_blank" rel="noopener">🎥 Demonstração por <b>${mtEsc(info.handle)}</b> <span>${info.icon}</span></a>`:''}
       <div class="ex-sec"><h4>Músculos trabalhados</h4><p>${mtEsc(ficha.m)}${ex.sub && !mtNorm(ficha.m).includes(mtNorm(ex.sub.split(/[(/]/)[0]).trim())?` · ênfase: ${mtEsc(ex.sub)}`:''}</p></div>
       <div class="ex-sec"><h4>Como executar</h4><ol>${ficha.ex.map(x=>`<li>${mtEsc(x)}</li>`).join('')}</ol></div>
       <div class="ex-sec"><h4>Dicas técnicas</h4><ul>${ficha.d.map(x=>`<li>${mtEsc(x)}</li>`).join('')}</ul></div>
       <div class="ex-sec"><h4>Erro comum</h4><p>${mtEsc(ficha.e)}</p></div>
       ${ex.improv?`<div class="note" style="margin-top:14px"><div class="note-line">Esta é uma adaptação para treinar em casa. Na academia, prefira a versão com equipamento.</div></div>`:''}
+      ${/* Beta 34: créditos do vídeo no fim, depois das informações técnicas */ ''}${v.id && creditosHtml(v.k, 'ficha') ? creditosHtml(v.k, 'ficha') : (info?`<a class="ex-credit" href="${mtEsc(v.cred)}" target="_blank" rel="noopener">🎥 Demonstração por <b>${mtEsc(info.handle)}</b> <span>${info.icon}</span></a>`:'')}
       ${v.id?`<div style="text-align:center;margin-top:14px"><a href="#" onclick="mtReportarVideo('${mtJsStr(v.k)}','${mtJsStr(ex.name)}','manual');return false" style="font-size:12px;color:var(--text-mute)">O vídeo não abre ou está errado? Avisar o treinador</a></div>`:''}
       <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>
     </div>`;

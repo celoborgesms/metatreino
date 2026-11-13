@@ -44,6 +44,8 @@ function carregar(opcoes){
   ctx.window = ctx; ctx.self = ctx; ctx.globalThis = ctx;
   vm.createContext(ctx);
   ctx.__MOCK_LOGGED_OUT = true;   // não dispara o login sozinho
+  // "new Date()" sem argumentos segue o Date.now() do teste (os testes adiantam o relógio)
+  vm.runInContext(`(()=>{ const _D = Date; class D extends _D { constructor(...a){ if(a.length) super(...a); else super(D.now()); } } D.now = ()=>_D.now(); globalThis.Date = D; })();`, ctx);
   vm.runInContext(fs.readFileSync(path.join(__dirname, 'mock-firebase.js'), 'utf8'), ctx, { filename:'mock-firebase.js' });
   for(const f of ['app.js', 'app-plus.js']) vm.runInContext(fs.readFileSync(path.join(RAIZ, f), 'utf8'), ctx, { filename:f });
   // let/const do app.js não viram propriedades do contexto: expõe o que os testes usam

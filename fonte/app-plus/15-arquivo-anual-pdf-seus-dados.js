@@ -25,7 +25,7 @@ function _arqSem(ts){ const d = new Date(ts); return d.getFullYear() + '-' + (d.
 function _arqInfo(){ if(!state.arquivo || typeof state.arquivo !== 'object' || Array.isArray(state.arquivo)) state.arquivo = {}; return state.arquivo; }
 function _comPrazo(p, ms){ return Promise.race([p, new Promise((_, rej)=>setTimeout(()=>rej(new Error('tempo esgotado')), ms))]); }
 function arqTemArquivo(){ const i = (state && state.arquivo) || {}; return !!((i.docs||[]).length); }
-function _arqCarregado(){ return !!(_arqMem && fbUser && _arqMem.uid === fbUser.uid); }
+function _arqCarregado(){ return !!(_arqMem && fbUser && _arqMem.uid === uidDados()); }
 
 // separa por semestre tudo o que é mais antigo que os cortes
 function arqColetar(alvo, alvoResumo){
@@ -53,19 +53,19 @@ function arqColetar(alvo, alvoResumo){
 
 // grava na nuvem e, só depois da confirmação, libera a limpeza
 async function arqArquivar(){
-  if(_arqRodando || !fbUser || !fbUser.uid || !state || !state.user || !state.modules) return false;
+  if(_arqRodando || !fbUser || !uidDados() || !state || !state.user || !state.modules) return false;
   const agora = Date.now();
   const alvo = agora - HISTORY_RETENTION_DAYS*DIA_MS, alvoR = agora - 730*DIA_MS;
   const info = _arqInfo();
   const docs = arqColetar(alvo, alvoR); const ids = Object.keys(docs);
   if(!ids.length){ info.ate = alvo; info.ateResumo = alvoR; return true; }   // nada a guardar
-  _arqRodando = true; const uid = fbUser.uid;
+  _arqRodando = true; const uid = uidDados();
   try{
     const escritas = ids.map(id=>{
       return _arqCol(uid).doc(id).set(Object.assign(_arqCompacto(docs[id]), { periodo:id, v:2, atualizadoEm:agora }), { merge:true });
     });
     await _comPrazo(Promise.all(escritas), 45000);
-    if(!fbUser || fbUser.uid !== uid) return false;            // trocou de conta no meio
+    if(!fbUser || uidDados() !== uid) return false;            // trocou de conta no meio
     info.ate = alvo; info.ateResumo = alvoR; info.em = agora; info.falhas = 0; delete info.erro; delete info.pendDesde;
     info.docs = [...new Set([...(info.docs||[]), ...ids])].sort();
     if(_arqCarregado()) ids.forEach(id=>{ _arqMem.docs[id] = _arqMescla(_arqMem.docs[id], JSON.parse(JSON.stringify(docs[id]))); });
@@ -115,7 +115,7 @@ window.cleanupOldHistory = function(){
 async function arqCarregar(forcar){
   if(_arqCarregado() && !forcar) return _arqMem;
   if(!fbUser) throw new Error('sem login');
-  const uid = fbUser.uid;
+  const uid = uidDados();
   // direto do servidor: o cache local pode estar vazio e dar a falsa impressão de arquivo vazio
   const snap = await _comPrazo(_arqCol(uid).get({ source:'server' }), 20000);
   const docs = {}; snap.forEach(d=>{ docs[d.id] = d.data(); });
@@ -142,7 +142,7 @@ function _arqLer(d){
 // restaurar backup (.json) que trouxe o arquivo junto
 function arqRestaurar(arq){
   if(!fbUser || !arq || typeof arq !== 'object') return;
-  const uid = fbUser.uid; const ids = Object.keys(arq).filter(id=>/^\d{4}-[12]$/.test(id));
+  const uid = uidDados(); const ids = Object.keys(arq).filter(id=>/^\d{4}-[12]$/.test(id));
   ids.forEach(id=>{ try{ _arqCol(uid).doc(id).set(Object.assign(_arqCompacto(_arqLer(arq[id])), { periodo:id, v:2, atualizadoEm:Date.now() }), { merge:true }).catch(e=>console.log('restaurar arquivo', e)); }catch(e){} });
   const info = _arqInfo(); info.docs = [...new Set([...(info.docs||[]), ...ids])].sort();
   _arqMem = null; saveData();

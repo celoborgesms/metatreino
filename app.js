@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 33 =====
-const APP_VERSION = '2027.1-beta.33';
+// ===== MetaTreino 2027.1 Beta 34 =====
+const APP_VERSION = '2027.1-beta.34';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -278,10 +278,14 @@ let cloudSyncTimer = null;
 
 function localCacheKey(uid){ return DATA_PREFIX + uid; }
 
+function salvarLocal(){
+  if(!state.user || !fbUser) return;
+  try{ localStorage.setItem(localCacheKey(uidDados()), JSON.stringify(state)); }catch(e){}
+}
 function saveData(){
   if(!state.user || !fbUser) return;
   state._savedAt = Date.now(); // carimbo pra decidir quem é mais novo (nuvem × local)
-  try{ localStorage.setItem(localCacheKey(fbUser.uid), JSON.stringify(state)); }catch(e){}
+  try{ localStorage.setItem(localCacheKey(uidDados()), JSON.stringify(state)); }catch(e){}
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = setTimeout(syncToCloud, 800);
 }
@@ -317,7 +321,7 @@ function limpaParaNuvem(v, path, achados){
   });
   return out;
 }
-let _assinaturaNuvem = '';   // Beta 33: o que a nuvem já tem (sem a aba aberta e o carimbo de hora)
+let _assinaturaNuvem = '', _carimboEnviado = 0;   // Beta 33: o que a nuvem já tem (sem a aba aberta e o carimbo de hora)
 function syncToCloud(){
   if(!fbUser || !state.user) return;
   clearTimeout(cloudSyncTimer);
@@ -329,10 +333,14 @@ function syncToCloud(){
     // Se só mudou a aba aberta, não grava (economiza a cota gratuita do Firestore e bateria).
     const assinatura = JSON.stringify(Object.assign({}, limpo, { ui:null, _savedAt:null }));
     if(assinatura === _assinaturaNuvem) return;
-    const enviadoEm = state._savedAt || Date.now(), uidEnvio = fbUser.uid;
+    // Beta 34: toda mudança de conteúdo enviada leva um carimbo NOVO (o outro aparelho usa o carimbo
+    // para saber que há novidade; antes uma mudança gravada sem saveData podia passar despercebida)
+    if((+state._savedAt||0) <= _carimboEnviado){ state._savedAt = Math.max(Date.now(), _carimboEnviado + 1); limpo._savedAt = state._savedAt; }
+    _carimboEnviado = +state._savedAt || Date.now();
+    const enviadoEm = state._savedAt || Date.now(), uidEnvio = uidDados();
     // set SEM merge: substitui o documento inteiro. Com merge, campos apagados
     // localmente (ex: foto removida) "ressuscitavam" da nuvem no próximo login.
-    const p = db.collection('usuarios').doc(fbUser.uid).set({
+    const p = db.collection('usuarios').doc(uidEnvio).set({
       email: fbUser.email,
       nome: (state.user && state.user.profile && state.user.profile.nickname) || fbUser.displayName || '',
       atualizadoEm: state._savedAt || Date.now(),
@@ -354,12 +362,25 @@ function fbTimeout(promise, ms){
   return Promise.race([ promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), ms||5000)) ]);
 }
 async function loadData(){
-  let cloud = null, local = null;
-  try{
-    const doc = await fbTimeout(db.collection('usuarios').doc(fbUser.uid).get(), 5000);
-    if(doc.exists && doc.data().estadoApp) cloud = doc.data().estadoApp;
-  }catch(e){ console.log('Sem conexão com a nuvem agora, usando cache local:', e); }
-  try{ local = JSON.parse(localStorage.getItem(localCacheKey(fbUser.uid))||'null'); }catch(e){}
+  let cloud = null, local = null, nuvemOk = false;
+  const uid = uidDados();
+  // Beta 34: antes eram só 5 s. Em computador novo (sem cópia local) com internet lenta, o app
+  // seguia como se a conta estivesse vazia e mostrava o questionário — e ao preencher, a conta
+  // vazia era gravada por cima da nuvem. Agora espera mais quando não há cópia no aparelho e,
+  // se ainda assim não conseguir, NÃO trata a conta como nova (veja afterGoogleSignIn).
+  try{ local = JSON.parse(localStorage.getItem(localCacheKey(uid))||'null'); }catch(e){}
+  for(const prazo of (local ? [6000] : [8000, 15000])){
+    try{
+      const doc = await fbTimeout(db.collection('usuarios').doc(uid).get(), prazo);
+      nuvemOk = true;
+      if(doc.exists && doc.data().estadoApp) cloud = doc.data().estadoApp;
+      break;
+    }catch(e){ console.log('Sem resposta da nuvem agora:', e); }
+  }
+  window.__nuvemCarregou = nuvemOk;
+  // cópia que este aparelho guardou com OUTRO login da mesma pessoa (ex.: Google × e-mail e senha)
+  let localOutro = null;
+  if(fbUser && uid !== fbUser.uid){ try{ localOutro = JSON.parse(localStorage.getItem(localCacheKey(fbUser.uid))||'null'); }catch(e){} }
   // decide pela cópia mais recente — nunca deixa a nuvem antiga apagar treino recém-salvo no aparelho
   const cloudAt = (cloud && cloud._savedAt) || 0;
   const localAt = (local && local._savedAt) || 0;
@@ -367,20 +388,86 @@ async function loadData(){
   if(cloud && local){
     chosen = localAt > cloudAt ? local : cloud; needPush = localAt > cloudAt;
     // Beta 33: a cópia mais antiga pode ter treinos que a mais nova não tem (registrados em outro
-    // aparelho ou sem internet). Antes ela era descartada inteira; agora os treinos que faltam entram.
-    // Da cópia LOCAL mais antiga só entra o que foi registrado depois da última gravação confirmada na
-    // nuvem por este aparelho (o resto, se sumiu da nuvem, foi excluído em outro aparelho e não deve voltar).
+    // aparelho ou sem internet). Da cópia LOCAL mais antiga só entra o que foi registrado depois da
+    // última gravação confirmada na nuvem por este aparelho (o resto foi excluído em outro aparelho).
     try{
       if(chosen === local) mesclaEstado(local, cloud);
-      else { const ack = +localStorage.getItem('mt_nuvem_ok_'+fbUser.uid) || 0; if(ack && mesclaEstado(cloud, local, { desde: ack }).daOutra) needPush = true; }
+      else { const ack = +localStorage.getItem('mt_nuvem_ok_'+uid) || 0; if(ack && mesclaEstado(cloud, local, { desde: ack }).daOutra) needPush = true; }
     }catch(e){ console.log('mesclar cópias', e); }
   }
   else chosen = cloud || local;
+  if(chosen && localOutro){
+    try{ const ack = +localStorage.getItem('mt_nuvem_ok_'+fbUser.uid) || 0; if(mesclaEstado(chosen, localOutro, { desde: ack }).daOutra) needPush = true; }catch(e){}
+  } else if(!chosen && localOutro && !cloud && nuvemOk){ chosen = localOutro; needPush = true; }
+  // contas antigas da mesma pessoa encontradas na unificação (entram uma vez só)
+  if(chosen && _contasParaJuntar.length){
+    _contasParaJuntar.forEach(outra=>{ try{ if(mesclaEstado(chosen, outra).daOutra) needPush = true; }catch(e){} });
+    _contasParaJuntar = [];
+  }
   if(chosen){
     state = {...state, ...chosen, ui:{...state.ui, ...(chosen.ui||{})}};
-    try{ localStorage.setItem(localCacheKey(fbUser.uid), JSON.stringify(state)); }catch(e){}
-    if(needPush) syncToCloud(); // devolve pra nuvem a versão local mais nova
+    _nuvemVistaEm = cloudAt;
+    try{ localStorage.setItem(localCacheKey(uid), JSON.stringify(state)); }catch(e){}
+    if(needPush){ state._savedAt = Date.now(); syncToCloud(); } // devolve pra nuvem a versão mais completa
   }
+}
+
+// ===== Beta 34: UMA conta por e-mail, em qualquer aparelho =====
+// CAUSA do "histórico aparece no celular e não no computador": os dados ficam em usuarios/{uid}, e
+// neste projeto o login com Google e o login com e-mail e senha da MESMA pessoa geram UIDs diferentes
+// (está registrado nas regras do Firestore). Quem entrava com Google no celular e com e-mail/senha no
+// computador (ou o contrário) abria dois documentos diferentes: dois históricos.
+// Agora existe contas/{email} → { uid } apontando o documento único daquela pessoa. Só vale para
+// e-mail verificado (ou o usuário interno @aluno.metatreino.app). Na primeira vez, o app procura
+// todos os documentos com aquele e-mail, escolhe o mais completo como principal e junta os outros
+// nele (nada é apagado: os documentos antigos ficam como estavam, só deixam de ser usados).
+let dadosUid = null;               // documento usado para os dados (pode ser diferente do uid do login)
+let _contasParaJuntar = [];        // estados de outros documentos da mesma pessoa, para juntar no carregamento
+function uidDados(){ return dadosUid || (fbUser && fbUser.uid) || null; }
+function emailConfiavel(user){
+  const em = String((user && user.email) || '').toLowerCase();
+  return !!em && (!!(user && user.emailVerified) || ehLoginInterno(em));
+}
+function _tamHist(e){ try{ return ((((e||{}).modules||{}).lift||{}).history||[]).length + ((((e||{}).modules||{}).run||{}).history||[]).length; }catch(x){ return 0; } }
+async function resolveContaUnica(user){
+  dadosUid = user.uid; _contasParaJuntar = [];
+  const email = String(user.email||'').toLowerCase();
+  if(!emailConfiavel(user)) return dadosUid;
+  const chaveLocal = 'mt_conta_' + email;
+  try{
+    const ref = db.collection('contas').doc(email);
+    const snap = await fbTimeout(ref.get(), 8000);
+    const dados = snap.exists ? snap.data() : null;
+    if(dados && dados.uid){
+      dadosUid = dados.uid;
+      const uids = Array.isArray(dados.uids) ? dados.uids : [];
+      if(!uids.includes(user.uid)) ref.set({ uids: uids.concat([user.uid]).slice(-10), atualizadoEm: Date.now() }, { merge:true }).catch(()=>{});
+    } else {
+      // primeira vez: procura todos os documentos desta pessoa (um por forma de login)
+      const achados = {};
+      const variantes = [...new Set([user.email, email].filter(Boolean))];
+      for(const v of variantes){
+        try{ const q = await fbTimeout(db.collection('usuarios').where('email', '==', v).get(), 10000); q.forEach(d=>{ achados[d.id] = d.data(); }); }catch(e){ console.log('procura de contas:', e); }
+      }
+      try{ const meu = await fbTimeout(db.collection('usuarios').doc(user.uid).get(), 8000); if(meu.exists) achados[user.uid] = meu.data(); }catch(e){}
+      const ids = Object.keys(achados);
+      let principal = user.uid;
+      if(ids.length){
+        ids.sort((a,b)=>(_tamHist(achados[b].estadoApp) - _tamHist(achados[a].estadoApp)) || ((+achados[b].atualizadoEm||0) - (+achados[a].atualizadoEm||0)));
+        principal = ids[0];
+        _contasParaJuntar = ids.slice(1).map(id=>achados[id].estadoApp).filter(Boolean);
+        window.__uidsAntigos = ids.slice(1);   // o arquivo anual desses documentos é juntado depois (parte 31)
+      }
+      await fbTimeout(ref.set({ uid: principal, uids: [...new Set(ids.concat([user.uid]))].slice(-10), criadoEm: Date.now(), atualizadoEm: Date.now() }), 8000);
+      dadosUid = principal;
+    }
+    try{ localStorage.setItem(chaveLocal, dadosUid); }catch(e){}
+  }catch(e){
+    // sem internet: usa o vínculo guardado neste aparelho (se houver)
+    console.log('vínculo da conta (sem resposta):', e);
+    try{ const salvo = localStorage.getItem(chaveLocal); if(salvo) dadosUid = salvo; }catch(x){}
+  }
+  return dadosUid;
 }
 
 // ===== Beta 33: juntar cópias do mesmo aluno (outro aparelho / sem internet) =====
@@ -441,14 +528,31 @@ function mesclaEstado(base, outra, opts){
 let _ouvinteNuvem = null, _nuvemVistaEm = 0;
 function ouveNuvem(){
   try{
-    if(_ouvinteNuvem || !fbUser || !db.collection('usuarios').doc(fbUser.uid).onSnapshot) return;
-    _ouvinteNuvem = db.collection('usuarios').doc(fbUser.uid).onSnapshot(doc=>{
+    if(_ouvinteNuvem || !fbUser || !db.collection('usuarios').doc(uidDados()).onSnapshot) return;
+    _ouvinteNuvem = db.collection('usuarios').doc(uidDados()).onSnapshot(doc=>{
       try{
         if(!doc || !doc.exists || (doc.metadata && (doc.metadata.hasPendingWrites || doc.metadata.fromCache))) return;
         const remoto = doc.data() && doc.data().estadoApp; if(!remoto || !state || !state.user) return;
         const at = +remoto._savedAt || 0;
         if(at <= _nuvemVistaEm || at === state._savedAt) { _nuvemVistaEm = Math.max(_nuvemVistaEm, at); return; }
         _nuvemVistaEm = at;
+        // Beta 34: se a nuvem tem uma versão MAIS NOVA que a deste aparelho (perfil, plano, conquistas
+        // mudados no outro aparelho), ela passa a valer aqui — mantendo o que este aparelho registrou e
+        // ainda não chegou à nuvem. Antes só os treinos do histórico eram juntados.
+        if(at > (+state._savedAt||0)){
+          // tudo o que este aparelho tem e a nuvem não tem volta a entrar (exclusões têm marca e não voltam).
+          // Importante quando a nuvem recebeu uma gravação atrasada (feita offline em outro aparelho).
+          const base = JSON.parse(JSON.stringify(remoto));
+          const r2 = mesclaEstado(base, state);
+          const user = Object.assign({}, base.user||{}, { email: state.user.email, isAdmin: state.user.isAdmin });
+          state = Object.assign({}, state, base, { ui: state.ui, user });
+          _carimboEnviado = Math.max(_carimboEnviado, at);
+          try{ localStorage.setItem(localCacheKey(uidDados()), JSON.stringify(state)); }catch(e){}
+          try{ ensureStats(); }catch(e){}
+          try{ const t = (state.ui && state.ui.tab) || 'home'; if(!document.querySelector('#modal-back.on')) goTabSemSalvar(t); }catch(e){}
+          if(r2.daOutra) saveData();   // este aparelho tinha registros que a nuvem ainda não tinha
+          return;
+        }
         const r = mesclaEstado(state, remoto);
         if(r.daOutra){
           try{ ensureStats(); }catch(e){}
@@ -459,6 +563,16 @@ function ouveNuvem(){
       }catch(e){ console.log('nuvem (tempo real):', e); }
     }, ()=>{ _ouvinteNuvem = null; });
   }catch(e){ _ouvinteNuvem = null; }
+}
+// redesenha a aba sem gravar (usado quando os dados chegam de outro aparelho)
+function goTabSemSalvar(t){ goTab(t); }   // goTab só guarda no aparelho (Beta 34)
+// sem internet no primeiro acesso deste aparelho: espera em vez de começar uma conta vazia
+function mostraSemDados(){
+  window.__mtOk = true; document.documentElement.classList.remove('restaurando');
+  const el = $('noaccess-msg');
+  if(el) el.innerHTML = `📶 <b>Não consegui buscar seus dados agora</b><br><br>Este aparelho ainda não tem uma cópia dos seus treinos e a internet não respondeu. Seus dados estão guardados na sua conta: confira a conexão e toque em <b>Tentar de novo</b>.`;
+  const rt = $('noaccess-retry'); if(rt){ rt.classList.remove('hidden'); rt.textContent = '🔄 Tentar de novo'; }
+  showScreen('scr-noaccess');
 }
 function paraDeOuvirNuvem(){ try{ if(_ouvinteNuvem) _ouvinteNuvem(); }catch(e){} _ouvinteNuvem = null; _nuvemVistaEm = 0; }
 
@@ -652,8 +766,9 @@ function doGoogleSignIn(){
 }
 function doLogout(){
   try{ localStorage.removeItem('metatreino_sessao'); }catch(e){}
-  try{ stopRestTimer(); treinoAtivoEncerrar(); paraDeOuvirNuvem(); _assinaturaNuvem = ""; }catch(e){}   // Beta 33: nada de cronômetro, tela ligada ou escuta da nuvem depois de sair
+  try{ stopRestTimer(); treinoAtivoEncerrar(); }catch(e){}   // Beta 33: nada de cronômetro, tela ligada ou escuta da nuvem depois de sair
   try{ syncToCloud(); }catch(e){}   // envia qualquer alteração pendente (ex: foto removida) ANTES de sair
+  try{ paraDeOuvirNuvem(); _assinaturaNuvem = ''; _carimboEnviado = 0; dadosUid = null; }catch(e){}   // depois do último envio
   try{ const so = fbAuth.signOut(); if(so && so.catch) so.catch(()=>{}); }catch(e){}
   fbUser = null;
   state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
@@ -681,7 +796,7 @@ function doRestart(){
   if(!state.user || !fbUser) return;
   appConfirm('Todo o progresso será apagado (treinos, séries e conquistas), mas sua conta e acesso continuam.', ()=>{
     const keep = { name:state.user.name, email:state.user.email, isAdmin:state.user.isAdmin };
-    try{ if(typeof arqApagarTudo==='function') arqApagarTudo(fbUser.uid); }catch(e){}   // o arquivo anual também faz parte do progresso
+    try{ if(typeof arqApagarTudo==='function') arqApagarTudo(uidDados()); }catch(e){}   // o arquivo anual também faz parte do progresso
     state = { user:keep, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
     saveData(); syncToCloud();
     $('tabbar').classList.add('hidden');
@@ -739,7 +854,8 @@ function doDeleteAccount(){
     closeModal(); return;
   }
   appConfirm('Todo o seu progresso será apagado para sempre e você sairá da conta.', ()=>{
-    const uid = fbUser.uid;
+    const uid = uidDados();   // Beta 34: o documento de dados da pessoa (pode ser de outro login dela)
+    try{ db.collection('contas').doc(String(fbUser.email||'').toLowerCase()).delete().catch(()=>{}); }catch(e){}
     const _u = fbUser;
     try{ if(typeof arqApagarTudo==='function') arqApagarTudo(uid); }catch(e){}   // arquivo anual (usuarios/{uid}/arquivo) — apagado antes do login sair
     db.collection('usuarios').doc(uid).delete().catch(e=>console.log('Erro ao excluir na nuvem:', e));
@@ -892,8 +1008,16 @@ async function afterGoogleSignIn(user){
   loadCoachMural(); // logo/mensagem fixada do treinador
   loadCoachContact(); // whatsapp/e-mail de contato do treinador
   loadWeather(); // clima (só mostra dica quando for notável)
+  try{ await resolveContaUnica(user); }catch(e){ dadosUid = user.uid; }   // Beta 34: mesma conta em todos os aparelhos e formas de login
   await loadData();
+  // Beta 34: sem cópia neste aparelho e sem resposta da nuvem, a conta NÃO é tratada como nova
+  // (antes caía no questionário e, ao preencher, gravava uma conta vazia por cima dos dados reais)
+  if(!window.__nuvemCarregou && !(state.user && state.user.profile && state.user.profile.quiz_done) && !(state.modules && (state.modules.lift || state.modules.run))){
+    if(!state.user) state.user = { name:user.displayName||'', email, isAdmin };
+    mostraSemDados(); return;
+  }
   if(!state.user) state.user = { name:user.displayName||'', email, isAdmin };
+  setTimeout(ouveNuvem, 3000);   // Beta 34: escuta o outro aparelho desde o login (antes só depois da tela inicial; quem estava no questionário ficava sem)
   state.user.isAdmin = isAdmin;
   state.user.email = email;
   migrateExerciseIds(); // renomeações: move histórico/PRs/pins pros ids novos
@@ -1101,7 +1225,7 @@ function bootAfterAuth(){
   saveData();
   goTab('home');
   try{ restRetomar(); }catch(e){}   // Beta 33: descanso que estava rodando quando o app fechou
-  try{ _nuvemVistaEm = state._savedAt || 0; setTimeout(ouveNuvem, 4000); }catch(e){}   // Beta 33: outro aparelho aberto ao mesmo tempo
+  try{ setTimeout(ouveNuvem, 4000); }catch(e){}   // Beta 33: outro aparelho aberto ao mesmo tempo (não duplica: ouveNuvem confere)
 }
 
 // ---------- QUESTIONÁRIO ----------
@@ -1907,19 +2031,28 @@ function exPapel(ex, grupo){
 const LIFT_PESO_CORPO = /flex[aã]o|pike|peso corporal|mochila|garrafa|toalha|superman|contra parede/i;
 const LIFT_AVANCADO = /arqueiro|nordic|jump|hollow|pike elevada|\(avan[cç]ado\)|levantamento terra|spider|pistol|muscle/i;
 // descanso por papel (antes era um só valor para o treino inteiro)
-function liftDescanso(tier, goal, senior){
-  const T = senior ? {
-    hipertrofia:{principal:'2min',  secundario:'90-120s', acessorio:'60-90s'},
-    forca:      {principal:'3min',  secundario:'2-3min',  acessorio:'90s'},
-    emagrecimento:{principal:'60s', secundario:'45-60s',  acessorio:'45-60s'},
-    resistencia:{principal:'45s',   secundario:'45s',     acessorio:'45s'}
-  } : {
-    hipertrofia:{principal:'90-120s', secundario:'60-90s', acessorio:'60s'},
-    forca:      {principal:'2-3min',  secundario:'2min',   acessorio:'60-90s'},
-    emagrecimento:{principal:'45-60s',secundario:'30-45s', acessorio:'30-45s'},
-    resistencia:{principal:'30-45s',  secundario:'30s',    acessorio:'30s'}
-  };
-  return ((T[goal] || T.hipertrofia)[tier]) || (T[goal] || T.hipertrofia).secundario;
+// Beta 34: o descanso vem do EXERCÍCIO (principal/composto, secundário ou isolado) e da INTENSIDADE
+// (faixa de repetições: menos repetições = carga mais alta = mais descanso). O objetivo entra só pelas
+// repetições que ele prescreve — antes, "emagrecimento" dava 45-60 s até no agachamento, o que só piora
+// a qualidade das séries sem gastar mais energia. A partir de 50 anos, um degrau a mais de descanso.
+const LIFT_DESC_FAIXAS = {
+  pesado:   { principal:'2-3min',  secundario:'2min',    acessorio:'90s' },     // até 8 repetições
+  moderado: { principal:'90-120s', secundario:'75-90s',  acessorio:'60-75s' },  // 9 a 12
+  leve:     { principal:'75-90s',  secundario:'60-75s',  acessorio:'60s' },     // 13 a 15
+  longo:    { principal:'60-75s',  secundario:'45-60s',  acessorio:'45s' },     // 16 ou mais (resistência)
+  senior:   { principal:'3min',    secundario:'2-3min',  acessorio:'2min' }
+};
+function liftFaixa(reps){
+  const nums = String(reps||'').match(/\d+/g); const alto = nums ? Math.max(...nums.map(Number)) : 12;
+  return alto <= 8 ? 'pesado' : alto <= 12 ? 'moderado' : alto <= 15 ? 'leve' : 'longo';
+}
+function liftDescanso(tier, goal, senior, reps){
+  const REPS_OBJ = { hipertrofia:'8-12', forca:'4-6', emagrecimento:'12-15', resistencia:'15-20' };
+  const ordem = ['longo','leve','moderado','pesado','senior'];
+  let f = liftFaixa(reps || REPS_OBJ[goal] || '8-12');
+  if(senior) f = ordem[Math.min(ordem.length-1, ordem.indexOf(f)+1)];
+  const T = LIFT_DESC_FAIXAS[f];
+  return T[tier] || T.secundario;
 }
 // quantos exercícios cada grupo recebe no dia (Beta 33): braços e glúteos ao lado das pernas
 // recebem menos, e um grupo que já foi treinado antes na semana não repete o volume cheio.
@@ -1944,7 +2077,8 @@ function liftQuantos(grupo, parts, level, opts){
 // teto de séries por sessão: acima disso o treino passa de ~90 min e a qualidade das últimas séries cai
 const LIFT_TETO_SERIES = { iniciante:20, intermediario:26, avancado:30 };
 const LIFT_REPS_PEQUENOS = { hipertrofia:'12-15', forca:'10-12', emagrecimento:'15-20', resistencia:'15-20' };
-const LIFT_DESC_PEQUENOS = { adulto:{ hipertrofia:'45-60s', forca:'60s', emagrecimento:'30s', resistencia:'30s' }, senior:{ hipertrofia:'60s', forca:'60-90s', emagrecimento:'45s', resistencia:'45s' } };
+// core, panturrilha e trapézio: recuperam rápido; 45-60 s em qualquer objetivo (resistência um pouco menos)
+const LIFT_DESC_PEQUENOS = { adulto:{ hipertrofia:'45-60s', forca:'60s', emagrecimento:'45-60s', resistencia:'30-45s' }, senior:{ hipertrofia:'60-75s', forca:'75-90s', emagrecimento:'60-75s', resistencia:'45-60s' } };
 function buildLiftExercises(parts, setup, opts){
   opts = opts || {};
   const level = setup.level || 'iniciante';
@@ -2053,7 +2187,7 @@ function buildLiftExercises(parts, setup, opts){
       if(p==='Core' || p==='Panturrilha') r = LIFT_REPS_PEQUENOS[goal] || '12-15';
       else if(goal==='forca' && tier==='acessorio') r = '8-10';
       else if(goal==='forca' && tier==='secundario') r = '6-8';
-      const descanso = pequeno ? (LIFT_DESC_PEQUENOS[isSenior?'senior':'adulto'][goal] || '45-60s') : liftDescanso(tier, goal, isSenior);
+      const descanso = pequeno ? (LIFT_DESC_PEQUENOS[isSenior?'senior':'adulto'][goal] || '45-60s') : liftDescanso(tier, goal, isSenior, isoAlvo ? null : r);
       list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets:s, reps: isoAlvo||r, rest: descanso, part:p, equip:ex.equip, unit: ex.iso?'tempo':'reps' });
     });
   });
@@ -2689,17 +2823,20 @@ function firstName(){ const p = state.user.profile; return (p&&p.nickname) || (s
 // "Ver como fazer" usa o link do treinador; sem link cadastrado, cai na busca do YouTube.
 let videoLinks = {};
 let videoCredits = {}; // crédito por exercício (link do perfil de quem gravou — qualquer rede)
+let videoCreditos = {}; // Beta 34: créditos de parceiro (só o que o admin liberou: {nome, ficha:{...}, biblioteca:{...}})
 async function loadVideoLinks(){
   try{
     const snap = await db.collection('videosExercicios').get();
-    videoLinks = {}; videoCredits = {};
-    snap.forEach(doc=>{ const d=doc.data(); if(d.url) videoLinks[doc.id]=d.url; if(d.credito) videoCredits[doc.id]=d.credito; });
+    videoLinks = {}; videoCredits = {}; videoCreditos = {};
+    snap.forEach(doc=>{ const d=doc.data(); if(d.url) videoLinks[doc.id]=d.url; if(d.credito) videoCredits[doc.id]=d.credito; if(d.creditos && typeof d.creditos==='object' && d.creditos.nome) videoCreditos[doc.id]=d.creditos; });
     try{ localStorage.setItem('metatreino_videos', JSON.stringify(videoLinks)); }catch(e){}
     try{ localStorage.setItem('metatreino_video_credits', JSON.stringify(videoCredits)); }catch(e){}
+    try{ localStorage.setItem('metatreino_video_creditos', JSON.stringify(videoCreditos)); }catch(e){}
   }catch(e){
     // offline: usa o cache
     try{ videoLinks = JSON.parse(localStorage.getItem('metatreino_videos')||'{}'); }catch(e2){ videoLinks={}; }
     try{ videoCredits = JSON.parse(localStorage.getItem('metatreino_video_credits')||'{}'); }catch(e2){ videoCredits={}; }
+    try{ videoCreditos = JSON.parse(localStorage.getItem('metatreino_video_creditos')||'{}'); }catch(e2){ videoCreditos={}; }
   }
 }
 function ytLink(ex){
@@ -2891,7 +3028,9 @@ function goTab(tab){
   const DONO = {home:'home', sessions:'sessions', plan:'sessions', library:'sessions', challenges:'challenges', perf:'progress', history:'progress', profile:'profile'};
   if(!DONO[tab]) tab = 'home';
   if(tab==='library' && state.active!=='lift' && !state.modules.lift) tab = 'sessions';
-  state.ui.tab = tab; saveData();
+  // Beta 34: trocar de aba só guarda no aparelho. Antes contava como "dado novo" (carimbo de hora
+  // novo): o aparelho que só navegava parecia mais atual que o que registrou um treino.
+  state.ui.tab = tab; salvarLocal();
   if(tab==='perf' || tab==='history') window.__ultProg = tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===DONO[tab]));
   $('tabbar').classList.remove('hidden');
@@ -3872,6 +4011,27 @@ function exCargaOpcional(exId){
   }catch(err){}
   return /panturrilha|prancha|abdominal/.test(String(exId||''));
 }
+// ===== Beta 34: tipo de registro de cada exercício =====
+// 'carga'      → peso + repetições (barra, halteres, máquinas)
+// 'corpo'      → só repetições; a carga extra é opcional e fica escondida até o aluno pedir
+// 'tempo'      → isométrico: duração (com carga extra opcional, escondida)
+// 'cardio'     → repetições (ex.: mountain climber, agachamento com salto)
+// 'mobilidade' → repetições ou duração, sem carga
+// Sem campo nenhum novo nos dados: os registros continuam {peso, reps} (peso 0 = sem carga).
+const EX_CORPO = /flex[aã]o|barra fixa|chin-?up|mergulho|pike|abdominal|crunch|bicicleta|eleva[cç][aã]o de pernas|dead bug|russian twist|superman|ponte|coice de cachorro|concha|abdu[cç][aã]o lateral|nordic|peso corporal|remada invertida|toalha|hollow|prancha/i;
+const EX_CARDIO = /mountain climber|jump|burpee|polichinelo|corrida estacion|skipping/i;
+function exTipoRegistro(exId){
+  try{
+    if(exExigeTempo(exId) || exBankIsIso(exId)) return 'tempo';
+    if(/^mob-/.test(String(exId))) return 'mobilidade';
+    const nome = ((exBySlug(exId)||{}).name) || String(exId).replace(/-/g,' ');
+    if(EX_CARDIO.test(nome)) return 'cardio';
+    if(EX_CORPO.test(nome)) return 'corpo';
+    const ex = exBySlug(exId);
+    if(ex && (ex.equip||[]).length===1 && ex.equip[0]==='casa') return 'corpo';   // só peso do corpo/improvisado
+    return 'carga';
+  }catch(e){ return 'carga'; }
+}
 function exExigeTempo(exId){
   const ex = (state.modules.lift?.plan?.workouts||[]).flatMap(w=>w.exercises||[]).find(e=>e.id===exId);
   return !!(ex && ex.unit==='tempo');
@@ -3935,31 +4095,37 @@ function smartProgressionHint(exId){
   }
   return {cls:'card-info', txt:`🎯 Última vez: ${last.sets.map(s=>`${s.peso>0?s.peso+'kg×':''}${s.reps}${s.peso>0?'':' reps'}`).join(', ')}. Hoje tente ${isBodyweight?'+1 repetição por série':'as mesmas cargas com +1 repetição'} — progresso constante vence pressa.`};
 }
+function exUsaTempo(exId){ return exExigeTempo(exId) || exBankIsIso(exId); }   // Beta 34: isométrico fora do plano (extra) também registra tempo
 function renderSetLogModal(){
   const { exId, exName, entry } = curLog;
-  const isTempo = exExigeTempo(exId);
+  const isTempo = exUsaTempo(exId);
+  // Beta 34: o campo de carga só aparece quando o exercício usa carga (ou quando o aluno pede carga extra)
+  const tipoReg = exTipoRegistro(exId);
+  const comPeso = tipoReg === 'carga' || curLog.cargaExtra || entry.sets.some(s=>(+s.peso||0) > 0);
+  const semPesoCls = comPeso ? '' : ' sem-peso';
   const hint = smartProgressionHint(exId);
   const suggested = `<div class="card ${hint.cls}" style="padding:12px;margin-bottom:12px"><div class="card-sub">${hint.txt}</div></div>`;
   const rows = entry.sets.length? entry.sets.map((s,i)=>`
-    <div class="set-row">
+    <div class="set-row${semPesoCls}">
       <div class="set-num">${i+1}</div>
-      <input class="set-in mono" type="number" step="0.5" value="${s.peso}" onchange="updateSet(${i},'peso',this.value)" placeholder="${exCargaOpcional(exId)?'opcional':'kg'}">
+      ${comPeso ? `<input class="set-in mono" type="number" inputmode="decimal" step="0.5" min="0" value="${s.peso}" onchange="updateSet(${i},'peso',this.value)" placeholder="${tipoReg==='carga'?'kg':'opcional'}" aria-label="Carga da série ${i+1} em kg">` : ''}
       ${isTempo
         ? `<input class="set-in mono" type="text" inputmode="numeric" value="${fmtTempo(s.reps)}" onchange="updateSet(${i},'tempo',this.value)" placeholder="mm:ss">`
-        : `<input class="set-in mono" type="number" value="${s.reps}" onchange="updateSet(${i},'reps',this.value)" placeholder="reps">`}
+        : `<input class="set-in mono" type="number" inputmode="numeric" min="0" value="${s.reps}" onchange="updateSet(${i},'reps',this.value)" placeholder="reps" aria-label="Repetições da série ${i+1}">`}
       <button class="set-x" onclick="delSet(${i})">✕</button>
     </div>`).join('') : `<div class="text-dim" style="text-align:center;padding:12px 0">Nenhuma série ainda. Clique em "+ Nova série" para começar.</div>`;
   $('modal-inner').innerHTML = `
     <h3>📝 ${exName}</h3>
-    <p style="font-size:13px;color:var(--text-dim);margin-top:2px">${isTempo ? 'Registre o peso extra (se usar) e o tempo que segurou cada série.' : (exCargaOpcional(exId) ? 'Registre as repetições. A carga é opcional neste exercício.' : 'Registre peso e repetições de cada série.')}</p>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:2px">${isTempo ? 'Registre o tempo que segurou cada série.' : (comPeso ? (tipoReg==='carga' ? 'Registre a carga e as repetições de cada série.' : 'Registre as repetições e a carga extra que usou.') : 'Registre as repetições de cada série. Este exercício é feito com o peso do corpo.')}${entry.sets.length ? ' Terminou a série? Toque em <b>+ Nova série</b>: o descanso começa na hora.' : ''}</p>
     ${suggested}
     <div style="margin-top:10px">
-      <div class="set-row" style="border-bottom:1px solid var(--border);padding-bottom:6px;color:var(--text-dim);font-size:11px;font-weight:700;letter-spacing:1px">
-        <div>#</div><div style="text-align:center">PESO (kg)${exCargaOpcional(exId)?' · opc.':''}</div><div style="text-align:center">${isTempo?'TEMPO (mm:ss)':'REPS'}</div><div></div>
+      <div class="set-row${semPesoCls}" style="border-bottom:1px solid var(--border);padding-bottom:6px;color:var(--text-dim);font-size:11px;font-weight:700;letter-spacing:1px">
+        <div>#</div>${comPeso ? `<div style="text-align:center">${tipoReg==='carga'?'CARGA (kg)':'CARGA EXTRA (kg)'}</div>` : ''}<div style="text-align:center">${isTempo?'TEMPO (mm:ss)':'REPETIÇÕES'}</div><div></div>
       </div>
       ${rows}
     </div>
-    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="addSet()">+ Nova série</button>
+    ${!comPeso && tipoReg !== 'mobilidade' && tipoReg !== 'cardio' ? `<div style="text-align:right;margin-top:6px"><a href="#" style="font-size:12px;color:var(--text-mute)" onclick="curLog.cargaExtra=true;renderSetLogModal();return false">+ Usei carga extra (colete, anilha, halter)</a></div>` : ''}
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="addSet()">${entry.sets.length ? '+ Nova série' : '+ Registrar a 1ª série'}</button>
     <button class="btn btn-outline btn-block hl-primary" style="margin-top:8px" onclick="startRestFor('${exId}','${exName.replace(/'/g,"\\'")}')">⏱️ Reiniciar descanso</button>
     <div class="row" style="gap:8px;margin-top:14px">
       <button class="btn btn-ghost btn-block" onclick="closeSetLog(false)">Voltar</button>
@@ -3967,24 +4133,40 @@ function renderSetLogModal(){
     </div>
   `;
 }
+// Beta 34: o descanso do exercício como está NO TREINO ABERTO (o mesmo exercício pode estar em dois
+// treinos com descansos diferentes; antes valia o do primeiro treino da lista). Exercício extra (fora do
+// plano) recebe o descanso do papel dele, em vez de 60 s fixos.
+function descansoDoExercicio(exId){
+  const mod = state.modules.lift; const ws = (mod && mod.plan && mod.plan.workouts) || [];
+  let w = null; try{ w = currentSelectedWorkout(mod); }catch(e){}
+  let ex = (w && (w.exercises||[]).find(e=>e.id===exId)) || ws.flatMap(x=>x.exercises||[]).find(e=>e.id===exId);
+  if(ex && ex.rest) return parseRestSeconds(ex.rest);
+  try{
+    const extra = extrasDeHoje().find(e=>e.id===exId);
+    const part = (extra && extra.part) || (EX_BANK.find(c=>c.items.some(i=>slug(i.name)===exId))||{}).name;
+    const st = (mod && mod.setup) || {}; const prof = state.user && state.user.profile;
+    if(['Core','Panturrilha','Trapézio'].includes(part)) return parseRestSeconds(LIFT_DESC_PEQUENOS[(prof && prof.age>=50)?'senior':'adulto'][st.goal||'hipertrofia']);
+    const nome = (exBySlug(exId)||{}).name || exId;
+    return parseRestSeconds(liftDescanso(exPapel({name:nome}, part).tier, st.goal||'hipertrofia', !!(prof && prof.age>=50)));
+  }catch(e){ return 60; }
+}
 function startRestFor(exId, exName){
-  const ex = (state.modules.lift?.plan?.workouts||[]).flatMap(w=>w.exercises||[]).find(e=>e.id===exId);
-  startRestTimer(parseRestSeconds(ex && ex.rest), exName);
+  startRestTimer(descansoDoExercicio(exId), exName);
 }
 function addSet(){
   // "+ Nova série" só é clicado depois que a série anterior acabou — então
   // esse toque já significa "descanse antes da próxima". O timer dispara
   // sozinho, sem precisar tocar em "Iniciar descanso" toda vez.
   const last = curLog.entry.sets[curLog.entry.sets.length-1];
+  const tinhaSerie = curLog.entry.sets.length > 0;   // Beta 34: a 1ª linha é a 1ª série, nenhuma série terminou ainda
   const prev = getLastLog(curLog.exId);
-  const seedDefault = exExigeTempo(curLog.exId) ? 30 : 10;   // isométrico: começa sugerindo 30s
+  const seedDefault = exUsaTempo(curLog.exId) ? 30 : 10;   // isométrico: começa sugerindo 30s
   const seed = last || (prev && prev.sets[0]) || {peso:0,reps:seedDefault};
   curLog.entry.sets.push({ peso:parseFloat(seed.peso)||0, reps:parseInt(seed.reps)||seedDefault });
   renderSetLogModal();
-  try{
-    const ex = (state.modules.lift?.plan?.workouts||[]).flatMap(w=>w.exercises||[]).find(e=>e.id===curLog.exId);
-    startRestTimer(parseRestSeconds(ex && ex.rest), curLog.exName || (ex && ex.name) || '');
-  }catch(e){}
+  // "+ Nova série" depois de uma série = aquela série terminou: começa o descanso (uma vez por toque;
+  // um descanso que já estava correndo é substituído, nunca somado). A 1ª série não dispara descanso.
+  if(tinhaSerie){ try{ startRestTimer(descansoDoExercicio(curLog.exId), curLog.exName || ''); }catch(e){} }
 }
 function delSet(i){ curLog.entry.sets.splice(i,1); renderSetLogModal(); }
 function updateSet(i,k,v){
@@ -3996,10 +4178,11 @@ function closeSetLog(save){
   if(save){
     // reps>0 basta: peso 0 é válido (exercícios de peso corporal)
     curLog.entry.sets = curLog.entry.sets.filter(s=>s.reps>0 && s.peso>=0);
-    const isTempo = exExigeTempo(curLog.exId);
+    const isTempo = exUsaTempo(curLog.exId);
     // Isométricos: o recorde é o TEMPO segurado, com ou sem peso extra —
     // senão a Prancha sem peso nunca teria PR registrado.
-    curLog.entry.sets.filter(s=>isTempo || s.peso>0).forEach(s=>{
+    const semCarga = exTipoRegistro(curLog.exId) !== 'carga';   // Beta 34: sem carga, o recorde é de repetições
+    curLog.entry.sets.filter(s=>isTempo || s.peso>0 || semCarga).forEach(s=>{
       const pr = state.prs[curLog.exId];
       const bateu = isTempo
         ? (!pr || s.reps > pr.reps || (s.reps===pr.reps && s.peso > pr.peso))
@@ -4461,7 +4644,7 @@ function renderRecords(){
   Object.entries(state.prs||{})
     .map(([id,pr])=>({id,...pr}))
     .sort((a,b)=>b.peso-a.peso).slice(0,3)
-    .forEach(p=>linhas.push({emo:'🏋️', titulo:nome(p.id), sub:dt(p.at), val: exBankIsIso(p.id) ? (p.peso>0?p.peso+'kg · ':'')+fmtTempo(p.reps) : `${p.peso}kg × ${p.reps}`}));
+    .forEach(p=>linhas.push({emo:'🏋️', titulo:nome(p.id), sub:dt(p.at), val: exBankIsIso(p.id) ? (p.peso>0?p.peso+'kg · ':'')+fmtTempo(p.reps) : (p.peso>0 ? `${p.peso}kg × ${p.reps}` : `${p.reps} repetições`)}));
   // corrida: maior distância e melhor pace
   const runs = (state.modules.run?.history||[]).filter(r=>!r.activity || r.activity==='corrida');
   if(runs.length){
@@ -10067,9 +10250,9 @@ async function saveVideoLink(id, exName){
   if(credito && !/^https?:\/\//i.test(credito)){ toast('⚠️ O link do perfil precisa começar com http:// ou https://'); return; }
   try{
     if(url){
-      const data = { nome:exName, url, atualizadoEm:Date.now() };
-      if(credito) data.credito = credito;
-      await db.collection('videosExercicios').doc(id).set(data);
+      // Beta 34: merge — salvar o link não apaga os créditos do parceiro
+      const data = { nome:exName, url, atualizadoEm:Date.now(), credito: credito || firebase.firestore.FieldValue.delete() };
+      await db.collection('videosExercicios').doc(id).set(data, { merge:true });
       videoLinks[id] = url;
       if(credito) videoCredits[id] = credito; else delete videoCredits[id];
       toast('✅ Vídeo salvo: '+exName);
@@ -10202,7 +10385,10 @@ async function loadAdminData(){
     allowCache = {};
     allowSnap.forEach(doc=>{ allowCache[doc.id] = doc.data(); });
     usuariosCache = {};
-    usersSnap.forEach(doc=>{ const d = doc.data(); if(d.email) usuariosCache[d.email.toLowerCase()] = {...d, _uid:doc.id}; });
+    // Beta 34: a mesma pessoa pode ter mais de um documento (um por forma de login); vale o mais recente,
+    // que é o documento unificado usado pelo app
+    usersSnap.forEach(doc=>{ const d = doc.data(); if(!d.email) return; const k = d.email.toLowerCase(); const a = usuariosCache[k];
+      if(!a || (+d.atualizadoEm||0) > (+a.atualizadoEm||0)) usuariosCache[k] = {...d, _uid:doc.id, _uids:[...new Set([...((a&&a._uids)||[]), doc.id])]}; else a._uids = [...new Set([...(a._uids||[]), doc.id])]; });
     admLoaded = true;
   }catch(e){
     console.log('Erro ao carregar dados do painel admin:', e);

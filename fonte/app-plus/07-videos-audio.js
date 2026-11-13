@@ -44,16 +44,80 @@ function mtCarregarYTApi(){
   });
   return _ytApi;
 }
-const MT_PLAYER = { p:null, v:null, info:null, mudo:false, pronto:false, t:null };
+const MT_PLAYER = { p:null, v:null, info:null, mudo:false, pronto:false, t:null, prog:null, vel:1 };
+// Beta 34 — MODO LIMPO: o player do YouTube vem sem os controles dele (controls=0) e o MetaTreino mostra
+// os seus, numa barra ABAIXO do vídeo (nada por cima da imagem): tocar/pausar, tempo, som, volume,
+// velocidade e tela cheia. O vídeo repete sozinho (loop), então a tela final de "outros vídeos" não
+// aparece. Tocar na imagem pausa/continua; o toque não vai para o YouTube, então o aluno não é levado
+// para fora do app por engano. Limitação oficial: o YouTube não permite esconder o título e o
+// logotipo por parâmetro (o "showinfo" foi desativado em 2018) — eles podem aparecer por alguns
+// segundos no início ou ao pausar, sem dar para remover sem infringir os termos do YouTube.
+function _mtPlayerVars(v, mudo){
+  return { autoplay:1, playsinline:1, controls:0, rel:0, modestbranding:1, iv_load_policy:3, disablekb:1, fs:0, cc_load_policy:0,
+    loop:1, playlist:v.id, mute: mudo ? 1 : 0, origin: location.origin };
+}
+const MTV_PAUSA = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+const MTV_PLAY = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+function _mtFmt(s){ s = Math.max(0, Math.floor(+s||0)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
+function mtTocarPausar(){
+  const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
+  try{ (p.getPlayerState && p.getPlayerState() === 1) ? p.pauseVideo() : p.playVideo(); }catch(e){}
+}
+function mtBuscar(frac){ const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return; try{ const d = p.getDuration(); if(d > 0) p.seekTo(d * Math.max(0, Math.min(1, frac)), true); }catch(e){} }
+function mtVolume(v){
+  const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
+  try{ v = Math.max(0, Math.min(100, +v)); p.setVolume(v); if(v === 0){ p.mute(); MT_PLAYER.mudo = true; } else if(MT_PLAYER.mudo){ p.unMute(); MT_PLAYER.mudo = false; } }catch(e){}
+  _mtBotaoSom();
+}
+function mtVelocidade(){
+  const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
+  const ops = [1, 0.75, 0.5]; MT_PLAYER.vel = ops[(ops.indexOf(MT_PLAYER.vel) + 1) % ops.length];
+  try{ p.setPlaybackRate(MT_PLAYER.vel); }catch(e){}
+  const b = $('mtv-vel'); if(b) b.textContent = String(MT_PLAYER.vel).replace('.', ',') + '×';
+}
+function _mtAtualizaBarra(){
+  const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
+  try{
+    const t = p.getCurrentTime() || 0, d = p.getDuration() || 0, est = p.getPlayerState && p.getPlayerState();
+    const i = document.querySelector('#mtv-barra i'); if(i) i.style.width = (d ? Math.min(100, t/d*100) : 0) + '%';
+    const tt = $('mtv-tempo'); if(tt) tt.textContent = d ? `${_mtFmt(t)} / ${_mtFmt(d)}` : '';
+    const bp = $('mtv-play'); if(bp){ const tocando = est === 1 || est === 3; if(bp.dataset.t !== String(tocando)){ bp.dataset.t = String(tocando); bp.innerHTML = tocando ? MTV_PAUSA : MTV_PLAY; } bp.setAttribute('aria-label', tocando ? 'Pausar o vídeo' : 'Tocar o vídeo'); }
+  }catch(e){}
+}
+function _mtControlesHtml(){
+  return `<div class="mtv-ctrl" id="mtv-ctrl">
+      <button type="button" class="mtv-b" id="mtv-play" onclick="mtTocarPausar()" aria-label="Pausar o vídeo">${MTV_PAUSA}</button>
+      <div class="mtv-barra" id="mtv-barra" role="slider" aria-label="Posição do vídeo" tabindex="0"><i></i></div>
+      <span class="mtv-tempo" id="mtv-tempo"></span>
+      <button type="button" class="mtv-b" id="mtv-vel" onclick="mtVelocidade()" aria-label="Velocidade do vídeo">1×</button>
+      <input type="range" class="mtv-vol" id="mtv-vol" min="0" max="100" value="100" aria-label="Volume do vídeo" oninput="mtVolume(this.value)">
+    </div>`;
+}
+function _mtLigaControles(){
+  const stage = $('ex-stage'); if(!stage || stage.querySelector('#mtv-ctrl')) return;
+  stage.insertAdjacentHTML('afterend', _mtControlesHtml());
+  const barra = $('mtv-barra');
+  if(barra){
+    const ir = e=>{ const r = barra.getBoundingClientRect(); mtBuscar(((e.clientX||0) - r.left) / r.width); };
+    barra.addEventListener('pointerdown', ir);
+    barra.addEventListener('keydown', e=>{ const p = MT_PLAYER.p; if(!p) return; try{ if(e.key==='ArrowRight') p.seekTo(p.getCurrentTime()+5, true); if(e.key==='ArrowLeft') p.seekTo(Math.max(0, p.getCurrentTime()-5), true); }catch(x){} });
+  }
+  // tocar na imagem pausa/continua (o iframe não recebe o toque: veja .ex-stage iframe no CSS)
+  stage.addEventListener('click', e=>{ if(e.target.closest('button,a')) return; mtTocarPausar(); });
+  clearInterval(MT_PLAYER.prog); MT_PLAYER.prog = setInterval(_mtAtualizaBarra, 400);
+}
 function mtDestruirPlayer(){
-  clearTimeout(MT_PLAYER.t);
+  clearTimeout(MT_PLAYER.t); clearInterval(MT_PLAYER.prog); MT_PLAYER.prog = null; MT_PLAYER.vel = 1;
+  try{ const c = $('mtv-ctrl'); if(c) c.remove(); }catch(e){}
   try{ MT_PLAYER.p && MT_PLAYER.p.destroy && MT_PLAYER.p.destroy(); }catch(e){}
   MT_PLAYER.p = null; MT_PLAYER.pronto = false; MT_PLAYER.v = null;
 }
 // Fallback sem a API (bloqueada/lenta): iframe simples; o parâmetro mute=1 ainda respeita a preferência.
 function _mtIframeSimples(v, mudo){
   const alvo = $('ex-yt'); if(!alvo) return;
-  const src = `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&modestbranding=1&playsinline=1&autoplay=1&mute=${mudo?1:0}`;
+  // sem a API não há como pôr controles próprios: o player do YouTube fica com os dele, no modo mais enxuto permitido
+  const src = `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&modestbranding=1&playsinline=1&autoplay=1&iv_load_policy=3&loop=1&playlist=${v.id}&mute=${mudo?1:0}`;
+  const st = $('ex-stage'); if(st) st.classList.add('nativo');
   alvo.outerHTML = `<iframe src="${src}" title="Vídeo do exercício" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen onload="exVideoOk()"></iframe>`;
   const b = $('ex-som'); if(b){ b.disabled = true; b.title = 'Use o botão de som do próprio player'; b.style.opacity = '.5'; }
 }
@@ -65,12 +129,14 @@ function mtMontarPlayer(v, info){
     if(MT_PLAYER.v !== v || !$('ex-yt')) return;   // o aluno já fechou ou abriu outro
     MT_PLAYER.p = new YT.Player('ex-yt', {
       videoId: v.id,
-      playerVars: { autoplay:1, playsinline:1, rel:0, modestbranding:1, mute: MT_PLAYER.mudo ? 1 : 0, origin: location.origin },
+      host: 'https://www.youtube-nocookie.com',
+      playerVars: _mtPlayerVars(v, MT_PLAYER.mudo),
       events: {
         onReady: e=>{
           MT_PLAYER.pronto = true; clearTimeout(MT_PLAYER.t);
           try{ MT_PLAYER.mudo ? e.target.mute() : e.target.unMute(); e.target.playVideo(); }catch(err){}
-          exVideoOk(); _mtBotaoSom();
+          exVideoOk(); _mtBotaoSom(); _mtLigaControles();
+          try{ const vol = $('mtv-vol'); if(vol) vol.value = MT_PLAYER.mudo ? 0 : (e.target.getVolume ? e.target.getVolume() : 100); }catch(err){}
         },
         onError: e=>{ clearTimeout(MT_PLAYER.t); mtVideoFalha(v, e && e.data); }
       }
@@ -84,11 +150,11 @@ function mtMontarPlayer(v, info){
     else _mtIframeSimples(v, MT_PLAYER.mudo);   // API indisponível: mostra o vídeo do jeito antigo
   });
 }
-function _mtBotaoSom(){ const b = $('ex-som'); if(b) b.textContent = MT_PLAYER.mudo ? '🔇 Sem som' : '🔊 Com som'; }
+function _mtBotaoSom(){ const b = $('ex-som'); if(b) b.textContent = MT_PLAYER.mudo ? '🔇 Sem som' : '🔊 Com som'; const vol = $('mtv-vol'); if(vol && MT_PLAYER.mudo) vol.value = 0; }
 // liga/desliga o som SÓ deste vídeo (a preferência geral continua a mesma)
 function mtAlternarSom(){
   const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
-  try{ if(MT_PLAYER.mudo){ p.unMute(); if(p.getVolume && p.getVolume()===0) p.setVolume(100); MT_PLAYER.mudo = false; } else { p.mute(); MT_PLAYER.mudo = true; } }catch(e){}
+  try{ if(MT_PLAYER.mudo){ p.unMute(); if(p.getVolume && p.getVolume()===0) p.setVolume(100); MT_PLAYER.mudo = false; const vol = $('mtv-vol'); if(vol) vol.value = p.getVolume ? (p.getVolume()||100) : 100; } else { p.mute(); MT_PLAYER.mudo = true; } }catch(e){}
   _mtBotaoSom();
 }
 // Códigos oficiais de erro do player do YouTube:

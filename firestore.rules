@@ -1,7 +1,11 @@
 rules_version = '2';
 
 // =============================================================
-// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 33)
+// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 34)
+// Beta 34: a mesma pessoa (mesmo e-mail VERIFICADO) acessa o mesmo
+// documento de dados com qualquer forma de login (Google ou e-mail e
+// senha geram UIDs diferentes). Coleção nova "contas" (vínculo e-mail →
+// documento) e "parceiros" (créditos dos vídeos, só administradores).
 // Beta 33: o aluno não consegue mais gravar no próprio documento um
 // e-mail que não é o dele (antes podia aparecer no painel com o
 // e-mail de outra pessoa). Nada mais mudou nas permissões.
@@ -64,32 +68,82 @@ service cloud.firestore {
     // (aluno: so os proprios dados · administradores: todos)
     // =========================================================
 
+    // e-mail que dá para confiar: verificado, ou o usuário interno (sem e-mail real)
+    function emailConfiavel() {
+      return signedIn() && request.auth.token.email != null && (
+        request.auth.token.email_verified == true
+        || userEmail().matches('.*@aluno[.]metatreino[.]app')
+      );
+    }
+
+    // documento de dados vinculado ao e-mail desta pessoa (contas/{email}.uid)
+    function contaVinculada(userId) {
+      return emailConfiavel()
+        && exists(/databases/$(database)/documents/contas/$(userEmail()))
+        && get(/databases/$(database)/documents/contas/$(userEmail())).data.uid == userId;
+    }
+
+    // documento antigo da mesma pessoa (outro login, mesmo e-mail): só leitura, para juntar
+    function mesmoEmail(userId) {
+      return emailConfiavel()
+        && exists(/databases/$(database)/documents/usuarios/$(userId))
+        && get(/databases/$(database)/documents/usuarios/$(userId)).data.email.lower() == userEmail();
+    }
+
     // o campo "email" do documento do aluno precisa ser o e-mail da própria conta
     function emailDoDocOk() {
       return !('email' in request.resource.data)
         || request.resource.data.email == null
-        || request.resource.data.email.lower() == userEmail();
+        || (emailConfiavel() && request.resource.data.email.lower() == userEmail());
     }
 
     match /usuarios/{userId} {
-      allow read:
-        if isOwnerUser(userId) || isAdmin();
+      allow get:
+        if isOwnerUser(userId) || contaVinculada(userId) || isAdmin()
+          || (emailConfiavel() && resource.data.email == request.auth.token.email);
+      // procurar os documentos do próprio e-mail (unificação) ou, para admins, a lista toda
+      allow list:
+        if isAdmin() || (emailConfiavel() && resource.data.email == request.auth.token.email);
       allow create, update:
-        if (isOwnerUser(userId) && emailDoDocOk()) || isAdmin();
+        if ((isOwnerUser(userId) || contaVinculada(userId)) && emailDoDocOk()) || isAdmin();
       // Apagar: o proprio aluno (excluir conta / comecar do zero) ou o
       // administrador principal (limpeza de ex-alunos). Secundario nao apaga.
       allow delete:
-        if isOwnerUser(userId) || isOwner();
+        if isOwnerUser(userId) || contaVinculada(userId) || isOwner();
 
       // Inclui o arquivo anual (usuarios/{uid}/arquivo/{ano-semestre}).
       match /{subdocumentos=**} {
-        allow read, create, update:
-          if isOwnerUser(userId) || isAdmin();
+        allow read:
+          if isOwnerUser(userId) || contaVinculada(userId) || mesmoEmail(userId) || isAdmin();
+        allow create, update:
+          if isOwnerUser(userId) || contaVinculada(userId) || isAdmin();
         allow delete:
-          if isOwnerUser(userId) || isOwner();
+          if isOwnerUser(userId) || contaVinculada(userId) || isOwner();
       }
     }
 
+
+    // =========================================================
+    // CONTAS (Beta 34): e-mail → documento de dados único da pessoa
+    // Só a própria pessoa (e-mail verificado) cria/troca o vínculo, e
+    // só pode apontar para o próprio login ou para um documento que
+    // já é do mesmo e-mail.
+    // =========================================================
+
+    match /contas/{emailDoc} {
+      allow read: if isAdmin() || (emailConfiavel() && userEmail() == emailDoc);
+      allow create, update: if emailConfiavel() && userEmail() == emailDoc
+        && request.resource.data.uid is string
+        && (request.resource.data.uid == request.auth.uid || mesmoEmail(request.resource.data.uid));
+      allow delete: if (emailConfiavel() && userEmail() == emailDoc) || isOwner();
+    }
+
+    // PARCEIROS (Beta 34): dados completos dos criadores dos vídeos
+    // (inclui contato privado). Só administradores. O que o aluno vê
+    // fica copiado no documento do vídeo, só com o que o admin liberou.
+    match /parceiros/{parceiroDoc} {
+      allow read, create, update, delete: if isAdmin();
+    }
 
     // =========================================================
     // USUARIOS AUTORIZADOS (liberacao de acesso dos alunos)

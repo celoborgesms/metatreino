@@ -1,3 +1,59 @@
+# MetaTreino 2027.1 Beta 34 — Mesmos dados em todos os aparelhos, vídeo limpo e créditos de parceiros
+
+Detalhes técnicos em `RELATORIO-BETA34.md`.
+
+1. **Mesmos dados no celular e no computador.**
+   - **Causa:** neste projeto, entrar com Google e entrar com e-mail e senha cria duas contas diferentes no Firebase, cada uma com seus próprios dados. Quem usava Google no celular e e-mail/senha no computador (ou o contrário) via dois históricos.
+   - Agora o app reconhece a pessoa pelo **e-mail verificado** e usa um único lugar para os dados, qualquer que seja a forma de login.
+   - Na primeira vez, junta o que estava separado (treinos, séries, peso, conquistas, recordes e o histórico antigo do arquivo anual). Nada é apagado.
+2. **Os dois aparelhos abertos ao mesmo tempo.**
+   - Treino, corrida, perfil e conquistas feitos num aparelho aparecem no outro em poucos segundos.
+   - Antes, só os treinos do histórico eram juntados, e só depois da tela inicial.
+3. **Internet lenta ou caindo.**
+   - Num aparelho novo, sem cópia dos dados e sem resposta da internet, o app agora espera e oferece "Tentar de novo". Antes, abria o questionário de conta nova, e preencher gravava uma conta vazia por cima da real.
+   - O que foi registrado sem internet é enviado quando a conexão volta, sem apagar o que o outro aparelho registrou nesse meio-tempo.
+4. **Perfil → Conta e dados → Sincronização entre aparelhos.** Mostra:
+   - a conta e a forma de login;
+   - se os dados estão unificados;
+   - a última gravação confirmada na nuvem e se há algo esperando envio;
+   - o botão **Sincronizar agora**.
+5. **Vídeos no modo limpo.**
+   - O vídeo aparece sem a barra de controles do YouTube.
+   - Abaixo da imagem ficam os controles do MetaTreino: tocar/pausar, posição, tempo, velocidade (1×, 0,75×, 0,5×) e volume. Os botões de som e de tela cheia continuam.
+   - O vídeo repete sozinho, então não aparecem sugestões de outros vídeos no fim.
+   - Tocar na imagem pausa ou continua e não leva para o YouTube.
+   - O botão "YouTube ↗" agora aparece só para administradores.
+   - **Limitação do YouTube:** o título e o logotipo podem aparecer por alguns segundos no começo ou ao pausar. Desde 2018 o YouTube não deixa escondê-los por configuração, e cobri-los iria contra os termos dele.
+6. **Créditos dos vídeos (parceiros).** Em Painel → Vídeos → **Parceiros e créditos**:
+   - Cadastre o profissional uma vez: nome, empresa, Instagram, WhatsApp, site e texto do crédito.
+   - Marque em quais vídeos ele aparece.
+   - Escolha o que os alunos veem na **ficha do exercício** e na **Biblioteca**, separadamente.
+   - O WhatsApp só aparece se você marcar.
+   - Editar ou excluir o parceiro atualiza todos os vídeos dele e **nunca mexe no link do vídeo**.
+   - Vídeos sem créditos e o crédito antigo (link do perfil) continuam funcionando como antes.
+
+7. **Semana com menos tempo (corrida).**
+   - Antes de aplicar, mostra como a semana fica: o que continua, o que sai e o tempo total.
+   - "Aplicar" muda a semana na hora. Antes, a mudança só aparecia depois de um recálculo.
+   - Dois treinos fortes nunca ficam em dias seguidos.
+   - Os dias que sobram não ficam mais longos, e a semana seguinte volta ao normal.
+8. **Descanso da musculação.** Agora depende do tipo de exercício e da carga (faixa de repetições), não só do objetivo. Exemplo: no emagrecimento, o agachamento tinha 45 a 60 s e passa a ter 75 a 90 s. O cronômetro usa o descanso do exercício no treino aberto.
+9. **Primeira série.** O primeiro toque ("+ Registrar a 1ª série") não inicia descanso. Da segunda série em diante, "+ Nova série" encerra a série anterior e começa o descanso.
+10. **Exercícios sem carga.**
+    - Flexão, barra fixa, abdominais e outros exercícios com o peso do corpo pedem só repetições. Há a opção "+ Usei carga extra".
+    - Isométricos pedem tempo.
+    - Os recordes passam a contar repetições quando não há carga.
+11. **Créditos no fim da ficha**, depois das orientações técnicas, com o título "Conteúdo demonstrativo".
+12. **Segurar o dedo** em botões, abas e menus não abre mais o menu de copiar. Os textos da ficha e os campos continuam selecionáveis.
+
+**Regras do Firestore: mudaram. Publique o `firestore.rules` novo.**
+- A pessoa com e-mail verificado acessa o próprio documento de dados com qualquer forma de login.
+- Coleção nova `contas`: liga o e-mail ao documento.
+- Coleção nova `parceiros`: só administradores leem e gravam.
+- Aluno, administrador secundário e administrador principal continuam com as mesmas permissões de antes.
+- Se o app for publicado antes das regras, ele continua funcionando como na Beta 33, só sem a unificação e sem o cadastro de parceiros.
+
+---
 # MetaTreino 2027.1 Beta 33 — Auditoria geral
 
 Versão de correções. Nenhum recurso foi removido; histórico, conquistas, preferências e permissões continuam como estavam. O relatório completo está em `RELATORIO-AUDITORIA-BETA33.md`.

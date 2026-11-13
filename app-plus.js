@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 33 — app-plus.js
+// MetaTreino 2027.1 Beta 34 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.33' };
+const MTP = { versao: '2027.1-beta.34' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -239,12 +239,36 @@ function renderLibrary(){
     html += items.map(ex=>{
       const temVideo = !!(videoLinks && videoLinks[slug(ex.name)]);
       const tags = (ex.equip||[]).filter(e=>EQUIP_LBL[e]).map(e=>`<span class="lx-tag">${EQUIP_LBL[e]}</span>`).join('') + (temVideo?'<span class="lx-tag v">▶ vídeo</span>':'');
-      return `<div class="lx-item" onclick="openExercise('${mtJsStr(ex.name)}')">${muscleIco(musculoDoExercicio(ex, cat.name))}<div class="lx-info"><div class="lx-name">${mtEsc(ex.name)}</div><div class="lx-sub">${mtEsc(ex.sub||'')}</div><div class="lx-tags">${tags}</div></div><span class="lx-go">›</span></div>`;
+      const cred = temVideo ? creditosHtml(slug(ex.name), 'biblioteca') : '';
+      return `<div class="lx-item" onclick="openExercise('${mtJsStr(ex.name)}')">${muscleIco(musculoDoExercicio(ex, cat.name))}<div class="lx-info"><div class="lx-name">${mtEsc(ex.name)}</div><div class="lx-sub">${mtEsc(ex.sub||'')}</div><div class="lx-tags">${tags}</div>${cred}</div><span class="lx-go">›</span></div>`;
     }).join('');
   });
   const totalCat = EX_BANK.reduce((s,c)=>s+c.items.length,0);
   const cnt = $('lib-count'); if(cnt) cnt.textContent = (termos.length || libFilter!=='Todos' || libEquip!=='todos') ? `${total} de ${totalCat} exercícios` : `Catálogo completo · ${totalCat} exercícios`;
   $('lib-list').innerHTML = html || `<div class="lx-empty">Nenhum exercício encontrado${q?` para “${mtEsc(q)}”`:''}.<br><span style="font-size:12px;color:var(--text-mute)">Tente outro termo ou limpe os filtros.</span></div>`;
+}
+
+// ---------- Beta 34: créditos do vídeo (parceiros) ----------
+// O documento do vídeo guarda SÓ o que o administrador liberou para cada lugar (ficha e Biblioteca).
+// Os dados completos do parceiro (inclusive contato privado) ficam em "parceiros", só para admins.
+function _fmtFone(d){ d = String(d||'').replace(/\D/g,''); if(d.length===13 && d.startsWith('55')) d = d.slice(2);
+  return d.length===11 ? `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}` : d.length===10 ? `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}` : d; }
+function _waLink(d){ d = String(d||'').replace(/\D/g,''); if(!d) return ''; if(d.length<=11) d = '55' + d; return 'https://wa.me/' + d; }
+function creditosHtml(k, onde){
+  const c = (typeof videoCreditos==='object' && videoCreditos) ? videoCreditos[k] : null;
+  if(!c || !c.nome) return '';
+  const o = c[onde]; if(!o || typeof o !== 'object') return '';
+  const nome = mtEsc(c.nome) + (o.empresa ? ` · ${mtEsc(o.empresa)}` : '');
+  if(onde === 'biblioteca'){
+    const ig = o.instagram ? ` · @${mtEsc(String(o.instagram).replace(/^@/,''))}` : '';
+    return `<div class="lx-cred">🎥 Vídeo: ${nome}${ig}</div>`;
+  }
+  const linhas = [];
+  if(o.texto) linhas.push(`<span class="vc-l">${mtEsc(o.texto)}</span>`);
+  if(o.instagram){ const h = String(o.instagram).replace(/^@/,''); linhas.push(`<span class="vc-l">Instagram: <a href="https://instagram.com/${encodeURIComponent(h)}" target="_blank" rel="noopener">@${mtEsc(h)}</a></span>`); }
+  if(o.contato) linhas.push(`<span class="vc-l">Contato profissional: <a href="${mtEsc(_waLink(o.contato))}" target="_blank" rel="noopener">${mtEsc(_fmtFone(o.contato))}</a></span>`);
+  if(o.site && /^https?:\/\//i.test(o.site)) linhas.push(`<span class="vc-l"><a href="${mtEsc(o.site)}" target="_blank" rel="noopener">${mtEsc(String(o.site).replace(/^https?:\/\/(www\.)?/i,'').replace(/\/$/,''))} ↗</a></span>`);
+  return `<div class="vc-cred"><div class="vc-t">Conteúdo demonstrativo</div>Créditos: <b>${nome}</b>${linhas.join('')}</div>`;
 }
 
 // ---------- 3. FICHA DO EXERCÍCIO + PLAYER IMERSIVO ----------
@@ -291,14 +315,14 @@ function openExerciseSheet(name, idKey, opts){
       <div class="ex-head"><div style="min-width:0"><h3>${mtEsc(ex.name)}</h3>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${grupo?`<span class="pill on">${mtEsc(grupo)}</span>`:''}${(ex.equip||[]).filter(e=>EQUIP_LBL[e]).map(e=>`<span class="pill">${EQUIP_LBL[e]}</span>`).join('')}</div></div>
         <button class="ex-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
-      ${v.id?`<div class="ex-tools"><button class="btn btn-ghost" id="ex-som" onclick="mtAlternarSom()">${videoMudoPref()?'🔇 Sem som':'🔊 Com som'}</button><button class="btn btn-ghost" onclick="exTelaCheia()">⛶ Tela cheia</button><a class="btn btn-ghost" href="${mtEsc(v.url)}" target="_blank" rel="noopener">YouTube ↗</a>${temEvo?`<button class="btn btn-ghost" onclick="closeModal();setTimeout(()=>openExProgress('${mtJsStr(exId)}'),80)">📈 Minha evolução</button>`:''}</div>`
+      ${v.id?`<div class="ex-tools"><button class="btn btn-ghost" id="ex-som" onclick="mtAlternarSom()">${videoMudoPref()?'🔇 Sem som':'🔊 Com som'}</button><button class="btn btn-ghost" onclick="exTelaCheia()">⛶ Tela cheia</button>${mtAdmin()?`<a class="btn btn-ghost" href="${mtEsc(v.url)}" target="_blank" rel="noopener" title="Só administradores veem">YouTube ↗</a>`:''}${temEvo?`<button class="btn btn-ghost" onclick="closeModal();setTimeout(()=>openExProgress('${mtJsStr(exId)}'),80)">📈 Minha evolução</button>`:''}</div>`
         : (temEvo?`<div class="ex-tools"><button class="btn btn-ghost" onclick="closeModal();setTimeout(()=>openExProgress('${mtJsStr(exId)}'),80)">📈 Minha evolução</button></div>`:'')}
-      ${info?`<a class="ex-credit" href="${mtEsc(v.cred)}" target="_blank" rel="noopener">🎥 Demonstração por <b>${mtEsc(info.handle)}</b> <span>${info.icon}</span></a>`:''}
       <div class="ex-sec"><h4>Músculos trabalhados</h4><p>${mtEsc(ficha.m)}${ex.sub && !mtNorm(ficha.m).includes(mtNorm(ex.sub.split(/[(/]/)[0]).trim())?` · ênfase: ${mtEsc(ex.sub)}`:''}</p></div>
       <div class="ex-sec"><h4>Como executar</h4><ol>${ficha.ex.map(x=>`<li>${mtEsc(x)}</li>`).join('')}</ol></div>
       <div class="ex-sec"><h4>Dicas técnicas</h4><ul>${ficha.d.map(x=>`<li>${mtEsc(x)}</li>`).join('')}</ul></div>
       <div class="ex-sec"><h4>Erro comum</h4><p>${mtEsc(ficha.e)}</p></div>
       ${ex.improv?`<div class="note" style="margin-top:14px"><div class="note-line">Esta é uma adaptação para treinar em casa. Na academia, prefira a versão com equipamento.</div></div>`:''}
+      ${/* Beta 34: créditos do vídeo no fim, depois das informações técnicas */ ''}${v.id && creditosHtml(v.k, 'ficha') ? creditosHtml(v.k, 'ficha') : (info?`<a class="ex-credit" href="${mtEsc(v.cred)}" target="_blank" rel="noopener">🎥 Demonstração por <b>${mtEsc(info.handle)}</b> <span>${info.icon}</span></a>`:'')}
       ${v.id?`<div style="text-align:center;margin-top:14px"><a href="#" onclick="mtReportarVideo('${mtJsStr(v.k)}','${mtJsStr(ex.name)}','manual');return false" style="font-size:12px;color:var(--text-mute)">O vídeo não abre ou está errado? Avisar o treinador</a></div>`:''}
       <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>
     </div>`;
@@ -1515,16 +1539,80 @@ function mtCarregarYTApi(){
   });
   return _ytApi;
 }
-const MT_PLAYER = { p:null, v:null, info:null, mudo:false, pronto:false, t:null };
+const MT_PLAYER = { p:null, v:null, info:null, mudo:false, pronto:false, t:null, prog:null, vel:1 };
+// Beta 34 — MODO LIMPO: o player do YouTube vem sem os controles dele (controls=0) e o MetaTreino mostra
+// os seus, numa barra ABAIXO do vídeo (nada por cima da imagem): tocar/pausar, tempo, som, volume,
+// velocidade e tela cheia. O vídeo repete sozinho (loop), então a tela final de "outros vídeos" não
+// aparece. Tocar na imagem pausa/continua; o toque não vai para o YouTube, então o aluno não é levado
+// para fora do app por engano. Limitação oficial: o YouTube não permite esconder o título e o
+// logotipo por parâmetro (o "showinfo" foi desativado em 2018) — eles podem aparecer por alguns
+// segundos no início ou ao pausar, sem dar para remover sem infringir os termos do YouTube.
+function _mtPlayerVars(v, mudo){
+  return { autoplay:1, playsinline:1, controls:0, rel:0, modestbranding:1, iv_load_policy:3, disablekb:1, fs:0, cc_load_policy:0,
+    loop:1, playlist:v.id, mute: mudo ? 1 : 0, origin: location.origin };
+}
+const MTV_PAUSA = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+const MTV_PLAY = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+function _mtFmt(s){ s = Math.max(0, Math.floor(+s||0)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
+function mtTocarPausar(){
+  const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
+  try{ (p.getPlayerState && p.getPlayerState() === 1) ? p.pauseVideo() : p.playVideo(); }catch(e){}
+}
+function mtBuscar(frac){ const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return; try{ const d = p.getDuration(); if(d > 0) p.seekTo(d * Math.max(0, Math.min(1, frac)), true); }catch(e){} }
+function mtVolume(v){
+  const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
+  try{ v = Math.max(0, Math.min(100, +v)); p.setVolume(v); if(v === 0){ p.mute(); MT_PLAYER.mudo = true; } else if(MT_PLAYER.mudo){ p.unMute(); MT_PLAYER.mudo = false; } }catch(e){}
+  _mtBotaoSom();
+}
+function mtVelocidade(){
+  const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
+  const ops = [1, 0.75, 0.5]; MT_PLAYER.vel = ops[(ops.indexOf(MT_PLAYER.vel) + 1) % ops.length];
+  try{ p.setPlaybackRate(MT_PLAYER.vel); }catch(e){}
+  const b = $('mtv-vel'); if(b) b.textContent = String(MT_PLAYER.vel).replace('.', ',') + '×';
+}
+function _mtAtualizaBarra(){
+  const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
+  try{
+    const t = p.getCurrentTime() || 0, d = p.getDuration() || 0, est = p.getPlayerState && p.getPlayerState();
+    const i = document.querySelector('#mtv-barra i'); if(i) i.style.width = (d ? Math.min(100, t/d*100) : 0) + '%';
+    const tt = $('mtv-tempo'); if(tt) tt.textContent = d ? `${_mtFmt(t)} / ${_mtFmt(d)}` : '';
+    const bp = $('mtv-play'); if(bp){ const tocando = est === 1 || est === 3; if(bp.dataset.t !== String(tocando)){ bp.dataset.t = String(tocando); bp.innerHTML = tocando ? MTV_PAUSA : MTV_PLAY; } bp.setAttribute('aria-label', tocando ? 'Pausar o vídeo' : 'Tocar o vídeo'); }
+  }catch(e){}
+}
+function _mtControlesHtml(){
+  return `<div class="mtv-ctrl" id="mtv-ctrl">
+      <button type="button" class="mtv-b" id="mtv-play" onclick="mtTocarPausar()" aria-label="Pausar o vídeo">${MTV_PAUSA}</button>
+      <div class="mtv-barra" id="mtv-barra" role="slider" aria-label="Posição do vídeo" tabindex="0"><i></i></div>
+      <span class="mtv-tempo" id="mtv-tempo"></span>
+      <button type="button" class="mtv-b" id="mtv-vel" onclick="mtVelocidade()" aria-label="Velocidade do vídeo">1×</button>
+      <input type="range" class="mtv-vol" id="mtv-vol" min="0" max="100" value="100" aria-label="Volume do vídeo" oninput="mtVolume(this.value)">
+    </div>`;
+}
+function _mtLigaControles(){
+  const stage = $('ex-stage'); if(!stage || stage.querySelector('#mtv-ctrl')) return;
+  stage.insertAdjacentHTML('afterend', _mtControlesHtml());
+  const barra = $('mtv-barra');
+  if(barra){
+    const ir = e=>{ const r = barra.getBoundingClientRect(); mtBuscar(((e.clientX||0) - r.left) / r.width); };
+    barra.addEventListener('pointerdown', ir);
+    barra.addEventListener('keydown', e=>{ const p = MT_PLAYER.p; if(!p) return; try{ if(e.key==='ArrowRight') p.seekTo(p.getCurrentTime()+5, true); if(e.key==='ArrowLeft') p.seekTo(Math.max(0, p.getCurrentTime()-5), true); }catch(x){} });
+  }
+  // tocar na imagem pausa/continua (o iframe não recebe o toque: veja .ex-stage iframe no CSS)
+  stage.addEventListener('click', e=>{ if(e.target.closest('button,a')) return; mtTocarPausar(); });
+  clearInterval(MT_PLAYER.prog); MT_PLAYER.prog = setInterval(_mtAtualizaBarra, 400);
+}
 function mtDestruirPlayer(){
-  clearTimeout(MT_PLAYER.t);
+  clearTimeout(MT_PLAYER.t); clearInterval(MT_PLAYER.prog); MT_PLAYER.prog = null; MT_PLAYER.vel = 1;
+  try{ const c = $('mtv-ctrl'); if(c) c.remove(); }catch(e){}
   try{ MT_PLAYER.p && MT_PLAYER.p.destroy && MT_PLAYER.p.destroy(); }catch(e){}
   MT_PLAYER.p = null; MT_PLAYER.pronto = false; MT_PLAYER.v = null;
 }
 // Fallback sem a API (bloqueada/lenta): iframe simples; o parâmetro mute=1 ainda respeita a preferência.
 function _mtIframeSimples(v, mudo){
   const alvo = $('ex-yt'); if(!alvo) return;
-  const src = `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&modestbranding=1&playsinline=1&autoplay=1&mute=${mudo?1:0}`;
+  // sem a API não há como pôr controles próprios: o player do YouTube fica com os dele, no modo mais enxuto permitido
+  const src = `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&modestbranding=1&playsinline=1&autoplay=1&iv_load_policy=3&loop=1&playlist=${v.id}&mute=${mudo?1:0}`;
+  const st = $('ex-stage'); if(st) st.classList.add('nativo');
   alvo.outerHTML = `<iframe src="${src}" title="Vídeo do exercício" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen onload="exVideoOk()"></iframe>`;
   const b = $('ex-som'); if(b){ b.disabled = true; b.title = 'Use o botão de som do próprio player'; b.style.opacity = '.5'; }
 }
@@ -1536,12 +1624,14 @@ function mtMontarPlayer(v, info){
     if(MT_PLAYER.v !== v || !$('ex-yt')) return;   // o aluno já fechou ou abriu outro
     MT_PLAYER.p = new YT.Player('ex-yt', {
       videoId: v.id,
-      playerVars: { autoplay:1, playsinline:1, rel:0, modestbranding:1, mute: MT_PLAYER.mudo ? 1 : 0, origin: location.origin },
+      host: 'https://www.youtube-nocookie.com',
+      playerVars: _mtPlayerVars(v, MT_PLAYER.mudo),
       events: {
         onReady: e=>{
           MT_PLAYER.pronto = true; clearTimeout(MT_PLAYER.t);
           try{ MT_PLAYER.mudo ? e.target.mute() : e.target.unMute(); e.target.playVideo(); }catch(err){}
-          exVideoOk(); _mtBotaoSom();
+          exVideoOk(); _mtBotaoSom(); _mtLigaControles();
+          try{ const vol = $('mtv-vol'); if(vol) vol.value = MT_PLAYER.mudo ? 0 : (e.target.getVolume ? e.target.getVolume() : 100); }catch(err){}
         },
         onError: e=>{ clearTimeout(MT_PLAYER.t); mtVideoFalha(v, e && e.data); }
       }
@@ -1555,11 +1645,11 @@ function mtMontarPlayer(v, info){
     else _mtIframeSimples(v, MT_PLAYER.mudo);   // API indisponível: mostra o vídeo do jeito antigo
   });
 }
-function _mtBotaoSom(){ const b = $('ex-som'); if(b) b.textContent = MT_PLAYER.mudo ? '🔇 Sem som' : '🔊 Com som'; }
+function _mtBotaoSom(){ const b = $('ex-som'); if(b) b.textContent = MT_PLAYER.mudo ? '🔇 Sem som' : '🔊 Com som'; const vol = $('mtv-vol'); if(vol && MT_PLAYER.mudo) vol.value = 0; }
 // liga/desliga o som SÓ deste vídeo (a preferência geral continua a mesma)
 function mtAlternarSom(){
   const p = MT_PLAYER.p; if(!p || !MT_PLAYER.pronto) return;
-  try{ if(MT_PLAYER.mudo){ p.unMute(); if(p.getVolume && p.getVolume()===0) p.setVolume(100); MT_PLAYER.mudo = false; } else { p.mute(); MT_PLAYER.mudo = true; } }catch(e){}
+  try{ if(MT_PLAYER.mudo){ p.unMute(); if(p.getVolume && p.getVolume()===0) p.setVolume(100); MT_PLAYER.mudo = false; const vol = $('mtv-vol'); if(vol) vol.value = p.getVolume ? (p.getVolume()||100) : 100; } else { p.mute(); MT_PLAYER.mudo = true; } }catch(e){}
   _mtBotaoSom();
 }
 // Códigos oficiais de erro do player do YouTube:
@@ -4322,6 +4412,14 @@ function rAtribuirDias(tipos, dias, pernas, nota){
   tipos.forEach((t,i)=>{ if(i===iLongo || RT[t].q) return;
     if(t==='regenerativo' && dLongo){ const prox = dLongo===7 ? 1 : dLongo+1; if(livres.includes(prox)){ livres.splice(livres.indexOf(prox),1); out[prox] = t; return; } }
     pega(t, d=>-Math.abs(d-4)*0.1); });
+  // Beta 34: dois treinos fortes em dias seguidos (qualidade colada no longão ou em outra qualidade, o que
+  // acontece quando o aluno só tem dias seguidos): o segundo vira corrida leve, com aviso
+  const forte = t => t==='longao' || (RT[t] && RT[t].q);
+  Object.keys(out).map(Number).sort((a,b)=>a-b).forEach(d=>{
+    const t = out[d]; if(!(RT[t] && RT[t].q)) return;
+    const viz = [d-1, d+1].filter(x=>out[x] && forte(out[x]));
+    if(viz.length){ nota[d] = `${RT[t].nome} virou corrida leve: com ${out[viz[0]]==='longao'?'o longão':'outro treino forte'} no dia ${viz[0]<d?'anterior':'seguinte'}, dois esforços seguidos aumentam o risco de lesão.`; out[d] = 'leve'; }
+  });
   // conflito inevitável com pernas: troca a qualidade de impacto por leve e avisa
   Object.keys(out).forEach(k=>{ const d = +k; const t = out[d];
     if(RT[t].q && pen(d) >= 3){ nota[d] = `Ontem tem treino de pernas na musculação: ${RT[t].nome.toLowerCase()} virou corrida leve para não somar cansaço nas pernas.`; out[d] = 'leve'; }
@@ -4336,7 +4434,15 @@ function rMontarSemana(ctx, M, semTs, opts){
   const tempos = rTempos(setup);
   const F = rSemanaFase(ctx, M, semTs);
   let dias = (setup.selectedDays && setup.selectedDays.length) ? setup.selectedDays.slice() : ({2:[3,6],3:[2,4,6],4:[1,3,5,7],5:[1,2,4,5,7],6:[1,2,3,4,5,6]}[setup.days] || [2,4,6]);
-  if(M.especial && M.especial.sem === semTs && (M.especial.dias||[]).length) dias = M.especial.dias.slice();
+  // Beta 34: na semana com menos tempo, nenhum treino fica mais longo que o mesmo tipo de treino na semana normal
+  // (os dias que sobram não compensam os que saíram)
+  let tetoTipo = null;
+  if(M.especial && M.especial.sem === semTs && (M.especial.dias||[]).length){
+    dias = M.especial.dias.slice();
+    try{ const S0 = rMontarSemana(ctx, Object.assign({}, M, { especial:null }), semTs, opts); tetoTipo = {};
+      S0.workouts.forEach(w=>{ const t = w.motor && w.motor.tipo; const mn = (w.blocks && w.blocks[1]) ? w.blocks[1].exs.reduce((x,e)=>x+(e.min||0),0) : 0; if(t){ tetoTipo[t] = Math.max(tetoTipo[t]||0, mn); tetoTipo['dur_'+t] = Math.max(tetoTipo['dur_'+t]||0, +w.duration||0); } }); }catch(e){ tetoTipo = null; }
+  }
+  const teto = (t, v)=> (tetoTipo && tetoTipo[t]) ? Math.min(v, tetoTipo[t]) : v;
   dias.sort((a,b)=>a-b);
   // semana da prova
   const rd = setup.raceDate ? new Date(setup.raceDate+'T12:00:00') : null;
@@ -4385,7 +4491,7 @@ function rMontarSemana(ctx, M, semTs, opts){
   } else {
     const kLongo = Object.keys(mapa).find(k=>mapa[k]==='longao');
     let longo = 0;
-    if(kLongo){ longo = _clamp(Math.round(V*share), 30, longCap); if(opts.fadiga) longo = Math.round(longo*0.85);
+    if(kLongo){ longo = teto('longao', _clamp(Math.round(V*share), 30, longCap)); if(opts.fadiga) longo = Math.round(longo*0.85);
       const mp = nv >= 3 && (goal==='42km' || goal==='21km') && F.fase==='especifica' && !opts.fadiga;
       sess[kLongo] = rSessao('longao', Object.assign({}, base, { min: longo, mp })); usado += longo; }
     const leves = Object.keys(mapa).filter(k=>mapa[k]==='leve' || mapa[k]==='regenerativo');
@@ -4394,8 +4500,11 @@ function rMontarSemana(ctx, M, semTs, opts){
     leves.forEach((k,i)=>{ const t = mapa[k];
       let min = Math.round(resto * pesos[i]/somaP);
       min = t==='regenerativo' ? _clamp(min, 20, 40) : _clamp(min, nv>=4 ? 30 : 20, Math.min(tempos.sessao - 11, longo ? longo-5 : 90));
+      if(tetoTipo) min = Math.min(min, Math.max(tetoTipo.leve||0, tetoTipo.regenerativo||0, 20));
       const strides = t==='leve' && nv >= 2 && i===0 && ['adaptacao','base','recuperacao'].includes(F.fase) && !lim && !opts.fadiga;
-      sess[k] = rSessao(t, Object.assign({}, base, { min: Math.round(min), strides })); });
+      sess[k] = rSessao(t, Object.assign({}, base, { min: Math.round(min), strides }));
+      const tetoDur = tetoTipo ? Math.max(tetoTipo.dur_leve||0, tetoTipo.dur_regenerativo||0) : 0;
+      if(tetoDur && sess[k].duration > tetoDur){ sess[k] = rSessao(t, Object.assign({}, base, { min: Math.max(20, Math.round(min - (sess[k].duration - tetoDur))), strides })); } });
   }
   // por que cada treino
   const pernas = rDiasPerna(ctx);
@@ -4486,16 +4595,19 @@ function runAtualizaStats(){
 
 // ---------- sincronização semanal ----------
 let _rSyncAt = 0;
-function runSync(force){
+// refazer (Beta 34): remonta a semana atual mantendo os dias que já passaram (usado pela "semana com menos tempo")
+function runSync(force, refazer){
   const run = state && state.modules && state.modules.run;
   if(!run || !run.plan || run.plan.type!=='run' || (run.setup||{}).logOnly) return false;
-  if(!force && Date.now() - _rSyncAt < 1500) return false;
+  if(!force && !refazer && Date.now() - _rSyncAt < 1500) return false;
   _rSyncAt = Date.now();
   const ctx = runCtx();
-  let M = run.plan.motor, mudou = false, rebuild = !!force;
+  let M = run.plan.motor, mudou = false, rebuild = !!force || !!refazer;
+  const semanaJaMontada = !!(M && M.semanaRef);   // conferido antes de avançar as semanas (abaixo)
   const inicioPlano = (typeof planStartTs==='function' && planStartTs(run)) || run.createdAt || Date.now();
   if(!M){ M = run.plan.motor = rMotorNovo(ctx, run.setup||{}, inicioPlano); M.migrado = !(run.setup||{}).aval; mudou = rebuild = true; }
   const semAtual = rSem(Math.max(Date.now(), inicioPlano));
+  const eraEstaSemana = semanaJaMontada && M.semanaRef === semAtual;   // Beta 34: semana nova não herda os dias da anterior
   // 1) avalia cada semana que terminou
   let guard = 0;
   while(M.semanaRef && M.semanaRef < semAtual && guard++ < 60){
@@ -4542,7 +4654,7 @@ function runSync(force){
   if(fad && infoSem.fadigaAt !== fadKey && rSem(fad.at) === semAtual){ rebuild = true; }
   // 4) monta a semana
   if(rebuild || M.semanaRef !== semAtual || !(run.plan.workouts||[]).length || !(run.plan.workouts[0]||{}).motor){
-    const mesmaSemana = M.semanaRef === semAtual && (run.plan.workouts||[]).length && (run.plan.workouts[0]||{}).motor;
+    const mesmaSemana = eraEstaSemana && (run.plan.workouts||[]).length && (run.plan.workouts[0]||{}).motor;
     const hoje = getDayIdx();
     const fadAtiva = fad && rSem(fad.at) === semAtual;
     const S = rMontarSemana(ctx, Object.assign(M, { semanaRef: semAtual }), semAtual, fadAtiva ? { fadiga: fad.motivo, aPartir: hoje+1 } : {});
@@ -4934,19 +5046,53 @@ function openRunSemana(){
   $('modal-inner').innerHTML = `<h3>📅 Semana com menos tempo</h3>
     <p class="mt-muted" style="margin:4px 0 10px">Marque os dias em que você <b>consegue</b> treinar até domingo. Eu reorganizo a semana priorizando o mais importante — sem empilhar treinos e sem compensar depois.</p>
     <div class="radio-grid" id="rs-dias" style="grid-template-columns:repeat(4,1fr)">${RUN_DIAS.map((d,i)=>{ const di = i+1; const pass = di < hoje; return `<div class="opt opt-multi ${!pass && atuais.includes(di)?'on':''} ${pass?'opt-off':''}" data-val="${di}" ${pass?'aria-disabled="true"':''}>${d.slice(0,3)}</div>`; }).join('')}</div>
-    <div class="row" style="gap:8px;margin-top:14px"><button class="btn btn-ghost btn-block" onclick="runSemanaNormal()">Voltar ao normal</button><button class="btn btn-primary btn-block" onclick="runSemanaAplicar()">Reorganizar</button></div>`;
+    <div class="row" style="gap:8px;margin-top:14px"><button class="btn btn-ghost btn-block" onclick="runSemanaNormal()">Voltar ao normal</button><button class="btn btn-primary btn-block" onclick="runSemanaPrevia()">Ver como fica</button></div>`;
   $('modal-back').classList.add('on');
   document.querySelectorAll('#rs-dias .opt-multi').forEach(o=>{ if(o.classList.contains('opt-off')) return; o.onclick = ()=>o.classList.toggle('on'); });
 }
-function runSemanaAplicar(){
-  const run = state.modules.run; const M = run.plan.motor; const hoje = getDayIdx();
-  const dias = [...document.querySelectorAll('#rs-dias .opt-multi.on')].map(o=>+o.dataset.val).filter(d=>d >= hoje);
-  if(!dias.length){ toast('Marque pelo menos um dia'); return; }
-  const passados = (run.plan.workouts||[]).map(w=>w.dayIdx).filter(d=>d < hoje);
-  M.especial = { sem: rSem(), dias: passados.concat(dias) };
-  _rSyncAt = 0; runSync(); closeModal(); toast('Semana reorganizada ✅'); try{ goTab(state.ui.tab||'sessions'); }catch(e){}
+// Beta 34: antes de aplicar, mostra como a semana fica (o que continua, o que muda e o que sai).
+// Antes, "Reorganizar" não remontava a semana (a mudança só aparecia num recálculo posterior).
+function _rsDiasEscolhidos(){
+  const hoje = getDayIdx();
+  return [...document.querySelectorAll('#rs-dias .opt-multi.on')].map(o=>+o.dataset.val).filter(d=>d >= hoje).sort((a,b)=>a-b);
 }
-function runSemanaNormal(){ const M = state.modules.run.plan.motor; M.especial = null; _rSyncAt = 0; runSync(); closeModal(); toast('Semana normal de volta'); try{ goTab(state.ui.tab||'sessions'); }catch(e){} }
+function _rsSessaoTxt(w){ const t = w.motor ? w.motor.tipo : ''; return `${(RT[t]||{}).nome || w.name} · ${w.duration} min${w.distance?` · ${w.distance}`:''}`; }
+function runSemanaPrevia(){
+  const run = state.modules.run; const M = run.plan.motor; const hoje = getDayIdx();
+  const dias = _rsDiasEscolhidos();
+  if(!dias.length){ toast('Marque pelo menos um dia a partir de hoje'); return; }
+  const feitosHoje = (run.history||[]).some(h=>mtDia0(h.at)===mtDia0());
+  const passados = (run.plan.workouts||[]).map(w=>w.dayIdx).filter(d=>d < hoje || (d===hoje && feitosHoje));
+  const sem = rSem();
+  const teste = JSON.parse(JSON.stringify(M)); teste.especial = { sem, dias: [...new Set(passados.concat(dias))] };
+  let S; try{ S = rMontarSemana(runCtx(), teste, sem, {}); }catch(e){ console.log('prévia da semana:', e); toast('Não consegui montar a prévia agora'); return; }
+  const futuro = ws => ws.filter(w=>w.dayIdx > hoje || (w.dayIdx===hoje && !feitosHoje));
+  const antes = futuro(run.plan.workouts||[]), depois = futuro(S.workouts||[]);
+  const tiposDepois = depois.map(w=>w.motor && w.motor.tipo);
+  const saem = antes.filter(w=>w.motor && !tiposDepois.includes(w.motor.tipo));
+  const minA = antes.reduce((t,w)=>t+(+w.duration||0),0), minD = depois.reduce((t,w)=>t+(+w.duration||0),0);
+  const notas = depois.filter(w=>w.motor && w.motor.nota).map(w=>`${w.dayName}: ${w.motor.nota}`);
+  window.__rsDias = teste.especial.dias;
+  $('modal-inner').innerHTML = `<h3>📅 Como fica a semana</h3>
+    <div class="section-lbl" style="margin:6px 0 4px">Antes</div>
+    ${antes.length ? antes.map(w=>`<div class="mrow"><span>${w.dayName}</span><b style="text-align:right">${mtEsc(_rsSessaoTxt(w))}</b></div>`).join('') : '<p class="mt-muted">Nenhum treino restante.</p>'}
+    <div class="section-lbl" style="margin:12px 0 4px">Depois</div>
+    ${depois.length ? depois.map(w=>`<div class="mrow"><span>${w.dayName}</span><b style="text-align:right">${mtEsc(_rsSessaoTxt(w))}</b></div>`).join('') : '<p class="mt-muted">Nenhum treino.</p>'}
+    <div class="note note-info" style="margin-top:12px"><div class="note-line" style="font-size:12.5px;line-height:1.55">
+      ${tiposDepois.includes('longao') ? 'O <b>longão</b> continua: é o treino que mais sustenta a sua evolução. ' : ''}${tiposDepois.some(t=>RT[t]&&RT[t].q) ? 'O treino de <b>qualidade</b> continua, longe do longão. ' : ''}
+      ${saem.length ? `Sai${saem.length>1?'em':''}: ${saem.map(w=>mtEsc((RT[w.motor.tipo]||{}).nome||w.name).toLowerCase()).join(', ')} — ${saem.length>1?'os de menor prioridade':'o de menor prioridade'}. ` : ''}
+      Tempo total: ${minA} → ${minD} min. Os outros dias <b>não</b> ficam mais longos para compensar, e a semana que vem volta ao plano normal.
+      ${notas.length ? '<br><br>' + notas.map(mtEsc).join('<br>') : ''}</div></div>
+    <div class="row" style="gap:8px;margin-top:14px"><button class="btn btn-ghost btn-block" onclick="openRunSemana()">Escolher outros dias</button><button class="btn btn-primary btn-block" onclick="runSemanaAplicar()">Aplicar</button></div>`;
+}
+function runSemanaAplicar(){
+  const run = state.modules.run; const M = run.plan.motor;
+  const dias = window.__rsDias; if(!dias || !dias.length){ runSemanaPrevia(); return; }
+  M.especial = { sem: rSem(), dias };
+  window.__rsDias = null;
+  runSync(false, true); closeModal(); toast('Semana reorganizada ✅'); try{ goTab(state.ui.tab||'sessions'); }catch(e){}
+}
+function runSemanaNormal(){ const M = state.modules.run.plan.motor; M.especial = null; runSync(false, true); closeModal(); toast('Semana normal de volta'); try{ goTab(state.ui.tab||'sessions'); }catch(e){} }
 
 // ---------- painel de evolução ----------
 function openRunPainel(dados){
@@ -5181,7 +5327,7 @@ mtGancho('openStudent', { depois(email){
   }catch(e){ console.log('admin corrida', e); }
 }});
 
-Object.assign(window, { runSync, openRunPainel, openRunSemana, runSemanaAplicar, runSemanaNormal, runLogCalc, runAtualizaDicaNivel, rMontarSemana, rNivelPotencial, rReferencia, rPerfil, rMetas, runCtx, rCriteriosNivel, rSemanaFase });
+Object.assign(window, { runSync, openRunPainel, openRunSemana, runSemanaPrevia, runSemanaAplicar, runSemanaNormal, runLogCalc, runAtualizaDicaNivel, rMontarSemana, rNivelPotencial, rReferencia, rPerfil, rMetas, runCtx, rCriteriosNivel, rSemanaFase });
 const _selectSessionRunB14 = window.selectSession;
 window.selectSession = function(){ const r = _selectSessionRunB14.apply(this, arguments); try{ _runSelos(); }catch(e){} return r; };
 
@@ -5794,7 +5940,7 @@ function _arqSem(ts){ const d = new Date(ts); return d.getFullYear() + '-' + (d.
 function _arqInfo(){ if(!state.arquivo || typeof state.arquivo !== 'object' || Array.isArray(state.arquivo)) state.arquivo = {}; return state.arquivo; }
 function _comPrazo(p, ms){ return Promise.race([p, new Promise((_, rej)=>setTimeout(()=>rej(new Error('tempo esgotado')), ms))]); }
 function arqTemArquivo(){ const i = (state && state.arquivo) || {}; return !!((i.docs||[]).length); }
-function _arqCarregado(){ return !!(_arqMem && fbUser && _arqMem.uid === fbUser.uid); }
+function _arqCarregado(){ return !!(_arqMem && fbUser && _arqMem.uid === uidDados()); }
 
 // separa por semestre tudo o que é mais antigo que os cortes
 function arqColetar(alvo, alvoResumo){
@@ -5822,19 +5968,19 @@ function arqColetar(alvo, alvoResumo){
 
 // grava na nuvem e, só depois da confirmação, libera a limpeza
 async function arqArquivar(){
-  if(_arqRodando || !fbUser || !fbUser.uid || !state || !state.user || !state.modules) return false;
+  if(_arqRodando || !fbUser || !uidDados() || !state || !state.user || !state.modules) return false;
   const agora = Date.now();
   const alvo = agora - HISTORY_RETENTION_DAYS*DIA_MS, alvoR = agora - 730*DIA_MS;
   const info = _arqInfo();
   const docs = arqColetar(alvo, alvoR); const ids = Object.keys(docs);
   if(!ids.length){ info.ate = alvo; info.ateResumo = alvoR; return true; }   // nada a guardar
-  _arqRodando = true; const uid = fbUser.uid;
+  _arqRodando = true; const uid = uidDados();
   try{
     const escritas = ids.map(id=>{
       return _arqCol(uid).doc(id).set(Object.assign(_arqCompacto(docs[id]), { periodo:id, v:2, atualizadoEm:agora }), { merge:true });
     });
     await _comPrazo(Promise.all(escritas), 45000);
-    if(!fbUser || fbUser.uid !== uid) return false;            // trocou de conta no meio
+    if(!fbUser || uidDados() !== uid) return false;            // trocou de conta no meio
     info.ate = alvo; info.ateResumo = alvoR; info.em = agora; info.falhas = 0; delete info.erro; delete info.pendDesde;
     info.docs = [...new Set([...(info.docs||[]), ...ids])].sort();
     if(_arqCarregado()) ids.forEach(id=>{ _arqMem.docs[id] = _arqMescla(_arqMem.docs[id], JSON.parse(JSON.stringify(docs[id]))); });
@@ -5884,7 +6030,7 @@ window.cleanupOldHistory = function(){
 async function arqCarregar(forcar){
   if(_arqCarregado() && !forcar) return _arqMem;
   if(!fbUser) throw new Error('sem login');
-  const uid = fbUser.uid;
+  const uid = uidDados();
   // direto do servidor: o cache local pode estar vazio e dar a falsa impressão de arquivo vazio
   const snap = await _comPrazo(_arqCol(uid).get({ source:'server' }), 20000);
   const docs = {}; snap.forEach(d=>{ docs[d.id] = d.data(); });
@@ -5911,7 +6057,7 @@ function _arqLer(d){
 // restaurar backup (.json) que trouxe o arquivo junto
 function arqRestaurar(arq){
   if(!fbUser || !arq || typeof arq !== 'object') return;
-  const uid = fbUser.uid; const ids = Object.keys(arq).filter(id=>/^\d{4}-[12]$/.test(id));
+  const uid = uidDados(); const ids = Object.keys(arq).filter(id=>/^\d{4}-[12]$/.test(id));
   ids.forEach(id=>{ try{ _arqCol(uid).doc(id).set(Object.assign(_arqCompacto(_arqLer(arq[id])), { periodo:id, v:2, atualizadoEm:Date.now() }), { merge:true }).catch(e=>console.log('restaurar arquivo', e)); }catch(e){} });
   const info = _arqInfo(); info.docs = [...new Set([...(info.docs||[]), ...ids])].sort();
   _arqMem = null; saveData();
@@ -8592,3 +8738,246 @@ function b33CorrigeFichas(){
 mtGancho('renderHome', { depois(){ b33CorrigeFichas(); }});
 
 Object.assign(window, { b33CorrigeFichas, b33FichaComProblema, restAjusta, restPausa, setRestVibrar, treinoAtivoIniciar, treinoAtivoEncerrar, telaLigadaPedir, telaLigadaSoltar });
+// =====================================================================
+// 45. Beta 34 — Sincronização entre aparelhos, vídeos e créditos de parceiros
+// =====================================================================
+
+// ---------- 1. Arquivo anual dos documentos antigos da mesma pessoa ----------
+// Na unificação da conta (resolveContaUnica, app.js), o histórico RECENTE dos outros documentos já é
+// juntado no carregamento. O histórico com mais de 90 dias fica no arquivo anual (usuarios/{uid}/arquivo):
+// aqui ele é copiado, uma vez, para o arquivo do documento principal. Nada é apagado dos antigos.
+async function syncJuntarArquivosAntigos(){
+  const antigos = (window.__uidsAntigos || []).filter(u=>u && u !== uidDados());
+  if(!antigos.length || !fbUser) return;
+  window.__uidsAntigos = [];
+  let n = 0;
+  for(const velho of antigos){
+    try{
+      const snap = await _comPrazo(db.collection('usuarios').doc(velho).collection('arquivo').get(), 20000);
+      const destino = db.collection('usuarios').doc(uidDados()).collection('arquivo');
+      const escritas = [];
+      snap.forEach(d=>{ if(/^\d{4}-[12]$/.test(d.id)){ escritas.push(destino.doc(d.id).set(d.data(), { merge:true })); n++; } });   // merge: registros com a mesma chave não duplicam
+      await Promise.all(escritas);
+      if(escritas.length){ const info = _arqInfo(); snap.forEach(d=>{ if(/^\d{4}-[12]$/.test(d.id)) info.docs = [...new Set([...(info.docs||[]), d.id])].sort(); }); _arqMem = null; saveData(); }
+    }catch(e){ console.log('arquivo do outro login:', e); window.__uidsAntigos = (window.__uidsAntigos||[]).concat([velho]); }
+  }
+  if(n) toast('🔄 Histórico antigo dos seus outros logins reunido nesta conta.');
+}
+mtGancho('renderHome', { depois(){ if((window.__uidsAntigos||[]).length && !window.__arqJuntando){ window.__arqJuntando = true; setTimeout(()=>{ syncJuntarArquivosAntigos().finally(()=>{ window.__arqJuntando = false; }); }, 5000); } }});
+
+// ---------- 2. Diagnóstico da sincronização (Perfil → Conta e dados) ----------
+function _syncQuando(t){ if(!t) return 'nunca'; const d = Date.now() - t; if(d < 60000) return 'agora há pouco'; if(d < 3600000) return `há ${Math.round(d/60000)} min`; return new Date(t).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }); }
+function openSincronizacao(){
+  if(!fbUser || !state.user) return;
+  const ack = +mtLS('mt_nuvem_ok_' + uidDados()) || 0;
+  const provedores = ((fbUser.providerData || []).map(p=>p && p.providerId) || []).map(p=>p==='google.com' ? 'Google' : p==='password' ? 'e-mail e senha' : p).filter(Boolean);
+  const unificado = uidDados() !== fbUser.uid;
+  const nL = (((state.modules||{}).lift||{}).history||[]).length, nR = (((state.modules||{}).run||{}).history||[]).length;
+  const pend = (+state._savedAt||0) > ack;
+  const linha = (k, v)=>`<div class="mrow"><span>${k}</span><b style="text-align:right">${v}</b></div>`;
+  $('modal-inner').innerHTML = `<h3>🔄 Sincronização</h3>
+    <p class="mt-muted" style="margin:0 0 10px">Seus treinos, perfil, conquistas e progresso ficam na sua conta na nuvem. Qualquer aparelho em que você entrar com este e-mail mostra os mesmos dados.</p>
+    <div class="card" style="padding:6px 14px">
+      ${linha('Conta', mtEsc(state.user.email || fbUser.email || '—'))}
+      ${linha('Entrou com', mtEsc(provedores.join(' + ') || '—'))}
+      ${linha('Documento de dados', `${mtEsc(String(uidDados()).slice(0,8))}…${unificado ? ' · unificado' : ''}`)}
+      ${linha('Internet', navigator.onLine === false ? '📴 sem conexão' : '✅ conectado')}
+      ${linha('Última gravação confirmada', _syncQuando(ack))}
+      ${linha('Alterações aguardando envio', pend ? 'sim — serão enviadas assim que possível' : 'nenhuma')}
+      ${linha('Registros no aparelho', `${nL} musculação · ${nR} corrida/bike/caminhada`)}
+    </div>
+    ${unificado ? `<div class="note note-info" style="margin-top:10px"><div class="note-line" style="font-size:12.5px">Você já entrou de mais de uma forma (Google e e-mail/senha). Os dados foram reunidos num único documento, usado em todos os aparelhos.</div></div>` : ''}
+    <p class="mt-muted" style="font-size:12px;margin:10px 0 0">O Histórico mostra uma modalidade por vez (musculação ou corrida): troque no seletor do topo para ver a outra. Registros com mais de 90 dias ficam em Histórico → Histórico completo.</p>
+    <button class="btn btn-primary btn-block" id="sync-agora" style="margin-top:12px" onclick="syncAgora()">Sincronizar agora</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+// envia o que falta e busca a versão da nuvem, juntando as duas (nada é apagado)
+async function syncAgora(){
+  const b = $('sync-agora'); if(b){ b.disabled = true; b.textContent = 'Sincronizando…'; }
+  try{
+    if(navigator.onLine === false){ toast('📴 Sem internet agora. Tudo fica guardado e sincroniza quando a conexão voltar.'); return; }
+    const doc = await _comPrazo(db.collection('usuarios').doc(uidDados()).get({ source:'server' }), 15000);
+    const remoto = doc.exists && doc.data().estadoApp;
+    let novos = 0;
+    if(remoto){
+      if((+remoto._savedAt||0) > (+state._savedAt||0)){
+        const base = JSON.parse(JSON.stringify(remoto)); novos = mesclaEstado(base, state).daOutra;
+        state = Object.assign({}, state, base, { ui: state.ui, user: Object.assign({}, base.user||{}, { email: state.user.email, isAdmin: state.user.isAdmin }) });
+      } else novos = mesclaEstado(state, remoto).daOutra;
+    }
+    try{ ensureStats(); }catch(e){}
+    _assinaturaNuvem = ''; state._savedAt = Date.now(); saveData(); syncToCloud();
+    toast('✅ Sincronizado com a nuvem.');
+    closeModal(); goTab(state.ui.tab || 'home');
+  }catch(e){ console.log('sincronizar agora:', e); toast('⚠️ A nuvem não respondeu. Tente de novo em instantes.'); }
+  finally{ const b2 = $('sync-agora'); if(b2){ b2.disabled = false; b2.textContent = 'Sincronizar agora'; } }
+}
+// a internet voltou: envia o que ficou pendente (o Firestore também reenvia sozinho; isto cobre o
+// caso em que o app foi aberto offline e nada foi gravado na nuvem ainda)
+window.addEventListener('online', ()=>{ setTimeout(()=>{ try{ if(fbUser && state && state.user && !state.user.blocked){ _assinaturaNuvem = ''; syncToCloud(); ouveNuvem(); } }catch(e){} }, 2500); });
+mtGancho('renderProfile', { depois(){ try{ const el = $('pf-sync-val'); if(el){ const ack = +mtLS('mt_nuvem_ok_' + uidDados()) || 0; el.textContent = navigator.onLine === false ? 'sem internet ›' : (ack ? 'sincronizado ' + _syncQuando(ack) + ' ›' : 'ver status ›'); } }catch(e){} }});
+
+// ---------- 3. Parceiros e créditos dos vídeos (administradores) ----------
+// parceiros/{id}: cadastro completo (inclui contato privado) — só administradores leem e gravam.
+// videosExercicios/{exercicio}.creditos: o que os alunos veem — só os campos que o admin marcou para
+// cada lugar (ficha do exercício e Biblioteca). Editar créditos nunca mexe no link do vídeo.
+const PC_CAMPOS = [ ['empresa','Empresa ou marca'], ['instagram','Instagram'], ['contato','WhatsApp / telefone'], ['site','Site ou link'], ['texto','Texto do crédito'] ];
+let _pcLista = [];
+function _pcVideos(){
+  const out = [];
+  try{ Object.keys(MOB).forEach(k=>{ const id = 'mob-'+k; if(videoLinks[id]) out.push({ id, nome: MOB[k].nome }); }); }catch(e){}
+  EX_BANK.forEach(c=>c.items.forEach(ex=>{ const id = slug(ex.name); if(videoLinks[id]) out.push({ id, nome: ex.name, grupo: c.name }); }));
+  return out;
+}
+function _pcNormaliza(d){
+  const ig = String(d.instagram||'').trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i,'').replace(/[/?#].*$/,'').replace(/^@/,'');
+  const fone = String(d.whatsapp||'').replace(/\D/g,'');
+  return { nome: String(d.nome||'').trim().replace(/\s+/g,' ').slice(0,80), empresa: String(d.empresa||'').trim().slice(0,80), instagram: ig.slice(0,40),
+    whatsapp: fone.slice(0,15), site: String(d.site||'').trim().slice(0,200), texto: String(d.texto||'').trim().slice(0,160) };
+}
+// o que vai para o documento do vídeo (público para os alunos)
+function pcProjecao(id, p){
+  const vis = p.mostrar || {};
+  const lugar = onde=>{
+    if(!(p.onde||{})[onde]) return null;
+    const o = {};
+    if((vis.empresa||{})[onde] && p.empresa) o.empresa = p.empresa;
+    if((vis.instagram||{})[onde] && p.instagram) o.instagram = p.instagram;
+    if((vis.contato||{})[onde] && p.whatsapp) o.contato = p.whatsapp;
+    if((vis.site||{})[onde] && /^https?:\/\//i.test(p.site||'')) o.site = p.site;
+    if((vis.texto||{})[onde] && p.texto) o.texto = p.texto;
+    return o;
+  };
+  return { parceiroId:id, nome:p.nome, ficha: lugar('ficha'), biblioteca: lugar('biblioteca'), atualizadoEm: Date.now() };
+}
+async function openParceiros(){
+  if(!mtAdmin()){ toast('🔒 Recurso restrito a administradores.'); return; }
+  $('modal-inner').innerHTML = `<h3>🤝 Parceiros e créditos</h3><p class="mt-muted">Carregando…</p>`; $('modal-back').classList.add('on');
+  try{
+    await loadVideoLinks();
+    const snap = await _comPrazo(db.collection('parceiros').get(), 12000);
+    _pcLista = []; snap.forEach(d=>_pcLista.push(Object.assign({ id:d.id }, d.data())));
+    _pcLista.sort((a,b)=>String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  }catch(e){ console.log('parceiros:', e); $('modal-inner').innerHTML = `<h3>🤝 Parceiros e créditos</h3><p class="mt-muted">Não foi possível carregar. Confira a internet e se as regras do Firestore da Beta 34 foram publicadas (coleção "parceiros").</p><button class="btn btn-ghost btn-block" onclick="openVideoAdmin()">Voltar</button>`; return; }
+  const conta = id=>Object.values(videoCreditos).filter(c=>c && c.parceiroId===id).length;
+  $('modal-inner').innerHTML = `<h3>🤝 Parceiros e créditos</h3>
+    <p class="mt-muted" style="margin:0 0 10px">Cadastre uma vez quem gravou ou cedeu os vídeos e escolha em quais vídeos o crédito aparece. Os contatos só aparecem para os alunos se você marcar.</p>
+    ${_pcLista.length ? _pcLista.map(p=>`<div class="list-row" onclick="openParceiroForm('${mtJsStr(p.id)}')"><span style="flex:1;min-width:0"><b>${mtEsc(p.nome)}</b>${p.empresa?` <span class="mt-muted">· ${mtEsc(p.empresa)}</span>`:''}</span><span style="color:var(--text-mute);font-size:12px">${conta(p.id)} vídeo${conta(p.id)===1?'':'s'} ›</span></div>`).join('') : '<p class="mt-muted">Nenhum parceiro cadastrado ainda.</p>'}
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="openParceiroForm(null)">➕ Novo parceiro</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openVideoAdmin()">Voltar aos vídeos</button>`;
+}
+function openParceiroForm(id){
+  if(!mtAdmin()) return;
+  const p = (id && _pcLista.find(x=>x.id===id)) || { nome:'', onde:{ ficha:true, biblioteca:false }, mostrar:{ empresa:{ficha:true,biblioteca:false}, instagram:{ficha:true,biblioteca:false}, contato:{ficha:false,biblioteca:false}, site:{ficha:true,biblioteca:false}, texto:{ficha:true,biblioteca:false} } };
+  const vis = p.mostrar || {}; const onde = p.onde || {};
+  const inp = (k, ph, extra)=>`<input class="input" id="pc-${k}" placeholder="${ph}" value="${mtEsc(p[k]||'')}" style="margin-top:8px" ${extra||''}>`;
+  const marc = (k, o)=>`<input type="checkbox" id="pc-v-${k}-${o}" ${((vis[k]||{})[o])?'checked':''} aria-label="${k} na ${o}">`;
+  const vids = _pcVideos();
+  window.__pcId = id;
+  $('modal-inner').innerHTML = `<h3>${id ? 'Editar parceiro' : 'Novo parceiro'}</h3>
+    <div style="max-height:66vh;overflow-y:auto;padding-right:2px">
+      <div class="section-lbl" style="margin:4px 0 0">Dados</div>
+      ${inp('nome','Nome do profissional ou criador *')}
+      ${inp('empresa','Empresa ou marca (opcional)')}
+      ${inp('instagram','Instagram, ex.: @joaosilva (opcional)')}
+      ${inp('whatsapp','WhatsApp ou telefone com DDD (opcional)', 'inputmode="tel"')}
+      ${inp('site','Site ou outro link, com https:// (opcional)', 'inputmode="url"')}
+      ${inp('texto','Texto do crédito, ex.: Personal trainer, CREF 000000 (opcional)')}
+      <div class="section-lbl" style="margin:16px 0 6px">O que os alunos veem</div>
+      <div class="pc-grade">
+        <span></span><span class="h">Ficha</span><span class="h">Biblioteca</span>
+        <span><b>Mostrar créditos</b> (nome)</span><input type="checkbox" id="pc-o-ficha" ${onde.ficha?'checked':''} aria-label="Créditos na ficha"><input type="checkbox" id="pc-o-biblioteca" ${onde.biblioteca?'checked':''} aria-label="Créditos na Biblioteca">
+        ${PC_CAMPOS.map(([k,l])=>`<span>${l}</span>${marc(k,'ficha')}${marc(k,'biblioteca')}`).join('')}
+      </div>
+      <p class="mt-muted" style="font-size:11.5px;margin:6px 0 0">Campos vazios nunca aparecem. O WhatsApp só fica visível para os alunos se você marcar. Na Biblioteca aparece uma linha curta (nome, empresa e Instagram).</p>
+      <div class="section-lbl" style="margin:16px 0 6px">Vídeos com este crédito · ${vids.length} vídeos cadastrados</div>
+      <input class="input" id="pc-busca" placeholder="Filtrar vídeos…" oninput="pcFiltrar(this.value)">
+      <div id="pc-vids" style="margin-top:6px">${vids.map(v=>{ const c = videoCreditos[v.id]; const outro = c && c.parceiroId && c.parceiroId !== id; return `<label class="pc-vid" data-n="${mtEsc(mtNorm(v.nome+' '+(v.grupo||'')))}"><input type="checkbox" class="pc-vchk" value="${mtEsc(v.id)}" ${c && id && c.parceiroId===id ? 'checked':''}><span style="flex:1">${mtEsc(v.nome)}${v.grupo?` <span class="mt-muted">· ${mtEsc(v.grupo)}</span>`:''}</span>${outro?`<span class="mt-muted" style="font-size:11px">de ${mtEsc(c.nome)}</span>`:''}</label>`; }).join('') || '<p class="mt-muted">Nenhum exercício tem vídeo cadastrado ainda.</p>'}</div>
+    </div>
+    <button class="btn btn-primary btn-block" id="pc-salvar" style="margin-top:12px" onclick="salvarParceiro()">💾 Salvar</button>
+    ${id ? `<button class="btn btn-ghost btn-block hl-danger" style="margin-top:8px" onclick="excluirParceiro('${mtJsStr(id)}')">🗑️ Excluir parceiro e tirar os créditos</button>` : ''}
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openParceiros()">Voltar</button>`;
+}
+function pcFiltrar(q){ const n = mtNorm(q||''); document.querySelectorAll('#pc-vids .pc-vid').forEach(el=>{ el.style.display = !n || (el.dataset.n||'').includes(n) ? '' : 'none'; }); }
+async function salvarParceiro(){
+  if(!mtAdmin()) return;
+  const id0 = window.__pcId;
+  const d = _pcNormaliza({ nome:$('pc-nome').value, empresa:$('pc-empresa').value, instagram:$('pc-instagram').value, whatsapp:$('pc-whatsapp').value, site:$('pc-site').value, texto:$('pc-texto').value });
+  if(d.nome.length < 2){ toast('⚠️ Informe o nome do profissional ou criador'); return; }
+  if(d.site && !/^https?:\/\//i.test(d.site)){ toast('⚠️ O site precisa começar com http:// ou https://'); return; }
+  if(d.whatsapp && d.whatsapp.length < 10){ toast('⚠️ Telefone incompleto: use DDD + número'); return; }
+  if(d.instagram && !/^[A-Za-z0-9._]{1,30}$/.test(d.instagram)){ toast('⚠️ Instagram inválido: use só o @usuário'); return; }
+  const p = Object.assign({}, d, {
+    onde: { ficha: !!$('pc-o-ficha').checked, biblioteca: !!$('pc-o-biblioteca').checked },
+    mostrar: Object.fromEntries(PC_CAMPOS.map(([k])=>[k, { ficha: !!$(`pc-v-${k}-ficha`).checked, biblioteca: !!$(`pc-v-${k}-biblioteca`).checked }])),
+    atualizadoEm: Date.now(), atualizadoPor: (state.user && state.user.email) || ''
+  });
+  const marcados = new Set([...document.querySelectorAll('#pc-vids .pc-vchk:checked')].map(i=>i.value));
+  await mtComBotao('pc-salvar', 'Salvando…', async ()=>{
+    try{
+      const ref = id0 ? db.collection('parceiros').doc(id0) : db.collection('parceiros').doc();
+      const id = ref.id;
+      const batch = db.batch();
+      batch.set(ref, p);
+      const proj = pcProjecao(id, p);
+      const del = firebase.firestore.FieldValue.delete();
+      Object.keys(videoLinks).forEach(vid=>{
+        const atual = videoCreditos[vid];
+        if(marcados.has(vid)) batch.set(db.collection('videosExercicios').doc(vid), { creditos: proj }, { merge:true });
+        else if(atual && atual.parceiroId === id) batch.set(db.collection('videosExercicios').doc(vid), { creditos: del }, { merge:true });
+      });
+      await _comPrazo(batch.commit(), 20000);
+      Object.keys(videoLinks).forEach(vid=>{ if(marcados.has(vid)) videoCreditos[vid] = proj; else if(videoCreditos[vid] && videoCreditos[vid].parceiroId === id) delete videoCreditos[vid]; });
+      mtLS('metatreino_video_creditos', JSON.stringify(videoCreditos));
+      toast(`✅ Créditos salvos em ${marcados.size} vídeo${marcados.size===1?'':'s'}`);
+      openParceiros();
+    }catch(e){ console.log('salvar parceiro:', e); toast('⚠️ Não foi possível salvar. Confira a internet e as regras do Firestore (Beta 34).'); }
+  });
+}
+function excluirParceiro(id){
+  if(!mtAdmin()) return;
+  appConfirm('O cadastro sai e os créditos dele somem dos vídeos. Os vídeos e os links continuam.', async ()=>{
+    try{
+      const batch = db.batch(); const del = firebase.firestore.FieldValue.delete();
+      Object.keys(videoCreditos).forEach(vid=>{ if(videoCreditos[vid] && videoCreditos[vid].parceiroId === id) batch.set(db.collection('videosExercicios').doc(vid), { creditos: del }, { merge:true }); });
+      batch.delete(db.collection('parceiros').doc(id));
+      await _comPrazo(batch.commit(), 20000);
+      Object.keys(videoCreditos).forEach(vid=>{ if(videoCreditos[vid] && videoCreditos[vid].parceiroId === id) delete videoCreditos[vid]; });
+      mtLS('metatreino_video_creditos', JSON.stringify(videoCreditos));
+      toast('🗑️ Parceiro excluído'); openParceiros();
+    }catch(e){ console.log('excluir parceiro:', e); toast('⚠️ Não foi possível excluir agora.'); }
+  }, { title:'Excluir parceiro?', emo:'🗑️', okLabel:'Sim, excluir', danger:true });
+}
+// atalho no painel de vídeos
+mtGancho('openVideoAdmin', { depois(){
+  try{
+    const mi = $('modal-inner'); if(!mi || mi.querySelector('#pc-atalho')) return;
+    const h = mi.querySelector('h3'); if(!h) return;
+    h.insertAdjacentHTML('afterend', `<button class="btn btn-outline btn-block" id="pc-atalho" style="margin:6px 0 4px" onclick="openParceiros()">🤝 Parceiros e créditos dos vídeos</button>`);
+  }catch(e){}
+}});
+
+// ---------- 4. Descanso por exercício e intensidade nos planos já salvos (uma vez) ----------
+// A regra nova (liftDescanso, app.js) olha o tipo do exercício e a faixa de repetições; os planos salvos
+// recebem o descanso novo uma vez. Exercícios, séries e repetições não mudam. Calistenia tem regra própria.
+function b34AtualizaDescansos(){
+  try{
+    const mod = state.modules && state.modules.lift;
+    if(!mod || !mod.plan || !mod.setup || state.b34Descanso || !Array.isArray(mod.plan.workouts)) return;
+    const prof = state.user && state.user.profile; const senior = !!(prof && prof.age >= 50); const goal = mod.setup.goal || 'hipertrofia';
+    mod.plan.workouts.forEach(w=>{
+      if(!w || w.cali || !Array.isArray(w.exercises)) return;
+      w.exercises.forEach(e=>{
+        if(!e || e.cali) return;
+        if(['Core','Panturrilha','Trapézio'].includes(e.part)) e.rest = LIFT_DESC_PEQUENOS[senior?'senior':'adulto'][goal] || '45-60s';
+        else e.rest = liftDescanso(exPapel(e, e.part).tier, goal, senior, e.unit==='tempo' ? null : e.reps);
+      });
+      w.duration = estimateLiftDuration(w.exercises, goal);
+    });
+    state.b34Descanso = true; saveData();
+  }catch(e){ console.log('descansos (Beta 34)', e); }
+}
+mtGancho('renderHome', { depois(){ b34AtualizaDescansos(); }});
+
+Object.assign(window, { b34AtualizaDescansos, exTipoRegistro, descansoDoExercicio, runSemanaPrevia, openSincronizacao, syncAgora, syncJuntarArquivosAntigos, openParceiros, openParceiroForm, salvarParceiro, excluirParceiro, pcFiltrar, pcProjecao, creditosHtml, mtTocarPausar, mtVelocidade, mtVolume, mtBuscar });

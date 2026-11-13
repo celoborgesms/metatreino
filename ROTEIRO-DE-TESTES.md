@@ -1,11 +1,11 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 33
+# Roteiro de testes em aparelho real — MetaTreino Beta 34
 
 Leva uns 25 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
 
 Antes de começar: publique o `firestore.rules` novo no Console do Firebase (Firestore → Regras → Publicar).
 
 ## 1. Instalação, atualização e modo avião
-- [ ] O app atualizou sozinho para a **Beta 33** (Perfil → rodapé), sem tocar em nenhum botão?
+- [ ] O app atualizou sozinho para a **Beta 34** (Perfil → rodapé), sem tocar em nenhum botão?
 - [ ] Fechar e abrir de novo: entrou direto, sem pedir login?
 - [ ] **Logo depois de atualizar**, ligue o modo avião, feche o app de vez e abra de novo. Ele abre e mostra os treinos? (Na Beta 32 este caso podia abrir em branco.)
 - [ ] Ainda no modo avião: registre 2 séries e salve o treino. Desligue o modo avião. O treino aparece no Histórico de outro aparelho (ou depois de sair e entrar)?
@@ -28,9 +28,32 @@ Antes de começar: publique o `firestore.rules` novo no Console do Firebase (Fir
 - [ ] Minimize o app no meio do treino e volte: continua acesa?
 - [ ] Salve o treino: depois disso, a tela apaga normalmente?
 
-## 4. Dois aparelhos (se tiver)
-- [ ] Abra a conta em dois aparelhos. Registre um treino ou uma corrida no primeiro. Em até ~1 min, aparece no segundo (aviso "Treinos do seu outro aparelho sincronizados")?
+## 4. Celular e computador (Beta 34 — o mais importante desta versão)
+- [ ] Publique o `firestore.rules` novo **antes** deste teste.
+- [ ] Entre no computador do jeito que costuma entrar (se no celular é Google, teste também com e-mail e senha). O Histórico do computador mostra **os mesmos treinos** do celular? (Musculação e corrida ficam em abas diferentes do Histórico: confira as duas.)
+- [ ] Perfil → Conta e dados → **Sincronização entre aparelhos**: aparece "unificado" se você já entrou de duas formas? A última gravação confirmada é recente?
+- [ ] Com os dois abertos: registre uma corrida no computador. Em poucos segundos ela aparece no celular?
+- [ ] Mude o apelido no celular (Editar dados pessoais). Aparece no computador?
+- [ ] Salve um treino de musculação no celular. Os totais (Progresso) e as conquistas ficam iguais nos dois?
+- [ ] Ligue o modo avião no celular, registre algo, registre outra coisa no computador, desligue o modo avião. Os dois registros aparecem nos dois aparelhos, sem duplicar?
 - [ ] Exclua um treino num aparelho. Ele **não volta** depois de abrir o outro?
+- [ ] Saia da conta no computador e entre de novo: tudo volta?
+
+## 4a. Revisão da Beta 34
+- [ ] Abra um exercício com carga: o 1º toque ("+ Registrar a 1ª série") **não** inicia o descanso? Depois de fazer a série, "+ Nova série" inicia o descanso uma vez só?
+- [ ] O descanso do agachamento/supino é maior que o da elevação lateral ou do abdominal?
+- [ ] Flexão de braço ou barra fixa: aparece só "Repetições" (sem peso)? "+ Usei carga extra" mostra a coluna de carga?
+- [ ] Corrida → Semana com menos tempo: escolha menos dias. Aparece "Como fica a semana" antes de aplicar? Depois de aplicar, a semana muda na hora?
+- [ ] Segure o dedo num botão ou numa aba: não aparece o menu de copiar? Segure num texto da ficha: dá para selecionar?
+- [ ] Na ficha de um exercício com créditos, eles aparecem no fim, depois de "Erro comum"?
+
+## 4b. Vídeos e créditos
+- [ ] Abra um exercício com vídeo (no Treino e na Biblioteca). O vídeo aparece sem a barra do YouTube, com os controles do MetaTreino embaixo? Pausar, velocidade, volume e a barra de posição funcionam?
+- [ ] Ao terminar, o vídeo recomeça sozinho (sem sugestões)? Tocar na imagem não abre o YouTube?
+- [ ] Anote se o título do YouTube aparece no começo ou ao pausar (limitação do YouTube).
+- [ ] Painel → Vídeos → Parceiros e créditos: cadastre um parceiro de teste, marque 2 vídeos e deixe o WhatsApp desmarcado. Na ficha do aluno aparecem nome e Instagram, **sem** o telefone?
+- [ ] Marque "Biblioteca" para esse parceiro: aparece a linha "Vídeo: Nome" na lista da Biblioteca?
+- [ ] Edite (tire o Instagram) e depois exclua o parceiro. O vídeo continua abrindo normalmente?
 
 ## 5. Fichas de musculação
 - [ ] Ao abrir o app, apareceu "Revisei a montagem dos seus treinos…"? (Só aparece uma vez e só se o plano precisava de ajuste.)
