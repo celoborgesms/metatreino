@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 30 — app-plus.js
+// MetaTreino 2027.1 Beta 32 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.30' };
+const MTP = { versao: '2027.1-beta.32' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem

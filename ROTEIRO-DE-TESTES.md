@@ -1,4 +1,4 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 30
+# Roteiro de testes em aparelho real — MetaTreino Beta 32
 
 Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
 
@@ -15,7 +15,7 @@ Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do ce
 ## 3. Corrida (se usar)
 - [ ] Registrar uma corrida com tempo e distância. O ritmo saiu certo?
 
-## 4. Novidades (Betas 19 a 30)
+## 4. Novidades (Betas 19 a 32)
 - [ ] Histórico → **Histórico completo**: abre? Os números do ano batem com o que você lembra?
 - [ ] Perfil → **Relatório em PDF** → 3 meses → Gerar. O PDF abre? Os gráficos estão legíveis? Teste **Compartilhar** → salvar no Google Drive ou mandar no WhatsApp.
 - [ ] Perfil → **Seus dados**: quanto % aparece? A lista "Do que é feito" faz sentido?
@@ -41,6 +41,10 @@ Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do ce
 - [ ] Ao abrir o app, aparece "Ajustei N treinos…"? Confira em Treinos se não há dois exercícios iguais no mesmo dia.
 - [ ] Início: o desenho do topo combina com a hora (sol de manhã, lua e coruja à noite) e com o tempo lá fora?
 - [ ] O selo com a temperatura aparece ao lado do METATREINO, e a frase de baixo não repete a temperatura?
+- [ ] Termine um treino de musculação: as frases da escala falam em repetições que sobravam? Registre uma corrida: as frases falam em conversar?
+- [ ] Feche o app de vez e abra de novo: abre sem zoom? A barra de abas fica fixa ao rolar?
+- [ ] Modo avião: feche e abra o app. Ele entra na hora? Desligue o modo avião e continue usando normalmente.
+- [ ] Personalizar início: segure a alça ⠿ e arraste devagar. A linha acompanha o dedo, sem selecionar texto?
 - [ ] No computador: o Início mostra a faixa de números e duas colunas? Teste as teclas 1 a 5 e o Esc.
 - [ ] No computador: o Histórico em linhas, uma janela abrindo como painel à direita, e Treinos e Progresso em duas colunas.
 - [ ] Personalizar início: arraste um bloco pela alça ⠿, feche e veja a tela inicial. Depois toque em "Voltar ao padrão".

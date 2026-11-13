@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 30 =====
-const APP_VERSION = '2027.1-beta.30';
+// ===== MetaTreino 2027.1 Beta 32 =====
+const APP_VERSION = '2027.1-beta.32';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -670,6 +670,44 @@ function doDeleteAccount(){
   }, {title:'Excluir conta?', emo:'🗑️', okLabel:'Sim, excluir conta', danger:true});
 }
 
+// ---- acesso guardado no aparelho (modo offline) ----
+const ACESSO_OFFLINE_DIAS = 30;
+function acessoCacheValido(c){
+  if(!c || !c.at) return false;
+  if(Date.now() - c.at > ACESSO_OFFLINE_DIAS*86400000) return false;
+  if(c.isAdmin) return true;
+  const a = c.allowData; if(!a || !a.active) return false;
+  return !a.expiresAt || a.expiresAt > Date.now();
+}
+// confere o acesso em segundo plano; sem internet, tenta de novo quando ela voltar.
+// Se o treinador tirou o acesso (ou ele venceu), mostra a tela de acesso — os dados ficam salvos.
+let _acessoEsperandoRede = false;
+async function acessoConfereDepois(email, chave){
+  if(!fbUser || !email) return;
+  if(navigator.onLine === false){
+    if(!_acessoEsperandoRede){ _acessoEsperandoRede = true; window.addEventListener('online', ()=>{ _acessoEsperandoRede = false; setTimeout(()=>acessoConfereDepois(email, chave), 2500); }, { once:true }); }
+    return;
+  }
+  try{
+    const adminDoc = await fbTimeout(db.collection('admins').doc(email).get(), 12000);
+    const adm = adminDoc.exists && adminDoc.data().ativo === true;
+    const allowDoc = await fbTimeout(db.collection('usuariosAutorizados').doc(email).get(), 12000);
+    const al = allowDoc.exists ? allowDoc.data() : null;
+    try{ localStorage.setItem(chave, JSON.stringify({ isAdmin:adm, allowData:al, at:Date.now() })); }catch(e){}
+    const ok = adm || (al && al.active && (!al.expiresAt || al.expiresAt > Date.now()));
+    if(ok){ if(al) myAccess = al; return; }
+    try{ saveData(); }catch(e){}
+    if(state.user) state.user.blocked = true;
+    const el = $('noaccess-msg');
+    if(el) el.innerHTML = `Seu acesso não está mais ativo.<br><br><span style="font-size:12px;color:var(--text-mute)">Seus treinos e seu histórico continuam salvos. Fale com o treinador para renovar.</span>`;
+    const rt = $('noaccess-retry'); if(rt) rt.classList.remove('hidden');
+    try{ closeModal(); }catch(e){}
+    showScreen('scr-noaccess');
+  }catch(e){
+    // ainda sem resposta: tenta de novo quando a conexão mudar, sem incomodar o aluno
+    if(!_acessoEsperandoRede){ _acessoEsperandoRede = true; window.addEventListener('online', ()=>{ _acessoEsperandoRede = false; setTimeout(()=>acessoConfereDepois(email, chave), 2500); }, { once:true }); }
+  }
+}
 async function afterGoogleSignIn(user){
   fbUser = user; window.__loginIniciado = true;
   try{ localStorage.setItem('metatreino_sessao','1'); }catch(e){}
@@ -680,19 +718,22 @@ async function afterGoogleSignIn(user){
 
   let isAdmin = false, allowData = null, checkedOnline = false;
   const cached = (()=>{ try{ return JSON.parse(localStorage.getItem(accessCacheKey)||'null'); }catch(e){ return null; } })();
-  const cacheValid = cached && (Date.now()-cached.at) < 7*86400000;
-  if(navigator.onLine === false && cacheValid){
-    // offline logo na entrada: usa o cache na hora, sem esperar a nuvem travar
+  // Acesso guardado no aparelho (Beta 31): vale até 30 dias sem conseguir conferir na nuvem e nunca
+  // depois da validade que o treinador definiu. Com ele, o app entra NA HORA e confere em segundo
+  // plano — sem a espera de até 20 s quando a internet "existe" mas não responde.
+  const cacheValid = acessoCacheValido(cached);
+  const tentar = async ()=>{
+    const adminDoc = await fbTimeout(db.collection('admins').doc(email).get(), 9000);
+    isAdmin = adminDoc.exists && adminDoc.data().ativo === true;
+    const allowDoc = await fbTimeout(db.collection('usuariosAutorizados').doc(email).get(), 9000);
+    if(allowDoc.exists) allowData = allowDoc.data();
+    checkedOnline = true;
+  };
+  if(cacheValid){
     isAdmin = cached.isAdmin; allowData = cached.allowData;
-    toast('📴 Modo offline — seus treinos funcionam normal e sincronizam depois. Só os vídeos precisam de internet.');
+    if(navigator.onLine === false) toast('📴 Modo offline — seus treinos funcionam normal e sincronizam depois. Só os vídeos precisam de internet.');
+    setTimeout(()=>acessoConfereDepois(email, accessCacheKey), 1500);
   } else {
-    const tentar = async ()=>{
-      const adminDoc = await fbTimeout(db.collection('admins').doc(email).get(), 9000);
-      isAdmin = adminDoc.exists && adminDoc.data().ativo === true;
-      const allowDoc = await fbTimeout(db.collection('usuariosAutorizados').doc(email).get(), 9000);
-      if(allowDoc.exists) allowData = allowDoc.data();
-      checkedOnline = true;
-    };
     try{
       try{ await tentar(); }
       catch(e1){ console.log('1ª tentativa falhou, tentando de novo:', e1); await new Promise(r=>setTimeout(r,1200)); await tentar(); }
@@ -3730,8 +3771,8 @@ function finishLiftWorkout(k){
   // Pergunta como a pessoa terminou o treino (auto-regulação)
   const html = `
     <h3>💪 Qual foi o esforço do treino?</h3>
-    <p style="color:var(--text-dim);font-size:13px">É o mesmo RPE que o relógio pergunta: de 1 (muito leve) a 10 (esforço máximo). Ajuda a ajustar o próximo treino.</p>
-    ${rpeHtml(5)}
+    <p style="color:var(--text-dim);font-size:13px">De 1 (muito leve) a 10 (esforço máximo). Pense nas séries do treino: <b>quantas repetições ainda sairiam?</b> Ajuda a ajustar o próximo treino.</p>
+    ${rpeHtml(5, 'musc')}
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="confirmLiftWorkout('${k}')">✅ Salvar treino</button>`;
   $('modal-inner').innerHTML = html;
   $('modal-back').classList.add('on');
@@ -11406,17 +11447,22 @@ function openAgua(){
 
 // ===== RPE: esforço percebido (1-10), igual ao do relógio =====
 const RPE_LBL = {1:'Muito leve',2:'Leve',3:'Leve a moderado',4:'Moderado',5:'Moderado a puxado',6:'Puxado',7:'Difícil',8:'Muito difícil',9:'Quase no limite',10:'Esforço máximo'};
-const RPE_DESC = {1:'Dava pra conversar sem esforço',2:'Conversava com folga',3:'Conversava com folga',4:'Conversava, mas já sentia',5:'Conversava com algum esforço',6:'Frases mais curtas',7:'Só frases curtas',8:'Quase sem conseguir falar',9:'Muito perto do limite',10:'Não dava pra fazer mais nada'};
+// Frases de cada nota. Corrida, caminhada e bike: teste da fala (a respiração acompanha o esforço).
+// Musculação (Beta 32): repetições que ainda sairiam ao fim das séries — a respiração não mede bem o esforço com carga.
+// O valor salvo é o mesmo (1 a 10) nas duas.
+const RPE_DESC = {1:'Dava para conversar sem esforço',2:'Conversava com folga',3:'Conversava normalmente, respirando um pouco mais forte',4:'Conversava, mas já sentia',5:'Conversava com algum esforço',6:'Frases mais curtas',7:'Só frases curtas',8:'Poucas palavras de cada vez',9:'Só uma ou duas palavras',10:'Não dava para falar nem continuar'};
+const RPE_DESC_MUSC = {1:'Quase nenhum esforço, como um aquecimento',2:'Muito fácil, as cargas pareciam leves',3:'Sobravam muitas repetições (mais de 6)',4:'Sobravam umas 6 repetições',5:'Sobravam umas 5 repetições',6:'Sobravam umas 4 repetições',7:'Sobravam umas 3 repetições',8:'Sobravam só 2 repetições',9:'Sobrava só 1 repetição',10:'Não saía nem mais uma repetição'};
+function rpeDesc(n){ return (window.__rpeModo === 'musc' ? RPE_DESC_MUSC : RPE_DESC)[n]; }
 function rpeToFeel(n){ return n<=3 ? 'otimo' : (n<=6 ? 'bem' : (n<=8 ? 'cansado' : 'exausto')); }   // compatível com o que o app já usava
 function rpeHtml(def){
   window.__rpe = def;
   const barras = [1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="rpe-b ${n===def?'on':''}" data-n="${n}" onclick="rpeSet(${n})" style="height:${26+n*4}px;background:hsl(${142-(n-1)*14},68%,44%)"><span>${n}</span></button>`).join('');
-  return `<div class="rpe"><div class="rpe-bars" id="rpe-bars">${barras}</div><div class="rpe-lbl" id="rpe-lbl"><b>${def}</b> · ${RPE_LBL[def]}<small>${RPE_DESC[def]}</small></div></div>`;
+  return `<div class="rpe"><div class="rpe-bars" id="rpe-bars">${barras}</div><div class="rpe-lbl" id="rpe-lbl"><b>${def}</b> · ${RPE_LBL[def]}<small>${rpeDesc(def)}</small></div></div>`;
 }
 function rpeSet(n){
   window.__rpe = n;
   document.querySelectorAll('#rpe-bars .rpe-b').forEach(b=>b.classList.toggle('on', +b.dataset.n===n));
-  const l = document.getElementById('rpe-lbl'); if(l) l.innerHTML = `<b>${n}</b> · ${RPE_LBL[n]}<small>${RPE_DESC[n]}</small>`;
+  const l = document.getElementById('rpe-lbl'); if(l) l.innerHTML = `<b>${n}</b> · ${RPE_LBL[n]}<small>${rpeDesc(n)}</small>`;
 }
 
 // ===== SOM DO FIM DO CRONÔMETRO (escolhível) =====

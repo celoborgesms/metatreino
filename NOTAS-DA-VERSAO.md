@@ -1,3 +1,32 @@
+# MetaTreino 2027.1 Beta 32 — Escala de esforço por modalidade
+
+1. **Frases da escala de esforço (1 a 10) conforme a modalidade.** Os nomes de cada nota (Muito leve… Esforço máximo) continuam iguais em tudo; só as frases de baixo mudaram.
+   - **Corrida, caminhada e bike:** continua o teste da fala, que é o certo para esforço aeróbico. Corrigi o 2 e o 3, que tinham a mesma frase, e o 8, 9 e 10, que estavam vagos ("Muito perto do limite").
+   - **Musculação:** agora usa "quantas repetições ainda sairiam" no fim das séries, que é como se mede o esforço com carga. A respiração não serve para isso: dá para conversar entre as séries mesmo tendo ido até a falha. Acima da escala aparece a dica: "Pense nas séries do treino: quantas repetições ainda sairiam?".
+   - O valor salvo é o mesmo (1 a 10): histórico, gráficos e ajustes automáticos não mudam.
+
+**Regras do Firestore:** não mudaram nesta versão (continua valendo o arquivo revisado da Beta 24).
+
+---
+# MetaTreino 2027.1 Beta 31 — Correções: zoom ao abrir, modo offline e arrastar
+
+1. **App abrindo com zoom e barra de abas instável (corrigido).**
+   - A causa era o desenho de fundo, que desde a Beta 27 passava uns 20 pixels da borda direita. A página ficava mais larga que a tela, o celular abria "ampliado" e a barra de baixo saía do lugar ao rolar.
+   - Agora o desenho fica dentro da tela, e há uma proteção para nenhum elemento alargar a página de novo.
+   - Conferido em todas as abas e temas: a largura da página é exatamente a da tela.
+2. **Entrar sem internet.**
+   - Antes, o app só entrava sem internet se o acesso tivesse sido conferido nos últimos **7 dias**. Quando o celular "achava" que tinha internet mas ela não respondia, ainda esperava até ~20 s.
+   - Agora o app entra **na hora** com o acesso guardado no aparelho e confere com o servidor em segundo plano, ou assim que a internet voltar.
+   - O acesso guardado vale até **30 dias sem conseguir conferir** e nunca passa da validade definida pelo treinador.
+   - Se o treinador tirou o acesso, o app mostra a tela de acesso assim que conseguir conferir. Os dados do aluno ficam salvos.
+3. **Arrastar no Personalizar início.**
+   - A linha acompanha o dedo e as outras deslizam suavemente para o lugar.
+   - A janela rola sozinha quando o dedo chega perto da borda.
+   - Segurar a alça não seleciona mais o texto.
+
+**Regras do Firestore:** não mudaram nesta versão (continua valendo o arquivo revisado da Beta 24).
+
+---
 # MetaTreino 2027.1 Beta 30 — Modo computador de verdade
 
 1. **Modo computador** (só em tela grande com mouse; o celular não muda nada):

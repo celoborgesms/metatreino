@@ -15,7 +15,9 @@ function rpeCor(n){
   const t = (n-1)/9; const h = Math.round(165 - t*157); const s = Math.round(48 + t*14); const l = Math.round(50 - t*4);
   return `hsl(${h} ${s}% ${l}%)`;
 }
-window.rpeHtml = function(def){
+window.rpeHtml = function(def, modo){
+  // modo 'musc' (fim do treino de musculação) troca só as frases de baixo; o padrão é corrida/caminhada/bike
+  window.__rpeModo = modo === 'musc' ? 'musc' : 'aero';
   def = Math.min(10, Math.max(1, Math.round(+def || 5)));
   window.__rpe = def;
   const cel = [1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" role="radio" aria-checked="${n===def}" aria-label="${n}: ${RPE_LBL[n]}" tabindex="${n===def?0:-1}"
@@ -26,7 +28,7 @@ window.rpeHtml = function(def){
     <div class="rpe-lbl rpe2-lbl" id="rpe-lbl" aria-live="polite">${_rpeLbl(def)}</div>
   </div>`;
 };
-function _rpeLbl(n){ return `<span class="rpe2-num">${n}</span><span class="rpe2-txt"><b>${RPE_LBL[n]}</b><small>${RPE_DESC[n]}</small></span><span class="rpe2-zona">${RPE_ZONA(n)}</span>`; }
+function _rpeLbl(n){ return `<span class="rpe2-num">${n}</span><span class="rpe2-txt"><b>${RPE_LBL[n]}</b><small>${rpeDesc(n)}</small></span><span class="rpe2-zona">${RPE_ZONA(n)}</span>`; }
 window.rpeSet = function(n){
   n = Math.min(10, Math.max(1, Math.round(+n) || 5));
   window.__rpe = n;

@@ -21,7 +21,7 @@ Na pasta do projeto:
 
 ```
 python3 fonte/montar.py              # junta as partes no app-plus.js e confere sintaxe e versões
-python3 fonte/montar.py --versao 31  # troca para "2027.1 Beta 31" em todos os lugares e monta
+python3 fonte/montar.py --versao 33  # troca para "2027.1 Beta 33" em todos os lugares e monta
 ```
 
 A versão aparece em 5 lugares (app.js, service-worker.js, index.html `?v=`, rodapé do Perfil e `MTP.versao`). Se ficarem diferentes, os celulares podem não atualizar sozinhos — o script avisa.
@@ -121,3 +121,9 @@ mtsAbrir({ tipo:'corrida', titulo:'Rodagem', data:Date.now(),
 Sugestão de carga: use sempre `proxCarga(kg)` (app.js) para o próximo degrau, assim todas as telas mostram o mesmo número.
 
 Modo computador: para mudar onde um bloco aparece no computador, edite `DK_LAYOUT` na parte 29 (topo, lado ou fim; o resto vai para a coluna principal).
+
+Acesso offline: `acessoCacheValido` e `acessoConfereDepois` (app.js). O app entra com o acesso guardado (até `ACESSO_OFFLINE_DIAS` = 30 dias) e confere na nuvem em segundo plano.
+
+Nenhum elemento pode passar da borda da tela no celular (deixa a página mais larga e o celular abre com zoom). Para conferir: `document.documentElement.scrollWidth` tem que ser igual à largura da tela.
+
+Escala de esforço: `rpeHtml(nota, 'musc')` usa as frases de musculação (`RPE_DESC_MUSC`); sem o segundo argumento, as de corrida, caminhada e bike (`RPE_DESC`).

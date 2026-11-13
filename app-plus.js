@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 30 — app-plus.js
+// MetaTreino 2027.1 Beta 32 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.30' };
+const MTP = { versao: '2027.1-beta.32' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -7022,7 +7022,9 @@ function rpeCor(n){
   const t = (n-1)/9; const h = Math.round(165 - t*157); const s = Math.round(48 + t*14); const l = Math.round(50 - t*4);
   return `hsl(${h} ${s}% ${l}%)`;
 }
-window.rpeHtml = function(def){
+window.rpeHtml = function(def, modo){
+  // modo 'musc' (fim do treino de musculação) troca só as frases de baixo; o padrão é corrida/caminhada/bike
+  window.__rpeModo = modo === 'musc' ? 'musc' : 'aero';
   def = Math.min(10, Math.max(1, Math.round(+def || 5)));
   window.__rpe = def;
   const cel = [1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" role="radio" aria-checked="${n===def}" aria-label="${n}: ${RPE_LBL[n]}" tabindex="${n===def?0:-1}"
@@ -7033,7 +7035,7 @@ window.rpeHtml = function(def){
     <div class="rpe-lbl rpe2-lbl" id="rpe-lbl" aria-live="polite">${_rpeLbl(def)}</div>
   </div>`;
 };
-function _rpeLbl(n){ return `<span class="rpe2-num">${n}</span><span class="rpe2-txt"><b>${RPE_LBL[n]}</b><small>${RPE_DESC[n]}</small></span><span class="rpe2-zona">${RPE_ZONA(n)}</span>`; }
+function _rpeLbl(n){ return `<span class="rpe2-num">${n}</span><span class="rpe2-txt"><b>${RPE_LBL[n]}</b><small>${rpeDesc(n)}</small></span><span class="rpe2-zona">${RPE_ZONA(n)}</span>`; }
 window.rpeSet = function(n){
   n = Math.min(10, Math.max(1, Math.round(+n) || 5));
   window.__rpe = n;
@@ -8289,17 +8291,45 @@ function _piArrasto(lista){
     h.addEventListener('keydown', e=>{
       if(e.key === 'ArrowUp' || e.key === 'ArrowDown'){ e.preventDefault(); if(_piMover(row, e.key==='ArrowUp'?-1:1)){ _piSalvaOrdem(lista); h.focus(); } }
     });
+    h.addEventListener('contextmenu', e=>e.preventDefault());
+    // Beta 31: a linha acompanha o dedo (transform), as vizinhas deslizam para o lugar,
+    // e a janela rola sozinha perto das bordas. Ouvimos a janela inteira porque mover a
+    // linha na lista solta a "captura" do dedo.
     h.addEventListener('pointerdown', e=>{
-      // ouvimos a janela inteira: mover a linha na lista solta a "captura" do dedo
-      e.preventDefault(); row.classList.add('pi-arrastando'); let mexeu = false; const pid = e.pointerId;
-      const mover = ev=>{
-        if(ev.pointerId !== pid) return; ev.preventDefault();
-        const prev = row.previousElementSibling, next = row.nextElementSibling;
-        if(prev && prev.dataset.ordem){ const r = prev.getBoundingClientRect(); if(ev.clientY < r.top + r.height/2){ _piMover(row, -1); mexeu = true; return; } }
-        if(next && next.dataset.ordem){ const r = next.getBoundingClientRect(); if(ev.clientY > r.top + r.height/2){ _piMover(row, 1); mexeu = true; } }
+      e.preventDefault();
+      const pid = e.pointerId, y0 = e.clientY, sc = lista.closest('.modal') || document.scrollingElement;
+      let base = 0, mexeu = false, ultimoY = e.clientY, raf = 0;
+      const sc0 = sc.scrollTop;
+      row.classList.add('pi-arrastando'); lista.classList.add('pi-lista-arrastando');
+      const desenha = ()=>{ raf = 0; row.style.transform = `translateY(${ultimoY - y0 + (sc.scrollTop - sc0) - base}px)`; };
+      const desliza = (el, antes)=>{ const d = antes - el.getBoundingClientRect().top; if(!d) return; el.style.transition = 'none'; el.style.transform = `translateY(${d}px)`; requestAnimationFrame(()=>{ el.style.transition = 'transform .16s ease'; el.style.transform = ''; }); };
+      const troca = dir=>{
+        const viz = dir < 0 ? row.previousElementSibling : row.nextElementSibling; if(!viz || !viz.dataset.ordem) return false;
+        const rAntes = row.getBoundingClientRect().top - (parseFloat((row.style.transform.match(/-?[\d.]+/)||[0])[0])||0);
+        const vAntes = viz.getBoundingClientRect().top - (parseFloat(((viz.style.transform||'').match(/-?[\d.]+/)||[0])[0])||0);
+        _piMover(row, dir);
+        const rDepois = row.getBoundingClientRect().top - (parseFloat((row.style.transform.match(/-?[\d.]+/)||[0])[0])||0);
+        base += rDepois - rAntes; mexeu = true; desliza(viz, vAntes); return true;
       };
-      const fim = ev=>{ if(ev.pointerId !== pid) return; window.removeEventListener('pointermove', mover); window.removeEventListener('pointerup', fim); window.removeEventListener('pointercancel', fim);
-        row.classList.remove('pi-arrastando'); if(mexeu) _piSalvaOrdem(lista); };
+      const mover = ev=>{
+        if(ev.pointerId !== pid) return; ev.preventDefault(); ultimoY = ev.clientY;
+        // rolagem automática perto das bordas da janela
+        const box = sc.getBoundingClientRect ? sc.getBoundingClientRect() : { top:0, bottom:innerHeight };
+        if(ev.clientY < box.top + 50) sc.scrollTop -= 8; else if(ev.clientY > box.bottom - 50) sc.scrollTop += 8;
+        desenha();
+        const r = row.getBoundingClientRect(), meio = r.top + r.height/2;
+        const prev = row.previousElementSibling, next = row.nextElementSibling;
+        if(prev && prev.dataset.ordem){ const p = prev.getBoundingClientRect(); if(meio < p.top + p.height/2){ troca(-1); desenha(); return; } }
+        if(next && next.dataset.ordem){ const n = next.getBoundingClientRect(); if(meio > n.top + n.height/2){ troca(1); desenha(); } }
+      };
+      const fim = ev=>{
+        if(ev.pointerId !== pid) return;
+        window.removeEventListener('pointermove', mover); window.removeEventListener('pointerup', fim); window.removeEventListener('pointercancel', fim);
+        if(raf) cancelAnimationFrame(raf);
+        row.style.transition = 'transform .16s ease'; row.style.transform = '';
+        setTimeout(()=>{ row.style.transition = ''; row.classList.remove('pi-arrastando'); lista.classList.remove('pi-lista-arrastando'); }, 170);
+        if(mexeu) _piSalvaOrdem(lista);
+      };
       window.addEventListener('pointermove', mover, { passive:false }); window.addEventListener('pointerup', fim); window.addEventListener('pointercancel', fim);
     });
   });
