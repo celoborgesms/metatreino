@@ -59,9 +59,11 @@ mtGancho('openTrophyDetail', { depois(id){
 // a mesma de antes), não recebem toques e somem com a opção "Fundo decorativo".
 const DECO2 = (corpo)=>`<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${corpo}</svg>`;
 const DECO2_SVG = {
-  // Início: anéis de atividade e uma linha de evolução subindo
-  inicio: DECO2(`<path d="M100 22a54 54 0 1 1-47 27"/><path class="dk-a" d="M100 38a38 38 0 1 1-33 19" stroke-width="5"/><path d="M100 54a22 22 0 1 1-19 11"/>
-    <path class="dk-a" d="M28 182 66 160l26 10 34-28 44-18" stroke-width="3.2"/><circle cx="66" cy="160" r="4"/><circle cx="92" cy="170" r="4"/><circle cx="126" cy="142" r="4"/><circle class="dk-a" cx="170" cy="124" r="6" stroke-width="3"/>`),
+  // Início (Beta 28): montanha com a bandeira da meta no topo, trilha subindo e o sol nascendo
+  inicio: DECO2(`<circle cx="52" cy="50" r="14"/><path d="M52 24v-8M30 34l-6-5M74 34l6-5" stroke-opacity=".7"/>
+    <path d="M6 168 58 104l22 22 44-72 70 114"/><path d="M110 76l14-22 14 22-8-4-6 6-6-6z" stroke-opacity=".8"/>
+    <path class="dk-a" d="M124 54V18" stroke-width="3"/><path class="dk-a" d="M124 18h30l-8 8 8 8h-30" stroke-width="3"/>
+    <path class="dk-a" d="M34 168c22-6 40-14 52-26s20-20 30-30 12-22 6-34" stroke-width="3.2" stroke-dasharray="3 8"/>`),
   // Treinos (musculação): barra com anilhas e um kettlebell
   musculacao: DECO2(`<path d="M30 86h140"/><rect x="40" y="58" width="14" height="56" rx="4"/><rect x="56" y="66" width="10" height="40" rx="3"/><rect x="146" y="58" width="14" height="56" rx="4"/><rect x="134" y="66" width="10" height="40" rx="3"/>
     <path d="M24 80v12M176 80v12"/><path class="dk-a" d="M113 130c-15 0-24 11-24 24 0 12 9 22 24 22s24-10 24-22c0-13-9-24-24-24z" stroke-width="3"/><path class="dk-a" d="M101 136c-2-12 4-21 12-21s14 9 12 21" stroke-width="3"/>`),
@@ -72,9 +74,9 @@ const DECO2_SVG = {
   progresso: DECO2(`<path d="M30 170h150M30 170V40" stroke-opacity=".7"/><path d="M30 130h150M30 90h150" stroke-dasharray="3 8" stroke-opacity=".6"/>
     <rect x="46" y="128" width="18" height="42" rx="4"/><rect x="78" y="112" width="18" height="58" rx="4"/><rect x="110" y="96" width="18" height="74" rx="4"/><rect x="142" y="70" width="18" height="100" rx="4"/>
     <path class="dk-a" d="M40 124c26-8 40-14 58-30s38-30 70-46" stroke-width="3.4"/><path class="dk-a" d="M168 34l2.8 6 6.5.8-4.8 4.4 1.3 6.4-5.8-3.2-5.8 3.2 1.3-6.4-4.8-4.4 6.5-.8z" stroke-width="2.4"/>`),
-  // Histórico: linha do tempo com registros e um pequeno calendário
-  historico: DECO2(`<path d="M50 30v150" stroke-dasharray="2 7"/><circle class="dk-a" cx="50" cy="48" r="7" stroke-width="3"/><circle cx="50" cy="98" r="6"/><circle cx="50" cy="148" r="6"/>
-    <rect x="70" y="34" width="96" height="28" rx="8"/><path class="dk-a" d="M82 48h44" stroke-width="3"/><rect x="70" y="84" width="80" height="28" rx="8"/><path d="M82 98h30"/><rect x="70" y="134" width="88" height="28" rx="8"/><path d="M82 148h40"/>`),
+  // Histórico: relógio com seta de "voltar no tempo" (Beta 27: sem formas que pareçam cartões ou botões)
+  historico: DECO2(`<circle cx="104" cy="104" r="62"/><path d="M104 54v8M104 146v8M54 104h8M146 104h8" stroke-opacity=".7"/>
+    <path class="dk-a" d="M104 72v34l22 14" stroke-width="3.4"/><path class="dk-a" d="M34 104a70 70 0 1 0 20-49" stroke-width="3.2"/><path class="dk-a" d="M38 40l16 15-21 6" stroke-width="3.2"/>`),
   // Desafios: medalha com fita, estrela e louros
   desafios: DECO2(`<path d="M76 30l24 48 24-48M60 30h32M108 30h32" /><circle cx="100" cy="122" r="44"/><circle class="dk-a" cx="100" cy="122" r="32" stroke-width="3"/>
     <path class="dk-a" d="M100 104l5.6 11.4 12.6 1.8-9.1 8.9 2.2 12.5-11.3-5.9-11.3 5.9 2.2-12.5-9.1-8.9 12.6-1.8z" stroke-width="3"/>

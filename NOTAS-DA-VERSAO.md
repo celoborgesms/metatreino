@@ -1,3 +1,72 @@
+# MetaTreino 2027.1 Beta 30 — Modo computador de verdade
+
+1. **Modo computador** (só em tela grande com mouse; o celular não muda nada):
+   - **Início em painel:**
+     - faixa de números da semana no topo: treinos/meta com barra, sequência, tempo, volume (ou distância na corrida) e conquistas, todos clicáveis;
+     - coluna principal com o treino de hoje, a atividade, a semana e seus treinos;
+     - coluna lateral com a sugestão, os indicadores, os desafios, o plano e a frase.
+   - **Treinos:** o treino aberto ocupa a coluna principal; programação e ajuda ficam ao lado.
+   - **Progresso:** os gráficos de evolução ficam largos; calendário, recordes e metas ao lado.
+   - **Histórico:** a lista vira linhas de tabela (nome, horário e duração, grupos), com a data fixa no topo ao rolar. Números, gráfico e arquivo ficam ao lado.
+   - **Janelas:** abrem como painel à direita, com a tela de trás visível. Confirmações, medalhas e vídeo continuam no centro.
+   - **Menu lateral:** o aluno aparece embaixo, com atalho para o Perfil.
+   - **Atalhos:** teclas 1 a 5 trocam de aba e Esc fecha a janela.
+   - As duas colunas são independentes (sem buracos) e seguem a ordem do Personalizar início.
+2. **Desenho do Início:**
+   - **Mais visível**, mas ainda discreto. O de outras abas também subiu um pouco.
+   - **Coruja nova**, mais simpática, num galho no canto do céu e não mais em cima do morro.
+   - **Árvore de Natal** simétrica, com estrela e bolinhas alinhadas.
+   - O desenho também aparece no computador.
+
+**Regras do Firestore:** não mudaram nesta versão (continua valendo o arquivo revisado da Beta 24).
+
+---
+# MetaTreino 2027.1 Beta 29 — Início que acompanha o dia e ordem dos blocos
+
+1. **Desenho do Início acompanha o dia.** A montanha com a bandeira continua, e o céu muda:
+   - **Pelo horário:** amanhecer (5h às 9h, sol nascendo atrás da montanha), dia (sol alto), fim de tarde (17h às 19h, sol se pondo) e noite (lua, estrelas e uma coruja).
+   - **Pelo clima:** nuvem, chuva, garoa, tempestade, névoa ou neve. Com chuva forte o sol e a lua somem atrás da nuvem. Usa os mesmos dados do clima que o app já busca quando o aluno libera a localização: nada a mais é baixado. Sem localização, só o horário.
+   - **Datas especiais:** dia da prova (linha de chegada e medalha), véspera da prova (cronômetro), aniversário do aluno (balões), Ano-Novo (fogos, 31/12 e 1/1) e Natal (árvore, 24 e 25/12). Se cair mais de uma no mesmo dia, vale nessa ordem.
+   - O desenho é parado, sem animação, e não gasta bateria. Some com a opção "Fundo decorativo".
+2. **Clima sem repetir.**
+   - A temperatura saiu da frase de baixo e virou um selo no topo, ao lado do METATREINO, com o ícone do tempo de agora (ex.: "☁ 23° Nublado").
+   - A frase ficou só com a dica ("Tempo perfeito pra treinar").
+   - Com a capa de foto do mural, que esconde a linha do METATREINO, continua como antes.
+3. **Ordem dos blocos do Início.**
+   - Em Perfil → Personalizar início, cada bloco tem uma alça ⠿ para arrastar para cima ou para baixo. No computador, as setas do teclado também movem.
+   - Vale para os blocos (incluindo o bloco de Indicadores inteiro) e para a ordem dos indicadores entre si.
+   - O treino de hoje e os avisos importantes (recado do treinador, férias, aniversário, treinos pendentes) ficam sempre no lugar.
+   - **Voltar ao padrão** desfaz a ordem e mostra todos os blocos de novo, com confirmação.
+   - A ordem é salva na conta (vale em outro aparelho).
+
+**Regras do Firestore:** não mudaram nesta versão (continua valendo o arquivo revisado da Beta 24).
+
+---
+# MetaTreino 2027.1 Beta 28 — Treinos sem repetição, ficha do exercício e fundos
+
+1. **Treinos sem repetir o mesmo exercício.** Testei os 864 treinos que o app consegue montar (4 equipamentos × 3 níveis × 4 objetivos × 3 a 6 dias). Achei exercícios que eram, na prática, o mesmo no mesmo dia:
+   - "Flexão Diamante" (peito) junto com "Flexão Fechada (diamante)" (tríceps);
+   - Mergulho no banco junto com mergulho nas paralelas;
+   - Agachamento livre sem carga junto com o goblet;
+   - Agachamento sumô e sumô com pausa;
+   - Duas elevações laterais ou duas roscas martelo;
+   - Supino reto com barra e com halteres no mesmo treino;
+   - Até 5 flexões em um treino em casa.
+
+   Agora o repetido é trocado por outro exercício do mesmo grupo, com o equipamento do aluno. Se não houver outro, ele sai e o exercício que ficou ganha uma série, para manter o volume.
+   - Séries, repetições, descanso e quantidade de exercícios por grupo **não mudaram**.
+   - Os planos já salvos são corrigidos uma vez, com aviso. Exercícios trocados à mão pelo aluno não mudam, e o histórico fica igual.
+2. **Sugestão de carga com um número só.** Antes, a tela inicial sugeria +4% e o registro de séries sugeria +2,5 kg para o mesmo exercício. Com halter leve, os +4% arredondados davam a mesma carga e a sugestão nunca aparecia.
+   - Agora as três sugestões usam o mesmo degrau, que existe na academia: +1 kg até 12 kg, +2 kg até 40 kg, +2,5 kg até 100 kg e +5 kg acima disso.
+3. **Ficha do exercício ("Ver como fazer"):**
+   - Ocupa a tela toda: o vídeo fica no topo e o conteúdo ganha o espaço que ficava vazio em cima. Tocar fora não fecha mais por engano.
+   - O botão Fechar fica fixo embaixo e não é mais cortado depois de sair da tela cheia.
+   - O vídeo vertical ficou um pouco maior.
+4. **Fundos decorativos no meio-termo:** continuam só no topo, mas maiores e bem mais visíveis que na Beta 27. O desenho do Início é novo: uma montanha com a bandeira da meta no topo, a trilha subindo e o sol.
+
+**Regras do Firestore:** não mudaram nesta versão (continua valendo o arquivo revisado da Beta 24).
+
+---
 # MetaTreino 2027.1 Beta 27 — Fundos mais discretos e coleção na Central
 
 1. **Fundos decorativos:**

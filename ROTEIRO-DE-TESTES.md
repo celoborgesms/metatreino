@@ -1,4 +1,4 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 27
+# Roteiro de testes em aparelho real — MetaTreino Beta 30
 
 Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
 
@@ -15,7 +15,7 @@ Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do ce
 ## 3. Corrida (se usar)
 - [ ] Registrar uma corrida com tempo e distância. O ritmo saiu certo?
 
-## 4. Novidades (Betas 19 a 27)
+## 4. Novidades (Betas 19 a 30)
 - [ ] Histórico → **Histórico completo**: abre? Os números do ano batem com o que você lembra?
 - [ ] Perfil → **Relatório em PDF** → 3 meses → Gerar. O PDF abre? Os gráficos estão legíveis? Teste **Compartilhar** → salvar no Google Drive ou mandar no WhatsApp.
 - [ ] Perfil → **Seus dados**: quanto % aparece? A lista "Do que é feito" faz sentido?
@@ -38,6 +38,13 @@ Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do ce
 - [ ] "Modelo clássico" (embaixo da Central) ainda abre o card antigo?
 - [ ] Conquistas → "Compartilhar coleção inteira": aparecem suas medalhas mais recentes?
 - [ ] Passe pelas abas: o desenho de fundo fica só no topo e não aparece atrás das listas?
+- [ ] Ao abrir o app, aparece "Ajustei N treinos…"? Confira em Treinos se não há dois exercícios iguais no mesmo dia.
+- [ ] Início: o desenho do topo combina com a hora (sol de manhã, lua e coruja à noite) e com o tempo lá fora?
+- [ ] O selo com a temperatura aparece ao lado do METATREINO, e a frase de baixo não repete a temperatura?
+- [ ] No computador: o Início mostra a faixa de números e duas colunas? Teste as teclas 1 a 5 e o Esc.
+- [ ] No computador: o Histórico em linhas, uma janela abrindo como painel à direita, e Treinos e Progresso em duas colunas.
+- [ ] Personalizar início: arraste um bloco pela alça ⠿, feche e veja a tela inicial. Depois toque em "Voltar ao padrão".
+- [ ] "Ver como fazer": a ficha ocupa a tela? Entre na tela cheia, gire o celular, volte: o botão Fechar continua inteiro embaixo?
 
 ## 5. No computador (se tiver)
 - [ ] Abrir metatreino.app no computador: a tela de login usa a largura? Depois de entrar, aparece o menu do lado e as telas em duas colunas?

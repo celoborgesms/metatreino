@@ -21,7 +21,7 @@ Na pasta do projeto:
 
 ```
 python3 fonte/montar.py              # junta as partes no app-plus.js e confere sintaxe e versões
-python3 fonte/montar.py --versao 28  # troca para "2027.1 Beta 28" em todos os lugares e monta
+python3 fonte/montar.py --versao 31  # troca para "2027.1 Beta 31" em todos os lugares e monta
 ```
 
 A versão aparece em 5 lugares (app.js, service-worker.js, index.html `?v=`, rodapé do Perfil e `MTP.versao`). Se ficarem diferentes, os celulares podem não atualizar sozinhos — o script avisa.
@@ -59,6 +59,9 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `24-historico-paginas-desafios-futuros.js` | Paginação numerada do Histórico, detalhes dos desafios futuros |
 | `25-treinos-desafios-progresso.js` | Andamento do treino, "o que falta" nos desafios, períodos no resumo, tela de preparo do plano |
 | `26-central-compartilhamento.js` | Central de compartilhamento: dados do card (`mtsDe*`), desenho (`mtsDesenhar`), tela (`mtsAbrir`), ligação com os botões antigos |
+| `27-treino-sem-repeticao-ficha.js` | Treinos sem exercício repetido (`treinoSemRepeticao`, correção única dos planos salvos), ficha do exercício em tela cheia |
+| `28-inicio-cena-ordem.js` | Desenho do Início por horário, clima e datas (`cenaInicio`), selo do clima, ordem dos blocos do Início (`state.inicioOrdem`) |
+| `29-modo-computador.js` | Modo computador: grade de duas colunas (`DK_LAYOUT`, `dkMontar`), faixa de números, painel lateral, atalhos |
 
 Parte nova: próximo número livre (ex.: `20-nome-da-funcao.js`).
 
@@ -77,7 +80,7 @@ mtGancho('renderHome', { antes(){ /* roda antes */ }, depois(){ /* roda depois *
 - Cada gancho roda isolado: se der erro, ele aparece no console e a tela continua funcionando.
 - Funciona com funções assíncronas (ex.: `goAdmin`).
 
-Funções que já usam ganchos: `renderHome`, `renderHomeMetrics`, `renderMonthlyCard`, `renderSessions`, `renderPerf`, `renderHistory`, `renderProfile`, `goAdmin`, `openStudent`, `closeModal`, `openTrophyDetail`, `openAparencia`, `openPersonalizarInicio`, `openAudioVideos`, `renderHistEvolution`, `renderChallenges`, `openMinhaConquistaShare`, `renderRecords`, `openExProgress`.
+Funções que já usam ganchos: `renderHome`, `renderHomeMetrics`, `renderMonthlyCard`, `renderSessions`, `renderPerf`, `renderHistory`, `renderProfile`, `goAdmin`, `openStudent`, `closeModal`, `openTrophyDetail`, `openAparencia`, `openPersonalizarInicio`, `openAudioVideos`, `renderHistEvolution`, `renderChallenges`, `openMinhaConquistaShare`, `renderRecords`, `openExProgress`, `openExerciseSheet`, `aplicaInicio`, `openPersonalizarInicio`.
 
 Embrulhar a função inteira (`window.f = function(){...}`) só quando for preciso **mudar os argumentos ou o resultado** dela.
 
@@ -114,3 +117,7 @@ mtsAbrir({ tipo:'corrida', titulo:'Rodagem', data:Date.now(),
 ```
 
 `tipo` define a cor e o desenho de fundo. Também aceita `desc`, `medalha:{svg,cor}`, `nivel`, `periodo`, `serie` (números para a curva) e `kick` (o texto pequeno acima do título). Nunca coloque e-mail, peso ou medidas.
+
+Sugestão de carga: use sempre `proxCarga(kg)` (app.js) para o próximo degrau, assim todas as telas mostram o mesmo número.
+
+Modo computador: para mudar onde um bloco aparece no computador, edite `DK_LAYOUT` na parte 29 (topo, lado ou fim; o resto vai para a coluna principal).

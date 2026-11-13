@@ -19,9 +19,9 @@ const MTS_FORMATOS = {
 };
 const MTS_ESTILOS = { escuro:'Escuro', claro:'Claro', tema:'Cores do meu tema' };
 const MTS_DISP = { destaque:'Destaque', grade:'Números', compacto:'Faixa' };
-const MTS_COR = { musculacao:'#ff7a3d', corrida:'#2fd4b5', bike:'#a78bfa', caminhada:'#34d399', conquista:'#f5c451',
+const MTS_COR = { musculacao:'#ff7a3d', corrida:'#2fd4b5', bike:'#a78bfa', caminhada:'#34d399', conquista:'#f5c451', colecao:'#f5c451',
   especial:'#f2c66d', desafio:'#f5c451', recorde:'#f5c451', evolucao:'#5ac8fa', semana:'#8ea2ff' };
-const MTS_KICKER = { musculacao:'Treino de musculação', corrida:'Corrida', bike:'Pedal', caminhada:'Caminhada', conquista:'Conquista desbloqueada',
+const MTS_KICKER = { musculacao:'Treino de musculação', corrida:'Corrida', bike:'Pedal', caminhada:'Caminhada', conquista:'Conquista desbloqueada', colecao:'Minhas conquistas',
   especial:'Conquista especial', desafio:'Desafio concluído', recorde:'Recorde pessoal', evolucao:'Evolução de carga', semana:'Minha semana' };
 
 // estado da Central (só na memória; a escolha de formato/estilo fica lembrada no aparelho)
@@ -97,6 +97,23 @@ function mtsDeConquista(id){
   return { tipo:'conquista', titulo:t.name, desc:t.desc, data:(state.trophyDates||{})[id] || null,
     medalha:{ svg:medalSvg(def[0], def[1], '', nv), cor:_mtsCatCor(t.secret ? 'secret' : t.cat) },
     nivel: nv==='especial' ? 'Especial' : nv==='rara' ? 'Rara' : '', texto:`Desbloqueei "${t.name}" no MetaTreino` };
+}
+function mtsDeColecao(){
+  const tem = state.trophies || [];
+  const des = TROPHIES.filter(t=>tem.includes(t.id)); if(!des.length) return null;
+  const datas = state.trophyDates || {};
+  // as mais recentes primeiro (pela data em que foram ganhas; sem data, a ordem da lista)
+  const recentes = des.map((t,i)=>({ t, q: datas[t.id] || i })).sort((a,b)=>b.q - a.q).slice(0,5).map(x=>x.t);
+  const niv = t=>typeof medalNivel==='function' ? medalNivel(t) : 'comum';
+  const raras = des.filter(t=>niv(t)==='rara').length, esp = des.filter(t=>niv(t)==='especial').length;
+  const nums = [{ l:'Coleção', v:String(Math.round(des.length/TROPHIES.length*100)), u:'%' }];
+  if(raras) nums.push({ l:'Raras', v:String(raras), u:'' });
+  if(esp) nums.push({ l:'Especiais', v:String(esp), u:'' });
+  if(nums.length < 3){ const l = des.filter(t=>t.cat==='lift').length, r = des.filter(t=>t.cat==='run').length;
+    if(l) nums.push({ l:'Musculação', v:String(l), u:'' }); if(r && nums.length < 3) nums.push({ l:'Corrida', v:String(r), u:'' }); }
+  return { tipo:'colecao', titulo:'Coleção de medalhas', data:Date.now(),
+    medalhas: recentes.map(t=>{ const def = TROPHY_ICO[t.id] || ['medal']; return { svg:medalSvg(def[0], def[1], '', niv(t)), cor:_mtsCatCor(t.secret ? 'secret' : t.cat) }; }),
+    hero:{ v:String(des.length), u:`de ${TROPHIES.length} conquistas` }, nums:nums.slice(0,3), texto:'Minhas conquistas no MetaTreino' };
 }
 function mtsDeEspecial(){
   const sp = state.specialTrophy; if(!sp) return null;
@@ -216,7 +233,9 @@ async function mtsDesenhar(cv, d, o){
   if(x.letterSpacing !== undefined) x.letterSpacing = '0px';
   if(d.data){ x.textAlign = 'right'; x.fillStyle = P.dim; x.font = `500 ${W*0.028}px ${FF}`; x.fillText(_mtsData(d.data), W-pad, my+ms/2); }
   // medalha (conquista / desafio)
-  let medImg = null; if(d.medalha) medImg = await _mtsMedalhaImg(d.medalha.svg, d.medalha.cor, (!foto && o.estilo==='claro') ? '#12151a' : (!foto && o.estilo==='tema' && typeof temaClaro==='function' && temaClaro()) ? P.txt : '#fff');
+  const corLbl = (!foto && o.estilo==='claro') ? '#12151a' : (!foto && o.estilo==='tema' && typeof temaClaro==='function' && temaClaro()) ? P.txt : '#fff';
+  let medImg = null; if(d.medalha) medImg = await _mtsMedalhaImg(d.medalha.svg, d.medalha.cor, corLbl);
+  let medRow = []; if(d.medalhas) medRow = (await Promise.all(d.medalhas.map(m=>_mtsMedalhaImg(m.svg, m.cor, corLbl).then(img=>img ? { img, cor:m.cor } : null)))).filter(Boolean);
   // bloco de conteúdo
   const kick = (d.kick || MTS_KICKER[d.tipo] || '').toUpperCase();
   const disp = o.disp || 'destaque';
@@ -231,7 +250,8 @@ async function mtsDesenhar(cv, d, o){
   const tamNum = W*0.062, tamLbl = W*0.026;
   const altNums = nums.length ? tamNum + tamLbl + W*0.045 : 0;
   const tamDesc = W*0.034; x.font = `400 ${tamDesc}px ${FF}`; const linDesc = d.desc ? _mtsQuebra(x, d.desc, maxW, 3) : [];
-  const medTam = medImg ? (o.fmt==='quadrado' ? W*(disp==='destaque'?0.26:0.2) : o.fmt==='feed' ? W*0.28 : W*0.34) : 0;
+  const rowGap = W*0.025, rowTam = medRow.length ? Math.min(o.fmt==='quadrado' ? W*0.13 : W*0.16, (maxW - rowGap*(medRow.length-1))/medRow.length) : 0;
+  const medTam = medImg ? (o.fmt==='quadrado' ? W*(disp==='destaque'?0.26:0.2) : o.fmt==='feed' ? W*0.28 : W*0.34) : rowTam;
   const chipsH = (d.extra && d.extra.length) ? W*0.07 : 0;
   const nomeH = (o.nome && _mtsPrimeiroNome()) ? W*0.06 : 0;
   const alturaBloco = W*0.04 /*kicker*/ + linTit.length*tamTit*1.08 + (temHero ? tamHero*1.02 + W*0.03 : 0) + (linDesc.length ? linDesc.length*tamDesc*1.35 + W*0.02 : 0)
@@ -244,7 +264,12 @@ async function mtsDesenhar(cv, d, o){
   if(disp === 'compacto'){
     x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, pad*0.55, y - W*0.05, W - pad*1.1, alturaBloco + W*0.08, W*0.04); x.fill();
   }
-  if(medImg){
+  if(medRow.length){
+    const tot = medRow.length*rowTam + rowGap*(medRow.length-1);
+    let mx = (disp==='grade' || (o.fmt!=='story' && disp!=='destaque')) ? (W-tot)/2 : pad;
+    const my2 = Math.max(my+ms+W*0.03, y - rowTam - (disp==='compacto' ? W*0.08 : W*0.03));
+    medRow.forEach(m=>{ x.save(); x.shadowColor = _mtsRgba(m.cor, .5); x.shadowBlur = W*0.03; x.drawImage(m.img, mx, my2, rowTam, rowTam); x.restore(); mx += rowTam + rowGap; });
+  } else if(medImg){
     const mx = (disp==='grade' || o.fmt!=='story' && disp!=='destaque') ? (W-medTam)/2 : pad - medTam*0.06;
     const my2 = y - medTam - W*0.03;
     x.save(); x.shadowColor = _mtsRgba(d.medalha.cor, .55); x.shadowBlur = W*0.05; x.drawImage(medImg, mx, Math.max(my+ms+W*0.03, my2), medTam, medTam); x.restore();
@@ -426,6 +451,8 @@ window.shareWorkoutImage = function(histIdx){
 };
 const _shareTrophyImageB26 = window.shareTrophyImage;
 window.shareTrophyImage = function(id){ const d = mtsDeConquista(id); if(!d) return _shareTrophyImageB26.apply(this, arguments); mtsAbrir(d, ()=>_shareTrophyImageB26(id)); };
+const _shareTrophiesImageB27 = window.shareTrophiesImage;
+window.shareTrophiesImage = function(){ const d = mtsDeColecao(); if(!d) return _shareTrophiesImageB27.apply(this, arguments); mtsAbrir(d, ()=>_shareTrophiesImageB27()); };
 const _shareWeekImageB26 = window.shareWeekImage;
 window.shareWeekImage = function(){ const d = mtsDeSemana(); if(!d) return _shareWeekImageB26.apply(this, arguments); mtsAbrir(d, ()=>_shareWeekImageB26()); };
 if(typeof window.shareWeekSummary === 'function'){ const _sws = window.shareWeekSummary; window.shareWeekSummary = function(){ const d = mtsDeSemana(); if(!d) return _sws.apply(this, arguments); mtsAbrir(d, ()=>_sws()); }; }
@@ -463,4 +490,4 @@ mtGancho('openExProgress', { depois(exId){
 }});
 
 Object.assign(window, { MTS, mtsAbrir, mtsDesenhar, mtsDesenhaPrev, mtsFmt, mtsEstilo, mtsDisp, mtsFoto, mtsSemFoto, mtsCompartilhar, mtsSalvar, mtsClassico,
-  mtsDeHistorico, mtsDeConquista, mtsDeEspecial, mtsDeDesafio, mtsDeSemana, mtsDeRecorde, mtsDeEvolucao });
+  mtsDeHistorico, mtsDeConquista, mtsDeColecao, mtsDeEspecial, mtsDeDesafio, mtsDeSemana, mtsDeRecorde, mtsDeEvolucao });

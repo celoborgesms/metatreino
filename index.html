@@ -2016,6 +2016,99 @@ html.mt-desk .mts-prev canvas{max-height:52vh}
 html.tema-claro #app-deco{opacity:.10}
 [data-theme="amoled"] #app-deco{opacity:.12}
 #app-deco .dk-a{stroke-opacity:.75}
+
+/* ===== Beta 28: fundos decorativos no meio-termo ===== */
+/* Continuam só no topo (não passam atrás das listas), mas maiores e visíveis. */
+#app-deco{width:min(56vw,250px);height:min(56vw,250px);right:-22px;top:calc(env(safe-area-inset-top,0px) + 24px);opacity:.09;
+  -webkit-mask-image:linear-gradient(to bottom,#000 45%,transparent 100%);mask-image:linear-gradient(to bottom,#000 45%,transparent 100%)}
+html.tema-claro #app-deco{opacity:.15}
+[data-theme="amoled"] #app-deco{opacity:.2}
+#app-deco .dk-a{stroke-opacity:.95}
+#app-deco[data-k="inicio"]{top:calc(env(safe-area-inset-top,0px) + 6px);right:-10px;width:min(60vw,270px);height:min(60vw,270px)}
+
+/* ===== Beta 28: ficha do exercício ocupando a tela ===== */
+.modal-back.ex-open{padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.modal-back.ex-open .modal.modal-ex{height:calc(var(--mt-vh,1vh)*100 - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-height:none}
+.modal.modal-ex .ex-scroll{flex:1 1 auto;min-height:0}
+.ex-stage.v{height:min(calc(var(--mt-vh,1vh)*66),660px)}
+.ex-stage.v iframe{width:min(100%,calc(min(calc(var(--mt-vh,1vh)*66),660px) * 9 / 16))}
+.ex-rodape{flex:0 0 auto;padding:10px 16px 12px;border-top:1px solid var(--border);background:var(--bg-2)}
+@media (min-width:700px){.modal-back.ex-open .modal.modal-ex{height:auto;max-height:calc(var(--mt-vh,1vh)*100 - 48px)}}
+
+/* ===== Beta 29: selo do clima, ordem do início ===== */
+#home-brand-row{align-items:center}
+#home-clima{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);font-size:12.5px;line-height:1;white-space:nowrap;max-width:48vw}
+#home-clima svg{color:var(--primary);flex:0 0 auto}
+#home-clima b{color:var(--text-strong);font-weight:800;font-size:14px}
+#home-clima span{overflow:hidden;text-overflow:ellipsis}
+@media (max-width:360px){#home-clima span{display:none}}
+.pi-alca{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:34px;height:40px;margin:-6px 0 -6px -8px;color:var(--text-mute);cursor:grab;touch-action:none;border-radius:10px}
+.pi-alca:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+.pi-arrastando{background:var(--surface-2);border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.28);position:relative;z-index:2}
+.pi-arrastando .pi-alca{cursor:grabbing;color:var(--primary)}
+.pi-fixo-sw{cursor:default}
+.pi-dica-ordem{font-size:12.5px;color:var(--text-dim);line-height:1.45;margin:10px 0 2px}
+
+/* ===== Beta 30: desenho do topo mais visível ===== */
+#app-deco{opacity:.14}
+html.tema-claro #app-deco{opacity:.22}
+[data-theme="amoled"] #app-deco{opacity:.28}
+#app-deco[data-k="inicio"]{opacity:.17}
+html.tema-claro #app-deco[data-k="inicio"]{opacity:.26}
+[data-theme="amoled"] #app-deco[data-k="inicio"]{opacity:.32}
+
+/* ===== Beta 30: modo computador ===== */
+/* grade de duas colunas independentes (alturas medidas pela parte 29) */
+html.mt-desk #scr-home .wrap.dk-grade,html.mt-desk #scr-sessions .wrap.dk-grade,html.mt-desk #scr-perf .wrap.dk-grade,html.mt-desk #scr-history .wrap.dk-grade{display:grid!important;column-count:auto!important;grid-template-columns:minmax(0,1.62fr) minmax(320px,1fr);grid-auto-rows:4px;grid-auto-flow:row dense;column-gap:26px;row-gap:0;align-items:start;max-width:1280px}
+html.mt-desk #scr-home .wrap.dk-grade > *,html.mt-desk #scr-sessions .wrap.dk-grade > *,html.mt-desk #scr-perf .wrap.dk-grade > *,html.mt-desk #scr-history .wrap.dk-grade > *{margin:0!important;min-width:0;break-inside:auto}
+html.mt-desk .wrap.dk-grade > [data-dk="topo"],html.mt-desk .wrap.dk-grade > [data-dk="fim"]{grid-column:1 / -1}
+html.mt-desk .wrap.dk-grade > [data-dk="principal"]{grid-column:1}
+html.mt-desk .wrap.dk-grade > [data-dk="lado"]{grid-column:2}
+html.mt-desk #scr-home .wrap.dk-grade > #mod-toggle{max-width:none}
+/* o desenho do topo também aparece no computador, no canto da área de conteúdo */
+html.mt-desk #app-deco{display:block;right:120px;top:10px;width:220px;height:220px}
+html.mt-desk body.no-deco #app-deco{display:none}
+
+/* Início: faixa de números */
+#desk-kpis{display:none}
+#scr-home #desk-kpis{order:10}
+html.mt-desk #desk-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.dk-kpi{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px 16px;border-radius:18px;border:1px solid var(--border);background:var(--surface);color:var(--text);text-align:left;font:inherit;cursor:pointer;transition:border-color .15s,transform .15s}
+.dk-kpi:hover{border-color:var(--line-primary);transform:translateY(-1px)}
+.dk-kpi-l{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute)}
+.dk-kpi-v{font-size:28px;font-weight:800;color:var(--text-strong);line-height:1.1;font-family:'Outfit',sans-serif}
+.dk-kpi-v small{font-size:14px;font-weight:600;color:var(--text-dim);margin-left:3px}
+.dk-kpi-s{font-size:12px;color:var(--text-dim)}
+.dk-kpi-bar{display:block;width:100%;height:5px;border-radius:9px;background:var(--surface-2);overflow:hidden}
+.dk-kpi-bar i{display:block;height:100%;background:var(--primary);border-radius:9px}
+
+/* Histórico: lista em linhas, como tabela */
+html.mt-desk #history-list .hist-day-lbl{position:sticky;top:0;z-index:1;background:var(--bg);padding:10px 4px 6px;margin:0}
+html.mt-desk #history-list .hist-card{align-items:center;padding:11px 16px;margin-bottom:6px;border-radius:14px}
+html.mt-desk #history-list .hist-card:hover{transform:none}
+html.mt-desk #history-list .hist-card > div:nth-child(2){display:grid;grid-template-columns:minmax(200px,1.3fr) minmax(170px,1fr) minmax(0,1.2fr);align-items:center;column-gap:16px}
+html.mt-desk #history-list .hist-card .hist-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html.mt-desk #history-list .hist-card .hist-meta,html.mt-desk #history-list .hist-card .hist-chips{margin:0!important}
+html.mt-desk #history-list .hist-card .hist-chips{justify-content:flex-end}
+html.mt-desk #scr-history .wrap.dk-grade > .stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* Janelas como painel lateral */
+html.mt-desk .modal-back.dk-painel{justify-content:flex-end;align-items:stretch;padding:0}
+html.mt-desk .modal-back.dk-painel .modal{max-width:520px;width:520px;height:100vh;max-height:100vh;border-radius:22px 0 0 22px;border-right:0;animation:dkPainel .22s ease-out}
+@keyframes dkPainel{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){html.mt-desk .modal-back.dk-painel .modal{animation:none}}
+
+/* Menu lateral: aluno e atalhos */
+#desk-user{display:none}
+html.mt-desk #desk-user{display:block;margin-top:auto;padding-top:14px;border-top:1px solid var(--border)}
+.dk-user-btn{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:12px;border:0;background:transparent;color:var(--text);font:inherit;cursor:pointer;text-align:left}
+.dk-user-btn:hover{background:var(--surface-2)}
+.dk-user-btn .avatar{width:34px;height:34px;flex:0 0 34px;font-size:14px}
+.dk-user-btn b{display:block;font-size:13.5px;color:var(--text-strong)}
+.dk-user-btn small{display:block;font-size:11.5px;color:var(--text-dim)}
+.dk-atalhos{font-size:11px;color:var(--text-mute);padding:8px 10px 0;line-height:1.6}
+.dk-atalhos kbd{font:inherit;font-size:10.5px;padding:1px 5px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim)}
+@media (max-width:1180px){html.mt-desk #desk-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}html.mt-desk #scr-home .wrap.dk-grade,html.mt-desk #scr-sessions .wrap.dk-grade,html.mt-desk #scr-perf .wrap.dk-grade,html.mt-desk #scr-history .wrap.dk-grade{grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr)}}
 </style>
 </head>
 <body>
@@ -2874,7 +2967,7 @@ html.tema-claro #app-deco{opacity:.10}
       <div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div>
     </div>
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 27</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 30</span>
     </div>
   </div>
 </div>
@@ -2952,8 +3045,8 @@ html.tema-claro #app-deco{opacity:.10}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.27"></script>
-<script src="./app-plus.js?v=2027.1-beta.27"></script>
+<script src="./app.js?v=2027.1-beta.30"></script>
+<script src="./app-plus.js?v=2027.1-beta.30"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();

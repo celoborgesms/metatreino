@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 27 =====
-const APP_VERSION = '2027.1-beta.27';
+// ===== MetaTreino 2027.1 Beta 30 =====
+const APP_VERSION = '2027.1-beta.30';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -3597,7 +3597,7 @@ function smartProgressionHint(exId){
   if(twoTop){
     return isBodyweight
       ? {cls:'card-ok', txt:`📈 Você bateu o topo da faixa (${range.hi} reps) nas 2 últimas sessões — hora de dificultar: +2 repetições por série ou uma variação mais difícil.`}
-      : {cls:'card-ok', txt:`📈 Você bateu o topo da faixa (${range.hi} reps) 2 sessões seguidas com ${lastW}kg — o app sugere subir pra ${(lastW+2.5).toFixed(1).replace('.0','')}kg hoje.`};
+      : {cls:'card-ok', txt:`📈 Você bateu o topo da faixa (${range.hi} reps) 2 sessões seguidas com ${lastW}kg — o app sugere subir pra ${String(proxCarga(lastW)).replace('.',',')}kg hoje.`};
   }
   if(allTop(last)){
     return isBodyweight
@@ -3796,6 +3796,13 @@ function cicloAtual(){
   }catch(e){ return null; }
 }
 // Progressão REAL: fechou todas as séries no topo das reps com a MESMA carga nas 2 últimas sessões → sugere +2-5%
+// Próxima carga ao progredir: um degrau que existe na academia (halter, anilha, máquina) e que
+// fica perto de +5% do que o aluno já faz. Usado em todas as sugestões, para que digam o mesmo número.
+function proxCarga(kg){
+  kg = +kg || 0; if(kg <= 0) return 0;
+  const passo = kg < 12 ? 1 : kg < 40 ? 2 : kg < 100 ? 2.5 : 5;
+  return Math.round((kg + passo) * 10) / 10;
+}
 function progressionTip(){
   try{
     const mod = state.modules.lift; if(!mod || !mod.plan) return null;
@@ -3811,9 +3818,9 @@ function progressionTip(){
       if(!fechou(logs[0]) || !fechou(logs[1])) continue;
       if(pesoDe(logs[0]) !== pesoDe(logs[1])) continue;
       const atual = pesoDe(logs[1]);
-      const novo = Math.round(atual*1.04*2)/2;
+      const novo = proxCarga(atual);
       if(novo<=atual) continue;
-      return { emo:'📈', txt:`No <b>${ex.name}</b> você fechou todas as séries com ${atual}kg nas últimas 2 sessões. Hora de progredir: tente <b>${novo}kg</b> hoje (+2-5%). 💪` };
+      return { emo:'📈', txt:`No <b>${ex.name}</b> você fechou todas as séries com ${atual}kg nas últimas 2 sessões. Hora de progredir: tente <b>${novo}kg</b> hoje. 💪` };
     }
     return null;
   }catch(e){ return null; }
@@ -7000,7 +7007,7 @@ function maDicasConcretas(){
       const c = cand[0];
       if(c){
         const nome = nomeDoEx(c.id);
-        const prox = (c.kg+2.5).toFixed(1).replace('.0','');
+        const prox = String(proxCarga(c.kg)).replace('.',',');
         out.push({
           bolha:`📊 Sua carga no ${nome} está em ${c.kg}kg há ${c.semanas} semanas.`,
           completa:`📊 Sua carga no <b>${nome}</b> está em <b>${c.kg}kg</b> há cerca de <b>${c.semanas} semanas</b>.<br><br>`
