@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 32 =====
-const APP_VERSION = '2027.1-beta.32';
+// ===== MetaTreino 2027.1 Beta 33 =====
+const APP_VERSION = '2027.1-beta.33';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -317,6 +317,7 @@ function limpaParaNuvem(v, path, achados){
   });
   return out;
 }
+let _assinaturaNuvem = '';   // Beta 33: o que a nuvem já tem (sem a aba aberta e o carimbo de hora)
 function syncToCloud(){
   if(!fbUser || !state.user) return;
   clearTimeout(cloudSyncTimer);
@@ -324,6 +325,11 @@ function syncToCloud(){
     const achados = [];
     const limpo = limpaParaNuvem(state, 'estadoApp', achados);
     try{ localStorage.setItem('mt_sane', JSON.stringify(achados.slice(0,8))); }catch(e){}
+    // Beta 33: trocar de aba chamava saveData e regravava o documento inteiro na nuvem a cada toque.
+    // Se só mudou a aba aberta, não grava (economiza a cota gratuita do Firestore e bateria).
+    const assinatura = JSON.stringify(Object.assign({}, limpo, { ui:null, _savedAt:null }));
+    if(assinatura === _assinaturaNuvem) return;
+    const enviadoEm = state._savedAt || Date.now(), uidEnvio = fbUser.uid;
     // set SEM merge: substitui o documento inteiro. Com merge, campos apagados
     // localmente (ex: foto removida) "ressuscitavam" da nuvem no próximo login.
     const p = db.collection('usuarios').doc(fbUser.uid).set({
@@ -332,7 +338,7 @@ function syncToCloud(){
       atualizadoEm: state._savedAt || Date.now(),
       estadoApp: limpo
     });
-    if(p && p.catch) p.catch(e=>{ console.log('Erro ao salvar na nuvem:', e); try{ localStorage.setItem('mt_syncerr', String(e&&e.message||e).slice(0,200)); }catch(_){} });
+    if(p && p.then) p.then(()=>{ _assinaturaNuvem = assinatura; try{ localStorage.removeItem('mt_syncerr'); localStorage.setItem('mt_nuvem_ok_'+uidEnvio, String(enviadoEm)); }catch(_){} }, e=>{ console.log('Erro ao salvar na nuvem:', e); try{ localStorage.setItem('mt_syncerr', String(e&&e.message||e).slice(0,200)); }catch(_){} });
   }catch(e){
     console.log('Falha ao preparar o salvamento na nuvem:', e);
     try{ localStorage.setItem('mt_syncerr', String(e&&e.message||e).slice(0,200)); }catch(_){}
@@ -358,7 +364,17 @@ async function loadData(){
   const cloudAt = (cloud && cloud._savedAt) || 0;
   const localAt = (local && local._savedAt) || 0;
   let chosen = null, needPush = false;
-  if(cloud && local){ chosen = localAt > cloudAt ? local : cloud; needPush = localAt > cloudAt; }
+  if(cloud && local){
+    chosen = localAt > cloudAt ? local : cloud; needPush = localAt > cloudAt;
+    // Beta 33: a cópia mais antiga pode ter treinos que a mais nova não tem (registrados em outro
+    // aparelho ou sem internet). Antes ela era descartada inteira; agora os treinos que faltam entram.
+    // Da cópia LOCAL mais antiga só entra o que foi registrado depois da última gravação confirmada na
+    // nuvem por este aparelho (o resto, se sumiu da nuvem, foi excluído em outro aparelho e não deve voltar).
+    try{
+      if(chosen === local) mesclaEstado(local, cloud);
+      else { const ack = +localStorage.getItem('mt_nuvem_ok_'+fbUser.uid) || 0; if(ack && mesclaEstado(cloud, local, { desde: ack }).daOutra) needPush = true; }
+    }catch(e){ console.log('mesclar cópias', e); }
+  }
   else chosen = cloud || local;
   if(chosen){
     state = {...state, ...chosen, ui:{...state.ui, ...(chosen.ui||{})}};
@@ -366,6 +382,85 @@ async function loadData(){
     if(needPush) syncToCloud(); // devolve pra nuvem a versão local mais nova
   }
 }
+
+// ===== Beta 33: juntar cópias do mesmo aluno (outro aparelho / sem internet) =====
+// O documento do aluno é gravado inteiro. Se dois aparelhos (ou o mesmo aparelho offline) gravam em
+// momentos diferentes, o último apagava os treinos do outro. mesclaEstado junta na cópia "base" o que
+// só existe na "outra": treinos do histórico (dos últimos 90 dias), as séries daquele dia, peso,
+// conquistas e recordes. O que o aluno EXCLUIU fica marcado (histExcluidos) e não volta.
+function chaveHist(mod, x){ return mod + '|' + (+x.at||0); }
+function marcaExcluido(mod, x){
+  try{ if(!x || !x.at) return; state.histExcluidos = (state.histExcluidos||[]).concat([chaveHist(mod, x)]).slice(-300); }catch(e){}
+}
+function mesclaEstado(base, outra, opts){
+  const r = { daOutra:0, daBase:0 };
+  const desde = (opts && +opts.desde) || 0;   // só entra da "outra" o que é mais novo que isso
+  if(!base || !outra || typeof base!=='object' || typeof outra!=='object') return r;
+  const excl = new Set([...(base.histExcluidos||[]), ...(outra.histExcluidos||[])]);
+  if(excl.size) base.histExcluidos = [...excl].slice(-300);
+  const limite = Date.now() - HISTORY_RETENTION_DAYS*86400000;   // o que é mais antigo já foi para o arquivo anual
+  const diasNovos = new Set();
+  ['lift','run'].forEach(m=>{
+    const B = base.modules && base.modules[m], O = outra.modules && outra.modules[m];
+    if(!B || !O || !Array.isArray(O.history)) return;
+    B.history = Array.isArray(B.history) ? B.history : [];
+    const tem = new Set(B.history.map(x=>chaveHist(m, x)));
+    const temO = new Set(O.history.map(x=>chaveHist(m, x)));
+    B.history.forEach(x=>{ if(!temO.has(chaveHist(m, x))) r.daBase++; });
+    O.history.forEach(x=>{
+      const k = chaveHist(m, x);
+      if(!x || !x.at || x.at < limite || x.at <= desde || tem.has(k) || excl.has(k)) return;
+      B.history.push(x); tem.add(k); r.daOutra++;
+      if(m==='lift') diasNovos.add(chaveDia(x.at));
+    });
+    B.history.sort((a,b)=>a.at-b.at);
+    // a "outra" cópia pode ter excluído algo que a base ainda tem
+    const antes = B.history.length; B.history = B.history.filter(x=>!excl.has(chaveHist(m, x))); r.daOutra += antes - B.history.length;
+  });
+  // séries do dia dos treinos que vieram da outra cópia
+  if(diasNovos.size && outra.progress){
+    base.progress = base.progress || {};
+    Object.keys(outra.progress).forEach(id=>{
+      (outra.progress[id]||[]).forEach(p=>{
+        if(!p || !diasNovos.has(chaveDia(p.date))) return;
+        const arr = base.progress[id] = base.progress[id] || [];
+        if(!arr.some(q=>chaveDia(q.date)===chaveDia(p.date))) arr.push(p);
+      });
+      if(base.progress[id]) base.progress[id].sort((a,b)=>a.date-b.date);
+    });
+  }
+  // recordes: fica o melhor; conquistas e pesos: junta
+  if(outra.prs){ base.prs = base.prs || {}; Object.keys(outra.prs).forEach(id=>{ const a = base.prs[id], b = outra.prs[id]; if(!b) return;
+    if(!a || (+b.peso||0) > (+a.peso||0) || ((+b.peso||0)===(+a.peso||0) && (+b.reps||0) > (+a.reps||0))){ base.prs[id] = b; r.daOutra++; } }); }
+  if(Array.isArray(outra.trophies)){ base.trophies = Array.isArray(base.trophies) ? base.trophies : []; outra.trophies.forEach(t=>{ if(!base.trophies.includes(t)){ base.trophies.push(t); r.daOutra++; } }); }
+  if(Array.isArray(outra.weights)){ base.weights = Array.isArray(base.weights) ? base.weights : []; const ds = new Set(base.weights.map(w=>w.date));
+    outra.weights.forEach(w=>{ if(w && !ds.has(w.date) && w.date >= limite && w.date > desde){ base.weights.push(w); ds.add(w.date); r.daOutra++; } }); base.weights.sort((a,b)=>a.date-b.date); }
+  return r;
+}
+// Com o app aberto em dois aparelhos: quando a nuvem muda por causa do OUTRO aparelho, junta aqui.
+let _ouvinteNuvem = null, _nuvemVistaEm = 0;
+function ouveNuvem(){
+  try{
+    if(_ouvinteNuvem || !fbUser || !db.collection('usuarios').doc(fbUser.uid).onSnapshot) return;
+    _ouvinteNuvem = db.collection('usuarios').doc(fbUser.uid).onSnapshot(doc=>{
+      try{
+        if(!doc || !doc.exists || (doc.metadata && (doc.metadata.hasPendingWrites || doc.metadata.fromCache))) return;
+        const remoto = doc.data() && doc.data().estadoApp; if(!remoto || !state || !state.user) return;
+        const at = +remoto._savedAt || 0;
+        if(at <= _nuvemVistaEm || at === state._savedAt) { _nuvemVistaEm = Math.max(_nuvemVistaEm, at); return; }
+        _nuvemVistaEm = at;
+        const r = mesclaEstado(state, remoto);
+        if(r.daOutra){
+          try{ ensureStats(); }catch(e){}
+          try{ const t = state.ui && state.ui.tab; if(t==='home') renderHome(); else if(t==='history') renderHistory(); else if(t==='perf') renderPerf(); }catch(e){}
+          toast('🔄 Treinos do seu outro aparelho sincronizados.');
+        }
+        if(r.daOutra) saveData();   // a nuvem passa a ter a soma das duas cópias (o outro aparelho recebe e para por aí)
+      }catch(e){ console.log('nuvem (tempo real):', e); }
+    }, ()=>{ _ouvinteNuvem = null; });
+  }catch(e){ _ouvinteNuvem = null; }
+}
+function paraDeOuvirNuvem(){ try{ if(_ouvinteNuvem) _ouvinteNuvem(); }catch(e){} _ouvinteNuvem = null; _nuvemVistaEm = 0; }
 
 // ---------- AUTH (Google) ----------
 // ===== LOGIN POR E-MAIL/USUÁRIO + SENHA =====
@@ -557,6 +652,7 @@ function doGoogleSignIn(){
 }
 function doLogout(){
   try{ localStorage.removeItem('metatreino_sessao'); }catch(e){}
+  try{ stopRestTimer(); treinoAtivoEncerrar(); paraDeOuvirNuvem(); _assinaturaNuvem = ""; }catch(e){}   // Beta 33: nada de cronômetro, tela ligada ou escuta da nuvem depois de sair
   try{ syncToCloud(); }catch(e){}   // envia qualquer alteração pendente (ex: foto removida) ANTES de sair
   try{ const so = fbAuth.signOut(); if(so && so.catch) so.catch(()=>{}); }catch(e){}
   fbUser = null;
@@ -891,7 +987,7 @@ function rotacionarBlocoLift(){
     if(b <= (mod.plan.bloco || 0)) return false;
     variarLiftExercises('bloco');
     mod.plan.bloco = b; mod.plan.blocoAt = Date.now();
-    state.lastVarWeek = Math.floor(Date.now()/(7*86400000));   // já variou nesta semana
+    state.lastVarWeek = semanaLocalId();   // já variou nesta semana
     return true;
   }catch(e){ console.log('rotação de bloco falhou', e); return false; }
 }
@@ -1004,6 +1100,8 @@ function bootAfterAuth(){
   }
   saveData();
   goTab('home');
+  try{ restRetomar(); }catch(e){}   // Beta 33: descanso que estava rodando quando o app fechou
+  try{ _nuvemVistaEm = state._savedAt || 0; setTimeout(ouveNuvem, 4000); }catch(e){}   // Beta 33: outro aparelho aberto ao mesmo tempo
 }
 
 // ---------- QUESTIONÁRIO ----------
@@ -1504,7 +1602,9 @@ function bindDaysUpdate(m){
     const on = [...document.querySelectorAll('#'+m+'-week-days .opt-multi.on')];
     if(n>0 && on.length>n){ on.slice(n).forEach(o=>o.classList.remove('on')); }
   };
-  daysGroup.querySelectorAll('.opt').forEach(o=>{ o.addEventListener('click', ()=>setTimeout(update,10)); });
+  // Beta 33: o ouvinte entra uma vez só (antes somava 2 a cada abertura da tela de montar plano)
+  daysGroup._mtUpdate = update;
+  daysGroup.querySelectorAll('.opt').forEach(o=>{ if(o._mtDias) return; o._mtDias = true; o.addEventListener('click', ()=>setTimeout(()=>{ try{ daysGroup._mtUpdate && daysGroup._mtUpdate(); }catch(e){} },10)); });
   update();
 }
 
@@ -1522,8 +1622,10 @@ function generatePlan(module, setup){
     // Use user-selected days if available, otherwise defaults
     const wkDays = (setup.selectedDays && setup.selectedDays.length===days) ? setup.selectedDays : ({ 3:[1,3,5], 4:[1,2,4,5], 5:[1,2,3,5,6], 6:[1,2,3,4,5,6] }[days] || [1,2,4,5]);
     const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+    const vistos = new Set(), usados = new Set();   // grupos e exercícios já usados antes na semana (Beta 33)
     const workouts = split.map((s,i)=>{
-      const exercises = buildLiftExercises(s.parts,setup);
+      const exercises = buildLiftExercises(s.parts, setup, { indice:i, jaNaSemana:new Set(vistos), usadosSemana:new Set(usados) });
+      s.parts.forEach(p=>vistos.add(p)); exercises.forEach(e=>usados.add(e.id));
       return {
         ...s, dayIdx:wkDays[i], dayName:dayNames[wkDays[i]-1],
         duration:estimateLiftDuration(exercises, setup.goal),
@@ -1721,7 +1823,130 @@ function painBlockedParts(){
   pains.forEach(p=>(PAIN_MAP[p]||[]).forEach(x=>blocked.add(x)));
   return blocked;
 }
-function buildLiftExercises(parts, setup){
+// ===== Beta 33: semana do calendário do aluno =====
+// Antes a "semana" era Math.floor(Date.now()/7 dias), que começa na QUINTA-FEIRA às 00:00 UTC
+// (21h de quarta no Brasil): a variação semanal trocava os exercícios no meio da semana.
+// Agora a semana começa na segunda-feira, no horário do aparelho. O número é o mesmo da conta
+// antiga de segunda a quarta, por isso não há troca extra na atualização (ver ensureStateShape).
+function semanaLocalId(ts){
+  const d = new Date(ts == null ? Date.now() : ts); d.setHours(12,0,0,0);   // meio-dia: imune a horário de verão
+  d.setDate(d.getDate() - ((d.getDay()+6)%7));                              // segunda-feira desta semana
+  const seg = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.floor((seg - 4*86400000) / (7*86400000));                     // 05/01/1970 (segunda) = semana 0
+}
+// ===== Beta 33: papel de cada exercício dentro do grupo =====
+// O gerador escolhia pela ordem da lista girada a cada semana. Em algumas semanas o peito do
+// iniciante saía só com crossover + pullover (sem supino nem flexão), o ombro com dois
+// "empurrar" e o trapézio com dois encolhimentos. Agora cada grupo tem uma sequência de papéis
+// (o principal primeiro) e a variação semanal acontece DENTRO de cada papel.
+const LIFT_PAPEIS = {
+  'Peito':   [['press', /supino reto|supino na m[aá]quina \(hammer\)|^flex[aã]o de bra[cç]o|flex[aã]o com m[aã]os elevadas|flex[aã]o arqueiro/i, 'principal'],
+              ['inclinado', /inclinad/i, 'principal'],
+              ['crucifixo', /crucifixo|crossover|peck|voador/i, 'acessorio'],
+              ['fechado', /diamante|fechad/i, 'secundario'],
+              ['pullover', /pullover/i, 'acessorio']],
+  'Costas':  [['puxada', /puxada|barra fixa|pulldown|chin/i, 'principal'],
+              ['remada', /remada/i, 'principal'],
+              ['terra', /levantamento terra/i, 'principal'],
+              ['pullover', /pullover/i, 'acessorio'],
+              ['lombar', /superman/i, 'acessorio']],
+  'Pernas':  [['agachar', /agachamento (livre|no smith|goblet)|leg press|hack/i, 'principal'],
+              ['dobradica', /stiff|nordic|terra/i, 'secundario'],
+              ['unilateral', /b[uú]lgaro|afundo|step-up/i, 'secundario'],
+              ['quadriceps', /extensora|contra parede/i, 'acessorio'],
+              ['posterior', /flexora/i, 'acessorio'],
+              ['adutor', /adutora|abdutora|sum[oô]/i, 'acessorio'],
+              ['explosao', /jump|salto/i, 'acessorio']],
+  'Glúteos': [['quadril', /hip thrust|eleva[cç][aã]o p[eé]lvica|ponte/i, 'principal'],
+              ['abducao', /abdutora|abdu[cç][aã]o|concha/i, 'acessorio'],
+              ['extensao', /coice|kickback|gl[uú]teo na m[aá]quina/i, 'acessorio'],
+              ['agachar', /sum[oô]/i, 'secundario']],
+  'Ombro':   [['desenvolvimento', /desenvolvimento|pike/i, 'principal'],
+              ['lateral', /eleva[cç][aã]o lateral/i, 'acessorio'],
+              ['posterior', /face pull|eleva[cç][aã]o posterior|eleva[cç][aã]o y/i, 'acessorio'],
+              ['frontal', /eleva[cç][aã]o frontal/i, 'acessorio']],
+  'Bíceps':  [['rosca', /rosca (direta|alternada|no cabo|com mochila)/i, 'secundario'],
+              ['martelo', /martelo/i, 'acessorio'],
+              ['pico', /scott|spider|concentrada|isom[eé]trica/i, 'acessorio'],
+              ['chin', /chin-?up/i, 'secundario']],   // composto: só completa o grupo (já há puxada nas costas)
+  'Tríceps': [['acima', /acima da cabe[cç]a|franc[eê]s|testa/i, 'secundario'],
+              ['polia', /polia com barra|corda|coice|m[aá]quina/i, 'acessorio'],
+              ['composto', /pegada fechada|mergulho|diamante|fechada/i, 'secundario']],
+  'Trapézio':[['encolhimento', /encolhimento/i, 'acessorio']],
+  'Core':    [['estabilidade', /prancha \(|dead bug|hollow/i, 'acessorio'],
+              ['flexao', /crunch|bicicleta|eleva[cç][aã]o de pernas|mountain/i, 'acessorio'],
+              ['rotacao', /prancha lateral|russian|pallof/i, 'acessorio'],
+              ['carregada', /farmer/i, 'acessorio']],
+  'Panturrilha':[['em-pe', /em p[eé]|donkey|leg press|degrau/i, 'acessorio'],
+              ['sentada', /sentada/i, 'acessorio']]
+};
+// sequência de papéis por grupo (o 1º é o principal do dia). Força troca a ordem das costas.
+function liftSequencia(grupo, goal, level, equip){
+  const S = {
+    // em casa, a flexão fechada é a 4ª variação; com carga, um 2º crucifixo (cabo/voador/halteres)
+    'Peito':['press','inclinado','crucifixo', equip==='casa' ? 'fechado' : 'crucifixo'],
+    'Costas': (goal==='forca' && level!=='iniciante') ? ['puxada','remada','terra','remada'] : ['puxada','remada','pullover','remada'],
+    'Pernas':['agachar','dobradica','unilateral','quadriceps','posterior'],
+    'Glúteos':['quadril','abducao','extensao','agachar'],
+    'Ombro':['desenvolvimento','lateral','posterior','desenvolvimento'],
+    'Bíceps':['rosca','martelo','pico'],
+    'Tríceps':['acima','polia','composto'],
+    'Trapézio':['encolhimento'],
+    'Core':['estabilidade','flexao','rotacao'],
+    'Panturrilha':['em-pe','sentada']
+  };
+  return S[grupo] || [];
+}
+function exPapel(ex, grupo){
+  const nome = String((ex && ex.name) || '');
+  const g = grupo || (ex && ex.part);
+  for(const [id, re, tier] of (LIFT_PAPEIS[g] || [])) if(re.test(nome)) return { id, tier };
+  return { id:'outro', tier: exPattern(nome)==='isolador' ? 'acessorio' : 'secundario' };
+}
+// exercícios que pedem técnica ou força prévia: o iniciante recebe primeiro as versões básicas
+const LIFT_PESO_CORPO = /flex[aã]o|pike|peso corporal|mochila|garrafa|toalha|superman|contra parede/i;
+const LIFT_AVANCADO = /arqueiro|nordic|jump|hollow|pike elevada|\(avan[cç]ado\)|levantamento terra|spider|pistol|muscle/i;
+// descanso por papel (antes era um só valor para o treino inteiro)
+function liftDescanso(tier, goal, senior){
+  const T = senior ? {
+    hipertrofia:{principal:'2min',  secundario:'90-120s', acessorio:'60-90s'},
+    forca:      {principal:'3min',  secundario:'2-3min',  acessorio:'90s'},
+    emagrecimento:{principal:'60s', secundario:'45-60s',  acessorio:'45-60s'},
+    resistencia:{principal:'45s',   secundario:'45s',     acessorio:'45s'}
+  } : {
+    hipertrofia:{principal:'90-120s', secundario:'60-90s', acessorio:'60s'},
+    forca:      {principal:'2-3min',  secundario:'2min',   acessorio:'60-90s'},
+    emagrecimento:{principal:'45-60s',secundario:'30-45s', acessorio:'30-45s'},
+    resistencia:{principal:'30-45s',  secundario:'30s',    acessorio:'30s'}
+  };
+  return ((T[goal] || T.hipertrofia)[tier]) || (T[goal] || T.hipertrofia).secundario;
+}
+// quantos exercícios cada grupo recebe no dia (Beta 33): braços e glúteos ao lado das pernas
+// recebem menos, e um grupo que já foi treinado antes na semana não repete o volume cheio.
+const LIFT_GRANDES = ['Peito','Costas','Pernas','Ombro','Glúteos'];
+function liftQuantos(grupo, parts, level, opts){
+  const nBig = level==='avancado'?4 : level==='intermediario'?3 : 2;
+  const nArm = level==='avancado'?3 : level==='intermediario'?2 : 1;
+  const nSmall = level==='iniciante'?1 : 2;
+  if(grupo==='Trapézio') return 1;
+  if(grupo==='Core' || grupo==='Panturrilha') return nSmall;
+  if(grupo==='Bíceps' || grupo==='Tríceps') return nArm;
+  let n = nBig;
+  const grandes = parts.filter(p=>LIFT_GRANDES.includes(p));
+  if(grandes.length >= 2 && grandes[0] !== grupo){
+    const parPernas = ['Pernas','Glúteos'].includes(grupo) && ['Pernas','Glúteos'].includes(grandes[0]);
+    n = parPernas ? Math.max(1, nBig-2) : Math.max(2, nBig-1);
+  }
+  if(opts && opts.goal==='forca') n = Math.max(2, n-1);                       // força: menos exercícios, mais séries pesadas
+  if(opts && opts.jaNaSemana && opts.jaNaSemana.has(grupo)) n = Math.max(2, n-2);
+  return Math.max(1, Math.min(n, nBig));
+}
+// teto de séries por sessão: acima disso o treino passa de ~90 min e a qualidade das últimas séries cai
+const LIFT_TETO_SERIES = { iniciante:20, intermediario:26, avancado:30 };
+const LIFT_REPS_PEQUENOS = { hipertrofia:'12-15', forca:'10-12', emagrecimento:'15-20', resistencia:'15-20' };
+const LIFT_DESC_PEQUENOS = { adulto:{ hipertrofia:'45-60s', forca:'60s', emagrecimento:'30s', resistencia:'30s' }, senior:{ hipertrofia:'60s', forca:'60-90s', emagrecimento:'45s', resistencia:'45s' } };
+function buildLiftExercises(parts, setup, opts){
+  opts = opts || {};
   const level = setup.level || 'iniciante';
   const goal = setup.goal || 'hipertrofia';
   // séries variam por nível E objetivo
@@ -1738,7 +1963,7 @@ function buildLiftExercises(parts, setup){
   const isSenior = prof && prof.age >= 50;
   const sets = (setsMap[level]||setsMap.iniciante)[goal] || 3;
   const reps = repsMap[goal];
-  const rest = (isSenior ? restMap50 : restMap)[goal];
+  const rest = (isSenior ? restMap50 : restMap)[goal];   // usado nos complementos de dor; o resto usa liftDescanso()
   const equip = setup.equip || 'academia';
   const equipFilter = equip==='basico' ? ['casa','halteres'] : equip==='academia' ? ['academia','halteres','casa'] : equip==='halteres' ? ['halteres','casa'] : ['casa'];
   // quantidade de exercícios por grupo varia por nível
@@ -1761,7 +1986,8 @@ function buildLiftExercises(parts, setup){
     }
     if(!compat.length) return;
     // VARIAÇÃO SEMANAL: gira as opções a cada semana — mesmo estímulo, exercício diferente (Supino barra → halteres → máquina → volta)
-    const wkSeed = Math.floor(Date.now()/(7*86400000)) % 4;
+    // Beta 33: semana do calendário (segunda a domingo); Core e panturrilha também giram entre os treinos da semana
+    const wkSeed = (((semanaLocalId() + ((p==='Core'||p==='Panturrilha') ? (opts.indice||0) : 0)) % 4) + 4) % 4;
     if(compat.length>3 && wkSeed>0) compat = [...compat.slice(wkSeed), ...compat.slice(0,wkSeed)];
     // Força prioriza exercícios compostos/pesados (os primeiros do banco em cada grupo
     // são os básicos de academia); emagrecimento/resistência rotacionam a lista pra
@@ -1788,22 +2014,60 @@ function buildLiftExercises(parts, setup){
     // guarda: isoladores nunca lideram o grupo (rotação continua, mas entre os principais)
     const isIso = e => /isolador|isolad/.test((e.sub||'').toLowerCase()) || exPattern(e.name)==='isolador';
     compat = [...compat].sort((a,b)=>(isIso(a)?1:0)-(isIso(b)?1:0));
-    const need = (p==='Core'||p==='Panturrilha'||p==='Trapézio') ? needSmall : needBig;
-    // escolhe exercícios com estímulos VARIADOS (evita 2 isoladores ou 2 "superior" no mesmo grupo):
-    // percorre a lista e só adiciona se a assinatura do sub ainda não foi usada; completa se faltar
-    const stim = s => (s||'').toLowerCase().replace(/[()]/g,'').trim();
-    const pick = [], usedStim = new Set(), usedPat = {};
-    const patCap = pat => pat==='isolador' ? (goal==='forca'?1:2) : 1; // máx 1 por padrão (isoladores até 2; força limita a 1)
-    compat.forEach(ex => { const pat=exPattern(ex.name); if(pick.length<need && !usedStim.has(stim(ex.sub)) && (usedPat[pat]||0)<patCap(pat)){ pick.push(ex); usedStim.add(stim(ex.sub)); usedPat[pat]=(usedPat[pat]||0)+1; } });
-    if(pick.length<need){ compat.forEach(ex => { if(pick.length<need && !pick.includes(ex)) pick.push(ex); }); }
+    // exercício já usado antes na semana vai para o fim da lista do papel (2º dia do grupo varia o estímulo)
+    if(opts.usadosSemana && opts.usadosSemana.size) compat = [...compat].sort((a,b)=>(opts.usadosSemana.has(slug(a.name))?1:0)-(opts.usadosSemana.has(slug(b.name))?1:0));
+    // iniciante: versões básicas antes das que pedem técnica (arqueiro, nórdico, salto, terra...)
+    if(level==='iniciante') compat = [...compat].sort((a,b)=>(LIFT_AVANCADO.test(a.name)?1:0)-(LIFT_AVANCADO.test(b.name)?1:0));
+    const need = liftQuantos(p, parts, level, Object.assign({ goal }, opts));
+    // Beta 33 — escolha por papel: segue a sequência do grupo (ex.: peito = supino/flexão →
+    // inclinado → crucifixo) pegando, em cada papel, o primeiro da lista já girada da semana.
+    // Papel sem opção no equipamento do aluno é pulado; o que faltar é completado com papéis
+    // ainda não usados e, por último, com qualquer exercício do grupo.
+    const pick = [], usados = new Set();
+    const pega = ex => { pick.push(ex); usados.add(exPapel(ex, p).id); };
+    for(const papel of liftSequencia(p, goal, level, equip)){
+      if(pick.length >= need) break;
+      const cands = compat.filter(e=>!pick.includes(e) && exPapel(e, p).id===papel && (papel!=='terra' || goal==='forca' || level==='avancado'));
+      // quem tem carga (halteres/academia) faz com carga: flexão, pike e isometria de parede ficam para quem treina em casa
+      const comCarga = (equip!=='casa' && p!=='Core') ? cands.find(e=>!LIFT_PESO_CORPO.test(e.name)) : null;
+      const ex = comCarga || cands[0];
+      if(ex) pega(ex);
+    }
+    if(pick.length<need) compat.forEach(ex=>{ if(pick.length<need && !pick.includes(ex) && !usados.has(exPapel(ex, p).id)) pega(ex); });
+    if(pick.length<need) compat.forEach(ex=>{ if(pick.length<need && !pick.includes(ex)) pega(ex); });
+    // ordem dentro do grupo: principal → secundário → acessório (o gerador nunca abre com isolador)
+    const peso = { principal:0, secundario:1, acessorio:2 };
+    pick.sort((a,b)=>peso[exPapel(a,p).tier]-peso[exPapel(b,p).tier]);
     // Isométricos (Prancha, Hollow Hold...) não fazem sentido com "reps" —
     // o alvo vira TEMPO SEGURADO, escalado pelo nível.
     const tempoIsoMap = {iniciante:'20-30s', intermediario:'30-45s', avancado:'45-60s'};
+    const pequeno = (p==='Core'||p==='Panturrilha'||p==='Trapézio');
     pick.forEach(ex=>{
       const isoAlvo = ex.iso ? tempoIsoMap[level] : null;
-      list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets, reps: isoAlvo||reps, rest, part:p, equip:ex.equip, unit: ex.iso?'tempo':'reps' });
+      const tier = exPapel(ex, p).tier;
+      // core, panturrilha e trapézio: até 3 séries (trapézio ganha +1 quando é o único exercício do grupo no nível que teria 2)
+      let s = pequeno ? Math.min(3, sets) : sets;
+      if(p==='Trapézio' && needSmall>1) s = Math.min(4, sets);
+      // repetições: core e panturrilha não fazem 4-6 (força); na força, os acessórios ficam em 8-10
+      let r = reps;
+      if(p==='Core' || p==='Panturrilha') r = LIFT_REPS_PEQUENOS[goal] || '12-15';
+      else if(goal==='forca' && tier==='acessorio') r = '8-10';
+      else if(goal==='forca' && tier==='secundario') r = '6-8';
+      const descanso = pequeno ? (LIFT_DESC_PEQUENOS[isSenior?'senior':'adulto'][goal] || '45-60s') : liftDescanso(tier, goal, isSenior);
+      list.push({ id: slug(ex.name), name:ex.name, sub:ex.sub, sets:s, reps: isoAlvo||r, rest: descanso, part:p, equip:ex.equip, unit: ex.iso?'tempo':'reps' });
     });
   });
+  // teto de séries da sessão: tira 1 série dos acessórios do fim (mínimo 2) até caber
+  const teto = LIFT_TETO_SERIES[level] || 26;
+  const totalSeries = ()=>list.reduce((a,e)=>a+(+e.sets||0),0);
+  for(let volta=0; volta<6 && totalSeries()>teto; volta++){
+    let mexeu = false;
+    for(let i=list.length-1;i>=0 && totalSeries()>teto;i--){
+      const e = list[i]; if(exPapel(e, e.part).tier==='principal' || e.sets<=2) continue;
+      e.sets--; mexeu = true;
+    }
+    if(!mexeu) break;
+  }
   // dor: se algum grupo foi bloqueado, completa com sinergistas seguros — o treino continua útil
   const blockedCount = parts.filter(p=>blocked.has(p)).length;
   if(blockedCount>0 && list.length){
@@ -1826,9 +2090,10 @@ function buildLiftExercises(parts, setup){
 function estimateLiftDuration(exercises, goal){
   const restSec = {hipertrofia:75, forca:150, emagrecimento:40, resistencia:30}[goal||'hipertrofia'] || 75;
   const workSec = 45; // tempo médio executando uma série
-  const totalSets = exercises.reduce((s,ex)=>s+(ex.sets||3),0);
+  // Beta 33: usa o descanso de cada exercício (agora varia entre principal e acessório)
+  const segundos = exercises.reduce((s,ex)=>{ const n = (+ex.sets||3); const r = ex.rest ? parseRestSeconds(ex.rest) : restSec; return s + n*(workSec + r); }, 0);
   // tempo das séries + transição/ajuste por exercício (troca de máquina, anilhas) + aquecimento
-  const mins = Math.round((totalSets*(workSec+restSec))/60 + (exercises.length||0)*1.5 + 5);
+  const mins = Math.round(segundos/60 + (exercises.length||0)*1.5 + 5);
   return Math.max(20, Math.min(100, mins));
 }
 function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
@@ -2047,7 +2312,7 @@ const EX_BANK = [
     {name:'Agachamento Sumô',sub:'Adutores / Glúteos',equip:['casa','halteres','academia']},
     {name:'Step-up no Banco',sub:'Quadríceps / Glúteos',equip:['casa','halteres','academia']},
     {name:'Stiff Unilateral (peso corporal)',sub:'Posterior de Coxa',equip:['casa','halteres','academia']},
-    {name:'Cadeira contra parede (isométrico)',sub:'Quadríceps (resistência)',equip:['casa','halteres','academia']},
+    {name:'Cadeira contra parede (isométrico)',sub:'Quadríceps (resistência)',equip:['casa','halteres','academia'],iso:true},
     {name:'Agachamento Jump',sub:'Quadríceps (explosão)',equip:['casa','halteres','academia']}
   ]},
   {name:'Glúteos',emo:'🍑',color:'pink',items:[
@@ -2113,6 +2378,12 @@ function ensureStateShape(){
     if(!state.prs || typeof state.prs !== 'object'){ state.prs = {}; mudou=true; }
     if(!state.ui || typeof state.ui !== 'object'){ state.ui = {tab:'home', selectedSession:null}; mudou=true; }
     if(state.user && typeof state.user === 'object' && (!state.user.profile || typeof state.user.profile !== 'object')){ state.user.profile = {}; mudou=true; }
+    // Beta 33: a semana passou a começar na segunda-feira (antes: quinta 00h UTC). Quem variou os
+    // treinos de quinta a domingo guardou o número da semana seguinte; acerta uma vez para não variar de novo.
+    if(typeof state.lastVarWeek === 'number' && !state.b33Semana){
+      if(state.lastVarWeek === semanaLocalId() + 1) state.lastVarWeek = semanaLocalId();
+      state.b33Semana = true; mudou = true;
+    }
   }catch(e){}
   return mudou;
 }
@@ -2172,6 +2443,10 @@ function migrateExerciseIds(){
 // Padrão de movimento do exercício (pra variar estímulos de verdade, não só o nome)
 function exPattern(name){
   const n = (name||'').toLowerCase();
+  // Beta 33: crucifixo/crossover/voador, extensora, flexora, adutora/abdutora, kickback e panturrilha
+  // são isoladores (antes caíam em "empurrar"/"agachar" e podiam abrir o treino); pike é empurrar vertical
+  if(/crucifixo|crossover|peck|voador|extensora|flexora|adutora|abdutora|kickback|panturrilha/.test(n)) return 'isolador';
+  if(/pike/.test(n)) return 'empurrar_v';
   if(/terra|stiff|elevação pélvica|hip thrust|ponte|nordic/.test(n)) return 'dobradica';
   if(/agach|leg press|hack|búlgaro|afundo|extensora|step|belt squat|cadeira contra/.test(n)) return 'agachar';
   if(/supino|flexão|crossover|crucifixo|paralela|mergulho|peck/.test(n)) return 'empurrar_h';
@@ -2439,6 +2714,8 @@ function ytVideoId(url){
   return m ? m[1] : null;
 }
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// texto dentro de onclick="f('...')": escapa para JavaScript E para o atributo HTML (Beta 33)
+function jsAttr(s){ return escHtml(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")); }
 // detecta a rede social a partir do link do perfil (funciona com qualquer uma)
 function socialInfo(url){
   if(!url) return null;
@@ -2631,6 +2908,7 @@ function goTab(tab){
   else if(tab==='plan') renderPlan();
   else if(tab==='profile') renderProfile();
   else if(tab==='challenges'){ try{ renderChallenges(); }catch(e){ console.log('desafios:', e); } }
+  try{ treinoAtivoAvaliar(); }catch(e){}   // Beta 33: fora da aba Treinos a tela pode apagar
 }
 
 // tela de escolha quando o módulo de corrida existe só como registro de atividades (sem plano)
@@ -2659,7 +2937,7 @@ function renderHome(){
   if(!mod){ showPickScreen(); return; }
   // Semana nova → varia os exercícios (trocas fixadas do aluno são mantidas pelo applyPins)
   try{
-    const _wkNow = Math.floor(Date.now()/(7*86400000));
+    const _wkNow = semanaLocalId();
     if(state.lastVarWeek !== _wkNow){
       const tinhaPlano = !!(state.modules.lift && state.modules.lift.plan);
       state.lastVarWeek = _wkNow;
@@ -3192,6 +3470,11 @@ function renderSessions(){
     return `<div class="filter-chip ${on?'on':''}" onclick="selectSession('${w.k||w.dayIdx}')"><div style="font-size:11px;letter-spacing:1px;color:var(--text-dim);font-weight:700">${(w.dayName||'').toUpperCase()}</div><div style="font-weight:700;margin-top:2px">${isLift?'Treino '+w.k:String(w.name||'Treino').split('(')[0].trim()}${_feito?' ✅':''}</div></div>`;
   }).join('');
   renderSessionDetail(sel);
+  // Beta 33: abriu o treino de musculação de hoje, ainda não salvo → treino ativo (tela ligada)
+  try{
+    if(isLift && sel && sel.dayIdx === getDayIdx() && !_preStart && !treinouHoje(mod) && !vacationActive()) treinoAtivoIniciar();
+    else treinoAtivoAvaliar();
+  }catch(e){}
 }
 function selectSession(id){
   // guarda só o IDENTIFICADOR, nunca o objeto do treino.
@@ -3293,7 +3576,7 @@ function mobilidadeDoDia(w){
   let ordenado = pool.filter(relevante).concat(pool.filter(k=>!relevante(k)));
   if(/Ombro/.test(partes) && !ordenado.includes('rotadores')) ordenado.unshift('rotadores');
   // RODÍZIO SEMANAL: igual aos exercícios do treino, pra não enjoar de ver sempre os mesmos
-  const wk = Math.floor(Date.now()/(7*86400000)) % Math.max(1, ordenado.length);
+  const wk = semanaLocalId() % Math.max(1, ordenado.length);
   if(ordenado.length > 3 && wk > 0) ordenado = ordenado.slice(wk).concat(ordenado.slice(0, wk));
   return ordenado.slice(0,3).map(k=>MOB[k]).filter(Boolean);
 }
@@ -3552,7 +3835,7 @@ function syncExtrasHistorico(){
   saveData();
 }
 function openSetLog(exId, exName){
-  requestWakeLock(); // mantém a tela ligada enquanto registra o exercício
+  telaLigadaPedir('registro'); treinoAtivoIniciar(); // mantém a tela ligada enquanto registra o exercício
   const today = new Date(); today.setHours(0,0,0,0);
   const logs = state.progress[exId]||[];
   let entry = logs.find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime(); });
@@ -3739,7 +4022,7 @@ function closeSetLog(save){
   }
   curLog = null;
   closeModal();
-  if(typeof restTimerInt==='undefined' || !restTimerInt) releaseWakeLock(); // solta a tela se não há descanso rodando
+  telaLigadaSoltar('registro'); // o descanso e o treino ativo têm motivos próprios para manter a tela ligada
   // Sem avanço automático: a pessoa escolhe manualmente o próximo exercício
   if(save && savedExId){
     const next = nextUnloggedExercise(savedExId);
@@ -3782,6 +4065,8 @@ function confirmLiftWorkout(k){
   const mod = state.modules.lift;
   const w = mod.plan.workouts.find(x=>x.k===k);
   if(!w) return;
+  // Beta 33: dois toques rápidos em "Salvar treino" gravavam o treino duas vezes
+  if((mod.history||[]).some(x=>x.module==='lift' && x.id===w.k && Date.now()-x.at < 30000)){ closeModal(); return; }
   const rpe = window.__rpe || 5; const feel = rpeToFeel(rpe);
   // captura o que foi feito hoje em cada exercício (pra histórico e compartilhamento)
   const today = new Date(); today.setHours(0,0,0,0);
@@ -3808,6 +4093,7 @@ function confirmLiftWorkout(k){
   ensureStats(); // deriva liftTotal do histórico — NÃO somar manualmente (contava em dobro)
   checkTrophies();
   saveData();
+  try{ stopRestTimer(); treinoAtivoEncerrar(); }catch(e){}   // Beta 33: treino salvo encerra o descanso e solta a tela
   closeModal();
   if(feel==='exausto') toast('✅ Salvo! Vou sugerir pegar mais leve no próximo treino 😌');
   else if(feel==='otimo') toast('✅ Salvo! Se sobrou energia, considere subir a carga no próximo 📈');
@@ -4042,6 +4328,9 @@ function calcStreak(h){
   if(!h||!h.length) return 0;
   const days = new Set(h.map(x=>new Date(x.at).toDateString()));
   let s=0, cur=new Date(), guard=0;
+  // Beta 33: o dia de hoje ainda está aberto. Sem atividade hoje, a sequência conta até ontem
+  // (antes mostrava "0 dias" para quem treinou todos os dias até ontem).
+  if(!days.has(cur.toDateString())) cur.setDate(cur.getDate()-1);
   while(guard++ < 3650){
     const ds = cur.toDateString();
     if(days.has(ds)){ s++; cur.setDate(cur.getDate()-1); continue; }
@@ -5509,7 +5798,7 @@ const MODAL_CONTENT = {
       <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Cancelar</button>`;
   },
   'faq':`<h3>❓ FAQ / Sobre</h3><p><b>MetaTreino</b> gera planos de treino inteligentes de musculação e corrida, personalizados.<br><br><b>Como funciona?</b> Escolha o módulo, responda o questionário e receba um plano progressivo.<br><br><b>Meus dados ficam salvos?</b> Sim, na nuvem, vinculados à sua conta (Google ou e-mail/usuário) — você pode entrar de qualquer aparelho. Os últimos 90 dias ficam detalhados no app; o histórico mais antigo vai para o seu arquivo anual na nuvem e aparece em Histórico → Histórico completo e no relatório em PDF.<br><br><b>Contato:</b> metatreinooficial@gmail.com</p><button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">Fechar</button>`,
-  'edit-profile':()=>{ const p = state.user.profile||{}; return `<h3>✏️ Editar perfil</h3><div class="field"><label>Como quer ser chamado</label><input class="input" id="ep-nick" value="${p.nickname||''}"></div><div class="field"><label>Data de nascimento</label><input class="input mono" type="date" id="ep-birth" value="${p.birth||''}" max="${new Date().toISOString().slice(0,10)}"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">${p.birth?`Idade: ${ageFromBirth(p.birth)} anos`:'Preencha para receber os parabéns no seu aniversário 🎂'}</div></div>
+  'edit-profile':()=>{ const p = state.user.profile||{}; return `<h3>✏️ Editar perfil</h3><div class="field"><label>Como quer ser chamado</label><input class="input" id="ep-nick" value="${escHtml(p.nickname||'')}"></div><div class="field"><label>Data de nascimento</label><input class="input mono" type="date" id="ep-birth" value="${p.birth||''}" max="${chaveDia(new Date())}"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">${p.birth?`Idade: ${ageFromBirth(p.birth)} anos`:'Preencha para receber os parabéns no seu aniversário 🎂'}</div></div>
     <div class="field"><label>Idade (usada se não informar a data)</label><input class="input mono" type="number" id="ep-age" value="${p.age||''}"></div><div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="ep-height" value="${p.height||''}"></div><div class="field"><label>WhatsApp</label><input class="input mono" id="ep-whats" value="${p.whatsapp||''}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveProfileEdit()">Salvar</button>`; },
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
   'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail ou usuário do aluno</label><input class="input" type="text" id="as-email" placeholder="aluno@email.com ou joao123" autocapitalize="none" spellcheck="false"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">Use o mesmo que ele digita pra entrar. Sem "@" vira login de usuário.</div></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="7">🎁 Teste 7 dias</div><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
@@ -6682,7 +6971,7 @@ function maLogActivity(type, km, min, rpe){
   if(km<=0||km>200||min<=0||min>600) return {done:true, msg:'Esses números parecem estranhos 🤔. Tenta de novo, ex: "corri 5km em 30 minutos".'};
   const mod = ensureActivityLog();
   const paceNum = min/km;
-  const paceStr = type==='bike' ? (km/(min/60)).toFixed(1)+' km/h' : Math.floor(paceNum)+':'+String(Math.round((paceNum-Math.floor(paceNum))*60)).padStart(2,'0')+'/km';
+  const paceStr = type==='bike' ? (km/(min/60)).toFixed(1)+' km/h' : fmtPaceMin(paceNum);   // Beta 33: sem "5:60/km"
   const meta = {corrida:{emo:'🏃',lbl:'Corrida'},caminhada:{emo:'🚶',lbl:'Caminhada'},bike:{emo:'🚴',lbl:'Bike'}}[type];
   const name = type==='corrida' ? `${meta.emo} Corrida — ${km}km` : `${meta.emo} ${meta.lbl} — ${km}km`;
   mod.history = mod.history||[];
@@ -7391,7 +7680,7 @@ function maNudge(){
     const lift=state.modules.lift, run=state.modules.run;
     const all=[...((lift&&lift.history)||[]),...((run&&run.history)||[])].sort((a,b)=>a.at-b.at);
     const total=all.length;
-    const streak=(typeof calcStreak==='function')?calcStreak():0;
+    const streak=(typeof calcStreak==='function')?calcStreak(all):0;   // Beta 33: antes era chamada sem o histórico e dava sempre 0
     const vac=(typeof vacationActive==='function')&&vacationActive();
     const hoje=new Date(); hoje.setHours(0,0,0,0);
     // ❤️ VERMELHO — extremamente especial
@@ -7742,7 +8031,7 @@ function exportMyData(){
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `metatreino-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `metatreino-backup-${chaveDia(new Date())}.json`;
   a.click();
   toast('📥 Backup baixado — guarde em local seguro');
 }
@@ -7773,93 +8062,234 @@ function importMyData(ev){
   ev.target.value = '';
 }
 
-// ---------- TIMER DE DESCANSO ----------
-let restTimerInt = null;
-let wakeLock = null;
+// ---------- TIMER DE DESCANSO (Beta 33: conta pelo horário real) ----------
+// Antes o descanso fazia "left--" a cada setInterval de 1 s. Com a tela bloqueada ou o app
+// minimizado, o navegador atrasa (ou congela) o intervalo e o tempo ficava errado. Agora o
+// cronômetro guarda o HORÁRIO em que o descanso acaba e só desenha a diferença; ao voltar
+// para o app ele mostra o tempo certo na hora. O som do fim é agendado no relógio do áudio
+// (toca mesmo se o JavaScript estiver dormindo), e só toca uma vez.
+let restTimerInt = null;            // intervalo de DESENHO (outras partes usam "restTimerInt" para saber se há descanso rodando)
+let restFimEm = 0;                  // horário (ms) em que o descanso termina
+let restPausaRestante = null;       // segundos que faltavam quando pausou (null = rodando)
+let restNomeEx = '', restTotalSeg = 0;
+let restSomAgendado = null;         // { nodes:[...], fim } — som do fim já agendado no AudioContext
 let restAudioCtx = null;
-let restMuted = false;
-function toggleRestMute(){ restMuted = !restMuted; toast(restMuted?'🔇 Som do timer desligado':'🔔 Som do timer ligado'); }
+let restMuted = (()=>{ try{ return localStorage.getItem('mt_descanso_mudo') === '1'; }catch(e){ return false; } })();
+function restVibrarLigado(){ try{ return localStorage.getItem('mt_descanso_vibrar') !== '0'; }catch(e){ return true; } }
+function setRestVibrar(on){ try{ localStorage.setItem('mt_descanso_vibrar', on ? '1' : '0'); }catch(e){} if(on) try{ navigator.vibrate && navigator.vibrate(120); }catch(e){} try{ openSomFim(); }catch(e){} }
+function toggleRestMute(){
+  restMuted = !restMuted;
+  try{ localStorage.setItem('mt_descanso_mudo', restMuted ? '1' : '0'); }catch(e){}
+  if(restMuted) restCancelaSom(); else restAgendaSom();
+  toast(restMuted ? '🔇 Som do descanso desligado' : '🔔 Som do descanso ligado');
+  restDesenha();
+}
 // Destrava o áudio no toque que inicia o timer (navegadores exigem interação do usuário).
-// Depois disso, conseguimos tocar o beep mesmo quando o timer termina sozinho.
 function unlockRestAudio(){
   try{
-    if(!restAudioCtx){ restAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-    if(restAudioCtx.state === 'suspended') restAudioCtx.resume();
-    // toca um "silêncio" instantâneo pra confirmar o desbloqueio
+    const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+    if(!restAudioCtx || restAudioCtx.state === 'closed') restAudioCtx = new AC();
+    if(restAudioCtx.state === 'suspended') restAudioCtx.resume().catch(()=>{});
     const o = restAudioCtx.createOscillator(); const g = restAudioCtx.createGain();
     g.gain.value = 0; o.connect(g); g.connect(restAudioCtx.destination); o.start(); o.stop(restAudioCtx.currentTime+0.01);
   }catch(e){}
 }
 function playRestBeepAntigo(){
   // 4 apitos ascendentes, mais altos e longos — sinal forte de fim de descanso
-  try{
-    if(!restAudioCtx) return;
-    if(restAudioCtx.state === 'suspended') restAudioCtx.resume();
-    const notes = [700, 900, 1100, 1300];
-    notes.forEach((freq, i)=>{
-      const o = restAudioCtx.createOscillator();
-      const g = restAudioCtx.createGain();
-      o.type = 'square'; o.frequency.value = freq; // onda quadrada = mais audível/estridente
-      const t0 = restAudioCtx.currentTime + i*0.32;
-      g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(0.7, t0+0.03);   // volume bem mais alto
-      g.gain.exponentialRampToValueAtTime(0.0001, t0+0.3); // cada apito mais longo
-      o.connect(g); g.connect(restAudioCtx.destination);
-      o.start(t0); o.stop(t0+0.32);
-    });
-  }catch(e){}
+  try{ if(!restAudioCtx) return; if(restAudioCtx.state === 'suspended') restAudioCtx.resume(); _apitosEm(restAudioCtx, restAudioCtx.currentTime); }catch(e){}
 }
-async function requestWakeLock(){
-  try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); } }catch(e){}
+function _apitosEm(c, t){
+  [700, 900, 1100, 1300].forEach((freq, i)=>{
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'square'; o.frequency.value = freq;
+    const t0 = t + i*0.32, pico = Math.min(0.95, 0.7*(window.__somVol||1));
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(pico, t0+0.03); g.gain.exponentialRampToValueAtTime(0.0001, t0+0.3);
+    o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0+0.32);
+    if(window.__somColetor) window.__somColetor.push(o);
+  });
 }
-function releaseWakeLock(){ try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
-// reativa o wake lock se o app voltar ao foco com timer rodando
-document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && restTimerInt) requestWakeLock(); });
+// ---------- TELA LIGADA (Wake Lock) — um controle só para o app inteiro ----------
+// Cada parte pede a tela ligada com um MOTIVO ('treino', 'registro', 'descanso', 'especial').
+// A tela fica ligada enquanto houver algum motivo; só existe uma trava por vez (sem pedidos
+// acumulados). O navegador solta a trava quando o app vai para segundo plano: ao voltar, ela
+// é pedida de novo se o motivo continuar valendo. Sem suporte ou sem permissão, nada trava.
+const telaLigada = { trava:null, motivos:new Set(), pedindo:false, suporte: ('wakeLock' in navigator) };
+async function telaLigadaAplicar(){
+  const quer = telaLigada.motivos.size > 0 && document.visibilityState === 'visible';
+  if(quer && !telaLigada.trava && !telaLigada.pedindo && telaLigada.suporte){
+    telaLigada.pedindo = true;
+    try{
+      const t = await navigator.wakeLock.request('screen');
+      t.addEventListener('release', ()=>{ if(telaLigada.trava === t) telaLigada.trava = null; });
+      telaLigada.trava = t;
+    }catch(e){ /* sem permissão, economia de bateria ou navegador sem suporte: o treino segue normal */ }
+    finally{ telaLigada.pedindo = false; }
+    if(telaLigada.motivos.size === 0) telaLigadaAplicar();   // o motivo acabou enquanto pedia
+  } else if(telaLigada.motivos.size === 0 && telaLigada.trava){
+    const t = telaLigada.trava; telaLigada.trava = null;
+    try{ await t.release(); }catch(e){}
+  }
+}
+function telaLigadaPedir(motivo){ telaLigada.motivos.add(motivo || 'geral'); telaLigadaAplicar(); }
+function telaLigadaSoltar(motivo){ telaLigada.motivos.delete(motivo || 'geral'); telaLigadaAplicar(); }
+// nomes antigos (Conquista Especial e chamadas antigas): continuam funcionando
+async function requestWakeLock(motivo){ telaLigadaPedir(motivo || 'especial'); }
+function releaseWakeLock(motivo){ telaLigadaSoltar(motivo || 'especial'); }
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState !== 'visible') return;
+  telaLigadaAplicar();
+  if(restTimerInt){ restTick(); }          // voltou ao app: mostra o tempo certo na hora (ou encerra se já acabou)
+  if(treinoAtivo) treinoAtivoAvaliar();
+});
+// ---------- TREINO ATIVO: mantém a tela ligada enquanto o aluno treina ----------
+// Começa quando ele abre o treino de hoje (ainda não salvo), registra uma série ou inicia um
+// descanso. A tela fica ligada enquanto estiver na aba Treinos. Termina ao salvar o treino,
+// sair da conta, virar o dia ou ficar 20 min sem tocar na tela (sem descanso rodando).
+// Sair para outra aba solta a tela; voltar para Treinos pede de novo.
+const TREINO_ATIVO_INATIVO_MS = 20*60000;
+let treinoAtivo = null;
+function treinoAtivoIniciar(){
+  const hoje = chaveDia(new Date());
+  if(!treinoAtivo || treinoAtivo.dia !== hoje) treinoAtivo = { dia:hoje, desde:Date.now(), toque:Date.now() };
+  else treinoAtivo.toque = Date.now();
+  treinoAtivoAvaliar();
+}
+function treinoAtivoEncerrar(){ treinoAtivo = null; telaLigadaSoltar('treino'); }
+function treinoAtivoAvaliar(){
+  if(!treinoAtivo){ telaLigadaSoltar('treino'); return; }
+  const parado = Date.now() - treinoAtivo.toque > TREINO_ATIVO_INATIVO_MS && !restTimerInt;
+  if(treinoAtivo.dia !== chaveDia(new Date()) || parado){ treinoAtivoEncerrar(); return; }
+  const naTela = !!(state && state.ui && state.ui.tab === 'sessions');
+  if(naTela) telaLigadaPedir('treino'); else telaLigadaSoltar('treino');
+}
+['pointerdown','keydown'].forEach(tp=>document.addEventListener(tp, ()=>{ if(treinoAtivo) treinoAtivo.toque = Date.now(); }, { passive:true, capture:true }));
+setInterval(()=>{ if(treinoAtivo) treinoAtivoAvaliar(); }, 60000);
 function parseRestSeconds(str){
   if(!str) return 60;
   const s = String(str).toLowerCase();
+  const mmss = s.match(/(\d+):(\d{2})/);                       // "1:30" = 90 s (antes virava a média de 1 e 30)
+  if(mmss) return parseInt(mmss[1])*60 + parseInt(mmss[2]);
   const nums = (s.match(/\d+/g)||[]).map(Number);
   if(!nums.length) return 60;
   const val = nums.length>1 ? (nums[0]+nums[1])/2 : nums[0]; // faixa → ponto médio
-  return Math.round(s.includes('min') ? val*60 : val);
+  return Math.max(5, Math.round(s.includes('min') ? val*60 : val));
+}
+function restRestante(){
+  if(restPausaRestante != null) return restPausaRestante;
+  return Math.max(0, Math.ceil((restFimEm - Date.now())/1000));
+}
+function restGuarda(){
+  try{
+    if(!restTimerInt){ localStorage.removeItem('mt_descanso'); return; }
+    localStorage.setItem('mt_descanso', JSON.stringify({ fim:restFimEm, pausa:restPausaRestante, nome:restNomeEx, total:restTotalSeg }));
+  }catch(e){}
+}
+function restCancelaSom(){
+  const a = restSomAgendado; restSomAgendado = null;
+  if(a) a.nodes.forEach(o=>{ try{ o.stop(0); }catch(e){} try{ o.disconnect(); }catch(e){} });
+}
+// agenda o som do fim no relógio do áudio (só com o som ligado e o áudio já destravado)
+function restAgendaSom(){
+  restCancelaSom();
+  if(restMuted || restPausaRestante != null || !restTimerInt) return;
+  try{
+    if(!restAudioCtx || restAudioCtx.state !== 'running') return;
+    const seg = (restFimEm - Date.now())/1000; if(seg <= 0.3) return;
+    window.__somColetor = [];
+    tocaSomFim(getSomFim(), seg);
+    restSomAgendado = { nodes: window.__somColetor, fim: restFimEm };
+  }catch(e){} finally{ window.__somColetor = null; }
+}
+function restDesenha(){
+  const el = $('rest-timer-banner'); if(!el) return;
+  const left = restRestante(), m = Math.floor(left/60), s = left%60;
+  const pausado = restPausaRestante != null;
+  const tempo = el.querySelector('.rt-tempo'); if(tempo) tempo.textContent = `${m}:${String(s).padStart(2,'0')}`;
+  const sub = el.querySelector('.rt-sub'); if(sub) sub.textContent = pausado ? '⏸ Pausado' : (restMuted ? '🔇 Som desligado' : '🔔 Toca ao acabar');
+  const bp = el.querySelector('.rt-pausa'); if(bp){ bp.textContent = pausado ? '▶ Continuar' : '⏸ Pausar'; bp.setAttribute('aria-label', pausado ? 'Continuar o descanso' : 'Pausar o descanso'); }
+  const bm = el.querySelector('.rt-som'); if(bm){ bm.textContent = restMuted ? '🔇' : '🔔'; bm.setAttribute('aria-label', restMuted ? 'Ligar o som do descanso' : 'Desligar o som do descanso'); }
+  const barra = el.querySelector('.rt-barra i'); if(barra) barra.style.width = (restTotalSeg ? Math.max(0, Math.min(100, left/restTotalSeg*100)) : 0) + '%';
+}
+function restTick(){
+  if(!restTimerInt) return;
+  if(restPausaRestante == null && Date.now() >= restFimEm) { restTermina(); return; }
+  restDesenha();
+}
+function restTermina(){
+  const atrasoMs = Date.now() - restFimEm;
+  const jaAgendado = !!(restSomAgendado && restAudioCtx && restAudioCtx.state === 'running' && Math.abs(restSomAgendado.fim - restFimEm) < 50);
+  restSomAgendado = null;   // o som agendado continua tocando: só esquece a referência para não cancelá-lo
+  stopRestTimer();
+  const recente = atrasoMs < 15000;   // voltou ao app muito depois: não apita do nada, só avisa
+  if(recente && !restMuted && !jaAgendado) playRestBeep(true);
+  if(recente && restVibrarLigado()) try{ navigator.vibrate && navigator.vibrate([300,120,300,120,300]); }catch(e){}
+  toast(recente ? '💪 Descanso acabou — próxima série!' : '💪 O descanso já terminou. Bora para a próxima série!');
 }
 function startRestTimer(seconds, exName){
   stopRestTimer();
-  let left = seconds;
+  seconds = Math.max(5, Math.min(900, Math.round(+seconds || 60)));
+  restTotalSeg = seconds; restNomeEx = exName || ''; restPausaRestante = null;
+  restFimEm = Date.now() + seconds*1000;
   let el = $('rest-timer-banner');
   if(!el){
     el = document.createElement('div');
-    el.id = 'rest-timer-banner';
-    el.style.cssText = 'position:fixed;bottom:76px;left:14px;right:14px;z-index:350;background:var(--bg-2);border:1.5px solid var(--primary);border-radius:var(--radius-card);padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-md)';
+    el.id = 'rest-timer-banner'; el.className = 'rt-banner';
+    el.setAttribute('role', 'timer'); el.setAttribute('aria-live', 'off');
     document.body.appendChild(el);
   }
-  const render = ()=>{
-    const m = Math.floor(left/60), s = left%60;
-    el.innerHTML = `<span style="font-size:22px">⏱️</span>
-      <div style="flex:1"><div style="font-weight:800;font-size:14px">Descanso${exName?' · '+exName:''}</div><div style="font-size:12px;color:var(--text-dim)">${restMuted?'🔇 Som desligado':'🔔 Apita ao acabar'}</div></div>
-      <div class="mono" style="font-weight:900;font-size:24px;color:var(--primary-2)">${m}:${String(s).padStart(2,'0')}</div>
-      <button onclick="toggleRestMute()" style="background:none;border:none;color:var(--text-mute);font-size:18px;padding:4px">${restMuted?'🔇':'🔔'}</button>
-      <button onclick="stopRestTimer()" style="background:none;border:none;color:var(--text-mute);font-size:18px;padding:4px">✕</button>`;
-  };
-  render();
-  requestWakeLock(); // mantém a tela ligada durante o descanso
-  unlockRestAudio(); // destrava o som agora (no toque) pra poder apitar no fim
-  restTimerInt = setInterval(()=>{
-    left--;
-    if(left<=0){
-      stopRestTimer();
-      if(!restMuted) playRestBeep(); // som (funciona mesmo sem toque, pois foi destravado no início)
-      if(navigator.vibrate) navigator.vibrate([300,120,300,120,300]); // vibração (reforço, quando o Chrome permite)
-      toast('💪 Descanso acabou — próxima série!');
-      return;
-    }
-    render();
-  }, 1000);
+  el.innerHTML = `<div class="rt-linha"><span class="rt-ico" aria-hidden="true">⏱️</span>
+      <div class="rt-txt"><div class="rt-tit">Descanso${restNomeEx?' · '+escHtml(restNomeEx):''}</div><div class="rt-sub"></div></div>
+      <div class="rt-tempo mono" aria-label="Tempo restante"></div></div>
+    <div class="rt-barra" aria-hidden="true"><i></i></div>
+    <div class="rt-botoes">
+      <button type="button" onclick="restAjusta(-15)" aria-label="Tirar 15 segundos">−15s</button>
+      <button type="button" class="rt-pausa" onclick="restPausa()"></button>
+      <button type="button" onclick="restAjusta(15)" aria-label="Somar 15 segundos">+15s</button>
+      <button type="button" class="rt-som" onclick="toggleRestMute()"></button>
+      <button type="button" onclick="stopRestTimer()" aria-label="Encerrar o descanso">✕</button>
+    </div>`;
+  telaLigadaPedir('descanso');
+  treinoAtivoIniciar();
+  unlockRestAudio(); // destrava o som agora (no toque) pra poder tocar no fim
+  restTimerInt = setInterval(restTick, 250);
+  restDesenha(); restGuarda();
+  setTimeout(restAgendaSom, 60);   // dá tempo do áudio destravar
+}
+function restAjusta(delta){
+  if(!restTimerInt) return;
+  if(restPausaRestante != null) restPausaRestante = Math.max(5, Math.min(900, restPausaRestante + delta));
+  else {
+    restFimEm = Math.min(Date.now() + 900*1000, restFimEm + delta*1000);
+    if(restFimEm <= Date.now() + 1000) restFimEm = Date.now() + 1000;   // nunca fica negativo: no mínimo 1 s
+    restAgendaSom();
+  }
+  restTotalSeg = Math.max(restTotalSeg, restRestante());
+  restDesenha(); restGuarda();
+}
+function restPausa(){
+  if(!restTimerInt) return;
+  if(restPausaRestante == null){ restPausaRestante = restRestante(); restCancelaSom(); }
+  else { restFimEm = Date.now() + restPausaRestante*1000; restPausaRestante = null; unlockRestAudio(); setTimeout(restAgendaSom, 60); }
+  restDesenha(); restGuarda();
 }
 function stopRestTimer(){
   clearInterval(restTimerInt); restTimerInt = null;
-  releaseWakeLock();
+  restCancelaSom(); restPausaRestante = null;
+  telaLigadaSoltar('descanso');
+  try{ localStorage.removeItem('mt_descanso'); }catch(e){}
   const el = $('rest-timer-banner'); if(el) el.remove();
+}
+// o app foi fechado no meio de um descanso: ao abrir de novo, o banner volta com o tempo certo
+function restRetomar(){
+  try{
+    const d = JSON.parse(localStorage.getItem('mt_descanso') || 'null'); if(!d || restTimerInt) return;
+    localStorage.removeItem('mt_descanso');
+    const falta = d.pausa != null ? d.pausa : Math.ceil((d.fim - Date.now())/1000);
+    if(!(falta > 0) || falta > 900) return;
+    startRestTimer(falta, d.nome); restTotalSeg = Math.max(falta, +d.total || falta);
+    if(d.pausa != null) restPausa();
+    restDesenha();
+  }catch(e){}
 }
 
 // ---------- DOR / ADAPTAÇÃO ----------
@@ -8021,7 +8451,9 @@ function regenLiftExercises(){
   const mod = state.modules.lift;
   if(!mod || !mod.plan) return;
   const a = adaptMode();
-  mod.plan.workouts.forEach(w=>{
+  const vistos = new Set(), usados = new Set();   // mesma regra do generatePlan: grupo repetido na semana recebe menos exercícios
+  mod.plan.workouts.forEach((w, wi)=>{
+    if(w.cali) return;   // treinos de calistenia têm gerador próprio (parte 09)
     w.originalParts = w.originalParts || [...(w.parts||[])]; // guarda os grupos originais uma única vez
     const blocked = painBlockedParts();
     const kept = w.originalParts.filter(p=>!blocked.has(p));
@@ -8044,7 +8476,8 @@ function regenLiftExercises(){
       w.reforcoParts = reforco;
     } else { w.reforcoParts = []; }
     w.parts = usar.length ? usar : w.originalParts; // se bloqueou tudo, mantém (mas avisa)
-    w.exercises = buildLiftExercises(w.parts, mod.setup);
+    w.exercises = buildLiftExercises(w.parts, mod.setup, { indice:wi, jaNaSemana:new Set(vistos), usadosSemana:new Set(usados) });
+    (w.originalParts||w.parts||[]).forEach(p=>vistos.add(p)); w.exercises.forEach(e=>usados.add(e.id));
     applyPins(w, mod.setup); // respeita as trocas manuais do aluno
     // TPM, cansaço ou dor: reduz uma série (treino mais leve / proteção)
     if(a.tpm || a.cramp || a.leve || a.pain.length) w.exercises.forEach(ex=>{ ex.sets = Math.max(2, (parseInt(ex.sets)||3)-1); });
@@ -9834,9 +10267,10 @@ function renderAdminList(){
     const isActive = x.active && days>0;
     const cls = !isActive?'off':days<7?'warn':'on';
     const daysLbl = days>=9999?'∞':days<=0?'Expirado':`${days}d`;
-    return `<div class="stud" onclick="openStudent('${x.email}')">
-      <div class="stud-top"><div><div class="stud-name">${x.user?.nome || x.name || x.email.split('@')[0]}</div><div class="stud-email">${x.email}</div></div><div class="stud-days ${cls}">${daysLbl}</div></div>
-      <div class="stud-meta">${x.phone?`<span>📱 <b>${x.phone}</b></span>`:''}${x.notes?`<span>📝 ${x.notes}</span>`:''}${x.expiresAt && (x.expiresAt-x.addedAt)<=8*86400000?`<span>🎁 <b>teste</b></span>`:''}</div>
+    // Beta 33 (segurança): o nome vem do documento do aluno — escapado para não virar HTML/script no painel
+    return `<div class="stud" onclick="openStudent('${jsAttr(x.email)}')">
+      <div class="stud-top"><div><div class="stud-name">${escHtml(x.user?.nome || x.name || x.email.split('@')[0])}</div><div class="stud-email">${escHtml(x.email)}</div></div><div class="stud-days ${cls}">${daysLbl}</div></div>
+      <div class="stud-meta">${x.phone?`<span>📱 <b>${escHtml(x.phone)}</b></span>`:''}${x.notes?`<span>📝 ${escHtml(x.notes)}</span>`:''}${x.expiresAt && (x.expiresAt-x.addedAt)<=8*86400000?`<span>🎁 <b>teste</b></span>`:''}</div>
     </div>`;
   }).join('');
   // controles de página (só aparecem quando há mais de 1 página)
@@ -9884,56 +10318,59 @@ function openStudent(email){
   const data = u?.estadoApp;
   const p = data?.user?.profile;
   const totalWk = (data?.modules?.lift?.history?.length||0) + (data?.modules?.run?.history?.length||0);
+  // Beta 33 (segurança): tudo o que vem do documento do aluno é escapado; a foto só entra se for imagem em data: ou https
+  const E = v => escHtml(v==null ? '' : v), eJs = jsAttr(email);
+  const fotoOk = p && typeof p.photo === 'string' && /^(data:image\/(png|jpe?g|webp|gif);base64,|https:\/\/)/i.test(p.photo) ? p.photo.replace(/"/g,'%22') : '';
   showScreen('scr-admin-student');
   $('stud-tag').textContent = 'Aluno · '+email;
   $('stud-content').innerHTML = `
     <div class="profile-head">
-      <div class="profile-avatar" style="overflow:hidden">${p?.photo?`<img src="${p.photo}">`:(p?.nickname||u?.nome||'?').charAt(0).toUpperCase()}</div>
-      <div><div class="profile-name">${p?.nickname||u?.nome||'—'}</div><div class="profile-email">${email}</div><div class="profile-tag">${a.active?'🎫 Ativo':'🔒 Bloqueado'} · ${daysLbl}</div></div>
+      <div class="profile-avatar" style="overflow:hidden">${fotoOk?`<img src="${fotoOk}" alt="">`:E(String(p?.nickname||u?.nome||'?').charAt(0).toUpperCase())}</div>
+      <div><div class="profile-name">${E(p?.nickname||u?.nome||'—')}</div><div class="profile-email">${E(email)}</div><div class="profile-tag">${a.active?'🎫 Ativo':'🔒 Bloqueado'} · ${daysLbl}</div></div>
     </div>
 
     <div class="section-lbl">Ações rápidas</div>
     <div class="row" style="gap:8px;flex-wrap:wrap">
-      ${a.phone?`<a href="https://wa.me/${a.phone.replace(/\\D/g,'')}?text=${encodeURIComponent('Olá! Aqui é do MetaTreino.')}" target="_blank" class="btn btn-primary" style="flex:1">📱 WhatsApp</a>`:''}
-      <a href="mailto:${email}?subject=MetaTreino" class="btn btn-ghost" style="flex:1">✉️ E-mail</a>
+      ${a.phone?`<a href="https://wa.me/${String(a.phone).replace(/\D/g,'')}?text=${encodeURIComponent('Olá! Aqui é do MetaTreino.')}" target="_blank" class="btn btn-primary" style="flex:1">📱 WhatsApp</a>`:''}
+      <a href="mailto:${encodeURIComponent(email)}?subject=MetaTreino" class="btn btn-ghost" style="flex:1">✉️ E-mail</a>
     </div>
 
     <div class="section-lbl">Ajustar tempo de acesso</div>
     <div class="row" style="gap:6px;flex-wrap:wrap">
-      <button class="btn btn-ghost" onclick="adjustDays('${email}',7)" style="flex:1">+7d</button>
-      <button class="btn btn-ghost" onclick="adjustDays('${email}',30)" style="flex:1">+30d</button>
-      <button class="btn btn-ghost" onclick="adjustDays('${email}',90)" style="flex:1">+90d</button>
-      <button class="btn btn-ghost" onclick="adjustDays('${email}',-7)" style="flex:1">-7d</button>
+      <button class="btn btn-ghost" onclick="adjustDays('${eJs}',7)" style="flex:1">+7d</button>
+      <button class="btn btn-ghost" onclick="adjustDays('${eJs}',30)" style="flex:1">+30d</button>
+      <button class="btn btn-ghost" onclick="adjustDays('${eJs}',90)" style="flex:1">+90d</button>
+      <button class="btn btn-ghost" onclick="adjustDays('${eJs}',-7)" style="flex:1">-7d</button>
     </div>
     <div class="row" style="gap:6px;margin-top:8px">
       ${a.expiresAt
-        ? `<button class="btn btn-outline btn-block hl-primary" style="" onclick="setLifetime('${email}')">♾️ Tornar vitalício</button>`
+        ? `<button class="btn btn-outline btn-block hl-primary" style="" onclick="setLifetime('${eJs}')">♾️ Tornar vitalício</button>`
         : (String(email).toLowerCase()===(((fbUser&&fbUser.email)||(state.user&&state.user.email)||'').toLowerCase())
             ? `<div style="text-align:center;font-size:12.5px;color:var(--text-mute);padding:6px 0">🛡️ Sua conta de administrador tem acesso permanente protegido</div>`
-            : `<button class="btn btn-ghost btn-block" onclick="unsetLifetime('${email}')">📅 Remover vitalício (definir 30 dias)</button>`)}
+            : `<button class="btn btn-ghost btn-block" onclick="unsetLifetime('${eJs}')">📅 Remover vitalício (definir 30 dias)</button>`)}
     </div>
 
     ${p?`
       <div class="section-lbl">Dados do aluno</div>
       <div class="card">
         <div style="display:flex;justify-content:space-between;padding:6px 0"><span class="text-dim">Sexo</span><b>${({m:'Masculino',f:'Feminino',o:'Outro'})[p.sex]||'—'}</b></div>
-        <div style="display:flex;justify-content:space-between;padding:6px 0"><span class="text-dim">Idade</span><b>${p.age||'—'}</b></div>
-        <div style="display:flex;justify-content:space-between;padding:6px 0"><span class="text-dim">Altura</span><b>${p.height||'—'} cm</b></div>
-        <div style="display:flex;justify-content:space-between;padding:6px 0"><span class="text-dim">Peso atual</span><b>${p.currentWeight||'—'} kg</b></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0"><span class="text-dim">Idade</span><b>${E(p.age||'—')}</b></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0"><span class="text-dim">Altura</span><b>${E(p.height||'—')} cm</b></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0"><span class="text-dim">Peso atual</span><b>${E(p.currentWeight||'—')} kg</b></div>
         <div style="display:flex;justify-content:space-between;padding:6px 0"><span class="text-dim">Objetivo</span><b>${({emagrecer:'Emagrecer',massa:'Ganhar massa',forca:'Ganhar força',condicionamento:'Condicionamento',tonificar:'Tonificar',saude:'Saúde'})[p.goal]||'—'}</b></div>
-        <div style="display:flex;justify-content:space-between;padding:6px 0"><span class="text-dim">WhatsApp</span><b>${p.whatsapp||'—'}</b></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0"><span class="text-dim">WhatsApp</span><b>${E(p.whatsapp||'—')}</b></div>
       </div>
       <div class="section-lbl">Progresso</div>
       <div class="stat-grid">
         <div class="stat-mini"><div class="stat-mini-emo">💪</div><div class="stat-mini-val">${totalWk}</div><div class="stat-mini-lbl">Treinos totais</div></div>
-        <div class="stat-mini"><div class="stat-mini-emo">🏆</div><div class="stat-mini-val">${data?.trophies?.length||0}</div><div class="stat-mini-lbl">Troféus</div></div>
+        <div class="stat-mini"><div class="stat-mini-emo">🏆</div><div class="stat-mini-val">${(Array.isArray(data?.trophies)?data.trophies.length:0)}</div><div class="stat-mini-lbl">Troféus</div></div>
       </div>
     ` : '<p class="text-dim" style="margin:14px 0">Aluno ainda não completou o questionário inicial.</p>'}
 
     <div id="stud-admin-slot"></div>
     <div class="section-lbl">Gerenciar</div>
-    <button class="btn btn-ghost btn-block" onclick="toggleStudent('${email}')">${a.active?'🔒 Bloquear acesso':'🔓 Reativar acesso'}</button>
-    <button class="btn btn-ghost btn-block danger" style="margin-top:8px;color:var(--danger-soft);border-color:var(--line-danger)" onclick="removeStudent('${email}')">🗑️ Remover aluno</button>
+    <button class="btn btn-ghost btn-block" onclick="toggleStudent('${eJs}')">${a.active?'🔒 Bloquear acesso':'🔓 Reativar acesso'}</button>
+    <button class="btn btn-ghost btn-block danger" style="margin-top:8px;color:var(--danger-soft);border-color:var(--line-danger)" onclick="removeStudent('${eJs}')">🗑️ Remover aluno</button>
   `;
 }
 async function setLifetime(email){
@@ -10001,7 +10438,7 @@ async function exportData(){
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `metatreino-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `metatreino-backup-${chaveDia(new Date())}.json`;
   a.click();
   toast('📤 Backup exportado');
 }
@@ -10049,9 +10486,10 @@ function saveHistoryEntry(idx){
   const kmAntes = x.distance || 0;   // guarda o valor antigo pra ajustar os contadores
   x.name = $('he-name').value.trim() || x.name;
   const dv = $('he-date').value;
-  if(dv){ const nd = new Date(dv); if(!isNaN(nd)) x.at = nd.getTime(); }
+  if(dv){ const nd = new Date(dv); if(!isNaN(nd) && nd.getTime() !== x.at){ marcaExcluido(state.active, x); x.at = nd.getTime(); const kN = chaveHist(state.active, x); state.histExcluidos = (state.histExcluidos||[]).filter(k=>k!==kN); } }   // Beta 33: a data antiga não volta pela sincronização
   x.duration = parseTimeToMin($('he-dur').value) || x.duration;
-  const kmEl = $('he-km'); if(kmEl){ const km = parseFloat(kmEl.value); if(km>0){ x.distance = km; if(x.duration) { const pace = x.duration/km; x.pace = Math.floor(pace)+':'+String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0')+'/km'; } } }
+  // Beta 33: aceita vírgula ("5,2"), bike continua em km/h e o ritmo nunca sai "5:60/km"
+  const kmEl = $('he-km'); if(kmEl){ const km = parseFloat(String(kmEl.value).replace(',','.')); if(km>0){ x.distance = km; if(x.duration) { const pace = x.duration/km; x.pace = x.activity==='bike' ? (km/(x.duration/60)).toFixed(1)+' km/h' : fmtPaceMin(pace); } } }
   // corrigiu a distância? os contadores vitalícios precisam acompanhar,
   // senão um erro de digitação (50km em vez de 30km) fica inflando os km pra sempre.
   if((x.distance||0) !== kmAntes) adjustKmStats(x, kmAntes, x.distance||0);
@@ -10140,6 +10578,7 @@ function deleteHistoryEntry(idx){
       ids.forEach(id=>recomputePR(id, today.getTime()));
     }
     const removido = mod.history[idx];
+    marcaExcluido(state.active, removido);   // Beta 33: não volta pela sincronização
     mod.history.splice(idx, 1);
     subtractFromStats(removido);
     if(isRecentEntry(removido && removido.at)) recomputeAchievements();
@@ -10382,7 +10821,8 @@ function saveRunLog(dayIdx){
   const w = livre ? { k:'livre', name:'Atividade livre', dayIdx:getDayIdx() } : mod.plan.workouts.find(x=>String(x.dayIdx)===String(dayIdx));
   if(!w){ toast('Erro ao registrar'); return; }
   const pace = (min/km);
-  const paceStr = type==='bike' ? (km/(min/60)).toFixed(1)+' km/h' : Math.floor(pace) + ':' + String(Math.round((pace-Math.floor(pace))*60)).padStart(2,'0') + '/km';
+  const paceStr = type==='bike' ? (km/(min/60)).toFixed(1)+' km/h' : fmtPaceMin(pace);   // Beta 33: sem "5:60/km"
+
   const meta = ACTIVITY_META[type] || ACTIVITY_META.corrida;
   const name = (type==='corrida' && !livre) ? w.name : `${meta.emo} ${meta.lbl} — ${km}km`;
   mod.history = mod.history || [];
@@ -10522,7 +10962,7 @@ Object.assign(window,{applyHeroCapa,processaMuralFoto,doGoogleSignIn,doLogout,do
 loadCoachContact();
 
 // impede escolher uma data de nascimento no futuro
-(function(){ const b = document.getElementById('q-birth'); if(b) b.max = new Date().toISOString().slice(0,10); })();
+(function(){ const b = document.getElementById('q-birth'); if(b) b.max = chaveDia(new Date()); })();
 
 Object.assign(window,{openNewExercise,saveNewExercise,removeCustomExercise,playExercise});
 
@@ -11484,14 +11924,16 @@ function _nota(ctx, freq, t0, dur, tipo, vol, ataque){
   g.gain.exponentialRampToValueAtTime(pico, t0 + (ataque||0.01));
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
   o.connect(g); g.connect(ctx.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+  if(window.__somColetor) window.__somColetor.push(o);   // Beta 33: o descanso guarda as notas para poder cancelar
 }
-function tocaSomFim(id){
+// atraso (s): agenda o som para daqui a "atraso" segundos no relógio do áudio (usado no fim do descanso)
+function tocaSomFim(id, atraso){
   try{
     if(!restAudioCtx) return;
     if(restAudioCtx.state === 'suspended') restAudioCtx.resume();
     const cfg = somCfg(), D = cfg.dur; window.__somVol = cfg.vol;
-    const c = restAudioCtx, t = c.currentTime + 0.02;
-    if(id==='apitos'){ const r = Math.max(1, Math.round(D)); for(let i=0;i<r;i++) setTimeout(()=>{ try{ playRestBeepAntigo(); }catch(e){} }, i*1500); return; }
+    const c = restAudioCtx, t = c.currentTime + 0.02 + Math.max(0, +atraso || 0);
+    if(id==='apitos'){ const r = Math.max(1, Math.round(D)); for(let i=0;i<r;i++) _apitosEm(c, t + i*1.5); return; }
     if(id==='sino'){       // sino metálico: parciais inarmônicos; a duração define quantas batidas e quanto ressoa
       const batidas = Math.max(1, Math.round(2*D)), resso = 1.7*Math.min(1.8, Math.max(0.7, D));
       for(let i=0;i<batidas;i++) [[880,.55],[2429,.28],[4752,.12],[1320,.2]].forEach(([f,v])=>_nota(c,f,t+i*0.95,resso,'sine',v,0.005));
@@ -11507,18 +11949,24 @@ function tocaSomFim(id){
     }
   }catch(e){}
 }
-function playRestBeep(){
+function playRestBeep(semVibrar){
+  if(restMuted) return;   // som desligado: nenhum alerta sonoro por engano
   tocaSomFim(getSomFim());
+  if(semVibrar || !restVibrarLigado()) return;
   try{ if(navigator.vibrate){ const r = Math.max(1, Math.round(somCfg().dur)); let pat = []; for(let i=0;i<r;i++) pat = pat.concat([250,120,250,120,400,300]); navigator.vibrate(pat); } }catch(e){}
 }
 function openSomFim(){
   const cur = getSomFim(), cfg = somCfg();
   const seg = (lista, ativo, fn)=>`<div class="mod-toggle" style="margin:6px 0 0">${lista.map((x,i)=>`<button class="seg ${i===ativo?'on':''}" style="font-size:12px;padding:10px 4px" onclick="${fn}(${i})">${x.nome}</button>`).join('')}</div>`;
   $('modal-inner').innerHTML = `<h3>🔔 Som do cronômetro</h3>
-    <p style="color:var(--text-dim);font-size:13px;line-height:1.55">Toca quando o descanso entre as séries termina. O celular também vibra (se o aparelho permitir).</p>
+    <p style="color:var(--text-dim);font-size:13px;line-height:1.55">Toca quando o descanso entre as séries termina.</p>
     ${Object.keys(SONS_FIM).map(k=>`<div class="list-row" style="${k===cur?'border:1px solid var(--primary)':''}"><span onclick="setSomFim('${k}')" style="flex:1;display:flex;gap:10px;align-items:center"><span>${SONS_FIM[k].emo}</span><span>${SONS_FIM[k].nome}${k===cur?' ✓':''}</span></span><button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="unlockRestAudio();tocaSomFim('${k}')">▶ Ouvir</button></div>`).join('')}
     <div class="section-lbl" style="margin:14px 0 0">Duração</div>${seg(SOM_DURS,cfg.d,'setSomDur')}
     <div class="section-lbl" style="margin:12px 0 0">Volume</div>${seg(SOM_VOLS,cfg.v,'setSomVol')}
+    <div class="section-lbl" style="margin:12px 0 0">No fim do descanso</div>
+    <div class="mod-toggle" style="margin:6px 0 0"><button class="seg ${restMuted?'':'on'}" style="font-size:12px;padding:10px 4px" onclick="if(restMuted)toggleRestMute();openSomFim()">🔔 Tocar som</button><button class="seg ${restMuted?'on':''}" style="font-size:12px;padding:10px 4px" onclick="if(!restMuted)toggleRestMute();openSomFim()">🔇 Sem som</button></div>
+    <div class="mod-toggle" style="margin:6px 0 0"><button class="seg ${restVibrarLigado()?'on':''}" style="font-size:12px;padding:10px 4px" onclick="setRestVibrar(true)">Vibrar</button><button class="seg ${restVibrarLigado()?'':'on'}" style="font-size:12px;padding:10px 4px" onclick="setRestVibrar(false)">Sem vibrar</button></div>
+    <p style="color:var(--text-mute);font-size:11.5px;line-height:1.5;margin-top:10px">No modo silencioso do celular o som pode não tocar; a vibração depende do aparelho.</p>
     <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }

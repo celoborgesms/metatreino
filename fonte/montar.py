@@ -40,6 +40,9 @@ def conferir():
     for v in re.findall(r'\?v=([0-9a-z.\-]+)', ler('index.html')): achados['index.html (?v=)'] = v
     rod = re.search(r'id="pf-version"[^>]*>2027\.1 Beta (\d+)<', ler('index.html'))
     if rod: achados['index.html (rodapé)'] = '2027.1-beta.' + rod.group(1)
+    # Beta 33: o service worker guarda o Firebase da mesma versão usada no index.html (para abrir offline)
+    fb_idx = set(re.findall(r'firebasejs/([0-9.]+)/', ler('index.html'))); fb_sw = set(re.findall(r'firebasejs/([0-9.]+)/', ler('service-worker.js')))
+    if fb_idx != fb_sw: print(f'⚠️  Firebase do index.html {sorted(fb_idx)} ≠ service-worker.js {sorted(fb_sw)} — atualize os dois.'); return False
     vs = set(achados.values())
     for k, v in achados.items(): print(f'  {k:24} {v}')
     if len(vs) != 1: print('⚠️  VERSÕES DIFERENTES — o app pode não atualizar sozinho nos celulares.'); return False

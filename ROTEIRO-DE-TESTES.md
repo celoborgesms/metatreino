@@ -1,66 +1,62 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 32
+# Roteiro de testes em aparelho real — MetaTreino Beta 33
 
-Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
+Leva uns 25 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
 
-## 1. Instalação e atualização
-- [ ] O app atualizou sozinho para a **Beta 25** (Perfil → rodapé)?
+Antes de começar: publique o `firestore.rules` novo no Console do Firebase (Firestore → Regras → Publicar).
+
+## 1. Instalação, atualização e modo avião
+- [ ] O app atualizou sozinho para a **Beta 33** (Perfil → rodapé), sem tocar em nenhum botão?
 - [ ] Fechar e abrir de novo: entrou direto, sem pedir login?
-- [ ] No modo avião, o app abre e mostra os treinos?
+- [ ] **Logo depois de atualizar**, ligue o modo avião, feche o app de vez e abra de novo. Ele abre e mostra os treinos? (Na Beta 32 este caso podia abrir em branco.)
+- [ ] Ainda no modo avião: registre 2 séries e salve o treino. Desligue o modo avião. O treino aparece no Histórico de outro aparelho (ou depois de sair e entrar)?
 
-## 2. Treino do dia
-- [ ] Abrir o treino de hoje, registrar 2 séries, finalizar. Aparece no Histórico?
-- [ ] Cronômetro de descanso tocou e vibrou?
-- [ ] Vídeo "Como fazer" abriu (ou mostrou o aviso de "sem vídeo")?
+## 2. Cronômetro de descanso (o mais importante desta versão)
+- [ ] Abra o treino de hoje, registre uma série e toque em "+ Nova série". O descanso começa com o tempo do exercício?
+- [ ] O descanso de um exercício principal (supino, agachamento) é maior que o de um acessório (elevação lateral, abdominal)? *(Vale para planos novos ou corrigidos: veja o item 5.)*
+- [ ] Toque em **+15s**, **−15s**, **Pausar** e **Continuar**. O tempo responde certo e nunca fica negativo?
+- [ ] Com o descanso rodando, **bloqueie a tela** por uns 40 s e desbloqueie. O tempo restante está certo (não parou nem atrasou)?
+- [ ] Deixe o descanso acabar **com a tela bloqueada**. O som tocou? Vibrou? (Anote: Android/iPhone, modo silencioso ligado ou não.)
+- [ ] Deixe acabar com o app aberto: tocou e vibrou **uma vez só**?
+- [ ] Perfil → Som do cronômetro → **Sem som**. Faça um descanso: não toca nada? Feche e abra o app: continua sem som?
+- [ ] Mesma tela → **Sem vibrar**: o celular não vibra no fim?
+- [ ] Inicie um descanso, feche o app de vez e abra de novo em seguida. O cronômetro volta com o tempo certo?
 
-## 3. Corrida (se usar)
-- [ ] Registrar uma corrida com tempo e distância. O ritmo saiu certo?
+## 3. Tela ligada durante o treino
+- [ ] Abra o treino de hoje e deixe o celular parado na ficha por mais tempo que o "desligar tela" do aparelho. **A tela continuou acesa?**
+- [ ] Vá para a aba Início e espere: a tela apaga normalmente?
+- [ ] Volte para Treinos: a tela volta a ficar acesa?
+- [ ] Minimize o app no meio do treino e volte: continua acesa?
+- [ ] Salve o treino: depois disso, a tela apaga normalmente?
 
-## 4. Novidades (Betas 19 a 32)
-- [ ] Histórico → **Histórico completo**: abre? Os números do ano batem com o que você lembra?
-- [ ] Perfil → **Relatório em PDF** → 3 meses → Gerar. O PDF abre? Os gráficos estão legíveis? Teste **Compartilhar** → salvar no Google Drive ou mandar no WhatsApp.
-- [ ] Perfil → **Seus dados**: quanto % aparece? A lista "Do que é feito" faz sentido?
-- [ ] Perfil → **Personalizar início**: desligar 2 ou 3 blocos, voltar para o Início, depois tocar em "Tudo".
-- [ ] Perfil → Backup e restauração → **Baixar meu backup**: o arquivo baixou?
+## 4. Dois aparelhos (se tiver)
+- [ ] Abra a conta em dois aparelhos. Registre um treino ou uma corrida no primeiro. Em até ~1 min, aparece no segundo (aviso "Treinos do seu outro aparelho sincronizados")?
+- [ ] Exclua um treino num aparelho. Ele **não volta** depois de abrir o outro?
 
-- [ ] Progresso → Desempenho: os gráficos de Evolução aparecem logo? Ocultar e mostrar o calendário.
+## 5. Fichas de musculação
+- [ ] Ao abrir o app, apareceu "Revisei a montagem dos seus treinos…"? (Só aparece uma vez e só se o plano precisava de ajuste.)
+- [ ] Em Treinos, cada grupo começa por um exercício principal (peito: supino ou flexão; costas: puxada; pernas: agachamento ou leg press)?
+- [ ] Os exercícios que você já fazia como principais (e as cargas) continuam lá? As trocas feitas à mão continuam?
+- [ ] Crie um plano novo (Perfil → Meu plano → refazer) com o seu equipamento. Faz sentido para você como treinador? Algo repetido ou fora de lugar?
 
-- [ ] Plano alimentar: abra o Jantar, remova 3 alimentos seguidos. A tela fica no lugar?
-- [ ] Finalize um treino: a escala de esforço nova responde ao toque e ao deslizar?
-- [ ] Com uma janela aberta, use o botão Voltar do celular: fecha a janela sem sair do app?
-- [ ] Histórico: os números de página funcionam?
-- [ ] Desafios → "Em breve": abre os detalhes?
+## 6. Corrida
+- [ ] Registre uma corrida com tempo e distância. O ritmo saiu certo (nunca "x:60/km")?
+- [ ] Edite a distância no Histórico usando vírgula (ex.: 5,2). Salvou certo?
+- [ ] Se tiver prova marcada: na semana depois da prova, o plano é de recuperação (sem longão forte nem ritmo de prova)?
 
-- [ ] Histórico → um treino → **Compartilhar**: abre a Central? Troque Stories / Feed / Quadrado e Escuro / Claro / Cores do meu tema.
-- [ ] Na Central: **Usar foto da galeria**, arraste a foto com o dedo, amplie com dois dedos, mexa em Zoom e Escurecer.
-- [ ] **Compartilhar** → mande para você mesmo no WhatsApp (Status) e veja se a imagem chega nítida. Teste também **Salvar imagem**.
-- [ ] Conquistas → uma medalha → Compartilhar. Progresso → Recordes → ícone de compartilhar. Evolução de um exercício → "Compartilhar minha evolução".
-- [ ] Conquista especial (se tiver): o vídeo continua funcionando? A opção "Card com foto e formatos" aparece?
-- [ ] "Modelo clássico" (embaixo da Central) ainda abre o card antigo?
-- [ ] Conquistas → "Compartilhar coleção inteira": aparecem suas medalhas mais recentes?
-- [ ] Passe pelas abas: o desenho de fundo fica só no topo e não aparece atrás das listas?
-- [ ] Ao abrir o app, aparece "Ajustei N treinos…"? Confira em Treinos se não há dois exercícios iguais no mesmo dia.
-- [ ] Início: o desenho do topo combina com a hora (sol de manhã, lua e coruja à noite) e com o tempo lá fora?
-- [ ] O selo com a temperatura aparece ao lado do METATREINO, e a frase de baixo não repete a temperatura?
-- [ ] Termine um treino de musculação: as frases da escala falam em repetições que sobravam? Registre uma corrida: as frases falam em conversar?
-- [ ] Feche o app de vez e abra de novo: abre sem zoom? A barra de abas fica fixa ao rolar?
-- [ ] Modo avião: feche e abra o app. Ele entra na hora? Desligue o modo avião e continue usando normalmente.
-- [ ] Personalizar início: segure a alça ⠿ e arraste devagar. A linha acompanha o dedo, sem selecionar texto?
-- [ ] No computador: o Início mostra a faixa de números e duas colunas? Teste as teclas 1 a 5 e o Esc.
-- [ ] No computador: o Histórico em linhas, uma janela abrindo como painel à direita, e Treinos e Progresso em duas colunas.
-- [ ] Personalizar início: arraste um bloco pela alça ⠿, feche e veja a tela inicial. Depois toque em "Voltar ao padrão".
-- [ ] "Ver como fazer": a ficha ocupa a tela? Entre na tela cheia, gire o celular, volte: o botão Fechar continua inteiro embaixo?
+## 7. Início, Histórico e Progresso
+- [ ] Antes de treinar hoje, a **sequência** no Início mostra os dias até ontem (não "0 dias")?
+- [ ] O card do Início não diz "seu próximo treino é amanhã" quando o treino de hoje ainda não foi feito?
+- [ ] Histórico: os números de página funcionam? Os detalhes abrem?
+- [ ] Progresso → Desempenho e Recordes abrem sem demora?
 
-## 5. No computador (se tiver)
-- [ ] Abrir metatreino.app no computador: a tela de login usa a largura? Depois de entrar, aparece o menu do lado e as telas em duas colunas?
-- [ ] Diminuir a janela: volta ao jeito do celular?
+## 8. Painel do administrador (só para você)
+- [ ] A lista de alunos e o perfil de um aluno abrem normalmente, com nome, foto e WhatsApp?
+- [ ] Ajustar dias, bloquear/reativar e remover um aluno de teste continuam funcionando?
 
-## 6. Aparência e Perfil
-- [ ] No Perfil, abrir e fechar os grupos (Treino, Aplicativo, Conta e dados). Achou tudo o que procurava?
-- [ ] Trocar para um tema claro e um escuro. Algum texto ficou ilegível?
+## 9. Aparência
+- [ ] Troque para cada tema (Zepp, Aurora, Clássico, Oceano, Claro, AMOLED, Rubi, Areia). Algum texto ficou ilegível? O cronômetro de descanso combina com o tema?
 - [ ] Algo ficou cortado ou fora da tela (principalmente em celular pequeno)?
-
-## 7. Sem internet
-- [ ] No modo avião, registrar um treino. Ao voltar a internet, ele aparece em outro aparelho (ou depois de sair e entrar)?
+- [ ] No computador: Tab percorre os botões com um contorno visível?
 
 ## O que mandar para o treinador
 Modelo do celular · sistema · o que testou · o que deu errado (com print) · o que achou confuso.

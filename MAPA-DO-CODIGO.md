@@ -14,6 +14,7 @@ Guia para quem for mexer no app (você, outra IA ou outro desenvolvedor). Vale a
 | `firestore.rules` | Regras de segurança do Firestore. Publicar no Console do Firebase quando mudar. |
 | `manifest.json`, `icon*.png/svg` | Instalação como app. |
 | `fonte/` | Código-fonte do `app-plus.js` em partes + o script `montar.py`. Pode ficar no GitHub (não pesa para quem usa o app). |
+| `testes/` | Testes automáticos (Beta 33). Não precisam ser publicados. Veja "Testes" abaixo. |
 
 ## Montar e trocar a versão
 
@@ -62,6 +63,7 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `27-treino-sem-repeticao-ficha.js` | Treinos sem exercício repetido (`treinoSemRepeticao`, correção única dos planos salvos), ficha do exercício em tela cheia |
 | `28-inicio-cena-ordem.js` | Desenho do Início por horário, clima e datas (`cenaInicio`), selo do clima, ordem dos blocos do Início (`state.inicioOrdem`) |
 | `29-modo-computador.js` | Modo computador: grade de duas colunas (`DK_LAYOUT`, `dkMontar`), faixa de números, painel lateral, atalhos |
+| `30-auditoria-beta33.js` | Correção única das fichas salvas (`b33CorrigeFichas`, marca `state.b33Fichas`) |
 
 Parte nova: próximo número livre (ex.: `20-nome-da-funcao.js`).
 
@@ -125,5 +127,34 @@ Modo computador: para mudar onde um bloco aparece no computador, edite `DK_LAYOU
 Acesso offline: `acessoCacheValido` e `acessoConfereDepois` (app.js). O app entra com o acesso guardado (até `ACESSO_OFFLINE_DIAS` = 30 dias) e confere na nuvem em segundo plano.
 
 Nenhum elemento pode passar da borda da tela no celular (deixa a página mais larga e o celular abre com zoom). Para conferir: `document.documentElement.scrollWidth` tem que ser igual à largura da tela.
+
+## Sistemas centrais (Beta 33) — use estes, não crie outro
+
+| Sistema | Onde | Como usar |
+|---|---|---|
+| Descanso | app.js, "TIMER DE DESCANSO" | `startRestTimer(seg, nome)`, `stopRestTimer()`, `restAjusta(±s)`, `restPausa()`. Conta pelo horário (`restFimEm`), não por `left--`. `restTimerInt` ≠ null = descanso rodando. |
+| Tela ligada | app.js, "TELA LIGADA" | `telaLigadaPedir('motivo')` / `telaLigadaSoltar('motivo')`. Uma trava só para o app; volta sozinha ao reabrir. `requestWakeLock()`/`releaseWakeLock()` = motivo `'especial'`. |
+| Treino ativo | app.js | `treinoAtivoIniciar()`, `treinoAtivoEncerrar()`. Mantém a tela ligada na aba Treinos; termina ao salvar, sair, virar o dia ou 20 min parado. |
+| Som do fim | app.js | `tocaSomFim(id, atrasoSeg)`. Respeita `restMuted` (salvo em `mt_descanso_mudo`) e `restVibrarLigado()` (`mt_descanso_vibrar`). |
+| Semana | app.js | `semanaLocalId()` (segunda a domingo, horário do aparelho). Não use `Math.floor(Date.now()/7 dias)`. |
+| Fichas | app.js | `buildLiftExercises(parts, setup, {indice, jaNaSemana, usadosSemana})`. Papéis em `LIFT_PAPEIS`/`liftSequencia`, descanso em `liftDescanso`, quantidade em `liftQuantos`, teto em `LIFT_TETO_SERIES`. |
+| Duas cópias do aluno | app.js | `mesclaEstado(base, outra, {desde})` junta histórico/séries/peso/conquistas. Ao excluir um registro do histórico, chame `marcaExcluido(modulo, registro)`. |
+| HTML com dado do aluno | app.js / parte 00 | `escHtml()` / `mtEsc()` para texto; `jsAttr()` dentro de `onclick="f('...')"`. |
+
+## Testes
+
+Na pasta do projeto (precisa de Node; os de navegador precisam de Python + Playwright):
+
+```
+node testes/regras.js                 # regras de negócio (descanso, ritmo, VDOT, datas, limpeza para a nuvem, escapes)
+node testes/auditoria-musculacao.js   # todas as fichas possíveis (768) + 98 combinações de dias
+node testes/simulacao-corrida.js      # 60 alunos simulados por 20 semanas de corrida
+node testes/sincronizacao.js          # junção de duas cópias (outro aparelho/offline)
+node testes/migracao-fichas.js PASTA_DA_BETA_32   # correção única dos planos antigos
+python3 testes/navegador.py URL       # abas, janelas e 8 temas: erros, largura, contraste
+python3 testes/cronometro.py URL      # descanso, tela ligada, som e vibração
+python3 testes/atualizacao.py PASTA_ANTIGA PASTA_NOVA   # atualização automática + modo avião
+```
+Os testes de navegador usam `testes/mock-firebase.js` (Firebase simulado, sem conta real) e `testes/semente.js` (aluno de exemplo). Para servir o site de teste: copie o projeto, troque os `<script>` do Firebase do `index.html` por `mock-firebase.js` e rode `python3 -m http.server`.
 
 Escala de esforço: `rpeHtml(nota, 'musc')` usa as frases de musculação (`RPE_DESC_MUSC`); sem o segundo argumento, as de corrida, caminhada e bike (`RPE_DESC`).

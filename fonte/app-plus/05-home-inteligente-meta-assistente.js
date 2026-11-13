@@ -8,7 +8,9 @@ function contextoAluno(){
   const last = total ? h[total-1].at : 0;
   const diasSem = last ? Math.round((mtDia0()-mtDia0(last))/DIA_MS) : null;
   const hojeFeito = h.some(x=>mtDia0(x.at)===mtDia0());
-  const planejados = Math.max(((state.modules.lift&&state.modules.lift.setup&&+state.modules.lift.setup.days)||0), ((state.modules.run&&state.modules.run.setup&&+state.modules.run.setup.days)||0)) || 3;
+  // Beta 33: musculação + corrida contam os DIAS planejados das duas (antes: o maior dos dois números)
+  const diasPlan = new Set(); ['lift','run'].forEach(m=>{ const mod = state.modules[m]; ((mod&&mod.plan&&mod.plan.workouts)||[]).forEach(w=>{ if(w && w.dayIdx) diasPlan.add(+w.dayIdx); }); });
+  const planejados = diasPlan.size || Math.max(((state.modules.lift&&state.modules.lift.setup&&+state.modules.lift.setup.days)||0), ((state.modules.run&&state.modules.run.setup&&+state.modules.run.setup.days)||0)) || 3;
   const semIni = mtSemanaIni(Date.now());
   const semDias = mtDiasAtivos(semIni).size;
   const diaSemana = new Date().getDay()===0?7:new Date().getDay();
@@ -27,6 +29,9 @@ function _proxTreinoTxt(){
     const hoje = getDayIdx(); const set = new Set();
     ['lift','run'].forEach(m=>{ const mod = state.modules[m]; (mod&&mod.plan&&mod.plan.workouts||[]).forEach(w=>set.add(w.dayIdx)); });
     const ord = [...set].sort((a,b)=>a-b); if(!ord.length) return '';
+    // Beta 33: o treino de hoje ainda não feito é o próximo (antes dizia "amanhã")
+    const feitoHoje = mtHist().some(x=>mtDia0(x.at)===mtDia0());
+    if(set.has(hoje) && !feitoHoje) return 'hoje';
     const prox = ord.find(d=>d>hoje) || ord[0];
     const dif = prox>hoje ? prox-hoje : prox+7-hoje;
     return dif===1 ? 'amanhã' : (dif<7 ? (prox===6||prox===7?'no ':'na ')+dias[prox-1] : 'na próxima semana');
@@ -75,7 +80,7 @@ function renderHomeSmart(){
     a = `<button class="btn btn-ghost" onclick="mtPergunta('consistencia')">Ver minha consistência</button>`;
   } else {
     k = 'Para você hoje'; t = c.semDias ? `${c.semDias} ${c.semDias===1?'dia ativo':'dias ativos'} nesta semana` : 'Semana nova, página em branco';
-    p = prox ? `Seu próximo treino é ${prox}. Se der para encaixar algo hoje, uma caminhada leve já ajuda na recuperação.` : 'Que tal começar hoje?';
+    p = prox==='hoje' ? 'Seu treino de hoje ainda está em aberto. Mesmo uma sessão mais curta mantém o hábito.' : prox ? `Seu próximo treino é ${prox}. Se der para encaixar algo hoje, uma caminhada leve já ajuda na recuperação.` : 'Que tal começar hoje?';
     a = `<button class="btn btn-ghost" onclick="mtPergunta('analise_semana')">Análise da semana</button>`;
   }
   el.innerHTML = `<div class="smart ${cls}"><div style="display:flex;align-items:flex-start;gap:8px"><div class="smart-k" style="flex:1">${k}</div><button onclick="mtLS('mt_smart_fechado', String(mtDia0()));renderHomeSmart()" aria-label="Ocultar hoje" style="background:none;border:0;color:var(--text-mute);font-size:15px;padding:0 2px;cursor:pointer">✕</button></div><div class="smart-t">${t}</div><div class="smart-p">${p}</div><div class="smart-a">${a}</div></div>`;

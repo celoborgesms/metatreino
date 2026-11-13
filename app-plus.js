@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 32 — app-plus.js
+// MetaTreino 2027.1 Beta 33 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.32' };
+const MTP = { versao: '2027.1-beta.33' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -884,7 +884,9 @@ function contextoAluno(){
   const last = total ? h[total-1].at : 0;
   const diasSem = last ? Math.round((mtDia0()-mtDia0(last))/DIA_MS) : null;
   const hojeFeito = h.some(x=>mtDia0(x.at)===mtDia0());
-  const planejados = Math.max(((state.modules.lift&&state.modules.lift.setup&&+state.modules.lift.setup.days)||0), ((state.modules.run&&state.modules.run.setup&&+state.modules.run.setup.days)||0)) || 3;
+  // Beta 33: musculação + corrida contam os DIAS planejados das duas (antes: o maior dos dois números)
+  const diasPlan = new Set(); ['lift','run'].forEach(m=>{ const mod = state.modules[m]; ((mod&&mod.plan&&mod.plan.workouts)||[]).forEach(w=>{ if(w && w.dayIdx) diasPlan.add(+w.dayIdx); }); });
+  const planejados = diasPlan.size || Math.max(((state.modules.lift&&state.modules.lift.setup&&+state.modules.lift.setup.days)||0), ((state.modules.run&&state.modules.run.setup&&+state.modules.run.setup.days)||0)) || 3;
   const semIni = mtSemanaIni(Date.now());
   const semDias = mtDiasAtivos(semIni).size;
   const diaSemana = new Date().getDay()===0?7:new Date().getDay();
@@ -903,6 +905,9 @@ function _proxTreinoTxt(){
     const hoje = getDayIdx(); const set = new Set();
     ['lift','run'].forEach(m=>{ const mod = state.modules[m]; (mod&&mod.plan&&mod.plan.workouts||[]).forEach(w=>set.add(w.dayIdx)); });
     const ord = [...set].sort((a,b)=>a-b); if(!ord.length) return '';
+    // Beta 33: o treino de hoje ainda não feito é o próximo (antes dizia "amanhã")
+    const feitoHoje = mtHist().some(x=>mtDia0(x.at)===mtDia0());
+    if(set.has(hoje) && !feitoHoje) return 'hoje';
     const prox = ord.find(d=>d>hoje) || ord[0];
     const dif = prox>hoje ? prox-hoje : prox+7-hoje;
     return dif===1 ? 'amanhã' : (dif<7 ? (prox===6||prox===7?'no ':'na ')+dias[prox-1] : 'na próxima semana');
@@ -951,7 +956,7 @@ function renderHomeSmart(){
     a = `<button class="btn btn-ghost" onclick="mtPergunta('consistencia')">Ver minha consistência</button>`;
   } else {
     k = 'Para você hoje'; t = c.semDias ? `${c.semDias} ${c.semDias===1?'dia ativo':'dias ativos'} nesta semana` : 'Semana nova, página em branco';
-    p = prox ? `Seu próximo treino é ${prox}. Se der para encaixar algo hoje, uma caminhada leve já ajuda na recuperação.` : 'Que tal começar hoje?';
+    p = prox==='hoje' ? 'Seu treino de hoje ainda está em aberto. Mesmo uma sessão mais curta mantém o hábito.' : prox ? `Seu próximo treino é ${prox}. Se der para encaixar algo hoje, uma caminhada leve já ajuda na recuperação.` : 'Que tal começar hoje?';
     a = `<button class="btn btn-ghost" onclick="mtPergunta('analise_semana')">Análise da semana</button>`;
   }
   el.innerHTML = `<div class="smart ${cls}"><div style="display:flex;align-items:flex-start;gap:8px"><div class="smart-k" style="flex:1">${k}</div><button onclick="mtLS('mt_smart_fechado', String(mtDia0()));renderHomeSmart()" aria-label="Ocultar hoje" style="background:none;border:0;color:var(--text-mute);font-size:15px;padding:0 2px;cursor:pointer">✕</button></div><div class="smart-t">${t}</div><div class="smart-p">${p}</div><div class="smart-a">${a}</div></div>`;
@@ -1428,7 +1433,7 @@ function _podeAtualizarAgora(){
   if(document.visibilityState === 'hidden') return true;
   const modal = document.getElementById('modal-back');
   const ocupado = (modal && modal.classList.contains('on')) || (state && state.ui && state.ui.tab==='sessions') ||
-    (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) || !!document.getElementById('rest-timer-on');
+    (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) || !!document.getElementById('rest-timer-banner') || !!document.getElementById('rest-timer-on');   // Beta 33: o id certo do descanso
   // nos primeiros 20 s após abrir, ninguém começou nada ainda: pode aplicar
   return !ocupado || (Date.now() - MT_UPD.abriuEm < 20000 && !(modal && modal.classList.contains('on')));
 }
@@ -3936,7 +3941,13 @@ function rFase(ctx, motor, semTs){
     const k = Math.round((semTs - semProva)/(7*DIA_MS)); if(k>=1 && k<=n) return { fase:'pos_prova', k, n }; }
   const semanaDoPlano = Math.max(1, Math.round((semTs - (motor.inicio||semTs))/(7*DIA_MS))+1);
   const rd = setup.raceDate ? new Date(setup.raceDate+'T12:00:00').getTime() : null;
-  if(rd && rd > semTs - 7*DIA_MS){
+  // Beta 33: a prova marcada já passou (o aluno pode ter registrado no dia seguinte, sem marcar como prova,
+  // e a data só é limpa no próximo login): a semana seguinte é de recuperação, não de "polimento" com longão.
+  if(rd && rSem(rd) < semTs){
+    const kmP = (RGOAL[goal]||{}).km || 5; const nP = kmP>=30 ? 3 : kmP>=15 ? 2 : 1;
+    const kP = Math.round((semTs - rSem(rd))/(7*DIA_MS)); if(kP>=1 && kP<=nP) return { fase:'pos_prova', k:kP, n:nP };
+  }
+  if(rd && rSem(rd) >= semTs){
     const W = Math.round((rSem(rd) - semTs)/(7*DIA_MS));      // 0 = semana da prova
     const km = (RGOAL[goal]||{}).km || 5;
     const tap = km>=40 ? 3 : km>=20 ? 2 : 1, esp = km>=40 ? 6 : km>=20 ? 5 : km>=10 ? 4 : 3;
@@ -5154,7 +5165,7 @@ mtGancho('openStudent', { depois(email){
     const ctx = runCtx(data); const M = run.plan && run.plan.motor; const p = rPerfil(ctx); const ref = rReferencia(ctx);
     const F = M ? rSemanaFase(ctx, M, rSem()) : null; const cump = M ? rCumprimento(ctx, M, 4) : null;
     const MT = rMetas(ctx); const fad = rFadiga(ctx);
-    const lin = (k,v)=>`<div class="list-row" style="cursor:default"><span>${k}</span><b style="text-align:right">${v}</b></div>`;
+    const lin = (k,v)=>`<div class="list-row" style="cursor:default"><span>${k}</span><b style="text-align:right">${mtEsc(v)}</b></div>`;   // Beta 33: dados do aluno escapados
     window.__admRunData = data;
     box.insertAdjacentHTML('beforeend', `<div class="section-lbl">🏃 Corrida</div><div class="card" style="padding:4px 12px">
       ${lin('Plano', run.plan ? `${(RGOAL[(run.setup||{}).goal]||{}).nome||'—'}${(run.setup||{}).raceDate?' · prova '+new Date(run.setup.raceDate+'T12:00:00').toLocaleDateString('pt-BR'):''}` : 'só registro de atividades')}
@@ -6145,7 +6156,7 @@ window.exportMyData = async function(){
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `metatreino-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `metatreino-backup-${chaveDia(new Date())}.json`;
   a.click();
   toast('📥 Backup baixado — guarde em local seguro');
 };
@@ -6518,7 +6529,7 @@ function arqMontarPDF(jsPDF, opt, aviso){
     doc.setDrawColor(...C.linha); doc.setLineWidth(0.2); doc.line(M, PH - 11, PW - M, PH - 11);
     txt(`MetaTreino · ${nomeAluno}`, M, PH - 7); txt(`Página ${i} de ${n}`, PW - M, PH - 7, {align:'right'});
   }
-  const nome = `metatreino-relatorio-${new Date().toISOString().slice(0,10)}.pdf`;
+  const nome = `metatreino-relatorio-${chaveDia(new Date())}.pdf`;
   return { doc, nome };
 }
 
@@ -6777,7 +6788,7 @@ async function admApagarConfirma(){
     const data = { app:'MetaTreino', versao:APP_VERSION, exportadoEm:new Date().toISOString(), aluno:{ email, nome }, estado:u.estadoApp || {}, arquivo };
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `metatreino-backup-${_semAcento(nome).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'aluno'}-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `metatreino-backup-${_semAcento(nome).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'aluno'}-${chaveDia(new Date())}.json`;
     document.body.appendChild(a); a.click(); setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(e){} }, 4000);
   }catch(e){
     console.log('backup do aluno', e);
@@ -8528,3 +8539,56 @@ window.mtDeskAplica = function(){
 try{ const mq = window.matchMedia(MT_DESK_MQ); if(mq.addEventListener) mq.addEventListener('change', ()=>window.mtDeskAplica()); }catch(e){}
 
 Object.assign(window, { dkMontar, dkMontarTudo, dkKpis, dkMenu, dkPainel });
+// =====================================================================
+// 44. Beta 33 — Auditoria geral: correção única das fichas já salvas
+// =====================================================================
+// O gerador de musculação (buildLiftExercises, app.js) passou a escolher por PAPEL de movimento
+// (o principal do grupo primeiro), com descanso por tipo de exercício e teto de séries por sessão.
+// Os planos criados antes disso podem ter, por exemplo, o peito começando por crossover, dois
+// encolhimentos no mesmo treino ou mais de 30 séries numa sessão. Esta etapa confere UMA vez os
+// planos salvos e só refaz quando há problema. Os exercícios principais que o aluno já usava
+// (e a carga que ele vem evoluindo) continuam; as trocas feitas à mão também (applyPins).
+// O histórico e os recordes não mudam: eles são guardados por exercício.
+function b33FichaComProblema(w, level){
+  const exs = (w && w.exercises) || []; if(!exs.length) return false;
+  const porGrupo = {};
+  exs.forEach(e=>{ (porGrupo[e.part] = porGrupo[e.part] || []).push(e); });
+  const ruimGrupo = Object.keys(porGrupo).some(g=>{
+    const lista = porGrupo[g];
+    if(LIFT_GRANDES.includes(g) && lista[0] && !lista[0].pinned && exPapel(lista[0], g).tier !== 'principal') return true;
+    if(lista.filter(e=>/encolhimento/i.test(e.name)).length > 1) return true;
+    return false;
+  });
+  const series = exs.reduce((a,e)=>a+(+e.sets||0), 0);
+  return ruimGrupo || series > (LIFT_TETO_SERIES[level] || 26) + 4;
+}
+function b33CorrigeFichas(){
+  try{
+    const mod = state.modules && state.modules.lift;
+    if(!mod || !mod.plan || !mod.setup || state.b33Fichas || !Array.isArray(mod.plan.workouts)) return;
+    const normais = mod.plan.workouts.filter(w=>w && !w.cali);
+    const ruins = normais.filter(w=>b33FichaComProblema(w, mod.setup.level));
+    state.b33Fichas = true;
+    if(!ruins.length){ saveData(); return; }
+    // principais bons de cada treino: continuam como o 1º do grupo (a carga segue evoluindo no mesmo exercício)
+    const lideres = mod.plan.workouts.map(w=>{ const L = {}; ((w && w.exercises) || []).forEach(e=>{ if(!L[e.part] && exPapel(e, e.part).tier === 'principal') L[e.part] = e; }); return L; });
+    regenLiftExercises();
+    mod.plan.workouts.forEach((w, wi)=>{
+      if(!w || w.cali) return;
+      const L = lideres[wi] || {}, exs = w.exercises || [];
+      Object.keys(L).forEach(part=>{
+        const lead = L[part]; const idxs = exs.map((e,i)=>e.part===part ? i : -1).filter(i=>i>=0); if(!idxs.length) return;
+        const first = idxs[0]; if(exs[first].pinned || exs[first].id === lead.id) return;
+        const onde = exs.findIndex(e=>e.id === lead.id);
+        if(onde >= 0){ const t = exs[onde]; exs[onde] = exs[first]; exs[first] = t; }
+        else exs[first] = Object.assign({}, lead, { sets: exs[first].sets, rest: exs[first].rest, reps: exs[first].reps });
+      });
+      w.duration = estimateLiftDuration(exs, mod.setup.goal);
+    });
+    saveData();
+    setTimeout(()=>toast(`Revisei a montagem dos seus treinos: cada grupo começa pelo exercício principal, o descanso agora varia por exercício e o volume ficou equilibrado. Seus principais foram mantidos.`, 6500), 2200);
+  }catch(e){ console.log('correção das fichas (Beta 33)', e); }
+}
+mtGancho('renderHome', { depois(){ b33CorrigeFichas(); }});
+
+Object.assign(window, { b33CorrigeFichas, b33FichaComProblema, restAjusta, restPausa, setRestVibrar, treinoAtivoIniciar, treinoAtivoEncerrar, telaLigadaPedir, telaLigadaSoltar });

@@ -228,7 +228,13 @@ function rFase(ctx, motor, semTs){
     const k = Math.round((semTs - semProva)/(7*DIA_MS)); if(k>=1 && k<=n) return { fase:'pos_prova', k, n }; }
   const semanaDoPlano = Math.max(1, Math.round((semTs - (motor.inicio||semTs))/(7*DIA_MS))+1);
   const rd = setup.raceDate ? new Date(setup.raceDate+'T12:00:00').getTime() : null;
-  if(rd && rd > semTs - 7*DIA_MS){
+  // Beta 33: a prova marcada já passou (o aluno pode ter registrado no dia seguinte, sem marcar como prova,
+  // e a data só é limpa no próximo login): a semana seguinte é de recuperação, não de "polimento" com longão.
+  if(rd && rSem(rd) < semTs){
+    const kmP = (RGOAL[goal]||{}).km || 5; const nP = kmP>=30 ? 3 : kmP>=15 ? 2 : 1;
+    const kP = Math.round((semTs - rSem(rd))/(7*DIA_MS)); if(kP>=1 && kP<=nP) return { fase:'pos_prova', k:kP, n:nP };
+  }
+  if(rd && rSem(rd) >= semTs){
     const W = Math.round((rSem(rd) - semTs)/(7*DIA_MS));      // 0 = semana da prova
     const km = (RGOAL[goal]||{}).km || 5;
     const tap = km>=40 ? 3 : km>=20 ? 2 : 1, esp = km>=40 ? 6 : km>=20 ? 5 : km>=10 ? 4 : 3;
@@ -1446,7 +1452,7 @@ mtGancho('openStudent', { depois(email){
     const ctx = runCtx(data); const M = run.plan && run.plan.motor; const p = rPerfil(ctx); const ref = rReferencia(ctx);
     const F = M ? rSemanaFase(ctx, M, rSem()) : null; const cump = M ? rCumprimento(ctx, M, 4) : null;
     const MT = rMetas(ctx); const fad = rFadiga(ctx);
-    const lin = (k,v)=>`<div class="list-row" style="cursor:default"><span>${k}</span><b style="text-align:right">${v}</b></div>`;
+    const lin = (k,v)=>`<div class="list-row" style="cursor:default"><span>${k}</span><b style="text-align:right">${mtEsc(v)}</b></div>`;   // Beta 33: dados do aluno escapados
     window.__admRunData = data;
     box.insertAdjacentHTML('beforeend', `<div class="section-lbl">🏃 Corrida</div><div class="card" style="padding:4px 12px">
       ${lin('Plano', run.plan ? `${(RGOAL[(run.setup||{}).goal]||{}).nome||'—'}${(run.setup||{}).raceDate?' · prova '+new Date(run.setup.raceDate+'T12:00:00').toLocaleDateString('pt-BR'):''}` : 'só registro de atividades')}

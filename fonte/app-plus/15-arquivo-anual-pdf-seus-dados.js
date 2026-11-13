@@ -387,7 +387,7 @@ window.exportMyData = async function(){
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `metatreino-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `metatreino-backup-${chaveDia(new Date())}.json`;
   a.click();
   toast('📥 Backup baixado — guarde em local seguro');
 };
@@ -760,7 +760,7 @@ function arqMontarPDF(jsPDF, opt, aviso){
     doc.setDrawColor(...C.linha); doc.setLineWidth(0.2); doc.line(M, PH - 11, PW - M, PH - 11);
     txt(`MetaTreino · ${nomeAluno}`, M, PH - 7); txt(`Página ${i} de ${n}`, PW - M, PH - 7, {align:'right'});
   }
-  const nome = `metatreino-relatorio-${new Date().toISOString().slice(0,10)}.pdf`;
+  const nome = `metatreino-relatorio-${chaveDia(new Date())}.pdf`;
   return { doc, nome };
 }
 

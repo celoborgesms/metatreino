@@ -170,7 +170,7 @@ function _podeAtualizarAgora(){
   if(document.visibilityState === 'hidden') return true;
   const modal = document.getElementById('modal-back');
   const ocupado = (modal && modal.classList.contains('on')) || (state && state.ui && state.ui.tab==='sessions') ||
-    (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) || !!document.getElementById('rest-timer-on');
+    (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) || !!document.getElementById('rest-timer-banner') || !!document.getElementById('rest-timer-on');   // Beta 33: o id certo do descanso
   // nos primeiros 20 s após abrir, ninguém começou nada ainda: pode aplicar
   return !ocupado || (Date.now() - MT_UPD.abriuEm < 20000 && !(modal && modal.classList.contains('on')));
 }

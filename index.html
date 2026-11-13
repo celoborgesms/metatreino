@@ -2121,6 +2121,26 @@ html,body{overflow-x:clip}
 .pi-lista [data-ordem]{will-change:transform}
 .pi-arrastando{transition:none!important;z-index:5}
 .pi-lista-arrastando .pi-row{cursor:grabbing}
+/* ===== Beta 33: descanso com pausar, ±15 s e barra; foco visível ===== */
+.rt-banner{position:fixed;left:12px;right:12px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:350;max-width:520px;margin:0 auto;
+  background:var(--bg-2);color:var(--text);border:1.5px solid var(--primary);border-radius:var(--radius-card);padding:11px 14px 10px;box-shadow:var(--shadow-md)}
+.rt-linha{display:flex;align-items:center;gap:10px}
+.rt-ico{font-size:20px;line-height:1}
+.rt-txt{flex:1;min-width:0}
+.rt-tit{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt-sub{font-size:12px;color:var(--text-dim)}
+.rt-tempo{font-weight:900;font-size:26px;color:var(--primary-2);font-variant-numeric:tabular-nums;min-width:62px;text-align:right}
+.rt-barra{height:4px;border-radius:4px;background:var(--surface-2);margin:8px 0 9px;overflow:hidden}
+.rt-barra i{display:block;height:100%;width:100%;background:var(--primary);border-radius:4px;transition:width .25s linear}
+.rt-botoes{display:flex;gap:6px}
+.rt-botoes button{flex:1;min-height:40px;padding:6px 4px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-size:13px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rt-botoes .rt-pausa{flex:1.6}
+.rt-botoes button:active{transform:scale(.97)}
+@media (max-width:340px){ .rt-botoes button{font-size:12px} .rt-tempo{font-size:22px;min-width:54px} }
+/* com o descanso rodando, os avisos sobem para não cobrir o cronômetro */
+body:has(#rest-timer-banner) #toast-wrap{bottom:calc(206px + env(safe-area-inset-bottom))}
+/* foco visível ao navegar pelo teclado (computador) sem mudar o toque no celular */
+button:focus-visible, .btn:focus-visible, [onclick]:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible{outline:2px solid var(--primary-2);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -2979,7 +2999,7 @@ html,body{overflow-x:clip}
       <div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div>
     </div>
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 32</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 33</span>
     </div>
   </div>
 </div>
@@ -3057,8 +3077,8 @@ html,body{overflow-x:clip}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.32"></script>
-<script src="./app-plus.js?v=2027.1-beta.32"></script>
+<script src="./app.js?v=2027.1-beta.33"></script>
+<script src="./app-plus.js?v=2027.1-beta.33"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();

@@ -1,3 +1,51 @@
+# MetaTreino 2027.1 Beta 33 — Auditoria geral
+
+Versão de correções. Nenhum recurso foi removido; histórico, conquistas, preferências e permissões continuam como estavam. O relatório completo está em `RELATORIO-AUDITORIA-BETA33.md`.
+
+1. **Segurança do painel (crítico).** O nome, o apelido, o WhatsApp e a foto que o aluno grava no próprio perfil apareciam no painel do administrador sem proteção. Um aluno mal-intencionado conseguiria rodar código na tela do administrador. Agora tudo o que vem do aluno é tratado como texto, e a foto só entra se for imagem.
+2. **App abrindo em branco sem internet (crítico).** Logo depois de instalar ou atualizar, o app podia não abrir no modo avião. Corrigido no service worker, que agora também guarda o Firebase na instalação. O defeito foi reproduzido na Beta 32 e o teste passou na Beta 33.
+3. **Treinos sumindo entre aparelhos (crítico).** Quando dois aparelhos (ou um aparelho sem internet) gravavam em momentos diferentes, o último apagava os treinos do outro.
+   - Agora as cópias são juntadas: treinos, séries do dia, peso, conquistas e recordes.
+   - O que o aluno exclui fica marcado e não volta.
+   - Com o app aberto em dois aparelhos ao mesmo tempo, o treino feito num aparece no outro.
+4. **Cronômetro de descanso.**
+   - Conta pelo horário real: com a tela bloqueada ou o app minimizado o tempo continua certo, e ao voltar ele mostra o tempo restante na hora.
+   - Ganhou os botões **Pausar/Continuar**, **−15 s** e **+15 s**, além de uma barra de progresso.
+   - O som do fim é agendado na hora e toca uma vez só. Com o som desligado, nada toca.
+   - A escolha "sem som" passou a ser lembrada, e há uma opção nova para **vibrar ou não**.
+   - Se o app for fechado no meio do descanso, o cronômetro volta com o tempo certo.
+5. **Tela sempre ligada durante o treino.** A tela fica ligada enquanto o aluno está na aba Treinos com o treino de hoje aberto, registrando séries ou descansando.
+   - Ao minimizar e voltar, a tela é pedida de novo.
+   - Ela é liberada quando o treino é salvo, quando o aluno sai da aba, sai da conta ou fica 20 minutos sem tocar na tela.
+   - Antes, a tela apagava no meio do treino assim que um descanso terminava.
+6. **Fichas de musculação revisadas.** Foram testadas todas as 768 combinações:
+   - Antes, o peito do iniciante às vezes não tinha nenhum supino ou flexão, saíam dois encolhimentos no mesmo treino, e 688 combinações passavam de 30 séries por sessão.
+   - Agora cada grupo começa pelo exercício principal (peito: supino ou flexão; costas: puxada e remada; pernas: agachamento ou leg press, depois posterior de coxa).
+   - O **descanso varia por exercício**: mais longo nos principais, mais curto nos acessórios, no core e na panturrilha.
+   - Bíceps e tríceps recebem menos exercícios que os grupos grandes. Um grupo que repete na semana não repete o volume cheio, e há um limite de séries por sessão.
+   - Na força, os acessórios ficam em 8 a 10 repetições e o core em 10 a 12 (antes: 4 a 6).
+   - Quem tem halteres ou academia faz o principal com carga (não com flexão ou pike).
+   - Os planos já salvos são corrigidos **uma vez**, mantendo os exercícios principais (e a carga) que o aluno já usava. Trocas feitas à mão continuam.
+7. **Semana certa.** A troca semanal de exercícios acontecia na quarta-feira às 21h. Agora a semana vai de segunda a domingo, no horário do aparelho.
+8. **Corrida.**
+   - A semana depois da prova agora é de recuperação. Antes podia virar "polimento" com longão e ritmo de prova.
+   - O ritmo não aparece mais como "5:60/km".
+   - Ao editar uma atividade, a distância aceita vírgula e a bike continua em km/h.
+9. **Início.**
+   - A sequência não zera mais enquanto o treino de hoje ainda não foi feito.
+   - "Seu próximo treino é amanhã" não aparece mais quando o treino de hoje está pendente.
+   - Quem faz musculação e corrida tem os dias planejados das duas somados.
+10. **Outros:**
+    - Tocar duas vezes em "Salvar treino" não grava em dobro.
+    - Os avisos não cobrem mais o cronômetro.
+    - Apelido com aspas não quebra mais o campo de editar perfil.
+    - Datas de arquivos usam o dia do aparelho.
+    - Há foco visível ao navegar pelo teclado no computador.
+    - O app não grava mais na nuvem só por trocar de aba, o que economiza a cota do Firebase.
+
+**Regras do Firestore: mudaram.** Publique o `firestore.rules` novo no Console do Firebase. A única mudança é que o aluno não consegue mais gravar no próprio documento um e-mail que não é o dele. As permissões de aluno, administrador secundário e administrador principal continuam iguais.
+
+---
 # MetaTreino 2027.1 Beta 32 — Escala de esforço por modalidade
 
 1. **Frases da escala de esforço (1 a 10) conforme a modalidade.** Os nomes de cada nota (Muito leve… Esforço máximo) continuam iguais em tudo; só as frases de baixo mudaram.

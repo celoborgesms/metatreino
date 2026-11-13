@@ -119,7 +119,7 @@ async function admApagarConfirma(){
     const data = { app:'MetaTreino', versao:APP_VERSION, exportadoEm:new Date().toISOString(), aluno:{ email, nome }, estado:u.estadoApp || {}, arquivo };
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `metatreino-backup-${_semAcento(nome).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'aluno'}-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `metatreino-backup-${_semAcento(nome).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'aluno'}-${chaveDia(new Date())}.json`;
     document.body.appendChild(a); a.click(); setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(e){} }, 4000);
   }catch(e){
     console.log('backup do aluno', e);

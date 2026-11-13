@@ -1,7 +1,10 @@
 rules_version = '2';
 
 // =============================================================
-// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 24)
+// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 33)
+// Beta 33: o aluno não consegue mais gravar no próprio documento um
+// e-mail que não é o dele (antes podia aparecer no painel com o
+// e-mail de outra pessoa). Nada mais mudou nas permissões.
 // Onde colar: Firebase Console → Firestore Database → Regras
 // Nenhuma coleção é pública (exceto a leitura de config/contato,
 // que já era pública e é usada na tela de login).
@@ -61,9 +64,18 @@ service cloud.firestore {
     // (aluno: so os proprios dados · administradores: todos)
     // =========================================================
 
+    // o campo "email" do documento do aluno precisa ser o e-mail da própria conta
+    function emailDoDocOk() {
+      return !('email' in request.resource.data)
+        || request.resource.data.email == null
+        || request.resource.data.email.lower() == userEmail();
+    }
+
     match /usuarios/{userId} {
-      allow read, create, update:
+      allow read:
         if isOwnerUser(userId) || isAdmin();
+      allow create, update:
+        if (isOwnerUser(userId) && emailDoDocOk()) || isAdmin();
       // Apagar: o proprio aluno (excluir conta / comecar do zero) ou o
       // administrador principal (limpeza de ex-alunos). Secundario nao apaga.
       allow delete:
