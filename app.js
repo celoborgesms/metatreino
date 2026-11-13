@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 24 =====
-const APP_VERSION = '2027.1-beta.24';
+// ===== MetaTreino 2027.1 Beta 26 =====
+const APP_VERSION = '2027.1-beta.26';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -573,7 +573,7 @@ function appConfirm(msg, onOk, opts){
       <h3 style="margin:8px 0 6px">${opts.title||'Tem certeza?'}</h3>
       <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5;white-space:pre-line">${msg}</p>
     </div>
-    <button class="btn btn-primary btn-block" id="appconfirm-ok" style="margin-top:16px${opts.danger?';background:#ef4444;box-shadow:none':''}">${opts.okLabel||'Confirmar'}</button>
+    <button class="btn ${opts.danger?'btn-perigo':'btn-primary'} btn-block" id="appconfirm-ok" style="margin-top:16px">${opts.okLabel||'Confirmar'}</button>
     <button class="btn btn-ghost btn-block" id="appconfirm-cancel" style="margin-top:8px">${opts.cancelLabel||'Cancelar'}</button>`;
   document.getElementById('modal-back').classList.add('on');
   const ok = document.getElementById('appconfirm-ok');
@@ -616,7 +616,7 @@ function pedeReautenticarParaExcluir(u){
       <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Por segurança, o sistema pede sua senha pra concluir a exclusão da conta.</p>
       <div class="field" style="margin-top:12px"><label>Senha</label><input class="input" type="password" id="del-pass" autocomplete="current-password"></div>
       <div id="del-err"></div>
-      <button class="btn btn-primary btn-block hl-danger" style="margin-top:10px" onclick="confirmaExclusaoFinal()">Excluir minha conta</button>
+      <button class="btn btn-perigo btn-block" style="margin-top:10px" onclick="confirmaExclusaoFinal()">Excluir minha conta</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
     $('modal-back').classList.add('on');
     window.__delUser = u;

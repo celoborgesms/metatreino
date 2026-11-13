@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // =============================================================
-// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 13)
+// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 24)
 // Onde colar: Firebase Console → Firestore Database → Regras
 // Nenhuma coleção é pública (exceto a leitura de config/contato,
 // que já era pública e é usada na tela de login).
@@ -62,12 +62,19 @@ service cloud.firestore {
     // =========================================================
 
     match /usuarios/{userId} {
-      allow read, create, update, delete:
+      allow read, create, update:
         if isOwnerUser(userId) || isAdmin();
+      // Apagar: o proprio aluno (excluir conta / comecar do zero) ou o
+      // administrador principal (limpeza de ex-alunos). Secundario nao apaga.
+      allow delete:
+        if isOwnerUser(userId) || isOwner();
 
+      // Inclui o arquivo anual (usuarios/{uid}/arquivo/{ano-semestre}).
       match /{subdocumentos=**} {
-        allow read, create, update, delete:
+        allow read, create, update:
           if isOwnerUser(userId) || isAdmin();
+        allow delete:
+          if isOwnerUser(userId) || isOwner();
       }
     }
 
@@ -215,8 +222,8 @@ service cloud.firestore {
         allow get: if isOwnerUser(userId) || isAdmin();
         allow list: if isAdmin();
         allow create, update: if isOwnerUser(userId);
-        // Beta 21: o administrador também apaga (limpeza dos dados de quem não é mais aluno)
-        allow delete: if isOwnerUser(userId) || isAdmin();
+        // O proprio aluno ou o administrador principal (limpeza de ex-alunos).
+        allow delete: if isOwnerUser(userId) || isOwner();
       }
     }
 

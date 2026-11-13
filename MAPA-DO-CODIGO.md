@@ -21,7 +21,7 @@ Na pasta do projeto:
 
 ```
 python3 fonte/montar.py              # junta as partes no app-plus.js e confere sintaxe e versões
-python3 fonte/montar.py --versao 25  # troca para "2027.1 Beta 25" em todos os lugares e monta
+python3 fonte/montar.py --versao 27  # troca para "2027.1 Beta 27" em todos os lugares e monta
 ```
 
 A versão aparece em 5 lugares (app.js, service-worker.js, index.html `?v=`, rodapé do Perfil e `MTP.versao`). Se ficarem diferentes, os celulares podem não atualizar sozinhos — o script avisa.
@@ -52,6 +52,13 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `17-desafios-resgate-limpeza-foto.js` | Aviso final e resgate de medalha, apagar dados de ex-alunos, foto mais leve |
 | `18-perfil-em-grupos.js` | Perfil em grupos recolhíveis |
 | `19-desempenho-historico.js` | Ordem do Desempenho, calendário e gráfico do Histórico recolhíveis |
+| `20-alimentacao-rolagem.js` | Plano alimentar: mantém rolagem, refeição aberta e foco ao editar |
+| `21-esforco-rpe.js` | Escala de esforço (RPE) nova — mesmas funções e valor salvo |
+| `22-medalhas-fundos.js` | Medalhas (níveis comum/rara/especial) e fundos decorativos por aba |
+| `23-janelas-cliques.js` | Fechar janelas (tocar fora com proteção, botão Voltar), janelas sem "Pronto", gráfico semanal do Histórico |
+| `24-historico-paginas-desafios-futuros.js` | Paginação numerada do Histórico, detalhes dos desafios futuros |
+| `25-treinos-desafios-progresso.js` | Andamento do treino, "o que falta" nos desafios, períodos no resumo, tela de preparo do plano |
+| `26-central-compartilhamento.js` | Central de compartilhamento: dados do card (`mtsDe*`), desenho (`mtsDesenhar`), tela (`mtsAbrir`), ligação com os botões antigos |
 
 Parte nova: próximo número livre (ex.: `20-nome-da-funcao.js`).
 
@@ -70,7 +77,7 @@ mtGancho('renderHome', { antes(){ /* roda antes */ }, depois(){ /* roda depois *
 - Cada gancho roda isolado: se der erro, ele aparece no console e a tela continua funcionando.
 - Funciona com funções assíncronas (ex.: `goAdmin`).
 
-Funções que já usam ganchos: `renderHome`, `renderHomeMetrics`, `renderMonthlyCard`, `renderSessions`, `renderPerf`, `renderHistory`, `renderProfile`, `goAdmin`, `openStudent`.
+Funções que já usam ganchos: `renderHome`, `renderHomeMetrics`, `renderMonthlyCard`, `renderSessions`, `renderPerf`, `renderHistory`, `renderProfile`, `goAdmin`, `openStudent`, `closeModal`, `openTrophyDetail`, `openAparencia`, `openPersonalizarInicio`, `openAudioVideos`, `renderHistEvolution`, `renderChallenges`, `openMinhaConquistaShare`, `renderRecords`, `openExProgress`.
 
 Embrulhar a função inteira (`window.f = function(){...}`) só quando for preciso **mudar os argumentos ou o resultado** dela.
 
@@ -96,3 +103,14 @@ Embrulhar a função inteira (`window.f = function(){...}`) só quando for preci
 | `perguntasNaoRespondidas`, `relatos`, `videosReportados` | Mensagens e relatos dos alunos | aluno cria; admins leem |
 
 O dono do app (administrador principal) é reconhecido pelo e-mail definido em `ADMIN_EMAIL` (app.js) e nas regras.
+
+## Compartilhamento (Beta 26)
+
+Para um card novo: escreva uma função que devolve os dados e chame `mtsAbrir(dados, funcaoDoModeloClassico)`.
+
+```js
+mtsAbrir({ tipo:'corrida', titulo:'Rodagem', data:Date.now(),
+  hero:{ v:'7,3', u:'km' }, nums:[{ l:'Tempo', v:'42', u:'min' }], extra:['Prova'], texto:'Texto do compartilhar' });
+```
+
+`tipo` define a cor e o desenho de fundo. Também aceita `desc`, `medalha:{svg,cor}`, `nivel`, `periodo`, `serie` (números para a curva) e `kick` (o texto pequeno acima do título). Nunca coloque e-mail, peso ou medidas.

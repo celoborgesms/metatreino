@@ -1,3 +1,75 @@
+# MetaTreino 2027.1 Beta 26 — Central de compartilhamento
+
+1. **Uma Central para todos os cards.** Os botões de compartilhar que já existiam agora abrem a mesma tela:
+   - Histórico (treino de musculação, corrida, bike ou caminhada), Conquistas (medalha), resumo da semana, Desafio concluído.
+   - **Novos pontos:** cada recorde do Progresso ganhou um botão de compartilhar; a evolução de um exercício ganhou "Compartilhar minha evolução"; a Conquista Especial ganhou "Card com foto e formatos", ao lado do vídeo, que continua igual.
+2. **Cards por tipo, com dados reais do aluno:**
+   - Musculação: duração, exercícios, séries, volume levantado e grupos treinados.
+   - Corrida e caminhada: distância, tempo, ritmo e velocidade. Bike: distância, tempo e velocidade média.
+   - Conquista: medalha do app com o nível (rara ou especial). Desafio: medalha do desafio, dias ativos e meta.
+   - Recorde: carga ou distância. Evolução: carga do início, atual e melhor, % de evolução e a curva real.
+   - Semana: atividades, treinos, corridas, distância e tempo.
+   - Só aparece o que existe: um treino sem séries registradas não mostra "0 séries".
+3. **Formatos:** Stories e Status do WhatsApp (9:16, 1080×1920), Feed (4:5, 1080×1350) e Quadrado (1:1, 1080×1080).
+4. **Fundo:**
+   - Escuro (identidade MetaTreino, padrão), Claro, ou **Cores do meu tema**.
+   - Ou uma foto da galeria: arrastar para posicionar, pinça ou controle para ampliar, e controle para escurecer e deixar o texto legível.
+   - A foto não é enviada para lugar nenhum: fica só no aparelho até você compartilhar.
+5. **Disposição:** Destaque (número grande embaixo, bom para Stories com foto), Números (centralizado) ou Faixa (painel atrás do texto).
+6. **Compartilhar ou Salvar imagem.**
+   - O formato, o estilo e a disposição escolhidos ficam lembrados no aparelho.
+   - Se o navegador não abrir o compartilhamento direto, a imagem é baixada e o app avisa.
+7. **Vídeo:** só a Conquista Especial tem vídeo animado, como antes. O botão só aparece se o aparelho consegue gravar (MP4 ou WebM).
+8. **Privacidade:**
+   - O card nunca mostra e-mail, peso corporal ou medidas.
+   - O nome só aparece se o aluno ligar "Mostrar meu primeiro nome", e só o primeiro nome ou apelido.
+   - Não há mapa de percurso: o app não registra GPS, então nada é inventado.
+9. **Modelo clássico:** o card antigo continua disponível por um link na Central.
+
+**Regras do Firestore:** não mudaram nesta versão (continua valendo o arquivo revisado da Beta 24).
+
+---
+# MetaTreino 2027.1 Beta 25 — Polimento visual, usabilidade e funcionalidades
+
+1. **Plano alimentar:** remover, editar ou adicionar um alimento não volta mais ao topo.
+   - A lista reabre exatamente onde estava (inclusive a lista interna de refeições), com a refeição aberta.
+   - O foco volta para o item vizinho ou para a refeição.
+   - Abrir o plano "do zero" continua começando do topo. Nada muda no que é salvo.
+2. **Contraste dos 8 temas:** auditoria automática de todo texto visível contra o fundo real (camadas e gradientes), em todas as telas e nas principais janelas.
+   - Textos abaixo do recomendado: de 1.836 para 140. Os que sobraram estão perto do mínimo e são de propósito discretos (dias passados ou futuros, botão desativado).
+   - Ajustes, mantendo a paleta de cada tema: tom secundário (--text-mute) de todos; tom intermediário (--text-dim) de Clássico e Oceano; gradiente dos botões em Clássico, Oceano e Vinho; selecionados do Vinho; "hoje" do calendário nos temas claros; avisos; logotipo.
+   - **Botões de perigo** ("Apagar dados", "Excluir conta", confirmações de exclusão) agora são vermelhos com texto branco. Antes eram texto vermelho sobre rosa.
+   - **Grupos de exercícios (Treinos):** fechados não mostram mais um pedaço do conteúdo, e o conteúdo aberto fica um tom acima do cartão (profundidade coerente).
+3. **Escala de esforço (RPE):** régua com 10 posições iguais, cores graduais suaves, animação curta, faixa (leve, moderado, intenso, máximo) e descrição embaixo.
+   - Dá para tocar, deslizar o dedo ou usar o teclado.
+   - Mesmos textos, mesmas funções (`rpeHtml`, `rpeSet`, `RPE_LBL`, `RPE_DESC`) e mesmo valor salvo, em musculação, corrida e outras atividades.
+4. **Medalhas:** símbolo ~25% maior, brilho e sombra interna, medalha do detalhe bem maior.
+   - Três níveis visuais: **comum** (aro simples), **rara** (aro duplo; o terço mais difícil de cada categoria) e **especial** (ornamento; conquistas secretas).
+   - Cada medalha mantém seu próprio desenho e cor. Critérios e ids não mudaram.
+5. **Fundos decorativos novos:** ilustrações em linha, uma por aba (Início, Treinos de musculação, Corrida, Progresso, Histórico, Desafios, Biblioteca, Perfil e Plano). O traço segue o tema e os detalhes, a cor principal.
+   - Mesma opacidade discreta; não recebem toques. A opção de desligar continua.
+6. **Auditoria de cliques:** nenhum `onclick` chamando função inexistente; nenhuma seta "›" sem ação.
+   - O cartão "Em breve" dos Desafios era o único que parecia tocável sem fazer nada: agora abre os detalhes (item 10).
+   - O gráfico semanal do Histórico agora responde ao toque (semana e valor) e usa as cores do tema.
+7. **Janelas:**
+   - Botão **Voltar do Android** fecha a janela aberta (antes saía da tela).
+   - Tocar fora fecha, **exceto** se o aluno digitou algo não salvo: aí o app avisa e mantém a janela.
+   - Aparência, Personalizar início e Áudio dos vídeos já salvam na hora: saiu o "Pronto" e entrou um ✕ no canto.
+   - Confirmações de ações irreversíveis continuam iguais.
+8. **Histórico:** paginação numerada `‹ 1 2 3 … 15 ›` (10 registros por página, mais recente primeiro), destaque na página atual, versão compacta para muitas páginas. Histórico completo e arquivo anual continuam lá.
+9. **Treinos, Desafios e Progresso:**
+   - Treinos: barra de andamento do dia ("3 de 8 exercícios registrados hoje", com estado não iniciado, em andamento ou concluído).
+   - Desafios: "Para concluir: X dias ativos nos próximos Y dias (cerca de Z por semana)", ou um aviso honesto quando a meta já não cabe.
+   - Progresso: o resumo diz de que período é cada número ("Últimos 7 dias" × "Desde o início").
+10. **Desafios futuros:** tocar no "Em breve" abre nome, medalha, descrição, início, término, duração, objetivo (meta de dias), missões, recompensa e como participar.
+    - Avisa que ainda não começou. Não há botão de participar antes da data; a contagem continua começando no dia de início.
+11. **Ajuda, FAQ, Privacidade e Termos** saíram do Início e foram para o fim do **Perfil**, mais discretos. O "Dúvidas? Fale com o treinador" da tela de Treinos continua.
+12. **Tela "Preparando seu plano":** os passos continuam os mesmos (reais). Saiu um dos dois indicadores girando; o de cima virou um selo da modalidade com anel que enche junto com as etapas.
+
+**Regras do Firestore:** não mudaram nesta versão.
+
+---
+
 # MetaTreino 2027.1 Beta 24 — Reorganização do código (sem mudança visível)
 
 Nenhuma tela, função, dado ou regra mudou para o aluno ou para o treinador. A versão serve para deixar as próximas mudanças mais seguras e mais rápidas.

@@ -1,9 +1,9 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 24
+# Roteiro de testes em aparelho real — MetaTreino Beta 26
 
 Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
 
 ## 1. Instalação e atualização
-- [ ] O app atualizou sozinho para a **Beta 24** (Perfil → rodapé)?
+- [ ] O app atualizou sozinho para a **Beta 25** (Perfil → rodapé)?
 - [ ] Fechar e abrir de novo: entrou direto, sem pedir login?
 - [ ] No modo avião, o app abre e mostra os treinos?
 
@@ -15,7 +15,7 @@ Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do ce
 ## 3. Corrida (se usar)
 - [ ] Registrar uma corrida com tempo e distância. O ritmo saiu certo?
 
-## 4. Novidades (Betas 19 a 24)
+## 4. Novidades (Betas 19 a 26)
 - [ ] Histórico → **Histórico completo**: abre? Os números do ano batem com o que você lembra?
 - [ ] Perfil → **Relatório em PDF** → 3 meses → Gerar. O PDF abre? Os gráficos estão legíveis? Teste **Compartilhar** → salvar no Google Drive ou mandar no WhatsApp.
 - [ ] Perfil → **Seus dados**: quanto % aparece? A lista "Do que é feito" faz sentido?
@@ -23,6 +23,19 @@ Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do ce
 - [ ] Perfil → Backup e restauração → **Baixar meu backup**: o arquivo baixou?
 
 - [ ] Progresso → Desempenho: os gráficos de Evolução aparecem logo? Ocultar e mostrar o calendário.
+
+- [ ] Plano alimentar: abra o Jantar, remova 3 alimentos seguidos. A tela fica no lugar?
+- [ ] Finalize um treino: a escala de esforço nova responde ao toque e ao deslizar?
+- [ ] Com uma janela aberta, use o botão Voltar do celular: fecha a janela sem sair do app?
+- [ ] Histórico: os números de página funcionam?
+- [ ] Desafios → "Em breve": abre os detalhes?
+
+- [ ] Histórico → um treino → **Compartilhar**: abre a Central? Troque Stories / Feed / Quadrado e Escuro / Claro / Cores do meu tema.
+- [ ] Na Central: **Usar foto da galeria**, arraste a foto com o dedo, amplie com dois dedos, mexa em Zoom e Escurecer.
+- [ ] **Compartilhar** → mande para você mesmo no WhatsApp (Status) e veja se a imagem chega nítida. Teste também **Salvar imagem**.
+- [ ] Conquistas → uma medalha → Compartilhar. Progresso → Recordes → ícone de compartilhar. Evolução de um exercício → "Compartilhar minha evolução".
+- [ ] Conquista especial (se tiver): o vídeo continua funcionando? A opção "Card com foto e formatos" aparece?
+- [ ] "Modelo clássico" (embaixo da Central) ainda abre o card antigo?
 
 ## 5. No computador (se tiver)
 - [ ] Abrir metatreino.app no computador: a tela de login usa a largura? Depois de entrar, aparece o menu do lado e as telas em duas colunas?

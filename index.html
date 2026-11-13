@@ -1822,6 +1822,191 @@ html.mt-desk.restaurando #scr-auth .auth-wrap{grid-template-columns:minmax(0,560
 #hist-evo.sec-fechada .sec-head{margin-bottom:0}
 .hist-evo-mais{display:inline-block;margin-top:8px;font-size:12px;font-weight:600;color:var(--primary);text-decoration:none}
 #scr-history .wrap > .brand{display:none}
+
+/* ===== Beta 25: contraste e hierarquia (auditoria de todos os temas) =====
+   Medido texto a texto contra o fundo real (com camadas e gradientes).
+   Mantém a paleta de cada tema: só ajusta o tom secundário (--text-mute),
+   o gradiente dos botões onde o texto ficava fraco e elementos esmaecidos demais. */
+[data-theme="amoled"]{--text-mute:#858585}
+[data-theme="zepp"]{--text-mute:#8e8e97}
+[data-theme="aurora"]{--text-mute:#8a97ad}
+[data-theme="classico"]{--text-mute:#8796ab; --grad-primary:linear-gradient(135deg,#34d399,#10b981)}
+[data-theme="oceano"]{--text-mute:#93a2b6; --grad-primary:linear-gradient(135deg,#22d3ee,#06b6d4)}
+[data-theme="rubi"]{--text-mute:#9a8f95; --grad-primary:linear-gradient(135deg,#a84f63,#8f3f51); --primary-dark:#8f3f51}
+[data-theme="claro"]{--text-mute:#5a6477}
+[data-theme="areia"]{--text-mute:#655e58}
+/* logo "M" do cabeçalho: texto escuro onde o fundo é claro */
+[data-theme="aurora"] .brand-logo,[data-theme="classico"] .brand-logo,[data-theme="oceano"] .brand-logo{color:var(--on-primary)}
+[data-theme="rubi"] .brand-logo{color:#fff}
+/* hoje no calendário: nos temas claros o número era branco sobre tom claro */
+html.tema-claro .cal-day.today{color:var(--primary-2)}
+/* o que é "passado" ou "futuro" continua discreto, mas legível */
+.cal-day.future{opacity:.62}
+.ev-mission.past:not(.ok){opacity:.78}
+.ndays .nd[style*="opacity"]{opacity:.72!important}
+.ev-stats small{color:var(--text-dim)}
+.day.today > div{color:var(--text-dim)}
+.seg-sm button[disabled]{opacity:.5}
+html.tema-claro .smart-k{color:color-mix(in srgb, var(--sm, var(--primary)) 62%, #000)}
+/* botão de perigo de verdade (o "Apagar dados" ficava vermelho sobre rosa) */
+.btn.btn-perigo,.btn.btn-perigo:hover{background:#c62828!important;background-image:none!important;color:#fff!important;border:0!important;box-shadow:none!important}
+.btn.btn-perigo:disabled{opacity:.6}
+/* grupos de exercícios (Treinos): fechado não mostra mais um pedaço do conteúdo,
+   e a camada aberta fica um tom ACIMA do cartão (profundidade coerente em todos os temas) */
+.block-head{background:transparent}
+.block-head:hover{background:var(--tint-primary)}
+.block-inner{transition:padding .26s ease}
+.block:not(.open) .block-inner{padding-top:0;padding-bottom:0}
+.block.open > .block-head{border-bottom:1px solid var(--border)}
+.block.open > .block-body{background:var(--surface-2)}
+@media (prefers-reduced-motion:reduce){.block-inner{transition:none}}
+
+/* ===== Beta 25: escala de esforço (RPE) ===== */
+.rpe2{margin-top:12px}
+.rpe2-trilho{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;padding:5px;border-radius:16px;background:var(--surface-2);border:1px solid var(--border);touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.rpe2-c{position:relative;height:46px;min-width:0;border:0;border-radius:11px;background:transparent;color:var(--text-dim);font:inherit;font-weight:800;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent;transition:background .18s ease,color .18s ease,transform .18s ease}
+.rpe2-c::after{content:'';position:absolute;left:50%;bottom:5px;width:14px;height:3px;border-radius:2px;transform:translateX(-50%);background:var(--rc);opacity:.75}
+.rpe2-c.abaixo{background:color-mix(in srgb, var(--rc) 16%, transparent);color:var(--text)}
+.rpe2-c.on{background:var(--rc);color:#fff;box-shadow:0 4px 14px color-mix(in srgb, var(--rc) 45%, transparent);text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.rpe2-c.on::after{background:#fff;opacity:.9}
+.rpe2-c:focus-visible{outline:2px solid var(--text-strong);outline-offset:2px}
+.rpe2-c.pop{animation:rpePop .26s ease}
+@keyframes rpePop{0%{transform:scale(.9)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+.rpe2-zonas{display:grid;grid-template-columns:3fr 3fr 2fr 2fr;margin:6px 4px 0;font-size:10.5px;font-weight:700;letter-spacing:.4px;color:var(--text-mute);text-transform:uppercase}
+.rpe2-zonas span{text-align:center}
+.rpe2-lbl{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb, var(--rsel) 12%, var(--surface-2));border:1px solid color-mix(in srgb, var(--rsel) 35%, transparent);text-align:left}
+.rpe2-num{flex:0 0 auto;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--rsel);color:#fff;font-size:20px;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.rpe2-txt{flex:1;min-width:0;line-height:1.25}
+.rpe2-txt b{display:block;font-size:15px;color:var(--text-strong)}
+.rpe2-txt small{display:block;font-size:12px;color:var(--text-dim);margin-top:2px}
+.rpe2-zona{flex:0 0 auto;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:4px 8px;border-radius:99px;color:var(--text-strong);background:color-mix(in srgb, var(--rsel) 26%, transparent)}
+@media (max-width:360px){.rpe2-c{font-size:13px;height:42px}.rpe2-trilho{gap:2px;padding:4px}.rpe2-zona{display:none}.rpe2-zonas{font-size:9px;letter-spacing:0}}
+@media (prefers-reduced-motion:reduce){.rpe2-c,.rpe2-c.pop{transition:none;animation:none}}
+
+/* ===== Beta 25: medalhas ===== */
+.tb-ring{stroke-width:1.8}
+.tb-ring2{fill:none;stroke:var(--c);stroke-width:.9;stroke-opacity:.7}
+.tb-orn{fill:none;stroke:var(--c);stroke-width:1.6;stroke-dasharray:1.4 2.2;stroke-opacity:.9}
+.tb-in{fill-opacity:.17}
+.tb-luz{fill:#fff;fill-opacity:.07;stroke:none}
+.tb-sombra{fill:none;stroke:#000;stroke-opacity:.22;stroke-width:1.1}
+html.tema-claro .tb-luz{fill-opacity:.55}
+html.tema-claro .tb-sombra{stroke-opacity:.08}
+.tb-g{stroke-width:1.6}
+.tb-l{font-size:9px}
+.tbadge.nv-especial{filter:drop-shadow(0 0 6px color-mix(in srgb, var(--c) 45%, transparent))}
+.tbadge.nv-rara{filter:drop-shadow(0 0 3px color-mix(in srgb, var(--c) 30%, transparent))}
+.tbadge.dim{filter:grayscale(1);opacity:.55}
+.trophy-emoji{font-size:54px}
+.tr-medal.tr-grande{width:172px;height:172px}
+.tr-medal.tr-grande .tr-ico{font-size:118px!important;line-height:1}
+.tr-medal.tr-grande .tr-glow{inset:10px}
+.tr-medal.tr-grande .tr-ring{inset:20px}
+.tr-nivel{display:inline-block;margin:6px 0 0;padding:3px 10px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--text-dim);background:var(--surface-2);border:1px solid var(--border)}
+.tr-nivel.nv-rara{color:var(--primary-2);border-color:var(--line-primary)}
+.tr-nivel.nv-especial{color:#b8860b;border-color:rgba(245,196,81,.55);background:rgba(245,196,81,.12)}
+html:not(.tema-claro) .tr-nivel.nv-especial{color:#f5c451}
+@media (max-width:340px){.tr-medal.tr-grande{width:148px;height:148px}.tr-medal.tr-grande .tr-ico{font-size:100px!important}}
+
+/* ===== Beta 25: fundos decorativos ===== */
+#app-deco{right:-36px;bottom:72px;width:min(64vw,330px);height:min(64vw,330px)}
+#app-deco .dk-a{stroke:var(--primary);stroke-opacity:.9}
+
+/* ===== Beta 25: ajuda no Perfil ===== */
+.pf-ajuda{margin:22px 0 0;text-align:center}
+.pf-ajuda-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);font-size:13px;text-decoration:none}
+.pf-ajuda-btn b{color:var(--text-strong);font-weight:700}
+.pf-ajuda .help-links{margin-top:12px;font-size:12.5px}
+.pf-ajuda .help-links a{color:var(--text-dim)}
+
+/* ===== Beta 25: janelas ===== */
+.modal-x{position:sticky;top:0;float:right;margin:-8px -8px 0 8px;width:36px;height:36px;border-radius:50%;border:0;background:var(--surface-2);color:var(--text-dim);font-size:16px;cursor:pointer;z-index:2}
+.modal-x:hover{color:var(--text-strong)}
+.jan-salvo{clear:both;text-align:center;font-size:11.5px;color:var(--text-mute);margin-top:12px}
+#modal-inner.jan-avisa{animation:janAvisa .35s ease}
+@keyframes janAvisa{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+#hist-evo-svg .ch-hit.sel{fill:rgba(var(--primary-rgb),.10)}
+#hist-evo-svg .ch-hit:focus{outline:none;fill:rgba(var(--primary-rgb),.10)}
+@media (prefers-reduced-motion:reduce){#modal-inner.jan-avisa{animation:none}}
+
+/* ===== Beta 25: paginação do histórico ===== */
+.hist-pag{margin:16px 0 6px;text-align:center}
+.hp-linha{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:nowrap}
+.hp-n,.hp-seta{min-width:40px;height:40px;padding:0 6px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-size:14px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hp-n.on{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+html.tema-claro .hp-n.on,[data-theme="rubi"] .hp-n.on{color:#fff}
+.hp-seta{font-size:20px;line-height:1}
+.hp-seta:disabled{opacity:.4;cursor:default}
+.hp-ret{color:var(--text-mute);padding:0 2px}
+.hp-info{margin-top:8px;font-size:11.5px;color:var(--text-mute)}
+@media (max-width:360px){.hp-n,.hp-seta{min-width:34px;height:36px;font-size:13px}.hp-linha{gap:4px}}
+/* ===== Beta 25: desafio futuro ===== */
+.ev-mini.evf-toque{cursor:pointer;position:relative;flex-wrap:wrap}
+.evf-seta{width:100%;text-align:right;font-size:11.5px;font-weight:700;color:var(--primary-2);margin-top:4px}
+html.tema-claro .evf-seta{color:var(--primary)}
+.evf-topo{text-align:center;padding-top:4px}
+.evf-quando{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--accent-2);background:var(--tint-accent)}
+.evf-aviso{padding:10px 12px;border-radius:12px;font-size:12.5px;line-height:1.5;background:var(--tint-info);border:1px solid var(--line-info);color:var(--text)}
+
+/* ===== Beta 25: Treinos, Desafios, Progresso ===== */
+.tr-anda{margin:0 0 12px;padding:12px 14px;border-radius:16px;background:var(--surface);border:1px solid var(--border)}
+.tr-anda-l{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim)}
+.tr-anda-l b{color:var(--text-strong);font-size:14px}
+.tr-anda-st{margin-left:auto;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:3px 9px;border-radius:99px;background:var(--surface-2);color:var(--text-dim)}
+.tr-and .tr-anda-st{background:var(--tint-accent);color:var(--accent-2)}
+.tr-ok .tr-anda-st{background:var(--tint-primary);color:var(--primary-2)}
+html.tema-claro .tr-ok .tr-anda-st{color:var(--primary)}
+.tr-anda-b{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:9px}
+.tr-anda-b i{display:block;height:100%;border-radius:99px;background:var(--primary);transition:width .35s ease}
+.ev-falta{position:relative;z-index:1;margin:12px 0 2px;padding:9px 11px;border-radius:12px;font-size:12.5px;line-height:1.5;background:rgba(0,0,0,.18);color:var(--text)}
+html.tema-claro .ev-falta{background:rgba(255,255,255,.6)}
+.pr-per{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--text-mute);margin:2px 4px 6px}
+#perf-resumo .stat-grid + .pr-per{margin-top:10px}
+
+/* ===== Beta 25: tela "Preparando seu plano" ===== */
+.mb-marca{font-size:11px;font-weight:800;letter-spacing:3px;color:var(--text-mute);margin-bottom:18px}
+.mb-anel{--p:0%;position:relative;width:64px;height:64px;border-radius:50%;margin-bottom:18px;display:grid;place-items:center;color:var(--primary);
+  background:conic-gradient(var(--primary) var(--p), rgba(var(--primary-rgb),.16) 0);transition:--p .4s ease}
+.mb-anel::before{content:'';position:absolute;inset:4px;border-radius:50%;background:var(--bg)}
+.mb-anel svg{position:relative;width:30px;height:30px}
+@media (min-height:700px){.mb-box{margin-top:-6vh}}
+
+/* Beta 25 — segunda rodada da auditoria de contraste */
+[data-theme="classico"]{--text-mute:#8d9cb0; --text-dim:#a1afc2}
+[data-theme="oceano"]{--text-mute:#9aa8bb; --text-dim:#a9b6c8}
+.cal-day.future{opacity:.78}
+.ndays .nd[style*="opacity"]{opacity:.82!important}
+.note .note-line{color:var(--text)}
+.ev-kicker{color:var(--text-strong)!important;opacity:.85}
+[data-theme="aurora"] .brand-logo,[data-theme="classico"] .brand-logo,[data-theme="oceano"] .brand-logo{background:var(--grad-primary)!important;color:var(--on-primary)!important}
+[data-theme="rubi"] .brand-logo{background:var(--grad-primary)!important;color:#fff!important}
+html.tema-claro .today-diff.diff-med,html.tema-claro .card-title.warn{color:color-mix(in srgb, var(--accent-2) 72%, #000)!important}
+html:not(.tema-claro) #card-monthly [style*="--primary)"]{color:var(--primary-2)!important}
+.today .today-desc,.today > div:not([class]){color:var(--text)}
+.day.today > div{color:var(--text)}
+.hist-evo-mais{color:var(--primary-2)}
+html.tema-claro .hist-evo-mais{color:var(--primary)}
+/* Vinho: elementos selecionados com fundo sólido usam o tom escuro (texto branco legível) */
+[data-theme="rubi"] .filter-chip.on,[data-theme="rubi"] .nxchip.on,[data-theme="rubi"] .nd.on,[data-theme="rubi"] .hp-n.on,[data-theme="rubi"] .seg.on,[data-theme="rubi"] .pill.on{background:var(--primary-dark)!important;border-color:var(--primary-dark)!important;color:#fff!important}
+
+/* ===== Beta 26 — Central de compartilhamento ===== */
+.mts-prev{position:relative;margin:4px auto 10px;display:flex;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:16px;padding:10px}
+.mts-prev canvas{display:block;max-width:100%;max-height:46vh;width:auto;height:auto;border-radius:10px;box-shadow:0 8px 26px rgba(0,0,0,.35)}
+.mts-dica{position:absolute;left:50%;top:16px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:4px 10px;border-radius:99px;pointer-events:none;white-space:nowrap}
+.mts-sec{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin:12px 0 6px}
+.mts-chips{display:flex;flex-wrap:wrap;gap:6px}
+.mts-chips button{flex:1 1 auto;min-height:40px;padding:8px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:600 13px/1.2 inherit;cursor:pointer}
+.mts-chips button small{display:block;font-size:10.5px;color:var(--text-mute);font-weight:600;margin-top:2px}
+.mts-chips button.on{border-color:var(--primary);background:rgba(var(--primary-rgb),.14);color:var(--text-strong)}
+.mts-chips button.on small{color:var(--text-dim)}
+.mts-foto{display:flex;gap:8px;flex-wrap:wrap}.mts-foto+.mts-chips{margin-top:8px}.mts-foto .btn{flex:1;min-width:140px}
+.mts-sl{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-dim);margin-top:10px}.mts-sl input{flex:1;accent-color:var(--primary)}
+.mts-nome{display:flex;align-items:center;gap:8px;font-size:13px;margin:12px 0 4px;color:var(--text)}.mts-nome input{width:18px;height:18px;accent-color:var(--primary)}
+.mts-acoes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.mts-priv{font-size:11.5px;color:var(--text-mute);text-align:center;margin-top:10px;line-height:1.5}.mts-priv a{color:var(--text-dim)}
+.rec-row{position:relative}.rec-share{margin-left:8px;width:34px;height:34px;flex:0 0 34px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.rec-share:active{transform:scale(.94)}
+html.mt-desk .mts-prev canvas{max-height:52vh}
 </style>
 </head>
 <body>
@@ -2411,7 +2596,6 @@ html.mt-desk.restaurando #scr-auth .auth-wrap{grid-template-columns:minmax(0,560
       <div class="card-icon">🎫</div>
       <div style="flex:1"><div class="card-title info">Acesso ativo</div><div class="card-sub" id="access-days">— dias restantes</div></div>
     </div>
-    <div class="help"><p>Precisa de ajuda?</p><a href="mailto:metatreinooficial@gmail.com" class="help-btn" style="display:grid;text-decoration:none">✉️</a><div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div></div>
   </div>
 </div>
 
@@ -2675,8 +2859,13 @@ html.mt-desk.restaurando #scr-auth .auth-wrap{grid-template-columns:minmax(0,560
     </details>
     <div class="list-row danger" id="pf-sair" style="margin-top:12px" onclick="doLogout()">🚪 Sair da conta</div>
 
+    <!-- Beta 25: ajuda, FAQ, privacidade e termos moram no Perfil (saíram do Início) -->
+    <div class="pf-ajuda">
+      <a class="pf-ajuda-btn" href="mailto:metatreinooficial@gmail.com">✉️ <span>Precisa de ajuda? <b>Fale com a gente</b></span></a>
+      <div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div>
+    </div>
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 24</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 26</span>
     </div>
   </div>
 </div>
@@ -2754,8 +2943,8 @@ html.mt-desk.restaurando #scr-auth .auth-wrap{grid-template-columns:minmax(0,560
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.24"></script>
-<script src="./app-plus.js?v=2027.1-beta.24"></script>
+<script src="./app.js?v=2027.1-beta.26"></script>
+<script src="./app-plus.js?v=2027.1-beta.26"></script>
 <script>
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();
