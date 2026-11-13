@@ -108,7 +108,11 @@ async function openAdminEventoPart(key){
   $('modal-back').classList.add('on');
   try{
     const snap = await db.collection('desafiosTematicos').doc(key).collection('participantes').get();
-    const arr = []; snap.forEach(d=>arr.push(d.data()));
+    // Beta 35: a mesma pessoa com dois logins podia aparecer duas vezes: fica o registro mais adiantado por e-mail
+    const porEmail = {}; const arr = [];
+    snap.forEach(d=>{ const x = d.data(); const k = String(x.email||'').toLowerCase() || d.id; const a = porEmail[k];
+      if(!a || (x.concluidoEm && !a.concluidoEm) || ((+x.progresso||0) > (+a.progresso||0) && !a.concluidoEm)) porEmail[k] = x; });
+    Object.values(porEmail).forEach(x=>arr.push(x));
     arr.sort((a,b)=>(b.progresso||0)-(a.progresso||0));
     const concl = arr.filter(x=>x.concluidoEm).length;
     const e = eventoPorKey(key);

@@ -1,3 +1,17 @@
+# MetaTreino 2027.1 Beta 35 — O que faltava da auditoria
+
+Detalhes técnicos em `RELATORIO-BETA35.md`. **Publique o `firestore.rules` novo** (Console do Firebase → Firestore → Regras → Publicar): as regras mudaram nesta versão.
+
+1. **Plano trocado num aparelho não volta mais atrás no outro.** Trocar dias, objetivo ou treinos no celular agora vale também no computador, mesmo que o computador grave algo depois. Vale o plano alterado por último. O histórico continua sendo somado como antes.
+2. **Corrida com dor no joelho, tornozelo ou lombar.** Antes, só o nome do treino virava "Caminhada", mas os blocos continuavam falando de tiros, ritmo e longão. Agora o treino inteiro vira caminhada leve (aquecimento, caminhada principal, volta à calma, sem ritmo-alvo). Quando a dor sai, o treino original volta igual.
+3. **Musculação 3 dias por semana.** Com pelo menos um dia de folga entre os treinos (ex.: seg/qua/sex), a divisão passa a ser **Superior · Inferior + Core · Corpo inteiro**: cada grupo grande é treinado 2× na semana, com o mesmo tempo de academia. Com dias seguidos, continua a divisão antiga. Nenhum treino passa de 90 minutos. Planos já montados só mudam quando o aluno gerar um plano novo.
+4. **Desafios temáticos com duas formas de login.** Quem entra com Google num aparelho e e-mail/senha no outro aparece uma vez só na lista de participantes. Na lista do painel, registros repetidos de antes são mostrados uma vez (vale o mais avançado).
+5. **Confirmação antes de apagar.** Limpar a conversa do assistente, excluir uma sugestão e bloquear um aluno agora pedem confirmação.
+6. **Excluir conta apaga tudo.** Excluir a própria conta (ou o administrador excluir um aluno) agora apaga também os dados do outro login ligado ao mesmo e-mail e o vínculo da conta. Antes podiam sobrar.
+7. **Acessibilidade.** Botões só com ícone (✕, 🗑️, ➤…) ganharam nome para leitores de tela. Cartões e linhas que abrem algo ao tocar passam a funcionar com Tab e Enter, com contorno de foco visível. Para quem usa o toque, nada muda.
+8. **Avisos sempre visíveis.** Com uma janela aberta, o aviso (ex.: "Salvo") aparece no topo da tela em vez de ficar escondido atrás da janela.
+9. **Linguagem padronizada.** Os textos do app passaram a usar "para", "para o" e "vamos" no lugar de "pra", "pro" e "bora" (409 trocas). O assistente continua entendendo quem escreve "pra" e "bora".
+
 # MetaTreino 2027.1 Beta 34 — Mesmos dados em todos os aparelhos, vídeo limpo e créditos de parceiros
 
 Detalhes técnicos em `RELATORIO-BETA34.md`.

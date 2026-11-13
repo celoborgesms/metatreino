@@ -1,11 +1,11 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 34
+# Roteiro de testes em aparelho real — MetaTreino Beta 35
 
 Leva uns 25 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
 
 Antes de começar: publique o `firestore.rules` novo no Console do Firebase (Firestore → Regras → Publicar).
 
 ## 1. Instalação, atualização e modo avião
-- [ ] O app atualizou sozinho para a **Beta 34** (Perfil → rodapé), sem tocar em nenhum botão?
+- [ ] O app atualizou sozinho para a **Beta 35** (Perfil → rodapé), sem tocar em nenhum botão?
 - [ ] Fechar e abrir de novo: entrou direto, sem pedir login?
 - [ ] **Logo depois de atualizar**, ligue o modo avião, feche o app de vez e abra de novo. Ele abre e mostra os treinos? (Na Beta 32 este caso podia abrir em branco.)
 - [ ] Ainda no modo avião: registre 2 séries e salve o treino. Desligue o modo avião. O treino aparece no Histórico de outro aparelho (ou depois de sair e entrar)?
@@ -46,6 +46,15 @@ Antes de começar: publique o `firestore.rules` novo no Console do Firebase (Fir
 - [ ] Corrida → Semana com menos tempo: escolha menos dias. Aparece "Como fica a semana" antes de aplicar? Depois de aplicar, a semana muda na hora?
 - [ ] Segure o dedo num botão ou numa aba: não aparece o menu de copiar? Segure num texto da ficha: dá para selecionar?
 - [ ] Na ficha de um exercício com créditos, eles aparecem no fim, depois de "Erro comum"?
+
+## 4c. Correções da Beta 35
+- [ ] Troque os dias de musculação no **celular**. Abra o **computador**: os dias e treinos novos aparecem lá? Registre algo no computador e confira que o celular **não** volta ao plano antigo.
+- [ ] Com plano de corrida, marque **dor no joelho** (Perfil ou assistente). Abra um treino: os blocos agora descrevem **caminhada** (não tiros nem ritmo)? Tire a dor: o treino original volta?
+- [ ] Musculação com **3 dias alternados** (ex.: seg/qua/sex): os treinos são Superior · Inferior + Core · Corpo inteiro? Algum passa de ~90 min?
+- [ ] Assistente → limpar conversa: pede confirmação? (O mesmo vale para excluir sugestão e bloquear aluno no painel.)
+- [ ] Com uma janela aberta, quando aparece um aviso, ele fica **visível no topo** (não atrás da janela)?
+- [ ] Desafio temático com duas formas de login (Google e e-mail/senha): você aparece **uma vez só** na lista de participantes?
+- [ ] Textos do app: aparecem "para" e "vamos" (não "pra" e "bora")?
 
 ## 4b. Vídeos e créditos
 - [ ] Abra um exercício com vídeo (no Treino e na Biblioteca). O vídeo aparece sem a barra do YouTube, com os controles do MetaTreino embaixo? Pausar, velocidade, volume e a barra de posição funcionam?

@@ -95,7 +95,7 @@ window.openMuralAdmin = function(){
       </div>
     </div>
     <div class="mur-info" id="mur-peso" style="text-align:center"></div>
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveMural()">💾 Publicar pra todos os alunos</button>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveMural()">💾 Publicar para todos os alunos</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
   $('modal-back').classList.add('on');
   ['logo','capa'].forEach(t=>['z','x','y'].forEach(c=>{ const el = $(`mur-${t}-${c}`); if(el) el.addEventListener('input', ()=>{ const E = _murEd[t]; E[c==='z'?'zoom':c] = c==='z' ? (+el.value)/100 : +el.value; murProcessar(t); }); }));
@@ -183,7 +183,7 @@ window.saveMural = async function(){
     coachMural = data; _murEd = null;
     try{ localStorage.setItem('metatreino_mural', JSON.stringify(coachMural)); }catch(e){}
     renderCoachMural(); try{ applyHeroCapa(); }catch(e){}
-    closeModal(); toast('📢 Mural publicado pra todos os alunos!');
+    closeModal(); toast('📢 Mural publicado para todos os alunos!');
   }catch(e){ console.log('Erro ao salvar mural:', e); toast('⚠️ Não foi possível publicar. Confira a conexão e as regras do Firestore (coleção config).'); }
 };
 // capa e logo agora podem ser imagens diferentes

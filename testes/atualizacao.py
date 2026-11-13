@@ -8,6 +8,8 @@ Uso: python3 testes/atualizacao.py PASTA_ANTIGA PASTA_NOVA"""
 import asyncio, sys, os, shutil, subprocess, time, tempfile
 from playwright.async_api import async_playwright
 ANT, NOVA = sys.argv[1], sys.argv[2]
+import re
+ALVO = re.search(r"beta\.\d+", open(os.path.join(NOVA, 'service-worker.js'), encoding='utf-8').read()).group(0)   # versão esperada = a da pasta nova
 SITE = tempfile.mkdtemp(prefix='mt-site-'); PORTA = 8799
 def publica(pasta):
     for f in os.listdir(SITE):
@@ -40,20 +42,20 @@ async def main():
                 await pg.wait_for_timeout(1000)
                 try:
                     v = await versao(pg)
-                    if 'beta.33' in v: break
+                    if ALVO in v: break
                 except Exception: pass
             v2 = await versao(pg); print('3. depois da atualização automática:', v2)
-            if 'beta.33' not in v2: falhas.append('não atualizou sozinho para a Beta 33')
+            if ALVO not in v2: falhas.append('não atualizou sozinho para a ' + ALVO)
             await ctx.set_offline(True); print('4. sem internet')
             await pg.reload(); await pg.wait_for_timeout(4000)
             v3 = await versao(pg); print('   reaberto offline:', v3)
-            if 'beta.33' not in v3: falhas.append('offline depois de atualizar não abriu a Beta 33: ' + v3)
+            if ALVO not in v3: falhas.append('offline depois de atualizar não abriu a ' + ALVO + ': ' + v3)
             # um aparelho que nunca abriu a versão nova online (só o service worker instalou) — o caso que abria em branco
             ctx2 = await b.new_context(viewport={'width':390,'height':844}); pg2 = await ctx2.new_page()
             await pg2.goto(url); await pg2.wait_for_timeout(3500)          # 1ª visita: instala, mas a página não é controlada
             await ctx2.set_offline(True); await pg2.reload(); await pg2.wait_for_timeout(4000)
             v4 = await versao(pg2); print('5. 1ª visita e já sem internet:', v4)
-            if 'beta.33' not in v4: falhas.append('primeira abertura offline falhou: ' + v4)
+            if ALVO not in v4: falhas.append('primeira abertura offline falhou: ' + v4)
             await b.close()
     finally:
         srv.terminate(); shutil.rmtree(SITE, ignore_errors=True)

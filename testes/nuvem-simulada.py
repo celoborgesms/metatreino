@@ -27,7 +27,7 @@ def email_ok(t, dados):
     return confiavel(t) and str(dados['email']).lower() == (t.get('email') or '').lower()
 
 def permite(op, caminho, t, dados=None):
-    """op: get | list | set | delete. Espelha firestore.rules (Beta 34) nos caminhos usados pelo app."""
+    """op: get | list | set | delete. Espelha firestore.rules (Beta 35) nos caminhos usados pelo app."""
     if not t.get('uid'): return caminho.startswith('config/contato') and op == 'get'
     p = caminho.split('/'); em = (t.get('email') or '').lower()
     if p[0] == 'usuarios':
@@ -38,15 +38,21 @@ def permite(op, caminho, t, dados=None):
                 d = LOJA.get(caminho)
                 return t['uid'] == uid or vinculada(t, uid) or admin(t) or (confiavel(t) and bool(d) and d.get('email') == t.get('email'))
             if op == 'set': return ((t['uid'] == uid or vinculada(t, uid)) and email_ok(t, dados or {})) or admin(t)
-            if op == 'delete': return t['uid'] == uid or vinculada(t, uid) or admin(t)
+            if op == 'delete': return t['uid'] == uid or vinculada(t, uid) or mesmo_email(t, uid) or admin(t)
         else:
             if op in ('get', 'list'): return t['uid'] == uid or vinculada(t, uid) or mesmo_email(t, uid) or admin(t)
+            if op == 'delete': return t['uid'] == uid or vinculada(t, uid) or mesmo_email(t, uid) or admin(t)
             return t['uid'] == uid or vinculada(t, uid) or admin(t)
     if p[0] == 'contas':
         alvo = p[1] if len(p) > 1 else ''
         if op == 'get': return admin(t) or (confiavel(t) and em == alvo)
         if op == 'set': return confiavel(t) and em == alvo and isinstance((dados or {}).get('uid'), str) and (dados['uid'] == t['uid'] or mesmo_email(t, dados['uid']))
         if op == 'delete': return confiavel(t) and em == alvo
+    if p[0] == 'desafiosTematicos' and len(p) >= 4 and p[2] == 'participantes':
+        alvo = p[3]
+        if op == 'list': return admin(t)
+        if op == 'set': return t['uid'] == alvo or vinculada(t, alvo)
+        return t['uid'] == alvo or vinculada(t, alvo) or admin(t)
     if p[0] == 'parceiros': return admin(t)
     if p[0] in ('videosExercicios', 'exerciciosCustom', 'caliExercicios', 'caliModelos', 'desafiosTematicos', 'config'):
         return op in ('get', 'list') or admin(t)

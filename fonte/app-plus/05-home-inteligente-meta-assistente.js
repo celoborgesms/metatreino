@@ -108,7 +108,7 @@ const MOTIVA = {
   ],
   retorno_curto:[
     '{dias} dias sem treinar ainda é só uma pausa. Hoje é o dia de não deixar virar hábito.',
-    'Dois ou três dias de descanso fazem bem. O quarto já começa a pesar — bora quebrar isso hoje?',
+    'Dois ou três dias de descanso fazem bem. O quarto já começa a pesar — vamos quebrar isso hoje?',
     'Você não precisa de motivação para começar; a motivação aparece depois do aquecimento.',
     'Sem drama: retome do ponto onde parou. O plano continua te esperando.',
     'Um treino curto hoje mantém a corrente que você vem construindo.'
@@ -161,7 +161,7 @@ const MOTIVA = {
     'Força não é só carga na barra: é aparecer quando ninguém está cobrando.',
     'Seu único adversário é quem você era no mês passado.',
     'Treinar é um presente que você dá para o seu futuro.',
-    'Corpo forte, cabeça leve. Bora?',
+    'Corpo forte, cabeça leve. Vamos?',
     'Disciplina é lembrar o que você quer de verdade.',
     'Um dia de cada vez. Hoje é o dia que importa.'
   ]
@@ -195,7 +195,7 @@ function motivacaoContextual(){
   const c = contextoAluno();
   const cats = _motivaCategorias(c);
   let hist = []; try{ hist = JSON.parse(mtLS('mt_motiva_hist')||'[]'); }catch(e){}
-  // primeira categoria é a mais relevante; às vezes (30%) usa a segunda, pra variar sem perder contexto
+  // primeira categoria é a mais relevante; às vezes (30%) usa a segunda, para variar sem perder contexto
   let cat = cats[0];
   if(cats.length > 2 && Math.random() < 0.3) cat = cats[1];
   const pool = MOTIVA[cat].map((m,i)=>({id:cat+':'+i, m})).filter(x=>!hist.includes(x.id));
@@ -373,7 +373,7 @@ maInterpret = function(txt){
   if(has('me motiva','me motive','motivacao','estou desanimad','to desanimad','sem vontade de treinar','preguica de treinar')) return 'motiva';
   return _maInterpretOrig(txt);
 };
-// proatividade discreta: só quando o assistente não tem nada mais importante pra dizer (máx. 1x/dia, regra original)
+// proatividade discreta: só quando o assistente não tem nada mais importante para dizer (máx. 1x/dia, regra original)
 const _maNudgeOrig = maNudge;
 maNudge = function(){
   const n = _maNudgeOrig();

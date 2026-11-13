@@ -1,7 +1,10 @@
 rules_version = '2';
 
 // =============================================================
-// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 34)
+// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 35)
+// Beta 35: ao excluir a conta, a pessoa apaga também os documentos dos
+// outros logins dela (mesmo e-mail verificado); a participação nos
+// desafios fica no documento de dados unificado.
 // Beta 34: a mesma pessoa (mesmo e-mail VERIFICADO) acessa o mesmo
 // documento de dados com qualquer forma de login (Google ou e-mail e
 // senha geram UIDs diferentes). Coleção nova "contas" (vínculo e-mail →
@@ -109,7 +112,7 @@ service cloud.firestore {
       // Apagar: o proprio aluno (excluir conta / comecar do zero) ou o
       // administrador principal (limpeza de ex-alunos). Secundario nao apaga.
       allow delete:
-        if isOwnerUser(userId) || contaVinculada(userId) || isOwner();
+        if isOwnerUser(userId) || contaVinculada(userId) || mesmoEmail(userId) || isOwner();
 
       // Inclui o arquivo anual (usuarios/{uid}/arquivo/{ano-semestre}).
       match /{subdocumentos=**} {
@@ -118,7 +121,7 @@ service cloud.firestore {
         allow create, update:
           if isOwnerUser(userId) || contaVinculada(userId) || isAdmin();
         allow delete:
-          if isOwnerUser(userId) || contaVinculada(userId) || isOwner();
+          if isOwnerUser(userId) || contaVinculada(userId) || mesmoEmail(userId) || isOwner();
       }
     }
 
@@ -285,11 +288,11 @@ service cloud.firestore {
 
       // Participacao de cada aluno: cada um grava so a propria.
       match /participantes/{userId} {
-        allow get: if isOwnerUser(userId) || isAdmin();
+        allow get: if isOwnerUser(userId) || contaVinculada(userId) || isAdmin();
         allow list: if isAdmin();
-        allow create, update: if isOwnerUser(userId);
+        allow create, update: if isOwnerUser(userId) || contaVinculada(userId);
         // O proprio aluno ou o administrador principal (limpeza de ex-alunos).
-        allow delete: if isOwnerUser(userId) || isOwner();
+        allow delete: if isOwnerUser(userId) || contaVinculada(userId) || isOwner();
       }
     }
 

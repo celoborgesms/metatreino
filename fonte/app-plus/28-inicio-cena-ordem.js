@@ -120,7 +120,7 @@ setInterval(()=>{ try{ if(state && state.ui && (state.ui.tab||'home')==='home' &
 
 // ---------- 2. Clima sem repetir ----------
 // A temperatura sai da frase e vira um selo discreto no topo (ao lado do METATREINO),
-// com o ícone do tempo de agora. A frase fica só com a dica ("tempo perfeito pra treinar").
+// com o ícone do tempo de agora. A frase fica só com a dica ("tempo perfeito para treinar").
 // Com a capa de foto do mural (sem a linha do METATREINO), tudo continua como antes.
 const CLIMA_ICO = {
   sol:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/>',
@@ -153,7 +153,7 @@ const _weatherHomeLineB29 = window.weatherHomeLine;
 window.weatherHomeLine = function(){
   const l = _weatherHomeLineB29.apply(this, arguments);
   if(!l || !_climaSeloVisivel()) return l;
-  // "🌡️ 23°C, parcialmente nublado · tempo perfeito pra treinar 💪" → "Tempo perfeito pra treinar 💪"
+  // "🌡️ 23°C, parcialmente nublado · tempo perfeito para treinar 💪" → "Tempo perfeito para treinar 💪"
   const dica = String(l).replace(/^🌡️\s*-?\d+°C,\s*[^·]*·\s*/, '');
   return dica ? dica.charAt(0).toUpperCase() + dica.slice(1) : l;
 };

@@ -438,7 +438,7 @@ function arqRelatorio(){
   const per = [['3m','3 meses'],['6m','6 meses'],['1a','1 ano'],['tudo','Tudo']];
   $('modal-inner').classList.remove('modal-video');
   $('modal-inner').innerHTML = `<h3>📄 Relatório em PDF</h3>
-    <p class="mt-muted" style="margin:0 0 8px;font-size:12.5px;line-height:1.5">Gráficos e dados dos seus treinos para guardar, imprimir ou mandar pro treinador. Dá pra salvar no Google Drive pelo botão Compartilhar.</p>
+    <p class="mt-muted" style="margin:0 0 8px;font-size:12.5px;line-height:1.5">Gráficos e dados dos seus treinos para guardar, imprimir ou mandar para o treinador. Dá para salvar no Google Drive pelo botão Compartilhar.</p>
     <div class="arq-sub">Período</div>
     <div class="pdf-opts" id="pdf-per">${per.map(([k,l])=>`<button type="button" class="${_pdfOpt.per===k?'on':''}" onclick="_pdfOpt.per='${k}';document.querySelectorAll('#pdf-per button').forEach(b=>b.classList.toggle('on', b===this))">${l}</button>`).join('')}</div>
     <div class="arq-sub">Incluir</div>

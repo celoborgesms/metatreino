@@ -73,6 +73,13 @@ async def main():
             await cel.evaluate("openModal('edit-profile'); document.getElementById('ep-nick').value='Aninha'; saveProfileEdit()")
             ok4 = await espera(pc, "state.user.profile && state.user.profile.nickname==='Aninha'", 15000)
             confere('apelido novo aparece no PC', ok4, await pc.evaluate("state.user.profile && state.user.profile.nickname"))
+            print('4b. Plano de musculação trocado no celular (Beta 35): chega ao PC e não volta atrás')
+            await cel.evaluate("state.modules.lift.plan.workouts[0].name='Treino do celular'; saveData()")
+            ok4b = await espera(pc, "state.modules.lift.plan.workouts[0].name==='Treino do celular'", 15000)
+            confere('plano alterado no celular aparece no PC', ok4b, await pc.evaluate("state.modules.lift.plan.workouts[0].name"))
+            await pc.evaluate("maLogActivity('caminhada', 1.1, 15, 2)")
+            await cel.wait_for_timeout(3000)
+            confere('PC gravando outra coisa não desfaz o plano novo no celular', await cel.evaluate("state.modules.lift.plan.workouts[0].name==='Treino do celular'"), await cel.evaluate("state.modules.lift.plan.workouts[0].name"))
             print('5. Treino de musculação concluído no celular: histórico e estatísticas iguais nos dois')
             await cel.evaluate("""(()=>{ const w = state.modules.lift.plan.workouts.find(x=>x.dayIdx===getDayIdx()) || state.modules.lift.plan.workouts[0];
                 const e = w.exercises[0]; openSetLog(e.id, e.name); addSet(); closeSetLog(true); stopRestTimer(); finishLiftWorkout(w.k); confirmLiftWorkout(w.k); })()""")

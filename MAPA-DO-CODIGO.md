@@ -65,6 +65,7 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `29-modo-computador.js` | Modo computador: grade de duas colunas (`DK_LAYOUT`, `dkMontar`), faixa de números, painel lateral, atalhos |
 | `30-auditoria-beta33.js` | Correção única das fichas salvas (`b33CorrigeFichas`, marca `state.b33Fichas`) |
 | `31-sincronizacao-videos-parceiros.js` | Arquivo anual dos logins antigos, tela de Sincronização (`openSincronizacao`, `syncAgora`), parceiros e créditos dos vídeos (`openParceiros`, `pcProjecao`) |
+| `32-acessibilidade.js` | Beta 35: nome (`aria-label`) para botões só com ícone, `role=button` + Tab + Enter/Espaço nos elementos com `onclick` (`a11yVarrer`, roda sozinho a cada mudança da tela) |
 
 Parte nova: próximo número livre (ex.: `20-nome-da-funcao.js`).
 
@@ -146,6 +147,9 @@ Nenhum elemento pode passar da borda da tela no celular (deixa a página mais la
 | Nuvem em tempo real | app.js | `ouveNuvem()` (começa no login). Nuvem mais nova → passa a valer aqui e o que só existe neste aparelho é juntado; mais antiga → junta o que falta. `salvarLocal()` grava só no aparelho (trocar de aba). |
 | Vídeos | parte 07 / 02 | `mtMontarPlayer` (modo limpo, `_mtPlayerVars`), controles `mtTocarPausar/mtBuscar/mtVolume/mtVelocidade`. Créditos: `creditosHtml(id, 'ficha'|'biblioteca')` lê `videoCreditos` (campo `creditos` do vídeo). |
 | Duas cópias do aluno | app.js | `mesclaEstado(base, outra, {desde})` junta histórico/séries/peso/conquistas. Ao excluir um registro do histórico, chame `marcaExcluido(modulo, registro)`. |
+| Plano entre aparelhos (Beta 35) | app.js | `saveData()` marca `modules.lift/run.planAt` quando `setup` ou `plan` mudam (compara com `planoAssinatura`). Na junção, o plano com `planAt` maior vence. Depois de trocar `state` inteiro, chame `planoMarcaBase()`. |
+| Divisão de 3 dias (Beta 35) | app.js, `generatePlan` | 3 dias com folga entre eles → Superior · Inferior + Core · Corpo inteiro (grupos grandes 2×/semana). Dias seguidos ou `setup.split3 = 'classico'` → divisão antiga. Teto de 90 min por treino em `buildLiftExercises`. |
+| Confirmação | app.js | `appConfirm(msg, onOk, {title, emo, okLabel, onCancel})`. Use antes de qualquer ação que apaga algo. |
 | HTML com dado do aluno | app.js / parte 00 | `escHtml()` / `mtEsc()` para texto; `jsAttr()` dentro de `onclick="f('...')"`. |
 
 ## Testes
@@ -165,6 +169,8 @@ python3 testes/dois-aparelhos.py PASTA_DO_PROJETO   # celular (Google) × comput
 python3 testes/videos-creditos.py PASTA_DO_PROJETO  # player limpo, parceiros, créditos e permissões
 node testes/semana-menos-tempo.js     # corrida: semana com menos tempo
 python3 testes/registro-series.py URL # registro de séries (carga/corpo/tempo), 1ª série e descanso, ficha, seleção de texto
+node testes/beta35.js                 # plano entre aparelhos, corrida adaptada por dor, divisão de 3 dias, confirmação
+python3 testes/acessibilidade.py URL  # nomes de botões, teclado, aviso acima das janelas, confirmação
 ```
 Os testes de navegador usam `testes/mock-firebase.js` (Firebase simulado, sem conta real) e `testes/semente.js` (aluno de exemplo). Para servir o site de teste: copie o projeto, troque os `<script>` do Firebase do `index.html` por `mock-firebase.js` e rode `python3 -m http.server`.
 

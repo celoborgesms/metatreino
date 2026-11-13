@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 34 — app-plus.js
+// MetaTreino 2027.1 Beta 35 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.34' };
+const MTP = { versao: '2027.1-beta.35' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -406,7 +406,7 @@ openFotos = async function(pose){
       ${sel?'':`<button type="button" class="fg-del" aria-label="Apagar esta foto" onclick="event.stopPropagation();fotoApagarConfirma('${f.id}')">${ICO_LIXO}</button>`}
       <span class="fg-cap">${fotoDataTxt(f.data,true)}${f.peso?'<br>'+String(f.peso).replace('.',',')+' kg':''}</span></div>`;
   const grade = filtro.length ? meses.map(k=>`<div class="fg-month">${nomeMes(k)}</div><div class="fg-grid">${grupos[k].map(tile).join('')}</div>`).join('')
-    : `<div class="text-dim" style="padding:22px 6px;text-align:center;font-size:13.5px;line-height:1.6">${lista.length?'Nenhuma foto nesta posição.':'Registre a primeira foto pra começar a acompanhar sua evolução visual. Uma foto por mês, no mesmo local e com a mesma luz, já mostra bastante.'}</div>`;
+    : `<div class="text-dim" style="padding:22px 6px;text-align:center;font-size:13.5px;line-height:1.6">${lista.length?'Nenhuma foto nesta posição.':'Registre a primeira foto para começar a acompanhar sua evolução visual. Uma foto por mês, no mesmo local e com a mesma luz, já mostra bastante.'}</div>`;
   const barraSel = sel ? `<div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn btn-ghost" style="flex:1" onclick="fotoSel=null;openFotos()">Cancelar</button>
       <button class="btn btn-primary" style="flex:1;${sel.size?'background:#ef4444!important;color:#fff!important':'opacity:.5'}" ${sel.size?'':'disabled'} onclick="fotoApagarSelConfirma()">Apagar ${sel.size||''} ${sel.size===1?'foto':'fotos'}</button></div>`
@@ -414,7 +414,7 @@ openFotos = async function(pose){
       <button class="btn btn-primary" style="flex:1" onclick="fotoNova()">➕ Nova foto</button>
       <button class="btn btn-ghost" style="flex:1${lista.length<2?';opacity:.45':''}" onclick="openComparar()" ${lista.length<2?'disabled':''}>↔ Comparar</button></div>`;
   $('modal-inner').innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h3 style="margin:0">📷 Fotos de evolução</h3>${lista.length&&!sel?`<button class="btn btn-ghost" style="padding:6px 11px;font-size:12px" onclick="fotoSel=new Set();openFotos()">Selecionar</button>`:''}</div>
-    <p style="color:var(--text-mute);font-size:11.5px;line-height:1.5;margin:6px 0 10px">${sel?'Toque nas fotos que deseja apagar.':`${lista.length} foto${lista.length===1?'':'s'} · ficam só neste aparelho, não vão pra nuvem. Se trocar de celular ou limpar os dados do site, elas somem — baixe as importantes.`}</p>
+    <p style="color:var(--text-mute);font-size:11.5px;line-height:1.5;margin:6px 0 10px">${sel?'Toque nas fotos que deseja apagar.':`${lista.length} foto${lista.length===1?'':'s'} · ficam só neste aparelho, não vão para nuvem. Se trocar de celular ou limpar os dados do site, elas somem — baixe as importantes.`}</p>
     <div class="nxchips" style="margin-bottom:6px">${chips}</div>
     <div style="max-height:50vh;overflow-y:auto;margin:0 -2px;padding:0 2px">${grade}</div>
     ${barraSel}
@@ -441,7 +441,7 @@ fotoApagarConfirma = function(id){
 fotoApagarTudoConfirma = async function(){
   let n = 0; try{ n = (await fotoListar()).length; }catch(e){}
   $('modal-inner').innerHTML = `<div style="text-align:center"><div style="font-size:40px">🗑️</div><h3 style="margin:8px 0 6px">Apagar TODAS as fotos?</h3>
-    <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5">Isso apaga as <b>${n}</b> fotos de evolução deste aparelho. Não dá pra desfazer.<br>Para confirmar, digite <b>APAGAR</b>.</p></div>
+    <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5">Isso apaga as <b>${n}</b> fotos de evolução deste aparelho. Não dá para desfazer.<br>Para confirmar, digite <b>APAGAR</b>.</p></div>
     <input class="input" id="fd-conf" autocomplete="off" autocapitalize="characters" placeholder="APAGAR" style="text-align:center;margin-top:10px" oninput="document.getElementById('fd-ok').disabled = this.value.trim().toUpperCase()!=='APAGAR'">
     <button class="btn btn-primary btn-block" id="fd-ok" disabled style="margin-top:12px;background:#ef4444!important;color:#fff!important;box-shadow:none" onclick="fotoApagarTudoAgora()">Apagar todas</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openFotos()">Cancelar</button>`;
@@ -704,7 +704,7 @@ function participaEvento(key){
 }
 function sairDoEvento(key){
   appConfirm('Você deixa de participar deste desafio. Seus treinos continuam no histórico normalmente.', ()=>{
-    if(state.eventos && state.eventos[key] && !state.eventos[key].concluidoEm){ delete state.eventos[key]; saveData(); try{ db.collection('desafiosTematicos').doc(key).collection('participantes').doc(fbUser.uid).delete().catch(()=>{}); }catch(e){} }
+    if(state.eventos && state.eventos[key] && !state.eventos[key].concluidoEm){ delete state.eventos[key]; saveData(); try{ db.collection('desafiosTematicos').doc(key).collection('participantes').doc(uidDados()).delete().catch(()=>{}); }catch(e){} }
     renderChallenges();
   }, {title:'Sair do desafio?', emo:'🚪', okLabel:'Sair', onCancel:()=>renderChallenges()});
 }
@@ -717,8 +717,8 @@ function syncParticipacao(e){
     const sig = [p.dias, reg.concluidoEm||0].join('|');
     if(reg._sig === sig) return;
     reg._sig = sig;
-    db.collection('desafiosTematicos').doc(e.key).collection('participantes').doc(fbUser.uid).set({
-      uid: fbUser.uid, email: (state.user&&state.user.email)||'', nome: (state.user&&state.user.profile&&state.user.profile.nickname)||(state.user&&state.user.name)||'',
+    db.collection('desafiosTematicos').doc(e.key).collection('participantes').doc(uidDados()).set({
+      uid: uidDados(), email: (state.user&&state.user.email)||'', nome: (state.user&&state.user.profile&&state.user.profile.nickname)||(state.user&&state.user.name)||'',
       entrouEm: reg.entrouEm||Date.now(), alvo: reg.alvo, progresso: p.dias, concluidoEm: reg.concluidoEm||null, atualizadoEm: Date.now(), desafio: e.nome
     }, {merge:true}).catch(()=>{});
   }catch(err){}
@@ -1008,7 +1008,7 @@ const MOTIVA = {
   ],
   retorno_curto:[
     '{dias} dias sem treinar ainda é só uma pausa. Hoje é o dia de não deixar virar hábito.',
-    'Dois ou três dias de descanso fazem bem. O quarto já começa a pesar — bora quebrar isso hoje?',
+    'Dois ou três dias de descanso fazem bem. O quarto já começa a pesar — vamos quebrar isso hoje?',
     'Você não precisa de motivação para começar; a motivação aparece depois do aquecimento.',
     'Sem drama: retome do ponto onde parou. O plano continua te esperando.',
     'Um treino curto hoje mantém a corrente que você vem construindo.'
@@ -1061,7 +1061,7 @@ const MOTIVA = {
     'Força não é só carga na barra: é aparecer quando ninguém está cobrando.',
     'Seu único adversário é quem você era no mês passado.',
     'Treinar é um presente que você dá para o seu futuro.',
-    'Corpo forte, cabeça leve. Bora?',
+    'Corpo forte, cabeça leve. Vamos?',
     'Disciplina é lembrar o que você quer de verdade.',
     'Um dia de cada vez. Hoje é o dia que importa.'
   ]
@@ -1095,7 +1095,7 @@ function motivacaoContextual(){
   const c = contextoAluno();
   const cats = _motivaCategorias(c);
   let hist = []; try{ hist = JSON.parse(mtLS('mt_motiva_hist')||'[]'); }catch(e){}
-  // primeira categoria é a mais relevante; às vezes (30%) usa a segunda, pra variar sem perder contexto
+  // primeira categoria é a mais relevante; às vezes (30%) usa a segunda, para variar sem perder contexto
   let cat = cats[0];
   if(cats.length > 2 && Math.random() < 0.3) cat = cats[1];
   const pool = MOTIVA[cat].map((m,i)=>({id:cat+':'+i, m})).filter(x=>!hist.includes(x.id));
@@ -1273,7 +1273,7 @@ maInterpret = function(txt){
   if(has('me motiva','me motive','motivacao','estou desanimad','to desanimad','sem vontade de treinar','preguica de treinar')) return 'motiva';
   return _maInterpretOrig(txt);
 };
-// proatividade discreta: só quando o assistente não tem nada mais importante pra dizer (máx. 1x/dia, regra original)
+// proatividade discreta: só quando o assistente não tem nada mais importante para dizer (máx. 1x/dia, regra original)
 const _maNudgeOrig = maNudge;
 maNudge = function(){
   const n = _maNudgeOrig();
@@ -1395,7 +1395,11 @@ async function openAdminEventoPart(key){
   $('modal-back').classList.add('on');
   try{
     const snap = await db.collection('desafiosTematicos').doc(key).collection('participantes').get();
-    const arr = []; snap.forEach(d=>arr.push(d.data()));
+    // Beta 35: a mesma pessoa com dois logins podia aparecer duas vezes: fica o registro mais adiantado por e-mail
+    const porEmail = {}; const arr = [];
+    snap.forEach(d=>{ const x = d.data(); const k = String(x.email||'').toLowerCase() || d.id; const a = porEmail[k];
+      if(!a || (x.concluidoEm && !a.concluidoEm) || ((+x.progresso||0) > (+a.progresso||0) && !a.concluidoEm)) porEmail[k] = x; });
+    Object.values(porEmail).forEach(x=>arr.push(x));
     arr.sort((a,b)=>(b.progresso||0)-(a.progresso||0));
     const concl = arr.filter(x=>x.concluidoEm).length;
     const e = eventoPorKey(key);
@@ -5684,7 +5688,7 @@ window.openMuralAdmin = function(){
       </div>
     </div>
     <div class="mur-info" id="mur-peso" style="text-align:center"></div>
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveMural()">💾 Publicar pra todos os alunos</button>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveMural()">💾 Publicar para todos os alunos</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
   $('modal-back').classList.add('on');
   ['logo','capa'].forEach(t=>['z','x','y'].forEach(c=>{ const el = $(`mur-${t}-${c}`); if(el) el.addEventListener('input', ()=>{ const E = _murEd[t]; E[c==='z'?'zoom':c] = c==='z' ? (+el.value)/100 : +el.value; murProcessar(t); }); }));
@@ -5772,7 +5776,7 @@ window.saveMural = async function(){
     coachMural = data; _murEd = null;
     try{ localStorage.setItem('metatreino_mural', JSON.stringify(coachMural)); }catch(e){}
     renderCoachMural(); try{ applyHeroCapa(); }catch(e){}
-    closeModal(); toast('📢 Mural publicado pra todos os alunos!');
+    closeModal(); toast('📢 Mural publicado para todos os alunos!');
   }catch(e){ console.log('Erro ao salvar mural:', e); toast('⚠️ Não foi possível publicar. Confira a conexão e as regras do Firestore (coleção config).'); }
 };
 // capa e logo agora podem ser imagens diferentes
@@ -6353,7 +6357,7 @@ function arqRelatorio(){
   const per = [['3m','3 meses'],['6m','6 meses'],['1a','1 ano'],['tudo','Tudo']];
   $('modal-inner').classList.remove('modal-video');
   $('modal-inner').innerHTML = `<h3>📄 Relatório em PDF</h3>
-    <p class="mt-muted" style="margin:0 0 8px;font-size:12.5px;line-height:1.5">Gráficos e dados dos seus treinos para guardar, imprimir ou mandar pro treinador. Dá pra salvar no Google Drive pelo botão Compartilhar.</p>
+    <p class="mt-muted" style="margin:0 0 8px;font-size:12.5px;line-height:1.5">Gráficos e dados dos seus treinos para guardar, imprimir ou mandar para o treinador. Dá para salvar no Google Drive pelo botão Compartilhar.</p>
     <div class="arq-sub">Período</div>
     <div class="pdf-opts" id="pdf-per">${per.map(([k,l])=>`<button type="button" class="${_pdfOpt.per===k?'on':''}" onclick="_pdfOpt.per='${k}';document.querySelectorAll('#pdf-per button').forEach(b=>b.classList.toggle('on', b===this))">${l}</button>`).join('')}</div>
     <div class="arq-sub">Incluir</div>
@@ -6949,6 +6953,13 @@ async function admApagarConfirma(){
   Object.keys((u.estadoApp && u.estadoApp.eventos) || {}).forEach(k=>extras.push(db.collection('desafiosTematicos').doc(k).collection('participantes').doc(uid).delete()));
   const resExtras = await Promise.allSettled(extras);
   const falhasExtras = resExtras.filter(x=>x.status === 'rejected').length;
+  // Beta 35: a mesma pessoa pode ter outros documentos (um por forma de login): saem também, com o vínculo
+  const outros = (u._uids || []).filter(x=>x && x !== uid);
+  for(const o of outros){
+    try{ const sn = await _comPrazo(_arqCol(o).get({ source:'server' }), 15000); const ps = []; sn.forEach(d=>ps.push(_arqCol(o).doc(d.id).delete())); Object.keys((u.estadoApp && u.estadoApp.eventos) || {}).forEach(k=>ps.push(db.collection('desafiosTematicos').doc(k).collection('participantes').doc(o).delete())); await Promise.allSettled(ps); }catch(e){}
+    try{ await _comPrazo(db.collection('usuarios').doc(o).delete(), 15000); }catch(e){ console.log('documento antigo do aluno', e); }
+  }
+  try{ await db.collection('contas').doc(String(email).toLowerCase()).delete(); }catch(e){}
   try{
     await _comPrazo(db.collection('usuarios').doc(uid).delete(), 20000);
   }catch(e){
@@ -8339,7 +8350,7 @@ setInterval(()=>{ try{ if(state && state.ui && (state.ui.tab||'home')==='home' &
 
 // ---------- 2. Clima sem repetir ----------
 // A temperatura sai da frase e vira um selo discreto no topo (ao lado do METATREINO),
-// com o ícone do tempo de agora. A frase fica só com a dica ("tempo perfeito pra treinar").
+// com o ícone do tempo de agora. A frase fica só com a dica ("tempo perfeito para treinar").
 // Com a capa de foto do mural (sem a linha do METATREINO), tudo continua como antes.
 const CLIMA_ICO = {
   sol:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/>',
@@ -8372,7 +8383,7 @@ const _weatherHomeLineB29 = window.weatherHomeLine;
 window.weatherHomeLine = function(){
   const l = _weatherHomeLineB29.apply(this, arguments);
   if(!l || !_climaSeloVisivel()) return l;
-  // "🌡️ 23°C, parcialmente nublado · tempo perfeito pra treinar 💪" → "Tempo perfeito pra treinar 💪"
+  // "🌡️ 23°C, parcialmente nublado · tempo perfeito para treinar 💪" → "Tempo perfeito para treinar 💪"
   const dica = String(l).replace(/^🌡️\s*-?\d+°C,\s*[^·]*·\s*/, '');
   return dica ? dica.charAt(0).toUpperCase() + dica.slice(1) : l;
 };
@@ -8981,3 +8992,53 @@ function b34AtualizaDescansos(){
 mtGancho('renderHome', { depois(){ b34AtualizaDescansos(); }});
 
 Object.assign(window, { b34AtualizaDescansos, exTipoRegistro, descansoDoExercicio, runSemanaPrevia, openSincronizacao, syncAgora, syncJuntarArquivosAntigos, openParceiros, openParceiroForm, salvarParceiro, excluirParceiro, pcFiltrar, pcProjecao, creditosHtml, mtTocarPausar, mtVelocidade, mtVolume, mtBuscar });
+// =====================================================================
+// 46. Beta 35 — Acessibilidade: nomes para botões só com ícone e teclado em elementos clicáveis
+// =====================================================================
+// Muitos botões do app mostram só um ícone (✕, 🗑️, ›...). Leitores de tela liam "botão" sem nome.
+// Aqui cada botão sem texto ganha um nome (aria-label) a partir do title ou do ícone. Elementos que não
+// são botões mas abrem algo ao tocar (cartões, linhas de menu) passam a ser alcançáveis pelo Tab e a
+// responder a Enter/Espaço. Nada muda para quem usa o toque.
+const A11Y_ICONES = [
+  [/^(✕|×|✖|❌)$/, 'Fechar'], [/^🗑/, 'Excluir'], [/^✏/, 'Editar'], [/^(▶|⏵)/, 'Tocar'], [/^(⏸)/, 'Pausar'],
+  [/^⚙/, 'Configurações'], [/^📤/, 'Compartilhar'], [/^(‹|←|⬅)/, 'Voltar'], [/^(›|→|➡)/, 'Avançar'], [/^(＋|\+)$/, 'Adicionar'],
+  [/^(−|-)$/, 'Diminuir'], [/^🔔/, 'Ligar ou desligar o som'], [/^🔇/, 'Ligar o som'], [/^🔊/, 'Desligar o som'], [/^⛶/, 'Tela cheia'],
+  [/^↩/, 'Desfazer'], [/^(✓|✅)$/, 'Confirmar'], [/^(⋮|⋯|…)$/, 'Mais opções'], [/^🔍/, 'Buscar'], [/^📋/, 'Copiar'], [/^🧹/, 'Limpar'],
+  [/^📷/, 'Foto'], [/^💾/, 'Salvar'], [/^🔄/, 'Atualizar'], [/^❤/, 'Favoritar'], [/^ℹ/, 'Informações'], [/^❓/, 'Ajuda'], [/^💬/, 'Abrir o assistente'], [/^(➤|➜|⮕)$/, 'Enviar']
+];
+function _a11yTemTexto(el){ return /[A-Za-zÀ-ÿ0-9]{2,}/.test((el.textContent || '').trim()); }
+function _a11yNome(el){
+  const t = el.getAttribute('title'); if(t && t.trim()) return t.trim();
+  const oc = el.getAttribute('onclick') || '', href = el.getAttribute('href') || '';
+  if(/pickPhoto\(/.test(oc)) return 'Trocar foto de perfil';
+  if(/^mailto:/.test(href)) return 'Enviar e-mail para o suporte';
+  const tx = (el.textContent || '').trim();
+  for(const [re, nome] of A11Y_ICONES) if(re.test(tx)) return nome;
+  return '';
+}
+function a11yVarrer(raiz){
+  try{
+    (raiz || document).querySelectorAll('button:not([aria-label]):not([aria-labelledby]), a:not([aria-label])').forEach(el=>{
+      if(_a11yTemTexto(el)) return;
+      const n = _a11yNome(el); if(n) el.setAttribute('aria-label', n);
+    });
+    (raiz || document).querySelectorAll('[onclick]:not(button):not(a):not(input):not(select):not(textarea):not([role]):not(.screen)').forEach(el=>{
+      const oc = el.getAttribute('onclick') || '';
+      if(/event\.target\s*===?\s*this/.test(oc) || el.id === 'modal-back') return;   // fundo de janela: não é um botão
+      el.setAttribute('role', 'button'); if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+      if(!_a11yTemTexto(el)){ const n = _a11yNome(el); if(n) el.setAttribute('aria-label', n); }
+    });
+  }catch(e){}
+}
+// Enter ou Espaço num elemento clicável que não é botão de verdade
+document.addEventListener('keydown', e=>{
+  if((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented) return;
+  const el = e.target; if(!el || el.getAttribute('role') !== 'button' || /^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+  e.preventDefault(); el.click();
+});
+let _a11yT = null;
+try{
+  new MutationObserver(()=>{ clearTimeout(_a11yT); _a11yT = setTimeout(()=>a11yVarrer(), 250); }).observe(document.body, { childList:true, subtree:true });
+}catch(e){}
+setTimeout(()=>a11yVarrer(), 1500);
+Object.assign(window, { a11yVarrer });

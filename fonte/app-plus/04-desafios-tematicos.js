@@ -190,7 +190,7 @@ function participaEvento(key){
 }
 function sairDoEvento(key){
   appConfirm('Você deixa de participar deste desafio. Seus treinos continuam no histórico normalmente.', ()=>{
-    if(state.eventos && state.eventos[key] && !state.eventos[key].concluidoEm){ delete state.eventos[key]; saveData(); try{ db.collection('desafiosTematicos').doc(key).collection('participantes').doc(fbUser.uid).delete().catch(()=>{}); }catch(e){} }
+    if(state.eventos && state.eventos[key] && !state.eventos[key].concluidoEm){ delete state.eventos[key]; saveData(); try{ db.collection('desafiosTematicos').doc(key).collection('participantes').doc(uidDados()).delete().catch(()=>{}); }catch(e){} }
     renderChallenges();
   }, {title:'Sair do desafio?', emo:'🚪', okLabel:'Sair', onCancel:()=>renderChallenges()});
 }
@@ -203,8 +203,8 @@ function syncParticipacao(e){
     const sig = [p.dias, reg.concluidoEm||0].join('|');
     if(reg._sig === sig) return;
     reg._sig = sig;
-    db.collection('desafiosTematicos').doc(e.key).collection('participantes').doc(fbUser.uid).set({
-      uid: fbUser.uid, email: (state.user&&state.user.email)||'', nome: (state.user&&state.user.profile&&state.user.profile.nickname)||(state.user&&state.user.name)||'',
+    db.collection('desafiosTematicos').doc(e.key).collection('participantes').doc(uidDados()).set({
+      uid: uidDados(), email: (state.user&&state.user.email)||'', nome: (state.user&&state.user.profile&&state.user.profile.nickname)||(state.user&&state.user.name)||'',
       entrouEm: reg.entrouEm||Date.now(), alvo: reg.alvo, progresso: p.dias, concluidoEm: reg.concluidoEm||null, atualizadoEm: Date.now(), desafio: e.nome
     }, {merge:true}).catch(()=>{});
   }catch(err){}

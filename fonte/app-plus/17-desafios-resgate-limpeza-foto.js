@@ -134,6 +134,13 @@ async function admApagarConfirma(){
   Object.keys((u.estadoApp && u.estadoApp.eventos) || {}).forEach(k=>extras.push(db.collection('desafiosTematicos').doc(k).collection('participantes').doc(uid).delete()));
   const resExtras = await Promise.allSettled(extras);
   const falhasExtras = resExtras.filter(x=>x.status === 'rejected').length;
+  // Beta 35: a mesma pessoa pode ter outros documentos (um por forma de login): saem também, com o vínculo
+  const outros = (u._uids || []).filter(x=>x && x !== uid);
+  for(const o of outros){
+    try{ const sn = await _comPrazo(_arqCol(o).get({ source:'server' }), 15000); const ps = []; sn.forEach(d=>ps.push(_arqCol(o).doc(d.id).delete())); Object.keys((u.estadoApp && u.estadoApp.eventos) || {}).forEach(k=>ps.push(db.collection('desafiosTematicos').doc(k).collection('participantes').doc(o).delete())); await Promise.allSettled(ps); }catch(e){}
+    try{ await _comPrazo(db.collection('usuarios').doc(o).delete(), 15000); }catch(e){ console.log('documento antigo do aluno', e); }
+  }
+  try{ await db.collection('contas').doc(String(email).toLowerCase()).delete(); }catch(e){}
   try{
     await _comPrazo(db.collection('usuarios').doc(uid).delete(), 20000);
   }catch(e){
