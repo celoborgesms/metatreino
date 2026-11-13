@@ -21,7 +21,7 @@ Na pasta do projeto:
 
 ```
 python3 fonte/montar.py              # junta as partes no app-plus.js e confere sintaxe e versões
-python3 fonte/montar.py --versao 27  # troca para "2027.1 Beta 27" em todos os lugares e monta
+python3 fonte/montar.py --versao 28  # troca para "2027.1 Beta 28" em todos os lugares e monta
 ```
 
 A versão aparece em 5 lugares (app.js, service-worker.js, index.html `?v=`, rodapé do Perfil e `MTP.versao`). Se ficarem diferentes, os celulares podem não atualizar sozinhos — o script avisa.

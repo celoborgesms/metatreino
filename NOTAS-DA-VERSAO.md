@@ -1,3 +1,19 @@
+# MetaTreino 2027.1 Beta 27 — Fundos mais discretos e coleção na Central
+
+1. **Fundos decorativos:**
+   - Agora ficam só no topo de cada aba, perto do título, e somem aos poucos antes das listas.
+   - Rolam junto com a tela, então não aparecem mais atrás de cartões, listas e botões.
+   - Ficaram mais discretos e um pouco menores. A opção de desligar continua.
+2. **Desenho novo do Histórico:** um relógio com seta de "voltar no tempo". O anterior tinha retângulos que pareciam cartões vazios ou botões ao lado dos treinos.
+3. **Compartilhar a coleção de medalhas pela Central:**
+   - "Compartilhar coleção inteira" e "Compartilhar minhas conquistas" agora abrem a Central de compartilhamento.
+   - O card mostra as 5 medalhas mais recentes (desenho real do app), quantas o aluno tem de quantas, % da coleção, raras e especiais.
+   - Tem os mesmos formatos, estilos e opção de foto dos outros cards.
+   - O card antigo continua no link "Modelo clássico".
+
+**Regras do Firestore:** não mudaram nesta versão (continua valendo o arquivo revisado da Beta 24).
+
+---
 # MetaTreino 2027.1 Beta 26 — Central de compartilhamento
 
 1. **Uma Central para todos os cards.** Os botões de compartilhar que já existiam agora abrem a mesma tela:

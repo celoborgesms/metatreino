@@ -1,4 +1,4 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 26
+# Roteiro de testes em aparelho real — MetaTreino Beta 27
 
 Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
 
@@ -15,7 +15,7 @@ Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do ce
 ## 3. Corrida (se usar)
 - [ ] Registrar uma corrida com tempo e distância. O ritmo saiu certo?
 
-## 4. Novidades (Betas 19 a 26)
+## 4. Novidades (Betas 19 a 27)
 - [ ] Histórico → **Histórico completo**: abre? Os números do ano batem com o que você lembra?
 - [ ] Perfil → **Relatório em PDF** → 3 meses → Gerar. O PDF abre? Os gráficos estão legíveis? Teste **Compartilhar** → salvar no Google Drive ou mandar no WhatsApp.
 - [ ] Perfil → **Seus dados**: quanto % aparece? A lista "Do que é feito" faz sentido?
@@ -36,6 +36,8 @@ Leva uns 20 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do ce
 - [ ] Conquistas → uma medalha → Compartilhar. Progresso → Recordes → ícone de compartilhar. Evolução de um exercício → "Compartilhar minha evolução".
 - [ ] Conquista especial (se tiver): o vídeo continua funcionando? A opção "Card com foto e formatos" aparece?
 - [ ] "Modelo clássico" (embaixo da Central) ainda abre o card antigo?
+- [ ] Conquistas → "Compartilhar coleção inteira": aparecem suas medalhas mais recentes?
+- [ ] Passe pelas abas: o desenho de fundo fica só no topo e não aparece atrás das listas?
 
 ## 5. No computador (se tiver)
 - [ ] Abrir metatreino.app no computador: a tela de login usa a largura? Depois de entrar, aparece o menu do lado e as telas em duas colunas?
