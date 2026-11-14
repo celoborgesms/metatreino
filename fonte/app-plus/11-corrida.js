@@ -328,12 +328,12 @@ function rAplicarDecisao(ctx, motor, res){
     if(nv === 0){
       const noEstagio = rAtividades(ctx).filter(r=>r.at>=res.sem && r.at<res.sem+7*DIA_MS && (r.tipoSessao==='camcorre' || r.tipoSessao==='caminhada') && (r.estagio===motor.estagio) && r.concluiu!=='nao' && r.concluiu!=='parcial' && (+r.rpe||5)<=7).length;
       if(noEstagio >= 2 && motor.estagio < RUN_EST.length-1){ motor.estagio++; res.mudou = `próximo estágio: ${rEstagioTxt(motor.estagio)}`; }
-      else if(noEstagio >= 2 && motor.estagio === RUN_EST.length-1){ motor.nivel = 1; motor.nivelDesde = res.sem+7*DIA_MS; motor.contMin = 12; res.mudou = `você correu 10 min sem parar: agora é ${RN_NOME[1]}`; }
+      else if(noEstagio >= 2 && motor.estagio === RUN_EST.length-1){ rOfertaNivel(motor, 1, res, 'você completou o último estágio de caminhada + corrida com folga'); }
       else { res.decisao = 'manter'; res.motivo = `para avançar de estágio são 2 treinos completos com esforço até 7/10 no estágio atual (feitos: ${noEstagio})`; }
     } else if(nv === 1){
       const ok = rs.filter(r=>rContinua(r) && (+r.duration||0) >= (motor.contMin||10)*0.95 && r.concluiu!=='nao' && (+r.rpe||5)<=6).length;
       if(ok >= 2){
-        if((motor.contMin||10) >= 30){ motor.nivel = 2; motor.nivelDesde = res.sem+7*DIA_MS; motor.vol = Math.max(motor.vol||0, 100); res.mudou = `30 min contínuos com folga: agora é ${RN_NOME[2]}`; }
+        if((motor.contMin||10) >= 30){ rOfertaNivel(motor, 2, res, 'você correu 30 min sem parar duas vezes com esforço até 6/10'); }
         else { const de = motor.contMin; motor.contMin = Math.min(30, (motor.contMin||10) + ((motor.contMin||10) < 20 ? 3 : 5)); res.mudou = `corrida contínua: ${de} → ${motor.contMin} min`; }
       } else { res.decisao = 'manter'; res.motivo = `para aumentar, são 2 corridas de ${motor.contMin} min sem parar com esforço até 6/10 (feitas: ${ok})`; }
     } else {
@@ -344,6 +344,8 @@ function rAplicarDecisao(ctx, motor, res){
       else { res.decisao = 'manter'; res.motivo += ' — você está no pico planejado para o seu nível e agenda'; }
     }
   } else if(res.decisao==='recuar'){
+    // Beta 39: semana pesada retira a oferta de subir de nível (facilidade passageira não é prontidão)
+    if(motor.ofertaNivel != null){ delete motor.ofertaNivel; delete motor.ofertaMotivo; }
     if(nv === 0){ if(motor.estagio > 1){ motor.estagio--; res.mudou = `volta para ${rEstagioTxt(motor.estagio)}`; } else res.mudou = 'repete o estágio, sem pressa'; }
     else if(nv === 1){ const de = motor.contMin; motor.contMin = Math.max(10, (motor.contMin||10) - 3); res.mudou = de!==motor.contMin ? `corrida contínua ${de} → ${motor.contMin} min` : 'repete a semana'; }
     else { const de = motor.vol; motor.vol = Math.round(Math.max(60, motor.vol*0.88)); if(motor.q>0) motor.q--; res.mudou = `volume ${de} → ${motor.vol} min e qualidade mais leve`; }
@@ -353,9 +355,28 @@ function rAplicarDecisao(ctx, motor, res){
     const crit = rCriteriosNivel(ctx, motor);
     const rdP = setup.raceDate ? new Date(setup.raceDate+'T12:00:00').getTime() : null;
     const pertoDaProva = rdP && rdP > res.sem && rdP - res.sem < 5*7*DIA_MS;
-    if(crit && crit.todos && !pertoDaProva && (res.sem - (motor.nivelDesde||0)) >= 3*7*DIA_MS){ motor.nivel++; motor.nivelDesde = res.sem+7*DIA_MS; motor.q = Math.max(0, motor.q-2); res.mudou = (res.mudou?res.mudou+'; ':'') + `nível ${RN_NOME[motor.nivel]}`; }
+    if(crit && crit.todos && !pertoDaProva && (res.sem - (motor.nivelDesde||0)) >= 3*7*DIA_MS && nv < RN_NOME.length-1){ rOfertaNivel(motor, nv+1, res, crit.lista.map(c=>c.txt).join('; ')); }
   }
   return res;
+}
+// Beta 39: subir de NÍVEL agora pede autorização. O motor só marca a oferta (motor.ofertaNivel) e o Meta
+// Assistente pergunta (parte 35). Continua automático o que é progressão DENTRO do nível (estágio, minutos
+// contínuos, volume, qualidade) e todo recuo (semana pesada, pausa) — recuar é segurança, não promoção.
+// window.__rAutoNivel = true (só nos testes de simulação) aplica direto, como era antes.
+function rOfertaNivel(motor, para, res, motivo){
+  if(window.__rAutoNivel){ rAplicarNivel(motor, para, res.sem+7*DIA_MS); res.mudou = (res.mudou?res.mudou+'; ':'') + `nível ${RN_NOME[para]}`; return; }
+  if(motor.ofertaNivel === para) return;
+  if(typeof evoPodeOferecer === 'function' && !evoPodeOferecer('run', para)){ res.motivo = (res.motivo?res.motivo+'; ':'') + 'próximo nível disponível, mas você preferiu continuar como está'; return; }
+  motor.ofertaNivel = para; motor.ofertaMotivo = motivo || ''; motor.ofertaEm = Date.now();
+  res.mudou = (res.mudou?res.mudou+'; ':'') + `pronto para ${RN_NOME[para]} — o Meta Assistente vai perguntar se você quer avançar`;
+}
+// aplica a subida (mesmas mudanças que o motor fazia sozinho), a partir de "desde" (início da semana seguinte)
+function rAplicarNivel(motor, para, desde){
+  if(para === 1){ motor.nivel = 1; motor.contMin = 12; }
+  else if(para === 2){ motor.nivel = 2; motor.vol = Math.max(motor.vol||0, 100); }
+  else { motor.nivel = para; motor.q = Math.max(0, (motor.q||0) - 2); }   // começa o nível novo com menos qualidade: volta a crescer aos poucos
+  motor.nivelDesde = desde;
+  delete motor.ofertaNivel; delete motor.ofertaMotivo; delete motor.ofertaEm;
 }
 function rEstagioTxt(i){ const e = RUN_EST[i]; return !e ? '' : e.rep ? `${e.rep}× (${e.corre} min correndo + ${e.anda} min caminhando)` : `${e.cam} min de caminhada ativa`; }
 // critérios para subir de nível (também usados pelo Meta Assistente para explicar "quando avançar")
