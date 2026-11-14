@@ -1,11 +1,44 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 37
+# Roteiro de testes em aparelho real — MetaTreino Beta 38
 
-Leva uns 25 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
+Leva uns 30 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
-Antes de começar: publique o `firestore.rules` novo no Console do Firebase (Firestore → Regras → Publicar).
+## 0. Beta 38 — primeiro acesso (o mais importante desta versão)
+
+**A. Conta nova** (crie uma conta de teste ou use uma liberada só para isso)
+- [ ] Logo depois de entrar: aparece "Etapa 1 de 10", **sem** a barra de abas e **sem** o botão do assistente?
+- [ ] Os 8 temas aparecem com miniatura. O **Areia** tem a etiqueta "Sugerido", mas não vem marcado. Toque em dois temas diferentes: a tela inteira muda na hora?
+- [ ] Toque em Continuar sem preencher o nome: aparece o aviso na própria etapa e ela não avança?
+- [ ] Preencha a etapa 2, avance, toque em **Voltar**: o que você digitou continua lá?
+- [ ] Na escolha da modalidade (etapa 5), toque em **← Voltar**: volta para o objetivo com a resposta marcada?
+- [ ] Musculação → etapa 6: o objetivo aparece já preenchido ("Objetivo do plano: …") com o botão **Alterar**, sem perguntar de novo?
+- [ ] Escolha **Híbrido**: só existe UMA pergunta de objetivo?
+- [ ] Etapa 7, "Escolher meus equipamentos": cada aparelho tem um desenho que parece o aparelho de verdade? Algum ficou estranho? (mande print)
+- [ ] Etapa 8: marque 4 dias por semana e só 2 dias da semana → Continuar: aparece "Selecione exatamente 4 dias da semana"?
+- [ ] Etapa 9 (Híbrido, com 60 min por sessão): o texto do nível diz "até 60 min" e não mostra outra estimativa de tempo?
+- [ ] Etapa 10 (Revisão): tudo o que você escolheu aparece? Toque em **Alterar** em "Você", mude o nome, avance: volta direto para a revisão, sem perder o resto?
+- [ ] **Criar meu plano**: a tela de montagem usa as cores do tema escolhido e ícones (sem emojis grandes)? Ao chegar no Início, **não** aparece o aviso "Semana nova: troquei os acessórios…"?
+- [ ] Depois do plano: abas e assistente aparecem e funcionam (peça "abrir desafios")?
+- [ ] Os treinos do Híbrido ficaram com no máximo uns 65 min (Treinos → cada dia)?
+- [ ] Com "Escolher meus equipamentos": os exercícios do plano usam os aparelhos que você marcou (antes vinha só peso do corpo)?
+
+**B. Antes de terminar o cadastro, tente "furar"** (com a conta nova, em qualquer etapa)
+- [ ] Não existe botão do assistente nem barra de abas em nenhuma etapa.
+- [ ] Feche e abra o app no meio do cadastro: ele volta para o cadastro (e não para o Início)?
+
+**C. Começar do zero** (se puder, numa conta de teste com alguns treinos — **apaga o histórico dessa conta**)
+- [ ] Perfil → Começar do zero → a confirmação diz o que é apagado e o que fica?
+- [ ] Depois: volta para a Etapa 1, com o seu tema atual marcado (não troca sozinho para o Areia)?
+- [ ] Os campos vêm em branco (nada da configuração anterior)?
+- [ ] O assistente e as abas ficam bloqueados até criar o plano novo?
+- [ ] Monte um plano de **corrida**: o mapa ilustrativo aparece no topo e o percurso colorido avança a cada etapa?
+- [ ] Depois do plano novo: o tema continua o mesmo? Áudio dos vídeos e organização do Início continuam como você deixou?
+
+**D. Conta do dia a dia (não use "Começar do zero" nela)**
+- [ ] Abriu direto no Início, com tudo como antes (tema, histórico, plano)?
+- [ ] Perfil: o IMC aparece como número (não "NaN")?
 
 ## 1. Instalação, atualização e modo avião
-- [ ] O app atualizou sozinho para a **Beta 37** (Perfil → rodapé), sem tocar em nenhum botão?
+- [ ] O app atualizou sozinho para a **Beta 38** (Perfil → rodapé), sem tocar em nenhum botão?
 - [ ] Fechar e abrir de novo: entrou direto, sem pedir login?
 - [ ] **Logo depois de atualizar**, ligue o modo avião, feche o app de vez e abra de novo. Ele abre e mostra os treinos? (Na Beta 32 este caso podia abrir em branco.)
 - [ ] Ainda no modo avião: registre 2 séries e salve o treino. Desligue o modo avião. O treino aparece no Histórico de outro aparelho (ou depois de sair e entrar)?

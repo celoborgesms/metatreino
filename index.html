@@ -2318,6 +2318,96 @@ html,body{overscroll-behavior-y:contain}
 .ex-stage.v{overflow:hidden}
 .ex-stage.v iframe{height:100%!important;width:calc(min(calc(var(--mt-vh,1vh)*66),660px) * 16 / 9)!important;left:50%!important;transform:translateX(-50%)!important;max-width:none!important}
 .ex-stage.v:fullscreen iframe{width:calc(100vh * 16 / 9)!important;left:50%!important;transform:translateX(-50%)!important}
+/* ===== Beta 38: primeiro acesso em etapas (parte 33 do app-plus) =====
+   Uma etapa por vez: os campos de outras etapas ficam fora (.wz-fora). Progresso no topo,
+   Voltar/Continuar fixos no rodapé da tela, revisão no fim. Ícones desenhados, sem emoji. */
+.wz-on [data-wz].wz-fora{display:none!important}
+.wz-on .wz-orig,.wz-on #q-err{display:none}
+.wz-prog{margin:4px 0 12px}
+.wz-prog-l{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-mute);margin-bottom:7px}
+.wz-bar{height:4px;border-radius:99px;background:rgba(var(--primary-rgb),.14);overflow:hidden}
+.wz-bar i{display:block;height:100%;width:0;border-radius:99px;background:var(--primary);transition:width .35s cubic-bezier(.2,.8,.3,1)}
+.wz-tit:focus{outline:none}
+.wz-nav{position:sticky;bottom:0;z-index:5;display:flex;gap:10px;margin-top:18px;padding:14px 0 calc(12px + env(safe-area-inset-bottom));background:linear-gradient(to bottom,transparent,var(--bg) 26%)}
+.wz-nav .btn{flex:1;min-height:50px;margin:0}
+.wz-nav .wz-voltar{flex:0 0 32%}
+.wz-err{margin-top:10px}
+.wz-err:empty{display:none}
+.wz-nota{font-size:12px;color:var(--text-mute);line-height:1.45;margin-top:6px}
+.wz-on .field:not(.wz-fora){animation:wz-entra .22s ease both}
+@keyframes wz-entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.field.wz-invalido > label{color:var(--danger-soft)}
+.field.wz-invalido .input{border-color:var(--danger)}
+.field.wz-invalido .radio-grid .opt:not(.on){border-color:var(--line-danger)}
+/* ícones dos botões de opção */
+.opt-ico-grid .opt{display:flex;align-items:center;justify-content:center;gap:8px}
+.opt [data-ico]{display:inline-flex;width:20px;height:20px;flex:0 0 20px;color:var(--text-dim)}
+.opt.on [data-ico]{color:var(--primary-2)}
+[data-ico] svg{width:100%;height:100%;display:block}
+.row-ico{display:inline-flex;width:18px;height:18px;flex:0 0 18px}
+.pick-icon svg{width:30px;height:30px}
+/* boas-vindas */
+.wz-passos-lista{list-style:none;display:flex;flex-direction:column;gap:8px;margin:2px 0 2px}
+.wz-passos-lista li{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.wz-passos-lista li > span:first-child{width:22px;height:22px;flex:0 0 22px;color:var(--primary-2);margin-top:1px}
+.wz-passos-lista li > span:last-child{font-size:12.5px;color:var(--text-dim);line-height:1.4}
+.wz-passos-lista b{display:block;font-size:14px;color:var(--text);margin-bottom:2px}
+/* escolha do tema: cada prévia usa as variáveis do próprio tema (data-theme no elemento) */
+.wz-temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:10px;margin-top:6px}
+.wz-tema{display:flex;flex-direction:column;gap:6px;padding:7px 7px 9px;border-radius:16px;border:1.5px solid var(--border);background:var(--surface);text-align:left;color:var(--text);transition:border-color .15s,box-shadow .15s}
+.wz-tema.on{border-color:var(--primary);box-shadow:0 0 0 3px rgba(var(--primary-rgb),.18)}
+.wz-tema:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.wz-tema-prev{display:flex;flex-direction:column;gap:5px;height:86px;border-radius:11px;padding:7px;background:var(--bg);border:1px solid var(--border);overflow:hidden}
+.tp-top{display:flex;align-items:center;gap:5px}
+.tp-top i{width:12px;height:12px;border-radius:4px;background:var(--primary)}
+.tp-top b{height:5px;width:46%;border-radius:3px;background:var(--text);opacity:.75}
+.tp-card{display:flex;flex-direction:column;gap:4px;padding:6px;border-radius:7px;background:var(--surface-2);border:1px solid var(--border)}
+.tp-card b{height:4px;width:70%;border-radius:2px;background:var(--text);opacity:.55}
+.tp-card i{height:4px;width:100%;border-radius:2px;background:linear-gradient(to right,var(--primary) 62%,rgba(var(--primary-rgb),.18) 62%)}
+.tp-card em{height:4px;width:42%;border-radius:2px;background:var(--accent)}
+.tp-btn{height:9px;border-radius:5px;background:var(--primary);margin-top:auto}
+.tp-tab{display:flex;justify-content:space-around;padding-top:4px;border-top:1px solid var(--border)}
+.tp-tab i{width:5px;height:5px;border-radius:50%;background:var(--text-mute)}
+.tp-tab i:first-child{background:var(--primary)}
+.wz-tema-nome{display:flex;align-items:center;justify-content:space-between;gap:4px;font-weight:700;font-size:13px;padding:0 2px}
+.wz-tema-sug{font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--primary-2);background:var(--tint-primary);border:1px solid var(--line-primary);border-radius:99px;padding:1px 6px}
+.wz-tema-sub{font-size:10.5px;color:var(--text-mute);line-height:1.3;padding:0 2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* objetivo sugerido pelo questionário (sem perguntar de novo) */
+.wz-sug{display:none}
+.wz-recolhido > label,.wz-recolhido .radio-grid{display:none}
+.wz-recolhido .wz-sug{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line-primary);background:var(--tint-primary);border-radius:14px}
+.wz-sug > div{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.wz-sug-l{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-mute)}
+.wz-sug b{font-size:16px;color:var(--text)}
+.wz-sug small{font-size:12px;color:var(--text-dim)}
+.wz-sug-btn{padding:8px 12px;font-size:13px;flex:0 0 auto}
+/* revisão */
+.wz-resumo{display:flex;flex-direction:column;gap:10px}
+.wz-rg{border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:10px 14px 8px}
+.wz-rg-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.wz-rg-h b{font-size:14px;color:var(--text)}
+.wz-alt{padding:6px 10px;font-size:12.5px;color:var(--primary-2)}
+.wz-rl{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px dashed var(--border);font-size:13px;line-height:1.35}
+.wz-rl span:first-child{color:var(--text-dim);flex:0 0 40%}
+.wz-rl span:last-child{text-align:right;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.wz-vazio{color:var(--text-mute);font-weight:400}
+/* equipamentos: desenho de cada aparelho + caixa de seleção de verdade */
+.eq-lista{display:grid;grid-template-columns:1fr;gap:6px;margin-top:10px}
+@media (min-width:430px){.eq-lista{grid-template-columns:1fr 1fr}}
+.eq-lista .eq-item{margin:0;padding:9px 12px;gap:12px;min-height:56px;color:var(--text);font-weight:600}
+.eq-ico{width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;border-radius:11px;background:var(--surface-2);color:var(--text-dim)}
+.eq-item.on{border-color:var(--line-primary);background:var(--tint-primary)}
+.eq-item.on .eq-ico{color:var(--primary-2);background:rgba(var(--primary-rgb),.12)}
+.eq-nome{flex:1;font-size:14px;line-height:1.25}
+.eq-check{width:22px;height:22px;flex:0 0 22px;border-radius:7px;border:1.5px solid var(--border-strong);display:grid;place-items:center}
+.eq-item.on .eq-check{background:var(--primary);border-color:var(--primary)}
+.eq-item.on .eq-check::after{content:'';width:10px;height:5px;border:2px solid var(--on-primary);border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg)}
+.eq-item:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+/* data/hora no tema claro: o seletor do sistema também fica claro */
+html.tema-claro .setup input[type=date],html.tema-claro .setup input[type=time]{color-scheme:light!important}
+/* silhueta dos desenhos (boas-vindas) */
+#app-deco .d-corpo{stroke:currentColor;stroke-opacity:calc(var(--d-linha) * .6);stroke-width:7}
+@media (prefers-reduced-motion:reduce){.wz-on .field{animation:none!important}.wz-bar i{transition:none}}
 </style>
 </head>
 <body>
@@ -2396,36 +2486,51 @@ html,body{overscroll-behavior-y:contain}
 <!-- ========== QUESTIONÁRIO ========== -->
 <div id="scr-quiz" class="screen">
   <div class="wrap setup">
-    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">METATREINO</div><div class="brand-tag">Questionário inicial</div></div></div>
-    <h1>Vamos te conhecer!</h1>
-    <p class="sub">Responda para personalizarmos seu plano.</p>
+    <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">METATREINO</div><div class="brand-tag">Primeiro acesso</div></div></div>
+    <h1 class="wz-tit">Vamos te conhecer!</h1>
+    <p class="sub wz-sub">Responda para personalizarmos seu plano.</p>
 
-    <div class="list-row hidden" id="quiz-admin-btn" onclick="goAdmin()" style="margin-bottom:16px;color:var(--accent-2);border-color:var(--line-warn);background:var(--tint-warn)">🛠️ <span>Acessar Painel ADM</span><span id="quiz-adm-badge" style="display:none;margin-left:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:2px 8px">0</span></div>
+    <div class="list-row hidden" id="quiz-admin-btn" onclick="goAdmin()" style="margin-bottom:16px;color:var(--accent-2);border-color:var(--line-warn);background:var(--tint-warn)"><span class="row-ico" data-ico="chave"></span><span>Acessar Painel ADM</span><span id="quiz-adm-badge" style="display:none;margin-left:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:2px 8px">0</span></div>
 
-    <div class="field"><label>Como quer ser chamado?</label><input class="input" id="q-nick" placeholder="Ex: Celo, João, Bea..."></div>
-    <div class="field"><label>Sexo</label>
-      <div class="radio-grid g3" id="q-sex"><div class="opt" data-val="m">👨 Masculino</div><div class="opt" data-val="f">👩 Feminino</div><div class="opt" data-val="o">👤 Outro</div></div>
+    <!-- Beta 38: cadastro em etapas. data-wz = número da etapa (parte 33 do app-plus) -->
+    <div class="field wz-boas" data-wz="1" data-rotulo="Boas-vindas">
+      <ul class="wz-passos-lista">
+        <li><span data-ico="dados"></span><span><b>Você e seu objetivo</b>Dados básicos para calcular o ponto de partida.</span></li>
+        <li><span data-ico="modal"></span><span><b>Como você vai treinar</b>Modalidade, equipamentos e os dias da semana.</span></li>
+        <li><span data-ico="revisao"></span><span><b>Revisão e plano pronto</b>Você confere tudo antes de o plano ser montado.</span></li>
+      </ul>
+      <div class="wz-nota">Leva cerca de 2 minutos. Dá para voltar e corrigir qualquer resposta.</div>
     </div>
-    <div class="field"><label>Data de nascimento</label><input class="input mono" type="date" id="q-birth"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">Usamos para ajustar seu treino — e para te dar os parabéns no dia 🎂</div></div>
-    <div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="q-height" placeholder="Ex: 175" min="100" max="230"></div>
-    <div class="field"><label>Peso atual (kg)</label><input class="input mono" type="number" step="0.1" id="q-weight" placeholder="Ex: 78" min="30" max="250"></div>
-    <div class="field"><label>WhatsApp (com DDD) <span style="font-weight:400;color:var(--text-mute)">— opcional</span></label><input class="input mono" type="tel" id="q-whats" placeholder="Ex: 61999999999"></div>
+    <div class="field" data-wz="1" data-rotulo="Tema"><label>Escolha o visual</label>
+      <div class="wz-temas" id="wz-temas" role="radiogroup" aria-label="Tema do app"></div>
+      <div class="wz-nota">O tema muda na hora. Você troca quando quiser em Perfil › Aparência.</div>
+    </div>
 
-    <div class="field"><label>Objetivo principal</label>
-      <div class="radio-grid" id="q-goal">
-        <div class="opt" data-val="emagrecer">📉 Emagrecer</div>
-        <div class="opt" data-val="massa">📈 Ganhar massa</div>
-        <div class="opt" data-val="forca">🔥 Ganhar força</div>
-        <div class="opt" data-val="condicionamento">⚡ Condicionamento</div>
-        <div class="opt" data-val="tonificar">💪 Tonificar</div>
-        <div class="opt" data-val="saude">❤️ Saúde geral</div>
+    <div class="field" data-wz="2"><label for="q-nick">Como quer ser chamado?</label><input class="input" id="q-nick" placeholder="Ex: Celo, João, Bea..." autocomplete="nickname"></div>
+    <div class="field" data-wz="2"><label>Sexo</label>
+      <div class="radio-grid g3" id="q-sex"><div class="opt" data-val="m">Masculino</div><div class="opt" data-val="f">Feminino</div><div class="opt" data-val="o">Outro</div></div>
+    </div>
+    <div class="field" data-wz="2"><label for="q-birth">Data de nascimento</label><input class="input mono" type="date" id="q-birth"><div class="wz-nota">Usamos para ajustar o treino à sua idade e para lembrar do seu aniversário.</div></div>
+    <div class="field" data-wz="2"><label for="q-whats">WhatsApp (com DDD) <span style="font-weight:400;color:var(--text-mute)">— opcional</span></label><input class="input mono" type="tel" id="q-whats" placeholder="Ex: 61999999999" autocomplete="tel"></div>
+    <div class="field" data-wz="3"><label for="q-height">Altura (cm)</label><input class="input mono" type="number" inputmode="numeric" id="q-height" placeholder="Ex: 175" min="100" max="230"></div>
+    <div class="field" data-wz="3"><label for="q-weight">Peso atual (kg)</label><input class="input mono" type="number" inputmode="decimal" step="0.1" id="q-weight" placeholder="Ex: 78" min="30" max="250"></div>
+    <div class="field" data-wz="3"><label>Nível atual de atividade</label>
+      <div class="radio-grid g3" id="q-level"><div class="opt on" data-val="sedentario">Sedentário</div><div class="opt" data-val="ativo">Ativo</div><div class="opt" data-val="atleta">Atleta</div></div>
+      <div class="wz-nota">Sedentário: quase não treina. Ativo: treina às vezes. Atleta: treina com regularidade há meses.</div>
+    </div>
+
+    <div class="field" data-wz="4"><label>Objetivo principal</label>
+      <div class="radio-grid opt-ico-grid" id="q-goal">
+        <div class="opt" data-val="emagrecer"><span data-ico="baixa"></span>Emagrecer</div>
+        <div class="opt" data-val="massa"><span data-ico="sobe"></span>Ganhar massa</div>
+        <div class="opt" data-val="forca"><span data-ico="barra"></span>Ganhar força</div>
+        <div class="opt" data-val="condicionamento"><span data-ico="pulso"></span>Condicionamento</div>
+        <div class="opt" data-val="tonificar"><span data-ico="silhueta"></span>Tonificar</div>
+        <div class="opt" data-val="saude"><span data-ico="coracao"></span>Saúde geral</div>
       </div>
     </div>
-    <div class="field"><label>Nível atual de atividade</label>
-      <div class="radio-grid g3" id="q-level"><div class="opt on" data-val="sedentario">Sedentário</div><div class="opt" data-val="ativo">Ativo</div><div class="opt" data-val="atleta">Atleta</div></div>
-    </div>
     <div id="q-err"></div>
-    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="saveQuiz()">Continuar →</button>
+    <button class="btn btn-primary btn-block wz-orig" style="margin-top:16px" onclick="saveQuiz()">Continuar →</button>
   </div>
 </div>
 
@@ -2479,22 +2584,23 @@ html,body{overscroll-behavior-y:contain}
 </div>
 <div id="scr-pick" class="screen">
   <div class="wrap pick-wrap">
+    <button class="btn btn-ghost wz-pick-voltar" style="align-self:flex-start;padding:8px 12px;font-size:13px;margin-bottom:8px" onclick="wzVoltaDoPick()">← Voltar</button>
     <div class="brand">
       <div class="brand-logo">M</div>
-      <div><div class="brand-name">METATREINO</div><div class="brand-tag">Escolha seu foco</div></div>
+      <div><div class="brand-name">METATREINO</div><div class="brand-tag">Primeiro acesso</div></div>
     </div>
-    <h1 class="pick-title">Bem-vindo, Atleta! 👋</h1>
-    <p class="pick-sub">Escolha o módulo que quer começar. Você pode alternar entre eles a qualquer momento.</p>
+    <h1 class="pick-title">Como você quer treinar?</h1>
+    <p class="pick-sub">Escolha por onde começar. A outra modalidade pode ser adicionada depois, sem perder nada.</p>
 
-    <div class="list-row hidden" id="pick-admin-btn" onclick="goAdmin()" style="margin-bottom:14px;color:var(--accent-2);border-color:var(--line-warn);background:var(--tint-warn)">🛠️ <span>Acessar Painel ADM</span><span id="pick-adm-badge" style="display:none;margin-left:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:2px 8px">0</span></div>
+    <div class="list-row hidden" id="pick-admin-btn" onclick="goAdmin()" style="margin-bottom:14px;color:var(--accent-2);border-color:var(--line-warn);background:var(--tint-warn)"><span class="row-ico" data-ico="chave"></span><span>Acessar Painel ADM</span><span id="pick-adm-badge" style="display:none;margin-left:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:2px 8px">0</span></div>
 
-    <div class="pick-card lift" onclick="pickModule('lift')">
-      <div class="pick-icon">🏋️</div>
-      <div><div class="pick-name">Musculação</div><div class="pick-desc">Treinos ABCD, hipertrofia, força, com biblioteca completa de exercícios</div></div>
+    <div class="pick-card lift" role="button" tabindex="0" onclick="pickModule('lift')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pickModule('lift')}">
+      <div class="pick-icon" data-ico="barra"></div>
+      <div><div class="pick-name">Musculação</div><div class="pick-desc">Academia, halteres, calistenia ou híbrido. Progressão de carga e biblioteca completa de exercícios.</div></div>
     </div>
-    <div class="pick-card run" onclick="pickModule('run')">
-      <div class="pick-icon">🏃</div>
-      <div><div class="pick-name">Corrida</div><div class="pick-desc">Planos de 5K, 10K, meia e maratona · Ritmo · Zonas de FC</div></div>
+    <div class="pick-card run" role="button" tabindex="0" onclick="pickModule('run')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pickModule('run')}">
+      <div class="pick-icon" data-ico="corredor"></div>
+      <div><div class="pick-name">Corrida</div><div class="pick-desc">Do primeiro trote à maratona. Ritmos, zonas de esforço e progressão semana a semana.</div></div>
     </div>
   </div>
 </div>
@@ -2504,41 +2610,42 @@ html,body{overscroll-behavior-y:contain}
   <div class="wrap setup">
     <button class="btn btn-ghost" style="align-self:flex-start;padding:8px 12px;font-size:13px;margin-bottom:8px" onclick="sairDoSetup()">← Voltar</button>
     <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">MUSCULAÇÃO</div><div class="brand-tag">Configure seu plano</div></div></div>
-    <h1>Vamos montar seu plano</h1>
-    <p class="sub">Responda para receber um plano feito para você.</p>
+    <h1 class="wz-tit">Vamos montar seu plano</h1>
+    <p class="sub wz-sub">Responda para receber um plano feito para você.</p>
 
-    <div class="field"><label>Modalidade</label>
-      <div class="radio-grid g3" id="lift-modalidade">
-        <div class="opt on" data-val="musculacao">🏋️ Musculação</div>
-        <div class="opt" data-val="calistenia">🤸 Calistenia</div>
-        <div class="opt" data-val="hibrido">🔀 Híbrido</div>
+    <div class="field" data-wz="1"><label>Modalidade</label>
+      <div class="radio-grid g3 opt-ico-grid" id="lift-modalidade">
+        <div class="opt on" data-val="musculacao"><span data-ico="barra"></span>Musculação</div>
+        <div class="opt" data-val="calistenia"><span data-ico="cali"></span>Calistenia</div>
+        <div class="opt" data-val="hibrido"><span data-ico="hibrido"></span>Híbrido</div>
       </div>
       <div id="lift-modal-hint" style="margin-top:8px;font-size:12.5px;color:var(--text-dim)"></div>
     </div>
 
     <div id="cali-setup" style="display:none">
-      <div class="field"><label>Objetivo na calistenia</label>
-        <div class="radio-grid" id="cali-goal">
-          <div class="opt on" data-val="hipertrofia">💪 Hipertrofia</div>
-          <div class="opt" data-val="forca">🔥 Força</div>
-          <div class="opt" data-val="resistencia">🎯 Resistência</div>
-          <div class="opt" data-val="condicionamento">⚡ Condicionamento</div>
-          <div class="opt" data-val="habilidades" style="grid-column:1/-1">🤸 Domínio de habilidades</div>
+      <div class="field" data-wz="1"><label>Objetivo na calistenia</label>
+        <div class="radio-grid opt-ico-grid" id="cali-goal">
+          <div class="opt on" data-val="hipertrofia"><span data-ico="halter"></span>Hipertrofia</div>
+          <div class="opt" data-val="forca"><span data-ico="barra"></span>Força</div>
+          <div class="opt" data-val="resistencia"><span data-ico="cronometro"></span>Resistência</div>
+          <div class="opt" data-val="condicionamento"><span data-ico="pulso"></span>Condicionamento</div>
+          <div class="opt" data-val="habilidades" style="grid-column:1/-1"><span data-ico="invertido"></span>Domínio de habilidades</div>
         </div>
       </div>
-      <div class="field"><label>Tempo por sessão</label>
+      <div class="field" data-wz="3"><label>Tempo por sessão</label>
         <div class="radio-grid g4" id="cali-tempo" style="grid-template-columns:repeat(4,1fr)">
           <div class="opt" data-val="30">30 min</div><div class="opt on" data-val="45">45 min</div><div class="opt" data-val="60">60 min</div><div class="opt" data-val="75">75 min</div>
         </div>
+        <div class="wz-nota">É o tempo que você tem disponível. Cada sessão é montada para caber nele, com aquecimento incluído.</div>
       </div>
-      <div class="field"><label>Nível na calistenia</label>
+      <div class="field" data-wz="4"><label>Nível na calistenia</label>
         <div class="radio-grid" id="cali-nivel">
           <div class="opt on" data-val="1">Iniciante</div><div class="opt" data-val="2">Intermediário</div>
           <div class="opt" data-val="3">Avançado</div><div class="opt" data-val="4">Especialista</div>
         </div>
-        <div style="margin-top:6px;font-size:12px;color:var(--text-mute);line-height:1.45">É só o ponto de partida. O nível real é recalculado pelas suas séries registradas.</div>
+        <div class="wz-nota">Define a dificuldade das progressões, não a duração. É só o ponto de partida: o nível real é recalculado pelas suas séries registradas.</div>
       </div>
-      <div class="field"><label>Equipamentos que você tem</label>
+      <div class="field" data-wz="2"><label>Equipamentos que você tem</label>
         <div class="radio-grid" id="cali-equip">
           <div class="opt opt-multi" data-val="barra">Barra fixa</div>
           <div class="opt opt-multi" data-val="paralelas">Barras paralelas</div>
@@ -2548,42 +2655,25 @@ html,body{overscroll-behavior-y:contain}
           <div class="opt opt-multi" data-val="banco">Banco / caixa firme</div>
           <div class="opt opt-multi" data-val="espaldar" style="grid-column:1/-1">Espaldar ou poste vertical</div>
         </div>
-        <div style="margin-top:6px;font-size:12px;color:var(--text-mute)">Nada marcado = só o peso do corpo e o chão.</div>
-      </div>
-      <div class="field"><label>Teste rápido (opcional — deixa o plano mais preciso)</label>
-        <div class="cali-teste">
-          <label>Flexões seguidas<input class="input" type="number" min="0" max="100" inputmode="numeric" id="ct-flexao" placeholder="—"></label>
-          <label>Barras seguidas<input class="input" type="number" min="0" max="50" inputmode="numeric" id="ct-barra" placeholder="—"></label>
-          <label>Paralelas (dips) seguidas<input class="input" type="number" min="0" max="80" inputmode="numeric" id="ct-dips" placeholder="—"></label>
-          <label>Prancha (segundos)<input class="input" type="number" min="0" max="600" inputmode="numeric" id="ct-prancha" placeholder="—"></label>
-        </div>
-      </div>
-      <div class="field"><label>Limitações (opcional)</label>
-        <div class="radio-grid" id="cali-limites">
-          <div class="opt opt-multi" data-val="semimpacto">Evitar saltos</div>
-          <div class="opt opt-multi" data-val="punho">Punhos sensíveis</div>
-          <div class="opt opt-multi" data-val="ombro">Ombros sensíveis</div>
-          <div class="opt opt-multi" data-val="joelho">Joelhos sensíveis</div>
-        </div>
+        <div class="wz-nota">Nada marcado = só o peso do corpo e o chão.</div>
       </div>
     </div>
-
-    <div class="field gym-only"><label>Objetivo</label>
-      <div class="radio-grid" id="lift-goal">
-        <div class="opt on" data-val="hipertrofia">💪 Hipertrofia</div>
-        <div class="opt" data-val="forca">🔥 Força</div>
-        <div class="opt" data-val="emagrecimento">⚡ Emagrecimento</div>
-        <div class="opt" data-val="resistencia">🎯 Resistência</div>
+    <div class="field gym-only" data-wz="1"><label>Objetivo</label>
+      <div class="radio-grid opt-ico-grid" id="lift-goal">
+        <div class="opt on" data-val="hipertrofia"><span data-ico="halter"></span>Hipertrofia</div>
+        <div class="opt" data-val="forca"><span data-ico="barra"></span>Força</div>
+        <div class="opt" data-val="emagrecimento"><span data-ico="chama"></span>Emagrecimento</div>
+        <div class="opt" data-val="resistencia"><span data-ico="cronometro"></span>Resistência</div>
       </div>
     </div>
-    <div class="field"><label>Dias por semana</label>
+    <div class="field" data-wz="3"><label>Dias por semana</label>
       <div class="radio-grid g3" id="lift-days">
         <div class="opt" data-val="3">3 dias</div>
         <div class="opt on" data-val="4">4 dias</div>
         <div class="opt" data-val="5">5 dias</div><div class="opt" data-val="6">6 dias</div>
       </div>
     </div>
-    <div id="lift-week-days-wrap"><div class="field"><label>Quais dias? (selecione <span id="lift-days-count">4</span>)</label>
+    <div id="lift-week-days-wrap"><div class="field" data-wz="3" data-rotulo="Dias da semana"><label>Quais dias? (selecione <span id="lift-days-count">4</span>)</label>
       <div class="radio-grid" id="lift-week-days" style="grid-template-columns:repeat(4,1fr)">
         <div class="opt opt-multi" data-val="1">Seg</div>
         <div class="opt opt-multi" data-val="2">Ter</div>
@@ -2594,20 +2684,20 @@ html,body{overscroll-behavior-y:contain}
         <div class="opt opt-multi" data-val="7">Dom</div>
       </div>
     </div></div>
-    <div class="field gym-only"><label>Equipamentos da academia / casa</label>
-      <div class="radio-grid" id="lift-equip">
-        <div class="opt on" data-val="academia">🏋️ Academia completa</div>
-        <div class="opt" data-val="halteres">💪 Só halteres</div>
-        <div class="opt" data-val="casa">🤸 Peso do corpo</div>
-        <div class="opt" data-val="custom">🛠️ Escolher meus equipamentos</div>
+    <div class="field gym-only" data-wz="2"><label>Equipamentos da academia / casa</label>
+      <div class="radio-grid opt-ico-grid" id="lift-equip">
+        <div class="opt on" data-val="academia"><span data-ico="rack"></span>Academia completa</div>
+        <div class="opt" data-val="halteres"><span data-ico="halter"></span>Só halteres</div>
+        <div class="opt" data-val="casa"><span data-ico="corpo"></span>Peso do corpo</div>
+        <div class="opt" data-val="custom"><span data-ico="lista"></span>Escolher meus equipamentos</div>
       </div>
       <div id="lift-equip-custom" style="display:none;margin-top:10px">
         <div class="note note-info" style="margin-top:0"><div class="note-line">Marque o que você tem à mão. Exercícios de <b>peso do corpo</b> entram sempre — o resto só se você tiver o aparelho.</div></div>
-        <div id="equip-check-list" style="display:flex;flex-direction:column;gap:6px;margin-top:10px"></div>
+        <div id="equip-check-list" class="eq-lista"></div>
         <div id="equip-count" style="font-size:12px;color:var(--text-dim);margin-top:8px;text-align:center"></div>
       </div>
     </div>
-    <div class="field gym-only"><label>Nível de experiência</label>
+    <div class="field gym-only" data-wz="4"><label>Nível de experiência</label>
       <div class="radio-grid g3" id="lift-level">
         <div class="opt on" data-val="iniciante">Iniciante</div>
         <div class="opt" data-val="intermediario">Intermediário</div>
@@ -2615,12 +2705,32 @@ html,body{overscroll-behavior-y:contain}
       </div>
       <div id="lift-level-hint" style="margin-top:8px;font-size:12.5px;color:var(--text-dim)"></div>
     </div>
-    <div class="field"><label>Quando você começa? (opcional)</label>
+    <!-- Beta 38: teste rápido e limitações saíram de #cali-setup para virem depois do nível (etapa "Experiência") -->
+    <div id="cali-setup-2" style="display:none">
+      <div class="field" data-wz="4" data-rotulo="Teste rápido"><label>Teste rápido (opcional — deixa o plano mais preciso)</label>
+        <div class="cali-teste">
+          <label>Flexões seguidas<input class="input" type="number" min="0" max="100" inputmode="numeric" id="ct-flexao" placeholder="—"></label>
+          <label>Barras seguidas<input class="input" type="number" min="0" max="50" inputmode="numeric" id="ct-barra" placeholder="—"></label>
+          <label>Paralelas (dips) seguidas<input class="input" type="number" min="0" max="80" inputmode="numeric" id="ct-dips" placeholder="—"></label>
+          <label>Prancha (segundos)<input class="input" type="number" min="0" max="600" inputmode="numeric" id="ct-prancha" placeholder="—"></label>
+        </div>
+      </div>
+      <div class="field" data-wz="4"><label>Limitações (opcional)</label>
+        <div class="radio-grid" id="cali-limites">
+          <div class="opt opt-multi" data-val="semimpacto">Evitar saltos</div>
+          <div class="opt opt-multi" data-val="punho">Punhos sensíveis</div>
+          <div class="opt opt-multi" data-val="ombro">Ombros sensíveis</div>
+          <div class="opt opt-multi" data-val="joelho">Joelhos sensíveis</div>
+        </div>
+      </div>
+    </div>
+    <div class="field" data-wz="3" data-rotulo="Início"><label>Quando você começa? (opcional)</label>
       <input class="input" type="date" id="lift-start-date" style="color-scheme:dark">
       <div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">Deixe vazio para começar hoje. Dias antes da data escolhida não contam como falta.</div>
     </div>
+    <div class="field wz-resumo" data-wz="5" id="wz-resumo-lift"></div>
 
-    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="finishSetup('lift')">Criar meu plano →</button>
+    <button class="btn btn-primary btn-block wz-orig" style="margin-top:16px" onclick="finishSetup('lift')">Criar meu plano →</button>
   </div>
 </div>
 
@@ -2629,20 +2739,20 @@ html,body{overscroll-behavior-y:contain}
   <div class="wrap setup">
     <button class="btn btn-ghost" style="align-self:flex-start;padding:8px 12px;font-size:13px;margin-bottom:8px" onclick="sairDoSetup()">← Voltar</button>
     <div class="brand"><div class="brand-logo">M</div><div><div class="brand-name">CORRIDA</div><div class="brand-tag">Configure seu plano</div></div></div>
-    <h1>Vamos correr?</h1>
-    <p class="sub">Responda com sinceridade: o plano parte do seu nível de hoje e evolui com você.</p>
+    <h1 class="wz-tit">Vamos correr?</h1>
+    <p class="sub wz-sub">Responda com sinceridade: o plano parte do seu nível de hoje e evolui com você.</p>
 
-    <div class="field"><label>Objetivo</label>
+    <div class="field" data-wz="1"><label>Objetivo</label>
       <div class="radio-grid" id="run-goal">
-        <div class="opt" data-val="comecar">🌱 Começar a correr</div>
-        <div class="opt" data-val="condicionamento">💪 Condicionamento</div>
-        <div class="opt on" data-val="5km">🏁 5 km</div>
-        <div class="opt" data-val="10km">🎽 10 km</div>
-        <div class="opt" data-val="21km">🥇 Meia (21k)</div>
-        <div class="opt" data-val="42km">🏆 Maratona (42k)</div>
+        <div class="opt" data-val="comecar">Começar a correr</div>
+        <div class="opt" data-val="condicionamento">Condicionamento</div>
+        <div class="opt on" data-val="5km">5 km</div>
+        <div class="opt" data-val="10km">10 km</div>
+        <div class="opt" data-val="21km">Meia maratona (21 km)</div>
+        <div class="opt" data-val="42km">Maratona (42 km)</div>
       </div>
     </div>
-    <div class="field"><label>Sua experiência com corrida</label>
+    <div class="field" data-wz="2" data-rotulo="Experiência"><label>Sua experiência com corrida</label>
       <div class="radio-grid run-col1" id="run-exp">
         <div class="opt" data-val="nunca">Nunca corri / estou sedentário(a)</div>
         <div class="opt on" data-val="caminho">Caminho, mas quase não corro</div>
@@ -2651,7 +2761,7 @@ html,body{overscroll-behavior-y:contain}
         <div class="opt" data-val="experiente">Corro há anos / faço provas</div>
       </div>
     </div>
-    <div class="field"><label>Hoje, quanto tempo você consegue correr sem parar?</label>
+    <div class="field" data-wz="2" data-rotulo="Corre sem parar"><label>Hoje, quanto tempo você consegue correr sem parar?</label>
       <div class="radio-grid" id="run-cont">
         <div class="opt on" data-val="0">Ainda não consigo</div>
         <div class="opt" data-val="5">1 a 5 min</div>
@@ -2663,7 +2773,7 @@ html,body{overscroll-behavior-y:contain}
       </div>
       <div class="run-hint-sm">Sem teste: responda pelo que você fez nas últimas semanas.</div>
     </div>
-    <div class="field run-exp-mais" id="run-kmsem-wrap"><label>Quantos km por semana, em média, nas últimas semanas?</label>
+    <div class="field run-exp-mais" id="run-kmsem-wrap" data-wz="2" data-rotulo="Km por semana"><label>Quantos km por semana, em média, nas últimas semanas?</label>
       <div class="radio-grid g3" id="run-kmsem">
         <div class="opt on" data-val="0">Quase nada</div>
         <div class="opt" data-val="8">Até 10 km</div>
@@ -2673,14 +2783,14 @@ html,body{overscroll-behavior-y:contain}
         <div class="opt" data-val="60">Mais de 50 km</div>
       </div>
     </div>
-    <div class="field run-exp-mais" id="run-marca-wrap"><label>Um tempo seu recente em alguma distância (opcional)</label>
+    <div class="field run-exp-mais" id="run-marca-wrap" data-wz="2" data-rotulo="Tempo recente"><label>Um tempo seu recente em alguma distância (opcional)</label>
       <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap">
         <select class="input" id="run-marca-dist" style="flex:1.2;min-width:96px"><option value="">Distância</option><option value="3">3 km</option><option value="5">5 km</option><option value="10">10 km</option><option value="21.0975">21 km</option><option value="42.195">42 km</option></select>
         <div class="tempo-hms" style="flex:2"><input class="input mono" type="number" min="0" max="9" inputmode="numeric" id="run-marca-h" placeholder="h"><span>:</span><input class="input mono" type="number" min="0" max="59" inputmode="numeric" id="run-marca-m" placeholder="min"><span>:</span><input class="input mono" type="number" min="0" max="59" inputmode="numeric" id="run-marca-s" placeholder="seg"></div>
       </div>
       <div class="run-hint-sm">Dos últimos 3 meses, correndo forte (prova ou teste). Com ele eu calculo seus ritmos de treino. Sem ele, os treinos vão por esforço até eu ter dados seus.</div>
     </div>
-    <div class="field"><label>Tempo disponível por treino</label>
+    <div class="field" data-wz="3"><label>Tempo disponível por treino</label>
       <div class="radio-grid g3" id="run-tempo">
         <div class="opt" data-val="20">20 min</div>
         <div class="opt" data-val="30">30 min</div>
@@ -2690,7 +2800,7 @@ html,body{overscroll-behavior-y:contain}
         <div class="opt" data-val="120">2 horas</div>
       </div>
     </div>
-    <div class="field run-exp-mais" id="run-tempolongo-wrap"><label>No dia do treino mais longo, até quanto tempo?</label>
+    <div class="field run-exp-mais" id="run-tempolongo-wrap" data-wz="3" data-rotulo="Treino mais longo"><label>No dia do treino mais longo, até quanto tempo?</label>
       <div class="radio-grid g3" id="run-tempolongo">
         <div class="opt on" data-val="0">O mesmo</div>
         <div class="opt" data-val="75">1h15</div>
@@ -2700,7 +2810,7 @@ html,body{overscroll-behavior-y:contain}
         <div class="opt" data-val="200">3h20</div>
       </div>
     </div>
-    <div class="field"><label>Está parado(a) agora?</label>
+    <div class="field" data-wz="2" data-rotulo="Parado agora"><label>Está parado(a) agora?</label>
       <div class="radio-grid" id="run-parado">
         <div class="opt on" data-val="0">Não, estou treinando</div>
         <div class="opt" data-val="10">1 a 2 semanas parado</div>
@@ -2709,7 +2819,7 @@ html,body{overscroll-behavior-y:contain}
       </div>
       <div class="run-hint-sm">Se você já registra corridas no app, eu uso o seu histórico real.</div>
     </div>
-    <div class="field"><label>Alguma dor ou limitação? (marque quantas quiser)</label>
+    <div class="field" data-wz="4" data-rotulo="Dor ou limitação"><label>Alguma dor ou limitação? (marque quantas quiser)</label>
       <div class="radio-grid" id="run-lim">
         <div class="opt opt-multi" data-val="joelho">Joelho</div>
         <div class="opt opt-multi" data-val="tornozelo">Tornozelo / pé</div>
@@ -2720,7 +2830,7 @@ html,body{overscroll-behavior-y:contain}
       </div>
       <div class="run-hint-sm">Com limitação, o plano tira subidas e tiros fortes e controla o impacto. Dor que persiste ou piora correndo precisa de avaliação profissional — o app não diagnostica lesões.</div>
     </div>
-    <div class="run-nivel-hint" id="run-nivel-hint"></div>
+    <div class="run-nivel-hint" id="run-nivel-hint" data-wz="2"></div>
     <div class="field" style="display:none"><label>Nível</label>
       <div class="radio-grid g3" id="run-level">
         <div class="opt on" data-val="iniciante">Iniciante</div>
@@ -2728,7 +2838,7 @@ html,body{overscroll-behavior-y:contain}
         <div class="opt" data-val="avancado">Avançado</div>
       </div>
     </div>
-    <div class="field"><label>Dias por semana</label>
+    <div class="field" data-wz="3"><label>Dias por semana</label>
       <div class="radio-grid g3" id="run-days">
         <div class="opt" data-val="2">2 dias</div>
         <div class="opt" data-val="3">3 dias</div>
@@ -2736,7 +2846,7 @@ html,body{overscroll-behavior-y:contain}
         <div class="opt" data-val="5">5 dias</div><div class="opt" data-val="6">6 dias</div>
       </div>
     </div>
-    <div id="run-week-days-wrap"><div class="field"><label>Quais dias? (selecione <span id="run-days-count">4</span>)</label>
+    <div id="run-week-days-wrap"><div class="field" data-wz="3" data-rotulo="Dias da semana"><label>Quais dias? (selecione <span id="run-days-count">4</span>)</label>
       <div class="radio-grid" id="run-week-days" style="grid-template-columns:repeat(4,1fr)">
         <div class="opt opt-multi" data-val="1">Seg</div>
         <div class="opt opt-multi" data-val="2">Ter</div>
@@ -2747,28 +2857,29 @@ html,body{overscroll-behavior-y:contain}
         <div class="opt opt-multi" data-val="7">Dom</div>
       </div>
     </div></div>
-    <div class="field"><label>🎯 Tem prova alvo? (opcional)</label>
+    <div class="field" data-wz="4" data-rotulo="Prova alvo"><label>Tem prova alvo? (opcional)</label>
       <div class="row" style="gap:8px">
-        <input class="input" type="date" id="run-race-date" style="color-scheme:dark;flex:1.4">
-        <input class="input" type="time" id="run-race-time" style="color-scheme:dark;flex:1" placeholder="Horário">
+        <input class="input" type="date" id="run-race-date" style="color-scheme:dark;flex:1.4" aria-label="Data da prova">
+        <input class="input" type="time" id="run-race-time" style="color-scheme:dark;flex:1" placeholder="Horário" aria-label="Horário da largada">
       </div>
-      <div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">O horário é opcional — com ele eu te mando o checklist antes da largada e pergunto como foi depois. 🏁</div>
+      <div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">O horário é opcional — com ele eu te mando o checklist antes da largada e pergunto como foi depois.</div>
       <div class="text-dim" style="font-size:12px;margin-top:4px">Se preencher, o plano ajusta o cronograma para chegar em pico nessa data.</div>
     </div>
-    <div class="field"><label>Terreno preferido</label>
-      <div class="radio-grid" id="run-terrain">
-        <div class="opt on" data-val="asfalto">🛣️ Asfalto</div>
-        <div class="opt" data-val="esteira">🏃 Esteira</div>
-        <div class="opt" data-val="trilha">⛰️ Trilha</div>
-        <div class="opt" data-val="pista">🏟️ Pista</div>
+    <div class="field" data-wz="4"><label>Terreno preferido</label>
+      <div class="radio-grid opt-ico-grid" id="run-terrain">
+        <div class="opt on" data-val="asfalto"><span data-ico="estrada"></span>Asfalto</div>
+        <div class="opt" data-val="esteira"><span data-ico="esteira"></span>Esteira</div>
+        <div class="opt" data-val="trilha"><span data-ico="trilha"></span>Trilha</div>
+        <div class="opt" data-val="pista"><span data-ico="pista"></span>Pista</div>
       </div>
     </div>
 
-    <div class="field"><label>Quando você começa? (opcional)</label>
+    <div class="field" data-wz="3" data-rotulo="Início"><label>Quando você começa? (opcional)</label>
       <input class="input" type="date" id="run-start-date" style="color-scheme:dark">
       <div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">Deixe vazio para começar hoje. Dias antes da data escolhida não contam como falta.</div>
     </div>
-    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="finishSetup('run')">Criar meu plano →</button>
+    <div class="field wz-resumo" data-wz="5" id="wz-resumo-run"></div>
+    <button class="btn btn-primary btn-block wz-orig" style="margin-top:16px" onclick="finishSetup('run')">Criar meu plano →</button>
   </div>
 </div>
 
@@ -3177,7 +3288,7 @@ html,body{overscroll-behavior-y:contain}
       <div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div>
     </div>
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 37</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 38</span>
     </div>
   </div>
 </div>
@@ -3255,8 +3366,8 @@ html,body{overscroll-behavior-y:contain}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.37"></script>
-<script src="./app-plus.js?v=2027.1-beta.37"></script>
+<script src="./app.js?v=2027.1-beta.38"></script>
+<script src="./app-plus.js?v=2027.1-beta.38"></script>
 <script>
 // Beta 36: app.js e app-plus.js precisam ser da MESMA versão. Se um deles não carregou ou veio de outra
 // versão (cache no meio de uma atualização), recarrega uma vez — senão partes antigas (como a tela antiga

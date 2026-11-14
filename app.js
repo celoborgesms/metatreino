@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 37 =====
-const APP_VERSION = '2027.1-beta.37';
+// ===== MetaTreino 2027.1 Beta 38 =====
+const APP_VERSION = '2027.1-beta.38';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -490,6 +490,20 @@ function mesclaEstado(base, outra, opts){
   const r = { daOutra:0, daBase:0 };
   const desde = (opts && +opts.desde) || 0;   // só entra da "outra" o que é mais novo que isso
   if(!base || !outra || typeof base!=='object' || typeof outra!=='object') return r;
+  // Beta 38: "Começar do zero" vale para todas as cópias. Se a OUTRA recomeçou depois desta, a outra vale inteira
+  // (esta é uma cópia antiga, de antes do recomeço). Se ESTA recomeçou, nada de antes do recomeço entra da outra.
+  const zB = +base.zeradoEm || 0, zO = +outra.zeradoEm || 0;
+  if(zO > zB){
+    Object.keys(base).forEach(k=>{ if(!(k in outra) && k !== 'ui') delete base[k]; });
+    Object.keys(outra).forEach(k=>{ if(k !== 'ui') base[k] = JSON.parse(JSON.stringify(outra[k])); });
+    r.daOutra++; return r;
+  }
+  if(zB > zO){
+    const z = zB; outra = JSON.parse(JSON.stringify(outra));
+    ['lift','run'].forEach(m=>{ const O = outra.modules && outra.modules[m]; if(O){ if(Array.isArray(O.history)) O.history = O.history.filter(x=>x && x.at >= z); if((+O.planAt||0) < z) delete O.planAt; } });
+    if(Array.isArray(outra.weights)) outra.weights = outra.weights.filter(w=>w && w.date >= z);
+    outra.trophies = []; outra.prs = {}; outra.progress = {};   // sem data própria: o que é de antes do recomeço não volta
+  }
   // Beta 35: o plano mais recente (planAt) vale, venha de qual cópia vier; o histórico é juntado abaixo
   ['lift','run'].forEach(m=>{
     const B = base.modules && base.modules[m], O = outra.modules && outra.modules[m];
@@ -811,13 +825,20 @@ function appConfirm(msg, onOk, opts){
 }
 function doRestart(){
   if(!state.user || !fbUser) return;
-  appConfirm('Todo o progresso será apagado (treinos, séries e conquistas), mas sua conta e acesso continuam.', ()=>{
+  // Beta 38: o que é apagado continua o mesmo de antes (treinos, séries, recordes, conquistas, pesagens,
+  // arquivo anual e o questionário). O texto agora diz isso com todas as letras, e as PREFERÊNCIAS do app
+  // (tema, áudio dos vídeos, como o Início é organizado) ficam — recomeçar a jornada não é configurar o app de novo.
+  appConfirm('Isto apaga seu progresso: treinos, séries, recordes, conquistas, pesagens e o questionário inicial. Você responde tudo de novo e monta um plano novo.\n\nContinuam: sua conta, seu acesso e as preferências do app (como o tema).\n\nSe quer só trocar de plano sem perder o histórico, use "Recriar plano" em Perfil › Meu plano.', ()=>{
     const keep = { name:state.user.name, email:state.user.email, isAdmin:state.user.isAdmin };
+    const pref = {};
+    ['prefs','inicioOcultos','inicioOrdem','inicioOrdemInd','inicioEnxuto'].forEach(k=>{ if(state[k] !== undefined) pref[k] = JSON.parse(JSON.stringify(state[k])); });
     try{ if(typeof arqApagarTudo==='function') arqApagarTudo(uidDados()); }catch(e){}   // o arquivo anual também faz parte do progresso
-    state = { user:keep, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
+    state = Object.assign({ user:keep, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null},
+      zeradoEm: Date.now() }, pref);   // Beta 38: o outro aparelho (ou a cópia antiga deste) não devolve o progresso apagado
     saveData(); syncToCloud();
     $('tabbar').classList.add('hidden');
-    const fim = ()=>{ toast('🔄 Recomeçando! Preencha o questionário de novo.'); showScreen('scr-quiz'); bindOpts('scr-quiz'); };
+    try{ if(typeof cadastroRecomecar === 'function') cadastroRecomecar(); }catch(e){}   // formulários limpos, volta para a 1ª etapa
+    const fim = ()=>{ toast('Recomeçando: responda o cadastro de novo.'); showScreen('scr-quiz'); bindOpts('scr-quiz'); };
     try{
       runBuildingScreen('lift', [
         {emo:'🧹', pri:1, txt:`Apagando treinos, séries e conquistas`},
@@ -1253,6 +1274,21 @@ function bootAfterAuth(){
 }
 
 // ---------- QUESTIONÁRIO ----------
+// Beta 38: uma regra só por campo. O cadastro em etapas valida cada etapa com ela,
+// e saveQuiz confere tudo de novo com a mesma regra (nada de validações que se contradizem).
+const QUIZ_CAMPOS = ['nick','sex','birth','height','weight','goal'];
+function quizErro(campo){
+  const regra = {
+    nick:  ()=> !$('q-nick').value.trim() ? 'Preencha como quer ser chamado.' : '',
+    sex:   ()=> !readOpt('q-sex') ? 'Selecione o sexo.' : '',
+    birth: ()=>{ const b = ($('q-birth') && $('q-birth').value) || ''; if(!b) return 'Informe sua data de nascimento.';
+                 const a = ageFromBirth(b); return (a===null || a<10 || a>100) ? 'Data de nascimento inválida.' : ''; },
+    height:()=>{ const h = parseFloat($('q-height').value); return (!h || h<100 || h>230) ? 'Altura inválida (entre 100 e 230 cm).' : ''; },
+    weight:()=>{ const w = parseFloat($('q-weight').value); return (!w || w<25 || w>400) ? 'Peso inválido (entre 25 e 400 kg).' : ''; },
+    goal:  ()=> !readOpt('q-goal') ? 'Selecione um objetivo.' : ''
+  };
+  return regra[campo] ? regra[campo]() : '';
+}
 function saveQuiz(){
   const nick = $('q-nick').value.trim();
   const sex = readOpt('q-sex');
@@ -1265,13 +1301,14 @@ function saveQuiz(){
   const level = readOpt('q-level');
   const err = $('q-err');
   err.innerHTML='';
-  if(!nick){ err.innerHTML='<div class="err">Preencha como quer ser chamado.</div>'; return; }
-  if(!sex){ err.innerHTML='<div class="err">Selecione o sexo.</div>'; return; }
-  if(!birth){ err.innerHTML='<div class="err">Informe sua data de nascimento.</div>'; return; }
-  if(age===null || age<10 || age>100){ err.innerHTML='<div class="err">Data de nascimento inválida.</div>'; return; }
-  if(!height || height<100 || height>230){ err.innerHTML='<div class="err">Altura inválida.</div>'; return; }
-  if(!weight || weight<25 || weight>400){ err.innerHTML='<div class="err">Peso inválido (entre 25 e 400 kg).</div>'; return; }
-  if(!goal){ err.innerHTML='<div class="err">Selecione um objetivo.</div>'; return; }
+  for(const c of QUIZ_CAMPOS){
+    const e = quizErro(c);
+    if(e){
+      err.innerHTML = '<div class="err">'+e+'</div>';
+      try{ if(typeof wzMostraCampo === 'function') wzMostraCampo('scr-quiz', c, e); }catch(_){}   // leva à etapa do campo
+      return;
+    }
+  }
 
   const profile = { nickname:nick, sex, birth, age, height, currentWeight:weight, whatsapp:whats, goal, level, quiz_done:true };
   state.user.profile = profile;
@@ -1285,6 +1322,7 @@ function calcIMC(){
   const p = state.user && state.user.profile; if(!p) return null;
   const w = latestWeight() || p.currentWeight;
   const h = p.height/100;
+  if(!(w > 0) || !(h > 0)) return null;   // Beta 38: sem peso ou altura (perfil incompleto) não existe IMC — antes aparecia "NaN"
   const imc = w / (h*h);
   // O IMC não separa gordura de músculo — quem treina há tempo costuma "pesar mal" nele.
   // Por isso o app mostra o número (útil como referência) sem carimbar diagnóstico na pessoa.
@@ -1452,7 +1490,15 @@ function updateLevelHint(){
   const descanso = goal==='forca' ? 2.4 : (goal==='resistencia' ? 0.9 : 1.5);
   const min = Math.round(exPorDia * setsMed * (0.9 + descanso)) + 8;
   const lbl = ({iniciante:'Iniciante', intermediario:'Intermediário', avancado:'Avançado'})[lvl] || '';
-  el.innerHTML = `⏱️ <b>${lbl}</b>: ~${Math.max(25,min-8)}-${min+7} min por treino · cerca de ${exPorDia} exercícios · ${dias}x na semana`;
+  // Beta 38: no Híbrido quem manda na duração é o "Tempo por sessão" (disponibilidade). O nível só ajusta
+  // dificuldade e progressão — antes aparecia uma 2ª estimativa de tempo que contradizia a escolhida.
+  const modal = readOpt('lift-modalidade') || 'musculacao';
+  if(modal === 'hibrido'){
+    const tempo = parseInt(readOpt('cali-tempo')) || 45;
+    el.innerHTML = `<b>${lbl}</b>: define a dificuldade, as cargas iniciais e o ritmo de progressão. A duração segue o seu tempo por sessão: <b>até ${tempo} min</b>.`;
+    return;
+  }
+  el.innerHTML = `<b>${lbl}</b>: cerca de ${Math.max(25,min-8)} a ${min+7} min por treino · ${exPorDia} exercícios · ${dias}x na semana`;
 }
 // ---------- TELA DE MONTAGEM DO PLANO ----------
 // Regra: cada etapa mostra um FATO REAL do que o app está fazendo com as escolhas do aluno
@@ -1460,25 +1506,26 @@ function updateLevelHint(){
 // ===== EQUIPAMENTOS ESPECÍFICOS =====
 // Cada exercício exige um aparelho. Descobrimos pelo NOME (são descritivos) — assim
 // não foi preciso re-etiquetar 123 exercícios na mão, e novos entram já classificados.
+// Beta 38: os ícones de cada aparelho são desenhos próprios (equipIcone, parte 33 do app-plus)
 const EQUIP_LISTA = [
-  { id:'banco',      nome:'Banco (reto/inclinado)', emo:'🛋️' },
-  { id:'halteres',   nome:'Halteres',               emo:'🏋️' },
-  { id:'barra',      nome:'Barra + anilhas',        emo:'🥢' },
-  { id:'barraw',     nome:'Barra W',                emo:'〰️' },
-  { id:'smith',      nome:'Smith',                  emo:'🏗️' },
-  { id:'polia',      nome:'Polia / cabos / cross',  emo:'🔗' },
-  { id:'maquina',    nome:'Máquinas (Hammer, voador)', emo:'⚙️' },
-  { id:'barrafixa',  nome:'Barra fixa',             emo:'🙌' },
-  { id:'paralelas',  nome:'Paralelas',              emo:'🤸' },
-  { id:'legpress',   nome:'Leg press',              emo:'🦿' },
-  { id:'hack',       nome:'Hack',                   emo:'📐' },
-  { id:'extensora',  nome:'Cadeira extensora',      emo:'🪑' },
-  { id:'flexora',    nome:'Mesa flexora',           emo:'🛏️' },
-  { id:'adutora',    nome:'Adutora / abdutora',     emo:'↔️' },
-  { id:'panturrilha',nome:'Panturrilha (máquina)',  emo:'🦶' },
-  { id:'gluteo',     nome:'Glúteo (máquina/caneleira)', emo:'🍑' },
-  { id:'kettlebell', nome:'Kettlebell',             emo:'🔔' },
-  { id:'elastico',   nome:'Elástico / faixa',       emo:'🎗️' }
+  { id:'banco',      nome:'Banco (reto/inclinado)' },
+  { id:'halteres',   nome:'Halteres' },
+  { id:'barra',      nome:'Barra + anilhas' },
+  { id:'barraw',     nome:'Barra W' },
+  { id:'smith',      nome:'Smith' },
+  { id:'polia',      nome:'Polia / cabos / cross' },
+  { id:'maquina',    nome:'Máquinas (Hammer, voador)' },
+  { id:'barrafixa',  nome:'Barra fixa' },
+  { id:'paralelas',  nome:'Paralelas' },
+  { id:'legpress',   nome:'Leg press' },
+  { id:'hack',       nome:'Hack' },
+  { id:'extensora',  nome:'Cadeira extensora' },
+  { id:'flexora',    nome:'Mesa flexora' },
+  { id:'adutora',    nome:'Adutora / abdutora' },
+  { id:'panturrilha',nome:'Panturrilha (máquina)' },
+  { id:'gluteo',     nome:'Glúteo (máquina/caneleira)' },
+  { id:'kettlebell', nome:'Kettlebell' },
+  { id:'elastico',   nome:'Elástico / faixa' }
 ];
 function equipDoExercicio(ex){
   // A biblioteca já sabe o que dá para fazer em casa (cadeira vira banco, barra na porta...).
@@ -1520,11 +1567,13 @@ function podeFazerCom(ex, lista){
 // desenha a lista de equipamentos marcáveis
 function renderEquipChecklist(){
   const box = $('equip-check-list'); if(!box) return;
-  const sel = new Set(((state.modules.lift||{}).setup||{}).equipList || equipTemp);
-  box.innerHTML = EQUIP_LISTA.map(e=>`<div class="list-row" onclick="toggleEquip('${e.id}')" style="padding:10px 12px;${sel.has(e.id)?'border-color:var(--line-primary);background:var(--tint-primary)':''}">
-      <span style="font-size:16px">${e.emo}</span><span style="flex:1">${e.nome}</span>
-      <span style="font-size:16px;color:${sel.has(e.id)?'var(--primary-2)':'var(--text-mute)'}">${sel.has(e.id)?'☑':'☐'}</span>
-    </div>`).join('');
+  const sel = new Set(equipTemp);
+  // Beta 38: desenho próprio de cada aparelho (antes eram emojis que não representavam o equipamento)
+  box.innerHTML = EQUIP_LISTA.map(e=>{ const on = sel.has(e.id);
+    return `<div class="list-row eq-item${on?' on':''}" role="checkbox" aria-checked="${on}" tabindex="0" onclick="toggleEquip('${e.id}')" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();toggleEquip('${e.id}')}">
+      <span class="eq-ico" aria-hidden="true">${typeof equipIcone==='function' ? equipIcone(e.id) : ''}</span><span class="eq-nome">${e.nome}</span>
+      <span class="eq-check" aria-hidden="true"></span>
+    </div>`; }).join('');
   atualizaContagemEquip();
 }
 let equipTemp = [];
@@ -1539,8 +1588,8 @@ function atualizaContagemEquip(){
   try{ EX_BANK.forEach(c=>c.items.forEach(x=>{ if(podeFazerCom(x, equipTemp)) n++; })); }catch(e){}
   const marcados = equipTemp.length;
   el.innerHTML = marcados===0
-    ? `🤸 <b>${n} exercícios</b> de peso do corpo — marque o que você tem para desbloquear mais`
-    : `✅ <b>${n} exercícios</b> disponíveis · <b>${marcados}</b> ${marcados===1?'equipamento marcado':'equipamentos marcados'}`;
+    ? `<b>${n} exercícios</b> de peso do corpo — marque o que você tem para liberar mais`
+    : `<b>${n} exercícios</b> disponíveis · <b>${marcados}</b> ${marcados===1?'equipamento marcado':'equipamentos marcados'}`;
   el.style.color = 'var(--text-dim)';
 }
 function countExercisesFor(equip){
@@ -1601,6 +1650,19 @@ function buildingSteps(m, setup, prev){
   steps.push({emo:'✅', pri:1, txt:m==='lift' ? `<b>Seu plano de musculação está pronto!</b>` : `<b>Seu plano de corrida está pronto!</b>`});
   return steps;
 }
+// Beta 38: ícone de linha no lugar do emoji grande de cada etapa da montagem (mesmo desenho dos ícones do app)
+function bldIcone(emo, ultimo){
+  const svg = d => '<div style="line-height:0;color:'+(ultimo?'var(--primary-2)':'var(--primary)')+'"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg></div>';
+  try{
+    const base = String(emo||'').replace(/[️\u{1F3FB}-\u{1F3FF}]/gu,''); const c = Array.from(base)[0];
+    if(!c) return ultimo ? svg('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/>') : '';
+    if(c === '✅') return svg('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/>');
+    if(c === '🧹') return svg('<path d="M14 4l-4 9M7 13h8l1.5 7h-11z"/>');
+    const n = ICO_POR_EMOJI[c];
+    if(n && ICO_SVG[n]) return svg(ICO_SVG[n]);
+  }catch(e){}
+  return '';
+}
 function runBuildingScreen(m, steps, done, opts){
   opts = opts || {};
   try{
@@ -1626,18 +1688,20 @@ function runBuildingScreen(m, steps, done, opts){
   ov.setAttribute('style',
     'position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:99999;'+
     'display:flex;align-items:center;justify-content:center;padding:26px;box-sizing:border-box;'+
-    'background:#070d16;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);'+
+    'background:var(--bg,#070d16);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);'+
     'opacity:0;transition:opacity .3s ease');
-  const titulo = opts.titulo || (m==='lift' ? '🧠 Montando seu treino' : '🧠 Montando seu plano de corrida');
+  // Beta 38: a tela acompanha o tema escolhido e usa ícones desenhados (antes: fundo azul-escuro fixo e emojis grandes)
+  let titulo = opts.titulo || (m==='lift' ? 'Montando seu treino' : 'Montando seu plano de corrida');
+  try{ titulo = String(titulo).replace(_reEmoji, '').trim(); }catch(e){}
   ov.innerHTML =
     '<div style="width:100%;max-width:430px;text-align:center">'+
       '<div style="width:70px;height:70px;margin:0 auto 22px;border-radius:50%;border:3px solid rgba(var(--primary-rgb),.16);border-top-color:var(--primary);animation:bldspin .9s linear infinite;position:relative">'+
         '<div style="position:absolute;top:10px;left:10px;right:10px;bottom:10px;border-radius:50%;border:2px solid rgba(var(--primary-rgb),.12);border-bottom-color:rgba(var(--primary-rgb),.55);animation:bldspin 1.5s linear infinite reverse"></div>'+
       '</div>'+
-      '<div style="font-size:22px;font-weight:800;letter-spacing:-.3px;color:#fff;margin-bottom:7px">'+titulo+'</div>'+
-      '<div style="font-size:12.5px;color:#8fa0b5;line-height:1.5;margin:0 auto 28px;max-width:330px">'+(opts.sub||'Analisando seus objetivos, equipamentos e preferências para montar algo que faça sentido para você.')+'</div>'+
+      '<div style="font-size:22px;font-weight:800;letter-spacing:-.3px;color:var(--text-strong,#fff);margin-bottom:7px">'+titulo+'</div>'+
+      '<div style="font-size:12.5px;color:var(--text-dim,#8fa0b5);line-height:1.5;margin:0 auto 28px;max-width:330px">'+(opts.sub||'Analisando seus objetivos, equipamentos e preferências para montar algo que faça sentido para você.')+'</div>'+
       '<div id="bld-stage" style="min-height:140px;display:flex;align-items:center;justify-content:center"></div>'+
-      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:26px"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--primary-2));transition:width 1.5s linear"></div></div>'+
+      '<div style="height:5px;border-radius:99px;background:rgba(var(--primary-rgb),.14);overflow:hidden;margin-top:26px"><div id="bld-bar-i" style="height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--primary-2));transition:width 1.5s linear"></div></div>'+
     '</div>';
   requestAnimationFrame(()=>{ ov.style.opacity='1'; });
   const stage = document.getElementById('bld-stage');
@@ -1655,13 +1719,12 @@ function runBuildingScreen(m, steps, done, opts){
     }
     const st = steps[i];
     const ultimo = (i === steps.length-1);
-    const cor = ultimo ? 'var(--primary-2)' : '#cfe0f0';
+    const cor = ultimo ? 'var(--primary-2)' : 'var(--text,#cfe0f0)';
     const el = document.createElement('div');
     el.setAttribute('style','display:flex;flex-direction:column;align-items:center;gap:13px;padding:0 6px;animation:bldenter .4s cubic-bezier(.2,.8,.3,1) both');
-    el.innerHTML =
-      '<div style="font-size:40px;line-height:1">'+st.emo+'</div>'+
+    el.innerHTML = bldIcone(st.emo, ultimo) +
       '<div style="font-size:16.5px;line-height:1.45;color:'+cor+';font-weight:500">'+
-        String(st.txt).replace(/<b>/g,'<b style="color:'+(ultimo?'var(--primary-2)':'#fff')+'">')+
+        String(st.txt).replace(/<b>/g,'<b style="color:'+(ultimo?'var(--primary-2)':'var(--text-strong,#fff)')+'">')+
       '</div>';
     stage.innerHTML = '';
     stage.appendChild(el);
@@ -1692,14 +1755,10 @@ function finishSetup(m){
   };
   // Exige escolher os dias da semana. (Antes, readSelectedDays devolvia null quando nada
   // estava marcado e a validação era pulada — o aluno novo criava o plano sem escolher.)
-  if(!setup.days){ toast('Escolha quantos dias por semana você vai treinar'); return; }
-  if(!setup.selectedDays || setup.selectedDays.length !== setup.days){
-    const faltam = setup.days - ((setup.selectedDays||[]).length);
-    toast(faltam === setup.days
-      ? `Escolha os ${setup.days} dias da semana em que você vai treinar`
-      : `Selecione exatamente ${setup.days} dia${setup.days>1?'s':''} da semana`);
-    return;
-  }
+  const erroDias = setupErroDias(m);
+  if(erroDias){ toast(erroDias); try{ if(typeof wzMostraCampo === 'function') wzMostraCampo('scr-setup-'+m, 'dias', erroDias); }catch(_){} return; }
+  // Beta 38: a lista de "Escolher meus equipamentos" nunca era gravada no plano — o treino saía só com peso do corpo
+  if(m==='lift' && setup.equip === 'custom') setup.equipList = equipTemp.slice();
   // preserva histórico e data de início ao RECRIAR um plano (não zera o progresso do aluno)
   // data de início escolhida (ou hoje) — dias antes disso não contam falta
   const _si = document.getElementById(m+'-start-date');
@@ -1709,6 +1768,9 @@ function finishSetup(m){
   const prev = state.modules[m];
   state.modules[m] = { setup, plan:generatePlan(m,setup), week:1, createdAt: (prev && prev.createdAt) || Date.now(), startAt, history: (prev && prev.history) || [] };
   state.active = m;
+  // Beta 38: plano recém-montado já é "desta semana". Antes, o primeiro Início trocava os acessórios do
+  // plano que acabou de nascer e avisava "Semana nova: troquei os acessórios…" logo depois de criar.
+  if(m === 'lift'){ try{ state.lastVarWeek = semanaLocalId(); }catch(e){} }
   regenAllPlans(); // se o aluno está com dor/TPM, o plano novo já nasce adaptado
   saveData();
   // tela de montagem: mostra o que o app REALMENTE fez com as escolhas do aluno
@@ -1720,6 +1782,17 @@ function finishSetup(m){
   }catch(e){
     goTab('home'); toast(prev ? '🔄 Plano recriado! Seu histórico foi mantido.' : '🎉 Plano criado!');
   }
+}
+// Beta 38: regra única dos dias da semana (etapa "Sua semana" do cadastro e a criação do plano usam a mesma)
+function setupErroDias(m){
+  const days = parseInt(readOpt(m+'-days'));
+  if(!days) return 'Escolha quantos dias por semana você vai treinar';
+  const sel = readSelectedDays(m+'-week-days') || [];
+  if(sel.length !== days){
+    return sel.length === 0 ? `Escolha os ${days} dias da semana em que você vai treinar`
+                            : `Selecione exatamente ${days} dia${days>1?'s':''} da semana`;
+  }
+  return '';
 }
 function readSelectedDays(id){
   const el = $(id); if(!el) return null;
@@ -2237,7 +2310,9 @@ function buildLiftExercises(parts, setup, opts){
   const totalSeries = ()=>list.reduce((a,e)=>a+(+e.sets||0),0);
   // Beta 35: se ainda passar, tira também dos secundários e, por último, dos principais (mínimo 3 séries)
   // e também pelo TEMPO: nenhuma sessão gerada passa de ~90 min (força tem descansos longos)
-  const passa = ()=> totalSeries() > teto || estimateLiftDuration(list, goal) > 90;
+  // Beta 38: no híbrido, o dia de academia respeita o "Tempo por sessão" do aluno (o mesmo dos dias de calistenia)
+  const tetoMin = (setup.modalidade==='hibrido' && +setup.caliTempo) ? (+setup.caliTempo + 5) : 90;
+  const passa = ()=> totalSeries() > teto || estimateLiftDuration(list, goal) > tetoMin;
   for(const [nivel, minimo] of [['acessorio',2],['secundario',2],['principal',3]]){
     for(let volta=0; volta<6 && passa(); volta++){
       let mexeu = false;
@@ -2248,6 +2323,11 @@ function buildLiftExercises(parts, setup, opts){
       }
       if(!mexeu) break;
     }
+  }
+  // Beta 38: com pouco tempo (híbrido de 30 min), ainda passando: tira acessórios do fim (fica no mínimo 3 exercícios)
+  while(tetoMin < 90 && list.length > 3 && estimateLiftDuration(list, goal) > tetoMin){
+    let k = -1; for(let i=list.length-1;i>=0;i--){ if(exPapel(list[i], list[i].part).tier !== 'principal'){ k = i; break; } }
+    if(k < 0) break; list.splice(k, 1);
   }
   // dor: se algum grupo foi bloqueado, completa com sinergistas seguros — o treino continua útil
   const blockedCount = parts.filter(p=>blocked.has(p)).length;
@@ -5032,8 +5112,8 @@ function renderProfile(){
     </div>
     <div style="margin-top:10px;padding:12px;border-radius:var(--radius-btn);background:var(--surface-2)">
       <div style="font-size:12px;color:var(--text-dim);font-weight:700;letter-spacing:1px">SUA EVOLUÇÃO</div>
-      <div style="font-weight:800;color:${deltaColor};margin-top:3px;font-size:15px">${nReg<2 ? 'Primeiro registro feito 👍' : deltaTxt+' desde o início'}</div>
-      ${nReg<2?'<div style="font-size:12px;color:var(--text-mute);margin-top:4px;line-height:1.5">A partir do próximo registro eu mostro sua evolução aqui.</div>':''}
+      <div style="font-weight:800;color:${deltaColor};margin-top:3px;font-size:15px">${nReg===0 ? 'Nenhuma pesagem ainda' : nReg<2 ? 'Primeiro registro feito 👍' : deltaTxt+' desde o início'}</div>
+      ${nReg===1?'<div style="font-size:12px;color:var(--text-mute);margin-top:4px;line-height:1.5">A partir do próximo registro eu mostro sua evolução aqui.</div>':''}
       ${imc?`<div style="font-size:12px;color:var(--text-mute);margin-top:8px;line-height:1.5">
         IMC ${imc.value} — <span style="color:${imc.color}">${imc.cls.toLowerCase()}</span>.
         ${imc.faixa==='dentro'
@@ -8618,7 +8698,9 @@ function applyPins(w, setup){
   w.pins.forEach(p=>{
     const ex = exBySlug(p.id);
     if(!ex) return;                                          // exercício não existe mais → descarta
-    if(!(ex.equip||[]).some(e=>allowed.includes(e))) return;  // equipamento mudou → descarta
+    // Beta 38: com "Escolher meus equipamentos" vale a lista marcada pelo aluno (antes só sobrava o peso do corpo)
+    const cabe = setup.equip === 'custom' ? podeFazerCom(ex, setup.equipList || []) : (ex.equip||[]).some(e=>allowed.includes(e));
+    if(!cabe) return;                                        // equipamento mudou → descarta
     guardados.push(p);                                       // pin continua válido
     if(!(w.parts||[]).includes(p.part)) return;              // grupo bloqueado por dor: só não aplica AGORA
     aplicaveis.push({p, ex});
@@ -9722,13 +9804,15 @@ function currentTheme(){
   const attr = document.documentElement.getAttribute('data-theme');
   try{ return normalizaTema(localStorage.getItem(THEME_KEY) || attr || 'zepp'); }catch(e){ return normalizaTema(attr); }
 }
-function applyTheme(t){
+function applyTheme(t, naoGuardar){
   t = normalizaTema(t);
   document.documentElement.setAttribute('data-theme', t);
   document.documentElement.classList.toggle('tema-claro', TEMAS_CLAROS.includes(t));
   const meta = document.querySelector('meta[name="theme-color"]');
   if(meta) meta.setAttribute('content', THEMES[t].bar);
-  try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
+  // Beta 38: só grava quando é uma ESCOLHA. Aplicar o padrão ao abrir o app não conta como escolha —
+  // assim dá para saber se o aparelho ainda não tem tema e usar o tema salvo na conta.
+  if(!naoGuardar){ try{ localStorage.setItem(THEME_KEY, t); }catch(e){} }
   renderThemePicker();
 }
 function setTheme(t){ applyTheme(t); const g=document.getElementById('theme-grid'); if(g) g.classList.add('hidden'); renderThemePicker(); toast('🎨 Tema '+THEMES[normalizaTema(t)].nome+' ativado'); }
@@ -9838,7 +9922,7 @@ function skipWorkout(k){
   toast('😴 Treino pulado. Descansar quando o corpo pede é escolha inteligente — te vejo no próximo! 💚');
   if(state.ui.tab==='sessions') renderSessions(); else goTab('home');
 }
-applyTheme(currentTheme()); // aplica imediatamente, antes de qualquer render
+applyTheme(currentTheme(), true); // aplica imediatamente, antes de qualquer render (sem gravar: não é uma escolha)
 
 // ---------- CONTATO DO TREINADOR (editável pelo admin) ----------
 let coachContact = { whatsapp:'', email:'metatreinooficial@gmail.com' };

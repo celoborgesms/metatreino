@@ -66,8 +66,20 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `30-auditoria-beta33.js` | Correção única das fichas salvas (`b33CorrigeFichas`, marca `state.b33Fichas`) |
 | `31-sincronizacao-videos-parceiros.js` | Arquivo anual dos logins antigos, tela de Sincronização (`openSincronizacao`, `syncAgora`), parceiros e créditos dos vídeos (`openParceiros`, `pcProjecao`) |
 | `32-acessibilidade.js` | Beta 35: nome (`aria-label`) para botões só com ícone, `role=button` + Tab + Enter/Espaço nos elementos com `onclick` (`a11yVarrer`, roda sozinho a cada mudança da tela) |
+| `33-cadastro-em-etapas.js` | Beta 38: controle de acesso antes do cadastro (`cadastroPronto`, `irParaCadastro`; travas em `goTab`, `showScreen`, `openAssistant`, `maAsk`, `maAskText`, `maTryCommand`, `updateFabNudge`), cadastro em etapas (`WZ`, `wzIr`, `wzAvancar`, `wzVoltar`, `wzResumo`, `wzMostraCampo`; etapas marcadas no HTML com `data-wz`), tema na 1ª etapa (`wzRenderTemas`, tema também em `state.prefs.tema`), ícones do cadastro (`CAD_ICO`, `cadIco`, `[data-ico]`) e dos aparelhos (`EQUIP_ICO`, `equipIcone`), desenhos por etapa e mapa da corrida (`cadMapaArte`), formulários limpos ao recomeçar/sair (`cadastroRecomecar`) |
 
 Parte nova: próximo número livre (ex.: `20-nome-da-funcao.js`).
+
+## Primeiro acesso (Beta 38)
+
+Fluxo: login → `bootAfterAuth` → `scr-quiz` (4 etapas) → `saveQuiz()` → `scr-pick` → `pickModule(m)` → `openSetupScreen(m)` (`scr-setup-lift`: 5 etapas; `scr-setup-run`: 5 etapas) → `finishSetup(m)` → Início.
+
+- **Cadastro pronto** = `profile.quiz_done` **e** pelo menos um plano (`state.modules.lift || state.modules.run`). Antes disso, `goTab`, `showScreen` de uma aba, o assistente e os comandos dele levam de volta para o cadastro (parte 33). Não crie atalho que chame a tela por fora disso.
+- **Campo novo no cadastro:** coloque `data-wz="N"` no `.field` (N = etapa). Sem o atributo, o campo aparece em todas as etapas. Para o nome na revisão, `data-rotulo="..."` (senão usa o texto do `<label>`).
+- **Validação:** uma regra só por campo. Questionário: `quizErro(campo)` (app.js), usada por etapa e de novo em `saveQuiz`. Dias da semana: `setupErroDias(m)` (app.js), usada na etapa "Sua semana" e em `finishSetup`.
+- **Ícones do cadastro:** `<span data-ico="nome"></span>` com o nome de `CAD_ICO` (parte 33). Nada de emoji nas telas do cadastro.
+- **Tema:** `applyTheme(t, true)` aplica sem gravar (abrir o app não é escolher). `setTheme` grava no aparelho e em `state.prefs.tema`.
+- **Começar do zero** (`doRestart`): apaga treinos, séries, recordes, conquistas, pesagens, arquivo anual e o questionário; mantém conta, acesso e as preferências (`prefs`, `inicioOcultos`, `inicioOrdem`, `inicioOrdemInd`, `inicioEnxuto`). Grava `zeradoEm`: em `mesclaEstado`, a cópia mais antiga que essa marca não devolve o que foi apagado.
 
 ## Como acrescentar comportamento a uma tela: ganchos
 
