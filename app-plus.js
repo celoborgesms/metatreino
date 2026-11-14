@@ -4069,7 +4069,7 @@ function rMotorNovo(ctx, setup, inicioTs){
   const nv = rNivelPotencial(ctx, aval);
   const p = rPerfil(ctx);
   const tempos = rTempos(setup);
-  const m = { v:1, nivel:nv, nivelDesde: rSem(inicioTs), inicio: rSem(inicioTs), q:0, ultimaVar:'intensidade', semanas:{}, hist:[], estagio:null, contMin:null, vol:null, retomada:null };
+  const m = { v:1, criadoEm: Date.now(), nivel:nv, nivelDesde: rSem(inicioTs), inicio: rSem(inicioTs), q:0, ultimaVar:'intensidade', semanas:{}, hist:[], estagio:null, contMin:null, vol:null, retomada:null };
   if(nv === 0) m.estagio = rEstagioInicial(ctx, aval);
   const cont = Math.max(RUN_CONT_AVAL[String(aval.continuo||'0')]||0, p.contMin||0);
   if(nv === 1) m.contMin = _clamp(_r5(cont*0.9), 10, 30);
@@ -4625,7 +4625,11 @@ function runSync(force, refazer){
   // 2) retomada: pausa de 7+ dias de corrida tem prioridade sobre tudo
   const pz = rPausa(ctx, M.nivel);
   const chave = pz ? pz.ultimoAntes : null;
-  if(pz && pz.pausa >= 7 && (!M.retomada || M.retomada.chave !== chave)){
+  // Beta 36: plano montado DEPOIS da pausa já parte da avaliação de hoje ("quanto tempo você corre sem parar
+  // hoje?" e "está parado?"). Antes a retomada rebaixava de novo esse ponto de partida (estágio 3 da avaliação
+  // virava estágio 1) e o cartão do treino e o aviso de progresso mostravam estágios diferentes.
+  const planoDepoisDaPausa = pz && (M.criadoEm || M.inicio || 0) > pz.ultimoAntes;
+  if(pz && pz.pausa >= 7 && !planoDepoisDaPausa && (!M.retomada || M.retomada.chave !== chave)){
     const N = rRetomadaSemanas(pz.pausa);
     const inicio = pz.voltou ? rSem(pz.retorno) : semAtual;
     if(semAtual < inicio + N*7*DIA_MS){
@@ -4897,6 +4901,13 @@ function runLogCalc(){
   const pace = seg/60/km;
   el.innerHTML = ty==='bike' ? `Tempo <b>${rFmtSeg(seg)}</b> · <b>${mtFmtKm(km)} km</b> · velocidade <b>${rFmtKmh(pace)}</b>`
     : `Tempo <b>${rFmtSeg(seg)}</b> · ritmo médio <b>${mtPaceStr(pace)}</b> · <b>${rFmtKmh(pace)}</b>`;
+  // Beta 36: aviso de digitação (só avisa; o aluno pode salvar assim mesmo). Ex.: 6:30:42 de bike para 8 km = 1,2 km/h
+  const kmh = 60/pace;
+  const faixa = ty==='bike' ? [6, 60] : ty==='caminhada' ? [2, 9.5] : [3, 26];
+  if(kmh < faixa[0] || kmh > faixa[1]){
+    const dica = kmh < faixa[0] && seg >= 3600 ? ' Será que o tempo foi para o campo das <b>horas</b> em vez dos minutos?' : ' Confira o tempo e a distância.';
+    el.innerHTML += `<div class="rl-alerta" role="status">⚠️ Essa velocidade (${rFmtKmh(pace)}) parece fora do normal para ${ty==='bike' ? 'pedal' : ty==='caminhada' ? 'caminhada' : 'corrida'}.${dica}</div>`;
+  }
 }
 const _saveRunLogB14 = window.saveRunLog;
 window.saveRunLog = function(dayIdx){
@@ -8375,7 +8386,7 @@ const CENA = {
     + `<path class="c-raio" d="${[0,45,90,135,180,225,270,315].map(g=>{ const a = g*Math.PI/180, r1 = r+5, r2 = r+9; return `M${(x+Math.cos(a)*r1).toFixed(1)} ${(y+Math.sin(a)*r1).toFixed(1)}L${(x+Math.cos(a)*r2).toFixed(1)} ${(y+Math.sin(a)*r2).toFixed(1)}`; }).join('')}"/>`,
   // sol no horizonte (amanhecer e fim de tarde): só a metade de cima, com o brilho espalhado na linha do horizonte
   solBaixo: (x, y, r)=>`<ellipse class="c-halo" cx="${x}" cy="${y}" rx="${r*3.2}" ry="${r*1.5}"/><path class="c-astro" d="M${x-r} ${y}a${r} ${r} 0 0 1 ${r*2} 0z"/>`
-    + `<path class="c-raio" d="M${x} ${y-r-5}v-5M${x-r-3} ${y-r+3}l-4-4M${x+r+3} ${y-r+3}l4-4M${x-r-6} ${y-1}h-5M${x+r+6} ${y-1}h5"/><path class="c-linha" d="M${x-r*2.4} ${y}h${r*4.8}" stroke-opacity=".35"/>`,
+    + `<path class="c-raio" d="M${x} ${y-r-5}v-5M${x-r-3} ${y-r+3}l-4-4M${x+r+3} ${y-r+3}l4-4M${x-r-6} ${y-1}h-5M${x+r+6} ${y-1}h5"/>`,
   lua: (x, y)=>`<circle class="c-halo" cx="${x}" cy="${y}" r="20"/><path class="c-astro" d="M${x+3} ${y-12}a12.5 12.5 0 1 0 9.5 17 10 10 0 0 1-9.5-17z"/>`,
   estrela: (x, y, s)=>`<path class="c-estrela" d="M${x} ${y-s}Q${x} ${y} ${x+s} ${y}Q${x} ${y} ${x} ${y+s}Q${x} ${y} ${x-s} ${y}Q${x} ${y} ${x} ${y-s}z"/>`,
   nuvem: (x, y, k)=>{ k = k || 1; const f = n=>+(n*k).toFixed(1);
@@ -8441,9 +8452,9 @@ function cenaInicio(){
   }
   const clima = _cenaClima();
   let ceu = '';
-  if(hora === 'amanhecer') ceu = CENA.solBaixo(296, 78, 11);
+  if(hora === 'amanhecer') ceu = CENA.solBaixo(301, 60, 12);   // no vale entre os dois morros: a metade de baixo fica escondida atrás da serra
   else if(hora === 'dia') ceu = CENA.sol(290, 30, 11);
-  else if(hora === 'tarde') ceu = CENA.solBaixo(292, 80, 10);
+  else if(hora === 'tarde') ceu = CENA.solBaixo(301, 62, 11);
   else ceu = CENA.lua(292, 30) + estrelas;
   // nuvem na frente do astro (dá profundidade); chuva forte esconde o sol e a lua
   const nx = hora==='tarde' || hora==='amanhecer' ? 296 : 310, ny = hora==='tarde' || hora==='amanhecer' ? 46 : 38;

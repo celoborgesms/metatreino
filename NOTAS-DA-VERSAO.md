@@ -45,7 +45,16 @@ Detalhes técnicos em `RELATORIO-BETA36.md`. As regras do Firestore não mudaram
    - painel do administrador.
 8. **Rolagem.** Fechar uma janela não faz mais a tela pular para outra posição (o navegador devolvia a tela para onde ela estava quando a janela abriu). O efeito nativo do Android no fim da tela voltou, e o puxar-para-atualizar continua bloqueado. As faixas que rolam para o lado não puxam a tela nem o gesto de voltar. A barra de abas ficou mais leve de desenhar.
 9. **Avisos.** Trocar Musculação/Corrida várias vezes não empilha mais "Trocado para…" na tela: o aviso novo substitui o anterior (no máximo 3 avisos ao mesmo tempo).
-10. **Paletas dos temas.** Cada amostra tem moldura própria e fundo neutro, e não pega mais o tom do cartão em volta.
+11. **Paletas dos temas.** Cada amostra tem moldura própria e fundo neutro, e não pega mais o tom do cartão em volta.
+
+10. **Ajustes a partir dos vídeos de uso:**
+    - **Corrida:** plano montado depois de uma pausa já parte da avaliação de hoje. Antes, a retomada rebaixava o ponto de partida de novo: o cartão mostrava "estágio 1" e o aviso de progresso "estágio 3".
+    - **Registrar atividade:** aviso quando a velocidade parece impossível (ex.: 6h30 de bike para 8 km = 1,2 km/h), sugerindo conferir se o tempo caiu no campo das horas.
+    - **Última série:** concluir a última série prevista encerra o descanso que ainda contava da série anterior.
+    - **Avisos:** com uma janela aberta, só o aviso mais recente aparece, sem cobrir o título.
+    - **Cena do Início:** os morros ficaram opacos e o sol do amanhecer e do fim de tarde nasce atrás da serra, no vale, em vez de aparecer pintado no meio do morro.
+    - **AMOLED refinado:** continua preto total, mas sem o neon em tudo. Limão mais calmo, ciano suave, cartões em quase-preto com borda cinza discreta; o limão cheio fica só no botão principal, e o seletor Musculação/Corrida e os dias ficam só contornados.
+
 
 # MetaTreino 2027.1 Beta 35 — O que faltava da auditoria
 

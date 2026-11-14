@@ -2656,7 +2656,11 @@ function toast(msg, ms){
   // "Trocado para…" na tela); no máximo 3 avisos ao mesmo tempo.
   const chave = String(msg||'').slice(0, 12);
   [...wrap.children].forEach(o=>{ if(String(o.textContent||'').slice(0, 12) === chave) o.remove(); });
-  while(wrap.children.length >= 3) wrap.firstElementChild.remove();
+  // com uma janela aberta os avisos ficam no topo, por cima do título da janela: só o mais recente fica
+  const janelaAberta = !!(document.getElementById('modal-back') && document.getElementById('modal-back').classList.contains('on'));
+  while(wrap.children.length >= (janelaAberta ? 1 : 3)) wrap.firstElementChild.remove();
+  // com uma janela aberta os avisos ficam no topo, por cima do título dela: só um de cada vez
+  try{ if(document.getElementById('modal-back').classList.contains('on')) wrap.innerHTML = ''; }catch(e){}
   const t = document.createElement('div'); t.className='toast'; t.textContent = msg;
   wrap.appendChild(t);
   // O tempo acompanha o tamanho do texto: "✅ Salvo!" some rápido, uma frase
@@ -4248,6 +4252,8 @@ function concluirSerie(i, opts){
   const nFeitas = curLog.entry.sets.filter((_,k)=>curLog.feitas[k]).length;
   const ultimaPrevista = !opts.implicito && planejadas && nFeitas >= planejadas && i === curLog.entry.sets.length-1;
   if(!ultimaPrevista && descansoAutomatico()){ try{ startRestTimer(descansoDoExercicio(curLog.exId), curLog.exName || ''); }catch(e){} }
+  // última série do exercício: o descanso que ainda contava da série anterior não faz mais sentido (a tela diz "sem descanso aqui")
+  if(ultimaPrevista){ try{ if(restTimerInt) stopRestTimer(); }catch(e){} }
   renderSetLogModal();
 }
 function addSet(){
@@ -4331,6 +4337,8 @@ function finishLiftWorkout(k){
   const w = mod.plan.workouts.find(x=>x.k===k);
   if(!w) return;
   if(!checkLiftDone(w)){ toast('Registre ao menos uma série antes de salvar'); return; }
+  // Beta 36: terminou o treino — o descanso que ainda contava (da última série) para aqui
+  try{ if(restTimerInt) stopRestTimer(); }catch(e){}
   // Pergunta como a pessoa terminou o treino (auto-regulação)
   const html = `
     <h3>💪 Qual foi o esforço do treino?</h3>
@@ -9683,7 +9691,7 @@ function dismissInstall(){
 // ---------- TEMAS (aurora · clássico · oceano · claro) ----------
 const THEME_KEY = 'metatreino_theme';
 const THEMES = {
-  amoled:   {nome:'AMOLED',   sub:'Preto total · economiza bateria', bar:'#000000', prev:{bg:'#000000', a:'#b6f23a', b:'#3de0ff', c:'#1a1a1a'}},
+  amoled:   {nome:'AMOLED',   sub:'Preto total · economiza bateria', bar:'#000000', prev:{bg:'#000000', a:'#a3d46a', b:'#86c6d6', c:'#1a1a1a'}},
   zepp:     {nome:'Premium',  sub:'Preto e laranja · estilo relógio', bar:'#000000', prev:{bg:'#000000', a:'#ff6a2b', b:'#2fd4b5', c:'#212124'}},
   aurora:   {nome:'Aurora',   sub:'Escuro · índigo e coral',  bar:'#070a1a', prev:{bg:'#070a1a', a:'#7c6cff', b:'#ff7a59', c:'#1b2150'}},
   classico: {nome:'Clássico', sub:'Escuro · verde (o de antes)', bar:'#050914', prev:{bg:'#050914', a:'#10b981', b:'#f59e0b', c:'#10223a'}},

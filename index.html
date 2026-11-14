@@ -2222,10 +2222,11 @@ html.tema-claro #app-deco svg[data-cena]{--sol:#e39a12}
 html.tema-claro #app-deco svg[data-cena^="amanhecer"],html.tema-claro #app-deco svg[data-cena^="tarde"]{--sol:#e8692c}
 html.tema-claro #app-deco svg[data-cena^="noite"]{--sol:#5b6478}
 [data-theme="amoled"] #app-deco svg[data-cena]{--k:1.25}
-#app-deco .c-serra1{fill:currentColor;fill-opacity:calc(.05 * var(--k));stroke:none}
-#app-deco .c-mont{fill:currentColor;fill-opacity:calc(.09 * var(--k));stroke:currentColor;stroke-opacity:calc(.28 * var(--k))}
+/* Beta 36: morros opacos (na cor do fundo) — o sol do amanhecer e do fim de tarde nasce ATRÁS da serra, em vez de aparecer pintado no meio do morro */
+#app-deco .c-serra1{fill:color-mix(in srgb,var(--text) calc(5% * var(--k)),var(--bg));stroke:none}
+#app-deco .c-mont{fill:color-mix(in srgb,var(--text) calc(9% * var(--k)),var(--bg));stroke:currentColor;stroke-opacity:calc(.28 * var(--k))}
 #app-deco .c-neve{fill:currentColor;fill-opacity:calc(.22 * var(--k));stroke:none}
-#app-deco .c-frente{fill:currentColor;fill-opacity:calc(.07 * var(--k));stroke:none}
+#app-deco .c-frente{fill:color-mix(in srgb,var(--text) calc(7% * var(--k)),var(--bg));stroke:none}
 #app-deco .c-ac{stroke:var(--primary);stroke-opacity:.85}
 #app-deco .c-acf{fill:var(--primary);fill-opacity:.8;stroke:none}
 #app-deco .c-halo{fill:var(--sol);fill-opacity:.12;stroke:none}
@@ -2276,6 +2277,39 @@ html,body{overscroll-behavior-y:contain}
 .sl-auto{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12.5px;color:var(--text-dim);cursor:pointer}
 .sl-auto .pi-sw{flex:0 0 auto}
 @media (max-width:360px){.set-row{gap:6px;grid-template-columns:30px 1fr 1fr 38px 32px}.set-row.sem-peso{grid-template-columns:30px 1fr 38px 32px}.set-row .set-num{width:30px;height:30px}}
+.rl-alerta{margin-top:6px;padding:7px 10px;border-radius:10px;background:var(--tint-warn);border:1px solid var(--line-warn);color:var(--text);font-size:12px;line-height:1.4}
+/* ===== Beta 36: AMOLED mais refinado =====
+   Continua preto total (economia de bateria nas telas OLED), mas sem o "neon em tudo":
+   - limão menos fluorescente e ciano suave; laranja e rosa só para avisos;
+   - cartões em quase-preto (#080808) com borda cinza discreta: dá profundidade sem acender a tela;
+   - limão cheio só no botão principal; seletor Musculação/Corrida, abas de dias e cartão do treino ficam
+     contornados, sem blocos enormes de cor. */
+[data-theme="amoled"]{
+  --surface-2:#0d0d0d;
+  --border:rgba(255,255,255,0.09); --border-strong:rgba(255,255,255,0.17);
+  --primary:#a3d65c; --primary-2:#c2e892; --primary-dark:#7ea83f; --primary-rgb:163,214,92; --primary-glow:rgba(163,214,92,0.16);
+  --grad-primary:linear-gradient(135deg,#a3d65c,#a3d65c); --lift:#a3d65c;
+  --accent:#7cc4d6; --accent-2:#a9dbe7; --accent-rgb:124,196,214; --run:#7cc4d6; --teal:#7cc4d6; --info:#7cc4d6; --info-soft:#a9dbe7;
+  --tint-primary:rgba(163,214,92,.07); --line-primary:rgba(163,214,92,.30);
+  --tint-accent:rgba(124,196,214,.07); --line-info:rgba(124,196,214,.24); --tint-info:rgba(124,196,214,.06);
+  --line-warn:rgba(255,159,67,.26); --tint-warn:rgba(255,159,67,.05);
+  --on-primary:#0e1604;
+}
+[data-theme="amoled"] .card,[data-theme="amoled"] .week,[data-theme="amoled"] .plan-card,[data-theme="amoled"] #scr-home .quote,
+[data-theme="amoled"] .list-item,[data-theme="amoled"] .stat,[data-theme="amoled"] .stat-mini,[data-theme="amoled"] .list-row,
+[data-theme="amoled"] .trophy,[data-theme="amoled"] .hist-card,[data-theme="amoled"] .rest-card,[data-theme="amoled"] .act-card,
+[data-theme="amoled"] .met,[data-theme="amoled"] .qs,[data-theme="amoled"] .mealc,[data-theme="amoled"] .pf-grp{background:#080808!important;border-color:rgba(255,255,255,.08)!important}
+[data-theme="amoled"] .today{background:#080808!important;border:1px solid rgba(255,255,255,.10)!important;box-shadow:inset 0 2px 0 rgba(163,214,92,.55)!important}
+[data-theme="amoled"] .modal,[data-theme="amoled"] #modal-inner{background:#050505;border-color:rgba(255,255,255,.10)}
+[data-theme="amoled"] .filter-chip.on{background:rgba(163,214,92,.12)!important;color:var(--primary-2)!important;border-color:rgba(163,214,92,.45)!important}
+[data-theme="amoled"] .filter-chip.on *{color:var(--primary-2)!important}
+[data-theme="amoled"] .filter-chip.on > div:first-child{color:var(--text-dim)!important}
+[data-theme="amoled"] .seg.on{background:rgba(163,214,92,.13)!important;color:var(--primary-2)!important;box-shadow:inset 0 0 0 1px rgba(163,214,92,.42)!important}
+[data-theme="amoled"] .opt.on,[data-theme="amoled"] .chip.on{background:rgba(163,214,92,.10)!important;border-color:rgba(163,214,92,.45)!important;color:var(--primary-2)!important}
+[data-theme="amoled"] .btn-outline{border-color:rgba(255,255,255,.18)}
+[data-theme="amoled"] #ma-fab{border-color:rgba(163,214,92,.55)!important;box-shadow:0 0 0 3px #000!important}
+[data-theme="amoled"] .tabbar{background:#000;border-color:rgba(255,255,255,.10)}
+[data-theme="amoled"] .tab.active .tab-ico,[data-theme="amoled"] .tab.on .tab-ico{background:rgba(163,214,92,.12)}
 </style>
 </head>
 <body>
