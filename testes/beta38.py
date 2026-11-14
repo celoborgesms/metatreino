@@ -20,6 +20,9 @@ EMOJI_JS = r"""(() => { const tela = document.querySelector('.screen.active'); c
 ATIVA = "document.querySelector('.screen.active').id"
 async def foto(pg, nome):
     if FOTOS: await pg.screenshot(path=os.path.join(FOTOS, nome + '.png'), full_page=False)
+async def poe(pg, sel, v):
+    """Beta 39: altura, peso e datas abrem a régua (campo somente leitura). Grava como a régua grava."""
+    await pg.evaluate("([s,v])=>{ const e=document.querySelector(s); e.value=v; e.dispatchEvent(new Event('input',{bubbles:true})); e.dispatchEvent(new Event('change',{bubbles:true})); }", [sel, v])
 async def etapa(pg):
     return await pg.evaluate("(()=>{ const t=document.querySelector('.screen.active'); const n=t.querySelector('.wz-n'); return { tela:t.id, n: n?n.textContent:'', tit:(t.querySelector('.wz-tit')||t.querySelector('.pick-title')||{}).textContent }; })()")
 async def continuar(pg):
@@ -35,7 +38,7 @@ async def nova_pagina(b, colorido=True, w=390, h=844):
     return ctx, pg, erros
 
 async def preenche_quiz(pg, nick='Bia', goal='massa'):
-    await pg.fill('#q-nick', nick); await pg.click('#q-sex .opt[data-val="f"]'); await pg.fill('#q-birth', '1995-03-20')
+    await pg.fill('#q-nick', nick); await pg.click('#q-sex .opt[data-val="f"]'); await poe(pg, '#q-birth', '1995-03-20')
 
 async def cenario_a(b):
     print('Cenário A — conta nova')
@@ -81,9 +84,9 @@ async def cenario_a(b):
     await pg.click('.screen.active .wz-voltar'); await pg.wait_for_timeout(200)
     confere('Voltar preserva as respostas', await pg.evaluate("document.getElementById('q-nick').value") == 'Bia' and await pg.evaluate("readOpt('q-sex')") == 'f')
     await continuar(pg)
-    await pg.fill('#q-height', '50'); await continuar(pg)
+    await poe(pg, '#q-height', '50'); await continuar(pg)
     confere('altura inválida barra a etapa', (await etapa(pg))['n'] == 'Etapa 3 de 10')
-    await pg.fill('#q-height', '168'); await pg.fill('#q-weight', '61.5'); await pg.click('#q-level .opt[data-val="ativo"]'); await continuar(pg)
+    await poe(pg, '#q-height', '168'); await poe(pg, '#q-weight', '61.5'); await pg.click('#q-level .opt[data-val="ativo"]'); await continuar(pg)
     confere('etapa 4: objetivo', (await etapa(pg))['n'] == 'Etapa 4 de 10')
     confere('sem emoji nos objetivos (ícones desenhados)', not await pg.evaluate(EMOJI_JS) and await pg.evaluate("document.querySelectorAll('#q-goal .opt svg').length") == 6)
     await continuar(pg)
@@ -179,7 +182,7 @@ async def cenario_a2(b):
     print('Cenário A2 — conta nova, Musculação com "Escolher meus equipamentos" (tela pequena 360 px)')
     ctx, pg, erros = await nova_pagina(b, w=360, h=740)
     await continuar(pg); await preenche_quiz(pg, 'Leo'); await continuar(pg)
-    await pg.fill('#q-height', '180'); await pg.fill('#q-weight', '80'); await continuar(pg)
+    await poe(pg, '#q-height', '180'); await poe(pg, '#q-weight', '80'); await continuar(pg)
     await pg.click('#q-goal .opt[data-val="forca"]'); await continuar(pg)
     await pg.click('.pick-card.lift'); await pg.wait_for_timeout(400)
     confere('objetivo sugerido: Ganhar força → Força', await pg.evaluate("document.querySelector('#lift-goal').closest('.field').querySelector('.wz-sug b').textContent") == 'Força')
@@ -234,7 +237,7 @@ async def cenario_b(b):
     confere('formulário limpo (sem respostas antigas)', await pg.evaluate("document.getElementById('q-nick').value") == '' and await pg.evaluate("readOpt('q-goal')") is None)
     await foto(pg, 'b38-12-recomeco-tema')
     await continuar(pg); await preenche_quiz(pg, 'Ana'); await continuar(pg)
-    await pg.fill('#q-height', '165'); await pg.fill('#q-weight', '62'); await continuar(pg)
+    await poe(pg, '#q-height', '165'); await poe(pg, '#q-weight', '62'); await continuar(pg)
     await pg.click('#q-goal .opt[data-val="condicionamento"]'); await continuar(pg)
     await pg.click('.pick-card.lift'); await pg.wait_for_timeout(400)
     confere('montagem sem a escolha antiga (modalidade volta para Musculação)', await pg.evaluate("readOpt('lift-modalidade')") == 'musculacao', await pg.evaluate("readOpt('lift-modalidade')"))
