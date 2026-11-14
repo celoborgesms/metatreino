@@ -4,45 +4,45 @@
 // =====================================================================
 
 // ---------- 1. Cena do Início ----------
-// A montanha com a bandeira continua; o céu muda:
-//   horário: amanhecer (5h–8h) · dia · fim de tarde (17h–18h) · noite (lua, estrelas e uma coruja)
-//   clima (só se o aluno liberou a localização, que o app já usa para o clima): nuvem, chuva, garoa,
-//   tempestade, névoa ou neve — com os mesmos dados da linha de clima, sem buscar nada a mais.
+// Beta 36: a cena virou uma paisagem em camadas numa "janela" à direita da saudação (a foto do perfil
+// subiu para a linha do METATREINO, então nada mais cobre o sol, a lua ou as nuvens).
+//   horário: amanhecer (5h–9h) · dia · fim de tarde (17h–19h) · noite (lua e estrelas)
+//   clima (só com a localização liberada, com os mesmos dados da linha de clima, sem buscar nada a mais):
+//   nublado, chuva, garoa, tempestade, névoa ou neve. Sem dados de clima: só o horário, nunca um clima inventado.
 //   datas: dia da prova, véspera da prova, aniversário do aluno, Ano-Novo e Natal (nessa ordem).
-// Tudo é um desenho em linha (SVG) parado: não gasta bateria e some com "Fundo decorativo".
-const CENA_SOL = (x, y, r)=>`<circle cx="${x}" cy="${y}" r="${r}"/><path d="M${x} ${y-r-6}v-7M${x-r-4} ${y-r+2}l-5-5M${x+r+4} ${y-r+2}l5-5M${x-r-7} ${y}h-7M${x+r+7} ${y}h7" stroke-opacity=".75"/>`;
-const CENA_SOL_BAIXO = (x, y, r)=>`<path d="M${x-r} ${y}a${r} ${r} 0 0 1 ${r*2} 0"/><path d="M${x} ${y-r-6}v-7M${x-r-4} ${y-r+2}l-5-5M${x+r+4} ${y-r+2}l5-5M${x-r-8} ${y-2}h-7M${x+r+8} ${y-2}h7" stroke-opacity=".7"/>`;
-const CENA_LUA = (x, y)=>`<path class="dk-a" d="M${x+6} ${y-17}a18 18 0 1 0 12 24 14 14 0 0 1-12-24z" stroke-width="3"/>`;
-const CENA_ESTRELA = (x, y, s)=>`<path d="M${x} ${y-s}v${s*2}M${x-s} ${y}h${s*2}" stroke-width="2"/>`;
-const CENA_NUVEM = (x, y)=>`<path d="M${x-22} ${y+10}h44a11 11 0 0 0 0-22 16 16 0 0 0-30-4 12 12 0 0 0-14 26z"/>`;
+// Camadas: céu (sol/lua/estrelas) → serra ao fundo → montanha da meta com a bandeira → trilha → clima na frente.
+// Tudo é SVG parado: não gasta bateria e some com "Fundo decorativo". Coordenadas: 390 × 100, desenho à direita.
+const CENA_VB = '0 0 390 100';
 const CENA = {
-  montanha: `<path d="M6 168 58 104l22 22 44-72 70 114"/><path d="M110 76l14-22 14 22-8-4-6 6-6-6z" stroke-opacity=".8"/>`,
-  bandeira: `<path class="dk-a" d="M124 54V18" stroke-width="3"/><path class="dk-a" d="M124 18h30l-8 8 8 8h-30" stroke-width="3"/>`,
-  trilha: `<path class="dk-a" d="M34 168c22-6 40-14 52-26s20-20 30-30 12-22 6-34" stroke-width="3.2" stroke-dasharray="3 8"/>`,
-  // coruja (Beta 30): num galho no canto esquerdo do céu, longe da montanha
-  coruja: `<path d="M2 106c12-3 28-4 44-8" stroke-width="2.6"/>
-    <path d="M17 100c-7-5-9-15-7-24 2-9 9-15 18-15s16 6 18 15c2 9 0 19-7 24z"/><path d="M13 66l-3-9 9 5M43 66l3-9-9 5"/>
-    <circle class="dk-a" cx="21.5" cy="76" r="6" stroke-width="2.4"/><circle class="dk-a" cx="34.5" cy="76" r="6" stroke-width="2.4"/>
-    <path d="M21.5 76h0M34.5 76h0" stroke-width="4.4"/><path d="M26 83l2 3.4 2-3.4z" stroke-width="2"/>
-    <path d="M20 92q4 3 8 0q4 3 8 0" stroke-opacity=".7"/><path d="M24 100v3M32 100v3" stroke-width="2.2"/>`,
-  chuva: (x, y)=>`<path d="M${x-14} ${y+18}l-4 10M${x-2} ${y+18}l-4 10M${x+10} ${y+18}l-4 10M${x-8} ${y+32}l-3 7M${x+4} ${y+32}l-3 7" stroke-opacity=".8"/>`,
-  garoa: (x, y)=>`<path d="M${x-12} ${y+18}v4M${x} ${y+20}v4M${x+12} ${y+18}v4M${x-6} ${y+28}v4M${x+6} ${y+30}v4" stroke-opacity=".8"/>`,
-  raio: (x, y)=>`<path class="dk-a" d="M${x+2} ${y+14}l-8 14h8l-6 14" stroke-width="3"/>`,
-  neve: (x, y)=>`<path d="M${x-12} ${y+22}h0M${x} ${y+28}h0M${x+12} ${y+22}h0M${x-6} ${y+36}h0M${x+8} ${y+38}h0" stroke-width="5"/>`,
-  nevoa: `<path d="M12 150c14-4 26 4 40 0s26-4 40 0 26 4 40 0 26-4 40 0" stroke-opacity=".7"/><path d="M28 160c14-4 26 4 40 0s26-4 40 0 26 4 40 0" stroke-opacity=".55"/>`,
+  serraFundo: `<path class="c-serra1" d="M150 100V86c26-6 48-4 72-12s40-16 64-14 36 10 56 6 32-10 48-8v42z"/>`,
+  montanha: `<path class="c-mont" d="M236 100l46-36 14 10 40-44 54 56v14z"/><path class="c-neve" d="M326 41l10-11 10 11-5-2-5 4-5-4z"/>`,
+  frente: `<path class="c-frente" d="M196 100c22-8 44-9 66-6s46 3 70-4 40-7 58-3v13z"/>`,
+  bandeira: `<path class="c-ac" d="M336 30V10" stroke-width="2"/><path class="c-acf" d="M336 10h17l-5 5 5 5h-17z"/>`,
+  trilha: `<path class="c-ac" d="M286 100c10-6 18-12 24-20s12-16 18-24 6-14 8-24" stroke-width="1.8" stroke-dasharray="1.5 6" stroke-opacity=".75"/>`,
+  sol: (x, y, r)=>`<circle class="c-halo" cx="${x}" cy="${y}" r="${r*1.9}"/><circle class="c-astro" cx="${x}" cy="${y}" r="${r}"/>`
+    + `<path class="c-raio" d="${[0,45,90,135,180,225,270,315].map(g=>{ const a = g*Math.PI/180, r1 = r+5, r2 = r+9; return `M${(x+Math.cos(a)*r1).toFixed(1)} ${(y+Math.sin(a)*r1).toFixed(1)}L${(x+Math.cos(a)*r2).toFixed(1)} ${(y+Math.sin(a)*r2).toFixed(1)}`; }).join('')}"/>`,
+  // sol no horizonte (amanhecer e fim de tarde): só a metade de cima, com o brilho espalhado na linha do horizonte
+  solBaixo: (x, y, r)=>`<ellipse class="c-halo" cx="${x}" cy="${y}" rx="${r*3.2}" ry="${r*1.5}"/><path class="c-astro" d="M${x-r} ${y}a${r} ${r} 0 0 1 ${r*2} 0z"/>`
+    + `<path class="c-raio" d="M${x} ${y-r-5}v-5M${x-r-3} ${y-r+3}l-4-4M${x+r+3} ${y-r+3}l4-4M${x-r-6} ${y-1}h-5M${x+r+6} ${y-1}h5"/><path class="c-linha" d="M${x-r*2.4} ${y}h${r*4.8}" stroke-opacity=".35"/>`,
+  lua: (x, y)=>`<circle class="c-halo" cx="${x}" cy="${y}" r="20"/><path class="c-astro" d="M${x+3} ${y-12}a12.5 12.5 0 1 0 9.5 17 10 10 0 0 1-9.5-17z"/>`,
+  estrela: (x, y, s)=>`<path class="c-estrela" d="M${x} ${y-s}Q${x} ${y} ${x+s} ${y}Q${x} ${y} ${x} ${y+s}Q${x} ${y} ${x-s} ${y}Q${x} ${y} ${x} ${y-s}z"/>`,
+  nuvem: (x, y, k)=>{ k = k || 1; const f = n=>+(n*k).toFixed(1);
+    return `<path class="c-nuvem" d="M${x-f(26)} ${y+f(10)}h${f(50)}a${f(11)} ${f(11)} 0 0 0 0-${f(22)}a${f(15)} ${f(15)} 0 0 0-${f(28)}-${f(5)}a${f(11)} ${f(11)} 0 0 0-${f(22)} ${f(27)}z"/>`; },
+  chuva: (x, y)=>`<path class="c-chuva" d="M${x-14} ${y+16}l-3 9M${x-4} ${y+16}l-3 9M${x+6} ${y+16}l-3 9M${x+16} ${y+16}l-3 9M${x-9} ${y+29}l-2 6M${x+1} ${y+29}l-2 6M${x+11} ${y+29}l-2 6"/>`,
+  garoa: (x, y)=>`<path class="c-chuva" d="M${x-12} ${y+16}v3M${x-2} ${y+18}v3M${x+8} ${y+16}v3M${x-7} ${y+26}v3M${x+3} ${y+28}v3M${x+13} ${y+25}v3"/>`,
+  raio: (x, y)=>`<path class="c-acf" d="M${x+3} ${y+13}l-9 13h7l-4 12 11-15h-7l4-10z"/>`,
+  neve: (x, y)=>`<g class="c-floco">${[[-12,18],[0,23],[12,18],[-6,31],[7,33]].map(([a,b])=>`<circle cx="${x+a}" cy="${y+b}" r="1.8"/>`).join('')}</g>`,
+  nevoa: `<path class="c-nevoa" d="M232 70c16-4 28 4 44 0s28-4 44 0 28 4 44 0 20-3 26-2M216 82c16-4 28 4 44 0s28-4 44 0 28 4 44 0 28-4 42-2M244 94c16-4 28 4 44 0s28-4 44 0 28 4 44 0"/>`,
   // datas
-  // Natal (Beta 30): árvore simétrica no lado esquerdo, montanha só com o pico da bandeira
-  natal: `<path d="M34 72 18 98h8L12 124h10L6 152h56L46 124h10L42 98h8z"/><path d="M29 152v10h10v-10" stroke-opacity=".85"/>
-    <path class="dk-a" d="M34.0 53.0 L36.2 58.9 L42.6 59.2 L37.6 63.2 L39.3 69.3 L34.0 65.8 L28.7 69.3 L30.4 63.2 L25.4 59.2 L31.8 58.9z" stroke-width="2.4"/>
-    <circle class="dk-a" cx="34" cy="92" r="2.8" stroke-width="2.4"/><circle class="dk-a" cx="26" cy="116" r="2.8" stroke-width="2.4"/><circle class="dk-a" cx="42" cy="116" r="2.8" stroke-width="2.4"/>
-    <circle class="dk-a" cx="20" cy="142" r="2.8" stroke-width="2.4"/><circle class="dk-a" cx="34" cy="138" r="2.8" stroke-width="2.4"/><circle class="dk-a" cx="48" cy="142" r="2.8" stroke-width="2.4"/>`,
-  montanhaPico: `<path d="M68 168 124 54l70 114"/><path d="M110 76l14-22 14 22-8-4-6 6-6-6z" stroke-opacity=".8"/>`,
-  fogos: (x, y, r)=>`<path class="dk-a" d="M${x} ${y-r}v${r*0.55}M${x} ${y+r}v-${r*0.55}M${x-r} ${y}h${r*0.55}M${x+r} ${y}h-${r*0.55}M${x-r*0.7} ${y-r*0.7}l${r*0.38} ${r*0.38}M${x+r*0.7} ${y+r*0.7}l-${r*0.38}-${r*0.38}M${x+r*0.7} ${y-r*0.7}l-${r*0.38} ${r*0.38}M${x-r*0.7} ${y+r*0.7}l${r*0.38}-${r*0.38}" stroke-width="2.8"/>`,
-  baloes: `<path class="dk-a" d="M124 54V40" stroke-width="3"/><ellipse cx="106" cy="18" rx="9" ry="12"/><ellipse class="dk-a" cx="126" cy="11" rx="10" ry="13" stroke-width="2.8"/><ellipse cx="146" cy="20" rx="9" ry="12"/>
-    <path d="M106 30l18 10M126 24l-2 16M146 32l-22 8" stroke-opacity=".7"/><path d="M40 40h0M70 30h0M86 56h0M30 70h0M172 60h0M184 40h0" stroke-width="5"/>`,
-  cronometro: `<circle cx="54" cy="54" r="22"/><path d="M50 26h8M54 26v6M72 36l5-5"/><path class="dk-a" d="M54 54V40M54 54l9 6" stroke-width="3"/>`,
-  chegada: `<path d="M104 86V14M144 86V14" stroke-width="3"/><path class="dk-a" d="M104 14h40v14h-40z" stroke-width="2.6"/><path d="M114 14v14M124 14v14M134 14v14" stroke-opacity=".7"/>
-    <circle cx="54" cy="56" r="16"/><path class="dk-a" d="M46 22l8 18 8-18" stroke-width="2.8"/><path class="dk-a" d="M54 48l2.6 5.4 6 .8-4.3 4.2 1 5.9-5.3-2.8-5.3 2.8 1-5.9-4.3-4.2 6-.8z" stroke-width="2.2"/>`
+  chegada: `<path class="c-linha" d="M276 100V34M366 100V34" stroke-width="2"/><rect class="c-fill" x="276" y="22" width="90" height="16" rx="3"/>
+    <path class="c-acf" d="M282 26h8v4h-8zM298 26h8v4h-8zM314 26h8v4h-8zM330 26h8v4h-8zM346 26h8v4h-8zM290 30h8v4h-8zM306 30h8v4h-8zM322 30h8v4h-8zM338 30h8v4h-8zM354 30h8v4h-8z"/>`,
+  cronometro: `<circle class="c-fill" cx="296" cy="42" r="18"/><path class="c-linha" d="M290 20h12M296 20v4M309 29l4-4"/><path class="c-ac" d="M296 42V31M296 42l7 5" stroke-width="2"/>`,
+  baloes: `<path class="c-linha" d="M286 44c4 10 12 16 22 22M308 36v30M330 44c-4 10-10 16-22 22" stroke-opacity=".6"/>
+    <ellipse class="c-fill" cx="286" cy="30" rx="10" ry="13"/><ellipse class="c-acf" cx="308" cy="22" rx="11" ry="14"/><ellipse class="c-fill" cx="330" cy="30" rx="10" ry="13"/>
+    <g class="c-floco"><circle cx="262" cy="18" r="1.8"/><circle cx="354" cy="14" r="1.8"/><circle cx="372" cy="40" r="1.8"/><circle cx="252" cy="44" r="1.8"/></g>`,
+  fogos: (x, y, r)=>`<path class="c-ac" stroke-width="2" d="${[0,45,90,135,180,225,270,315].map(g=>{ const a = g*Math.PI/180; return `M${(x+Math.cos(a)*r*0.45).toFixed(1)} ${(y+Math.sin(a)*r*0.45).toFixed(1)}L${(x+Math.cos(a)*r).toFixed(1)} ${(y+Math.sin(a)*r).toFixed(1)}`; }).join('')}"/>`,
+  natal: `<path class="c-fill" d="M268 100l12-20h-6l10-16h-5l9-15 9 15h-5l10 16h-6l12 20z"/><path class="c-acf" d="M287 36l2 4.4 4.8.6-3.5 3.3.9 4.7-4.2-2.3-4.2 2.3.9-4.7-3.5-3.3 4.8-.6z"/>
+    <g class="c-floco"><circle cx="280" cy="76" r="2"/><circle cx="292" cy="68" r="2"/><circle cx="296" cy="88" r="2"/></g>`
 };
 function _cenaData(){
   const d = new Date(), m = d.getMonth()+1, dia = d.getDate();
@@ -69,47 +69,62 @@ function _cenaClima(){
   if(c>=71&&c<=77) return 'neve'; if(c===45||c===48) return 'nevoa'; if(c>=2&&c<=3) return 'nublado';
   return 'limpo';
 }
+function _cenaSvg(corpo, k){ return `<svg viewBox="${CENA_VB}" preserveAspectRatio="xMaxYMax meet" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" data-cena="${k}">${corpo}</svg>`; }
 function cenaInicio(){
+  const hora = _cenaHora();
+  const noite = hora === 'noite';
+  const estrelas = CENA.estrela(262, 14, 3) + CENA.estrela(318, 8, 2.2) + CENA.estrela(372, 22, 2.6) + CENA.estrela(252, 6, 2);
+  const paisagem = (comBandeira)=>CENA.serraFundo + CENA.montanha + (comBandeira ? CENA.bandeira : '') + CENA.trilha + CENA.frente;
   const data = _cenaData();
-  if(data) return { k:'data-'+data, svg: (data==='natal' ? CENA.montanhaPico : CENA.montanha) + ({
-    prova: CENA.chegada + CENA.trilha,
-    vespera: CENA.cronometro + CENA.bandeira + CENA.trilha,
-    aniversario: CENA.baloes + CENA.trilha,
-    anonovo: CENA.fogos(48, 44, 18) + CENA.fogos(82, 22, 11) + CENA.fogos(170, 30, 13) + CENA.bandeira + CENA.trilha,
-    natal: CENA.natal + CENA.bandeira + '<path class="dk-a" d="M96 168c10-8 18-18 22-30s4-26 6-36" stroke-width="3.2" stroke-dasharray="3 8"/>'
-  })[data] };
-  const hora = _cenaHora(), clima = _cenaClima();
+  if(data){
+    const ceuData = noite ? estrelas : '';
+    const corpo = {
+      prova: ceuData + CENA.serraFundo + CENA.chegada + CENA.frente,
+      vespera: ceuData + paisagem(true) + CENA.cronometro,
+      aniversario: ceuData + paisagem(true) + CENA.baloes,
+      anonovo: estrelas + CENA.fogos(272, 24, 13) + CENA.fogos(306, 12, 8) + CENA.fogos(372, 38, 10) + paisagem(true),
+      natal: (noite ? estrelas : '') + CENA.serraFundo + CENA.montanha + CENA.bandeira + CENA.natal + CENA.frente
+    }[data];
+    return { k:'data-'+data, svg: corpo };
+  }
+  const clima = _cenaClima();
   let ceu = '';
-  if(hora === 'amanhecer') ceu = CENA_SOL_BAIXO(36, 100, 15);
-  else if(hora === 'dia') ceu = CENA_SOL(52, 50, 14);
-  else if(hora === 'tarde') ceu = CENA_SOL_BAIXO(170, 76, 13) + '<path d="M150 76h40" stroke-opacity=".7"/>';
-  else ceu = CENA_LUA(78, 34) + CENA_ESTRELA(30, 24, 3.5) + CENA_ESTRELA(104, 70, 2.5) + CENA_ESTRELA(170, 72, 3) + CENA_ESTRELA(54, 52, 2.5);
-  const nx = hora==='tarde' ? 164 : hora==='noite' ? 84 : 66, ny = hora==='tarde' ? 60 : hora==='noite' ? 42 : 54;
+  if(hora === 'amanhecer') ceu = CENA.solBaixo(296, 78, 11);
+  else if(hora === 'dia') ceu = CENA.sol(290, 30, 11);
+  else if(hora === 'tarde') ceu = CENA.solBaixo(292, 80, 10);
+  else ceu = CENA.lua(292, 30) + estrelas;
+  // nuvem na frente do astro (dá profundidade); chuva forte esconde o sol e a lua
+  const nx = hora==='tarde' || hora==='amanhecer' ? 296 : 310, ny = hora==='tarde' || hora==='amanhecer' ? 46 : 38;
   let tempo = '';
   if(clima && clima !== 'limpo'){
     if(clima === 'nevoa') tempo = CENA.nevoa;
     else {
-      tempo = CENA_NUVEM(nx, ny);
+      tempo = CENA.nuvem(nx, ny);
+      if(clima === 'nublado') tempo = CENA.nuvem(nx + 44, ny + 10, .7) + tempo;
       if(clima === 'chuva') tempo += CENA.chuva(nx, ny);
       if(clima === 'garoa') tempo += CENA.garoa(nx, ny);
       if(clima === 'tempestade') tempo += CENA.chuva(nx, ny) + CENA.raio(nx, ny);
       if(clima === 'neve') tempo += CENA.neve(nx, ny);
-      // chuva forte: o sol some atrás da nuvem
-      if(clima === 'chuva' || clima === 'tempestade'){ if(hora === 'dia' || hora === 'noite') ceu = ''; }
+      if(clima === 'chuva' || clima === 'tempestade'){ if(hora === 'dia') ceu = ''; if(noite) ceu = estrelas; tempo = CENA.nuvem(nx + 42, ny + 6, .75) + tempo; }
     }
   }
-  return { k:`${hora}-${clima||'semclima'}`, svg: ceu + CENA.montanha + CENA.bandeira + CENA.trilha + (hora==='noite' ? CENA.coruja : '') + tempo };
+  return { k:`${hora}-${clima||'semclima'}`, svg: ceu + paisagem(true) + tempo };
 }
 const _updateDecoB29 = window.updateDeco;
 window.updateDeco = function(tab){
   const el = document.getElementById('app-deco');
+  // Com a capa do mural ligada, a capa é a imagem do topo: a cena do céu não é desenhada (ficaria escondida atrás dela)
+  const capaLigada = ()=>{ const h = document.getElementById('home-hero'); return !!(h && !h.classList.contains('hidden')); };
+  if(tab === 'home' && el && decoEnabled() && capaLigada()){ document.body.classList.remove('no-deco'); el.classList.add('deco36'); el.innerHTML = ''; el.dataset.k = 'sem'; delete el.dataset.cena; return; }
   if(tab === 'home' && el && decoEnabled()){
     document.body.classList.remove('no-deco');
+    el.classList.add('deco36');
     const c = cenaInicio();
     if(el.dataset.k !== 'inicio' || el.dataset.cena !== c.k || !el.innerHTML){
       el.dataset.k = 'inicio'; el.dataset.cena = c.k;
-      el.innerHTML = `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${c.svg}</svg>`;
+      el.innerHTML = _cenaSvg(c.svg, c.k);
     }
+    try{ requestAnimationFrame(()=>{ decoPosiciona('home'); setTimeout(()=>decoPosiciona('home'), 200); }); }catch(e){}
     return;
   }
   if(el) delete el.dataset.cena;
@@ -148,6 +163,7 @@ function climaChip(){
   chip.title = `${Math.round(w.temp)}°C, ${desc}`;
   const curto = { tempestade:'Tempestade', chuva:'Chuva', garoa:'Garoa', neve:'Neve', nevoa:'Névoa', nublado:'Nublado' }[c] || (noite ? 'Céu limpo' : 'Ensolarado');
   chip.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CLIMA_ICO[ico]}</svg><b>${Math.round(w.temp)}°</b><span>${curto}</span>`;
+  climaChipCabe();
 }
 const _weatherHomeLineB29 = window.weatherHomeLine;
 window.weatherHomeLine = function(){
@@ -157,7 +173,25 @@ window.weatherHomeLine = function(){
   const dica = String(l).replace(/^🌡️\s*-?\d+°C,\s*[^·]*·\s*/, '');
   return dica ? dica.charAt(0).toUpperCase() + dica.slice(1) : l;
 };
-mtGancho('renderHome', { depois(){ try{ climaChip(); }catch(e){} }});
+// Beta 36: o chip do clima nunca encosta no nome do app. Se a descrição ("Tempestade", "Céu limpo"…)
+// não couber com folga, fica só o ícone e a temperatura (a descrição continua no toque longo/leitor de tela).
+function climaChipCabe(){
+  const br = $('home-brand-row'), chip = $('home-clima'); if(!br || !chip) return;
+  chip.classList.remove('so-temp');
+  const nome = [...br.children].find(e=>!e.classList.contains('brand-logo') && !e.classList.contains('avatar') && e.id!=='home-clima'); if(!nome) return;
+  const r = document.createRange(); r.selectNodeContents(nome);
+  const fim = Math.max(...[...r.getClientRects()].map(x=>x.right));
+  if(chip.getBoundingClientRect().left - fim < 14) chip.classList.add('so-temp');
+}
+window.addEventListener('resize', ()=>{ try{ climaChipCabe(); }catch(e){} }, { passive:true });
+// Beta 36: a foto do perfil sobe para a linha do METATREINO (à direita, depois do clima). Assim a janela
+// ao lado da saudação fica livre para o desenho do céu. Tocar na foto abre o Perfil.
+function inicioAvatarNoTopo(){
+  const br = $('home-brand-row'), av = $('home-avatar'); if(!br || !av) return;
+  if(av.parentElement !== br) br.appendChild(av);
+  if(!av.dataset.toque){ av.dataset.toque = '1'; av.setAttribute('role', 'button'); av.setAttribute('tabindex', '0'); av.setAttribute('aria-label', 'Abrir meu perfil'); av.addEventListener('click', ()=>goTab('profile')); }
+}
+mtGancho('renderHome', { depois(){ try{ inicioAvatarNoTopo(); climaChip(); if(state.ui && state.ui.tab === 'home') updateDeco('home'); }catch(e){} }});
 
 // ---------- 3. Ordem dos blocos do Início ----------
 // Em "Personalizar início" cada bloco ganha uma alça (⠿) para arrastar para cima ou para baixo.

@@ -37,11 +37,17 @@ let _janFechandoPorVoltar = false;
     _janHist = false; _janFechandoPorVoltar = true; closeModal();
   });
 })();
+// Beta 36: as janelas usam o histórico do navegador (para o Voltar do Android fechar a janela). Com a
+// restauração automática, ao fechar, o navegador devolvia a tela para a posição de quando a janela ABRIU
+// (às vezes no meio de uma rolagem) — a tela "pulava". A posição agora é só do app.
+try{ if('scrollRestoration' in history) history.scrollRestoration = 'manual'; }catch(e){}
 mtGancho('closeModal', { depois(){
   _janSuja = false;
   const mi = document.getElementById('modal-inner'); if(!mi) return;
   const ao = mi.dataset.aoFechar; delete mi.dataset.aoFechar;
-  if(ao === 'perfil'){ try{ renderProfile(); }catch(e){} }
+  // Beta 36: redesenhar o Perfil ao fechar a janela mantém a posição da rolagem (durante o redesenho a página
+  // fica curta por um instante e o navegador puxava a tela para cima)
+  if(ao === 'perfil'){ const y = window.scrollY; try{ renderProfile(); }catch(e){} if(Math.abs(window.scrollY - y) > 1) window.scrollTo({ top:y, behavior:'instant' }); requestAnimationFrame(()=>{ if(Math.abs(window.scrollY - y) > 1) window.scrollTo({ top:y, behavior:'instant' }); }); }
 }});
 // janelas que salvam na hora: troca o "Pronto" por um ✕ discreto
 function janelaInstantanea(aoFechar){

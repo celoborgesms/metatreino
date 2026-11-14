@@ -53,51 +53,99 @@ mtGancho('openTrophyDetail', { depois(id){
   }
 }});
 
-// ---------- Fundos decorativos ----------
-// Ilustrações em linha (SVG), uma por aba, com dois tons: o traço segue a cor do texto do
-// tema e os detalhes seguem a cor principal. Ficam bem discretas (a opacidade do fundo é
-// a mesma de antes), não recebem toques e somem com a opção "Fundo decorativo".
-const DECO2 = (corpo)=>`<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${corpo}</svg>`;
+// ---------- Fundos decorativos (Beta 36: nova linguagem visual e curadoria por aba) ----------
+// Cada desenho fica numa "faixa" no topo da aba, à direita, entre o cabeçalho e o primeiro cartão:
+// a altura é medida na hora (decoPosiciona), então o desenho nunca passa por trás de cartões, bandeiras
+// ou listas. Linguagem comum: um disco suave na cor principal (profundidade), formas com preenchimento
+// translúcido na cor do texto e um único detalhe na cor principal. SVG parado: sem animação, sem gasto
+// de bateria, e some com a opção "Fundo decorativo".
+// Curadoria (Beta 36):
+//   Início ........ melhorado (cena do horário/clima, parte 28)
+//   Treinos ....... substituído (barra e anilhas; corrida: pista em curva)
+//   Biblioteca .... substituído (fichas empilhadas com o vídeo)
+//   Plano ......... melhorado (calendário com os dias de treino)
+//   Desafios ...... melhorado (medalha só na faixa do título; não cruza mais a bandeira do desafio)
+//   Perfil ........ mantido (pessoa e arco de evolução), redesenhado na nova linguagem e só na faixa do topo
+//   Histórico ..... mantido (relógio voltando no tempo), pequeno, ao lado do título
+//   Progresso ..... mantido (gráfico subindo), pequeno, ao lado do título — nunca atrás dos gráficos
+const DECO3 = (corpo, vb)=>`<svg viewBox="${vb||'0 0 220 120'}" preserveAspectRatio="xMaxYMid meet" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${corpo}</svg>`;
+// classes: .d-fundo (disco na cor principal) · .d-fill (preenchimento translúcido) · .d-ac (traço na cor principal) · .d-acf (preenchimento na cor principal)
 const DECO2_SVG = {
-  // Início (Beta 28): montanha com a bandeira da meta no topo, trilha subindo e o sol nascendo
-  inicio: DECO2(`<circle cx="52" cy="50" r="14"/><path d="M52 24v-8M30 34l-6-5M74 34l6-5" stroke-opacity=".7"/>
-    <path d="M6 168 58 104l22 22 44-72 70 114"/><path d="M110 76l14-22 14 22-8-4-6 6-6-6z" stroke-opacity=".8"/>
-    <path class="dk-a" d="M124 54V18" stroke-width="3"/><path class="dk-a" d="M124 18h30l-8 8 8 8h-30" stroke-width="3"/>
-    <path class="dk-a" d="M34 168c22-6 40-14 52-26s20-20 30-30 12-22 6-34" stroke-width="3.2" stroke-dasharray="3 8"/>`),
-  // Treinos (musculação): barra com anilhas e um kettlebell
-  musculacao: DECO2(`<path d="M30 86h140"/><rect x="40" y="58" width="14" height="56" rx="4"/><rect x="56" y="66" width="10" height="40" rx="3"/><rect x="146" y="58" width="14" height="56" rx="4"/><rect x="134" y="66" width="10" height="40" rx="3"/>
-    <path d="M24 80v12M176 80v12"/><path class="dk-a" d="M113 130c-15 0-24 11-24 24 0 12 9 22 24 22s24-10 24-22c0-13-9-24-24-24z" stroke-width="3"/><path class="dk-a" d="M101 136c-2-12 4-21 12-21s14 9 12 21" stroke-width="3"/>`),
-  // Corrida: pista em curva, marcação de chegada e linhas de velocidade
-  corrida: DECO2(`<path d="M20 170c0-60 40-110 110-110h50"/><path d="M44 170c0-46 30-86 86-86h50"/><path class="dk-a" d="M68 170c0-32 22-62 62-62h50" stroke-width="3.2"/>
-    <path d="M164 60v48" stroke-dasharray="4 6"/><path class="dk-a" d="M40 40h34M28 54h30M48 26h20" stroke-width="3"/><circle cx="150" cy="150" r="16"/><path d="M150 140v10l7 5M144 128h12"/>`),
-  // Progresso: grade, barras e curva de evolução com destaque no ponto mais alto
-  progresso: DECO2(`<path d="M30 170h150M30 170V40" stroke-opacity=".7"/><path d="M30 130h150M30 90h150" stroke-dasharray="3 8" stroke-opacity=".6"/>
-    <rect x="46" y="128" width="18" height="42" rx="4"/><rect x="78" y="112" width="18" height="58" rx="4"/><rect x="110" y="96" width="18" height="74" rx="4"/><rect x="142" y="70" width="18" height="100" rx="4"/>
-    <path class="dk-a" d="M40 124c26-8 40-14 58-30s38-30 70-46" stroke-width="3.4"/><path class="dk-a" d="M168 34l2.8 6 6.5.8-4.8 4.4 1.3 6.4-5.8-3.2-5.8 3.2 1.3-6.4-4.8-4.4 6.5-.8z" stroke-width="2.4"/>`),
-  // Histórico: relógio com seta de "voltar no tempo" (Beta 27: sem formas que pareçam cartões ou botões)
-  historico: DECO2(`<circle cx="104" cy="104" r="62"/><path d="M104 54v8M104 146v8M54 104h8M146 104h8" stroke-opacity=".7"/>
-    <path class="dk-a" d="M104 72v34l22 14" stroke-width="3.4"/><path class="dk-a" d="M34 104a70 70 0 1 0 20-49" stroke-width="3.2"/><path class="dk-a" d="M38 40l16 15-21 6" stroke-width="3.2"/>`),
-  // Desafios: medalha com fita, estrela e louros
-  desafios: DECO2(`<path d="M76 30l24 48 24-48M60 30h32M108 30h32" /><circle cx="100" cy="122" r="44"/><circle class="dk-a" cx="100" cy="122" r="32" stroke-width="3"/>
-    <path class="dk-a" d="M100 104l5.6 11.4 12.6 1.8-9.1 8.9 2.2 12.5-11.3-5.9-11.3 5.9 2.2-12.5-9.1-8.9 12.6-1.8z" stroke-width="3"/>
-    <path d="M44 150c-10-16-10-36 0-52M156 150c10-16 10-36 0-52"/><path d="M40 132l-10-4M40 116l-10-6M160 132l10-4M160 116l10-6"/>`),
-  // Biblioteca: livro aberto e vídeo
-  biblioteca: DECO2(`<path d="M100 66c-18-12-42-14-66-10v100c24-4 48-2 66 10 18-12 42-14 66-10V56c-24-4-48-2-66 10z"/><path d="M100 66v100"/>
-    <path d="M50 84c14-2 28 0 38 6M50 104c14-2 28 0 38 6M50 124c14-2 28 0 38 6" stroke-opacity=".7"/><circle class="dk-a" cx="136" cy="110" r="20" stroke-width="3"/><path class="dk-a" d="M131 101l14 9-14 9z" stroke-width="3"/>`),
-  // Perfil: pessoa e um arco de evolução pessoal
-  perfil: DECO2(`<circle cx="100" cy="78" r="26"/><path d="M52 164c4-28 24-44 48-44s44 16 48 44"/><path class="dk-a" d="M40 100a62 62 0 0 1 106-58" stroke-width="3.2"/><path class="dk-a" d="M140 30l8 12-14 3" stroke-width="3.2"/>`),
-  // Plano: calendário com dias marcados
-  plano: DECO2(`<rect x="36" y="44" width="128" height="120" rx="14"/><path d="M36 72h128M68 32v22M132 32v22"/>
-    <path d="M60 96h12M94 96h12M128 96h12M60 122h12M94 122h12M60 146h12" stroke-opacity=".7"/><path class="dk-a" d="M124 120l7 7 14-15M124 144l7 7 14-15" stroke-width="3.2"/>`)
+  musculacao: DECO3(`<circle class="d-fundo" cx="164" cy="60" r="50"/>
+    <path class="d-linha" d="M70 60h142" stroke-width="3.2"/>
+    <rect class="d-fill" x="98" y="30" width="14" height="60" rx="4.5"/><rect class="d-fill" x="114" y="39" width="9" height="42" rx="3.5"/>
+    <rect class="d-fill" x="180" y="30" width="14" height="60" rx="4.5"/><rect class="d-fill" x="169" y="39" width="9" height="42" rx="3.5"/>
+    <path class="d-ac" d="M105 40v40M187 40v40" stroke-width="2.2"/><path class="d-linha" d="M126 56v8M166 56v8" stroke-width="2.4"/>`),
+  corrida: DECO3(`<circle class="d-fundo" cx="172" cy="64" r="48"/>
+    <path class="d-fill" d="M96 120a124 124 0 0 1 124-124v26a98 98 0 0 0-98 98z"/>
+    <path class="d-linha" d="M96 120a124 124 0 0 1 124-124M122 120a98 98 0 0 1 98-98"/>
+    <path class="d-ac" d="M109 120a111 111 0 0 1 111-111" stroke-width="2.2" stroke-dasharray="2 7"/>
+    <path class="d-linha" d="M150 30l14 8M141 41l14 8" stroke-opacity=".7"/><path class="d-ac" d="M176 8v24" stroke-width="2.2"/><path class="d-acf" d="M176 8h18l-5 6 5 6h-18z" stroke="none"/>`),
+  biblioteca: DECO3(`<circle class="d-fundo" cx="160" cy="58" r="50"/>
+    <rect class="d-fill" x="130" y="16" width="76" height="54" rx="10" transform="rotate(8 168 43)"/>
+    <rect class="d-fill" x="116" y="28" width="80" height="58" rx="11"/>
+    <path class="d-linha" d="M130 72h34M130 80h22" stroke-opacity=".7"/>
+    <circle class="d-ac" cx="156" cy="50" r="13" stroke-width="2"/><path class="d-acf" d="M152 44l11 6-11 6z" stroke="none"/>`),
+  plano: DECO3(`<circle class="d-fundo" cx="166" cy="60" r="50"/>
+    <rect class="d-fill" x="112" y="22" width="96" height="80" rx="12"/><path class="d-linha" d="M112 42h96M134 14v16M186 14v16"/>
+    <rect class="d-fill" x="124" y="54" width="14" height="12" rx="3"/><rect class="d-acf" x="146" y="54" width="14" height="12" rx="3" stroke="none"/><rect class="d-fill" x="168" y="54" width="14" height="12" rx="3"/><rect class="d-fill" x="190" y="54" width="10" height="12" rx="3"/>
+    <rect class="d-acf" x="124" y="76" width="14" height="12" rx="3" stroke="none"/><rect class="d-fill" x="146" y="76" width="14" height="12" rx="3"/><rect class="d-acf" x="168" y="76" width="14" height="12" rx="3" stroke="none"/>`),
+  desafios: DECO3(`<circle class="d-fundo" cx="168" cy="62" r="50"/>
+    <path class="d-fill" d="M146 8h18l12 30h-18zM190 8h-18l-12 30h18z"/>
+    <circle class="d-fill" cx="168" cy="70" r="30"/><circle class="d-ac" cx="168" cy="70" r="21" stroke-width="2"/>
+    <path class="d-acf" stroke="none" d="M168 58.5l3.4 7 7.7 1.1-5.6 5.4 1.3 7.7-6.8-3.6-6.8 3.6 1.3-7.7-5.6-5.4 7.7-1.1z"/>`),
+  perfil: DECO3(`<circle class="d-fundo" cx="166" cy="62" r="50"/>
+    <circle class="d-fill" cx="166" cy="46" r="17"/><path class="d-fill" d="M134 104c3-20 16-32 32-32s29 12 32 32z"/>
+    <path class="d-ac" d="M120 84a48 48 0 0 1 78-50" stroke-width="2.4"/><path class="d-acf" stroke="none" d="M203 28l1 15-14-5z"/>`),
+  progresso: DECO3(`<circle class="d-fundo" cx="166" cy="60" r="48"/>
+    <rect class="d-fill" x="128" y="66" width="14" height="30" rx="3"/><rect class="d-fill" x="150" y="52" width="14" height="44" rx="3"/><rect class="d-fill" x="172" y="38" width="14" height="58" rx="3"/>
+    <path class="d-linha" d="M120 96h80" stroke-opacity=".6"/><path class="d-ac" d="M124 56l22-16 20 10 30-24" stroke-width="2.4"/><path class="d-acf" stroke="none" d="M203 21l-2 15-11-10z"/>`),
+  historico: DECO3(`<circle class="d-fundo" cx="168" cy="60" r="48"/>
+    <circle class="d-fill" cx="168" cy="60" r="32"/><path class="d-linha" d="M168 33v5M168 82v5M141 60h5M190 60h5" stroke-opacity=".7"/>
+    <path class="d-ac" d="M168 44v17l11 7" stroke-width="2.4"/><path class="d-ac" d="M126 60a42 42 0 1 0 12-30" stroke-width="2.2"/><path class="d-acf" stroke="none" d="M131 20l11 14-15 3z"/>`)
 };
+// faixa do topo de cada aba: onde termina (o primeiro bloco de conteúdo) — o desenho fica acima dele
+const DECO_FAIXA = {
+  sessions:  { fim:'#sess-qlinks' },
+  library:   { ini:'.brand', fim:'#lib-count' },
+  plan:      { ini:'.brand', fim:'#plan-title' },
+  challenges:{ fim:'#chal-root' },
+  profile:   { fim:'.profile-head', fimBase:true },
+  history:   { ini:'.seg-nav', fim:'.stat-grid' },
+  perf:      { ini:'.seg-nav', fim:'#perf-resumo' },
+  home:      { ini:'#home-brand-row', fim:'#home-greet-row', fimBase:true }
+};
+function decoPosiciona(tab){
+  const el = document.getElementById('app-deco'); if(!el) return;
+  const f = DECO_FAIXA[tab]; const tela = document.querySelector('.screen.active');
+  if(!f || !tela || !el.innerHTML){ el.style.removeProperty('--deco-top'); el.style.removeProperty('--deco-h'); return; }
+  const sy = window.scrollY || 0;
+  const fimEl = tela.querySelector(f.fim), iniEl = f.ini ? tela.querySelector(f.ini) : null;
+  if(!fimEl || !fimEl.offsetHeight){ el.style.removeProperty('--deco-top'); el.style.removeProperty('--deco-h'); return; }
+  const rf = fimEl.getBoundingClientRect();
+  const topo = iniEl && iniEl.offsetHeight ? iniEl.getBoundingClientRect().bottom + sy + 2 : 4;
+  const fim = (f.fimBase ? rf.bottom + 4 : rf.top - 6) + sy;
+  const h = Math.max(0, Math.round(fim - topo));
+  // encosta na borda direita da coluna de conteúdo (no celular é a borda da tela; no computador e no tablet, a coluna)
+  const wrap = tela.querySelector('.wrap'); const dir = wrap ? Math.max(0, Math.round(innerWidth - wrap.getBoundingClientRect().right)) : 0;
+  el.style.setProperty('--deco-dir', dir + 'px');
+  el.style.setProperty('--deco-top', Math.round(topo) + 'px');
+  el.style.setProperty('--deco-h', h + 'px');
+  el.classList.toggle('deco-baixa', h < 40);   // faixa muito baixa (fonte grande, tela pequena): o desenho some
+}
+function _decoAgenda(tab){ cancelAnimationFrame(window.__decoRaf); window.__decoRaf = requestAnimationFrame(()=>{ decoPosiciona(tab); setTimeout(()=>decoPosiciona(tab), 180); }); }
 window.updateDeco = function(tab){
   const el = document.getElementById('app-deco'); if(!el) return;
   const on = decoEnabled();
   document.body.classList.toggle('no-deco', !on);
-  if(!on){ el.innerHTML = ''; return; }
+  el.classList.add('deco36');
+  if(!on){ el.innerHTML = ''; delete el.dataset.k; return; }
   const corrida = state && state.active === 'run';
-  const map = { home:'inicio', sessions: corrida ? 'corrida' : 'musculacao', perf:'progresso', history:'historico', challenges:'desafios', library:'biblioteca', profile:'perfil', plan:'plano' };
-  const k = map[tab] || (corrida ? 'corrida' : 'musculacao');
-  if(el.dataset.k === k && el.innerHTML) return;
-  el.dataset.k = k; el.innerHTML = DECO2_SVG[k];
+  const map = { sessions: corrida ? 'corrida' : 'musculacao', challenges:'desafios', library:'biblioteca', plan:'plano', profile:'perfil', history:'historico', perf:'progresso' };
+  const k = map[tab];
+  if(!k){ el.innerHTML = ''; el.dataset.k = 'sem'; decoPosiciona(tab); return; }   // abas sem desenho
+  if(el.dataset.k !== k || !el.innerHTML){ el.dataset.k = k; el.innerHTML = DECO2_SVG[k]; }
+  _decoAgenda(tab);
 };
+window.addEventListener('resize', ()=>{ try{ _decoAgenda(state.ui.tab || 'home'); }catch(e){} }, { passive:true });
+Object.assign(window, { decoPosiciona });

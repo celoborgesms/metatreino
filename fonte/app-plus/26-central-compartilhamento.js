@@ -181,6 +181,11 @@ function _mtsQuebra(x, txt, maxW, maxL){
   if(linhas.length > maxL){ const r = linhas.slice(0, maxL); let u = r[maxL-1]; while(u.length > 1 && x.measureText(u+'…').width > maxW) u = u.slice(0,-1); r[maxL-1] = u+'…'; return r; }
   return linhas;
 }
+// contexto "de ensaio": mede textos com as mesmas fontes, mas não desenha nada (usado para medir a altura do bloco)
+function _mtsMedidor(ctx){
+  const nada = new Set(['fillText','strokeText','fill','stroke','fillRect','strokeRect','clearRect','drawImage','beginPath','moveTo','lineTo','arcTo','arc','rect','closePath','quadraticCurveTo','bezierCurveTo','save','restore']);
+  return new Proxy(ctx, { get(t, k){ if(nada.has(k)) return ()=>{}; const v = Reflect.get(t, k, t); return typeof v === 'function' ? v.bind(t) : v; }, set(t, k, v){ t[k] = v; return true; } });
+}
 function _mtsRet(x, px, py, w, h, r){ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath(); }
 // desenho de fundo por modalidade (traços discretos, sem fotos de terceiros)
 function _mtsPadrao(x, W, H, tipo, cor){
@@ -253,16 +258,93 @@ async function mtsDesenhar(cv, d, o){
   const rowGap = W*0.025, rowTam = medRow.length ? Math.min(o.fmt==='quadrado' ? W*0.13 : W*0.16, (maxW - rowGap*(medRow.length-1))/medRow.length) : 0;
   const medTam = medImg ? (o.fmt==='quadrado' ? W*(disp==='destaque'?0.26:0.2) : o.fmt==='feed' ? W*0.28 : W*0.34) : rowTam;
   const chipsH = (d.extra && d.extra.length) ? W*0.07 : 0;
-  const nomeH = (o.nome && _mtsPrimeiroNome()) ? W*0.06 : 0;
-  const alturaBloco = W*0.04 /*kicker*/ + linTit.length*tamTit*1.08 + (temHero ? tamHero*1.02 + W*0.03 : 0) + (linDesc.length ? linDesc.length*tamDesc*1.35 + W*0.02 : 0)
-    + (d.periodo ? W*0.045 : 0) + altNums + chipsH + nomeH + (d.serie ? W*0.14 : 0) + (d.nivel ? W*0.05 : 0);
+  // Beta 36: o nome entra no bloco e a altura do bloco é MEDIDA (passada de ensaio sem desenhar). Antes era uma
+  // estimativa que não contava o número grande, as fichas e as linhas extras: com "Faixa" + "Mostrar meu nome",
+  // o nome caía fora da faixa ou colado na borda.
+  const nomeTxt = (o.nome && _mtsPrimeiroNome()) ? 'por ' + _mtsPrimeiroNome() : '';
+  const faixaX = pad*0.55, faixaW = W - pad*1.1;
+  const padBaixo = (nomeTxt && disp==='compacto') ? W*0.04 : W*0.05;
+  const desenhaBloco = (x, y)=>{
+  const alinh = disp==='grade' ? 'center' : 'left'; const ax = disp==='grade' ? W/2 : pad;
+    x.textAlign = alinh;
+    // nível (rara/especial)
+    if(d.nivel){ x.font = `800 ${W*0.024}px ${FF}`; if(x.letterSpacing !== undefined) x.letterSpacing = `${W*0.004}px`; x.fillStyle = P.acc; x.fillText(d.nivel.toUpperCase(), ax, y + W*0.026); if(x.letterSpacing !== undefined) x.letterSpacing = '0px'; y += W*0.05; }
+    // kicker
+    x.fillStyle = P.acc; x.font = `800 ${W*0.028}px ${FF}`; if(x.letterSpacing !== undefined) x.letterSpacing = `${W*0.005}px`;
+    x.fillText(kick, ax, y + W*0.03); if(x.letterSpacing !== undefined) x.letterSpacing = '0px'; y += W*0.04;
+    // título
+    x.fillStyle = P.txt; x.font = `800 ${tamTit}px ${FF}`;
+    linTit.forEach(l=>{ y += tamTit*1.08; x.fillText(l, ax, y); });
+    // número principal
+    if(temHero){
+      y += tamHero*0.98; x.font = `800 ${tamHero}px ${FF}`; x.fillStyle = P.txt;
+      const hv = String(d.hero.v); const wv = x.measureText(hv).width;
+      const startX = alinh==='center' ? (W - wv - (d.hero.u ? x.measureText(' ').width : 0) - (()=>{ x.font = `600 ${W*0.045}px ${FF}`; const u = x.measureText(d.hero.u||'').width; x.font = `800 ${tamHero}px ${FF}`; return u; })())/2 : ax;
+      x.textAlign = 'left'; x.fillText(hv, startX, y);
+      if(d.hero.u){ x.font = `600 ${W*0.045}px ${FF}`; x.fillStyle = P.acc; x.fillText(' ' + d.hero.u, startX + wv, y); }
+      x.textAlign = alinh; y += W*0.03;
+    }
+    if(d.periodo){ y += W*0.045; x.font = `500 ${W*0.03}px ${FF}`; x.fillStyle = P.dim; x.fillText(d.periodo, ax, y); }
+    // minigráfico da evolução (valores reais da série)
+    if(d.serie && d.serie.length >= 2){
+      y += W*0.05; const gh = W*0.08, gw = disp==='grade' ? W*0.6 : maxW*0.75, gx = disp==='grade' ? (W-gw)/2 : pad;
+      const lo = Math.min(...d.serie), hi = Math.max(...d.serie), rng = (hi-lo)||1;
+      x.strokeStyle = P.acc; x.lineWidth = W*0.006; x.lineJoin = 'round'; x.beginPath();
+      d.serie.forEach((v,i)=>{ const px2 = gx + gw*i/(d.serie.length-1), py2 = y + gh - gh*(v-lo)/rng; i ? x.lineTo(px2, py2) : x.moveTo(px2, py2); }); x.stroke();
+      y += gh + W*0.01;
+    }
+    if(linDesc.length){ y += W*0.02; x.font = `400 ${tamDesc}px ${FF}`; x.fillStyle = P.dim; linDesc.forEach(l=>{ y += tamDesc*1.35; x.fillText(l, ax, y); }); }
+    // números
+    if(nums.length){
+      y += W*0.05;
+      x.strokeStyle = P.linha; x.lineWidth = 2; x.beginPath(); x.moveTo(pad, y - W*0.01); x.lineTo(W-pad, y - W*0.01); x.stroke();
+      const col = maxW / nums.length;
+      nums.forEach((n,i)=>{
+        const cx = disp==='grade' ? pad + col*i + col/2 : pad + col*i;
+        x.textAlign = disp==='grade' ? 'center' : 'left';
+        x.font = `500 ${tamLbl}px ${FF}`; x.fillStyle = P.dim; x.fillText(String(n.l).toUpperCase(), cx, y + tamLbl + W*0.012);
+        x.font = `800 ${tamNum}px ${FF}`; x.fillStyle = P.txt;
+        const v = String(n.v); x.fillText(v, cx - (disp==='grade' && n.u ? (()=>{ x.font = `600 ${tamLbl*1.15}px ${FF}`; const uw = x.measureText(' '+n.u).width; x.font = `800 ${tamNum}px ${FF}`; return uw/2; })() : 0), y + tamLbl + tamNum + W*0.02);
+        if(n.u){ const vw = x.measureText(v).width; x.font = `600 ${tamLbl*1.15}px ${FF}`; x.fillStyle = P.dim; x.textAlign = 'left';
+          x.fillText(' ' + n.u, disp==='grade' ? (cx + vw/2 - x.measureText(' '+n.u).width/2) : cx + vw, y + tamLbl + tamNum + W*0.02); }
+      });
+      x.textAlign = alinh; y += altNums;
+    }
+    // grupos musculares (musculação) / marcações
+    if(chipsH){
+      y += W*0.01; x.font = `600 ${W*0.03}px ${FF}`; x.textAlign = 'left';
+      const chips = d.extra.slice(0,4); const larg = chips.map(c=>x.measureText(c).width + W*0.05); const total = larg.reduce((a,b)=>a+b,0) + W*0.015*(chips.length-1);
+      let cx = disp==='grade' ? (W-Math.min(total,maxW))/2 : pad;
+      chips.forEach((c,i)=>{ if(cx + larg[i] > W - pad) return; x.fillStyle = _mtsRgba(P.acc, .16); _mtsRet(x, cx, y, larg[i], W*0.055, W*0.0275); x.fill();
+        x.fillStyle = P.txt; x.fillText(c, cx + W*0.025, y + W*0.038); cx += larg[i] + W*0.015; });
+      y += chipsH;
+    }
+  if(nomeTxt){
+    if(disp === 'compacto'){
+      // linha própria no pé da faixa, centralizada na largura da faixa e no espaço entre o divisor e a borda
+      y += W*0.03;
+      x.strokeStyle = _mtsRgba(P.txt, .14); x.lineWidth = Math.max(1.5, W*0.0016); x.beginPath(); x.moveTo(faixaX + pad*0.45, y); x.lineTo(faixaX + faixaW - pad*0.45, y); x.stroke();
+      let tam = W*0.03; x.font = `600 ${tam}px ${FF}`;
+      const maxN = faixaW - pad*0.9; while(tam > W*0.02 && x.measureText(nomeTxt).width > maxN){ tam -= W*0.001; x.font = `600 ${tam}px ${FF}`; }
+      let txtN = nomeTxt; while(txtN.length > 4 && x.measureText(txtN).width > maxN) txtN = txtN.slice(0, -2) + '…';
+      x.textAlign = 'center'; x.fillStyle = P.dim;
+      y += W*0.04 + tam*0.72; x.fillText(txtN, faixaX + faixaW/2, y);
+    } else {
+      x.textAlign = alinh; let tam = W*0.03; x.font = `500 ${tam}px ${FF}`;
+      while(tam > W*0.02 && x.measureText(nomeTxt).width > maxW){ tam -= W*0.001; x.font = `500 ${tam}px ${FF}`; }
+      x.fillStyle = P.dim; y += W*0.02 + tam; x.fillText(nomeTxt, ax, y);
+    }
+  }
+  return y;
+  };
+  const alturaBloco = desenhaBloco(_mtsMedidor(x), 0);
   const rodapeY = H - pad*0.75;
   let y;
   if(disp === 'grade' && !foto) y = Math.min(rodapeY - W*0.07 - alturaBloco, Math.max(my+ms+W*0.08 + medTam, (H - alturaBloco)/2 + medTam*0.4));
-  else y = rodapeY - W*0.07 - alturaBloco;
+  else y = rodapeY - W*0.06 - padBaixo - alturaBloco;
   // faixa (compacto): painel atrás do bloco
   if(disp === 'compacto'){
-    x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, pad*0.55, y - W*0.05, W - pad*1.1, alturaBloco + W*0.08, W*0.04); x.fill();
+    x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, faixaX, y - W*0.045, faixaW, alturaBloco + W*0.045 + padBaixo, W*0.04); x.fill();
   }
   if(medRow.length){
     const tot = medRow.length*rowTam + rowGap*(medRow.length-1);
@@ -277,61 +359,7 @@ async function mtsDesenhar(cv, d, o){
     x.save(); x.globalAlpha = 1; x.fillStyle = '#000'; x.font = `${W*0.16}px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif`; x.textAlign = disp==='grade' ? 'center' : 'left';
     x.fillText(d.emoji, disp==='grade' ? W/2 : pad, y - (disp==='compacto' ? W*0.08 : W*0.04)); x.restore();
   }
-  const alinh = disp==='grade' ? 'center' : 'left'; const ax = disp==='grade' ? W/2 : pad;
-  x.textAlign = alinh;
-  // nível (rara/especial)
-  if(d.nivel){ x.font = `800 ${W*0.024}px ${FF}`; if(x.letterSpacing !== undefined) x.letterSpacing = `${W*0.004}px`; x.fillStyle = P.acc; x.fillText(d.nivel.toUpperCase(), ax, y + W*0.026); if(x.letterSpacing !== undefined) x.letterSpacing = '0px'; y += W*0.05; }
-  // kicker
-  x.fillStyle = P.acc; x.font = `800 ${W*0.028}px ${FF}`; if(x.letterSpacing !== undefined) x.letterSpacing = `${W*0.005}px`;
-  x.fillText(kick, ax, y + W*0.03); if(x.letterSpacing !== undefined) x.letterSpacing = '0px'; y += W*0.04;
-  // título
-  x.fillStyle = P.txt; x.font = `800 ${tamTit}px ${FF}`;
-  linTit.forEach(l=>{ y += tamTit*1.08; x.fillText(l, ax, y); });
-  // número principal
-  if(temHero){
-    y += tamHero*0.98; x.font = `800 ${tamHero}px ${FF}`; x.fillStyle = P.txt;
-    const hv = String(d.hero.v); const wv = x.measureText(hv).width;
-    const startX = alinh==='center' ? (W - wv - (d.hero.u ? x.measureText(' ').width : 0) - (()=>{ x.font = `600 ${W*0.045}px ${FF}`; const u = x.measureText(d.hero.u||'').width; x.font = `800 ${tamHero}px ${FF}`; return u; })())/2 : ax;
-    x.textAlign = 'left'; x.fillText(hv, startX, y);
-    if(d.hero.u){ x.font = `600 ${W*0.045}px ${FF}`; x.fillStyle = P.acc; x.fillText(' ' + d.hero.u, startX + wv, y); }
-    x.textAlign = alinh; y += W*0.03;
-  }
-  if(d.periodo){ y += W*0.045; x.font = `500 ${W*0.03}px ${FF}`; x.fillStyle = P.dim; x.fillText(d.periodo, ax, y); }
-  // minigráfico da evolução (valores reais da série)
-  if(d.serie && d.serie.length >= 2){
-    y += W*0.05; const gh = W*0.08, gw = disp==='grade' ? W*0.6 : maxW*0.75, gx = disp==='grade' ? (W-gw)/2 : pad;
-    const lo = Math.min(...d.serie), hi = Math.max(...d.serie), rng = (hi-lo)||1;
-    x.strokeStyle = P.acc; x.lineWidth = W*0.006; x.lineJoin = 'round'; x.beginPath();
-    d.serie.forEach((v,i)=>{ const px2 = gx + gw*i/(d.serie.length-1), py2 = y + gh - gh*(v-lo)/rng; i ? x.lineTo(px2, py2) : x.moveTo(px2, py2); }); x.stroke();
-    y += gh + W*0.01;
-  }
-  if(linDesc.length){ y += W*0.02; x.font = `400 ${tamDesc}px ${FF}`; x.fillStyle = P.dim; linDesc.forEach(l=>{ y += tamDesc*1.35; x.fillText(l, ax, y); }); }
-  // números
-  if(nums.length){
-    y += W*0.05;
-    x.strokeStyle = P.linha; x.lineWidth = 2; x.beginPath(); x.moveTo(pad, y - W*0.01); x.lineTo(W-pad, y - W*0.01); x.stroke();
-    const col = maxW / nums.length;
-    nums.forEach((n,i)=>{
-      const cx = disp==='grade' ? pad + col*i + col/2 : pad + col*i;
-      x.textAlign = disp==='grade' ? 'center' : 'left';
-      x.font = `500 ${tamLbl}px ${FF}`; x.fillStyle = P.dim; x.fillText(String(n.l).toUpperCase(), cx, y + tamLbl + W*0.012);
-      x.font = `800 ${tamNum}px ${FF}`; x.fillStyle = P.txt;
-      const v = String(n.v); x.fillText(v, cx - (disp==='grade' && n.u ? (()=>{ x.font = `600 ${tamLbl*1.15}px ${FF}`; const uw = x.measureText(' '+n.u).width; x.font = `800 ${tamNum}px ${FF}`; return uw/2; })() : 0), y + tamLbl + tamNum + W*0.02);
-      if(n.u){ const vw = x.measureText(v).width; x.font = `600 ${tamLbl*1.15}px ${FF}`; x.fillStyle = P.dim; x.textAlign = 'left';
-        x.fillText(' ' + n.u, disp==='grade' ? (cx + vw/2 - x.measureText(' '+n.u).width/2) : cx + vw, y + tamLbl + tamNum + W*0.02); }
-    });
-    x.textAlign = alinh; y += altNums;
-  }
-  // grupos musculares (musculação) / marcações
-  if(chipsH){
-    y += W*0.01; x.font = `600 ${W*0.03}px ${FF}`; x.textAlign = 'left';
-    const chips = d.extra.slice(0,4); const larg = chips.map(c=>x.measureText(c).width + W*0.05); const total = larg.reduce((a,b)=>a+b,0) + W*0.015*(chips.length-1);
-    let cx = disp==='grade' ? (W-Math.min(total,maxW))/2 : pad;
-    chips.forEach((c,i)=>{ if(cx + larg[i] > W - pad) return; x.fillStyle = _mtsRgba(P.acc, .16); _mtsRet(x, cx, y, larg[i], W*0.055, W*0.0275); x.fill();
-      x.fillStyle = P.txt; x.fillText(c, cx + W*0.025, y + W*0.038); cx += larg[i] + W*0.015; });
-    y += chipsH;
-  }
-  if(nomeH){ x.textAlign = alinh; x.font = `500 ${W*0.03}px ${FF}`; x.fillStyle = P.dim; x.fillText('por ' + _mtsPrimeiroNome(), ax, y + W*0.045); }
+  desenhaBloco(x, y);
   // assinatura
   x.textAlign = 'right'; x.font = `600 ${W*0.026}px ${FF}`; x.fillStyle = P.dim; x.fillText('metatreino.app', W - pad, rodapeY);
   return cv;
@@ -340,6 +368,9 @@ async function mtsDesenhar(cv, d, o){
 // ---------- tela da Central ----------
 function mtsAbrir(d, classico){
   if(!d){ toast('Ainda não há dados para montar esse card.'); return; }
+  // Beta 36: abrir OUTRO item começa limpo (a foto, o zoom e o enquadramento do card anterior não passam para o próximo).
+  // Trocar formato/estilo/disposição reabre com o mesmo item (MTS.d) e mantém tudo.
+  if(d !== MTS.d){ MTS.foto = null; MTS.zoom = 1; MTS.px = 0; MTS.py = 0; }
   MTS.d = d; MTS.classico = classico || null;
   MTS.fmt = _mtsPref('fmt', 'story'); MTS.estilo = _mtsPref('estilo', 'escuro'); MTS.disp = _mtsPref('disp', 'destaque');
   if(!MTS_FORMATOS[MTS.fmt]) MTS.fmt = 'story';
@@ -366,7 +397,7 @@ function mtsAbrir(d, classico){
       <button class="btn btn-outline" onclick="mtsSalvar()">Salvar imagem</button>
     </div>
     ${video ? `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openMinhaConquistaShare()">Vídeo animado (${video.ext.toUpperCase()})</button>` : ''}
-    <div class="mts-priv">O card mostra só o que está nele: sem e-mail, peso ou medidas.${MTS.classico ? ` · <a href="#" onclick="mtsClassico();return false">Modelo clássico</a>` : ''}</div>`;
+    <div class="mts-priv">O card mostra só o que está nele: sem e-mail, peso ou medidas.</div>`;
   $('modal-back').classList.add('on');
   mtsDesenhaPrev(); mtsArrasto();
 }
@@ -450,9 +481,15 @@ window.shareWorkoutImage = function(histIdx){
   mtsAbrir(d, ()=>_shareWorkoutImageB26(histIdx));
 };
 const _shareTrophyImageB26 = window.shareTrophyImage;
-window.shareTrophyImage = function(id){ const d = mtsDeConquista(id); if(!d) return _shareTrophyImageB26.apply(this, arguments); mtsAbrir(d, ()=>_shareTrophyImageB26(id)); };
+// Beta 36: conquista abre SEMPRE a central atual. A interface antiga só aparecia por caminhos de exceção
+// (link "Modelo clássico", erro ao montar o card); agora um erro vira aviso, sem trocar de interface.
+window.shareTrophyImage = function(id){
+  let d = null; try{ d = mtsDeConquista(id); }catch(e){ console.log('card da conquista', e); }
+  if(!d){ toast('Não consegui montar o card desta conquista. Tente de novo.'); return; }
+  mtsAbrir(d);
+};
 const _shareTrophiesImageB27 = window.shareTrophiesImage;
-window.shareTrophiesImage = function(){ const d = mtsDeColecao(); if(!d) return _shareTrophiesImageB27.apply(this, arguments); mtsAbrir(d, ()=>_shareTrophiesImageB27()); };
+window.shareTrophiesImage = function(){ let d = null; try{ d = mtsDeColecao(); }catch(e){ console.log('card da coleção', e); } if(!d){ toast('Você ainda não tem conquistas para compartilhar.'); return; } mtsAbrir(d); };
 const _shareWeekImageB26 = window.shareWeekImage;
 window.shareWeekImage = function(){ const d = mtsDeSemana(); if(!d) return _shareWeekImageB26.apply(this, arguments); mtsAbrir(d, ()=>_shareWeekImageB26()); };
 if(typeof window.shareWeekSummary === 'function'){ const _sws = window.shareWeekSummary; window.shareWeekSummary = function(){ const d = mtsDeSemana(); if(!d) return _sws.apply(this, arguments); mtsAbrir(d, ()=>_sws()); }; }
