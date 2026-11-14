@@ -23,7 +23,7 @@ const CENA = {
     + `<path class="c-raio" d="${[0,45,90,135,180,225,270,315].map(g=>{ const a = g*Math.PI/180, r1 = r+5, r2 = r+9; return `M${(x+Math.cos(a)*r1).toFixed(1)} ${(y+Math.sin(a)*r1).toFixed(1)}L${(x+Math.cos(a)*r2).toFixed(1)} ${(y+Math.sin(a)*r2).toFixed(1)}`; }).join('')}"/>`,
   // sol no horizonte (amanhecer e fim de tarde): só a metade de cima, com o brilho espalhado na linha do horizonte
   solBaixo: (x, y, r)=>`<ellipse class="c-halo" cx="${x}" cy="${y}" rx="${r*3.2}" ry="${r*1.5}"/><path class="c-astro" d="M${x-r} ${y}a${r} ${r} 0 0 1 ${r*2} 0z"/>`
-    + `<path class="c-raio" d="M${x} ${y-r-5}v-5M${x-r-3} ${y-r+3}l-4-4M${x+r+3} ${y-r+3}l4-4M${x-r-6} ${y-1}h-5M${x+r+6} ${y-1}h5"/><path class="c-linha" d="M${x-r*2.4} ${y}h${r*4.8}" stroke-opacity=".35"/>`,
+    + `<path class="c-raio" d="M${x} ${y-r-5}v-5M${x-r-3} ${y-r+3}l-4-4M${x+r+3} ${y-r+3}l4-4M${x-r-6} ${y-1}h-5M${x+r+6} ${y-1}h5"/>`,
   lua: (x, y)=>`<circle class="c-halo" cx="${x}" cy="${y}" r="20"/><path class="c-astro" d="M${x+3} ${y-12}a12.5 12.5 0 1 0 9.5 17 10 10 0 0 1-9.5-17z"/>`,
   estrela: (x, y, s)=>`<path class="c-estrela" d="M${x} ${y-s}Q${x} ${y} ${x+s} ${y}Q${x} ${y} ${x} ${y+s}Q${x} ${y} ${x-s} ${y}Q${x} ${y} ${x} ${y-s}z"/>`,
   nuvem: (x, y, k)=>{ k = k || 1; const f = n=>+(n*k).toFixed(1);
@@ -89,9 +89,9 @@ function cenaInicio(){
   }
   const clima = _cenaClima();
   let ceu = '';
-  if(hora === 'amanhecer') ceu = CENA.solBaixo(296, 78, 11);
+  if(hora === 'amanhecer') ceu = CENA.solBaixo(301, 60, 12);   // no vale entre os dois morros: a metade de baixo fica escondida atrás da serra
   else if(hora === 'dia') ceu = CENA.sol(290, 30, 11);
-  else if(hora === 'tarde') ceu = CENA.solBaixo(292, 80, 10);
+  else if(hora === 'tarde') ceu = CENA.solBaixo(301, 62, 11);
   else ceu = CENA.lua(292, 30) + estrelas;
   // nuvem na frente do astro (dá profundidade); chuva forte esconde o sol e a lua
   const nx = hora==='tarde' || hora==='amanhecer' ? 296 : 310, ny = hora==='tarde' || hora==='amanhecer' ? 46 : 38;

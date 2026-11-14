@@ -262,7 +262,7 @@ function rMotorNovo(ctx, setup, inicioTs){
   const nv = rNivelPotencial(ctx, aval);
   const p = rPerfil(ctx);
   const tempos = rTempos(setup);
-  const m = { v:1, nivel:nv, nivelDesde: rSem(inicioTs), inicio: rSem(inicioTs), q:0, ultimaVar:'intensidade', semanas:{}, hist:[], estagio:null, contMin:null, vol:null, retomada:null };
+  const m = { v:1, criadoEm: Date.now(), nivel:nv, nivelDesde: rSem(inicioTs), inicio: rSem(inicioTs), q:0, ultimaVar:'intensidade', semanas:{}, hist:[], estagio:null, contMin:null, vol:null, retomada:null };
   if(nv === 0) m.estagio = rEstagioInicial(ctx, aval);
   const cont = Math.max(RUN_CONT_AVAL[String(aval.continuo||'0')]||0, p.contMin||0);
   if(nv === 1) m.contMin = _clamp(_r5(cont*0.9), 10, 30);
@@ -818,7 +818,11 @@ function runSync(force, refazer){
   // 2) retomada: pausa de 7+ dias de corrida tem prioridade sobre tudo
   const pz = rPausa(ctx, M.nivel);
   const chave = pz ? pz.ultimoAntes : null;
-  if(pz && pz.pausa >= 7 && (!M.retomada || M.retomada.chave !== chave)){
+  // Beta 36: plano montado DEPOIS da pausa já parte da avaliação de hoje ("quanto tempo você corre sem parar
+  // hoje?" e "está parado?"). Antes a retomada rebaixava de novo esse ponto de partida (estágio 3 da avaliação
+  // virava estágio 1) e o cartão do treino e o aviso de progresso mostravam estágios diferentes.
+  const planoDepoisDaPausa = pz && (M.criadoEm || M.inicio || 0) > pz.ultimoAntes;
+  if(pz && pz.pausa >= 7 && !planoDepoisDaPausa && (!M.retomada || M.retomada.chave !== chave)){
     const N = rRetomadaSemanas(pz.pausa);
     const inicio = pz.voltou ? rSem(pz.retorno) : semAtual;
     if(semAtual < inicio + N*7*DIA_MS){
@@ -1090,6 +1094,13 @@ function runLogCalc(){
   const pace = seg/60/km;
   el.innerHTML = ty==='bike' ? `Tempo <b>${rFmtSeg(seg)}</b> · <b>${mtFmtKm(km)} km</b> · velocidade <b>${rFmtKmh(pace)}</b>`
     : `Tempo <b>${rFmtSeg(seg)}</b> · ritmo médio <b>${mtPaceStr(pace)}</b> · <b>${rFmtKmh(pace)}</b>`;
+  // Beta 36: aviso de digitação (só avisa; o aluno pode salvar assim mesmo). Ex.: 6:30:42 de bike para 8 km = 1,2 km/h
+  const kmh = 60/pace;
+  const faixa = ty==='bike' ? [6, 60] : ty==='caminhada' ? [2, 9.5] : [3, 26];
+  if(kmh < faixa[0] || kmh > faixa[1]){
+    const dica = kmh < faixa[0] && seg >= 3600 ? ' Será que o tempo foi para o campo das <b>horas</b> em vez dos minutos?' : ' Confira o tempo e a distância.';
+    el.innerHTML += `<div class="rl-alerta" role="status">⚠️ Essa velocidade (${rFmtKmh(pace)}) parece fora do normal para ${ty==='bike' ? 'pedal' : ty==='caminhada' ? 'caminhada' : 'corrida'}.${dica}</div>`;
+  }
 }
 const _saveRunLogB14 = window.saveRunLog;
 window.saveRunLog = function(dayIdx){
