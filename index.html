@@ -2237,7 +2237,8 @@ html.tema-claro #app-deco svg[data-cena^="noite"]{--sol:#5b6478}
 #app-deco .c-chuva{stroke:currentColor;stroke-opacity:.45}
 #app-deco .c-floco circle{fill:currentColor;fill-opacity:.5;stroke:none}
 #app-deco .c-nevoa{stroke:currentColor;stroke-opacity:.32}
-#app-deco .c-fill{fill:currentColor;fill-opacity:calc(.1 * var(--k));stroke:currentColor;stroke-opacity:.35}
+/* Beta 37: cronômetro, balões, árvore e faixa de chegada opacos: o traço do morro não aparece através deles */
+#app-deco .c-fill{fill:color-mix(in srgb,var(--text) calc(10% * var(--k)),var(--bg));stroke:currentColor;stroke-opacity:.35}
 #app-deco .c-linha{stroke:currentColor;stroke-opacity:.4}
 /* ===== Beta 36: paletas dos temas iguais em qualquer lugar ===== */
 /* A amostra é sempre opaca e tem a própria moldura neutra: não herda o tom do cartão em volta (que é
@@ -2310,6 +2311,13 @@ html,body{overscroll-behavior-y:contain}
 [data-theme="amoled"] #ma-fab{border-color:rgba(163,214,92,.55)!important;box-shadow:0 0 0 3px #000!important}
 [data-theme="amoled"] .tabbar{background:#000;border-color:rgba(255,255,255,.10)}
 [data-theme="amoled"] .tab.active .tab-ico,[data-theme="amoled"] .tab.on .tab-ico{background:rgba(163,214,92,.12)}
+/* ===== Beta 37: vídeos verticais (Shorts) sem a interface de Shorts =====
+   Quando o quadro do vídeo é mais alto que largo, o YouTube troca para a interface de Shorts (título,
+   canal, logotipo "Shorts", legenda). O quadro agora é deitado (16:9) e da altura da área do vídeo;
+   o vídeo vertical fica no centro dele e as sobras dos lados (e o título no canto) ficam fora da área visível. */
+.ex-stage.v{overflow:hidden}
+.ex-stage.v iframe{height:100%!important;width:calc(min(calc(var(--mt-vh,1vh)*66),660px) * 16 / 9)!important;left:50%!important;transform:translateX(-50%)!important;max-width:none!important}
+.ex-stage.v:fullscreen iframe{width:calc(100vh * 16 / 9)!important;left:50%!important;transform:translateX(-50%)!important}
 </style>
 </head>
 <body>
@@ -3169,7 +3177,7 @@ html,body{overscroll-behavior-y:contain}
       <div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div>
     </div>
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 36</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 37</span>
     </div>
   </div>
 </div>
@@ -3247,8 +3255,8 @@ html,body{overscroll-behavior-y:contain}
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.36"></script>
-<script src="./app-plus.js?v=2027.1-beta.36"></script>
+<script src="./app.js?v=2027.1-beta.37"></script>
+<script src="./app-plus.js?v=2027.1-beta.37"></script>
 <script>
 // Beta 36: app.js e app-plus.js precisam ser da MESMA versão. Se um deles não carregou ou veio de outra
 // versão (cache no meio de uma atualização), recarrega uma vez — senão partes antigas (como a tela antiga

@@ -1,3 +1,12 @@
+# MetaTreino 2027.1 Beta 37 — Ajustes a partir dos vídeos de uso
+
+1. **Perfil:** os grupos (Treino, Aplicativo, Conta e dados…) continuam abertos enquanto você usa o app, mas fechar o app e abrir de novo começa com todos fechados. Antes, o grupo aberto ficava gravado no aparelho.
+2. **Grupos repetidos no treino:** "Glúteo" (de exercícios como a Cadeira Abdutora, foco em glúteo médio) e "Glúteos" apareciam como dois grupos no mesmo treino. Agora viram um grupo só. Vale para qualquer grupo no singular/plural.
+3. **Vídeos verticais (Shorts):** o quadro do vídeo vertical era mais alto que largo, e nesse formato o YouTube troca para a interface de Shorts (título, canal, logotipo, legenda). O quadro agora é deitado, com o vídeo no centro e as sobras fora da área visível, como nas versões antigas. A legenda é desligada ao abrir o vídeo.
+4. **Retomada da corrida:** quem já tinha montado o plano com a versão anterior ficou com a retomada aplicada em cima da avaliação. Ela é desfeita sozinha e o plano volta para o estágio da avaliação.
+5. **Assistente, "Quanto peso perdi?":** números no formato brasileiro (122,9 kg) e comentário de acordo com o objetivo. Quem quer emagrecer e ganhou peso não recebe mais "ótimo sinal".
+6. **Cena do Início:** cronômetro da véspera, balões do aniversário, árvore de Natal e faixa de chegada ficaram sólidos (o traço do morro não aparece através deles), e com chuva ou tempestade não aparece mais sol no amanhecer/fim de tarde.
+
 # MetaTreino 2027.1 Beta 36 — Acabamento visual, séries e compartilhamento
 
 Detalhes técnicos em `RELATORIO-BETA36.md`. As regras do Firestore não mudaram nesta versão.

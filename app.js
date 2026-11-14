@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 36 =====
-const APP_VERSION = '2027.1-beta.36';
+// ===== MetaTreino 2027.1 Beta 37 =====
+const APP_VERSION = '2027.1-beta.37';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -3860,11 +3860,17 @@ function marcaBlocoAberto(exId){
   }catch(e){}
 }
 function renderLiftBlocksBase(w){
-  const groups = {};
+  // Beta 37: "Glúteo" (de "Glúteo Médio") e "Glúteos" eram dois grupos separados no mesmo treino.
+  // Agrupa pela forma normalizada (sem acento e sem plural) e mostra o nome no plural quando houver.
+  const groups = {}, rotulo = {};
+  const chaveGrupo = g => g.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/s$/,'');
   w.exercises.forEach(ex=>{
-    const g = (ex.sub||'').split(/[\s\/]/)[0] || 'Principal';
-    (groups[g] = groups[g]||[]).push(ex);
+    const g0 = (ex.sub||'').split(/[\s\/]/)[0] || 'Principal';
+    const k = chaveGrupo(g0);
+    if(!rotulo[k] || (g0.length > rotulo[k].length && /s$/.test(g0))) rotulo[k] = g0;
+    (groups[k] = groups[k]||[]).push(ex);
   });
+  Object.keys(groups).forEach(k=>{ if(rotulo[k] !== k){ groups[rotulo[k]] = groups[k]; delete groups[k]; } });
   // Um grupo está "pronto" quando todos os seus exercícios foram registrados hoje.
   // O primeiro grupo AINDA não concluído abre sozinho — a pessoa não precisa ficar clicando.
   const hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -6580,7 +6586,15 @@ const MA_ANSWERS = {
     const diff = +(l - f).toFixed(1);
     if(diff===0) return `Seu peso está igual ao primeiro registro (${l} kg). Lembre: a balança não conta tudo — força e medidas também evoluem. 💪`;
     const perdeu = diff<0;
-    return `Do primeiro registro (${f} kg) até agora (${l} kg), você ${perdeu?'perdeu':'ganhou'} <b>${Math.abs(diff)} kg</b>. ${perdeu?'Mandou bem no processo! 🔥':'Se o objetivo é massa, ótimo sinal — senão, vale ajustar a rotina. 💪'}`;
+    // Beta 37: números no formato brasileiro (122,9 kg) e comentário de acordo com o objetivo do aluno
+    const kg = n => (+n).toLocaleString('pt-BR', { maximumFractionDigits:1 });
+    let obj = ''; try{ obj = String(((state.modules.lift||{}).setup||{}).goal || ((state.user||{}).profile||{}).goal || '').toLowerCase(); }catch(e){}
+    const querPerder = /emagrec|perder|defini/.test(obj), querGanhar = /hipertrof|massa|ganh/.test(obj);
+    const coment = perdeu
+      ? (querGanhar ? 'Como seu objetivo é ganhar massa, vale olhar a alimentação e a carga dos treinos.' : 'Mandou bem no processo! 🔥')
+      : (querPerder ? 'Como seu objetivo é emagrecer, vale revisar a alimentação e manter a regularidade dos treinos — a balança oscila, e força e medidas também contam. 💪'
+        : querGanhar ? 'Para quem busca ganhar massa, é um bom sinal. 💪' : 'A balança oscila: acompanhe também as medidas e a força. 💪');
+    return `Do primeiro registro (${kg(f)} kg) até agora (${kg(l)} kg), você ${perdeu?'perdeu':'ganhou'} <b>${kg(Math.abs(diff))} kg</b>. ${coment}`;
   },
   trocar_ex(){ return `Sim! 🔀 Na aba <b>Sessões</b>, cada exercício tem o botão <b>"Trocar"</b> — ele substitui por outro do mesmo grupo muscular, mantendo o foco do treino (vale só para aquele dia). E o botão <b>"Ver como fazer"</b> abre o vídeo da execução. 💪`; },
   proximo_trofeu(){

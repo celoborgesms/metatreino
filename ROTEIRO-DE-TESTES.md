@@ -1,11 +1,11 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 36
+# Roteiro de testes em aparelho real — MetaTreino Beta 37
 
 Leva uns 25 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
 
 Antes de começar: publique o `firestore.rules` novo no Console do Firebase (Firestore → Regras → Publicar).
 
 ## 1. Instalação, atualização e modo avião
-- [ ] O app atualizou sozinho para a **Beta 36** (Perfil → rodapé), sem tocar em nenhum botão?
+- [ ] O app atualizou sozinho para a **Beta 37** (Perfil → rodapé), sem tocar em nenhum botão?
 - [ ] Fechar e abrir de novo: entrou direto, sem pedir login?
 - [ ] **Logo depois de atualizar**, ligue o modo avião, feche o app de vez e abra de novo. Ele abre e mostra os treinos? (Na Beta 32 este caso podia abrir em branco.)
 - [ ] Ainda no modo avião: registre 2 séries e salve o treino. Desligue o modo avião. O treino aparece no Histórico de outro aparelho (ou depois de sair e entrar)?
@@ -46,6 +46,12 @@ Antes de começar: publique o `firestore.rules` novo no Console do Firebase (Fir
 - [ ] Corrida → Semana com menos tempo: escolha menos dias. Aparece "Como fica a semana" antes de aplicar? Depois de aplicar, a semana muda na hora?
 - [ ] Segure o dedo num botão ou numa aba: não aparece o menu de copiar? Segure num texto da ficha: dá para selecionar?
 - [ ] Na ficha de um exercício com créditos, eles aparecem no fim, depois de "Erro comum"?
+
+## 4e. Beta 37
+- [ ] Perfil: abra um grupo, feche o app (tire da lista de recentes) e abra de novo — o grupo está fechado?
+- [ ] Treino com Cadeira Abdutora/glúteo médio: aparece só um grupo "Glúteos"?
+- [ ] "Ver como fazer" num exercício com vídeo vertical: sem o logotipo "Shorts", sem título grande e sem legenda?
+- [ ] Corrida: o cartão do treino e o aviso de progresso mostram o mesmo estágio?
 
 ## 4d. Beta 36 — acabamento
 - [ ] Início de manhã, de dia, no fim da tarde e à noite: o sol ou a lua aparecem inteiros, à direita da saudação, sem nada por cima? Com chuva ou nublado aparecem nuvens?

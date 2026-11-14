@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 36 — app-plus.js
+// MetaTreino 2027.1 Beta 37 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.36' };
+const MTP = { versao: '2027.1-beta.37' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -1552,7 +1552,7 @@ const MT_PLAYER = { p:null, v:null, info:null, mudo:false, pronto:false, t:null,
 // logotipo por parâmetro (o "showinfo" foi desativado em 2018) — eles podem aparecer por alguns
 // segundos no início ou ao pausar, sem dar para remover sem infringir os termos do YouTube.
 function _mtPlayerVars(v, mudo){
-  return { autoplay:1, playsinline:1, controls:0, rel:0, modestbranding:1, iv_load_policy:3, disablekb:1, fs:0, cc_load_policy:0,
+  return { autoplay:1, playsinline:1, controls:0, rel:0, modestbranding:1, iv_load_policy:3, disablekb:1, fs:0, cc_load_policy:0, cc_lang_pref:'pt', hl:'pt-BR',
     loop:1, playlist:v.id, mute: mudo ? 1 : 0, origin: location.origin };
 }
 const MTV_PAUSA = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
@@ -1615,7 +1615,7 @@ function mtDestruirPlayer(){
 function _mtIframeSimples(v, mudo){
   const alvo = $('ex-yt'); if(!alvo) return;
   // sem a API não há como pôr controles próprios: o player do YouTube fica com os dele, no modo mais enxuto permitido
-  const src = `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&modestbranding=1&playsinline=1&autoplay=1&iv_load_policy=3&loop=1&playlist=${v.id}&mute=${mudo?1:0}`;
+  const src = `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&modestbranding=1&playsinline=1&autoplay=1&iv_load_policy=3&cc_load_policy=0&loop=1&playlist=${v.id}&mute=${mudo?1:0}`;
   const st = $('ex-stage'); if(st) st.classList.add('nativo');
   alvo.outerHTML = `<iframe src="${src}" title="Vídeo do exercício" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen onload="exVideoOk()"></iframe>`;
   const b = $('ex-som'); if(b){ b.disabled = true; b.title = 'Use o botão de som do próprio player'; b.style.opacity = '.5'; }
@@ -1634,6 +1634,8 @@ function mtMontarPlayer(v, info){
         onReady: e=>{
           MT_PLAYER.pronto = true; clearTimeout(MT_PLAYER.t);
           try{ MT_PLAYER.mudo ? e.target.mute() : e.target.unMute(); e.target.playVideo(); }catch(err){}
+          // Beta 37: legenda nunca liga sozinha (o YouTube às vezes segue a preferência da conta do aparelho)
+          try{ e.target.unloadModule && e.target.unloadModule('captions'); e.target.unloadModule && e.target.unloadModule('cc'); }catch(err){}
           exVideoOk(); _mtBotaoSom(); _mtLigaControles();
           try{ const vol = $('mtv-vol'); if(vol) vol.value = MT_PLAYER.mudo ? 0 : (e.target.getVolume ? e.target.getVolume() : 100); }catch(err){}
         },
@@ -4629,6 +4631,13 @@ function runSync(force, refazer){
   // hoje?" e "está parado?"). Antes a retomada rebaixava de novo esse ponto de partida (estágio 3 da avaliação
   // virava estágio 1) e o cartão do treino e o aviso de progresso mostravam estágios diferentes.
   const planoDepoisDaPausa = pz && (M.criadoEm || M.inicio || 0) > pz.ultimoAntes;
+  // Beta 37: plano montado depois da pausa que ainda carrega uma retomada dessa mesma pausa (aplicada antes da
+  // correção): desfaz — o ponto de partida volta a ser o da avaliação.
+  if(planoDepoisDaPausa && M.retomada && !M.retomada.declarada && M.retomada.chave === chave){
+    const a = M.retomada.antes || {};
+    if(a.estagio != null) M.estagio = a.estagio; if(a.nivel != null) M.nivel = a.nivel; if(a.contMin != null) M.contMin = a.contMin;
+    delete M.retomada; mudou = rebuild = true;
+  }
   if(pz && pz.pausa >= 7 && !planoDepoisDaPausa && (!M.retomada || M.retomada.chave !== chave)){
     const N = rRetomadaSemanas(pz.pausa);
     const inicio = pz.voltou ? rSem(pz.retorno) : semAtual;
@@ -7031,15 +7040,17 @@ Object.assign(window, { resgatarEvento, admApagarAluno, admApagarConfirma, admTe
 // =====================================================================
 // O Perfil tinha ~20 linhas soltas. Agora: dados do corpo e do plano em cima e
 // quatro grupos (Ajustar plano, Treino, Aplicativo, Conta e dados) que abrem com um toque.
-// O app lembra quais grupos o aluno deixou abertos (neste aparelho).
-function _pfGruposAbertos(){ try{ return JSON.parse(localStorage.getItem('mt_pf_grupos') || '[]'); }catch(e){ return []; } }
+// Beta 37: o app lembra quais grupos ficaram abertos só enquanto está aberto (trocar de aba e voltar mantém);
+// fechar o app e abrir de novo começa com todos fechados.
+try{ localStorage.removeItem('mt_pf_grupos'); }catch(e){}
+function _pfGruposAbertos(){ try{ return JSON.parse(sessionStorage.getItem('mt_pf_grupos') || '[]'); }catch(e){ return []; } }
 function pfGruposInit(){
   const abertos = _pfGruposAbertos();
   document.querySelectorAll('#scr-profile details.pf-grp').forEach(d=>{
     if(d.dataset.ok) return; d.dataset.ok = '1';
     if(abertos.includes(d.id)) d.open = true;
     d.addEventListener('toggle', ()=>{
-      try{ const s = new Set(_pfGruposAbertos()); d.open ? s.add(d.id) : s.delete(d.id); localStorage.setItem('mt_pf_grupos', JSON.stringify([...s])); }catch(e){}
+      try{ const s = new Set(_pfGruposAbertos()); d.open ? s.add(d.id) : s.delete(d.id); sessionStorage.setItem('mt_pf_grupos', JSON.stringify([...s])); }catch(e){}
     });
   });
 }
@@ -8468,7 +8479,7 @@ function cenaInicio(){
       if(clima === 'garoa') tempo += CENA.garoa(nx, ny);
       if(clima === 'tempestade') tempo += CENA.chuva(nx, ny) + CENA.raio(nx, ny);
       if(clima === 'neve') tempo += CENA.neve(nx, ny);
-      if(clima === 'chuva' || clima === 'tempestade'){ if(hora === 'dia') ceu = ''; if(noite) ceu = estrelas; tempo = CENA.nuvem(nx + 42, ny + 6, .75) + tempo; }
+      if(clima === 'chuva' || clima === 'tempestade'){ if(hora !== 'noite') ceu = ''; if(noite) ceu = '';   /* Beta 37: com chuva não aparece sol nem estrelas (nem no amanhecer/fim de tarde) */ tempo = CENA.nuvem(nx + 42, ny + 6, .75) + tempo; }
     }
   }
   return { k:`${hora}-${clima||'semclima'}`, svg: ceu + paisagem(true) + tempo };
