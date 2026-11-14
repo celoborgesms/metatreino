@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 38 — app-plus.js
+// MetaTreino 2027.1 Beta 39 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.38' };
+const MTP = { versao: '2027.1-beta.39' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -4147,12 +4147,12 @@ function rAplicarDecisao(ctx, motor, res){
     if(nv === 0){
       const noEstagio = rAtividades(ctx).filter(r=>r.at>=res.sem && r.at<res.sem+7*DIA_MS && (r.tipoSessao==='camcorre' || r.tipoSessao==='caminhada') && (r.estagio===motor.estagio) && r.concluiu!=='nao' && r.concluiu!=='parcial' && (+r.rpe||5)<=7).length;
       if(noEstagio >= 2 && motor.estagio < RUN_EST.length-1){ motor.estagio++; res.mudou = `próximo estágio: ${rEstagioTxt(motor.estagio)}`; }
-      else if(noEstagio >= 2 && motor.estagio === RUN_EST.length-1){ motor.nivel = 1; motor.nivelDesde = res.sem+7*DIA_MS; motor.contMin = 12; res.mudou = `você correu 10 min sem parar: agora é ${RN_NOME[1]}`; }
+      else if(noEstagio >= 2 && motor.estagio === RUN_EST.length-1){ rOfertaNivel(motor, 1, res, 'você completou o último estágio de caminhada + corrida com folga'); }
       else { res.decisao = 'manter'; res.motivo = `para avançar de estágio são 2 treinos completos com esforço até 7/10 no estágio atual (feitos: ${noEstagio})`; }
     } else if(nv === 1){
       const ok = rs.filter(r=>rContinua(r) && (+r.duration||0) >= (motor.contMin||10)*0.95 && r.concluiu!=='nao' && (+r.rpe||5)<=6).length;
       if(ok >= 2){
-        if((motor.contMin||10) >= 30){ motor.nivel = 2; motor.nivelDesde = res.sem+7*DIA_MS; motor.vol = Math.max(motor.vol||0, 100); res.mudou = `30 min contínuos com folga: agora é ${RN_NOME[2]}`; }
+        if((motor.contMin||10) >= 30){ rOfertaNivel(motor, 2, res, 'você correu 30 min sem parar duas vezes com esforço até 6/10'); }
         else { const de = motor.contMin; motor.contMin = Math.min(30, (motor.contMin||10) + ((motor.contMin||10) < 20 ? 3 : 5)); res.mudou = `corrida contínua: ${de} → ${motor.contMin} min`; }
       } else { res.decisao = 'manter'; res.motivo = `para aumentar, são 2 corridas de ${motor.contMin} min sem parar com esforço até 6/10 (feitas: ${ok})`; }
     } else {
@@ -4163,6 +4163,8 @@ function rAplicarDecisao(ctx, motor, res){
       else { res.decisao = 'manter'; res.motivo += ' — você está no pico planejado para o seu nível e agenda'; }
     }
   } else if(res.decisao==='recuar'){
+    // Beta 39: semana pesada retira a oferta de subir de nível (facilidade passageira não é prontidão)
+    if(motor.ofertaNivel != null){ delete motor.ofertaNivel; delete motor.ofertaMotivo; }
     if(nv === 0){ if(motor.estagio > 1){ motor.estagio--; res.mudou = `volta para ${rEstagioTxt(motor.estagio)}`; } else res.mudou = 'repete o estágio, sem pressa'; }
     else if(nv === 1){ const de = motor.contMin; motor.contMin = Math.max(10, (motor.contMin||10) - 3); res.mudou = de!==motor.contMin ? `corrida contínua ${de} → ${motor.contMin} min` : 'repete a semana'; }
     else { const de = motor.vol; motor.vol = Math.round(Math.max(60, motor.vol*0.88)); if(motor.q>0) motor.q--; res.mudou = `volume ${de} → ${motor.vol} min e qualidade mais leve`; }
@@ -4172,9 +4174,28 @@ function rAplicarDecisao(ctx, motor, res){
     const crit = rCriteriosNivel(ctx, motor);
     const rdP = setup.raceDate ? new Date(setup.raceDate+'T12:00:00').getTime() : null;
     const pertoDaProva = rdP && rdP > res.sem && rdP - res.sem < 5*7*DIA_MS;
-    if(crit && crit.todos && !pertoDaProva && (res.sem - (motor.nivelDesde||0)) >= 3*7*DIA_MS){ motor.nivel++; motor.nivelDesde = res.sem+7*DIA_MS; motor.q = Math.max(0, motor.q-2); res.mudou = (res.mudou?res.mudou+'; ':'') + `nível ${RN_NOME[motor.nivel]}`; }
+    if(crit && crit.todos && !pertoDaProva && (res.sem - (motor.nivelDesde||0)) >= 3*7*DIA_MS && nv < RN_NOME.length-1){ rOfertaNivel(motor, nv+1, res, crit.lista.map(c=>c.txt).join('; ')); }
   }
   return res;
+}
+// Beta 39: subir de NÍVEL agora pede autorização. O motor só marca a oferta (motor.ofertaNivel) e o Meta
+// Assistente pergunta (parte 35). Continua automático o que é progressão DENTRO do nível (estágio, minutos
+// contínuos, volume, qualidade) e todo recuo (semana pesada, pausa) — recuar é segurança, não promoção.
+// window.__rAutoNivel = true (só nos testes de simulação) aplica direto, como era antes.
+function rOfertaNivel(motor, para, res, motivo){
+  if(window.__rAutoNivel){ rAplicarNivel(motor, para, res.sem+7*DIA_MS); res.mudou = (res.mudou?res.mudou+'; ':'') + `nível ${RN_NOME[para]}`; return; }
+  if(motor.ofertaNivel === para) return;
+  if(typeof evoPodeOferecer === 'function' && !evoPodeOferecer('run', para)){ res.motivo = (res.motivo?res.motivo+'; ':'') + 'próximo nível disponível, mas você preferiu continuar como está'; return; }
+  motor.ofertaNivel = para; motor.ofertaMotivo = motivo || ''; motor.ofertaEm = Date.now();
+  res.mudou = (res.mudou?res.mudou+'; ':'') + `pronto para ${RN_NOME[para]} — o Meta Assistente vai perguntar se você quer avançar`;
+}
+// aplica a subida (mesmas mudanças que o motor fazia sozinho), a partir de "desde" (início da semana seguinte)
+function rAplicarNivel(motor, para, desde){
+  if(para === 1){ motor.nivel = 1; motor.contMin = 12; }
+  else if(para === 2){ motor.nivel = 2; motor.vol = Math.max(motor.vol||0, 100); }
+  else { motor.nivel = para; motor.q = Math.max(0, (motor.q||0) - 2); }   // começa o nível novo com menos qualidade: volta a crescer aos poucos
+  motor.nivelDesde = desde;
+  delete motor.ofertaNivel; delete motor.ofertaMotivo; delete motor.ofertaEm;
 }
 function rEstagioTxt(i){ const e = RUN_EST[i]; return !e ? '' : e.rep ? `${e.rep}× (${e.corre} min correndo + ${e.anda} min caminhando)` : `${e.cam} min de caminhada ativa`; }
 // critérios para subir de nível (também usados pelo Meta Assistente para explicar "quando avançar")
@@ -9807,3 +9828,823 @@ mtGancho('doLogout', { depois(){ try{ cadastroRecomecar(); }catch(e){} cadEscond
 // início: guarda o estado original dos formulários e desenha os ícones
 try{ cadFotografa(); cadPoeIcones(document); }catch(e){ console.log('cadastro (início):', e); }
 Object.assign(window, { cadastroPronto, cadastroRecomecar, irParaCadastro, wzIr, wzAvancar, wzVoltar, wzVoltaDoPick, wzEscolheTema, wzAbreObjetivo, wzEditaQuiz, wzMostraCampo, equipIcone, cadIco });
+// ---------- 34. CONTROLES POR GESTO: números, distâncias, durações, datas e horários (Beta 39) ----------
+// Um componente só para o app inteiro. Tocar num campo numérico abre uma folha com uma RÉGUA horizontal:
+// arrastar para o lado muda o valor, com o embalo nativo do sistema (rolagem do próprio navegador, sem
+// travar) e encaixe suave no valor mais próximo. O valor aparece grande enquanto a régua anda.
+//  • Datas: três réguas (dia, mês, ano). Horário: hora e minuto. Duração: h/min/s. Distância: km e metros.
+//  • O teclado não abre sozinho (campo readonly + inputmode="none"). "Digitar" abre o teclado de propósito.
+//  • Sem tela de toque: arrastar com o mouse (com embalo), roda do mouse, setas do teclado, PageUp/PageDown,
+//    Home/End e digitar números direto com a folha aberta.
+//  • Datas opcionais ganham "×" no próprio campo e "Sem data" na folha (antes não dava para apagar).
+//  • O campo continua sendo o mesmo <input>: o valor é gravado nele e os eventos input/change disparam,
+//    então nenhuma tela precisou mudar a forma de ler os dados.
+// Campos de texto (assistente, busca, nomes, observações) não são tocados. data-teclado no input = fica de fora.
+
+const NR_TK = 12;   // distância entre dois traços da régua (px)
+const NR_MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const NR_MESES_LONGO = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const NR_OPCIONAIS = ['lift-start-date','run-start-date','run-race-date','run-race-time','ep-birth','sa-data','ef-ini','ef-fim'];
+const _nrPeso = ()=> (typeof latestWeight === 'function' && latestWeight()) || (state.user && state.user.profile && state.user.profile.currentWeight) || 70;
+const NR_CAMPOS = {
+  'q-height':{ tit:'Altura', min:100, max:230, step:1, un:'cm', def:170 },
+  'ep-height':{ tit:'Altura', min:100, max:230, step:1, un:'cm', def:170 },
+  'q-weight':{ tit:'Peso atual', min:30, max:250, step:0.1, un:'kg', def:70 },
+  'wt-val':{ tit:'Peso de hoje', min:30, max:250, step:0.1, un:'kg', def:_nrPeso },
+  'fn-peso':{ tit:'Peso no dia da foto', min:30, max:250, step:0.1, un:'kg', def:_nrPeso },
+  'ep-age':{ tit:'Idade', min:10, max:100, step:1, un:'anos', def:30 },
+  'ct-flexao':{ tit:'Flexões seguidas', min:0, max:100, step:1, un:'reps', def:10 },
+  'ct-barra':{ tit:'Barras seguidas', min:0, max:50, step:1, un:'reps', def:3 },
+  'ct-dips':{ tit:'Paralelas seguidas', min:0, max:80, step:1, un:'reps', def:5 },
+  'ct-prancha':{ tit:'Prancha', min:0, max:600, step:5, un:'s', def:30 },
+  'nc-kcal':{ tit:'Calorias', min:0, max:6000, step:10, un:'kcal', def:2000 },
+  'nc-p':{ tit:'Proteínas', min:0, max:600, step:1, un:'g', def:120 },
+  'nc-c':{ tit:'Carboidratos', min:0, max:900, step:1, un:'g', def:200 },
+  'nc-g':{ tit:'Gorduras', min:0, max:400, step:1, un:'g', def:60 },
+  'ef-alvo':{ tit:'Meta de dias ativos', min:1, max:60, step:1, un:'dias', def:8 },
+  'rl-km':{ tipo:'dist', tit:'Distância' }, 'he-km':{ tipo:'dist', tit:'Distância' }, 'act-km':{ tipo:'dist', tit:'Distância' },
+  'rl-min':{ tipo:'dur', tit:'Tempo total', h:true }, 'he-dur':{ tipo:'dur', tit:'Duração', h:false, maxMin:300 }   // he-dur é "min:seg"
+};
+function _nrNum(v){ const n = parseFloat(String(v==null?'':v).replace(',','.')); return isFinite(n) ? n : null; }
+function _nrFmt(v, step){ const dec = step < 1 ? (String(step).split('.')[1]||'').length : 0; return Number(v).toFixed(dec).replace('.',','); }
+function _nrRotulo(el){
+  const f = el.closest('.field'); const l = f && f.querySelector('label');
+  const t = (el.getAttribute('aria-label') || (l && l.textContent) || '').replace(/\s*\(.*?\)\s*/g,' ').replace(/—\s*opcional/i,'').trim();
+  return t || 'Valor';
+}
+function _nrIsoHoje(dd){ const d = new Date(); d.setHours(12,0,0,0); if(dd) d.setDate(d.getDate()+dd); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+// que tipo de controle cada campo usa (ou null = continua com teclado)
+function nrConfig(el){
+  if(!el || el.tagName !== 'INPUT' || el.dataset.teclado != null || el.closest('#nr-fundo')) return null;
+  const id = el.id || '', tp = (el.getAttribute('type')||'text').toLowerCase();
+  if(tp === 'date'){
+    const hoje = _nrIsoHoje();
+    let min = el.getAttribute('min'), max = el.getAttribute('max');
+    if(/start-date/.test(id)){ min = min || hoje; max = max || _nrIsoHoje(365); }
+    else if(id === 'run-race-date'){ min = min || hoje; max = max || _nrIsoHoje(730); }
+    else if(/birth/.test(id)){ min = min || '1920-01-01'; const d = new Date(); max = `${d.getFullYear()-10}-12-31`; }
+    return { tipo:'data', tit:_nrRotulo(el), min: min || _nrIsoHoje(-365*5), max: max || _nrIsoHoje(365*5), opcional: NR_OPCIONAIS.includes(id), nasc: /birth/.test(id) };
+  }
+  if(tp === 'time') return { tipo:'hora', tit:_nrRotulo(el), opcional: NR_OPCIONAIS.includes(id) };
+  if(el.closest('.tempo-hms')) return { tipo:'hms', tit: /marca/.test(id) ? 'Tempo da prova recente' : 'Tempo total' };
+  const base = NR_CAMPOS[id];
+  if(base) return Object.assign({ tipo:'num' }, base, { tit: base.tit });
+  if(el.classList.contains('set-in')){
+    const oc = el.getAttribute('onchange') || '';
+    if(/'peso'/.test(oc)) return { tipo:'num', tit:'Carga', min:0, max:400, step:0.5, un:'kg', def: _nrNum(el.placeholder) || 10 };
+    if(/'reps'/.test(oc)) return { tipo:'num', tit:'Repetições', min:0, max:100, step:1, un:'reps', def: _nrNum(el.placeholder) || 10 };
+    if(/'tempo'/.test(oc)) return { tipo:'dur', tit:'Tempo da série', h:false, maxMin:20 };
+  }
+  if(tp === 'number'){
+    const min = _nrNum(el.getAttribute('min')), max = _nrNum(el.getAttribute('max')), step = _nrNum(el.getAttribute('step'));
+    const mn = min != null ? min : 0;
+    return { tipo:'num', tit:_nrRotulo(el), min:mn, max: max != null ? max : mn + 1000, step: step && step > 0 ? step : 1, un:'', def: _nrNum(el.placeholder) };
+  }
+  return null;
+}
+
+// ---- a régua ----
+function nrRegua(o){
+  // o: { min, max, step, valor, fmt(v), rotulo, maior, onChange(v), compacta, nome }
+  const TK = o.tk || NR_TK;   // faixas curtas (mês, ano, hora) usam traços mais espaçados para os números não se encostarem
+  const n = Math.max(1, Math.round((o.max - o.min)/o.step));
+  const maior = o.maior || (n > 300 || o.step < 1 ? 10 : 5);
+  const medio = maior % 2 === 0 ? maior/2 : 0;
+  const el = document.createElement('div');
+  el.className = 'nr-regua' + (o.compacta ? ' compacta' : '');
+  el.tabIndex = 0; el.setAttribute('role','slider');
+  el.setAttribute('aria-label', o.nome || 'Valor'); el.setAttribute('aria-valuemin', o.min); el.setAttribute('aria-valuemax', o.max);
+  let rot = '';
+  for(let k = 0; k <= n; k += maior) rot += `<span class="nr-r" style="left:${k*TK}px" data-k="${k}">${o.fmt(o.min + k*o.step)}</span>`;
+  el.innerHTML = `${o.rotulo ? `<div class="nr-cap">${o.rotulo}</div>` : ''}<div class="nr-rolo"><div class="nr-esp"></div><div class="nr-trilho" style="width:${n*TK+2}px;--tk:${TK}px;--mj:${maior*TK}px;--md:${(medio||maior)*TK}px">${rot}</div><div class="nr-esp"></div></div><div class="nr-agulha" aria-hidden="true"></div>`;
+  const rolo = el.querySelector('.nr-rolo');
+  const clampK = k=>Math.max(0, Math.min(n, k));
+  const valDe = k=>Math.round((o.min + k*o.step)*1e6)/1e6;
+  let kAtual = clampK(Math.round(((o.valor != null ? o.valor : o.min) - o.min)/o.step));
+  let raf = 0, toque = false, mouse = false, fimT = 0, ultVib = 0, inercia = 0;
+  // a folha pode ter fechado enquanto a régua ainda terminava o encaixe: aí não avisa mais ninguém
+  const muda = v=>{ if(NR && o.onChange) o.onChange(v); };
+  const aria = ()=>{ el.setAttribute('aria-valuenow', valDe(kAtual)); el.setAttribute('aria-valuetext', o.fmt(valDe(kAtual)) + (o.un ? ' '+o.un : '')); };
+  const vibra = ()=>{ const t = Date.now(); if(t - ultVib > 35 && navigator.vibrate && matchMedia('(pointer:coarse)').matches){ ultVib = t; try{ navigator.vibrate(3); }catch(e){} } };
+  const ler = ()=>{
+    raf = 0;
+    const k = clampK(Math.round(rolo.scrollLeft / TK));
+    if(k !== kAtual){ kAtual = k; aria(); vibra(); muda(valDe(k)); }
+  };
+  const ajusta = ()=>{
+    if(toque || mouse) return;
+    // lê a posição de agora (o fim da rolagem pode chegar antes do quadro que atualiza o valor)
+    const k = clampK(Math.round(rolo.scrollLeft / TK));
+    if(k !== kAtual){ kAtual = k; aria(); muda(valDe(k)); }
+    const alvo = kAtual*TK;
+    if(Math.abs(rolo.scrollLeft - alvo) > 0.6) rolo.scrollTo({ left:alvo, behavior:'smooth' });
+  };
+  const agenda = ()=>{ clearTimeout(fimT); fimT = setTimeout(ajusta, 'onscrollend' in window ? 260 : 110); };
+  rolo.addEventListener('scroll', ()=>{ if(!raf) raf = requestAnimationFrame(ler); if(!toque && !mouse) agenda(); }, { passive:true });
+  rolo.addEventListener('scrollend', ()=>{ clearTimeout(fimT); ajusta(); });
+  rolo.addEventListener('touchstart', ()=>{ toque = true; cancelAnimationFrame(inercia); }, { passive:true });
+  const solta = ()=>{ toque = false; agenda(); };
+  rolo.addEventListener('touchend', solta, { passive:true }); rolo.addEventListener('touchcancel', solta, { passive:true });
+  // mouse: arrastar com embalo
+  rolo.addEventListener('pointerdown', e=>{
+    if(e.pointerType !== 'mouse' || e.button !== 0) return;
+    e.preventDefault(); cancelAnimationFrame(inercia); mouse = true; el.classList.add('arrastando');
+    const x0 = e.clientX, s0 = rolo.scrollLeft; let ux = x0, ut = performance.now(), v = 0;
+    rolo.setPointerCapture(e.pointerId);
+    const mv = ev=>{ rolo.scrollLeft = s0 - (ev.clientX - x0); const t = performance.now(); if(t > ut){ v = (ev.clientX - ux)/(t - ut); ux = ev.clientX; ut = t; } };
+    const up = ()=>{
+      rolo.removeEventListener('pointermove', mv); rolo.removeEventListener('pointerup', up); rolo.removeEventListener('pointercancel', up);
+      el.classList.remove('arrastando');
+      let vel = -v*16;   // px por quadro
+      const passo = ()=>{ if(Math.abs(vel) < 0.4){ mouse = false; ajusta(); return; } rolo.scrollLeft += vel; vel *= 0.94; inercia = requestAnimationFrame(passo); };
+      if(performance.now() - ut > 80) vel = 0;
+      passo();
+    };
+    rolo.addEventListener('pointermove', mv); rolo.addEventListener('pointerup', up); rolo.addEventListener('pointercancel', up);
+  });
+  rolo.addEventListener('wheel', e=>{ e.preventDefault(); rolo.scrollLeft += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY; agenda(); }, { passive:false });
+  // tocar num número da régua leva até ele
+  rolo.addEventListener('click', e=>{ const r = e.target.closest('.nr-r'); if(r) api.definir(valDe(+r.dataset.k), true); });
+  el.addEventListener('keydown', e=>{
+    const d = { ArrowRight:1, ArrowUp:1, ArrowLeft:-1, ArrowDown:-1, PageUp:maior, PageDown:-maior }[e.key];
+    if(d != null){ e.preventDefault(); api.definir(valDe(clampK(kAtual + d)), true); }
+    else if(e.key === 'Home'){ e.preventDefault(); api.definir(o.min, true); }
+    else if(e.key === 'End'){ e.preventDefault(); api.definir(valDe(n), true); }
+  });
+  const api = {
+    el,
+    get valor(){ return valDe(kAtual); },
+    definir(v, suave){
+      const k = clampK(Math.round((v - o.min)/o.step));
+      if(k !== kAtual){ kAtual = k; aria(); muda(valDe(k)); }
+      rolo.scrollTo({ left:k*TK, behavior: suave ? 'smooth' : 'auto' });
+    },
+    // depois de aparecer na tela: espaços laterais = metade da largura (o traço 0 fica no meio)
+    montar(){
+      const w = rolo.clientWidth; rolo.querySelectorAll('.nr-esp').forEach(s=>{ s.style.width = (w/2) + 'px'; });
+      rolo.scrollLeft = kAtual*TK; aria();
+    }
+  };
+  aria();
+  return api;
+}
+
+// ---- a folha ----
+let NR = null;   // estado da folha aberta
+function nrFolha(){
+  let f = document.getElementById('nr-fundo');
+  if(f) return f;
+  f = document.createElement('div'); f.id = 'nr-fundo'; f.className = 'nr-fundo';
+  f.innerHTML = `<div class="nr-folha" role="dialog" aria-modal="true" aria-labelledby="nr-tit">
+      <div class="nr-alca" aria-hidden="true"></div>
+      <div class="nr-topo"><div class="nr-tit" id="nr-tit"></div><button type="button" class="nr-x" aria-label="Fechar sem mudar" onclick="nrFechar()">×</button></div>
+      <div class="nr-mostra" aria-live="polite"><span class="nr-num"></span><span class="nr-un"></span></div>
+      <div class="nr-sub"></div>
+      <div class="nr-reguas"></div>
+      <div class="nr-dig" hidden><input class="input mono" id="nr-dig-in" autocomplete="off" data-teclado><div class="nr-dig-dica"></div></div>
+      <div class="nr-acoes"><button type="button" class="btn btn-ghost nr-limpar" onclick="nrLimpar()"></button><button type="button" class="btn btn-ghost nr-bdig" onclick="nrDigitar()">Digitar</button><button type="button" class="btn btn-primary nr-ok" onclick="nrConfirmar()">Confirmar</button></div>
+    </div>`;
+  document.body.appendChild(f);
+  f.addEventListener('click', e=>{ if(e.target === f) nrFechar(); });
+  f.addEventListener('keydown', e=>{
+    if(e.key === 'Escape'){ e.preventDefault(); nrFechar(); }
+    else if(e.key === 'Enter' && !e.target.closest('button')){ e.preventDefault(); nrConfirmar(); }
+    else if(/^[0-9]$/.test(e.key) && e.target.id !== 'nr-dig-in' && NR){ nrDigitar(e.key); e.preventDefault(); }   // computador: digitar direto
+  });
+  const dig = f.querySelector('#nr-dig-in'); dig.addEventListener('input', ()=>nrDigitado(true));
+  return f;
+}
+function nrMostra(txt, un, sub){
+  const f = nrFolha();
+  const num = f.querySelector('.nr-num'); num.textContent = txt; num.classList.toggle('longo', String(txt).length > 9); f.querySelector('.nr-un').textContent = un || '';
+  f.querySelector('.nr-sub').textContent = sub || '';
+}
+function _nrDiasMes(a, m){ return new Date(a, m, 0).getDate(); }
+function _nrDataTxt(a, m, d){ const dt = new Date(a, m-1, d, 12); return { num:`${d} de ${NR_MESES_LONGO[m-1]} de ${a}`, sub: dt.toLocaleDateString('pt-BR', { weekday:'long' }) }; }
+function _nrHms(s){ s = Math.max(0, Math.round(s)); return { h:Math.floor(s/3600), m:Math.floor(s%3600/60), s:s%60 }; }
+function _nrLerDur(txt){
+  const p = String(txt||'').trim().split(/[:.]/).map(x=>parseInt(x,10));
+  if(!p.length || p.some(isNaN)) return null;
+  if(p.length === 3) return p[0]*3600 + p[1]*60 + p[2];
+  if(p.length === 2) return p[0]*60 + p[1];
+  return p[0]*60;
+}
+function nrAbrir(el){
+  const c = nrConfig(el); if(!c) return;
+  const f = nrFolha(); const box = f.querySelector('.nr-reguas'); box.innerHTML = '';
+  f.querySelector('.nr-dig').hidden = true; box.hidden = false;
+  f.querySelector('#nr-tit').textContent = c.tit;
+  const lim = f.querySelector('.nr-limpar');
+  NR = { el, c, reguas:[], val:null, origem: document.activeElement };
+  const add = (r)=>{ NR.reguas.push(r); box.appendChild(r.el); return r; };
+  if(c.tipo === 'num'){
+    const atual = _nrNum(el.value);
+    const def = atual != null ? atual : (typeof c.def === 'function' ? c.def() : c.def != null ? c.def : c.min);
+    NR.val = Math.max(c.min, Math.min(c.max, def));
+    const up = v=>{ NR.val = v; nrMostra(_nrFmt(v, c.step), c.un); };
+    add(nrRegua({ min:c.min, max:c.max, step:c.step, valor:NR.val, fmt:v=>_nrFmt(v, c.step).replace(/,0+$/,''), un:c.un, nome:c.tit, onChange:up }));
+    up(NR.val);
+    lim.textContent = 'Apagar'; lim.hidden = !el.value;
+  } else if(c.tipo === 'dist'){
+    const atual = _nrNum(el.value) || 5;
+    let km = Math.floor(atual), mt = Math.round((atual - km)*100)*10;
+    const up = ()=>{ NR.val = km + mt/1000; nrMostra(_nrFmt(NR.val, 0.01), 'km'); };
+    add(nrRegua({ min:0, max:120, step:1, valor:km, fmt:v=>String(v), rotulo:'km', nome:'Quilômetros', compacta:true, maior:5, tk:24, onChange:v=>{ km = v; up(); } }));
+    add(nrRegua({ min:0, max:990, step:10, valor:mt, fmt:v=>String(v), rotulo:'metros', nome:'Metros', compacta:true, maior:10, tk:16, onChange:v=>{ mt = v; up(); } }));
+    up(); lim.textContent = 'Apagar'; lim.hidden = !el.value;
+  } else if(c.tipo === 'dur' || c.tipo === 'hms'){
+    let seg;
+    if(c.tipo === 'hms'){ const g = el.closest('.tempo-hms'); const ins = [...g.querySelectorAll('input')]; NR.grupo = ins; seg = (+ins[0].value||0)*3600 + (+ins[1].value||0)*60 + (+ins[2].value||0); c.h = true; }
+    else seg = _nrLerDur(el.value) || 0;
+    let t = _nrHms(seg);
+    const up = ()=>{ NR.val = t.h*3600 + t.m*60 + t.s; nrMostra(c.h && t.h ? `${t.h}h ${String(t.m).padStart(2,'0')}min ${String(t.s).padStart(2,'0')}s` : `${c.h ? t.m : t.m + t.h*60}min ${String(t.s).padStart(2,'0')}s`, ''); };
+    if(c.h) add(nrRegua({ min:0, max:9, step:1, valor:t.h, fmt:v=>String(v), rotulo:'horas', nome:'Horas', compacta:true, maior:1, tk:48, onChange:v=>{ t.h = v; up(); } }));
+    else { t.m += t.h*60; t.h = 0; }
+    add(nrRegua({ min:0, max: c.h ? 59 : (c.maxMin||59), step:1, valor:t.m, fmt:v=>String(v), rotulo:'min', nome:'Minutos', compacta:true, maior:5, tk:20, onChange:v=>{ t.m = v; up(); } }));
+    add(nrRegua({ min:0, max:59, step:1, valor:t.s, fmt:v=>String(v).padStart(2,'0'), rotulo:'seg', nome:'Segundos', compacta:true, maior:5, tk:20, onChange:v=>{ t.s = v; up(); } }));
+    up(); lim.textContent = 'Apagar'; lim.hidden = !(NR.grupo ? NR.grupo.some(i=>i.value) : el.value);
+  } else if(c.tipo === 'data'){
+    const [mnA] = c.min.split('-').map(Number), [mxA] = c.max.split('-').map(Number);
+    let base = el.value || (c.nasc ? `${new Date().getFullYear()-30}-01-01` : (c.min > _nrIsoHoje() ? c.min : _nrIsoHoje()));
+    if(base < c.min) base = c.min; if(base > c.max) base = c.max;
+    let [a, m, d] = base.split('-').map(Number);
+    let rDia, dmAtual = 0;
+    const iso =()=>`${a}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const up = ()=>{
+      const dm = _nrDiasMes(a, m); if(d > dm) d = dm;
+      let v = iso(); if(v < c.min){ [a,m,d] = c.min.split('-').map(Number); v = iso(); } if(v > c.max){ [a,m,d] = c.max.split('-').map(Number); v = iso(); }
+      NR.val = v; const t = _nrDataTxt(a, m, d); nrMostra(t.num, '', t.sub);
+    };
+    // o dia acompanha o mês: fevereiro tem 28/29, abril 30…
+    const novoDia = ()=>{
+      const dm = _nrDiasMes(a, m); if(d > dm) d = dm; dmAtual = dm;
+      const r = nrRegua({ min:1, max:dm, step:1, valor:d, fmt:v=>String(v), rotulo:'dia', nome:'Dia', compacta:true, maior:1, tk:40, onChange:v=>{ d = v; up(); } });
+      if(rDia){ box.replaceChild(r.el, rDia.el); NR.reguas[0] = r; requestAnimationFrame(()=>r.montar()); } else add(r);
+      rDia = r;
+    };
+    novoDia();
+    add(nrRegua({ min:1, max:12, step:1, valor:m, fmt:v=>NR_MESES[v-1], rotulo:'mês', nome:'Mês', compacta:true, maior:1, tk:64, onChange:v=>{ m = v; if(_nrDiasMes(a, m) !== dmAtual) novoDia(); up(); } }));
+    add(nrRegua({ min:mnA, max:mxA, step:1, valor:a, fmt:v=>String(v), rotulo:'ano', nome:'Ano', compacta:true, maior:1, tk:64, onChange:v=>{ a = v; if(_nrDiasMes(a, m) !== dmAtual) novoDia(); up(); } }));
+    up();
+    lim.textContent = 'Sem data'; lim.hidden = !c.opcional;
+  } else if(c.tipo === 'hora'){
+    let [h, mi] = (el.value || '07:00').split(':').map(Number); mi = Math.round(mi/5)*5 % 60;
+    const up = ()=>{ NR.val = `${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`; nrMostra(NR.val, ''); };
+    add(nrRegua({ min:0, max:23, step:1, valor:h, fmt:v=>String(v).padStart(2,'0'), rotulo:'hora', nome:'Hora', compacta:true, maior:1, tk:44, onChange:v=>{ h = v; up(); } }));
+    add(nrRegua({ min:0, max:55, step:5, valor:mi, fmt:v=>String(v).padStart(2,'0'), rotulo:'min', nome:'Minutos', compacta:true, maior:1, tk:44, onChange:v=>{ mi = v; up(); } }));
+    up(); lim.textContent = 'Sem hora'; lim.hidden = !c.opcional;
+  }
+  f.classList.add('on'); document.documentElement.classList.add('nr-aberta');
+  requestAnimationFrame(()=>{ NR && NR.reguas.forEach(r=>r.montar()); const r0 = NR && NR.reguas[0]; if(r0) try{ r0.el.focus({ preventScroll:true }); }catch(e){} });
+}
+function nrFechar(){
+  const f = document.getElementById('nr-fundo'); if(!f) return;
+  f.classList.remove('on'); document.documentElement.classList.remove('nr-aberta');
+  const o = NR && NR.el; NR = null;
+  if(o) try{ o.focus({ preventScroll:true }); }catch(e){}
+}
+function _nrDispara(el){ el.dispatchEvent(new Event('input', { bubbles:true })); el.dispatchEvent(new Event('change', { bubbles:true })); nrCampoVazio(el); }
+function nrGravar(v){
+  const { el, c } = NR;
+  if(c.tipo === 'hms'){
+    const ins = NR.grupo;
+    if(v === ''){ ins.forEach(i=>{ i.value = ''; _nrDispara(i); }); return; }
+    const t = _nrHms(v); [t.h, t.m, t.s].forEach((x,i)=>{ ins[i].value = x || (i ? '0' : ''); _nrDispara(ins[i]); });
+    return;
+  }
+  if(v === '') el.value = '';
+  else if(c.tipo === 'num') el.value = String(Math.round(v*1e6)/1e6);
+  else if(c.tipo === 'dist') el.value = (el.type === 'number' ? String(Math.round(v*100)/100) : String(Math.round(v*100)/100).replace('.',','));
+  else if(c.tipo === 'dur'){ const t = _nrHms(v); el.value = c.h && t.h ? `${t.h}:${String(t.m).padStart(2,'0')}:${String(t.s).padStart(2,'0')}` : `${t.m + t.h*60}:${String(t.s).padStart(2,'0')}`; }
+  else el.value = v;
+  _nrDispara(el);
+}
+function nrConfirmar(){
+  if(!NR) return;
+  if(!document.querySelector('#nr-fundo .nr-dig').hidden){ if(!nrDigitado(false)) return; }
+  nrGravar(NR.val); nrFechar();
+}
+function nrLimpar(){ if(!NR) return; nrGravar(''); nrFechar(); }
+// alternativa sem gesto: o teclado abre porque a pessoa pediu
+function nrDigitar(primeiro){
+  if(!NR) return;
+  const f = nrFolha(); const d = f.querySelector('.nr-dig'); const inp = f.querySelector('#nr-dig-in'); const c = NR.c;
+  const dica = { num:`Entre ${_nrFmt(c.min, c.step||1)} e ${_nrFmt(c.max, c.step||1)}${c.un?' '+c.un:''}`, dist:'Ex.: 5,25 (km)', dur: c.h ? 'Ex.: 44:30 ou 1:05:00' : 'Ex.: 1:30 (min:seg)', hms:'Ex.: 44:30 ou 1:05:00', data:'dd/mm/aaaa', hora:'hh:mm' }[c.tipo];
+  inp.setAttribute('inputmode', ['num','dist'].includes(c.tipo) ? 'decimal' : 'numeric');
+  inp.placeholder = dica; d.querySelector('.nr-dig-dica').textContent = dica;
+  inp.value = primeiro != null ? primeiro : '';
+  d.hidden = false; f.querySelector('.nr-reguas').hidden = true;
+  setTimeout(()=>{ inp.focus(); try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(e){} }, 30);
+}
+function nrDigitado(soMostrar){
+  const inp = document.getElementById('nr-dig-in'); const c = NR && NR.c; if(!c) return false;
+  const t = inp.value.trim(); let v = null;
+  if(c.tipo === 'num' || c.tipo === 'dist'){ const n = _nrNum(t); if(n != null){ const lo = c.tipo === 'dist' ? 0 : c.min, hi = c.tipo === 'dist' ? 200 : c.max; if(n >= lo && n <= hi) v = n; } }
+  else if(c.tipo === 'dur' || c.tipo === 'hms'){ const s = _nrLerDur(t); if(s != null && s >= 0) v = s; }
+  else if(c.tipo === 'data'){ const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t); if(m){ const iso = `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; const dt = new Date(iso+'T12:00:00'); if(!isNaN(dt) && dt.getDate() === +m[1] && iso >= c.min && iso <= c.max) v = iso; } }
+  else if(c.tipo === 'hora'){ const m = /^(\d{1,2}):(\d{2})$/.exec(t); if(m && +m[1] < 24 && +m[2] < 60) v = `${m[1].padStart(2,'0')}:${m[2]}`; }
+  inp.classList.toggle('nr-ruim', !!t && v == null);
+  if(v == null) return false;
+  NR.val = v;
+  if(!soMostrar) return true;
+  if(c.tipo === 'num') nrMostra(_nrFmt(v, c.step), c.un); else if(c.tipo === 'dist') nrMostra(_nrFmt(v, 0.01), 'km');
+  else if(c.tipo === 'data'){ const [a,m,d] = v.split('-').map(Number); const x = _nrDataTxt(a,m,d); nrMostra(x.num, '', x.sub); }
+  else if(c.tipo === 'hora') nrMostra(v, ''); else { const h = _nrHms(v); nrMostra(`${h.h ? h.h+'h ' : ''}${h.m}min ${String(h.s).padStart(2,'0')}s`, ''); }
+  return true;
+}
+
+// ---- preparar os campos ----
+function nrCampoVazio(el){ const w = el.parentElement; if(w && w.classList.contains('nr-wrap')) w.classList.toggle('vazio', !el.value); }
+function nrPrepara(el){
+  if(el.dataset.nr) return;
+  const c = nrConfig(el); if(!c) return;
+  el.dataset.nr = c.tipo;
+  el.readOnly = true; el.setAttribute('inputmode','none'); el.setAttribute('aria-haspopup','dialog');
+  el.classList.add('nr-campo');
+  // datas/horários opcionais: "×" para limpar no próprio campo
+  if((c.tipo === 'data' || c.tipo === 'hora') && c.opcional && !(el.parentElement && el.parentElement.classList.contains('nr-wrap'))){
+    const w = document.createElement('span'); w.className = 'nr-wrap';
+    if(el.style.flex){ w.style.flex = el.style.flex; el.style.flex = ''; }
+    el.parentNode.insertBefore(w, el); w.appendChild(el);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'nr-limpa';
+    b.setAttribute('aria-label', c.tipo === 'hora' ? 'Limpar horário' : 'Limpar data'); b.textContent = '×';
+    b.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); el.value = ''; _nrDispara(el); });
+    w.appendChild(b); nrCampoVazio(el);
+  }
+}
+function nrVarre(raiz){
+  try{
+    if(raiz.tagName === 'INPUT'){ nrPrepara(raiz); return; }
+    if(raiz.querySelectorAll) raiz.querySelectorAll('input').forEach(nrPrepara);
+  }catch(e){ console.log('controles por gesto:', e); }
+}
+// tocar/clicar no campo abre a folha (o teclado não abre)
+document.addEventListener('click', e=>{
+  const el = e.target.closest && e.target.closest('input.nr-campo'); if(!el || el.disabled) return;
+  e.preventDefault(); nrAbrir(el);
+}, true);
+document.addEventListener('keydown', e=>{
+  const el = e.target; if(!(el && el.classList && el.classList.contains('nr-campo'))) return;
+  if(['Enter',' ','ArrowUp','ArrowDown','F4'].includes(e.key)){ e.preventDefault(); nrAbrir(el); }
+  else if((e.key === 'Delete' || e.key === 'Backspace') && el.value){ const c = nrConfig(el); if(c && c.opcional){ e.preventDefault(); el.value = ''; _nrDispara(el); } }
+}, true);
+// campos novos (janelas e fichas montadas depois) também ganham o controle
+new MutationObserver(ms=>{ ms.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType === 1) nrVarre(n); })); })
+  .observe(document.body, { childList:true, subtree:true });
+nrVarre(document.body);
+// formulários que mudam o valor por código (ex.: limpar ao recomeçar) atualizam o "×"
+document.addEventListener('input', e=>{ if(e.target && e.target.classList && e.target.classList.contains('nr-campo')) nrCampoVazio(e.target); }, true);
+mtGancho('showScreen', { depois(){ setTimeout(()=>document.querySelectorAll('.nr-wrap > input').forEach(nrCampoVazio), 0); }});
+Object.assign(window, { nrAbrir, nrFechar, nrConfirmar, nrLimpar, nrDigitar, nrRegua, nrConfig });
+// ---------- 35. META ASSISTENTE: EVOLUÇÃO DE NÍVEL, PREPARAÇÃO PARA PROVAS E BOAS-VINDAS (Beta 39) ----------
+// 1. Evolução de nível. O app não sobe o nível sozinho: quando os critérios são cumpridos, o Meta Assistente
+//    pergunta (balão + cartão no Início + conversa). "Aceitar" aplica pela lógica real do app; "Continuar como
+//    está" mantém tudo e a mesma oferta só volta depois de um tempo (6 semanas; 12 na segunda recusa...).
+//    Dá para mudar de ideia pedindo ao assistente ("quero subir de nível").
+//    • Corrida: os critérios são os do motor (rCriteriosNivel / progressão de estágio e minutos contínuos,
+//      parte 11). O motor só marca motor.ofertaNivel; a subida é rAplicarNivel, na semana seguinte, com as
+//      4 semanas de base que o motor já dá a um nível novo.
+//    • Musculação: critérios próprios (evoLiftAvaliar): tempo no nível, sessões, regularidade, aderência,
+//      evolução das cargas nos exercícios principais, esforço (RPE 1–10 e relatos de "está fácil"),
+//      recuperação (dor, pausas) e, para Avançado, força relativa. Facilidade sozinha nunca basta.
+//      Ao aceitar: setup.level novo + generatePlan (o mesmo do app), histórico intacto, 2 semanas de
+//      transição com as séries do nível anterior (buildLiftExercises) e depois o plano completo.
+//    • Calistenia: continua com o nível recalculado pelas séries (parte 09) — não entra aqui.
+// 2. Provas: orientação em marcos que dependem da distância (5/10/21/42 km), com os números do plano do aluno
+//    (volume da semana, maior corrida recente, esforço). Cada marco aparece uma vez. Depois da prova, um pedido
+//    para registrar o resultado (marcado como prova, entra nos recordes).
+// 3. Boas-vindas: conta nova ou "Começar do zero" → o assistente se apresenta de novo, com os dados novos.
+
+const EVO_NIV_LIFT = ['iniciante','intermediario','avancado'];
+const EVO_NOME_LIFT = { iniciante:'Iniciante', intermediario:'Intermediário', avancado:'Avançado' };
+const EVO_PAUSA_DIAS = 42;
+const EVO_SEM = 7*DIA_MS;
+
+function evoE(){
+  state.evolucao = state.evolucao || {};
+  ['lift','run'].forEach(m=>{ if(!state.evolucao[m]) state.evolucao[m] = {}; });
+  if(!Array.isArray(state.evolucao.log)) state.evolucao.log = [];
+  return state.evolucao;
+}
+function evoPodeOferecer(m, para){
+  const r = state.evolucao && state.evolucao[m] && state.evolucao[m].recusa;
+  return !(r && r.para === para && Date.now() < (+r.ate||0));
+}
+
+// ---- musculação: avaliação ----
+function evoE1rm(entry){
+  return Math.max(0, ...((entry && entry.sets)||[]).map(s=>{ const p = +s.peso||0, r = +s.reps||0; return p > 0 ? p*(1 + Math.min(r,12)/30) : r; }));
+}
+function evoLiftPrincipais(mod){
+  const ids = new Map();
+  ((mod.plan && mod.plan.workouts)||[]).forEach(w=>{ if(w.cali) return; (w.exercises||[]).forEach(e=>{
+    try{ const ex = exBySlug(e.id) || e; const p = exPapel(Object.assign({}, ex, { name: ex.name || e.name }), e.part || ex.part);
+      if(p && p.tier === 'principal') ids.set(e.id, e.name || ex.name); }catch(_){}
+  }); });
+  return ids;
+}
+function evoLiftProgressao(mod, desde){
+  const out = { com:0, subiram:0, cairam:0, lista:[] };
+  evoLiftPrincipais(mod).forEach((nome, id)=>{
+    const ent = ((state.progress||{})[id]||[]).filter(p=>p && p.date >= desde && p.sets && p.sets.length).sort((a,b)=>a.date-b.date);
+    if(ent.length < 4) return;
+    const ini = Math.max(evoE1rm(ent[0]), evoE1rm(ent[1])), fim = Math.max(evoE1rm(ent[ent.length-1]), evoE1rm(ent[ent.length-2]));
+    if(!(ini > 0)) return;
+    const g = fim/ini - 1; out.com++; out.lista.push({ id, nome, ganho:g, fim });
+    if(g >= mod.__evoProg) out.subiram++; if(g <= -0.05) out.cairam++;
+  });
+  return out;
+}
+// força relativa (só para Avançado): agachamento, supino e terra comparados com o peso do corpo
+function evoForcaRelativa(lista){
+  const pc = (typeof latestWeight === 'function' && latestWeight()) || (state.user && state.user.profile && state.user.profile.currentWeight) || 0;
+  if(!(pc > 0)) return { achou:0, bate:0 };
+  const fem = state.user && state.user.profile && state.user.profile.sex === 'f';
+  const P = [ { re:/agachamento/, m: fem ? 0.9 : 1.25 }, { re:/supino/, m: fem ? 0.6 : 1.0 }, { re:/terra/, m: fem ? 1.1 : 1.5 } ];
+  let achou = 0, bate = 0;
+  P.forEach(p=>{ const c = lista.filter(x=>p.re.test(x.id)); if(!c.length) return; achou++; if(Math.max(...c.map(x=>x.fim)) >= pc*p.m) bate++; });
+  return { achou, bate };
+}
+function evoLiftAvaliar(){
+  const mod = state.modules && state.modules.lift; if(!mod || !mod.plan || !mod.setup) return null;
+  const st = mod.setup; if(st.modalidade === 'calistenia') return null;
+  const de = st.level || 'iniciante'; const i = EVO_NIV_LIFT.indexOf(de); if(i < 0 || i >= EVO_NIV_LIFT.length-1) return null;
+  const para = EVO_NIV_LIFT[i+1];
+  const cfg = i === 0
+    ? { sem:8,  janela:8,  sessoes:16, regOk:5,  regDe:6,  porSem:2, ader:0.70, prog:0.075, nProg:3 }
+    : { sem:16, janela:12, sessoes:36, regOk:10, regDe:12, porSem:3, ader:0.80, prog:0.05,  nProg:4 };
+  const agora = Date.now(), dias = Math.max(1, +st.days || 3);
+  const desde = +st.levelDesde || +mod.createdAt || agora;
+  const semanasNivel = (agora - desde)/EVO_SEM;
+  const hist = (mod.history||[]).filter(h=>h && h.at).sort((a,b)=>a.at-b.at);
+  const iniJ = Math.max(agora - cfg.janela*EVO_SEM, desde);
+  const sessoes = new Set(hist.filter(h=>h.at >= iniJ).map(h=>mtDia0(h.at))).size;
+  const s0 = mtSemanaIni(agora);
+  let reg = 0;
+  for(let k = 1; k <= cfg.regDe; k++){ const a = s0 - k*EVO_SEM; const n = new Set(hist.filter(h=>h.at>=a && h.at<a+EVO_SEM).map(h=>mtDia0(h.at))).size; if(n >= Math.min(cfg.porSem, dias)) reg++; }
+  const feitos4 = new Set(hist.filter(h=>h.at >= s0-4*EVO_SEM && h.at < s0).map(h=>mtDia0(h.at))).size;
+  const ader = feitos4/(dias*4);
+  const ult = hist.slice(-6);
+  const rpes = ult.map(h=>+h.rpe).filter(n=>n >= 1 && n <= 10);
+  const rpeMed = rpes.length >= 3 ? rpes.reduce((a,b)=>a+b,0)/rpes.length : null;
+  const relatos = ((state.evolucao && state.evolucao.lift && state.evolucao.lift.facilEm) || []).filter(t=>t >= agora-21*DIA_MS).length;
+  const facil = ult.filter(h=>+h.rpe && +h.rpe <= 4).length + relatos;
+  const rpeAlto = hist.slice(-3).some(h=>+h.rpe >= 9);
+  mod.__evoProg = cfg.prog;
+  const pg = evoLiftProgressao(mod, iniJ); delete mod.__evoProg;
+  const precisa = Math.min(cfg.nProg, Math.max(2, pg.com));
+  const dor = !!(state.user && state.user.pain && state.user.pain.length);
+  const datas = hist.filter(h=>h.at >= agora-28*DIA_MS).map(h=>h.at).concat([agora]);
+  let maiorPausa = 0; for(let k = 1; k < datas.length; k++) maiorPausa = Math.max(maiorPausa, (datas[k]-datas[k-1])/DIA_MS);
+  const pct = n=>Math.round(n*100);
+  const C = [
+    { ok: semanasNivel >= cfg.sem, txt:`${cfg.sem} semanas no nível atual (você está há ${Math.floor(semanasNivel)})` },
+    { ok: sessoes >= cfg.sessoes, txt:`${cfg.sessoes} treinos nas últimas ${cfg.janela} semanas (feitos: ${sessoes})` },
+    { ok: reg >= cfg.regOk, txt:`regularidade: ${cfg.porSem}+ treinos em ${cfg.regOk} das últimas ${cfg.regDe} semanas (cumpridas: ${reg})` },
+    { ok: ader >= cfg.ader, txt:`${pct(cfg.ader)}% dos treinos planejados nas últimas 4 semanas (você: ${pct(ader)}%)` },
+    { ok: pg.subiram >= precisa && pg.cairam === 0 && pg.com >= 2, txt:`cargas subindo em ${precisa}+ exercícios principais, sem nenhum caindo (subiram: ${pg.subiram} de ${pg.com} com dados)` },
+    { ok: !rpeAlto && (rpeMed != null ? rpeMed <= 7 : facil >= 2), txt: rpeMed != null ? `esforço médio até 7/10 nos últimos treinos (você: ${String(Math.round(rpeMed*10)/10).replace('.',',')})` : 'treinos avaliados como fáceis ou moderados' },
+    { ok: !dor && maiorPausa < 10, txt: dor ? 'sem dor registrada (há uma dor registrada agora)' : `recuperação em dia, sem pausas de 10+ dias (maior: ${Math.round(maiorPausa)} dias)` }
+  ];
+  if(i === 1){ const fr = evoForcaRelativa(pg.lista);
+    C.push(fr.achou ? { ok: fr.bate >= Math.min(2, fr.achou), txt:`força em relação ao peso do corpo nos básicos (agachamento, supino, terra): ${fr.bate} de ${fr.achou} na referência` }
+                    : { ok: pg.subiram >= cfg.nProg+1, txt:`sem agachamento/supino/terra registrados: evolução em ${cfg.nProg+1}+ principais` }); }
+  const motivos = [];
+  if(pg.subiram) motivos.push(`cargas subindo em ${pg.subiram} exercícios principais`);
+  if(rpeMed != null && rpeMed <= 6) motivos.push(`esforço médio de ${String(Math.round(rpeMed*10)/10).replace('.',',')}/10`); else if(facil >= 2) motivos.push('treinos saindo fáceis');
+  motivos.push(`${sessoes} treinos em ${cfg.janela} semanas`);
+  return { de, para, pronto: C.every(c=>c.ok), lista:C, motivos };
+}
+
+// ---- ofertas (as duas modalidades) ----
+let _evoAt = 0;
+function evoAtualizar(forcar){
+  if(!forcar && Date.now() - _evoAt < 60000) return;
+  _evoAt = Date.now();
+  try{
+    if(typeof cadastroPronto === 'function' && !cadastroPronto()) return;
+    const E = evoE(); let mudou = false;
+    // musculação
+    const r = evoLiftAvaliar();
+    if(r && r.pronto && !E.lift.oferta && evoPodeOferecer('lift', r.para)){ E.lift.oferta = { de:r.de, para:r.para, em:Date.now(), motivos:r.motivos }; mudou = true; }
+    else if(E.lift.oferta && (!r || !r.pronto || r.para !== E.lift.oferta.para)){ delete E.lift.oferta; mudou = true; }   // a evidência sumiu: a oferta sai
+    // corrida (quem decide é o motor)
+    const M = state.modules.run && state.modules.run.plan && state.modules.run.plan.motor;
+    if(M && M.ofertaNivel != null){
+      if(!E.run.oferta || E.run.oferta.para !== M.ofertaNivel){ E.run.oferta = { de:M.nivel, para:M.ofertaNivel, em:M.ofertaEm || Date.now(), motivos: M.ofertaMotivo ? [M.ofertaMotivo] : [] }; mudou = true; }
+    } else if(E.run.oferta){ delete E.run.oferta; mudou = true; }
+    if(mudou) saveData();
+    evoTransicaoFim();
+  }catch(e){ console.log('evolução:', e); }
+}
+function evoNomeNivel(m, n){ return m === 'run' ? (RN_NOME[n] || '') : (EVO_NOME_LIFT[n] || n); }
+function evoOfertaPendente(){
+  const E = state.evolucao || {}; if(state.user && state.user.pain && state.user.pain.length) return null;
+  if(typeof vacationActive === 'function' && vacationActive()) return null;
+  const m = (E[state.active] && E[state.active].oferta) ? state.active : (E.lift && E.lift.oferta) ? 'lift' : (E.run && E.run.oferta) ? 'run' : null;
+  return m ? { m, o: E[m].oferta } : null;
+}
+function evoOfertaHtml(m){
+  const o = state.evolucao && state.evolucao[m] && state.evolucao[m].oferta; if(!o) return '';
+  const mod = m === 'run' ? 'corrida' : 'musculação';
+  const muda = m === 'run'
+    ? `A partir da próxima semana, foco em ${RN_FOCO[o.para] || 'um degrau a mais'}. As 4 primeiras semanas do nível novo são de base, sem salto de volume.`
+    : `O plano ganha a seleção de exercícios do nível ${EVO_NOME_LIFT[o.para]}. Nas 2 primeiras semanas as séries continuam as de hoje; depois o plano fica completo. Suas cargas seguem o seu histórico.`;
+  return `Percebi que seus treinos de ${mod} estão ficando mais fáceis e que você vem evoluindo bem${o.motivos && o.motivos.length ? ` (${o.motivos.join(', ')})` : ''}. Que tal avançarmos para o nível <b>${evoNomeNivel(m, o.para)}</b>?<br><br>
+    <b>O que muda:</b> ${muda} Seu histórico e suas conquistas não mudam.
+    <div class="evo-acoes"><button class="btn btn-primary" onclick="evoResponder('${m}',true)">Aceitar</button><button class="btn btn-ghost" onclick="evoResponder('${m}',false)">Continuar como está</button></div>
+    <button class="link-mais" style="margin-top:6px" onclick="evoPorque('${m}')">Por que agora?</button>`;
+}
+function evoResponder(m, aceitar){
+  const E = evoE(); const o = E[m] && E[m].oferta;
+  const aberto = !!document.getElementById('ma-input');
+  const diz = t=>{ if(aberto){ try{ maThread.push({ who:'user', txt: aceitar ? 'Aceitar' : 'Continuar como está' }); renderAssistant(); maReply(t); }catch(e){ toast(t.replace(/<[^>]+>/g,'')); } } else toast(t.replace(/<[^>]+>/g,'').slice(0,140)); };
+  if(!o){ diz('Essa sugestão já foi respondida. Se quiser rever, me peça "quero subir de nível".'); return; }
+  E.log.push({ m, de:o.de, para:o.para, d: aceitar ? 'aceitou' : 'continuar', em:Date.now() }); E.log = E.log.slice(-30);
+  delete E[m].oferta;
+  let msg;
+  if(aceitar){
+    delete E[m].recusa;
+    msg = m === 'run' ? evoRunAplicar(o.para) : evoLiftAplicar(o.para);
+  } else {
+    E[m].recusas = (E[m].recusas||0) + 1;
+    E[m].recusa = { para:o.para, em:Date.now(), ate: Date.now() + EVO_PAUSA_DIAS*E[m].recusas*DIA_MS };
+    const M = m === 'run' && state.modules.run && state.modules.run.plan && state.modules.run.plan.motor;
+    if(M){ delete M.ofertaNivel; delete M.ofertaMotivo; delete M.ofertaEm; }
+    msg = `Combinado: seguimos no nível <b>${evoNomeNivel(m, o.de)}</b>, sem mudar nada. Não vou insistir nisso; se mudar de ideia, é só me dizer "quero subir de nível".`;
+  }
+  saveData();
+  try{ if(typeof renderHome === 'function' && state.ui && state.ui.tab === 'home') renderHome(); }catch(e){}
+  diz(msg);
+}
+function evoLiftAplicar(para){
+  const mod = state.modules.lift; const de = mod.setup.level || 'iniciante';
+  mod.setup = Object.assign({}, mod.setup, { level:para, levelDesde:Date.now(), transicao:{ de, para, ate: Date.now() + 14*DIA_MS } });
+  mod.plan = generatePlan('lift', mod.setup);
+  try{ state.lastVarWeek = semanaLocalId(); }catch(e){}
+  regenAllPlans();
+  return `Pronto: musculação no nível <b>${EVO_NOME_LIFT[para]}</b>. Nas próximas 2 semanas as séries continuam as de hoje enquanto você se adapta aos exercícios novos; depois disso o plano fica completo. Seu histórico e suas cargas continuam.`;
+}
+function evoTransicaoFim(){
+  const mod = state.modules.lift; const t = mod && mod.setup && mod.setup.transicao;
+  if(!t || t.fim || Date.now() < (+t.ate||0)) return;
+  mod.setup.transicao = Object.assign({}, t, { fim:true });
+  mod.plan = generatePlan('lift', mod.setup);
+  try{ state.lastVarWeek = semanaLocalId(); }catch(e){}
+  regenAllPlans(); saveData();
+  try{ toast(`Transição concluída: seu plano ${EVO_NOME_LIFT[mod.setup.level]||''} agora está completo.`); }catch(e){}
+}
+function evoRunAplicar(para){
+  const run = state.modules.run; const M = run.plan.motor;
+  rAplicarNivel(M, para, rSem(Date.now()) + 7*DIA_MS);
+  run.setup.level = RN_LEG[para]; run.plan.level = RN_LEG[para];
+  return `Pronto: corrida no nível <b>${RN_NOME[para]}</b> a partir da próxima semana. Foco: ${RN_FOCO[para]}. As primeiras semanas são de base, sem salto de volume.`;
+}
+function evoPorque(m){
+  let L = [];
+  if(m === 'run'){
+    const M = state.modules.run && state.modules.run.plan && state.modules.run.plan.motor;
+    if(M && M.nivel >= 2){ const c = rCriteriosNivel(runCtx(), M); L = (c.lista||[]).map(x=>(x.ok?'✓ ':'✗ ')+x.txt); }
+    else if(M && M.ofertaMotivo) L = ['✓ ' + M.ofertaMotivo];
+  } else { const r = evoLiftAvaliar(); if(r) L = r.lista.map(x=>(x.ok?'✓ ':'✗ ')+x.txt); }
+  const t = L.length ? `Eu não olho só a quantidade de treinos. Para sugerir o próximo nível, tudo isto precisa estar em dia:<br>${L.join('<br>')}` : 'No momento não há uma sugestão de nível em aberto.';
+  if(document.getElementById('ma-input')){ maThread.push({ who:'user', txt:'Por que agora?' }); renderAssistant(); maReply(t); }
+  else { try{ openAssistant(); setTimeout(()=>maReply(t), 400); }catch(e){} }
+}
+// "quero subir de nível", "mudei de ideia", "está fácil demais"
+function evoComando(t){
+  const m = state.active === 'run' ? 'run' : 'lift';
+  if(!state.modules[m]) return null;
+  const E = evoE();
+  if(/f[aá]ce?il demais|t[aá] f[aá]cil|est[aá] (muito )?f[aá]cil|muito f[aá]cil|treino (est[aá] )?leve demais/.test(t)){
+    E[m].facilEm = (E[m].facilEm||[]).concat([Date.now()]).slice(-10); saveData();
+    evoAtualizar(true);
+    if(E[m].oferta) return { done:true, msg:'Anotado. E os números confirmam: ' + evoOfertaHtml(m) };
+    const falta = evoFaltam(m);
+    return { done:true, msg:`Anotei que está fácil. Isso entra na conta, mas sozinho não basta para subir de nível — facilidade num dia não é prontidão do corpo.${falta?`<br><br>Ainda falta:<br>${falta}`:''}<br><br>${m==='lift'?'Enquanto isso, quando a última série sair com 2+ repetições sobrando, suba a carga no próximo treino.':'Enquanto isso, o plano já aumenta volume e qualidade quando a semana sai completa e confortável.'}` };
+  }
+  if(/(subir|avan[cç]ar|passar) (de |o |para o pr[oó]ximo )?n[ií]vel|pr[oó]ximo n[ií]vel|mudei de ideia/.test(t)){
+    if(E[m].oferta) return { done:true, msg: evoOfertaHtml(m) };
+    // mudou de ideia depois de "continuar como está": se os critérios continuam valendo, a oferta volta já
+    const M = m === 'run' && state.modules.run.plan && state.modules.run.plan.motor;
+    let pronto = false, para = null;
+    if(m === 'lift'){ const r = evoLiftAvaliar(); pronto = !!(r && r.pronto); para = r && r.para; }
+    else if(M){ if(M.nivel >= 2 && M.nivel < RN_NOME.length-1){ const c = rCriteriosNivel(runCtx(), M); pronto = !!c.todos; } else if(E.run.recusa){ pronto = E.run.recusa.para === M.nivel+1; } para = M.nivel + 1; }
+    if(pronto && para != null){
+      delete E[m].recusa;
+      if(m === 'run'){ M.ofertaNivel = para; M.ofertaMotivo = 'você pediu para rever'; M.ofertaEm = Date.now(); }
+      _evoAt = 0; evoAtualizar(true);
+      if(m === 'lift' && !E.lift.oferta){ const r = evoLiftAvaliar(); if(r) E.lift.oferta = { de:r.de, para:r.para, em:Date.now(), motivos:r.motivos }; }
+      saveData();
+      return { done:true, msg: evoOfertaHtml(m) };
+    }
+    const falta = evoFaltam(m);
+    return { done:true, msg:`Ainda não é a hora de subir com segurança.${falta?`<br><br>Falta:<br>${falta}`:''}<br><br>Assim que estiver tudo em dia eu te aviso — e a decisão continua sendo sua.` };
+  }
+  return null;
+}
+function evoFaltam(m){
+  if(m === 'lift'){ const r = evoLiftAvaliar(); return r ? r.lista.filter(c=>!c.ok).map(c=>'• '+c.txt).join('<br>') : ''; }
+  const M = state.modules.run && state.modules.run.plan && state.modules.run.plan.motor; if(!M) return '';
+  const c = rCriteriosNivel(runCtx(), M); return (c.lista||[]).filter(x=>!x.ok).map(x=>'• '+x.txt).join('<br>');
+}
+
+// ---- 2. preparação para provas ----
+const PROVA_MARCOS = { '5km':[7,3,1], '10km':[10,4,1], '21km':[14,7,2], '42km':[21,10,3,1] };
+const PROVA_CHEGADA = { '5km':'45 min', '10km':'45 min', '21km':'1 hora', '42km':'1 hora a 1h30' };
+function provaDist(){ const g = ((state.modules.run||{}).setup||{}).goal; return PROVA_MARCOS[g] ? g : '5km'; }
+function provaKm(d){ return ({ '5km':'5 km', '10km':'10 km', '21km':'meia maratona', '42km':'maratona' })[d]; }
+function provaMarcoAtual(dias, d){
+  const mk = PROVA_MARCOS[d]; if(dias == null || dias < 0 || dias > mk[0]) return null;
+  return mk.filter(x=>dias <= x).sort((a,b)=>a-b)[0];
+}
+function provaDados(){
+  const ctx = runCtx(); const runs = rCorridas(ctx).filter(r=>r.at >= Date.now()-42*DIA_MS);
+  const maiorKm = runs.reduce((m,r)=>Math.max(m, +r.distance||0), 0);
+  const rp = runs.slice(-5).map(r=>+r.rpe).filter(Boolean);
+  const rpe = rp.length >= 3 ? rp.reduce((a,b)=>a+b,0)/rp.length : null;
+  const M = state.modules.run && state.modules.run.plan && state.modules.run.plan.motor;
+  const s = rSem(Date.now());
+  const volAgora = M && M.semanas && M.semanas[s] ? M.semanas[s].vol : null;
+  const volAntes = M && M.semanas && M.semanas[s-7*DIA_MS] ? M.semanas[s-7*DIA_MS].vol : null;
+  const fase = M && M.semanas && M.semanas[s] && M.semanas[s].F ? M.semanas[s].F.fase : null;
+  const porSem = Math.round(runs.filter(r=>r.at >= Date.now()-28*DIA_MS).length/4*10)/10;
+  return { maiorKm, rpe, volAgora, volAntes, fase, porSem };
+}
+function provaOrientacao(dias){
+  const d = provaDist(); const marco = provaMarcoAtual(dias, d); if(marco == null) return null;
+  const D = provaDados(); const nome = provaKm(d);
+  const vespera = `<b>Véspera:</b> descanso ou trote de 10–15 min com 3 acelerações curtas. Separe tudo hoje (número de peito, chip, tênis e roupa já testados). Jantar conhecido, sem exagero, e cama cedo. Chegue ${PROVA_CHEGADA[d]} antes e aqueça ${d==='5km'||d==='10km'?'10 min de trote + 3 acelerações':'5–10 min bem leve'}.`;
+  const T = {
+    '5km': { 7:'Semana da prova: o volume cai cerca de 20–30%. Mantenha um treino curto com 4–6 acelerações de 20 s; nada de treino longo ou forte novo.',
+             3:'Faltam 3 dias: só rodagens leves e curtas (20–30 min). Último estímulo: 4 acelerações de 15–20 s. Use o tênis e a roupa da prova num treino.',
+             1: vespera },
+    '10km':{ 10:'Começa o polimento: nos próximos dias o volume cai uns 30%. O último treino de ritmo acontece até 5–6 dias antes da prova, mais curto que o normal.',
+             4:'Faltam 4 dias: rodagens leves de 25–40 min e, no máximo, uma sessão curta com trechos no ritmo de prova. Nada de treino de pernas pesado na musculação.',
+             1: vespera },
+    '21km':{ 14:'Duas semanas para a meia: o último longão (mais curto que o seu maior) fica para este fim de semana. Depois disso o volume cai uns 40% até a prova, mantendo trechos curtos de ritmo.',
+             7:'Semana da meia: volume perto de metade do normal e um treino curto no ritmo de prova (ex.: 3 × 1 km). Nos 2 dias antes, aumente os carboidratos nas refeições.',
+             2:'Faltam 2 dias: trote de 20–30 min ou descanso; carboidrato em todas as refeições e boa hidratação. Planeje os primeiros 5 km mais devagar que o ritmo-alvo.<br><br>' + vespera },
+    '42km':{ 21:'Três semanas para a maratona: começa o polimento. O volume cai aos poucos: cerca de −20% nesta semana, −35% na próxima e −50 a 60% na semana da prova.',
+             10:'Polimento em andamento: mantenha a frequência e reduza a duração; ritmo de prova só em blocos curtos. Teste agora os géis e a hidratação que vai usar na prova.',
+             3:'Carga de carboidratos: nos 3 dias antes, mais massas, arroz, pão e frutas; menos fibras e gorduras. Hidrate bem e evite qualquer novidade.',
+             1: vespera }
+  };
+  const L = [`<b>${dias===0?'É hoje':dias===1?'Amanhã é a prova':`Faltam ${dias} dias para a prova`} (${nome}).</b> ${T[d][marco]}`];
+  // números do plano do aluno
+  if(D.volAgora && D.volAntes && D.volAgora < D.volAntes) L.push(`Seu plano desta semana já reduz o volume: ${D.volAgora} min planejados, contra ${D.volAntes} na semana passada.`);
+  else if(D.volAgora && marco >= 7) L.push(`Seu plano desta semana tem ${D.volAgora} min de corrida: siga ele, sem compensar treino perdido.`);
+  if(D.rpe && D.rpe >= 7.5) L.push(`Seus últimos treinos saíram pesados (esforço médio ${String(Math.round(D.rpe*10)/10).replace('.',',')}/10). Nestes dias, priorize descanso: uma folga a mais não tira condicionamento.`);
+  try{ const tip = raceSmartTip(dias); if(tip) L.push(tip); }catch(e){}
+  if(state.modules.lift && marco <= 4 && d !== '42km') L.push('Musculação: nos dias antes da prova, deixe as pernas de fora ou bem leves.');
+  return { marco, d, html: L.join('<br><br>') };
+}
+function provaAviso(){
+  try{
+    const ri = typeof raceInfo === 'function' ? raceInfo() : null; if(!ri || ri.passou) return null;
+    const o = provaOrientacao(ri.dias); if(!o) return null;
+    state.provaAvisos = state.provaAvisos || {};
+    const k = ((state.modules.run||{}).setup||{}).raceDate;
+    const reg = state.provaAvisos[k] = state.provaAvisos[k] || { km:o.d, vistos:{} };
+    const hoje = new Date().toDateString(); const v = reg.vistos[o.marco];
+    if(v && v !== hoje) return null;                    // esse marco já foi mostrado em outro dia
+    if(!v){ reg.vistos[o.marco] = hoje; reg.km = o.d; saveData(); }
+    return { text: ri.dias <= 1 ? '🏁 Prova chegando: veja o que fazer até a largada' : `🏁 Faltam ${ri.dias} dias para a prova: ajuste da semana`, tone:'important', dica:{ completa:o.html } };
+  }catch(e){ return null; }
+}
+// depois da prova: pede o resultado (uma vez), com a recuperação certa para a distância
+function provaPosAviso(){
+  try{
+    const lp = state.ui && state.ui.lastRacePrompt; if(!lp || !lp.data) return null;
+    const dataTs = new Date(lp.data+'T00:00:00').getTime(); const dias = Math.round((mtDia0() - dataTs)/DIA_MS);
+    if(dias < 0 || dias > 3) return null;
+    state.provaAvisos = state.provaAvisos || {}; const reg = state.provaAvisos[lp.data] = state.provaAvisos[lp.data] || { vistos:{} };
+    const hoje = new Date().toDateString();
+    if(reg.pos && reg.pos !== hoje) return null;
+    const registrou = (((state.modules.run||{}).history)||[]).some(r=>r.isRace && r.at >= dataTs);
+    if(registrou) return null;
+    if(!reg.pos){ reg.pos = hoje; saveData(); }
+    const d = reg.km || provaDist();
+    const rec = ({ '5km':'2–3 dias só leves', '10km':'3–4 dias leves', '21km':'cerca de 1 semana leve', '42km':'umas 2 semanas de recuperação' })[d];
+    return { text:'🏅 Como foi a prova? Registre o resultado', tone:'important', dica:{ completa:`Como foi a prova? Registre o resultado: ele atualiza seus recordes e ajuda a planejar o próximo ciclo.<div class="evo-acoes"><button class="btn btn-primary" onclick="provaRegistrar('${lp.data}')">Registrar resultado</button></div><br>Recuperação: ${rec}. O plano já segue com treinos mais leves nesses dias.` } };
+  }catch(e){ return null; }
+}
+function provaRegistrar(data){
+  window.__provaAtrasada = data;
+  try{ closeAssistant(); }catch(e){}
+  setTimeout(()=>{ try{ openRunLog('livre'); }catch(e){} }, 220);
+}
+const _saveRunLogEvo = window.saveRunLog;
+if(typeof _saveRunLogEvo === 'function') window.saveRunLog = function(){
+  const pend = window.__provaAtrasada; const n0 = (((state.modules.run||{}).history)||[]).length;
+  const r = _saveRunLogEvo.apply(this, arguments);
+  try{
+    const h = (state.modules.run||{}).history || [];
+    if(pend && h.length > n0){
+      const u = h[h.length-1];
+      if(u && (!u.activity || u.activity === 'corrida')){ u.isRace = true; u.provaData = pend; u.name = '🏅 Prova — ' + u.distance + 'km'; try{ runAtualizaStats(); }catch(e){} saveData(); }
+      window.__provaAtrasada = null;
+    }
+  }catch(e){}
+  return r;
+};
+
+// ---- 3. boas-vindas (conta nova e "Começar do zero") ----
+function maJornada(){ return String(+state.zeradoEm || (state.modules.lift && state.modules.lift.createdAt) || (state.modules.run && state.modules.run.createdAt) || ''); }
+function maPrecisaBoasVindas(){
+  if(typeof cadastroPronto === 'function' && !cadastroPronto()) return false;
+  const tot = ((state.modules.lift||{}).history||[]).length + ((state.modules.run||{}).history||[]).length;
+  return tot === 0 && state.maBoasVindas !== maJornada();
+}
+function maBoasVindasTexto(){
+  const p = (state.user && state.user.profile) || {};
+  const G = { emagrecer:'emagrecer', massa:'ganhar massa', forca:'ganhar força', condicionamento:'melhorar o condicionamento', tonificar:'tonificar', saude:'cuidar da saúde' };
+  const DIAS = ['seg','ter','qua','qui','sex','sáb','dom'];
+  const planos = [];
+  ['lift','run'].forEach(m=>{
+    const mod = state.modules[m]; if(!mod || !mod.setup) return; const st = mod.setup;
+    const dias = (st.selectedDays||[]).map(d=>DIAS[d-1]).filter(Boolean).join(', ');
+    const nome = m === 'run' ? 'corrida' : (st.modalidade === 'calistenia' ? 'calistenia' : st.modalidade === 'hibrido' ? 'treino híbrido' : 'musculação');
+    const nivel = m === 'run' ? (RN_NOME[((mod.plan||{}).motor||{}).nivel] || EVO_NOME_LIFT[st.level] || '') : (EVO_NOME_LIFT[st.level] || '');
+    planos.push(`<b>${nome}</b>${nivel?` (nível ${nivel})`:''}${dias?`, ${st.days} dias por semana (${dias})`:''}`);
+  });
+  const prova = ((state.modules.run||{}).setup||{}).raceDate;
+  return `Olá, <b>${maName()}</b>! 👋 Eu sou o Meta Assistente e vou te acompanhar a partir de agora.<br><br>`
+    + `Vi que seu objetivo é <b>${G[p.goal] || 'evoluir com constância'}</b> e montamos seu plano de ${planos.join(' e ') || 'treino'}.${prova?` Também anotei sua prova em ${new Date(prova+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long'})}: vou te orientando conforme ela chegar.`:''}<br><br>`
+    + `O que eu faço por você: acompanho cada treino registrado, ajusto o plano quando algo pesa ou fica fácil, aviso quando for hora de subir de nível (a decisão é sempre sua) e respondo dúvidas. Também dá para registrar coisas por aqui, como "pesei 70 kg".<br><br>`
+    + `Para começar: registre o primeiro treino com calma, cargas leves e foco na técnica. 💪`;
+}
+const _maNudgeEvo = window.maNudge;
+window.maNudge = function(){
+  try{
+    if(maPrecisaBoasVindas()) return { text:`👋 Olá, ${maName()}! Sou o Meta Assistente. Toque para conhecer seu plano.`, tone:'curio', dica:{ completa: maBoasVindasTexto(), boasVindas:true } };
+    const pa = provaAviso(); if(pa) return pa;
+    const pp = provaPosAviso(); if(pp) return pp;
+    evoAtualizar();
+    const of = evoOfertaPendente();
+    if(of){
+      const dias = of.o.diasAviso = of.o.diasAviso || []; const hoje = new Date().toDateString();
+      if(dias.includes(hoje) || dias.length < 2){   // o balão aparece em no máximo 2 dias; o cartão do Início continua até a resposta
+        if(!dias.includes(hoje)){ dias.push(hoje); saveData(); }
+        return { text:`📈 Você vem evoluindo: que tal o próximo nível?`, tone:'important', dica:{ completa: evoOfertaHtml(of.m) } };
+      }
+    }
+  }catch(e){ console.log('assistente (avisos):', e); }
+  return _maNudgeEvo.apply(this, arguments);
+};
+// abrir o assistente: as boas-vindas da jornada nova vêm primeiro (e só uma vez)
+const _openAssistantEvo = window.openAssistant;
+window.openAssistant = function(){
+  try{
+    if(!(typeof cadBloqueado === 'function' && cadBloqueado()) && maPrecisaBoasVindas()){
+      state.maBoasVindas = maJornada(); saveData();
+      try{ localStorage.removeItem('mt_ma_thread'); }catch(e){}
+      maNudgeAtivo = { text:'', tone:'curio', dica:{ completa: maBoasVindasTexto() } };
+    }
+  }catch(e){}
+  return _openAssistantEvo.apply(this, arguments);
+};
+// resumo de abertura: oferta de nível e orientação da prova aparecem no topo
+const _maOpeningEvo = window.maOpeningSummary;
+window.maOpeningSummary = function(){
+  let base = _maOpeningEvo.apply(this, arguments);
+  try{
+    const ri = typeof raceInfo === 'function' ? raceInfo() : null;
+    const o = ri && !ri.passou ? provaOrientacao(ri.dias) : null;
+    if(o) base += '<br><br>' + o.html;
+    const of = evoOfertaPendente(); if(of) base += '<br><br>' + evoOfertaHtml(of.m);
+  }catch(e){}
+  return base;
+};
+const _maTryCommandEvo = window.maTryCommand;
+window.maTryCommand = function(txt){
+  if(!(typeof cadBloqueado === 'function' && cadBloqueado())){
+    try{ const r = evoComando(String(txt||'').toLowerCase().trim()); if(r) return r; }catch(e){ console.log('evolução (comando):', e); }
+  }
+  return _maTryCommandEvo.apply(this, arguments);
+};
+// Início: a oferta pendente vira o cartão do topo (com as duas respostas); perto da prova, o cartão da prova
+// passa a trazer a orientação daquele momento
+const _renderHomeSmartEvo = window.renderHomeSmart;
+window.renderHomeSmart = function(){
+  const r = _renderHomeSmartEvo.apply(this, arguments);
+  try{
+    evoAtualizar();
+    const el = $('home-smart'); if(!el) return r;
+    const fechado = typeof mtLS === 'function' && mtLS('mt_smart_fechado') === mtDia0()+'';
+    const of = fechado ? null : evoOfertaPendente();
+    if(of){
+      el.innerHTML =`<div class="smart evo-card"><div class="smart-k">Evolução · ${of.m==='run'?'Corrida':'Musculação'}</div><div class="smart-t">Pronto para o nível ${evoNomeNivel(of.m, of.o.para)}?</div>
+        <div class="smart-p">Seus últimos treinos mostram evolução de verdade${of.o.motivos&&of.o.motivos.length?`: ${of.o.motivos.join(', ')}`:''}. Avançar é opcional.</div>
+        <div class="smart-a"><button class="btn btn-primary" onclick="evoResponder('${of.m}',true)">Aceitar</button><button class="btn btn-ghost" onclick="evoResponder('${of.m}',false)">Continuar como está</button><button class="btn btn-ghost" onclick="evoPorque('${of.m}')">Por quê?</button></div></div>`;
+      return r;
+    }
+    const ri = typeof raceInfo === 'function' ? raceInfo() : null;
+    const o = ri && !ri.passou ? provaOrientacao(ri.dias) : null;
+    const p = o && el.querySelector('.smart-p');
+    if(p){ const txt = o.html.split('<br><br>')[0].replace(/<b>.*?<\/b>\s*/, ''); p.textContent = txt.replace(/<[^>]+>/g,''); }
+  }catch(e){ console.log('início (evolução):', e); }
+  return r;
+};
+Object.assign(window, { evoResponder, evoPorque, evoAtualizar, evoLiftAvaliar, evoPodeOferecer, provaOrientacao, provaRegistrar, maBoasVindasTexto });

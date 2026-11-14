@@ -2408,6 +2408,62 @@ html.tema-claro .setup input[type=date],html.tema-claro .setup input[type=time]{
 /* silhueta dos desenhos (boas-vindas) */
 #app-deco .d-corpo{stroke:currentColor;stroke-opacity:calc(var(--d-linha) * .6);stroke-width:7}
 @media (prefers-reduced-motion:reduce){.wz-on .field{animation:none!important}.wz-bar i{transition:none}}
+/* ===== Beta 39: controles por gesto (parte 34) =====
+   Folha de baixo com régua horizontal. A régua é a rolagem nativa do navegador (embalo do sistema);
+   os traços são um fundo em gradiente (um elemento só, qualquer tamanho de faixa sem pesar). */
+.nr-campo{cursor:pointer;caret-color:transparent}
+.nr-campo::-webkit-calendar-picker-indicator{display:none}
+.nr-campo::-webkit-inner-spin-button,.nr-campo::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.nr-wrap{position:relative;display:block;min-width:0}
+.nr-wrap > input{width:100%;padding-right:40px}
+.nr-limpa{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:0;background:var(--surface-2);color:var(--text-dim);font-size:18px;line-height:1;display:grid;place-items:center;cursor:pointer}
+.nr-limpa:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+.nr-wrap.vazio .nr-limpa{display:none}
+.nr-fundo{position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s ease}
+.nr-fundo.on{opacity:1;pointer-events:auto}
+.nr-folha{width:100%;max-width:520px;background:var(--bg);border:1px solid var(--border);border-bottom:0;border-radius:24px 24px 0 0;padding:8px 18px calc(16px + env(safe-area-inset-bottom));transform:translateY(24px);transition:transform .26s cubic-bezier(.2,.8,.3,1);box-shadow:0 -10px 40px rgba(0,0,0,.25)}
+.nr-fundo.on .nr-folha{transform:none}
+@media (min-width:700px){.nr-fundo{align-items:center}.nr-folha{border-radius:24px;border-bottom:1px solid var(--border)}}
+.nr-alca{width:38px;height:4px;border-radius:99px;background:var(--border-strong);margin:2px auto 10px}
+.nr-topo{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nr-tit{font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--text-mute)}
+.nr-x{width:34px;height:34px;border-radius:50%;border:0;background:var(--surface-2);color:var(--text-dim);font-size:20px;line-height:1;cursor:pointer}
+.nr-mostra{display:flex;align-items:baseline;justify-content:center;gap:6px;margin:8px 0 0;min-height:52px}
+.nr-num{font-size:40px;font-weight:800;letter-spacing:-1px;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.15;text-align:center}
+.nr-num.longo{font-size:26px;letter-spacing:-.4px}
+.nr-un{font-size:16px;font-weight:700;color:var(--text-dim)}
+.nr-sub{text-align:center;font-size:13px;color:var(--text-dim);min-height:18px;text-transform:capitalize}
+.nr-reguas{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}
+.nr-regua{position:relative;border-radius:16px;background:var(--surface);border:1px solid var(--border);overflow:hidden;outline:none;touch-action:pan-x}
+.nr-regua:focus-visible{box-shadow:0 0 0 2px var(--primary)}
+.nr-cap{position:absolute;left:12px;top:7px;z-index:2;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-mute);pointer-events:none}
+.nr-rolo{display:flex;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);cursor:grab}
+.nr-regua.arrastando .nr-rolo{cursor:grabbing}
+.nr-rolo::-webkit-scrollbar{display:none}
+.nr-esp{flex:0 0 auto}
+.nr-trilho{flex:0 0 auto;position:relative;height:72px;
+  background-image:repeating-linear-gradient(90deg,var(--text) 0 2px,transparent 2px var(--mj)),repeating-linear-gradient(90deg,var(--text-dim) 0 2px,transparent 2px var(--md)),repeating-linear-gradient(90deg,var(--text-mute) 0 1.5px,transparent 1.5px var(--tk,12px));
+  background-size:100% 30px,100% 22px,100% 13px;background-position:-1px 0,-1px 0,-.75px 0;background-repeat:no-repeat;opacity:.9}
+.nr-regua.compacta .nr-trilho{height:60px;background-size:100% 24px,100% 18px,100% 11px}
+.nr-r{position:absolute;top:38px;transform:translateX(-50%);font-size:13px;font-weight:700;color:var(--text-dim);white-space:nowrap;font-variant-numeric:tabular-nums;cursor:pointer;padding:2px 4px}
+.nr-regua.compacta .nr-r{top:31px;font-size:12.5px}
+.nr-agulha{position:absolute;left:50%;top:0;width:3px;height:36px;margin-left:-1.5px;border-radius:0 0 3px 3px;background:var(--primary);box-shadow:0 0 0 3px rgba(var(--primary-rgb),.18);pointer-events:none;z-index:3}
+.nr-regua.compacta .nr-agulha{height:30px}
+.nr-dig{margin:12px 0 6px}
+.nr-dig .input{font-size:22px;text-align:center}
+.nr-dig .input.nr-ruim{border-color:var(--danger)}
+.nr-dig-dica{text-align:center;font-size:12px;color:var(--text-mute);margin-top:6px}
+.nr-acoes{display:flex;gap:8px;margin-top:12px}
+.nr-acoes .btn{flex:1;min-height:48px;margin:0;padding:10px 8px}
+.nr-acoes .nr-ok{flex:1.4}
+.nr-acoes [hidden]{display:none}
+html.nr-aberta body{overflow:hidden}
+@media (prefers-reduced-motion:reduce){.nr-fundo,.nr-folha{transition:none}}
+/* Beta 39: respostas da oferta de nível e da prova (Meta Assistente e Início) */
+.evo-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.evo-acoes .btn{padding:9px 14px;font-size:13px;margin:0}
+.smart.evo-card{--sm:var(--primary)}
 </style>
 </head>
 <body>
@@ -3288,7 +3344,7 @@ html.tema-claro .setup input[type=date],html.tema-claro .setup input[type=time]{
       <div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div>
     </div>
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 38</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 39</span>
     </div>
   </div>
 </div>
@@ -3366,8 +3422,8 @@ html.tema-claro .setup input[type=date],html.tema-claro .setup input[type=time]{
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.38"></script>
-<script src="./app-plus.js?v=2027.1-beta.38"></script>
+<script src="./app.js?v=2027.1-beta.39"></script>
+<script src="./app-plus.js?v=2027.1-beta.39"></script>
 <script>
 // Beta 36: app.js e app-plus.js precisam ser da MESMA versão. Se um deles não carregou ou veio de outra
 // versão (cache no meio de uma atualização), recarrega uma vez — senão partes antigas (como a tela antiga

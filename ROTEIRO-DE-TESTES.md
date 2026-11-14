@@ -1,8 +1,37 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 38
+# Roteiro de testes em aparelho real — MetaTreino Beta 39
 
-Leva uns 30 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
+Leva uns 35 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
-## 0. Beta 38 — primeiro acesso (o mais importante desta versão)
+## 00. Beta 39 — réguas, evolução e provas (o mais importante desta versão)
+
+**Réguas por gesto** (celular de verdade: é aqui que a fluidez aparece)
+- [ ] Toque na carga de uma série: abre a régua e o teclado **não** abre? Arraste para o lado devagar: o número acompanha o dedo sem travar?
+- [ ] Dê um peteleco rápido: a régua continua andando um pouco e para encaixada num valor (sem ficar entre dois traços)?
+- [ ] Vibra de leve a cada valor (Android)? Incomoda ou ajuda?
+- [ ] "Digitar" abre o teclado numérico e o valor digitado entra certo (ex.: 42,5)?
+- [ ] Repetições, peso do corpo (Perfil › Registrar peso), distância e tempo da corrida: tudo pela régua?
+- [ ] Campo de texto (assistente, busca da biblioteca, observações): continua abrindo o teclado normal?
+- [ ] No computador: arrastar com o mouse, roda do mouse e setas funcionam?
+
+**Datas**
+- [ ] Montar plano › Sua semana › "Quando você começa?": escolha uma data, depois toque no **×**. A data some?
+- [ ] Abra de novo e use **Sem data**. O plano criado sem data começa hoje?
+- [ ] Na corrida: data de início, data e horário da prova também apagam?
+- [ ] Na régua de data, vá para 31 de janeiro e passe para fevereiro: o dia vira 28 (ou 29)?
+
+**Evolução de nível** (só aparece com semanas de treino de verdade: talvez não dê para ver nesta rodada)
+- [ ] Se aparecer o cartão "Pronto para o nível…": "Por quê?" mostra os critérios? "Continuar como está" some com o cartão e não volta nos dias seguintes?
+- [ ] Pergunte ao assistente "quero subir de nível": ele explica o que falta (ou mostra a proposta)?
+- [ ] Diga "o treino está fácil demais": ele anota e explica que só isso não basta?
+
+**Provas** (com uma prova cadastrada perto)
+- [ ] Faltando poucos dias, o assistente chama com o aviso da prova uma vez só no dia, e o texto combina com a distância?
+- [ ] No dia seguinte à prova: aparece "Como foi a prova?" e o registro entra como prova (🏅 no Histórico)?
+
+**Começar do zero e o assistente** (conta de teste)
+- [ ] Converse com o assistente, faça Começar do zero e o cadastro novo. No Início, o assistente se apresenta de novo com o nome e o plano novos, e nada da conversa antiga aparece?
+
+## 0. Beta 38 — primeiro acesso
 
 **A. Conta nova** (crie uma conta de teste ou use uma liberada só para isso)
 - [ ] Logo depois de entrar: aparece "Etapa 1 de 10", **sem** a barra de abas e **sem** o botão do assistente?
@@ -38,7 +67,7 @@ Leva uns 30 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegado
 - [ ] Perfil: o IMC aparece como número (não "NaN")?
 
 ## 1. Instalação, atualização e modo avião
-- [ ] O app atualizou sozinho para a **Beta 38** (Perfil → rodapé), sem tocar em nenhum botão?
+- [ ] O app atualizou sozinho para a **Beta 39** (Perfil → rodapé), sem tocar em nenhum botão?
 - [ ] Fechar e abrir de novo: entrou direto, sem pedir login?
 - [ ] **Logo depois de atualizar**, ligue o modo avião, feche o app de vez e abra de novo. Ele abre e mostra os treinos? (Na Beta 32 este caso podia abrir em branco.)
 - [ ] Ainda no modo avião: registre 2 séries e salve o treino. Desligue o modo avião. O treino aparece no Histórico de outro aparelho (ou depois de sair e entrar)?

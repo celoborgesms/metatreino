@@ -1,3 +1,29 @@
+# MetaTreino 2027.1 Beta 39 — Réguas por gesto, evolução de nível e provas
+
+Detalhes técnicos em `RELATORIO-BETA39.md`. As regras do Firestore não mudaram nesta versão.
+
+1. **Data de início que dá para apagar.** Musculação e corrida (e a data/horário da prova): o campo ganhou um "×" e a régua de data tem "Sem data". Sem data, o plano começa hoje, como antes.
+2. **Réguas por gesto no lugar do teclado numérico.** Tocar num número abre uma folha com uma régua: arraste para o lado e solte. O valor aparece grande, a régua tem embalo e encaixa sozinha no valor. Vale para:
+   - altura, peso, idade;
+   - carga e repetições das séries, tempo de isometria;
+   - distância (km + metros) e tempo da corrida (h/min/s);
+   - teste rápido da calistenia, macros, meta de desafio (admin).
+
+   Datas usam três réguas (dia, mês, ano; o dia acompanha o mês, inclusive fevereiro). Horário usa hora e minuto. O teclado não abre sozinho. "Digitar" abre o teclado quando a pessoa quiser. No computador: arrastar com o mouse, roda, setas do teclado ou digitar o número direto. Campos de texto (assistente, busca, nomes, observações) continuam com teclado.
+3. **Evolução de nível pelo Meta Assistente.** O app não sobe o nível sozinho. Quando os critérios são cumpridos, aparece um cartão no Início e o assistente pergunta, com **Aceitar** e **Continuar como está**.
+   - **Musculação:** olha tempo no nível, treinos feitos, regularidade, aderência ao plano, cargas subindo nos exercícios principais, esforço (escala 1–10 e "está fácil") e recuperação (dor, pausas). Do Intermediário para o Avançado, olha também força em relação ao peso do corpo. Ao aceitar, o plano é refeito pelo gerador do app; nas 2 primeiras semanas as séries continuam as do nível anterior, depois o plano fica completo.
+   - **Corrida:** os critérios são os do próprio plano (tempo contínuo, volume, longão, cumprimento e esforço). A subida vale a partir da semana seguinte, com semanas de base. Antes, o plano subia de nível sozinho; agora ele pergunta. Ajustes dentro do nível e recuos por semana pesada continuam automáticos.
+   - **Continuar como está:** nada muda, a decisão fica registrada e a mesma sugestão só volta depois de 6 semanas (12 na segunda vez). Para mudar de ideia: "quero subir de nível". Dizer "está fácil demais" é anotado, mas sozinho não faz subir; o assistente diz o que ainda falta.
+   - **Calistenia:** continua com o nível recalculado pelas séries, como antes.
+4. **Preparação para provas.** Avisos em marcos que dependem da distância:
+   - 5 km: 7, 3 e 1 dia antes;
+   - 10 km: 10, 4 e 1;
+   - meia maratona: 14, 7 e 2;
+   - maratona: 21, 10, 3 e 1.
+
+   Cada aviso traz o que fazer naquele momento (redução de volume, último treino forte, carboidratos, véspera e horário de chegada). Ele usa os números do seu plano: volume da semana, maior corrida recente e esforço. Cada marco aparece uma vez. No dia seguinte à prova, o assistente pede o resultado e explica a recuperação; o resultado registrado entra como prova nos recordes.
+5. **Começar do zero também recomeça a conversa do Meta Assistente.** A conversa anterior não aparece mais, nem em outro aparelho. Depois do novo cadastro, o assistente se apresenta de novo, já com o novo objetivo e o novo plano. O que "Começar do zero" apaga continua igual. Contas novas também recebem essa apresentação.
+
 # MetaTreino 2027.1 Beta 38 — Primeiro acesso em etapas
 
 Detalhes técnicos em `RELATORIO-BETA38.md`. As regras do Firestore não mudaram nesta versão.

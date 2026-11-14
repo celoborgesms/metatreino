@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 38 =====
-const APP_VERSION = '2027.1-beta.38';
+// ===== MetaTreino 2027.1 Beta 39 =====
+const APP_VERSION = '2027.1-beta.39';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -838,6 +838,13 @@ function doRestart(){
     saveData(); syncToCloud();
     $('tabbar').classList.add('hidden');
     try{ if(typeof cadastroRecomecar === 'function') cadastroRecomecar(); }catch(e){}   // formulários limpos, volta para a 1ª etapa
+    // Beta 39: a conversa do Meta Assistente também recomeça (só a conversa e os avisos já mostrados —
+    // nada além do que "Começar do zero" já apagava). Em outro aparelho, maLoadThread descarta pela marca zeradoEm.
+    try{
+      clearTimeout(maTypingT); maThread = []; maNudgeAtivo = null;
+      ['mt_ma_thread','mt_fab_vistos','mt_motiva_hist','mt_smart_fechado'].forEach(k=>localStorage.removeItem(k));
+      const b = document.getElementById('fab-bubble'); if(b) b.style.display = 'none';
+    }catch(e){}
     const fim = ()=>{ toast('Recomeçando: responda o cadastro de novo.'); showScreen('scr-quiz'); bindOpts('scr-quiz'); };
     try{
       runBuildingScreen('lift', [
@@ -2209,7 +2216,10 @@ function buildLiftExercises(parts, setup, opts){
   const restMap50 = {hipertrofia:'90-120s', forca:'3min', emagrecimento:'45-60s', resistencia:'45s'};
   const prof = state.user && state.user.profile;
   const isSenior = prof && prof.age >= 50;
-  const sets = (setsMap[level]||setsMap.iniciante)[goal] || 3;
+  // Beta 39: subida de nível aceita pelo aluno entra aos poucos — nas 2 primeiras semanas o número de séries
+  // e o teto de volume continuam os do nível anterior; os exercícios já são os do nível novo (parte 35).
+  const nivelVolume = (setup.transicao && setup.transicao.de && Date.now() < (+setup.transicao.ate||0)) ? setup.transicao.de : level;
+  const sets = (setsMap[nivelVolume]||setsMap.iniciante)[goal] || 3;
   const reps = repsMap[goal];
   const rest = (isSenior ? restMap50 : restMap)[goal];   // usado nos complementos de dor; o resto usa liftDescanso()
   const equip = setup.equip || 'academia';
@@ -2306,7 +2316,7 @@ function buildLiftExercises(parts, setup, opts){
     });
   });
   // teto de séries da sessão: tira 1 série dos acessórios do fim (mínimo 2) até caber
-  const teto = LIFT_TETO_SERIES[level] || 26;
+  const teto = LIFT_TETO_SERIES[nivelVolume] || 26;
   const totalSeries = ()=>list.reduce((a,e)=>a+(+e.sets||0),0);
   // Beta 35: se ainda passar, tira também dos secundários e, por último, dos principais (mínimo 3 séries)
   // e também pelo TEMPO: nenhuma sessão gerada passa de ~90 min (força tem descansos longos)
@@ -8129,6 +8139,8 @@ function maLoadThread(){
     const o = JSON.parse(raw);
     if(!o || !o.thread || !o.thread.length) return null;
     if(Date.now() - (o.at||0) > MA_THREAD_TTL){ localStorage.removeItem('mt_ma_thread'); return null; }
+    // Beta 39: conversa de antes de um "Começar do zero" (feito aqui ou em outro aparelho) não volta
+    if((+state.zeradoEm||0) && (o.at||0) < +state.zeradoEm){ localStorage.removeItem('mt_ma_thread'); return null; }
     return o.thread;
   }catch(e){ return null; }
 }

@@ -68,6 +68,9 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `32-acessibilidade.js` | Beta 35: nome (`aria-label`) para botões só com ícone, `role=button` + Tab + Enter/Espaço nos elementos com `onclick` (`a11yVarrer`, roda sozinho a cada mudança da tela) |
 | `33-cadastro-em-etapas.js` | Beta 38: controle de acesso antes do cadastro (`cadastroPronto`, `irParaCadastro`; travas em `goTab`, `showScreen`, `openAssistant`, `maAsk`, `maAskText`, `maTryCommand`, `updateFabNudge`), cadastro em etapas (`WZ`, `wzIr`, `wzAvancar`, `wzVoltar`, `wzResumo`, `wzMostraCampo`; etapas marcadas no HTML com `data-wz`), tema na 1ª etapa (`wzRenderTemas`, tema também em `state.prefs.tema`), ícones do cadastro (`CAD_ICO`, `cadIco`, `[data-ico]`) e dos aparelhos (`EQUIP_ICO`, `equipIcone`), desenhos por etapa e mapa da corrida (`cadMapaArte`), formulários limpos ao recomeçar/sair (`cadastroRecomecar`) |
 
+| `34-controles-por-gesto.js` | Beta 39: réguas por gesto para todo campo numérico, data e horário (`nrConfig` decide o tipo de cada campo; `nrRegua` é a régua; `nrAbrir` a folha). Campo vira `readonly` + `inputmode="none"`; o valor volta para o mesmo `<input>` com eventos `input`/`change`. Campo novo de número: entra sozinho (MutationObserver); limites próprios em `NR_CAMPOS`; `data-teclado` deixa um campo de fora |
+| `35-evolucao-provas-assistente.js` | Beta 39: oferta de subir de nível (`evoLiftAvaliar`, `evoAtualizar`, `evoResponder`, `evoComando`; estado em `state.evolucao`), orientação de provas por marcos (`provaOrientacao`, `provaAviso`, `provaPosAviso`; vistos em `state.provaAvisos`), boas-vindas da jornada nova (`maBoasVindasTexto`, `state.maBoasVindas`) |
+
 Parte nova: próximo número livre (ex.: `20-nome-da-funcao.js`).
 
 ## Primeiro acesso (Beta 38)
