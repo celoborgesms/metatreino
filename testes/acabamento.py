@@ -65,6 +65,19 @@ async def main():
             confere('desenhos das abas aparecem e terminam antes do conteúdo (8 temas)', not probs_deco, probs_deco[:6])
             confere('sol/lua do Início visível, inteiro e fora de textos, foto e clima; clima nunca encosta no nome do app (8 temas)', not probs_cena, probs_cena[:6])
             confere('nenhuma tela mais larga que o celular', not probs_larg, probs_larg[:6])
+            # cena do Início estável: trocar Musculação/Corrida e tocar em Início várias vezes não muda posição nem tamanho
+            await pg.evaluate("""window.__am=[]; (function a(){ const d=document.getElementById('app-deco'); if(d.dataset.k==='inicio'){ const r=d.getBoundingClientRect(), s=d.querySelector('svg'); window.__am.push([Math.round(r.top+scrollY),Math.round(r.height),s?Math.round(s.getBoundingClientRect().width):0].join()); } if(window.__am.length<4000) requestAnimationFrame(a); })()""")
+            for c in ["goTab('home')","switchModule('run')","switchModule('lift')","goTab('sessions')","goTab('home')","goTab('home')"]:
+                await pg.evaluate(c); await pg.wait_for_timeout(350)
+            est = await pg.evaluate("[...new Set(window.__am)]")
+            confere('cena do Início não pula ao trocar Musculação/Corrida ou tocar em Início', len(est) == 1, est)
+            r = {}
+            for n, cmd in [('admin', "goAdmin()"), ('musc', "sairDoPainel(); openSetupScreen('lift')"), ('corr', "openSetupScreen('run')")]:
+                await pg.evaluate(cmd); await pg.wait_for_timeout(900)   # goAdmin é assíncrono (carrega os alunos)
+                r[n] = await pg.evaluate("document.getElementById('app-deco').dataset.k")
+            await pg.evaluate("sairDoSetup(); goTab('home')"); await pg.wait_for_timeout(1500)
+            await pg.evaluate("try{closeAwards()}catch(e){}; try{closeModal()}catch(e){}")   # voltar ao app pode mostrar um aviso (ex.: conquista); fecha antes de seguir
+            confere('painel do administrador e telas de montar plano com desenho próprio', r == {'admin':'admin','musc':'montarMusculacao','corr':'montarCorrida'}, r)
             confere('sem erros de página', not erros, erros[:3])
             if largura != 390: await pg.close(); continue
             # ---------- Desafios no AMOLED ----------
@@ -135,6 +148,8 @@ async def main():
             confere('rolagem nativa: sem puxar-para-atualizar, com efeito de fim de tela, sem rolagem "suave" forçada', ob == ['contain','contain','auto'], ob)
             perdas = []
             for aba, abrir in [('profile', "openAparencia()"), ('library', "openExerciseSheet(state.modules.lift.plan.workouts[0].exercises[0].name)"), ('history', "openHistoryEntry(state.modules[state.active].history.length-1)"), ('home', "openWeekSummary()"), ('perf', "openTrophies()")]:
+                for _ in range(3):   # nenhuma janela de passos anteriores aberta (fechamentos pelo histórico chegam depois)
+                    await pg.evaluate("if(document.getElementById('modal-back').classList.contains('on')) closeModal()"); await pg.wait_for_timeout(250)
                 await pg.evaluate(f"goTab('{aba}')"); await pg.wait_for_timeout(350)
                 await pg.mouse.move(195, 420)
                 for _ in range(6): await pg.mouse.wheel(0, 120); await pg.wait_for_timeout(30)
