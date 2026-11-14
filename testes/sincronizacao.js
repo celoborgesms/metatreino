@@ -41,4 +41,17 @@ e2.modules.lift.history.push({ at:agora-1*DIA+5000, id:'OFF', module:'lift' }); 
 app.mesclaEstado(e1, e2, { desde: agora-1*DIA });
 t('excluído antes da Beta 33 não volta pelo cache antigo', !e1.modules.lift.history.some(x=>x.id==='EXCL'));
 t('treino offline depois da última gravação entra', e1.modules.lift.history.some(x=>x.id==='OFF'));
+// Beta 38: "Começar do zero" em um aparelho não pode ser desfeito pela cópia antiga do outro
+const z = agora - 2*3600000;
+const zerado = ()=>({ user:{ name:'A' }, modules:{ lift:null, run:null }, progress:{}, prs:{}, trophies:[], weights:[], zeradoEm:z });
+const f1 = J(zerado()), f2 = J(base());             // f1 recomeçou; f2 é a cópia antiga (sem a marca)
+app.mesclaEstado(f1, f2);
+t('recomeço: histórico antigo do outro aparelho não volta', !f1.modules.lift && !f1.modules.run && !(f1.weights||[]).length && !(f1.trophies||[]).length, f1);
+const g1 = J(base()), g2 = J(zerado());              // este aparelho tem a cópia antiga; a nuvem recomeçou
+app.mesclaEstado(g1, g2);
+t('recomeço feito no outro aparelho vale inteiro aqui', !g1.modules.lift && g1.zeradoEm === z && !(g1.prs && g1.prs.supino));
+const h1 = J(zerado()); h1.modules.lift = { history:[{ at:agora-60000, id:'NOVO', module:'lift' }] };
+const h2 = J(base()); h2.modules.lift.history.push({ at:agora-30000, id:'DEPOIS', module:'lift' });
+app.mesclaEstado(h1, h2);
+t('recomeço: treino feito DEPOIS do recomeço (no outro aparelho) entra; os antigos não', h1.modules.lift.history.some(x=>x.id==='DEPOIS') && h1.modules.lift.history.some(x=>x.id==='NOVO') && !h1.modules.lift.history.some(x=>x.id==='A'), h1.modules.lift.history.map(x=>x.id));
 console.log(`\n${ok} testes aprovados, ${falhou} reprovados.`); process.exitCode = falhou ? 1 : 0;

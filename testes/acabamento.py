@@ -77,7 +77,8 @@ async def main():
                 r[n] = await pg.evaluate("document.getElementById('app-deco').dataset.k")
             await pg.evaluate("sairDoSetup(); goTab('home')"); await pg.wait_for_timeout(1500)
             await pg.evaluate("try{closeAwards()}catch(e){}; try{closeModal()}catch(e){}")   # voltar ao app pode mostrar um aviso (ex.: conquista); fecha antes de seguir
-            confere('painel do administrador e telas de montar plano com desenho próprio', r == {'admin':'admin','musc':'montarMusculacao','corr':'montarCorrida'}, r)
+            # Beta 38: a montagem da corrida usa o mapa ilustrativo por etapa (cadMapa0 na 1ª etapa)
+            confere('painel do administrador e telas de montar plano com desenho próprio', r == {'admin':'admin','musc':'montarMusculacao','corr':'cadMapa0'}, r)
             confere('sem erros de página', not erros, erros[:3])
             if largura != 390: await pg.close(); continue
             # ---------- Desafios no AMOLED ----------
