@@ -927,7 +927,7 @@ function runAtualizaDicaNivel(){
   if(setup.raceDate && RUN_PRAZO[goal]){
     const sem = Math.round((new Date(setup.raceDate+'T12:00:00') - Date.now())/(7*DIA_MS));
     const precisa = RUN_PRAZO[goal][nv];
-    if(sem >= 0 && sem < precisa) linhas.push(`⚠️ Faltam ${sem} semana${sem===1?'':'s'} para a prova; para o seu nível, o ideal seriam ${precisa}. O plano não vai acelerar o volume para compensar — se for correr, intercalar caminhada é uma estratégia segura.`);
+    if(sem >= 0 && sem < precisa) linhas.push(`<b>Atenção:</b> faltam ${sem} semana${sem===1?'':'s'} para a prova; para o seu nível, o ideal seriam ${precisa}. O plano não vai acelerar o volume para compensar — se for correr, intercalar caminhada é uma estratégia segura.`);
   }
   if(aval.lim.length) linhas.push('Com a limitação marcada, ficam fora subidas e tiros fortes, e o impacto cresce devagar.');
   el.innerHTML = linhas.map(l=>`<div>${l}</div>`).join('');

@@ -496,11 +496,19 @@ window.exCargaOpcional = function(id){ return CALI_EX[id] ? true : _cargaOpcCali
 // ---- configuração (tela de montagem) ----
 function caliMostrarSetup(){
   const m = readOpt('lift-modalidade') || 'musculacao';
-  const box = $('cali-setup'); if(box) box.style.display = (m==='musculacao') ? 'none' : '';
+  ['cali-setup','cali-setup-2'].forEach(id=>{ const box = $(id); if(box) box.style.display = (m==='musculacao') ? 'none' : ''; });
+  // Beta 38: no Híbrido o objetivo é um só (o da calistenia vale para os dois tipos de dia — caliLerSetup
+  // converte para a musculação). Antes apareciam duas perguntas de objetivo na mesma tela.
   document.querySelectorAll('#scr-setup-lift .gym-only').forEach(el=>{
-    const ehEquip = !!el.querySelector('#lift-equip'), ehNivel = !!el.querySelector('#lift-level');
-    el.style.display = (m==='calistenia') ? 'none' : (m==='hibrido' ? ((ehEquip||ehNivel||true) ? '' : 'none') : '');
+    const ehObjetivo = !!el.querySelector('#lift-goal');
+    el.style.display = (m==='calistenia') ? 'none' : (m==='hibrido' && ehObjetivo ? 'none' : '');
   });
+  // rótulos dizem a qual parte do treino cada pergunta se refere
+  const rot = (gid, txt)=>{ const g = $(gid); const l = g && g.closest('.field') && g.closest('.field').querySelector('label'); if(l) l.textContent = txt; };
+  rot('lift-level', m==='hibrido' ? 'Experiência na musculação' : 'Nível de experiência');
+  rot('lift-equip', m==='hibrido' ? 'Equipamentos para os dias de academia' : 'Equipamentos da academia / casa');
+  rot('cali-equip', m==='hibrido' ? 'Equipamentos para a calistenia' : 'Equipamentos que você tem');
+  rot('cali-goal', m==='hibrido' ? 'Objetivo do treino' : 'Objetivo na calistenia');
   try{ const bn = document.querySelector('#scr-setup-lift .brand-name'); if(bn) bn.textContent = ({musculacao:'MUSCULAÇÃO', calistenia:'CALISTENIA', hibrido:'HÍBRIDO'})[m]; }catch(e){}
   const h = $('lift-modal-hint');
   if(h) h.textContent = m==='calistenia' ? 'Peso do corpo como base: progressões por variação, isometrias e habilidades.' : m==='hibrido' ? 'Musculação para pernas e volume; calistenia para puxar, empurrar e habilidades.' : 'Academia, halteres ou peso do corpo, com progressão de carga.';
@@ -516,6 +524,7 @@ function caliLerSetup(){
   const ex = { modalidade:m, caliGoal:cg, caliTempo:parseInt(readOpt('cali-tempo')||'45',10), caliNivelDecl:nv, caliEquip:multi('cali-equip'), caliLimites:multi('cali-limites'),
     caliTeste:{ flexao:num('ct-flexao'), barra:num('ct-barra'), dips:num('ct-dips'), prancha:num('ct-prancha') } };
   if(m==='calistenia'){ ex.goal = goalGym; ex.level = ['','iniciante','intermediario','avancado','avancado'][nv]; ex.equip = 'casa'; }
+  if(m==='hibrido') ex.goal = goalGym;   // Beta 38: objetivo único no Híbrido (a pergunta repetida da musculação saiu)
   // recriar: mantém posições e histórico de progressão já conquistados
   const prev = state.modules.lift && state.modules.lift.setup;
   if(prev && prev.caliPos){ ex.caliPos = prev.caliPos; ex.caliHist = prev.caliHist; ex.caliPref = prev.caliPref; }
@@ -554,7 +563,8 @@ window.openSetupScreen = function(m){
       setOn('lift-modalidade', pre);
       if(st && st.caliGoal){ setOn('cali-goal', st.caliGoal); setOn('cali-tempo', st.caliTempo); setOn('cali-nivel', st.caliNivelDecl);
         ['cali-equip','cali-limites'].forEach(id=>{ const lista = id==='cali-equip'?(st.caliEquip||[]):(st.caliLimites||[]); document.querySelectorAll('#'+id+' .opt-multi').forEach(o=>o.classList.toggle('on', lista.includes(o.dataset.val))); }); }
-      document.querySelectorAll('#lift-modalidade .opt').forEach(o=>o.addEventListener('click', ()=>setTimeout(caliMostrarSetup, 0)));
+      // Beta 38: liga uma vez só (antes cada abertura da tela somava mais um ouvinte)
+      document.querySelectorAll('#lift-modalidade .opt').forEach(o=>{ if(o._caliMod) return; o._caliMod = true; o.addEventListener('click', ()=>setTimeout(caliMostrarSetup, 0)); });
       // equipamentos e limitações: seleção livre (o binding padrão da tela limita pelos dias da semana)
       document.querySelectorAll('#cali-equip .opt-multi, #cali-limites .opt-multi').forEach(o=>{ o.onclick = ()=>o.classList.toggle('on'); });
       caliMostrarSetup();
