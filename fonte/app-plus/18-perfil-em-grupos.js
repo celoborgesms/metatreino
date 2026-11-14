@@ -4,15 +4,17 @@
 // =====================================================================
 // O Perfil tinha ~20 linhas soltas. Agora: dados do corpo e do plano em cima e
 // quatro grupos (Ajustar plano, Treino, Aplicativo, Conta e dados) que abrem com um toque.
-// O app lembra quais grupos o aluno deixou abertos (neste aparelho).
-function _pfGruposAbertos(){ try{ return JSON.parse(localStorage.getItem('mt_pf_grupos') || '[]'); }catch(e){ return []; } }
+// Beta 37: o app lembra quais grupos ficaram abertos só enquanto está aberto (trocar de aba e voltar mantém);
+// fechar o app e abrir de novo começa com todos fechados.
+try{ localStorage.removeItem('mt_pf_grupos'); }catch(e){}
+function _pfGruposAbertos(){ try{ return JSON.parse(sessionStorage.getItem('mt_pf_grupos') || '[]'); }catch(e){ return []; } }
 function pfGruposInit(){
   const abertos = _pfGruposAbertos();
   document.querySelectorAll('#scr-profile details.pf-grp').forEach(d=>{
     if(d.dataset.ok) return; d.dataset.ok = '1';
     if(abertos.includes(d.id)) d.open = true;
     d.addEventListener('toggle', ()=>{
-      try{ const s = new Set(_pfGruposAbertos()); d.open ? s.add(d.id) : s.delete(d.id); localStorage.setItem('mt_pf_grupos', JSON.stringify([...s])); }catch(e){}
+      try{ const s = new Set(_pfGruposAbertos()); d.open ? s.add(d.id) : s.delete(d.id); sessionStorage.setItem('mt_pf_grupos', JSON.stringify([...s])); }catch(e){}
     });
   });
 }

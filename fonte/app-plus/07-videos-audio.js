@@ -53,7 +53,7 @@ const MT_PLAYER = { p:null, v:null, info:null, mudo:false, pronto:false, t:null,
 // logotipo por parâmetro (o "showinfo" foi desativado em 2018) — eles podem aparecer por alguns
 // segundos no início ou ao pausar, sem dar para remover sem infringir os termos do YouTube.
 function _mtPlayerVars(v, mudo){
-  return { autoplay:1, playsinline:1, controls:0, rel:0, modestbranding:1, iv_load_policy:3, disablekb:1, fs:0, cc_load_policy:0,
+  return { autoplay:1, playsinline:1, controls:0, rel:0, modestbranding:1, iv_load_policy:3, disablekb:1, fs:0, cc_load_policy:0, cc_lang_pref:'pt', hl:'pt-BR',
     loop:1, playlist:v.id, mute: mudo ? 1 : 0, origin: location.origin };
 }
 const MTV_PAUSA = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
@@ -116,7 +116,7 @@ function mtDestruirPlayer(){
 function _mtIframeSimples(v, mudo){
   const alvo = $('ex-yt'); if(!alvo) return;
   // sem a API não há como pôr controles próprios: o player do YouTube fica com os dele, no modo mais enxuto permitido
-  const src = `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&modestbranding=1&playsinline=1&autoplay=1&iv_load_policy=3&loop=1&playlist=${v.id}&mute=${mudo?1:0}`;
+  const src = `https://www.youtube-nocookie.com/embed/${v.id}?rel=0&modestbranding=1&playsinline=1&autoplay=1&iv_load_policy=3&cc_load_policy=0&loop=1&playlist=${v.id}&mute=${mudo?1:0}`;
   const st = $('ex-stage'); if(st) st.classList.add('nativo');
   alvo.outerHTML = `<iframe src="${src}" title="Vídeo do exercício" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen onload="exVideoOk()"></iframe>`;
   const b = $('ex-som'); if(b){ b.disabled = true; b.title = 'Use o botão de som do próprio player'; b.style.opacity = '.5'; }
@@ -135,6 +135,8 @@ function mtMontarPlayer(v, info){
         onReady: e=>{
           MT_PLAYER.pronto = true; clearTimeout(MT_PLAYER.t);
           try{ MT_PLAYER.mudo ? e.target.mute() : e.target.unMute(); e.target.playVideo(); }catch(err){}
+          // Beta 37: legenda nunca liga sozinha (o YouTube às vezes segue a preferência da conta do aparelho)
+          try{ e.target.unloadModule && e.target.unloadModule('captions'); e.target.unloadModule && e.target.unloadModule('cc'); }catch(err){}
           exVideoOk(); _mtBotaoSom(); _mtLigaControles();
           try{ const vol = $('mtv-vol'); if(vol) vol.value = MT_PLAYER.mudo ? 0 : (e.target.getVolume ? e.target.getVolume() : 100); }catch(err){}
         },

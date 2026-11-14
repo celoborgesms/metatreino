@@ -822,6 +822,13 @@ function runSync(force, refazer){
   // hoje?" e "está parado?"). Antes a retomada rebaixava de novo esse ponto de partida (estágio 3 da avaliação
   // virava estágio 1) e o cartão do treino e o aviso de progresso mostravam estágios diferentes.
   const planoDepoisDaPausa = pz && (M.criadoEm || M.inicio || 0) > pz.ultimoAntes;
+  // Beta 37: plano montado depois da pausa que ainda carrega uma retomada dessa mesma pausa (aplicada antes da
+  // correção): desfaz — o ponto de partida volta a ser o da avaliação.
+  if(planoDepoisDaPausa && M.retomada && !M.retomada.declarada && M.retomada.chave === chave){
+    const a = M.retomada.antes || {};
+    if(a.estagio != null) M.estagio = a.estagio; if(a.nivel != null) M.nivel = a.nivel; if(a.contMin != null) M.contMin = a.contMin;
+    delete M.retomada; mudou = rebuild = true;
+  }
   if(pz && pz.pausa >= 7 && !planoDepoisDaPausa && (!M.retomada || M.retomada.chave !== chave)){
     const N = rRetomadaSemanas(pz.pausa);
     const inicio = pz.voltou ? rSem(pz.retorno) : semAtual;

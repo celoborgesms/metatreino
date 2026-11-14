@@ -105,7 +105,7 @@ function cenaInicio(){
       if(clima === 'garoa') tempo += CENA.garoa(nx, ny);
       if(clima === 'tempestade') tempo += CENA.chuva(nx, ny) + CENA.raio(nx, ny);
       if(clima === 'neve') tempo += CENA.neve(nx, ny);
-      if(clima === 'chuva' || clima === 'tempestade'){ if(hora === 'dia') ceu = ''; if(noite) ceu = estrelas; tempo = CENA.nuvem(nx + 42, ny + 6, .75) + tempo; }
+      if(clima === 'chuva' || clima === 'tempestade'){ if(hora !== 'noite') ceu = ''; if(noite) ceu = '';   /* Beta 37: com chuva não aparece sol nem estrelas (nem no amanhecer/fim de tarde) */ tempo = CENA.nuvem(nx + 42, ny + 6, .75) + tempo; }
     }
   }
   return { k:`${hora}-${clima||'semclima'}`, svg: ceu + paisagem(true) + tempo };
