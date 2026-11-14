@@ -68,6 +68,7 @@ mtGancho('openTrophyDetail', { depois(id){
 //   Perfil ........ mantido (pessoa e arco de evolução), redesenhado na nova linguagem e só na faixa do topo
 //   Histórico ..... mantido (relógio voltando no tempo), pequeno, ao lado do título
 //   Progresso ..... mantido (gráfico subindo), pequeno, ao lado do título — nunca atrás dos gráficos
+//   Painel do administrador e telas de montar plano: desenhos próprios (prancheta; ficha com halter; percurso)
 const DECO3 = (corpo, vb)=>`<svg viewBox="${vb||'0 0 220 120'}" preserveAspectRatio="xMaxYMid meet" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${corpo}</svg>`;
 // classes: .d-fundo (disco na cor principal) · .d-fill (preenchimento translúcido) · .d-ac (traço na cor principal) · .d-acf (preenchimento na cor principal)
 const DECO2_SVG = {
@@ -100,24 +101,53 @@ const DECO2_SVG = {
   progresso: DECO3(`<circle class="d-fundo" cx="166" cy="60" r="48"/>
     <rect class="d-fill" x="128" y="66" width="14" height="30" rx="3"/><rect class="d-fill" x="150" y="52" width="14" height="44" rx="3"/><rect class="d-fill" x="172" y="38" width="14" height="58" rx="3"/>
     <path class="d-linha" d="M120 96h80" stroke-opacity=".6"/><path class="d-ac" d="M124 56l22-16 20 10 30-24" stroke-width="2.4"/><path class="d-acf" stroke="none" d="M203 21l-2 15-11-10z"/>`),
+  // Painel do administrador: prancheta com a lista de alunos (visto) — próprio do painel, nada dos desenhos do aluno
+  admin: DECO3(`<circle class="d-fundo" cx="168" cy="58" r="48"/>
+    <rect class="d-fill" x="140" y="20" width="58" height="76" rx="9"/><rect class="d-fill" x="156" y="13" width="26" height="12" rx="4"/>
+    <path class="d-ac" d="M150 44l4 4 8-9M150 62l4 4 8-9" stroke-width="2.2"/><path class="d-linha" d="M168 44h20M168 62h20M150 80h38" stroke-opacity=".7"/>
+    <circle class="d-fill" cx="124" cy="70" r="8"/><path class="d-fill" d="M110 96c1-9 7-14 14-14s13 5 14 14z"/>`),
+  // Montar o plano de musculação: ficha sendo desenhada (prancheta com halter e lápis)
+  montarMusculacao: DECO3(`<circle class="d-fundo" cx="166" cy="60" r="48"/>
+    <rect class="d-fill" x="128" y="18" width="70" height="84" rx="10"/><path class="d-linha" d="M140 38h30M140 50h46M140 62h38" stroke-opacity=".7"/>
+    <path class="d-ac" d="M144 84h26M140 78v12M174 78v12M136 81v6M178 81v6" stroke-width="2.2"/>
+    <path class="d-acf" stroke="none" d="M205 28l7 7-30 30-9 2 2-9z"/>`),
+  // Montar o plano de corrida: percurso com largada, caminho tracejado e bandeira de chegada
+  montarCorrida: DECO3(`<circle class="d-fundo" cx="166" cy="60" r="48"/>
+    <path class="d-linha" d="M118 98c18-8 26-30 46-32s28-18 30-40" stroke-width="7" stroke-opacity=".10"/>
+    <path class="d-ac" d="M118 98c18-8 26-30 46-32s28-18 30-40" stroke-width="2.2" stroke-dasharray="2 7"/>
+    <circle class="d-acf" cx="118" cy="98" r="5" stroke="none"/><path class="d-ac" d="M194 26V6" stroke-width="2.2"/><path class="d-acf" stroke="none" d="M194 6h16l-4 5 4 5h-16z"/>
+    <circle class="d-fill" cx="150" cy="40" r="7"/><circle class="d-fill" cx="190" cy="82" r="9"/>`),
   historico: DECO3(`<circle class="d-fundo" cx="168" cy="60" r="48"/>
     <circle class="d-fill" cx="168" cy="60" r="32"/><path class="d-linha" d="M168 33v5M168 82v5M141 60h5M190 60h5" stroke-opacity=".7"/>
     <path class="d-ac" d="M168 44v17l11 7" stroke-width="2.4"/><path class="d-ac" d="M126 60a42 42 0 1 0 12-30" stroke-width="2.2"/><path class="d-acf" stroke="none" d="M131 20l11 14-15 3z"/>`)
 };
 // faixa do topo de cada aba: onde termina (o primeiro bloco de conteúdo) — o desenho fica acima dele
+// faixa do topo de cada TELA: onde termina (o primeiro bloco de conteúdo) — o desenho fica acima dele
 const DECO_FAIXA = {
-  sessions:  { fim:'#sess-qlinks' },
-  library:   { ini:'.brand', fim:'#lib-count' },
-  plan:      { ini:'.brand', fim:'#plan-title' },
-  challenges:{ fim:'#chal-root' },
-  profile:   { fim:'.profile-head', fimBase:true },
-  history:   { ini:'.seg-nav', fim:'.stat-grid' },
-  perf:      { ini:'.seg-nav', fim:'#perf-resumo' },
-  home:      { ini:'#home-brand-row', fim:'#home-greet-row', fimBase:true }
+  'scr-sessions':  { fim:'#sess-qlinks' },
+  'scr-library':   { ini:'.brand', fim:'#lib-count' },
+  'scr-plan':      { ini:'.brand', fim:'#plan-title' },
+  'scr-challenges':{ fim:'#chal-root' },
+  'scr-profile':   { fim:'.profile-head', fimBase:true },
+  'scr-history':   { ini:'.seg-nav', fim:'.stat-grid' },
+  'scr-perf':      { ini:'.seg-nav', fim:'#perf-resumo' },
+  'scr-setup-lift':{ fim:'.sub' },
+  'scr-setup-run': { fim:'.sub' },
+  'scr-admin':     { fim:'.row' },
+  'scr-admin-student': { fim:'.row' },
+  'scr-home':      { ini:'#home-brand-row', fim:'#home-greet-row', fimBase:true }
 };
-function decoPosiciona(tab){
+// desenho de cada tela (a escolha é pela tela que está aberta, não pela aba: o painel do administrador e as
+// telas de montar plano não herdam mais o desenho da aba de onde vieram)
+function decoChaveDaTela(id){
+  const corrida = state && state.active === 'run';
+  return ({ 'scr-sessions': corrida ? 'corrida' : 'musculacao', 'scr-challenges':'desafios', 'scr-library':'biblioteca', 'scr-plan':'plano',
+    'scr-profile':'perfil', 'scr-history':'historico', 'scr-perf':'progresso', 'scr-setup-lift':'montarMusculacao', 'scr-setup-run':'montarCorrida',
+    'scr-admin':'admin', 'scr-admin-student':'admin' })[id] || null;
+}
+function decoPosiciona(){
   const el = document.getElementById('app-deco'); if(!el) return;
-  const f = DECO_FAIXA[tab]; const tela = document.querySelector('.screen.active');
+  const tela = document.querySelector('.screen.active'); const f = tela ? DECO_FAIXA[tela.id] : null;
   if(!f || !tela || !el.innerHTML){ el.style.removeProperty('--deco-top'); el.style.removeProperty('--deco-h'); return; }
   const sy = window.scrollY || 0;
   const fimEl = tela.querySelector(f.fim), iniEl = f.ini ? tela.querySelector(f.ini) : null;
@@ -133,19 +163,20 @@ function decoPosiciona(tab){
   el.style.setProperty('--deco-h', h + 'px');
   el.classList.toggle('deco-baixa', h < 40);   // faixa muito baixa (fonte grande, tela pequena): o desenho some
 }
-function _decoAgenda(tab){ cancelAnimationFrame(window.__decoRaf); window.__decoRaf = requestAnimationFrame(()=>{ decoPosiciona(tab); setTimeout(()=>decoPosiciona(tab), 180); }); }
+function _decoAgenda(){ decoPosiciona(); cancelAnimationFrame(window.__decoRaf); window.__decoRaf = requestAnimationFrame(()=>{ decoPosiciona(); setTimeout(decoPosiciona, 180); }); }
 window.updateDeco = function(tab){
   const el = document.getElementById('app-deco'); if(!el) return;
   const on = decoEnabled();
   document.body.classList.toggle('no-deco', !on);
   el.classList.add('deco36');
   if(!on){ el.innerHTML = ''; delete el.dataset.k; return; }
-  const corrida = state && state.active === 'run';
-  const map = { sessions: corrida ? 'corrida' : 'musculacao', challenges:'desafios', library:'biblioteca', plan:'plano', profile:'perfil', history:'historico', perf:'progresso' };
-  const k = map[tab];
-  if(!k){ el.innerHTML = ''; el.dataset.k = 'sem'; decoPosiciona(tab); return; }   // abas sem desenho
+  const tela = document.querySelector('.screen.active');
+  const k = tela ? decoChaveDaTela(tela.id) : null;
+  if(!k){ el.innerHTML = ''; el.dataset.k = 'sem'; return; }   // telas sem desenho (login, escolha, registro de corrida…)
   if(el.dataset.k !== k || !el.innerHTML){ el.dataset.k = k; el.innerHTML = DECO2_SVG[k]; }
-  _decoAgenda(tab);
+  _decoAgenda();
 };
-window.addEventListener('resize', ()=>{ try{ _decoAgenda(state.ui.tab || 'home'); }catch(e){} }, { passive:true });
+// toda troca de tela (abas, painel, montar plano) atualiza o desenho
+mtGancho('showScreen', { depois(){ try{ updateDeco((state && state.ui && state.ui.tab) || 'home'); }catch(e){} }});
+window.addEventListener('resize', ()=>{ try{ _decoAgenda(); }catch(e){} }, { passive:true });
 Object.assign(window, { decoPosiciona });

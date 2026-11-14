@@ -115,6 +115,9 @@ window.updateDeco = function(tab){
   const el = document.getElementById('app-deco');
   // Com a capa do mural ligada, a capa é a imagem do topo: a cena do céu não é desenhada (ficaria escondida atrás dela)
   const capaLigada = ()=>{ const h = document.getElementById('home-hero'); return !!(h && !h.classList.contains('hidden')); };
+  const naHome = ()=>{ const t = document.querySelector('.screen.active'); return !!(t && t.id === 'scr-home'); };
+  if(!naHome()){ if(el) delete el.dataset.cena; return _updateDecoB29.apply(this, arguments); }
+  tab = 'home';
   if(tab === 'home' && el && decoEnabled() && capaLigada()){ document.body.classList.remove('no-deco'); el.classList.add('deco36'); el.innerHTML = ''; el.dataset.k = 'sem'; delete el.dataset.cena; return; }
   if(tab === 'home' && el && decoEnabled()){
     document.body.classList.remove('no-deco');
@@ -124,7 +127,7 @@ window.updateDeco = function(tab){
       el.dataset.k = 'inicio'; el.dataset.cena = c.k;
       el.innerHTML = _cenaSvg(c.svg, c.k);
     }
-    try{ requestAnimationFrame(()=>{ decoPosiciona('home'); setTimeout(()=>decoPosiciona('home'), 200); }); }catch(e){}
+    try{ decoPosiciona(); requestAnimationFrame(()=>{ decoPosiciona(); setTimeout(decoPosiciona, 200); }); }catch(e){}
     return;
   }
   if(el) delete el.dataset.cena;
