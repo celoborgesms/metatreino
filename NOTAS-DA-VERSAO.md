@@ -17,6 +17,8 @@ Detalhes técnicos em `RELATORIO-BETA36.md`. As regras do Firestore não mudaram
    - **Perfil:** mantido (pessoa e arco de evolução), redesenhado e só no topo.
    - **Histórico:** mantido (relógio), pequeno, ao lado do título.
    - **Progresso:** mantido (gráfico subindo), pequeno, ao lado do título, nunca atrás dos gráficos.
+   - **Painel do administrador** e telas de **montar plano** (musculação e corrida) ganharam desenhos próprios: prancheta com a lista de alunos; ficha com halter e lápis; percurso com largada e bandeira. Antes elas mostravam o desenho da aba de onde você veio.
+   - A cena do Início tem tamanho fixo no celular: não pula mais ao tocar em Início ou trocar Musculação/Corrida.
    - A opção "Fundo decorativo" continua ligando e desligando tudo.
 3. **Registro de séries.** Cada série tem um botão **✓ Concluir**:
    - O descanso só começa depois de uma série concluída. Abrir o exercício ou adicionar uma série vazia não inicia descanso.
@@ -42,7 +44,8 @@ Detalhes técnicos em `RELATORIO-BETA36.md`. As regras do Firestore não mudaram
    - créditos dos vídeos;
    - painel do administrador.
 8. **Rolagem.** Fechar uma janela não faz mais a tela pular para outra posição (o navegador devolvia a tela para onde ela estava quando a janela abriu). O efeito nativo do Android no fim da tela voltou, e o puxar-para-atualizar continua bloqueado. As faixas que rolam para o lado não puxam a tela nem o gesto de voltar. A barra de abas ficou mais leve de desenhar.
-9. **Paletas dos temas.** Cada amostra tem moldura própria e fundo neutro, e não pega mais o tom do cartão em volta.
+9. **Avisos.** Trocar Musculação/Corrida várias vezes não empilha mais "Trocado para…" na tela: o aviso novo substitui o anterior (no máximo 3 avisos ao mesmo tempo).
+10. **Paletas dos temas.** Cada amostra tem moldura própria e fundo neutro, e não pega mais o tom do cartão em volta.
 
 # MetaTreino 2027.1 Beta 35 — O que faltava da auditoria
 

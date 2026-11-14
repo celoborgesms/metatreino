@@ -89,6 +89,11 @@ Esta versão faz uma rodada de acabamento sobre a Beta 35.
 - Rolagem ao fechar janelas: às vezes a tela pulava (o teste de acabamento pegou o caso no Perfil, de 360 para 240). Causa: as janelas usam o histórico do navegador para o Voltar do Android, e o navegador restaurava a posição de quando a janela abriu. Solução: `history.scrollRestoration = 'manual'` (parte 23), e o Perfil guarda a posição ao se redesenhar.
 - Mural: com a capa ligada, a cena do Início não é desenhada (ficava escondida atrás da capa). O logo do mural foi conferido em todas as telas.
 
+- Vídeos do aluno (Beta 36 instalada): a cena do Início mudava de tamanho ao tocar em Início ou trocar Musculação/Corrida (a altura seguia o número de linhas da saudação). Agora tem altura fixa (100 px) e é posicionada na hora, sem esperar o próximo quadro. O teste de acabamento grava a cena a cada quadro numa sequência de trocas e confere que ela fica idêntica.
+- O desenho agora é escolhido pela TELA aberta (`decoChaveDaTela`), não pela aba: o painel do administrador mostrava o desenho do Perfil, e as telas de montar plano também. Elas ganharam desenhos próprios (`admin`, `montarMusculacao`, `montarCorrida`), e a troca de tela (`showScreen`) atualiza o desenho.
+- Regras antigas de opacidade por tema (0,22 no Claro e no Areia, 0,32 no AMOLED) ainda apagavam os desenhos novos nesses temas. Agora os desenhos novos ficam com opacidade 1 e a transparência vem de cada traço.
+- Avisos: um aviso do mesmo tipo substitui o anterior, com no máximo 3 na tela.
+
 ## Testes executados (todos nesta versão final, Beta 36)
 
 | Teste | Resultado |

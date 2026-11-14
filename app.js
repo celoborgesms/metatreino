@@ -2652,6 +2652,11 @@ function showScreen(id){
 function toast(msg, ms){
   let wrap = document.getElementById('toast-wrap');
   if(!wrap){ wrap = document.createElement('div'); wrap.id='toast-wrap'; document.body.appendChild(wrap); }
+  // Beta 36: aviso do mesmo tipo substitui o anterior (alternar Musculação/Corrida várias vezes empilhava
+  // "Trocado para…" na tela); no máximo 3 avisos ao mesmo tempo.
+  const chave = String(msg||'').slice(0, 12);
+  [...wrap.children].forEach(o=>{ if(String(o.textContent||'').slice(0, 12) === chave) o.remove(); });
+  while(wrap.children.length >= 3) wrap.firstElementChild.remove();
   const t = document.createElement('div'); t.className='toast'; t.textContent = msg;
   wrap.appendChild(t);
   // O tempo acompanha o tamanho do texto: "✅ Salvo!" some rápido, uma frase
