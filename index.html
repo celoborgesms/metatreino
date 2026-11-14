@@ -2163,17 +2163,113 @@ body:has(#modal-back.on) #toast-wrap{top:calc(14px + env(safe-area-inset-top));b
 [role="button"]:focus-visible{outline:2px solid var(--primary-2);outline-offset:2px}
 /* Beta 34: registro sem coluna de carga (peso do corpo, isométricos) */
 .set-row.sem-peso{grid-template-columns:36px 1fr 40px}
-/* Beta 34: segurar o dedo em botões, abas, menus e cartões de navegação não abre o menu de copiar.
-   Textos informativos (fichas, mensagens, créditos, números) continuam selecionáveis, e campos de digitação também. */
-button, .btn, .tab, .tabbar, .seg, .opt, .opt-multi, .filter-chip, .pill, .list-row, .lx-item, .hist-card, summary,
-.pf-grp-h, .ex-tools, .rt-banner, .mtv-ctrl, .modal-back .ex-x, [role="button"], [onclick]:not(input):not(textarea){
+/* Beta 36: seleção de texto num lugar só. A interface (telas, abas, janelas, botões, cartões, rótulos, clima,
+   status) não abre o menu de copiar ao segurar o dedo. Continua selecionável só o que faz sentido copiar:
+   campos de digitação, conversa com o assistente, recado do treinador, anotações do dia, instruções da ficha,
+   créditos dos vídeos, painel do administrador e qualquer bloco marcado com a classe "selecionavel". */
+.screen, .tabbar, #modal-inner, #modal-back, #ma-fab, #fab-bubble, #toast-wrap, .rt-banner, #building-ov{
   -webkit-user-select:none; user-select:none; -webkit-touch-callout:none }
-input, textarea, select, [contenteditable="true"], .vc-cred, .vc-cred *, .ex-sec, .ex-sec *, .selecionavel, .selecionavel *{
+input, textarea, select, [contenteditable="true"],
+.selecionavel, .selecionavel *, .vc-cred, .vc-cred *, .ex-sec, .ex-sec *, #ma-thread, #ma-thread *,
+#coach-msg-text, .dn-nota, .dn-nota *, #scr-admin, #scr-admin *, #scr-admin-student, #scr-admin-student *{
   -webkit-user-select:text; user-select:text; -webkit-touch-callout:default }
+#ma-thread button, #scr-admin button, #scr-admin .btn, #scr-admin-student button, #scr-admin-student .btn, .selecionavel button{
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none }
 /* com o descanso rodando, os avisos sobem para não cobrir o cronômetro */
 body:has(#rest-timer-banner) #toast-wrap{bottom:calc(206px + env(safe-area-inset-bottom))}
 /* foco visível ao navegar pelo teclado (computador) sem mudar o toque no celular */
 button:focus-visible, .btn:focus-visible, [onclick]:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible{outline:2px solid var(--primary-2);outline-offset:2px}
+/* ===== Beta 36: fundos decorativos numa faixa do topo (não passam mais por trás de cartões) ===== */
+/* A faixa vai do topo da aba até o primeiro bloco de conteúdo (medida por decoPosiciona, parte 22). */
+#app-deco.deco36,html.mt-desk #app-deco.deco36{display:block;position:absolute;top:var(--deco-top,calc(env(safe-area-inset-top,0px) + 6px));right:var(--deco-dir,0px);left:auto;bottom:auto;
+  width:min(56vw,236px);height:var(--deco-h,110px);opacity:1;overflow:hidden;color:var(--text);pointer-events:none;
+  -webkit-mask-image:linear-gradient(to bottom,#000 74%,transparent);mask-image:linear-gradient(to bottom,#000 74%,transparent)}
+#app-deco.deco36 svg{width:100%;height:100%;transform:none;display:block}
+#app-deco.deco36.deco-baixa,#app-deco.deco36[data-k="sem"],body.no-deco #app-deco.deco36{display:none}
+html.mt-desk #app-deco.deco36{opacity:1}
+html.mt-desk #app-deco.deco36:not([data-k="inicio"]){width:240px}
+/* Início: janela à direita da saudação; a paisagem some aos poucos por trás do texto */
+#app-deco.deco36[data-k="inicio"],html.mt-desk #app-deco.deco36[data-k="inicio"]{width:min(100%,540px);
+  -webkit-mask-image:linear-gradient(to right,transparent 26%,#000 60%),linear-gradient(to bottom,#000 82%,transparent);-webkit-mask-composite:source-in;
+  mask-image:linear-gradient(to right,transparent 26%,#000 60%),linear-gradient(to bottom,#000 82%,transparent);mask-composite:intersect}
+body:not(.no-deco) #scr-home .greet > div:not(.avatar){padding-right:min(31%,150px)}
+#home-brand-row > div:not(.brand-logo):not(.avatar):not(#home-clima){flex:1;min-width:0}
+#home-brand-row > #home-clima{order:2;margin-left:8px}
+#home-brand-row > .avatar{order:3;width:38px;height:38px;flex:0 0 38px;font-size:15px;margin-left:10px;border-width:2px;box-shadow:0 0 0 3px rgba(var(--primary-rgb),.12);cursor:pointer}
+@media (max-width:379px){#home-clima span{display:none}}
+#home-clima.so-temp span{display:none}
+#home-brand-row > div:not(.brand-logo):not(.avatar):not(#home-clima){white-space:nowrap}
+/* tintas dos desenhos: seguem o tema (texto + cor principal) */
+#app-deco{--d-fundo:.08;--d-fill:.07;--d-linha:.34;--d-ac:.75;--d-acf:.6}
+html.tema-claro #app-deco{--d-fundo:.10;--d-fill:.06;--d-linha:.30;--d-ac:.8;--d-acf:.65}
+[data-theme="amoled"] #app-deco{--d-fundo:.13;--d-fill:.09;--d-linha:.42;--d-ac:.85;--d-acf:.7}
+#app-deco .d-fundo{fill:var(--primary);fill-opacity:var(--d-fundo);stroke:none}
+#app-deco .d-fill{fill:currentColor;fill-opacity:var(--d-fill);stroke:currentColor;stroke-opacity:var(--d-linha)}
+#app-deco .d-linha{stroke:currentColor;stroke-opacity:var(--d-linha)}
+#app-deco .d-ac{stroke:var(--primary);stroke-opacity:var(--d-ac)}
+#app-deco .d-acf{fill:var(--primary);fill-opacity:var(--d-acf)}
+/* cena do Início */
+#app-deco svg[data-cena]{--sol:#f5b83d;--k:1}
+#app-deco svg[data-cena^="amanhecer"],#app-deco svg[data-cena^="tarde"]{--sol:#ff8f5a}
+#app-deco svg[data-cena^="noite"]{--sol:var(--text-strong,var(--text))}
+html.tema-claro #app-deco svg[data-cena]{--sol:#e39a12}
+html.tema-claro #app-deco svg[data-cena^="amanhecer"],html.tema-claro #app-deco svg[data-cena^="tarde"]{--sol:#e8692c}
+html.tema-claro #app-deco svg[data-cena^="noite"]{--sol:#5b6478}
+[data-theme="amoled"] #app-deco svg[data-cena]{--k:1.25}
+#app-deco .c-serra1{fill:currentColor;fill-opacity:calc(.05 * var(--k));stroke:none}
+#app-deco .c-mont{fill:currentColor;fill-opacity:calc(.09 * var(--k));stroke:currentColor;stroke-opacity:calc(.28 * var(--k))}
+#app-deco .c-neve{fill:currentColor;fill-opacity:calc(.22 * var(--k));stroke:none}
+#app-deco .c-frente{fill:currentColor;fill-opacity:calc(.07 * var(--k));stroke:none}
+#app-deco .c-ac{stroke:var(--primary);stroke-opacity:.85}
+#app-deco .c-acf{fill:var(--primary);fill-opacity:.8;stroke:none}
+#app-deco .c-halo{fill:var(--sol);fill-opacity:.12;stroke:none}
+#app-deco .c-astro{fill:var(--sol);fill-opacity:.30;stroke:var(--sol);stroke-opacity:.9;stroke-width:1.8}
+#app-deco .c-raio{stroke:var(--sol);stroke-opacity:.6;stroke-width:1.6}
+#app-deco .c-estrela{fill:currentColor;fill-opacity:calc(.5 * var(--k));stroke:none}
+#app-deco .c-nuvem{fill:var(--bg);fill:color-mix(in srgb,var(--text) 12%,var(--bg));stroke:currentColor;stroke-opacity:.38}
+#app-deco .c-chuva{stroke:currentColor;stroke-opacity:.45}
+#app-deco .c-floco circle{fill:currentColor;fill-opacity:.5;stroke:none}
+#app-deco .c-nevoa{stroke:currentColor;stroke-opacity:.32}
+#app-deco .c-fill{fill:currentColor;fill-opacity:calc(.1 * var(--k));stroke:currentColor;stroke-opacity:.35}
+#app-deco .c-linha{stroke:currentColor;stroke-opacity:.4}
+/* ===== Beta 36: paletas dos temas iguais em qualquer lugar ===== */
+/* A amostra é sempre opaca e tem a própria moldura neutra: não herda o tom do cartão em volta (que é
+   translúcido e muda com o tema atual), então a mesma paleta parece a mesma, aberta ou fechada. */
+.ap-prev,.theme-prev{isolation:isolate;box-shadow:inset 0 0 0 1px rgba(128,128,128,.38)}
+.ap-opt,.theme-opt{background:var(--surface-2)}
+html.tema-claro .ap-opt,html.tema-claro .theme-opt{background:#fff}
+[data-theme="amoled"] .ap-opt{background:#000}
+/* ===== Beta 36: botão do Meta Assistente com contraste em todos os temas ===== */
+/* O ícone pegava a cor principal do tema, a mesma do fundo do botão (verde sobre verde no Clássico).
+   Agora usa a cor de texto dos botões principais; um anel na cor do fundo separa o botão de cartões e desenhos. */
+#ma-fab .ico,#ma-fab .ico svg{color:var(--on-primary)!important}
+#ma-fab{box-shadow:0 0 0 3px var(--bg),0 8px 22px rgba(0,0,0,.34),0 4px 16px rgba(var(--primary-rgb),.32)}
+[data-theme="zepp"] #ma-fab{border-color:rgba(var(--primary-rgb),.6)!important;box-shadow:0 0 0 3px var(--bg),0 8px 22px rgba(0,0,0,.5)!important}
+[data-theme="zepp"] #ma-fab .ico,[data-theme="zepp"] #ma-fab .ico svg,[data-theme="amoled"] #ma-fab .ico,[data-theme="amoled"] #ma-fab .ico svg{color:var(--primary-2)!important}
+[data-theme="amoled"] #ma-fab{box-shadow:0 0 0 3px #000,0 0 14px rgba(var(--primary-rgb),.28)}
+#ma-fab.fab-important .ico,#ma-fab.fab-rare .ico,#ma-fab.fab-special .ico,#ma-fab.fab-important .ico svg,#ma-fab.fab-rare .ico svg,#ma-fab.fab-special .ico svg{color:#fff!important}
+/* ===== Beta 36: rolagem natural ===== */
+/* "contain" no lugar de "none": continua sem o puxar-para-atualizar (que recarregava o app no meio do treino),
+   mas volta o efeito nativo do Android ao chegar no fim da tela. */
+html,body{overscroll-behavior-y:contain}
+/* faixas que rolam para o lado não arrastam a tela nem disparam o gesto de voltar do navegador */
+.hs,.chips-row,.mts-chips,.qlinks,.week,#sessions-chips{overscroll-behavior-x:contain}
+/* barra de abas: mesmo visual, desfoque mais leve (é redesenhado a cada quadro da rolagem) */
+.tabbar{backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3)}
+/* ===== Beta 36: registro de séries — concluir série e descanso ===== */
+.set-row{grid-template-columns:34px 1fr 1fr 40px 34px}
+.set-row.sem-peso{grid-template-columns:34px 1fr 40px 34px}
+.set-ok{width:100%;height:36px;border-radius:10px;border:1.5px solid var(--border-strong);background:transparent;color:var(--text-mute);font-weight:800;font-size:16px;line-height:1;cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease}
+.set-ok:active{transform:scale(.94)}
+.set-row.feita .set-ok{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.set-row.feita .set-num{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.set-row .set-x{width:100%;height:36px}
+.set-row > *{min-width:0}
+.sl-prog{display:inline-block;margin-left:2px;padding:1px 8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--border);font-size:11.5px;font-weight:700;color:var(--text-dim);white-space:nowrap}
+.sl-fim{margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(var(--primary-rgb),.10);border:1px solid rgba(var(--primary-rgb),.28);color:var(--text);font-size:12.5px;line-height:1.45}
+.sl-auto{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12.5px;color:var(--text-dim);cursor:pointer}
+.sl-auto .pi-sw{flex:0 0 auto}
+@media (max-width:360px){.set-row{gap:6px;grid-template-columns:30px 1fr 1fr 38px 32px}.set-row.sem-peso{grid-template-columns:30px 1fr 38px 32px}.set-row .set-num{width:30px;height:30px}}
 </style>
 </head>
 <body>
@@ -3033,7 +3129,7 @@ button:focus-visible, .btn:focus-visible, [onclick]:focus-visible, input:focus-v
       <div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div>
     </div>
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 35</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 36</span>
     </div>
   </div>
 </div>
@@ -3111,9 +3207,18 @@ button:focus-visible, .btn:focus-visible, [onclick]:focus-visible, input:focus-v
   }, 16000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.35"></script>
-<script src="./app-plus.js?v=2027.1-beta.35"></script>
+<script src="./app.js?v=2027.1-beta.36"></script>
+<script src="./app-plus.js?v=2027.1-beta.36"></script>
 <script>
+// Beta 36: app.js e app-plus.js precisam ser da MESMA versão. Se um deles não carregou ou veio de outra
+// versão (cache no meio de uma atualização), recarrega uma vez — senão partes antigas (como a tela antiga
+// de compartilhar) podiam aparecer. Uma tentativa por sessão, para nunca entrar em ciclo sem internet.
+(function(){
+  try{
+    var okV = (typeof MTP !== 'undefined') && (typeof APP_VERSION !== 'undefined') && MTP.versao === APP_VERSION;
+    if(!okV && !sessionStorage.getItem('mt_versao_recarga')){ sessionStorage.setItem('mt_versao_recarga', '1'); location.reload(); }
+  }catch(e){}
+})();
 // (APP_VERSION já é declarada em app.js: declarar de novo aqui dava erro e impedia o service worker de registrar)
 var _semSW = (function(){ try{ var t = +localStorage.getItem('mt_nosw'); return !!t && (Date.now()-t) < 7*864e5; }catch(e){ return false; } })();
 var _tinhaCtl = !!(navigator.serviceWorker && navigator.serviceWorker.controller);

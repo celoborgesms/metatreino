@@ -149,6 +149,9 @@ Nenhum elemento pode passar da borda da tela no celular (deixa a página mais la
 | Duas cópias do aluno | app.js | `mesclaEstado(base, outra, {desde})` junta histórico/séries/peso/conquistas. Ao excluir um registro do histórico, chame `marcaExcluido(modulo, registro)`. |
 | Plano entre aparelhos (Beta 35) | app.js | `saveData()` marca `modules.lift/run.planAt` quando `setup` ou `plan` mudam (compara com `planoAssinatura`). Na junção, o plano com `planAt` maior vence. Depois de trocar `state` inteiro, chame `planoMarcaBase()`. |
 | Divisão de 3 dias (Beta 35) | app.js, `generatePlan` | 3 dias com folga entre eles → Superior · Inferior + Core · Corpo inteiro (grupos grandes 2×/semana). Dias seguidos ou `setup.split3 = 'classico'` → divisão antiga. Teto de 90 min por treino em `buildLiftExercises`. |
+| Fundos decorativos (Beta 36) | parte 22 / 28 | `updateDeco(tab)` desenha; `decoPosiciona(tab)` mede a faixa do topo (`DECO_FAIXA`: até o primeiro bloco de conteúdo) e grava `--deco-top`, `--deco-h`, `--deco-dir`. Todas as abas principais têm desenho. Início: `cenaInicio()` (camadas, classes `.c-*`), foto do perfil na linha do METATREINO (`inicioAvatarNoTopo`). Cores pelas classes `.d-*`/`.c-*` no CSS, nunca no SVG. |
+| Registro de séries (Beta 36) | app.js | `concluirSerie(i)` (✓), `addSet()` (adicionar), `updateSet()` (editar, não toca no descanso). `curLog.feitas[]` só na tela (nada novo é gravado). `seriesPlanejadas(exId)`, `descansoAutomatico()` (`mt_descanso_auto`). |
+| Compartilhar (Beta 36) | parte 26 | Sempre `mtsAbrir(d)`. A altura do bloco do card é medida com `_mtsMedidor` (contexto que não desenha); o nome entra no bloco. |
 | Confirmação | app.js | `appConfirm(msg, onOk, {title, emo, okLabel, onCancel})`. Use antes de qualquer ação que apaga algo. |
 | HTML com dado do aluno | app.js / parte 00 | `escHtml()` / `mtEsc()` para texto; `jsAttr()` dentro de `onclick="f('...')"`. |
 
@@ -171,6 +174,9 @@ node testes/semana-menos-tempo.js     # corrida: semana com menos tempo
 python3 testes/registro-series.py URL # registro de séries (carga/corpo/tempo), 1ª série e descanso, ficha, seleção de texto
 node testes/beta35.js                 # plano entre aparelhos, corrida adaptada por dor, divisão de 3 dias, confirmação
 python3 testes/acessibilidade.py URL  # nomes de botões, teclado, aviso acima das janelas, confirmação
+python3 testes/acabamento.py URL      # 8 temas × 360/390/430 px: fundos, cena do Início, paletas, botão do assistente, seleção, rolagem
+python3 testes/serie-descanso.py URL  # concluir série, descanso automático/manual, última série
+python3 testes/compartilhar.py URL    # central de compartilhamento em sequência, estado limpo, nome na faixa
 ```
 Os testes de navegador usam `testes/mock-firebase.js` (Firebase simulado, sem conta real) e `testes/semente.js` (aluno de exemplo). Para servir o site de teste: copie o projeto, troque os `<script>` do Firebase do `index.html` por `mock-firebase.js` e rode `python3 -m http.server`.
 

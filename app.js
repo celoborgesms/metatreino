@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 35 =====
-const APP_VERSION = '2027.1-beta.35';
+// ===== MetaTreino 2027.1 Beta 36 =====
+const APP_VERSION = '2027.1-beta.36';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -4026,7 +4026,7 @@ function openSetLog(exId, exName){
   const logs = state.progress[exId]||[];
   let entry = logs.find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime(); });
   if(!entry){ entry = { date:Date.now(), sets:[] }; logs.push(entry); state.progress[exId] = logs; }
-  curLog = { exId, exName, entry };
+  curLog = { exId, exName, entry, feitas: entry.sets.map(()=>true) };   // Beta 36: o que já estava salvo hoje conta como concluído
   renderSetLogModal();
   $('modal-back').classList.add('on');
 }
@@ -4152,18 +4152,32 @@ function renderSetLogModal(){
   const semPesoCls = comPeso ? '' : ' sem-peso';
   const hint = smartProgressionHint(exId);
   const suggested = `<div class="card ${hint.cls}" style="padding:12px;margin-bottom:12px"><div class="card-sub">${hint.txt}</div></div>`;
+  if(!Array.isArray(curLog.feitas)) curLog.feitas = entry.sets.map(()=>true);
+  const feitas = curLog.feitas;
+  const planejadas = seriesPlanejadas(exId);
+  const nFeitas = entry.sets.filter((_,i)=>feitas[i]).length;
   const rows = entry.sets.length? entry.sets.map((s,i)=>`
-    <div class="set-row${semPesoCls}">
+    <div class="set-row${semPesoCls}${feitas[i]?' feita':''}">
       <div class="set-num">${i+1}</div>
       ${comPeso ? `<input class="set-in mono" type="number" inputmode="decimal" step="0.5" min="0" value="${s.peso}" onchange="updateSet(${i},'peso',this.value)" placeholder="${tipoReg==='carga'?'kg':'opcional'}" aria-label="Carga da série ${i+1} em kg">` : ''}
       ${isTempo
-        ? `<input class="set-in mono" type="text" inputmode="numeric" value="${fmtTempo(s.reps)}" onchange="updateSet(${i},'tempo',this.value)" placeholder="mm:ss">`
+        ? `<input class="set-in mono" type="text" inputmode="numeric" value="${fmtTempo(s.reps)}" onchange="updateSet(${i},'tempo',this.value)" placeholder="mm:ss" aria-label="Tempo da série ${i+1}">`
         : `<input class="set-in mono" type="number" inputmode="numeric" min="0" value="${s.reps}" onchange="updateSet(${i},'reps',this.value)" placeholder="reps" aria-label="Repetições da série ${i+1}">`}
-      <button class="set-x" onclick="delSet(${i})">✕</button>
-    </div>`).join('') : `<div class="text-dim" style="text-align:center;padding:12px 0">Nenhuma série ainda. Clique em "+ Nova série" para começar.</div>`;
+      <button type="button" class="set-ok" onclick="concluirSerie(${i})" aria-pressed="${feitas[i]?'true':'false'}" aria-label="${feitas[i]?'Série '+(i+1)+' concluída (tocar desfaz)':'Concluir série '+(i+1)}">${feitas[i]?'✓':'✓'}</button>
+      <button type="button" class="set-x" onclick="delSet(${i})" aria-label="Apagar série ${i+1}">✕</button>
+    </div>`).join('') : `<div class="text-dim" style="text-align:center;padding:12px 0">Nenhuma série ainda. Toque em "+ Registrar a 1ª série" para começar.</div>`;
+  const ultimaFeita = entry.sets.length && feitas[entry.sets.length-1];
+  const fimPlano = planejadas && nFeitas >= planejadas && ultimaFeita;
+  const descSeg = descansoDoExercicio(exId);
+  const rodando = typeof restTimerInt!=='undefined' && !!restTimerInt;
+  const autoDesc = descansoAutomatico();
+  // ação de descanso: só aparece depois de uma série concluída (nunca ao abrir o exercício ou com a série ainda vazia)
+  const acaoDescanso = !nFeitas ? '' : fimPlano
+    ? `<div class="sl-fim">✓ Última série prevista concluída — sem descanso aqui. Siga para o próximo exercício quando quiser.</div>`
+    : `<button class="btn ${(!rodando && ultimaFeita && !autoDesc) ? 'btn-primary' : 'btn-outline hl-primary'} btn-block" style="margin-top:8px" onclick="startRestFor('${exId}','${exName.replace(/'/g,"\\'")}');renderSetLogModal()">⏱️ ${rodando ? 'Reiniciar descanso' : 'Iniciar descanso'} · ${fmtTempo(descSeg)}</button>`;
   $('modal-inner').innerHTML = `
     <h3>📝 ${exName}</h3>
-    <p style="font-size:13px;color:var(--text-dim);margin-top:2px">${isTempo ? 'Registre o tempo que segurou cada série.' : (comPeso ? (tipoReg==='carga' ? 'Registre a carga e as repetições de cada série.' : 'Registre as repetições e a carga extra que usou.') : 'Registre as repetições de cada série. Este exercício é feito com o peso do corpo.')}${entry.sets.length ? ' Terminou a série? Toque em <b>+ Nova série</b>: o descanso começa na hora.' : ''}</p>
+    <p style="font-size:13px;color:var(--text-dim);margin-top:2px">${isTempo ? 'Registre o tempo que segurou cada série.' : (comPeso ? (tipoReg==='carga' ? 'Registre a carga e as repetições de cada série.' : 'Registre as repetições e a carga extra que usou.') : 'Registre as repetições de cada série. Este exercício é feito com o peso do corpo.')}${entry.sets.length ? ` Terminou a série? Toque em <b>✓</b> para concluir${autoDesc ? ': o descanso começa sozinho' : ' e depois em <b>Iniciar descanso</b>'}.` : ''}${planejadas ? ` <span class="sl-prog">${nFeitas} de ${planejadas} séries</span>` : ''}</p>
     ${suggested}
     <div style="margin-top:10px">
       <div class="set-row${semPesoCls}" style="border-bottom:1px solid var(--border);padding-bottom:6px;color:var(--text-dim);font-size:11px;font-weight:700;letter-spacing:1px">
@@ -4173,7 +4187,8 @@ function renderSetLogModal(){
     </div>
     ${!comPeso && tipoReg !== 'mobilidade' && tipoReg !== 'cardio' ? `<div style="text-align:right;margin-top:6px"><a href="#" style="font-size:12px;color:var(--text-mute)" onclick="curLog.cargaExtra=true;renderSetLogModal();return false">+ Usei carga extra (colete, anilha, halter)</a></div>` : ''}
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="addSet()">${entry.sets.length ? '+ Nova série' : '+ Registrar a 1ª série'}</button>
-    <button class="btn btn-outline btn-block hl-primary" style="margin-top:8px" onclick="startRestFor('${exId}','${exName.replace(/'/g,"\\'")}')">⏱️ Reiniciar descanso</button>
+    ${acaoDescanso}
+    ${entry.sets.length ? `<label class="sl-auto"><input type="checkbox" class="pi-sw" ${autoDesc?'checked':''} onchange="setDescansoAutomatico(this.checked)"><span>Iniciar o descanso sozinho ao concluir a série</span></label>` : ''}
     <div class="row" style="gap:8px;margin-top:14px">
       <button class="btn btn-ghost btn-block" onclick="closeSetLog(false)">Voltar</button>
       <button class="btn btn-primary btn-block" onclick="closeSetLog(true)">Salvar</button>
@@ -4200,22 +4215,52 @@ function descansoDoExercicio(exId){
 function startRestFor(exId, exName){
   startRestTimer(descansoDoExercicio(exId), exName);
 }
+// Beta 36: três ações diferentes no registro de séries
+//   adicionar (+ Nova série) → cria a linha da próxima série, ainda pendente;
+//   editar (mudar carga/repetições) → só muda os números, nunca mexe no descanso;
+//   concluir (✓) → a série foi feita: começa o descanso (automático ou pelo botão "Iniciar descanso").
+// A 1ª série nunca dispara descanso antes de ser concluída, e a última série prevista não dispara descanso.
+function descansoAutomatico(){ try{ return localStorage.getItem('mt_descanso_auto') !== '0'; }catch(e){ return true; } }
+function setDescansoAutomatico(on){ try{ localStorage.setItem('mt_descanso_auto', on ? '1' : '0'); }catch(e){} if(curLog) renderSetLogModal(); }
+function seriesPlanejadas(exId){
+  try{
+    const mod = state.modules.lift; let w = null; try{ w = currentSelectedWorkout(mod); }catch(e){}
+    let ex = (w && (w.exercises||[]).find(e=>e.id===exId));
+    if(!ex){ try{ ex = extrasDeHoje().find(e=>e.id===exId); }catch(e){} }
+    const n = ex ? parseInt(ex.sets) : 0;
+    return n > 0 ? n : 0;
+  }catch(e){ return 0; }
+}
+function concluirSerie(i, opts){
+  if(!curLog || !curLog.entry.sets[i]) return;
+  opts = opts || {};
+  if(!Array.isArray(curLog.feitas)) curLog.feitas = curLog.entry.sets.map(()=>true);
+  if(curLog.feitas[i] && !opts.implicito){ curLog.feitas[i] = false; renderSetLogModal(); return; }   // tocar de novo desfaz (o descanso que já começou continua)
+  curLog.feitas[i] = true;
+  const s0 = curLog.entry.sets[i];
+  if(!(+s0.reps > 0)){ toast(exUsaTempo(curLog.exId) ? 'Preencha o tempo da série antes de concluir.' : 'Preencha as repetições da série antes de concluir.'); curLog.feitas[i] = false; renderSetLogModal(); return; }
+  const planejadas = seriesPlanejadas(curLog.exId);
+  const nFeitas = curLog.entry.sets.filter((_,k)=>curLog.feitas[k]).length;
+  const ultimaPrevista = !opts.implicito && planejadas && nFeitas >= planejadas && i === curLog.entry.sets.length-1;
+  if(!ultimaPrevista && descansoAutomatico()){ try{ startRestTimer(descansoDoExercicio(curLog.exId), curLog.exName || ''); }catch(e){} }
+  renderSetLogModal();
+}
 function addSet(){
-  // "+ Nova série" só é clicado depois que a série anterior acabou — então
-  // esse toque já significa "descanse antes da próxima". O timer dispara
-  // sozinho, sem precisar tocar em "Iniciar descanso" toda vez.
-  const last = curLog.entry.sets[curLog.entry.sets.length-1];
-  const tinhaSerie = curLog.entry.sets.length > 0;   // Beta 34: a 1ª linha é a 1ª série, nenhuma série terminou ainda
+  const sets = curLog.entry.sets;
+  if(!Array.isArray(curLog.feitas)) curLog.feitas = sets.map(()=>true);
+  // "+ Nova série" com a série anterior ainda aberta = ela foi feita (é o hábito de quem usava o botão antes):
+  // conclui a anterior com as mesmas regras (descanso automático, se estiver ligado). Concluída antes, não repete.
+  const ultima = sets.length - 1;
+  if(ultima >= 0 && !curLog.feitas[ultima] && +sets[ultima].reps > 0){ curLog.feitas[ultima] = true; if(descansoAutomatico()){ try{ startRestTimer(descansoDoExercicio(curLog.exId), curLog.exName || ''); }catch(e){} } }
+  const last = sets[sets.length-1];
   const prev = getLastLog(curLog.exId);
   const seedDefault = exUsaTempo(curLog.exId) ? 30 : 10;   // isométrico: começa sugerindo 30s
   const seed = last || (prev && prev.sets[0]) || {peso:0,reps:seedDefault};
-  curLog.entry.sets.push({ peso:parseFloat(seed.peso)||0, reps:parseInt(seed.reps)||seedDefault });
+  sets.push({ peso:parseFloat(seed.peso)||0, reps:parseInt(seed.reps)||seedDefault });
+  curLog.feitas.push(false);
   renderSetLogModal();
-  // "+ Nova série" depois de uma série = aquela série terminou: começa o descanso (uma vez por toque;
-  // um descanso que já estava correndo é substituído, nunca somado). A 1ª série não dispara descanso.
-  if(tinhaSerie){ try{ startRestTimer(descansoDoExercicio(curLog.exId), curLog.exName || ''); }catch(e){} }
 }
-function delSet(i){ curLog.entry.sets.splice(i,1); renderSetLogModal(); }
+function delSet(i){ curLog.entry.sets.splice(i,1); if(Array.isArray(curLog.feitas)) curLog.feitas.splice(i,1); renderSetLogModal(); }
 function updateSet(i,k,v){
   if(k==='tempo'){ curLog.entry.sets[i].reps = parseTempo(v); return; }   // mm:ss → segundos, guardado em reps
   curLog.entry.sets[i][k] = k==='peso'?parseFloat(v)||0:parseInt(v)||0;
@@ -11208,7 +11253,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{applyHeroCapa,processaMuralFoto,doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,listaPendentes,abrirPendente,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{applyHeroCapa,processaMuralFoto,doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,listaPendentes,abrirPendente,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,concluirSerie,setDescansoAutomatico,descansoAutomatico,seriesPlanejadas,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo para garantir que `coachContact` já foi declarado.

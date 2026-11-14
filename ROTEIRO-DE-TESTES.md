@@ -1,11 +1,11 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 35
+# Roteiro de testes em aparelho real — MetaTreino Beta 36
 
 Leva uns 25 minutos. Use o aparelho e a conta do dia a dia. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho.
 
 Antes de começar: publique o `firestore.rules` novo no Console do Firebase (Firestore → Regras → Publicar).
 
 ## 1. Instalação, atualização e modo avião
-- [ ] O app atualizou sozinho para a **Beta 35** (Perfil → rodapé), sem tocar em nenhum botão?
+- [ ] O app atualizou sozinho para a **Beta 36** (Perfil → rodapé), sem tocar em nenhum botão?
 - [ ] Fechar e abrir de novo: entrou direto, sem pedir login?
 - [ ] **Logo depois de atualizar**, ligue o modo avião, feche o app de vez e abra de novo. Ele abre e mostra os treinos? (Na Beta 32 este caso podia abrir em branco.)
 - [ ] Ainda no modo avião: registre 2 séries e salve o treino. Desligue o modo avião. O treino aparece no Histórico de outro aparelho (ou depois de sair e entrar)?
@@ -46,6 +46,18 @@ Antes de começar: publique o `firestore.rules` novo no Console do Firebase (Fir
 - [ ] Corrida → Semana com menos tempo: escolha menos dias. Aparece "Como fica a semana" antes de aplicar? Depois de aplicar, a semana muda na hora?
 - [ ] Segure o dedo num botão ou numa aba: não aparece o menu de copiar? Segure num texto da ficha: dá para selecionar?
 - [ ] Na ficha de um exercício com créditos, eles aparecem no fim, depois de "Erro comum"?
+
+## 4d. Beta 36 — acabamento
+- [ ] Início de manhã, de dia, no fim da tarde e à noite: o sol ou a lua aparecem inteiros, à direita da saudação, sem nada por cima? Com chuva ou nublado aparecem nuvens?
+- [ ] Toque na sua foto (no alto, à direita): abre o Perfil?
+- [ ] Desafios em todos os temas, principalmente AMOLED: a medalha do topo aparece e não cruza a bandeira do desafio?
+- [ ] Treinos → abra um exercício: o descanso **não** começa ao abrir nem ao tocar "+ Registrar a 1ª série". Preencha e toque em **✓**: o descanso começa. Na última série prevista, o ✓ **não** abre descanso.
+- [ ] Desligue "Iniciar o descanso sozinho…": ao concluir, aparece o botão **Iniciar descanso**?
+- [ ] Compartilhe 3 conquistas diferentes seguidas (abrir, fechar, abrir outra): sempre a central nova?
+- [ ] Central de compartilhamento: Faixa + "Mostrar meu primeiro nome" — o nome fica dentro da faixa, centralizado, em Stories, Feed e Quadrado?
+- [ ] Botão redondo do assistente bem visível em todos os temas (principalmente Clássico e Vinho)?
+- [ ] Segure o dedo no clima, na semana e nos cartões do Início: **não** abre o menu de copiar. Na conversa do assistente, ainda dá para copiar?
+- [ ] Role todas as abas até o fim: rolagem fluida, com o efeito de fim de tela do Android e sem recarregar a página ao puxar para baixo?
 
 ## 4c. Correções da Beta 35
 - [ ] Troque os dias de musculação no **celular**. Abra o **computador**: os dias e treinos novos aparecem lá? Registre algo no computador e confira que o celular **não** volta ao plano antigo.

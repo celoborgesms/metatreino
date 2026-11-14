@@ -1,3 +1,49 @@
+# MetaTreino 2027.1 Beta 36 — Acabamento visual, séries e compartilhamento
+
+Detalhes técnicos em `RELATORIO-BETA36.md`. As regras do Firestore não mudaram nesta versão.
+
+1. **Início com o céu visível.** A foto do perfil subiu para a linha do METATREINO (tocar nela abre o Perfil). Ao lado da saudação ficou uma janela com uma paisagem em camadas: serra, montanha com a bandeira, sol, lua, estrelas e nuvens na frente do sol.
+   - A cena acompanha o horário e o clima real (nublado, chuva, garoa, tempestade, névoa, neve).
+   - Sem dados de clima, mostra só o horário.
+   - As datas especiais continuam: dia da prova, véspera, aniversário, Ano-Novo e Natal.
+   - A altura da tela inicial não mudou.
+   - Com a **capa do mural** ligada, a capa é a imagem do topo e a cena do céu não é desenhada atrás dela. O logo do mural continua substituindo o "M" em todas as telas.
+   - O clima nunca encosta no nome do app: se a descrição ("Tempestade", "Céu limpo"…) não couber com folga, fica só o ícone e a temperatura.
+2. **Fundos decorativos das abas.** Cada desenho agora fica numa faixa no topo da aba e termina antes do primeiro cartão. Não passa mais atrás de cartões nem cruza a bandeira dos Desafios, e aparece também no AMOLED. A curadoria aba por aba:
+   - **Treinos:** substituído (barra com anilhas; na corrida, uma pista em curva).
+   - **Biblioteca:** substituído (fichas empilhadas com o vídeo).
+   - **Plano:** melhorado.
+   - **Desafios:** melhorado.
+   - **Perfil:** mantido (pessoa e arco de evolução), redesenhado e só no topo.
+   - **Histórico:** mantido (relógio), pequeno, ao lado do título.
+   - **Progresso:** mantido (gráfico subindo), pequeno, ao lado do título, nunca atrás dos gráficos.
+   - A opção "Fundo decorativo" continua ligando e desligando tudo.
+3. **Registro de séries.** Cada série tem um botão **✓ Concluir**:
+   - O descanso só começa depois de uma série concluída. Abrir o exercício ou adicionar uma série vazia não inicia descanso.
+   - A última série prevista não abre descanso: aparece um aviso de que o exercício acabou.
+   - Mudar carga ou repetições nunca mexe no cronômetro.
+   - Nova opção no próprio registro: **"Iniciar o descanso sozinho ao concluir a série"** (vem ligada). Desligada, aparece o botão **Iniciar descanso**.
+   - Quem já tinha o hábito de tocar em "+ Nova série" continua funcionando: a série anterior é concluída.
+   - Registros antigos não mudam.
+4. **Compartilhar conquistas sempre abre a central nova.** Saiu o link "Modelo clássico", que levava à interface antiga. Um erro ao montar o card agora vira um aviso, sem trocar de tela.
+   - Abrir outra conquista começa limpo, sem a foto e o zoom da anterior.
+   - Se o app abrir com arquivos de versões diferentes no meio de uma atualização, ele recarrega uma vez.
+5. **Nome na faixa.** Com "Faixa" e "Mostrar meu nome", o nome fica dentro da faixa, centralizado, numa linha própria. Nome longo diminui até caber. Vale para todos os formatos e tipos de card.
+6. **Botão do Meta Assistente.**
+   - O ícone usava a mesma cor do fundo do botão (verde sobre verde no Clássico) e agora usa a cor de texto dos botões principais.
+   - Um anel na cor do fundo separa o botão de cartões e desenhos.
+   - Posição, tamanho e comportamento continuam iguais.
+7. **Seleção de texto.** Segurar o dedo em botões, cartões, clima, saudação, rótulos e status não abre mais o menu de copiar. Continuam copiáveis:
+   - campos de digitação;
+   - conversa com o assistente;
+   - recado do treinador;
+   - anotações do dia;
+   - instruções da ficha;
+   - créditos dos vídeos;
+   - painel do administrador.
+8. **Rolagem.** Fechar uma janela não faz mais a tela pular para outra posição (o navegador devolvia a tela para onde ela estava quando a janela abriu). O efeito nativo do Android no fim da tela voltou, e o puxar-para-atualizar continua bloqueado. As faixas que rolam para o lado não puxam a tela nem o gesto de voltar. A barra de abas ficou mais leve de desenhar.
+9. **Paletas dos temas.** Cada amostra tem moldura própria e fundo neutro, e não pega mais o tom do cartão em volta.
+
 # MetaTreino 2027.1 Beta 35 — O que faltava da auditoria
 
 Detalhes técnicos em `RELATORIO-BETA35.md`. **Publique o `firestore.rules` novo** (Console do Firebase → Firestore → Regras → Publicar): as regras mudaram nesta versão.

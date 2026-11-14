@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 35 — app-plus.js
+// MetaTreino 2027.1 Beta 36 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.35' };
+const MTP = { versao: '2027.1-beta.36' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -7291,54 +7291,102 @@ mtGancho('openTrophyDetail', { depois(id){
   }
 }});
 
-// ---------- Fundos decorativos ----------
-// Ilustrações em linha (SVG), uma por aba, com dois tons: o traço segue a cor do texto do
-// tema e os detalhes seguem a cor principal. Ficam bem discretas (a opacidade do fundo é
-// a mesma de antes), não recebem toques e somem com a opção "Fundo decorativo".
-const DECO2 = (corpo)=>`<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${corpo}</svg>`;
+// ---------- Fundos decorativos (Beta 36: nova linguagem visual e curadoria por aba) ----------
+// Cada desenho fica numa "faixa" no topo da aba, à direita, entre o cabeçalho e o primeiro cartão:
+// a altura é medida na hora (decoPosiciona), então o desenho nunca passa por trás de cartões, bandeiras
+// ou listas. Linguagem comum: um disco suave na cor principal (profundidade), formas com preenchimento
+// translúcido na cor do texto e um único detalhe na cor principal. SVG parado: sem animação, sem gasto
+// de bateria, e some com a opção "Fundo decorativo".
+// Curadoria (Beta 36):
+//   Início ........ melhorado (cena do horário/clima, parte 28)
+//   Treinos ....... substituído (barra e anilhas; corrida: pista em curva)
+//   Biblioteca .... substituído (fichas empilhadas com o vídeo)
+//   Plano ......... melhorado (calendário com os dias de treino)
+//   Desafios ...... melhorado (medalha só na faixa do título; não cruza mais a bandeira do desafio)
+//   Perfil ........ mantido (pessoa e arco de evolução), redesenhado na nova linguagem e só na faixa do topo
+//   Histórico ..... mantido (relógio voltando no tempo), pequeno, ao lado do título
+//   Progresso ..... mantido (gráfico subindo), pequeno, ao lado do título — nunca atrás dos gráficos
+const DECO3 = (corpo, vb)=>`<svg viewBox="${vb||'0 0 220 120'}" preserveAspectRatio="xMaxYMid meet" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${corpo}</svg>`;
+// classes: .d-fundo (disco na cor principal) · .d-fill (preenchimento translúcido) · .d-ac (traço na cor principal) · .d-acf (preenchimento na cor principal)
 const DECO2_SVG = {
-  // Início (Beta 28): montanha com a bandeira da meta no topo, trilha subindo e o sol nascendo
-  inicio: DECO2(`<circle cx="52" cy="50" r="14"/><path d="M52 24v-8M30 34l-6-5M74 34l6-5" stroke-opacity=".7"/>
-    <path d="M6 168 58 104l22 22 44-72 70 114"/><path d="M110 76l14-22 14 22-8-4-6 6-6-6z" stroke-opacity=".8"/>
-    <path class="dk-a" d="M124 54V18" stroke-width="3"/><path class="dk-a" d="M124 18h30l-8 8 8 8h-30" stroke-width="3"/>
-    <path class="dk-a" d="M34 168c22-6 40-14 52-26s20-20 30-30 12-22 6-34" stroke-width="3.2" stroke-dasharray="3 8"/>`),
-  // Treinos (musculação): barra com anilhas e um kettlebell
-  musculacao: DECO2(`<path d="M30 86h140"/><rect x="40" y="58" width="14" height="56" rx="4"/><rect x="56" y="66" width="10" height="40" rx="3"/><rect x="146" y="58" width="14" height="56" rx="4"/><rect x="134" y="66" width="10" height="40" rx="3"/>
-    <path d="M24 80v12M176 80v12"/><path class="dk-a" d="M113 130c-15 0-24 11-24 24 0 12 9 22 24 22s24-10 24-22c0-13-9-24-24-24z" stroke-width="3"/><path class="dk-a" d="M101 136c-2-12 4-21 12-21s14 9 12 21" stroke-width="3"/>`),
-  // Corrida: pista em curva, marcação de chegada e linhas de velocidade
-  corrida: DECO2(`<path d="M20 170c0-60 40-110 110-110h50"/><path d="M44 170c0-46 30-86 86-86h50"/><path class="dk-a" d="M68 170c0-32 22-62 62-62h50" stroke-width="3.2"/>
-    <path d="M164 60v48" stroke-dasharray="4 6"/><path class="dk-a" d="M40 40h34M28 54h30M48 26h20" stroke-width="3"/><circle cx="150" cy="150" r="16"/><path d="M150 140v10l7 5M144 128h12"/>`),
-  // Progresso: grade, barras e curva de evolução com destaque no ponto mais alto
-  progresso: DECO2(`<path d="M30 170h150M30 170V40" stroke-opacity=".7"/><path d="M30 130h150M30 90h150" stroke-dasharray="3 8" stroke-opacity=".6"/>
-    <rect x="46" y="128" width="18" height="42" rx="4"/><rect x="78" y="112" width="18" height="58" rx="4"/><rect x="110" y="96" width="18" height="74" rx="4"/><rect x="142" y="70" width="18" height="100" rx="4"/>
-    <path class="dk-a" d="M40 124c26-8 40-14 58-30s38-30 70-46" stroke-width="3.4"/><path class="dk-a" d="M168 34l2.8 6 6.5.8-4.8 4.4 1.3 6.4-5.8-3.2-5.8 3.2 1.3-6.4-4.8-4.4 6.5-.8z" stroke-width="2.4"/>`),
-  // Histórico: relógio com seta de "voltar no tempo" (Beta 27: sem formas que pareçam cartões ou botões)
-  historico: DECO2(`<circle cx="104" cy="104" r="62"/><path d="M104 54v8M104 146v8M54 104h8M146 104h8" stroke-opacity=".7"/>
-    <path class="dk-a" d="M104 72v34l22 14" stroke-width="3.4"/><path class="dk-a" d="M34 104a70 70 0 1 0 20-49" stroke-width="3.2"/><path class="dk-a" d="M38 40l16 15-21 6" stroke-width="3.2"/>`),
-  // Desafios: medalha com fita, estrela e louros
-  desafios: DECO2(`<path d="M76 30l24 48 24-48M60 30h32M108 30h32" /><circle cx="100" cy="122" r="44"/><circle class="dk-a" cx="100" cy="122" r="32" stroke-width="3"/>
-    <path class="dk-a" d="M100 104l5.6 11.4 12.6 1.8-9.1 8.9 2.2 12.5-11.3-5.9-11.3 5.9 2.2-12.5-9.1-8.9 12.6-1.8z" stroke-width="3"/>
-    <path d="M44 150c-10-16-10-36 0-52M156 150c10-16 10-36 0-52"/><path d="M40 132l-10-4M40 116l-10-6M160 132l10-4M160 116l10-6"/>`),
-  // Biblioteca: livro aberto e vídeo
-  biblioteca: DECO2(`<path d="M100 66c-18-12-42-14-66-10v100c24-4 48-2 66 10 18-12 42-14 66-10V56c-24-4-48-2-66 10z"/><path d="M100 66v100"/>
-    <path d="M50 84c14-2 28 0 38 6M50 104c14-2 28 0 38 6M50 124c14-2 28 0 38 6" stroke-opacity=".7"/><circle class="dk-a" cx="136" cy="110" r="20" stroke-width="3"/><path class="dk-a" d="M131 101l14 9-14 9z" stroke-width="3"/>`),
-  // Perfil: pessoa e um arco de evolução pessoal
-  perfil: DECO2(`<circle cx="100" cy="78" r="26"/><path d="M52 164c4-28 24-44 48-44s44 16 48 44"/><path class="dk-a" d="M40 100a62 62 0 0 1 106-58" stroke-width="3.2"/><path class="dk-a" d="M140 30l8 12-14 3" stroke-width="3.2"/>`),
-  // Plano: calendário com dias marcados
-  plano: DECO2(`<rect x="36" y="44" width="128" height="120" rx="14"/><path d="M36 72h128M68 32v22M132 32v22"/>
-    <path d="M60 96h12M94 96h12M128 96h12M60 122h12M94 122h12M60 146h12" stroke-opacity=".7"/><path class="dk-a" d="M124 120l7 7 14-15M124 144l7 7 14-15" stroke-width="3.2"/>`)
+  musculacao: DECO3(`<circle class="d-fundo" cx="164" cy="60" r="50"/>
+    <path class="d-linha" d="M70 60h142" stroke-width="3.2"/>
+    <rect class="d-fill" x="98" y="30" width="14" height="60" rx="4.5"/><rect class="d-fill" x="114" y="39" width="9" height="42" rx="3.5"/>
+    <rect class="d-fill" x="180" y="30" width="14" height="60" rx="4.5"/><rect class="d-fill" x="169" y="39" width="9" height="42" rx="3.5"/>
+    <path class="d-ac" d="M105 40v40M187 40v40" stroke-width="2.2"/><path class="d-linha" d="M126 56v8M166 56v8" stroke-width="2.4"/>`),
+  corrida: DECO3(`<circle class="d-fundo" cx="172" cy="64" r="48"/>
+    <path class="d-fill" d="M96 120a124 124 0 0 1 124-124v26a98 98 0 0 0-98 98z"/>
+    <path class="d-linha" d="M96 120a124 124 0 0 1 124-124M122 120a98 98 0 0 1 98-98"/>
+    <path class="d-ac" d="M109 120a111 111 0 0 1 111-111" stroke-width="2.2" stroke-dasharray="2 7"/>
+    <path class="d-linha" d="M150 30l14 8M141 41l14 8" stroke-opacity=".7"/><path class="d-ac" d="M176 8v24" stroke-width="2.2"/><path class="d-acf" d="M176 8h18l-5 6 5 6h-18z" stroke="none"/>`),
+  biblioteca: DECO3(`<circle class="d-fundo" cx="160" cy="58" r="50"/>
+    <rect class="d-fill" x="130" y="16" width="76" height="54" rx="10" transform="rotate(8 168 43)"/>
+    <rect class="d-fill" x="116" y="28" width="80" height="58" rx="11"/>
+    <path class="d-linha" d="M130 72h34M130 80h22" stroke-opacity=".7"/>
+    <circle class="d-ac" cx="156" cy="50" r="13" stroke-width="2"/><path class="d-acf" d="M152 44l11 6-11 6z" stroke="none"/>`),
+  plano: DECO3(`<circle class="d-fundo" cx="166" cy="60" r="50"/>
+    <rect class="d-fill" x="112" y="22" width="96" height="80" rx="12"/><path class="d-linha" d="M112 42h96M134 14v16M186 14v16"/>
+    <rect class="d-fill" x="124" y="54" width="14" height="12" rx="3"/><rect class="d-acf" x="146" y="54" width="14" height="12" rx="3" stroke="none"/><rect class="d-fill" x="168" y="54" width="14" height="12" rx="3"/><rect class="d-fill" x="190" y="54" width="10" height="12" rx="3"/>
+    <rect class="d-acf" x="124" y="76" width="14" height="12" rx="3" stroke="none"/><rect class="d-fill" x="146" y="76" width="14" height="12" rx="3"/><rect class="d-acf" x="168" y="76" width="14" height="12" rx="3" stroke="none"/>`),
+  desafios: DECO3(`<circle class="d-fundo" cx="168" cy="62" r="50"/>
+    <path class="d-fill" d="M146 8h18l12 30h-18zM190 8h-18l-12 30h18z"/>
+    <circle class="d-fill" cx="168" cy="70" r="30"/><circle class="d-ac" cx="168" cy="70" r="21" stroke-width="2"/>
+    <path class="d-acf" stroke="none" d="M168 58.5l3.4 7 7.7 1.1-5.6 5.4 1.3 7.7-6.8-3.6-6.8 3.6 1.3-7.7-5.6-5.4 7.7-1.1z"/>`),
+  perfil: DECO3(`<circle class="d-fundo" cx="166" cy="62" r="50"/>
+    <circle class="d-fill" cx="166" cy="46" r="17"/><path class="d-fill" d="M134 104c3-20 16-32 32-32s29 12 32 32z"/>
+    <path class="d-ac" d="M120 84a48 48 0 0 1 78-50" stroke-width="2.4"/><path class="d-acf" stroke="none" d="M203 28l1 15-14-5z"/>`),
+  progresso: DECO3(`<circle class="d-fundo" cx="166" cy="60" r="48"/>
+    <rect class="d-fill" x="128" y="66" width="14" height="30" rx="3"/><rect class="d-fill" x="150" y="52" width="14" height="44" rx="3"/><rect class="d-fill" x="172" y="38" width="14" height="58" rx="3"/>
+    <path class="d-linha" d="M120 96h80" stroke-opacity=".6"/><path class="d-ac" d="M124 56l22-16 20 10 30-24" stroke-width="2.4"/><path class="d-acf" stroke="none" d="M203 21l-2 15-11-10z"/>`),
+  historico: DECO3(`<circle class="d-fundo" cx="168" cy="60" r="48"/>
+    <circle class="d-fill" cx="168" cy="60" r="32"/><path class="d-linha" d="M168 33v5M168 82v5M141 60h5M190 60h5" stroke-opacity=".7"/>
+    <path class="d-ac" d="M168 44v17l11 7" stroke-width="2.4"/><path class="d-ac" d="M126 60a42 42 0 1 0 12-30" stroke-width="2.2"/><path class="d-acf" stroke="none" d="M131 20l11 14-15 3z"/>`)
 };
+// faixa do topo de cada aba: onde termina (o primeiro bloco de conteúdo) — o desenho fica acima dele
+const DECO_FAIXA = {
+  sessions:  { fim:'#sess-qlinks' },
+  library:   { ini:'.brand', fim:'#lib-count' },
+  plan:      { ini:'.brand', fim:'#plan-title' },
+  challenges:{ fim:'#chal-root' },
+  profile:   { fim:'.profile-head', fimBase:true },
+  history:   { ini:'.seg-nav', fim:'.stat-grid' },
+  perf:      { ini:'.seg-nav', fim:'#perf-resumo' },
+  home:      { ini:'#home-brand-row', fim:'#home-greet-row', fimBase:true }
+};
+function decoPosiciona(tab){
+  const el = document.getElementById('app-deco'); if(!el) return;
+  const f = DECO_FAIXA[tab]; const tela = document.querySelector('.screen.active');
+  if(!f || !tela || !el.innerHTML){ el.style.removeProperty('--deco-top'); el.style.removeProperty('--deco-h'); return; }
+  const sy = window.scrollY || 0;
+  const fimEl = tela.querySelector(f.fim), iniEl = f.ini ? tela.querySelector(f.ini) : null;
+  if(!fimEl || !fimEl.offsetHeight){ el.style.removeProperty('--deco-top'); el.style.removeProperty('--deco-h'); return; }
+  const rf = fimEl.getBoundingClientRect();
+  const topo = iniEl && iniEl.offsetHeight ? iniEl.getBoundingClientRect().bottom + sy + 2 : 4;
+  const fim = (f.fimBase ? rf.bottom + 4 : rf.top - 6) + sy;
+  const h = Math.max(0, Math.round(fim - topo));
+  // encosta na borda direita da coluna de conteúdo (no celular é a borda da tela; no computador e no tablet, a coluna)
+  const wrap = tela.querySelector('.wrap'); const dir = wrap ? Math.max(0, Math.round(innerWidth - wrap.getBoundingClientRect().right)) : 0;
+  el.style.setProperty('--deco-dir', dir + 'px');
+  el.style.setProperty('--deco-top', Math.round(topo) + 'px');
+  el.style.setProperty('--deco-h', h + 'px');
+  el.classList.toggle('deco-baixa', h < 40);   // faixa muito baixa (fonte grande, tela pequena): o desenho some
+}
+function _decoAgenda(tab){ cancelAnimationFrame(window.__decoRaf); window.__decoRaf = requestAnimationFrame(()=>{ decoPosiciona(tab); setTimeout(()=>decoPosiciona(tab), 180); }); }
 window.updateDeco = function(tab){
   const el = document.getElementById('app-deco'); if(!el) return;
   const on = decoEnabled();
   document.body.classList.toggle('no-deco', !on);
-  if(!on){ el.innerHTML = ''; return; }
+  el.classList.add('deco36');
+  if(!on){ el.innerHTML = ''; delete el.dataset.k; return; }
   const corrida = state && state.active === 'run';
-  const map = { home:'inicio', sessions: corrida ? 'corrida' : 'musculacao', perf:'progresso', history:'historico', challenges:'desafios', library:'biblioteca', profile:'perfil', plan:'plano' };
-  const k = map[tab] || (corrida ? 'corrida' : 'musculacao');
-  if(el.dataset.k === k && el.innerHTML) return;
-  el.dataset.k = k; el.innerHTML = DECO2_SVG[k];
+  const map = { sessions: corrida ? 'corrida' : 'musculacao', challenges:'desafios', library:'biblioteca', plan:'plano', profile:'perfil', history:'historico', perf:'progresso' };
+  const k = map[tab];
+  if(!k){ el.innerHTML = ''; el.dataset.k = 'sem'; decoPosiciona(tab); return; }   // abas sem desenho
+  if(el.dataset.k !== k || !el.innerHTML){ el.dataset.k = k; el.innerHTML = DECO2_SVG[k]; }
+  _decoAgenda(tab);
 };
+window.addEventListener('resize', ()=>{ try{ _decoAgenda(state.ui.tab || 'home'); }catch(e){} }, { passive:true });
+Object.assign(window, { decoPosiciona });
 
 // =====================================================================
 // 38. Beta 25 — Janelas, botão Voltar do Android e auditoria de cliques
@@ -7378,11 +7426,17 @@ let _janFechandoPorVoltar = false;
     _janHist = false; _janFechandoPorVoltar = true; closeModal();
   });
 })();
+// Beta 36: as janelas usam o histórico do navegador (para o Voltar do Android fechar a janela). Com a
+// restauração automática, ao fechar, o navegador devolvia a tela para a posição de quando a janela ABRIU
+// (às vezes no meio de uma rolagem) — a tela "pulava". A posição agora é só do app.
+try{ if('scrollRestoration' in history) history.scrollRestoration = 'manual'; }catch(e){}
 mtGancho('closeModal', { depois(){
   _janSuja = false;
   const mi = document.getElementById('modal-inner'); if(!mi) return;
   const ao = mi.dataset.aoFechar; delete mi.dataset.aoFechar;
-  if(ao === 'perfil'){ try{ renderProfile(); }catch(e){} }
+  // Beta 36: redesenhar o Perfil ao fechar a janela mantém a posição da rolagem (durante o redesenho a página
+  // fica curta por um instante e o navegador puxava a tela para cima)
+  if(ao === 'perfil'){ const y = window.scrollY; try{ renderProfile(); }catch(e){} if(Math.abs(window.scrollY - y) > 1) window.scrollTo({ top:y, behavior:'instant' }); requestAnimationFrame(()=>{ if(Math.abs(window.scrollY - y) > 1) window.scrollTo({ top:y, behavior:'instant' }); }); }
 }});
 // janelas que salvam na hora: troca o "Pronto" por um ✕ discreto
 function janelaInstantanea(aoFechar){
@@ -7781,6 +7835,11 @@ function _mtsQuebra(x, txt, maxW, maxL){
   if(linhas.length > maxL){ const r = linhas.slice(0, maxL); let u = r[maxL-1]; while(u.length > 1 && x.measureText(u+'…').width > maxW) u = u.slice(0,-1); r[maxL-1] = u+'…'; return r; }
   return linhas;
 }
+// contexto "de ensaio": mede textos com as mesmas fontes, mas não desenha nada (usado para medir a altura do bloco)
+function _mtsMedidor(ctx){
+  const nada = new Set(['fillText','strokeText','fill','stroke','fillRect','strokeRect','clearRect','drawImage','beginPath','moveTo','lineTo','arcTo','arc','rect','closePath','quadraticCurveTo','bezierCurveTo','save','restore']);
+  return new Proxy(ctx, { get(t, k){ if(nada.has(k)) return ()=>{}; const v = Reflect.get(t, k, t); return typeof v === 'function' ? v.bind(t) : v; }, set(t, k, v){ t[k] = v; return true; } });
+}
 function _mtsRet(x, px, py, w, h, r){ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath(); }
 // desenho de fundo por modalidade (traços discretos, sem fotos de terceiros)
 function _mtsPadrao(x, W, H, tipo, cor){
@@ -7853,16 +7912,93 @@ async function mtsDesenhar(cv, d, o){
   const rowGap = W*0.025, rowTam = medRow.length ? Math.min(o.fmt==='quadrado' ? W*0.13 : W*0.16, (maxW - rowGap*(medRow.length-1))/medRow.length) : 0;
   const medTam = medImg ? (o.fmt==='quadrado' ? W*(disp==='destaque'?0.26:0.2) : o.fmt==='feed' ? W*0.28 : W*0.34) : rowTam;
   const chipsH = (d.extra && d.extra.length) ? W*0.07 : 0;
-  const nomeH = (o.nome && _mtsPrimeiroNome()) ? W*0.06 : 0;
-  const alturaBloco = W*0.04 /*kicker*/ + linTit.length*tamTit*1.08 + (temHero ? tamHero*1.02 + W*0.03 : 0) + (linDesc.length ? linDesc.length*tamDesc*1.35 + W*0.02 : 0)
-    + (d.periodo ? W*0.045 : 0) + altNums + chipsH + nomeH + (d.serie ? W*0.14 : 0) + (d.nivel ? W*0.05 : 0);
+  // Beta 36: o nome entra no bloco e a altura do bloco é MEDIDA (passada de ensaio sem desenhar). Antes era uma
+  // estimativa que não contava o número grande, as fichas e as linhas extras: com "Faixa" + "Mostrar meu nome",
+  // o nome caía fora da faixa ou colado na borda.
+  const nomeTxt = (o.nome && _mtsPrimeiroNome()) ? 'por ' + _mtsPrimeiroNome() : '';
+  const faixaX = pad*0.55, faixaW = W - pad*1.1;
+  const padBaixo = (nomeTxt && disp==='compacto') ? W*0.04 : W*0.05;
+  const desenhaBloco = (x, y)=>{
+  const alinh = disp==='grade' ? 'center' : 'left'; const ax = disp==='grade' ? W/2 : pad;
+    x.textAlign = alinh;
+    // nível (rara/especial)
+    if(d.nivel){ x.font = `800 ${W*0.024}px ${FF}`; if(x.letterSpacing !== undefined) x.letterSpacing = `${W*0.004}px`; x.fillStyle = P.acc; x.fillText(d.nivel.toUpperCase(), ax, y + W*0.026); if(x.letterSpacing !== undefined) x.letterSpacing = '0px'; y += W*0.05; }
+    // kicker
+    x.fillStyle = P.acc; x.font = `800 ${W*0.028}px ${FF}`; if(x.letterSpacing !== undefined) x.letterSpacing = `${W*0.005}px`;
+    x.fillText(kick, ax, y + W*0.03); if(x.letterSpacing !== undefined) x.letterSpacing = '0px'; y += W*0.04;
+    // título
+    x.fillStyle = P.txt; x.font = `800 ${tamTit}px ${FF}`;
+    linTit.forEach(l=>{ y += tamTit*1.08; x.fillText(l, ax, y); });
+    // número principal
+    if(temHero){
+      y += tamHero*0.98; x.font = `800 ${tamHero}px ${FF}`; x.fillStyle = P.txt;
+      const hv = String(d.hero.v); const wv = x.measureText(hv).width;
+      const startX = alinh==='center' ? (W - wv - (d.hero.u ? x.measureText(' ').width : 0) - (()=>{ x.font = `600 ${W*0.045}px ${FF}`; const u = x.measureText(d.hero.u||'').width; x.font = `800 ${tamHero}px ${FF}`; return u; })())/2 : ax;
+      x.textAlign = 'left'; x.fillText(hv, startX, y);
+      if(d.hero.u){ x.font = `600 ${W*0.045}px ${FF}`; x.fillStyle = P.acc; x.fillText(' ' + d.hero.u, startX + wv, y); }
+      x.textAlign = alinh; y += W*0.03;
+    }
+    if(d.periodo){ y += W*0.045; x.font = `500 ${W*0.03}px ${FF}`; x.fillStyle = P.dim; x.fillText(d.periodo, ax, y); }
+    // minigráfico da evolução (valores reais da série)
+    if(d.serie && d.serie.length >= 2){
+      y += W*0.05; const gh = W*0.08, gw = disp==='grade' ? W*0.6 : maxW*0.75, gx = disp==='grade' ? (W-gw)/2 : pad;
+      const lo = Math.min(...d.serie), hi = Math.max(...d.serie), rng = (hi-lo)||1;
+      x.strokeStyle = P.acc; x.lineWidth = W*0.006; x.lineJoin = 'round'; x.beginPath();
+      d.serie.forEach((v,i)=>{ const px2 = gx + gw*i/(d.serie.length-1), py2 = y + gh - gh*(v-lo)/rng; i ? x.lineTo(px2, py2) : x.moveTo(px2, py2); }); x.stroke();
+      y += gh + W*0.01;
+    }
+    if(linDesc.length){ y += W*0.02; x.font = `400 ${tamDesc}px ${FF}`; x.fillStyle = P.dim; linDesc.forEach(l=>{ y += tamDesc*1.35; x.fillText(l, ax, y); }); }
+    // números
+    if(nums.length){
+      y += W*0.05;
+      x.strokeStyle = P.linha; x.lineWidth = 2; x.beginPath(); x.moveTo(pad, y - W*0.01); x.lineTo(W-pad, y - W*0.01); x.stroke();
+      const col = maxW / nums.length;
+      nums.forEach((n,i)=>{
+        const cx = disp==='grade' ? pad + col*i + col/2 : pad + col*i;
+        x.textAlign = disp==='grade' ? 'center' : 'left';
+        x.font = `500 ${tamLbl}px ${FF}`; x.fillStyle = P.dim; x.fillText(String(n.l).toUpperCase(), cx, y + tamLbl + W*0.012);
+        x.font = `800 ${tamNum}px ${FF}`; x.fillStyle = P.txt;
+        const v = String(n.v); x.fillText(v, cx - (disp==='grade' && n.u ? (()=>{ x.font = `600 ${tamLbl*1.15}px ${FF}`; const uw = x.measureText(' '+n.u).width; x.font = `800 ${tamNum}px ${FF}`; return uw/2; })() : 0), y + tamLbl + tamNum + W*0.02);
+        if(n.u){ const vw = x.measureText(v).width; x.font = `600 ${tamLbl*1.15}px ${FF}`; x.fillStyle = P.dim; x.textAlign = 'left';
+          x.fillText(' ' + n.u, disp==='grade' ? (cx + vw/2 - x.measureText(' '+n.u).width/2) : cx + vw, y + tamLbl + tamNum + W*0.02); }
+      });
+      x.textAlign = alinh; y += altNums;
+    }
+    // grupos musculares (musculação) / marcações
+    if(chipsH){
+      y += W*0.01; x.font = `600 ${W*0.03}px ${FF}`; x.textAlign = 'left';
+      const chips = d.extra.slice(0,4); const larg = chips.map(c=>x.measureText(c).width + W*0.05); const total = larg.reduce((a,b)=>a+b,0) + W*0.015*(chips.length-1);
+      let cx = disp==='grade' ? (W-Math.min(total,maxW))/2 : pad;
+      chips.forEach((c,i)=>{ if(cx + larg[i] > W - pad) return; x.fillStyle = _mtsRgba(P.acc, .16); _mtsRet(x, cx, y, larg[i], W*0.055, W*0.0275); x.fill();
+        x.fillStyle = P.txt; x.fillText(c, cx + W*0.025, y + W*0.038); cx += larg[i] + W*0.015; });
+      y += chipsH;
+    }
+  if(nomeTxt){
+    if(disp === 'compacto'){
+      // linha própria no pé da faixa, centralizada na largura da faixa e no espaço entre o divisor e a borda
+      y += W*0.03;
+      x.strokeStyle = _mtsRgba(P.txt, .14); x.lineWidth = Math.max(1.5, W*0.0016); x.beginPath(); x.moveTo(faixaX + pad*0.45, y); x.lineTo(faixaX + faixaW - pad*0.45, y); x.stroke();
+      let tam = W*0.03; x.font = `600 ${tam}px ${FF}`;
+      const maxN = faixaW - pad*0.9; while(tam > W*0.02 && x.measureText(nomeTxt).width > maxN){ tam -= W*0.001; x.font = `600 ${tam}px ${FF}`; }
+      let txtN = nomeTxt; while(txtN.length > 4 && x.measureText(txtN).width > maxN) txtN = txtN.slice(0, -2) + '…';
+      x.textAlign = 'center'; x.fillStyle = P.dim;
+      y += W*0.04 + tam*0.72; x.fillText(txtN, faixaX + faixaW/2, y);
+    } else {
+      x.textAlign = alinh; let tam = W*0.03; x.font = `500 ${tam}px ${FF}`;
+      while(tam > W*0.02 && x.measureText(nomeTxt).width > maxW){ tam -= W*0.001; x.font = `500 ${tam}px ${FF}`; }
+      x.fillStyle = P.dim; y += W*0.02 + tam; x.fillText(nomeTxt, ax, y);
+    }
+  }
+  return y;
+  };
+  const alturaBloco = desenhaBloco(_mtsMedidor(x), 0);
   const rodapeY = H - pad*0.75;
   let y;
   if(disp === 'grade' && !foto) y = Math.min(rodapeY - W*0.07 - alturaBloco, Math.max(my+ms+W*0.08 + medTam, (H - alturaBloco)/2 + medTam*0.4));
-  else y = rodapeY - W*0.07 - alturaBloco;
+  else y = rodapeY - W*0.06 - padBaixo - alturaBloco;
   // faixa (compacto): painel atrás do bloco
   if(disp === 'compacto'){
-    x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, pad*0.55, y - W*0.05, W - pad*1.1, alturaBloco + W*0.08, W*0.04); x.fill();
+    x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, faixaX, y - W*0.045, faixaW, alturaBloco + W*0.045 + padBaixo, W*0.04); x.fill();
   }
   if(medRow.length){
     const tot = medRow.length*rowTam + rowGap*(medRow.length-1);
@@ -7877,61 +8013,7 @@ async function mtsDesenhar(cv, d, o){
     x.save(); x.globalAlpha = 1; x.fillStyle = '#000'; x.font = `${W*0.16}px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif`; x.textAlign = disp==='grade' ? 'center' : 'left';
     x.fillText(d.emoji, disp==='grade' ? W/2 : pad, y - (disp==='compacto' ? W*0.08 : W*0.04)); x.restore();
   }
-  const alinh = disp==='grade' ? 'center' : 'left'; const ax = disp==='grade' ? W/2 : pad;
-  x.textAlign = alinh;
-  // nível (rara/especial)
-  if(d.nivel){ x.font = `800 ${W*0.024}px ${FF}`; if(x.letterSpacing !== undefined) x.letterSpacing = `${W*0.004}px`; x.fillStyle = P.acc; x.fillText(d.nivel.toUpperCase(), ax, y + W*0.026); if(x.letterSpacing !== undefined) x.letterSpacing = '0px'; y += W*0.05; }
-  // kicker
-  x.fillStyle = P.acc; x.font = `800 ${W*0.028}px ${FF}`; if(x.letterSpacing !== undefined) x.letterSpacing = `${W*0.005}px`;
-  x.fillText(kick, ax, y + W*0.03); if(x.letterSpacing !== undefined) x.letterSpacing = '0px'; y += W*0.04;
-  // título
-  x.fillStyle = P.txt; x.font = `800 ${tamTit}px ${FF}`;
-  linTit.forEach(l=>{ y += tamTit*1.08; x.fillText(l, ax, y); });
-  // número principal
-  if(temHero){
-    y += tamHero*0.98; x.font = `800 ${tamHero}px ${FF}`; x.fillStyle = P.txt;
-    const hv = String(d.hero.v); const wv = x.measureText(hv).width;
-    const startX = alinh==='center' ? (W - wv - (d.hero.u ? x.measureText(' ').width : 0) - (()=>{ x.font = `600 ${W*0.045}px ${FF}`; const u = x.measureText(d.hero.u||'').width; x.font = `800 ${tamHero}px ${FF}`; return u; })())/2 : ax;
-    x.textAlign = 'left'; x.fillText(hv, startX, y);
-    if(d.hero.u){ x.font = `600 ${W*0.045}px ${FF}`; x.fillStyle = P.acc; x.fillText(' ' + d.hero.u, startX + wv, y); }
-    x.textAlign = alinh; y += W*0.03;
-  }
-  if(d.periodo){ y += W*0.045; x.font = `500 ${W*0.03}px ${FF}`; x.fillStyle = P.dim; x.fillText(d.periodo, ax, y); }
-  // minigráfico da evolução (valores reais da série)
-  if(d.serie && d.serie.length >= 2){
-    y += W*0.05; const gh = W*0.08, gw = disp==='grade' ? W*0.6 : maxW*0.75, gx = disp==='grade' ? (W-gw)/2 : pad;
-    const lo = Math.min(...d.serie), hi = Math.max(...d.serie), rng = (hi-lo)||1;
-    x.strokeStyle = P.acc; x.lineWidth = W*0.006; x.lineJoin = 'round'; x.beginPath();
-    d.serie.forEach((v,i)=>{ const px2 = gx + gw*i/(d.serie.length-1), py2 = y + gh - gh*(v-lo)/rng; i ? x.lineTo(px2, py2) : x.moveTo(px2, py2); }); x.stroke();
-    y += gh + W*0.01;
-  }
-  if(linDesc.length){ y += W*0.02; x.font = `400 ${tamDesc}px ${FF}`; x.fillStyle = P.dim; linDesc.forEach(l=>{ y += tamDesc*1.35; x.fillText(l, ax, y); }); }
-  // números
-  if(nums.length){
-    y += W*0.05;
-    x.strokeStyle = P.linha; x.lineWidth = 2; x.beginPath(); x.moveTo(pad, y - W*0.01); x.lineTo(W-pad, y - W*0.01); x.stroke();
-    const col = maxW / nums.length;
-    nums.forEach((n,i)=>{
-      const cx = disp==='grade' ? pad + col*i + col/2 : pad + col*i;
-      x.textAlign = disp==='grade' ? 'center' : 'left';
-      x.font = `500 ${tamLbl}px ${FF}`; x.fillStyle = P.dim; x.fillText(String(n.l).toUpperCase(), cx, y + tamLbl + W*0.012);
-      x.font = `800 ${tamNum}px ${FF}`; x.fillStyle = P.txt;
-      const v = String(n.v); x.fillText(v, cx - (disp==='grade' && n.u ? (()=>{ x.font = `600 ${tamLbl*1.15}px ${FF}`; const uw = x.measureText(' '+n.u).width; x.font = `800 ${tamNum}px ${FF}`; return uw/2; })() : 0), y + tamLbl + tamNum + W*0.02);
-      if(n.u){ const vw = x.measureText(v).width; x.font = `600 ${tamLbl*1.15}px ${FF}`; x.fillStyle = P.dim; x.textAlign = 'left';
-        x.fillText(' ' + n.u, disp==='grade' ? (cx + vw/2 - x.measureText(' '+n.u).width/2) : cx + vw, y + tamLbl + tamNum + W*0.02); }
-    });
-    x.textAlign = alinh; y += altNums;
-  }
-  // grupos musculares (musculação) / marcações
-  if(chipsH){
-    y += W*0.01; x.font = `600 ${W*0.03}px ${FF}`; x.textAlign = 'left';
-    const chips = d.extra.slice(0,4); const larg = chips.map(c=>x.measureText(c).width + W*0.05); const total = larg.reduce((a,b)=>a+b,0) + W*0.015*(chips.length-1);
-    let cx = disp==='grade' ? (W-Math.min(total,maxW))/2 : pad;
-    chips.forEach((c,i)=>{ if(cx + larg[i] > W - pad) return; x.fillStyle = _mtsRgba(P.acc, .16); _mtsRet(x, cx, y, larg[i], W*0.055, W*0.0275); x.fill();
-      x.fillStyle = P.txt; x.fillText(c, cx + W*0.025, y + W*0.038); cx += larg[i] + W*0.015; });
-    y += chipsH;
-  }
-  if(nomeH){ x.textAlign = alinh; x.font = `500 ${W*0.03}px ${FF}`; x.fillStyle = P.dim; x.fillText('por ' + _mtsPrimeiroNome(), ax, y + W*0.045); }
+  desenhaBloco(x, y);
   // assinatura
   x.textAlign = 'right'; x.font = `600 ${W*0.026}px ${FF}`; x.fillStyle = P.dim; x.fillText('metatreino.app', W - pad, rodapeY);
   return cv;
@@ -7940,6 +8022,9 @@ async function mtsDesenhar(cv, d, o){
 // ---------- tela da Central ----------
 function mtsAbrir(d, classico){
   if(!d){ toast('Ainda não há dados para montar esse card.'); return; }
+  // Beta 36: abrir OUTRO item começa limpo (a foto, o zoom e o enquadramento do card anterior não passam para o próximo).
+  // Trocar formato/estilo/disposição reabre com o mesmo item (MTS.d) e mantém tudo.
+  if(d !== MTS.d){ MTS.foto = null; MTS.zoom = 1; MTS.px = 0; MTS.py = 0; }
   MTS.d = d; MTS.classico = classico || null;
   MTS.fmt = _mtsPref('fmt', 'story'); MTS.estilo = _mtsPref('estilo', 'escuro'); MTS.disp = _mtsPref('disp', 'destaque');
   if(!MTS_FORMATOS[MTS.fmt]) MTS.fmt = 'story';
@@ -7966,7 +8051,7 @@ function mtsAbrir(d, classico){
       <button class="btn btn-outline" onclick="mtsSalvar()">Salvar imagem</button>
     </div>
     ${video ? `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openMinhaConquistaShare()">Vídeo animado (${video.ext.toUpperCase()})</button>` : ''}
-    <div class="mts-priv">O card mostra só o que está nele: sem e-mail, peso ou medidas.${MTS.classico ? ` · <a href="#" onclick="mtsClassico();return false">Modelo clássico</a>` : ''}</div>`;
+    <div class="mts-priv">O card mostra só o que está nele: sem e-mail, peso ou medidas.</div>`;
   $('modal-back').classList.add('on');
   mtsDesenhaPrev(); mtsArrasto();
 }
@@ -8050,9 +8135,15 @@ window.shareWorkoutImage = function(histIdx){
   mtsAbrir(d, ()=>_shareWorkoutImageB26(histIdx));
 };
 const _shareTrophyImageB26 = window.shareTrophyImage;
-window.shareTrophyImage = function(id){ const d = mtsDeConquista(id); if(!d) return _shareTrophyImageB26.apply(this, arguments); mtsAbrir(d, ()=>_shareTrophyImageB26(id)); };
+// Beta 36: conquista abre SEMPRE a central atual. A interface antiga só aparecia por caminhos de exceção
+// (link "Modelo clássico", erro ao montar o card); agora um erro vira aviso, sem trocar de interface.
+window.shareTrophyImage = function(id){
+  let d = null; try{ d = mtsDeConquista(id); }catch(e){ console.log('card da conquista', e); }
+  if(!d){ toast('Não consegui montar o card desta conquista. Tente de novo.'); return; }
+  mtsAbrir(d);
+};
 const _shareTrophiesImageB27 = window.shareTrophiesImage;
-window.shareTrophiesImage = function(){ const d = mtsDeColecao(); if(!d) return _shareTrophiesImageB27.apply(this, arguments); mtsAbrir(d, ()=>_shareTrophiesImageB27()); };
+window.shareTrophiesImage = function(){ let d = null; try{ d = mtsDeColecao(); }catch(e){ console.log('card da coleção', e); } if(!d){ toast('Você ainda não tem conquistas para compartilhar.'); return; } mtsAbrir(d); };
 const _shareWeekImageB26 = window.shareWeekImage;
 window.shareWeekImage = function(){ const d = mtsDeSemana(); if(!d) return _shareWeekImageB26.apply(this, arguments); mtsAbrir(d, ()=>_shareWeekImageB26()); };
 if(typeof window.shareWeekSummary === 'function'){ const _sws = window.shareWeekSummary; window.shareWeekSummary = function(){ const d = mtsDeSemana(); if(!d) return _sws.apply(this, arguments); mtsAbrir(d, ()=>_sws()); }; }
@@ -8234,45 +8325,45 @@ Object.assign(window, { treinoSemRepeticao, treinoCorrigeSalvos, mtMedeTela });
 // =====================================================================
 
 // ---------- 1. Cena do Início ----------
-// A montanha com a bandeira continua; o céu muda:
-//   horário: amanhecer (5h–8h) · dia · fim de tarde (17h–18h) · noite (lua, estrelas e uma coruja)
-//   clima (só se o aluno liberou a localização, que o app já usa para o clima): nuvem, chuva, garoa,
-//   tempestade, névoa ou neve — com os mesmos dados da linha de clima, sem buscar nada a mais.
+// Beta 36: a cena virou uma paisagem em camadas numa "janela" à direita da saudação (a foto do perfil
+// subiu para a linha do METATREINO, então nada mais cobre o sol, a lua ou as nuvens).
+//   horário: amanhecer (5h–9h) · dia · fim de tarde (17h–19h) · noite (lua e estrelas)
+//   clima (só com a localização liberada, com os mesmos dados da linha de clima, sem buscar nada a mais):
+//   nublado, chuva, garoa, tempestade, névoa ou neve. Sem dados de clima: só o horário, nunca um clima inventado.
 //   datas: dia da prova, véspera da prova, aniversário do aluno, Ano-Novo e Natal (nessa ordem).
-// Tudo é um desenho em linha (SVG) parado: não gasta bateria e some com "Fundo decorativo".
-const CENA_SOL = (x, y, r)=>`<circle cx="${x}" cy="${y}" r="${r}"/><path d="M${x} ${y-r-6}v-7M${x-r-4} ${y-r+2}l-5-5M${x+r+4} ${y-r+2}l5-5M${x-r-7} ${y}h-7M${x+r+7} ${y}h7" stroke-opacity=".75"/>`;
-const CENA_SOL_BAIXO = (x, y, r)=>`<path d="M${x-r} ${y}a${r} ${r} 0 0 1 ${r*2} 0"/><path d="M${x} ${y-r-6}v-7M${x-r-4} ${y-r+2}l-5-5M${x+r+4} ${y-r+2}l5-5M${x-r-8} ${y-2}h-7M${x+r+8} ${y-2}h7" stroke-opacity=".7"/>`;
-const CENA_LUA = (x, y)=>`<path class="dk-a" d="M${x+6} ${y-17}a18 18 0 1 0 12 24 14 14 0 0 1-12-24z" stroke-width="3"/>`;
-const CENA_ESTRELA = (x, y, s)=>`<path d="M${x} ${y-s}v${s*2}M${x-s} ${y}h${s*2}" stroke-width="2"/>`;
-const CENA_NUVEM = (x, y)=>`<path d="M${x-22} ${y+10}h44a11 11 0 0 0 0-22 16 16 0 0 0-30-4 12 12 0 0 0-14 26z"/>`;
+// Camadas: céu (sol/lua/estrelas) → serra ao fundo → montanha da meta com a bandeira → trilha → clima na frente.
+// Tudo é SVG parado: não gasta bateria e some com "Fundo decorativo". Coordenadas: 390 × 100, desenho à direita.
+const CENA_VB = '0 0 390 100';
 const CENA = {
-  montanha: `<path d="M6 168 58 104l22 22 44-72 70 114"/><path d="M110 76l14-22 14 22-8-4-6 6-6-6z" stroke-opacity=".8"/>`,
-  bandeira: `<path class="dk-a" d="M124 54V18" stroke-width="3"/><path class="dk-a" d="M124 18h30l-8 8 8 8h-30" stroke-width="3"/>`,
-  trilha: `<path class="dk-a" d="M34 168c22-6 40-14 52-26s20-20 30-30 12-22 6-34" stroke-width="3.2" stroke-dasharray="3 8"/>`,
-  // coruja (Beta 30): num galho no canto esquerdo do céu, longe da montanha
-  coruja: `<path d="M2 106c12-3 28-4 44-8" stroke-width="2.6"/>
-    <path d="M17 100c-7-5-9-15-7-24 2-9 9-15 18-15s16 6 18 15c2 9 0 19-7 24z"/><path d="M13 66l-3-9 9 5M43 66l3-9-9 5"/>
-    <circle class="dk-a" cx="21.5" cy="76" r="6" stroke-width="2.4"/><circle class="dk-a" cx="34.5" cy="76" r="6" stroke-width="2.4"/>
-    <path d="M21.5 76h0M34.5 76h0" stroke-width="4.4"/><path d="M26 83l2 3.4 2-3.4z" stroke-width="2"/>
-    <path d="M20 92q4 3 8 0q4 3 8 0" stroke-opacity=".7"/><path d="M24 100v3M32 100v3" stroke-width="2.2"/>`,
-  chuva: (x, y)=>`<path d="M${x-14} ${y+18}l-4 10M${x-2} ${y+18}l-4 10M${x+10} ${y+18}l-4 10M${x-8} ${y+32}l-3 7M${x+4} ${y+32}l-3 7" stroke-opacity=".8"/>`,
-  garoa: (x, y)=>`<path d="M${x-12} ${y+18}v4M${x} ${y+20}v4M${x+12} ${y+18}v4M${x-6} ${y+28}v4M${x+6} ${y+30}v4" stroke-opacity=".8"/>`,
-  raio: (x, y)=>`<path class="dk-a" d="M${x+2} ${y+14}l-8 14h8l-6 14" stroke-width="3"/>`,
-  neve: (x, y)=>`<path d="M${x-12} ${y+22}h0M${x} ${y+28}h0M${x+12} ${y+22}h0M${x-6} ${y+36}h0M${x+8} ${y+38}h0" stroke-width="5"/>`,
-  nevoa: `<path d="M12 150c14-4 26 4 40 0s26-4 40 0 26 4 40 0 26-4 40 0" stroke-opacity=".7"/><path d="M28 160c14-4 26 4 40 0s26-4 40 0 26 4 40 0" stroke-opacity=".55"/>`,
+  serraFundo: `<path class="c-serra1" d="M150 100V86c26-6 48-4 72-12s40-16 64-14 36 10 56 6 32-10 48-8v42z"/>`,
+  montanha: `<path class="c-mont" d="M236 100l46-36 14 10 40-44 54 56v14z"/><path class="c-neve" d="M326 41l10-11 10 11-5-2-5 4-5-4z"/>`,
+  frente: `<path class="c-frente" d="M196 100c22-8 44-9 66-6s46 3 70-4 40-7 58-3v13z"/>`,
+  bandeira: `<path class="c-ac" d="M336 30V10" stroke-width="2"/><path class="c-acf" d="M336 10h17l-5 5 5 5h-17z"/>`,
+  trilha: `<path class="c-ac" d="M286 100c10-6 18-12 24-20s12-16 18-24 6-14 8-24" stroke-width="1.8" stroke-dasharray="1.5 6" stroke-opacity=".75"/>`,
+  sol: (x, y, r)=>`<circle class="c-halo" cx="${x}" cy="${y}" r="${r*1.9}"/><circle class="c-astro" cx="${x}" cy="${y}" r="${r}"/>`
+    + `<path class="c-raio" d="${[0,45,90,135,180,225,270,315].map(g=>{ const a = g*Math.PI/180, r1 = r+5, r2 = r+9; return `M${(x+Math.cos(a)*r1).toFixed(1)} ${(y+Math.sin(a)*r1).toFixed(1)}L${(x+Math.cos(a)*r2).toFixed(1)} ${(y+Math.sin(a)*r2).toFixed(1)}`; }).join('')}"/>`,
+  // sol no horizonte (amanhecer e fim de tarde): só a metade de cima, com o brilho espalhado na linha do horizonte
+  solBaixo: (x, y, r)=>`<ellipse class="c-halo" cx="${x}" cy="${y}" rx="${r*3.2}" ry="${r*1.5}"/><path class="c-astro" d="M${x-r} ${y}a${r} ${r} 0 0 1 ${r*2} 0z"/>`
+    + `<path class="c-raio" d="M${x} ${y-r-5}v-5M${x-r-3} ${y-r+3}l-4-4M${x+r+3} ${y-r+3}l4-4M${x-r-6} ${y-1}h-5M${x+r+6} ${y-1}h5"/><path class="c-linha" d="M${x-r*2.4} ${y}h${r*4.8}" stroke-opacity=".35"/>`,
+  lua: (x, y)=>`<circle class="c-halo" cx="${x}" cy="${y}" r="20"/><path class="c-astro" d="M${x+3} ${y-12}a12.5 12.5 0 1 0 9.5 17 10 10 0 0 1-9.5-17z"/>`,
+  estrela: (x, y, s)=>`<path class="c-estrela" d="M${x} ${y-s}Q${x} ${y} ${x+s} ${y}Q${x} ${y} ${x} ${y+s}Q${x} ${y} ${x-s} ${y}Q${x} ${y} ${x} ${y-s}z"/>`,
+  nuvem: (x, y, k)=>{ k = k || 1; const f = n=>+(n*k).toFixed(1);
+    return `<path class="c-nuvem" d="M${x-f(26)} ${y+f(10)}h${f(50)}a${f(11)} ${f(11)} 0 0 0 0-${f(22)}a${f(15)} ${f(15)} 0 0 0-${f(28)}-${f(5)}a${f(11)} ${f(11)} 0 0 0-${f(22)} ${f(27)}z"/>`; },
+  chuva: (x, y)=>`<path class="c-chuva" d="M${x-14} ${y+16}l-3 9M${x-4} ${y+16}l-3 9M${x+6} ${y+16}l-3 9M${x+16} ${y+16}l-3 9M${x-9} ${y+29}l-2 6M${x+1} ${y+29}l-2 6M${x+11} ${y+29}l-2 6"/>`,
+  garoa: (x, y)=>`<path class="c-chuva" d="M${x-12} ${y+16}v3M${x-2} ${y+18}v3M${x+8} ${y+16}v3M${x-7} ${y+26}v3M${x+3} ${y+28}v3M${x+13} ${y+25}v3"/>`,
+  raio: (x, y)=>`<path class="c-acf" d="M${x+3} ${y+13}l-9 13h7l-4 12 11-15h-7l4-10z"/>`,
+  neve: (x, y)=>`<g class="c-floco">${[[-12,18],[0,23],[12,18],[-6,31],[7,33]].map(([a,b])=>`<circle cx="${x+a}" cy="${y+b}" r="1.8"/>`).join('')}</g>`,
+  nevoa: `<path class="c-nevoa" d="M232 70c16-4 28 4 44 0s28-4 44 0 28 4 44 0 20-3 26-2M216 82c16-4 28 4 44 0s28-4 44 0 28 4 44 0 28-4 42-2M244 94c16-4 28 4 44 0s28-4 44 0 28 4 44 0"/>`,
   // datas
-  // Natal (Beta 30): árvore simétrica no lado esquerdo, montanha só com o pico da bandeira
-  natal: `<path d="M34 72 18 98h8L12 124h10L6 152h56L46 124h10L42 98h8z"/><path d="M29 152v10h10v-10" stroke-opacity=".85"/>
-    <path class="dk-a" d="M34.0 53.0 L36.2 58.9 L42.6 59.2 L37.6 63.2 L39.3 69.3 L34.0 65.8 L28.7 69.3 L30.4 63.2 L25.4 59.2 L31.8 58.9z" stroke-width="2.4"/>
-    <circle class="dk-a" cx="34" cy="92" r="2.8" stroke-width="2.4"/><circle class="dk-a" cx="26" cy="116" r="2.8" stroke-width="2.4"/><circle class="dk-a" cx="42" cy="116" r="2.8" stroke-width="2.4"/>
-    <circle class="dk-a" cx="20" cy="142" r="2.8" stroke-width="2.4"/><circle class="dk-a" cx="34" cy="138" r="2.8" stroke-width="2.4"/><circle class="dk-a" cx="48" cy="142" r="2.8" stroke-width="2.4"/>`,
-  montanhaPico: `<path d="M68 168 124 54l70 114"/><path d="M110 76l14-22 14 22-8-4-6 6-6-6z" stroke-opacity=".8"/>`,
-  fogos: (x, y, r)=>`<path class="dk-a" d="M${x} ${y-r}v${r*0.55}M${x} ${y+r}v-${r*0.55}M${x-r} ${y}h${r*0.55}M${x+r} ${y}h-${r*0.55}M${x-r*0.7} ${y-r*0.7}l${r*0.38} ${r*0.38}M${x+r*0.7} ${y+r*0.7}l-${r*0.38}-${r*0.38}M${x+r*0.7} ${y-r*0.7}l-${r*0.38} ${r*0.38}M${x-r*0.7} ${y+r*0.7}l${r*0.38}-${r*0.38}" stroke-width="2.8"/>`,
-  baloes: `<path class="dk-a" d="M124 54V40" stroke-width="3"/><ellipse cx="106" cy="18" rx="9" ry="12"/><ellipse class="dk-a" cx="126" cy="11" rx="10" ry="13" stroke-width="2.8"/><ellipse cx="146" cy="20" rx="9" ry="12"/>
-    <path d="M106 30l18 10M126 24l-2 16M146 32l-22 8" stroke-opacity=".7"/><path d="M40 40h0M70 30h0M86 56h0M30 70h0M172 60h0M184 40h0" stroke-width="5"/>`,
-  cronometro: `<circle cx="54" cy="54" r="22"/><path d="M50 26h8M54 26v6M72 36l5-5"/><path class="dk-a" d="M54 54V40M54 54l9 6" stroke-width="3"/>`,
-  chegada: `<path d="M104 86V14M144 86V14" stroke-width="3"/><path class="dk-a" d="M104 14h40v14h-40z" stroke-width="2.6"/><path d="M114 14v14M124 14v14M134 14v14" stroke-opacity=".7"/>
-    <circle cx="54" cy="56" r="16"/><path class="dk-a" d="M46 22l8 18 8-18" stroke-width="2.8"/><path class="dk-a" d="M54 48l2.6 5.4 6 .8-4.3 4.2 1 5.9-5.3-2.8-5.3 2.8 1-5.9-4.3-4.2 6-.8z" stroke-width="2.2"/>`
+  chegada: `<path class="c-linha" d="M276 100V34M366 100V34" stroke-width="2"/><rect class="c-fill" x="276" y="22" width="90" height="16" rx="3"/>
+    <path class="c-acf" d="M282 26h8v4h-8zM298 26h8v4h-8zM314 26h8v4h-8zM330 26h8v4h-8zM346 26h8v4h-8zM290 30h8v4h-8zM306 30h8v4h-8zM322 30h8v4h-8zM338 30h8v4h-8zM354 30h8v4h-8z"/>`,
+  cronometro: `<circle class="c-fill" cx="296" cy="42" r="18"/><path class="c-linha" d="M290 20h12M296 20v4M309 29l4-4"/><path class="c-ac" d="M296 42V31M296 42l7 5" stroke-width="2"/>`,
+  baloes: `<path class="c-linha" d="M286 44c4 10 12 16 22 22M308 36v30M330 44c-4 10-10 16-22 22" stroke-opacity=".6"/>
+    <ellipse class="c-fill" cx="286" cy="30" rx="10" ry="13"/><ellipse class="c-acf" cx="308" cy="22" rx="11" ry="14"/><ellipse class="c-fill" cx="330" cy="30" rx="10" ry="13"/>
+    <g class="c-floco"><circle cx="262" cy="18" r="1.8"/><circle cx="354" cy="14" r="1.8"/><circle cx="372" cy="40" r="1.8"/><circle cx="252" cy="44" r="1.8"/></g>`,
+  fogos: (x, y, r)=>`<path class="c-ac" stroke-width="2" d="${[0,45,90,135,180,225,270,315].map(g=>{ const a = g*Math.PI/180; return `M${(x+Math.cos(a)*r*0.45).toFixed(1)} ${(y+Math.sin(a)*r*0.45).toFixed(1)}L${(x+Math.cos(a)*r).toFixed(1)} ${(y+Math.sin(a)*r).toFixed(1)}`; }).join('')}"/>`,
+  natal: `<path class="c-fill" d="M268 100l12-20h-6l10-16h-5l9-15 9 15h-5l10 16h-6l12 20z"/><path class="c-acf" d="M287 36l2 4.4 4.8.6-3.5 3.3.9 4.7-4.2-2.3-4.2 2.3.9-4.7-3.5-3.3 4.8-.6z"/>
+    <g class="c-floco"><circle cx="280" cy="76" r="2"/><circle cx="292" cy="68" r="2"/><circle cx="296" cy="88" r="2"/></g>`
 };
 function _cenaData(){
   const d = new Date(), m = d.getMonth()+1, dia = d.getDate();
@@ -8299,47 +8390,62 @@ function _cenaClima(){
   if(c>=71&&c<=77) return 'neve'; if(c===45||c===48) return 'nevoa'; if(c>=2&&c<=3) return 'nublado';
   return 'limpo';
 }
+function _cenaSvg(corpo, k){ return `<svg viewBox="${CENA_VB}" preserveAspectRatio="xMaxYMax meet" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" data-cena="${k}">${corpo}</svg>`; }
 function cenaInicio(){
+  const hora = _cenaHora();
+  const noite = hora === 'noite';
+  const estrelas = CENA.estrela(262, 14, 3) + CENA.estrela(318, 8, 2.2) + CENA.estrela(372, 22, 2.6) + CENA.estrela(252, 6, 2);
+  const paisagem = (comBandeira)=>CENA.serraFundo + CENA.montanha + (comBandeira ? CENA.bandeira : '') + CENA.trilha + CENA.frente;
   const data = _cenaData();
-  if(data) return { k:'data-'+data, svg: (data==='natal' ? CENA.montanhaPico : CENA.montanha) + ({
-    prova: CENA.chegada + CENA.trilha,
-    vespera: CENA.cronometro + CENA.bandeira + CENA.trilha,
-    aniversario: CENA.baloes + CENA.trilha,
-    anonovo: CENA.fogos(48, 44, 18) + CENA.fogos(82, 22, 11) + CENA.fogos(170, 30, 13) + CENA.bandeira + CENA.trilha,
-    natal: CENA.natal + CENA.bandeira + '<path class="dk-a" d="M96 168c10-8 18-18 22-30s4-26 6-36" stroke-width="3.2" stroke-dasharray="3 8"/>'
-  })[data] };
-  const hora = _cenaHora(), clima = _cenaClima();
+  if(data){
+    const ceuData = noite ? estrelas : '';
+    const corpo = {
+      prova: ceuData + CENA.serraFundo + CENA.chegada + CENA.frente,
+      vespera: ceuData + paisagem(true) + CENA.cronometro,
+      aniversario: ceuData + paisagem(true) + CENA.baloes,
+      anonovo: estrelas + CENA.fogos(272, 24, 13) + CENA.fogos(306, 12, 8) + CENA.fogos(372, 38, 10) + paisagem(true),
+      natal: (noite ? estrelas : '') + CENA.serraFundo + CENA.montanha + CENA.bandeira + CENA.natal + CENA.frente
+    }[data];
+    return { k:'data-'+data, svg: corpo };
+  }
+  const clima = _cenaClima();
   let ceu = '';
-  if(hora === 'amanhecer') ceu = CENA_SOL_BAIXO(36, 100, 15);
-  else if(hora === 'dia') ceu = CENA_SOL(52, 50, 14);
-  else if(hora === 'tarde') ceu = CENA_SOL_BAIXO(170, 76, 13) + '<path d="M150 76h40" stroke-opacity=".7"/>';
-  else ceu = CENA_LUA(78, 34) + CENA_ESTRELA(30, 24, 3.5) + CENA_ESTRELA(104, 70, 2.5) + CENA_ESTRELA(170, 72, 3) + CENA_ESTRELA(54, 52, 2.5);
-  const nx = hora==='tarde' ? 164 : hora==='noite' ? 84 : 66, ny = hora==='tarde' ? 60 : hora==='noite' ? 42 : 54;
+  if(hora === 'amanhecer') ceu = CENA.solBaixo(296, 78, 11);
+  else if(hora === 'dia') ceu = CENA.sol(290, 30, 11);
+  else if(hora === 'tarde') ceu = CENA.solBaixo(292, 80, 10);
+  else ceu = CENA.lua(292, 30) + estrelas;
+  // nuvem na frente do astro (dá profundidade); chuva forte esconde o sol e a lua
+  const nx = hora==='tarde' || hora==='amanhecer' ? 296 : 310, ny = hora==='tarde' || hora==='amanhecer' ? 46 : 38;
   let tempo = '';
   if(clima && clima !== 'limpo'){
     if(clima === 'nevoa') tempo = CENA.nevoa;
     else {
-      tempo = CENA_NUVEM(nx, ny);
+      tempo = CENA.nuvem(nx, ny);
+      if(clima === 'nublado') tempo = CENA.nuvem(nx + 44, ny + 10, .7) + tempo;
       if(clima === 'chuva') tempo += CENA.chuva(nx, ny);
       if(clima === 'garoa') tempo += CENA.garoa(nx, ny);
       if(clima === 'tempestade') tempo += CENA.chuva(nx, ny) + CENA.raio(nx, ny);
       if(clima === 'neve') tempo += CENA.neve(nx, ny);
-      // chuva forte: o sol some atrás da nuvem
-      if(clima === 'chuva' || clima === 'tempestade'){ if(hora === 'dia' || hora === 'noite') ceu = ''; }
+      if(clima === 'chuva' || clima === 'tempestade'){ if(hora === 'dia') ceu = ''; if(noite) ceu = estrelas; tempo = CENA.nuvem(nx + 42, ny + 6, .75) + tempo; }
     }
   }
-  return { k:`${hora}-${clima||'semclima'}`, svg: ceu + CENA.montanha + CENA.bandeira + CENA.trilha + (hora==='noite' ? CENA.coruja : '') + tempo };
+  return { k:`${hora}-${clima||'semclima'}`, svg: ceu + paisagem(true) + tempo };
 }
 const _updateDecoB29 = window.updateDeco;
 window.updateDeco = function(tab){
   const el = document.getElementById('app-deco');
+  // Com a capa do mural ligada, a capa é a imagem do topo: a cena do céu não é desenhada (ficaria escondida atrás dela)
+  const capaLigada = ()=>{ const h = document.getElementById('home-hero'); return !!(h && !h.classList.contains('hidden')); };
+  if(tab === 'home' && el && decoEnabled() && capaLigada()){ document.body.classList.remove('no-deco'); el.classList.add('deco36'); el.innerHTML = ''; el.dataset.k = 'sem'; delete el.dataset.cena; return; }
   if(tab === 'home' && el && decoEnabled()){
     document.body.classList.remove('no-deco');
+    el.classList.add('deco36');
     const c = cenaInicio();
     if(el.dataset.k !== 'inicio' || el.dataset.cena !== c.k || !el.innerHTML){
       el.dataset.k = 'inicio'; el.dataset.cena = c.k;
-      el.innerHTML = `<svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${c.svg}</svg>`;
+      el.innerHTML = _cenaSvg(c.svg, c.k);
     }
+    try{ requestAnimationFrame(()=>{ decoPosiciona('home'); setTimeout(()=>decoPosiciona('home'), 200); }); }catch(e){}
     return;
   }
   if(el) delete el.dataset.cena;
@@ -8378,6 +8484,7 @@ function climaChip(){
   chip.title = `${Math.round(w.temp)}°C, ${desc}`;
   const curto = { tempestade:'Tempestade', chuva:'Chuva', garoa:'Garoa', neve:'Neve', nevoa:'Névoa', nublado:'Nublado' }[c] || (noite ? 'Céu limpo' : 'Ensolarado');
   chip.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CLIMA_ICO[ico]}</svg><b>${Math.round(w.temp)}°</b><span>${curto}</span>`;
+  climaChipCabe();
 }
 const _weatherHomeLineB29 = window.weatherHomeLine;
 window.weatherHomeLine = function(){
@@ -8387,7 +8494,25 @@ window.weatherHomeLine = function(){
   const dica = String(l).replace(/^🌡️\s*-?\d+°C,\s*[^·]*·\s*/, '');
   return dica ? dica.charAt(0).toUpperCase() + dica.slice(1) : l;
 };
-mtGancho('renderHome', { depois(){ try{ climaChip(); }catch(e){} }});
+// Beta 36: o chip do clima nunca encosta no nome do app. Se a descrição ("Tempestade", "Céu limpo"…)
+// não couber com folga, fica só o ícone e a temperatura (a descrição continua no toque longo/leitor de tela).
+function climaChipCabe(){
+  const br = $('home-brand-row'), chip = $('home-clima'); if(!br || !chip) return;
+  chip.classList.remove('so-temp');
+  const nome = [...br.children].find(e=>!e.classList.contains('brand-logo') && !e.classList.contains('avatar') && e.id!=='home-clima'); if(!nome) return;
+  const r = document.createRange(); r.selectNodeContents(nome);
+  const fim = Math.max(...[...r.getClientRects()].map(x=>x.right));
+  if(chip.getBoundingClientRect().left - fim < 14) chip.classList.add('so-temp');
+}
+window.addEventListener('resize', ()=>{ try{ climaChipCabe(); }catch(e){} }, { passive:true });
+// Beta 36: a foto do perfil sobe para a linha do METATREINO (à direita, depois do clima). Assim a janela
+// ao lado da saudação fica livre para o desenho do céu. Tocar na foto abre o Perfil.
+function inicioAvatarNoTopo(){
+  const br = $('home-brand-row'), av = $('home-avatar'); if(!br || !av) return;
+  if(av.parentElement !== br) br.appendChild(av);
+  if(!av.dataset.toque){ av.dataset.toque = '1'; av.setAttribute('role', 'button'); av.setAttribute('tabindex', '0'); av.setAttribute('aria-label', 'Abrir meu perfil'); av.addEventListener('click', ()=>goTab('profile')); }
+}
+mtGancho('renderHome', { depois(){ try{ inicioAvatarNoTopo(); climaChip(); if(state.ui && state.ui.tab === 'home') updateDeco('home'); }catch(e){} }});
 
 // ---------- 3. Ordem dos blocos do Início ----------
 // Em "Personalizar início" cada bloco ganha uma alça (⠿) para arrastar para cima ou para baixo.
