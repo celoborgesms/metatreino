@@ -166,12 +166,12 @@ async def conquistas(b):
     await pg.wait_for_timeout(1700)
     confere('desbloquear NÃO abre janela no início', not await pg.evaluate(MODAL_ON))
     confere('nenhuma animação de conquista fora da aba (início)', await pg.evaluate("!document.querySelector('.cq-novo, .anim-check, #modal-back.award-dark')"))
-    confere('fica pendente na conta (3 itens) com selo parado "Novidade" no cartão do início', await pg.evaluate("state.conqPend.length===3 && !!document.querySelector('#home-trofeus .cq-badge')"))
+    confere('fica pendente na conta (3 itens); aviso só no ponto da aba Desafios (Beta 45)', await pg.evaluate("state.conqPend.length===3 && !document.querySelector('#home-trofeus .cq-badge') && !!document.querySelector('.tab[data-tab=\"challenges\"] .cq-dot')"))
     for aba in ['sessions', 'challenges', 'perf', 'profile', 'home']:
         await pg.evaluate(f"goTab('{aba}')"); await pg.wait_for_timeout(250)
     confere('navegar pelas outras abas não apresenta nada (continua pendente)', not await pg.evaluate(MODAL_ON) and await pg.evaluate("state.conqPend.length===3"))
     await pg.evaluate("goTab('challenges')"); await pg.wait_for_timeout(200)
-    confere('bloco "Sua coleção" (Desafios) mostra o selo parado na entrada de Conquistas', await pg.evaluate("!!document.querySelector('.chal-tile[onclick^=\"openTrophies\"] .cq-badge')"))
+    confere('dentro de Desafios, o cartão Conquistas diz "3 novas" (sem outro selo)', await pg.evaluate("(document.querySelector('.chal-tile[onclick^=\"openTrophies\"] .cq-novas-txt')||{}).textContent==='3 novas' && !document.querySelector('.chal-tile .cq-badge')"))
     await pg.evaluate("openTrophies()"); await pg.wait_for_timeout(1500)
     r = await pg.evaluate("""(()=>({ novos: document.querySelectorAll('.cq-novo').length, rara: !!document.querySelector('.cq-novo.nv-rara .cq-novo-luz'), especial: !!document.querySelector('.cq-novo.nv-especial'),
        anim: getComputedStyle(document.querySelector('.cq-novo')).animationName, recente: document.querySelectorAll('.cq-tile.cq-recente').length,
@@ -180,10 +180,10 @@ async def conquistas(b):
     confere('rara e especial têm destaque próprio (brilho único / moldura)', r['rara'] and r['especial'], r)
     confere('recém-desbloqueadas destacadas como "Nova" na coleção', r['recente'] >= 2, r)
     confere('desbloqueadas / em andamento / bloqueadas diferenciadas', all(n > 0 for n in r['estados']), r)
-    confere('apresentação registrada (Beta 44: continuam "novas" até abrir cada uma, mas marcadas como apresentadas)', r['pend'] == 3 and await pg.evaluate("state.conqPend.every(p=>p.anim)"))
+    confere('apresentação registrada (sai da fila)', r['pend'] == 0)
     await foto(pg, 'b41-04-conquistas-novas')
     await pg.evaluate("closeModal(); openTrophies()"); await pg.wait_for_timeout(500)
-    confere('reabrir: as novas continuam destacadas, sem reanimar (Beta 44)', await pg.evaluate("document.querySelectorAll('.cq-novo').length===3 && !document.querySelector('.cq.cq-anim')"))
+    confere('reabrir: conquistas já vistas não reaparecem nem reanimam', await pg.evaluate("document.querySelectorAll('.cq-novo').length===0 && document.querySelectorAll('.cq-tile.cq-recente').length===0"))
     await pg.evaluate("cqFiltrar('and')"); await pg.wait_for_timeout(200)
     confere('filtro "Em andamento" mostra só as com progresso', await pg.evaluate("[...document.querySelectorAll('#cq-grade-box .cq-tile')].every(t=>t.classList.contains('st-and'))"))
     await pg.evaluate("cqFiltrar('todas'); closeModal()")
@@ -195,13 +195,13 @@ async def conquistas(b):
     # sincronização: o outro aparelho recebe a conta já com as conquistas vistas
     await pg.wait_for_timeout(1200)
     doc = await pg.evaluate("(()=>{ for(const k in window.__mockFS){ const v = window.__mockFS[k]; if(v && v.estadoApp) return [k, v]; } return null; })()")
-    confere('controle de visualização salvo na nuvem (abrir o detalhe tira da lista de novas)', doc and len(doc[1]['estadoApp'].get('conqPend')) == 2 and all(p.get('anim') for p in doc[1]['estadoApp'].get('conqPend')) and len(doc[1]['estadoApp'].get('conqVistas', [])) >= 1, doc and doc[1]['estadoApp'].get('conqPend'))
+    confere('controle de visualização salvo na nuvem', doc and doc[1]['estadoApp'].get('conqPend') == [] and len(doc[1]['estadoApp'].get('conqVistas', [])) >= 3)
     confere('sem erros de JavaScript', not erros, erros[:3])
     await ctx.close()
     if doc:
         ctx, pg, erros = await nova(b, docs={doc[0]: doc[1]})
         await pg.evaluate("openTrophies()"); await pg.wait_for_timeout(500)
-        confere('segundo aparelho: nada é reanimado', await pg.evaluate("!document.querySelector('.cq.cq-anim') && state.conqPend.every(p=>p.anim)"))
+        confere('segundo aparelho: nada é reapresentado', await pg.evaluate("document.querySelectorAll('.cq-novo').length===0 && state.conqVistas.length>=3"))
         await ctx.close()
 
 async def desafio_mensal(b):
