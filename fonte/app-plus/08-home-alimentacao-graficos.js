@@ -55,7 +55,7 @@ runBuildingScreen = function(m, steps, done, opts){
   ov.className = 'mt-build'; ov.removeAttribute('style');
   const titulo = String(opts.titulo || (m==='lift' ? 'Preparando seu plano de treinamento' : 'Preparando seu plano de corrida')).replace(/^\S+\s(?=[A-ZÁÉÍÓÚ])/,'');
   ov.innerHTML = `<div class="mb-box"><div class="mb-spin"></div><div class="mb-t">${titulo}</div><div class="mb-s">${opts.sub || 'Organizando exercícios, dias e progressão com base nas suas escolhas.'}</div>
-    <ol class="mb-list">${steps.map((s,i)=>`<li id="mb-${i}"><span class="mb-ck"></span><span class="mb-tx">${s.txt}</span></li>`).join('')}</ol>
+    <ol class="mb-list" aria-live="polite">${steps.map((s,i)=>`<li id="mb-${i}"><span class="mb-ck"></span><span class="mb-tx">${s.txt}</span></li>`).join('')}</ol>
     <div class="mb-bar"><i id="mb-bar"></i></div><div class="mb-n" id="mb-n">0 de ${steps.length} etapas</div></div>`;
   requestAnimationFrame(()=>ov.classList.add('on'));
   const passo = Math.min(opts.passo || 900, 1100);
@@ -66,7 +66,7 @@ runBuildingScreen = function(m, steps, done, opts){
     if(bar) bar.style.width = Math.round(i/steps.length*100)+'%';
     if(n) n.textContent = `${i} de ${steps.length} etapas`;
     if(i >= steps.length){
-      setTimeout(()=>{ ov.classList.remove('on'); setTimeout(()=>{ ov.className=''; ov.innerHTML=''; ov.setAttribute('style','display:none'); if(typeof done==='function') done(); }, 260); }, 450);
+      setTimeout(()=>{ ov.classList.remove('on'); setTimeout(()=>{ ov.className=''; ov.innerHTML=''; ov.setAttribute('style','display:none'); try{ if(typeof done==='function') done(); }catch(e){ console.log('montagem (fim):', e); if(typeof mtMontagemErro==='function') mtMontagemErro(m, e); } }, 260); }, opts.final || 450);
       return;
     }
     const li = $('mb-'+i); if(li) li.classList.add('now');

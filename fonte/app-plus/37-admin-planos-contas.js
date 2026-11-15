@@ -22,7 +22,7 @@ async function admRegistrar(acao, alvo, detalhe){
 }
 function admPlanoDe(email){ return planoDe(false, allowCache[email] || null); }
 function admPlanoSelo(p){
-  const nome = { premium:'Premium', teste:'Teste', gratuito:'Gratuito', bloqueado:'Bloqueado' }[p.tipo] || p.tipo;
+  const nome = { premium:'Premium', teste:'Teste', gratuito:'Básico', bloqueado:'Bloqueado' }[p.tipo] || p.tipo;
   return `<span class="adm-plano ${p.tipo}">${p.tipo==='premium'||p.tipo==='teste'?'⭐ ':''}${nome}</span>`;
 }
 function admDias(p){ if(!p.premium) return p.tipo === 'bloqueado' ? '🔒' : '—'; if(!p.ate) return '∞'; return Math.max(0, Math.ceil((p.ate - Date.now())/DIA_MS)) + 'd'; }
@@ -95,7 +95,7 @@ mtGancho('openStudent', { depois(email){
       </div>
       <div class="row" style="gap:6px;margin-top:8px">
         <button class="btn btn-outline" style="flex:1" onclick="admPremium('${eJs}',0)">♾️ Premium sem prazo</button>
-        ${p.premium ? `<button class="btn btn-ghost" style="flex:1" onclick="admEncerrar('${eJs}')">Passar para Gratuito</button>` : ''}
+        ${p.premium ? `<button class="btn btn-ghost" style="flex:1" onclick="admEncerrar('${eJs}')">Passar para Básico</button>` : ''}
       </div>
       <div class="mt-muted" style="font-size:11.5px;margin-top:6px;line-height:1.45">Os dias somam a partir do fim do Premium atual (ou de hoje, se não houver). Trocar de plano nunca apaga treinos nem histórico.</div>
       <div class="section-lbl">Gerenciar</div>
@@ -115,11 +115,11 @@ function admDiasLongo(p){
 function admPlanoTexto(a, p){
   const f = t=>new Date(t).toLocaleDateString('pt-BR');
   if(p.tipo==='bloqueado') return `Conta suspensa${a.bloqueioMotivo?' — '+a.bloqueioMotivo:''}${a.bloqueadoEm?' (desde '+f(msDe(a.bloqueadoEm))+')':''}. A pessoa não entra no app; os dados continuam guardados.`;
-  if(p.tipo==='teste') return `Teste Premium até ${f(p.ate)} (começou em ${f(p.inicio)}). Ao terminar, passa sozinho para o Gratuito.`;
+  if(p.tipo==='teste') return `Teste Premium até ${f(p.ate)} (começou em ${f(p.inicio)}). Ao terminar, passa sozinho para o Básico.`;
   if(p.tipo==='premium') return p.ate ? `Premium até ${f(p.ate)}.` : 'Premium sem data de término.';
-  if(p.testeAcabouEm) return `Gratuito (teste encerrado em ${f(p.testeAcabouEm)}).`;
-  if(p.premiumAcabouEm) return `Gratuito (Premium encerrado em ${f(p.premiumAcabouEm)}).`;
-  return a._semDoc ? 'Gratuito (conta criada sem teste — ex.: login de usuário sem e-mail).' : 'Gratuito.';
+  if(p.testeAcabouEm) return `Básico (teste encerrado em ${f(p.testeAcabouEm)}).`;
+  if(p.premiumAcabouEm) return `Básico (Premium encerrado em ${f(p.premiumAcabouEm)}).`;
+  return a._semDoc ? 'Básico (conta criada sem teste — ex.: login de usuário sem e-mail).' : 'Básico.';
 }
 async function admGravarPlano(email, dados, acao, detalhe){
   if(email === admEu()){ toast('🛡️ Sua própria conta não é alterada por aqui.'); return false; }
@@ -144,10 +144,10 @@ async function admPremium(email, dias){
   if(ok){ toast(dias ? `⭐ Premium até ${new Date(ate).toLocaleDateString('pt-BR')}` : '⭐ Premium sem prazo'); openStudent(email); }
 }
 function admEncerrar(email){
-  appConfirm(`${email} passa para o plano Gratuito agora. Treinos, histórico e dados continuam; o que é Premium fica guardado.`, async ()=>{
+  appConfirm(`${email} passa para o plano Básico agora. Treinos, histórico e dados continuam; o que é Premium fica guardado.`, async ()=>{
     const ok = await admGravarPlano(email, { plano:'gratuito', premiumAte:null, active:true, expiresAt:Date.now()-1000 }, 'gratuito');
-    if(ok){ toast('Plano Gratuito'); openStudent(email); }
-  }, { title:'Encerrar o Premium?', okLabel:'Passar para Gratuito', onCancel:()=>setTimeout(()=>openStudent(email), 80) });
+    if(ok){ toast('Plano Básico'); openStudent(email); }
+  }, { title:'Encerrar o Premium?', okLabel:'Passar para Básico', onCancel:()=>setTimeout(()=>openStudent(email), 80) });
 }
 function admBloquear(email, bloquear){
   if(!bloquear){
@@ -269,62 +269,166 @@ async function fnChamar(nome, dados){
   if(j && j.error) throw Object.assign(new Error(j.error.message || 'erro'), { code: j.error.status || 'erro' });
   return j ? j.result : null;
 }
+// Beta 42: confirmação por janela (sem digitar o e-mail), uma exclusão por vez, painel e sessão do
+// administrador preservados, e marca permanente contasExcluidas/{email}:
+//  • o app de quem foi excluído (se ainda estiver aberto ou logado) NÃO consegue recriar os dados nem um
+//    novo teste Premium (firestore.rules), e a lista do painel não mostra mais a conta;
+//  • a exclusão só apaga documentos cujo e-mail é o da conta excluída — nunca o do administrador.
+// Sem a função do servidor publicada (plano Blaze), o painel faz o que o navegador pode fazer de verdade
+// (dados + bloqueio + marca) e diz claramente que o login segue no Authentication.
+let _admExcluindo = false;
+function _admNomeDe(email){ const u = usuariosCache[email]; const d = u && u.estadoApp; const p = d && d.user && d.user.profile; return (p && p.nickname) || (u && u.nome) || (allowCache[email]||{}).name || email.split('@')[0]; }
+function _admProtegido(email){
+  const e = String(email||'').toLowerCase();
+  return !e || e === admEu() || e === String(ADMIN_EMAIL).toLowerCase();
+}
 function admExcluirConta(email){
   if(!mtPrincipal()){ toast('🔒 Somente o administrador principal exclui contas.'); return; }
-  if(email === admEu() || email === String(ADMIN_EMAIL).toLowerCase()){ toast('🛡️ Esta conta não pode ser excluída por aqui.'); return; }
-  const u = usuariosCache[email]; const d = u && u.estadoApp; const p = d && d.user && d.user.profile;
-  const treinos = ((d&&d.modules&&d.modules.lift&&d.modules.lift.history)||[]).length + ((d&&d.modules&&d.modules.run&&d.modules.run.history)||[]).length;
-  const ult = u && +u.atualizadoEm ? new Date(+u.atualizadoEm).toLocaleString('pt-BR') : '—';
-  $('modal-inner').innerHTML = `<h3>🗑️ Excluir conta</h3>
-    <div class="card" style="font-size:13px;line-height:1.7;word-break:break-word">
-      <b>E-mail:</b> ${mtEsc(email)}<br><b>Nome:</b> ${mtEsc((p&&p.nickname) || (u&&u.nome) || (allowCache[email]||{}).name || '—')}<br>
-      <b>Documentos de dados:</b> ${(u&&u._uids||[]).length || 0} · <b>Treinos registrados:</b> ${treinos}<br><b>Último uso:</b> ${mtEsc(ult)}<br><b>Plano:</b> ${admPlanoSelo(admPlanoDe(email))}</div>
-    <p class="mt-muted" style="font-size:12.5px;line-height:1.5">Apaga o login (Authentication), os dados do aluno, o arquivo anual, as participações em desafios, o vínculo da conta e o cargo de administrador, se houver. <b>Não pode ser desfeito.</b> Fica só a marca de conta excluída no plano, para o mesmo e-mail não ganhar outro teste Premium.</p>
-    <div class="field"><label>Para confirmar, digite o e-mail da conta</label><input class="input" id="adm-del-conf" autocapitalize="none" spellcheck="false" autocomplete="off" placeholder="${mtEsc(email)}" data-teclado></div>
-    <div id="adm-del-st" class="mt-muted" style="font-size:12.5px;min-height:18px"></div>
-    <button class="btn btn-perigo btn-block" id="adm-del-go" onclick="admExcluirContaGo('${jsAttr(email)}')">Excluir conta definitivamente</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();setTimeout(()=>openStudent('${jsAttr(email)}'),60)">Cancelar</button>`;
+  if(_admProtegido(email)){ toast('🛡️ Esta conta não pode ser excluída por aqui.'); return; }
+  if(_admExcluindo){ toast('Já existe uma exclusão em andamento.'); return; }
+  $('modal-inner').innerHTML = `<div class="adm-del">
+    <div class="adm-del-ico" aria-hidden="true">🗑️</div>
+    <h3>Excluir aluno?</h3>
+    <div class="adm-del-quem"><b>${mtEsc(_admNomeDe(email))}</b><span>${mtEsc(email)}</span></div>
+    <p class="adm-del-aviso"><b>Esta operação é permanente.</b> Apaga os treinos, o histórico, o arquivo anual, as participações em desafios e o acesso desta conta. Não pode ser desfeita.</p>
+    <div id="adm-del-st" class="adm-del-st" role="status" aria-live="polite"></div>
+    <div class="adm-del-bts"><button class="btn btn-ghost" id="adm-del-cancel" onclick="closeModal();setTimeout(()=>openStudent('${jsAttr(email)}'),60)">Cancelar</button>
+    <button class="btn btn-perigo" id="adm-del-go" onclick="admExcluirContaGo('${jsAttr(email)}')">Excluir aluno</button></div></div>`;
   $('modal-back').classList.add('on');
 }
+function _admBloqueiaBotoes(on, txt){
+  ['adm-del-go','adm-del-cancel'].forEach(id=>{ const b = $(id); if(b){ b.disabled = on; if(id==='adm-del-go' && txt) b.textContent = txt; } });
+  const back = $('modal-back'); if(back) back.classList.toggle('adm-ocupado', on);
+}
 async function admExcluirContaGo(email){
-  const conf = String(($('adm-del-conf')||{}).value||'').trim().toLowerCase();
-  const st = $('adm-del-st'), bt = $('adm-del-go'); const fala = (t, cor)=>{ if(st){ st.innerHTML = t; st.style.color = cor || ''; } };
-  if(conf !== email){ fala('O e-mail digitado não confere. Nada foi excluído.', 'var(--danger-soft)'); return; }
-  if(bt){ bt.disabled = true; bt.textContent = 'Excluindo…'; }
+  if(_admExcluindo) return;                         // um clique só (toques repetidos são ignorados)
+  if(!mtPrincipal() || _admProtegido(email)) return;
+  _admExcluindo = true;
+  const st = $('adm-del-st'); const fala = (t, cor)=>{ if(st){ st.innerHTML = t; st.style.color = cor || ''; } };
+  _admBloqueiaBotoes(true, 'Excluindo…'); fala('Excluindo… não feche esta janela.');
   try{
-    const r = await fnChamar('adminExcluirConta', { email, confirmacao: conf });
-    if(!r || !r.ok) throw new Error('resposta inesperada do servidor');
-    delete allowCache[email]; delete usuariosCache[email];
-    $('modal-inner').innerHTML = `<h3>✅ Conta excluída</h3><p class="mt-muted" style="font-size:13px;line-height:1.55"><b>${mtEsc(email)}</b>: ${r.logins} login(s) excluído(s) do Authentication, ${r.documentos} documento(s) de dados e ${r.participacoes} participação(ões) em desafios apagados.</p><button class="btn btn-primary btn-block" onclick="closeModal();goAdmin()">Voltar ao painel</button>`;
+    let r = null, semFuncao = false;
+    if(!window.__admSemFuncao){
+      try{ r = await fnChamar('adminExcluirConta', { email, confirmacao: email, confirmado: true }); }
+      catch(e){ if(e && e.code === 'sem-funcao'){ semFuncao = true; window.__admSemFuncao = true; } else throw e; }
+    } else semFuncao = true;
+    if(r && r.ok){
+      await _admMarcaExcluida(email, { origem:'servidor', logins:r.logins });
+      await _admDepoisDeExcluir(email);
+      $('modal-inner').innerHTML = `<h3>✅ Aluno excluído</h3><p class="mt-muted" style="font-size:13px;line-height:1.55"><b>${mtEsc(email)}</b>: ${r.logins} login(s) excluído(s) do Authentication, ${r.documentos} documento(s) de dados e ${r.participacoes} participação(ões) em desafios apagados.</p><button class="btn btn-primary btn-block" onclick="admVoltarLista()">Voltar ao painel</button>`;
+      return;
+    }
+    if(!semFuncao) throw new Error('resposta inesperada do servidor');
+    // sem a função do servidor: dados + bloqueio + marca de excluída
+    const res = await admExcluirSoDados(email, true);
+    await _admDepoisDeExcluir(email);
+    $('modal-inner').innerHTML = `<h3>${res.falhou.length ? '⚠️ Exclusão parcial' : '✅ Dados do aluno excluídos'}</h3>
+      <p class="mt-muted" style="font-size:13px;line-height:1.55">${res.feito.length ? 'Feito: ' + mtEsc([...new Set(res.feito)].join(', ')) + '.' : ''}${res.falhou.length ? '<br><b>Não foi possível:</b> ' + mtEsc(res.falhou.join(', ')) + '. Toque em Excluir de novo para tentar o que faltou.' : ''}</p>
+      ${res.ignorados && res.ignorados.length ? `<p class="mt-muted" style="font-size:12px;line-height:1.5">${res.ignorados.length} documento(s) ligado(s) a este e-mail pertencem a outra conta e foram preservados.</p>` : ''}
+      <p class="mt-muted" style="font-size:12.5px;line-height:1.55">A conta está bloqueada e não consegue recriar dados nem ganhar outro teste. <b>O login (Firebase Authentication) só é apagado com a função do servidor publicada</b> (plano Blaze) ou pelo Console do Firebase › Authentication.</p>
+      <button class="btn btn-primary btn-block" onclick="admVoltarLista()">Voltar ao painel</button>`;
   }catch(e){
     console.log('excluir conta:', e);
-    if(bt){ bt.disabled = false; bt.textContent = 'Excluir conta definitivamente'; }
-    if(e && e.code === 'sem-funcao'){
-      fala(`<b>A exclusão completa precisa da função do servidor</b> (functions/, plano Blaze do Firebase), e ela ainda não respondeu. <b>Nada foi excluído.</b><br><br>Sem ela, o navegador só consegue apagar os dados e suspender a conta — o login continua no Authentication até você apagar no Console.
-        <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="admExcluirSoDados('${jsAttr(email)}')">Apagar só os dados e suspender</button>`, 'var(--text-dim)');
-    } else fala('⚠️ O servidor recusou: ' + mtEsc(e && e.message || 'erro') + '. <b>Nada foi dado como excluído.</b>', 'var(--danger-soft)');
-  }
+    _admBloqueiaBotoes(false, 'Excluir aluno');
+    fala('⚠️ Não foi possível excluir: ' + mtEsc((e && e.message) || 'erro') + '. <b>Nada foi dado como excluído.</b>', 'var(--danger-soft)');
+  }finally{ _admExcluindo = false; const back = $('modal-back'); if(back) back.classList.remove('adm-ocupado'); }
 }
-async function admExcluirSoDados(email){
-  const st = $('adm-del-st'); const fala = t=>{ if(st) st.innerHTML = t; };
-  const u = usuariosCache[email] || {}; const uids = [...new Set([...(u._uids||[]), u._uid].filter(Boolean))];
-  const feito = []; const falhou = [];
+// enquanto exclui, a janela não fecha (toque fora, voltar do Android) — o painel fica onde está
+const _closeModalB42 = window.closeModal;
+window.closeModal = function(){ if(_admExcluindo) return; return _closeModalB42.apply(this, arguments); };
+// volta para a lista do painel SEM recarregar tudo (a sessão e a tela do administrador continuam)
+function admVoltarLista(){ closeModal(); try{ showScreen('scr-admin'); renderAdminStats(); renderAdminList(); window.scrollTo(0,0); }catch(e){ goAdmin(); } }
+async function _admMarcaExcluida(email, extra){
+  await db.collection('contasExcluidas').doc(email).set(Object.assign({ em:Date.now(), por:admEu() }, extra||{}));
+}
+// depois de excluir: tira da lista NA HORA (sem recarregar o painel), confere que os dados do administrador
+// continuam na nuvem e regrava se algo faltar
+async function _admDepoisDeExcluir(email){
+  delete allowCache[email]; delete usuariosCache[email];
+  window.__admExcluidas = Object.assign(window.__admExcluidas || {}, { [email]: { em:Date.now() } });
+  try{ renderAdminStats(); renderAdminList(); }catch(e){}
+  try{
+    const meu = await db.collection('usuarios').doc(uidDados()).get();
+    if(!meu.exists){ console.log('documento do administrador ausente: regravando'); try{ _assinaturaNuvem = ''; }catch(x){} saveData(); syncToCloud(); }
+  }catch(e){}
+}
+async function admExcluirSoDados(email, interno){
+  if(!mtPrincipal() || _admProtegido(email)) return { feito:[], falhou:['conta protegida'] };
+  const u = usuariosCache[email] || {};
+  const proibidos = new Set([fbUser && fbUser.uid, uidDados()].filter(Boolean));
+  const candidatos = [...new Set([...(u._uids||[]), u._uid].filter(Boolean))].filter(x=>!proibidos.has(x));
+  const feito = []; const falhou = []; const ignorados = [...proibidos].filter(x=>(u._uids||[]).includes(x));
   const tenta = async (nome, f)=>{ try{ await f(); feito.push(nome); }catch(e){ falhou.push(nome + ' (' + ((e&&e.code)||'erro') + ')'); } };
-  fala('Apagando…');
-  for(const uid of uids){
-    await tenta('arquivo anual', async ()=>{ const s = await db.collection('usuarios').doc(uid).collection('arquivo').get(); for(const d of s.docs || []) await db.collection('usuarios').doc(uid).collection('arquivo').doc(d.id).delete(); });
+  // marca ANTES de apagar: a partir daqui o app do aluno já não recria nada
+  await tenta('marca de conta excluída', ()=>_admMarcaExcluida(email, { origem:'painel' }));
+  await tenta('bloqueio', ()=>db.collection('usuariosAutorizados').doc(email).set({ plano:'gratuito', bloqueado:true, bloqueioMotivo:'Conta excluída pela administração', contaExcluidaEm:Date.now(), atualizadoPor:admEu() }));
+  for(const uid of candidatos){
+    // só apaga documento que é MESMO desta conta (o e-mail gravado no documento confere)
+    let ok = false;
+    try{ const d = await db.collection('usuarios').doc(uid).get(); ok = !d.exists || String((d.data()||{}).email||'').toLowerCase() === email; }catch(e){}
+    if(!ok){ ignorados.push(uid); continue; }   // documento de outra pessoa: não é tocado
+    for(const sub of ['arquivo','backups']){
+      await tenta(sub === 'arquivo' ? 'arquivo anual' : 'registros de backup', async ()=>{ const s = await db.collection('usuarios').doc(uid).collection(sub).get(); for(const d of s.docs || []) await db.collection('usuarios').doc(uid).collection(sub).doc(d.id).delete(); });
+    }
     await tenta('participações', async ()=>{ const ds = await db.collection('desafiosTematicos').get(); for(const d of ds.docs || []){ const r = db.collection('desafiosTematicos').doc(d.id).collection('participantes').doc(uid); const x = await r.get(); if(x.exists) await r.delete(); } });
     await tenta('dados do aluno', ()=>db.collection('usuarios').doc(uid).delete());
   }
   await tenta('vínculo da conta', ()=>db.collection('contas').doc(email).delete());
   await tenta('cargo de administrador', ()=>db.collection('admins').doc(email).delete());
-  await tenta('suspensão', ()=>db.collection('usuariosAutorizados').doc(email).set({ plano:'gratuito', bloqueado:true, bloqueioMotivo:'Conta excluída pela administração', contaExcluidaEm:Date.now(), atualizadoPor:admEu() }));
-  await admRegistrar(falhou.length ? 'excluir-dados-parcial' : 'excluir-dados', email, { feito, falhou });
-  $('modal-inner').innerHTML = `<h3>${falhou.length ? '⚠️ Exclusão parcial' : '✅ Dados apagados e conta suspensa'}</h3>
-    <p class="mt-muted" style="font-size:13px;line-height:1.55">${feito.length ? 'Feito: ' + mtEsc([...new Set(feito)].join(', ')) + '.' : ''}${falhou.length ? '<br><b>Não foi possível:</b> ' + mtEsc(falhou.join(', ')) + '.' : ''}</p>
-    <p class="mt-muted" style="font-size:12.5px;line-height:1.55"><b>O login da pessoa continua existindo no Firebase Authentication.</b> Para apagá-lo: Console do Firebase › Authentication › Usuários › ${mtEsc(email)} › Excluir. Ou publique a função (functions/) para que o painel faça tudo sozinho.</p>
-    <button class="btn btn-primary btn-block" onclick="closeModal();goAdmin()">Voltar ao painel</button>`;
+  await admRegistrar(falhou.length ? 'excluir-dados-parcial' : 'excluir-dados', email, { feito, falhou, ignorados });
+  return { feito, falhou, ignorados };
 }
+// lista: contas marcadas como excluídas não aparecem (mesmo que o app antigo do aluno tenha regravado algo)
+const _loadAdminDataB42 = window.loadAdminData;
+window.loadAdminData = async function(){
+  const r = await _loadAdminDataB42.apply(this, arguments);
+  try{
+    const s = await db.collection('contasExcluidas').get();
+    const m = {}; s.forEach(d=>{ m[d.id] = d.data() || {}; }); window.__admExcluidas = m;
+  }catch(e){}
+  Object.keys(window.__admExcluidas || {}).forEach(em=>{ delete allowCache[em]; delete usuariosCache[em]; });
+  return r;
+};
+// contas excluídas: o principal pode liberar o e-mail para um cadastro novo (sem novo teste Premium)
+function openContasExcluidas(){
+  if(!mtPrincipal()) return;
+  const m = window.__admExcluidas || {}; const L = Object.keys(m).sort();
+  $('modal-inner').innerHTML = `<h3>Contas excluídas</h3>
+    <p class="mt-muted" style="font-size:12.5px;line-height:1.5">Estes e-mails não aparecem na lista e não conseguem recriar dados. "Liberar" permite que a pessoa volte a usar o app com este e-mail (no plano Básico, sem novo teste).</p>
+    <div style="max-height:55vh;overflow:auto">${L.map(em=>`<div class="adm-log" style="display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0;word-break:break-all">${mtEsc(em)}<br><small>${m[em].em?new Date(+m[em].em).toLocaleString('pt-BR'):''}</small></span><button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" onclick="admLiberarEmail('${jsAttr(em)}')">Liberar</button></div>`).join('') || '<div class="mt-muted">Nenhuma conta excluída.</div>'}</div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function admLiberarEmail(email){
+  appConfirm(`Liberar ${email} para usar o app de novo? A conta volta no plano Básico (sem novo teste Premium).`, async ()=>{
+    try{
+      await db.collection('contasExcluidas').doc(email).delete();
+      await db.collection('usuariosAutorizados').doc(email).set({ plano:'gratuito', bloqueado:false, exclusaoAnteriorEm:Date.now(), atualizadoPor:admEu() });
+      await admRegistrar('liberar-email', email);
+      delete (window.__admExcluidas||{})[email]; toast('E-mail liberado'); goAdmin();
+    }catch(e){ toast('⚠️ O Firestore recusou (' + ((e&&e.code)||'erro') + ').'); }
+  }, { title:'Liberar e-mail?', okLabel:'Liberar' });
+}
+mtGancho('goAdmin', { depois(){
+  try{
+    if(!mtPrincipal() || $('adm-excl-row')) return;
+    const ref = $('adm-tam-row') || $('adm-log-row'); if(!ref) return;
+    const d = document.createElement('div'); d.className = 'list-row'; d.id = 'adm-excl-row'; d.onclick = openContasExcluidas;
+    d.innerHTML = '🗂️ <span>Contas excluídas</span><span style="margin-left:auto;font-size:11px;color:var(--text-dim)">liberar e-mail</span>'; ref.after(d);
+  }catch(e){}
+}});
+// suporte: liberar a restauração de um backup que não é desta conta (24 h), depois de conferir a identidade
+function admLiberarBackup(email){
+  appConfirm(`Liberar ${email} para restaurar um backup que não foi criado nesta conta, pelas próximas 24 horas?\n\nFaça isso só depois de confirmar que os dados são da própria pessoa.`, async ()=>{
+    try{ await db.collection('liberacoesBackup').doc(email).set({ ate:Date.now()+24*3600000, por:admEu(), em:Date.now() }); await admRegistrar('liberar-backup', email); toast('Restauração liberada por 24 h'); }
+    catch(e){ toast('⚠️ O Firestore recusou (' + ((e&&e.code)||'erro') + '). Publique as regras da Beta 42.'); }
+  }, { title:'Liberar restauração de backup?', okLabel:'Liberar por 24 h' });
+}
+mtGancho('openStudent', { depois(email){
+  try{ const box = $('stud-content'); if(!box || box.querySelector('#adm-lib-bkp') || email === admEu()) return;
+    box.insertAdjacentHTML('beforeend', `<button class="btn btn-ghost btn-block" id="adm-lib-bkp" style="margin-top:8px" onclick="admLiberarBackup('${jsAttr(email)}')">📥 Liberar restauração de backup (24 h)</button>`);
+  }catch(e){}
+}});
 
 // ---------- 5. Registro das ações ----------
 async function openAdminLog(){
@@ -334,10 +438,10 @@ async function openAdminLog(){
     const s = await db.collection('adminLog').orderBy('em','desc').limit(80).get();
     const L = []; s.forEach(d=>L.push(d.data()));
     L.sort((a,b)=>msDe(b.em)-msDe(a.em));
-    const nome = { premium:'Premium concedido/renovado', gratuito:'Passou para Gratuito', bloquear:'Conta suspensa', desbloquear:'Conta desbloqueada', 'admin-conceder':'Administrador autorizado', 'admin-remover':'Administrador removido', 'admin-apagar-registro':'Registro de admin apagado', 'excluir-conta':'Conta excluída', 'excluir-conta-parcial':'Exclusão parcial', 'excluir-dados':'Dados apagados e conta suspensa', 'excluir-dados-parcial':'Dados apagados (parcial)' };
+    const nome = { premium:'Premium concedido/renovado', gratuito:'Passou para Básico', bloquear:'Conta suspensa', desbloquear:'Conta desbloqueada', 'admin-conceder':'Administrador autorizado', 'admin-remover':'Administrador removido', 'admin-apagar-registro':'Registro de admin apagado', 'excluir-conta':'Conta excluída', 'excluir-conta-parcial':'Exclusão parcial', 'excluir-dados':'Dados apagados e conta suspensa', 'excluir-dados-parcial':'Dados apagados (parcial)', 'liberar-email':'E-mail liberado após exclusão', 'liberar-backup':'Restauração de backup liberada' };
     $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><div style="max-height:60vh;overflow:auto">${L.map(x=>`<div class="adm-log"><b>${mtEsc(nome[x.acao]||x.acao)}</b> · ${mtEsc(x.alvo||'')}<br>${mtEsc(msDe(x.em)?new Date(msDe(x.em)).toLocaleString('pt-BR'):'')} · por ${mtEsc(x.por||'')}${x.origem==='servidor'?' (servidor)':''}</div>`).join('') || '<div class="mt-muted">Nenhuma ação registrada ainda.</div>'}</div>
       <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
   }catch(e){ $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><p class="mt-muted">Não consegui ler o registro (${mtEsc((e&&e.code)||'erro')}). Publique as regras desta versão (coleção adminLog).</p><button class="btn btn-ghost btn-block" onclick="closeModal()">Fechar</button>`; }
 }
 
-Object.assign(window, { admPremium, admEncerrar, admBloquear, admBloquearConfirma, admExcluirConta, admExcluirContaGo, admExcluirSoDados, admApagarRegistroAdmin, openAdminLog, admRegistrar, fnChamar });
+Object.assign(window, { admPremium, admEncerrar, admBloquear, admBloquearConfirma, admExcluirConta, admExcluirContaGo, admExcluirSoDados, admApagarRegistroAdmin, openAdminLog, admRegistrar, fnChamar, openContasExcluidas, admLiberarEmail, admLiberarBackup, admVoltarLista });

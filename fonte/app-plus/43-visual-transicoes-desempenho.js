@@ -66,12 +66,15 @@ window.setTheme = function(){
 
 // ---------- montagem do plano ----------
 // As etapas são as mesmas (reais). Antes eram até 6 × 0,9–1,1 s (~6 s de espera); agora cada etapa
-// marca em 0,36 s — tempo de ler o que foi considerado, sem fingir processamento. No fim, o título vira
+// marca em ~1,1 s (Beta 42) — tempo de ler o que foi considerado, sem fingir processamento. No fim, o título vira
 // "Plano pronto" e a tela de treinos entra com os dias e exercícios em sequência.
 const _buildB41 = window.runBuildingScreen;
 window.runBuildingScreen = function(m, steps, done, opts){
   opts = Object.assign({}, opts || {});
-  if(!opts.passo || opts.passo > 360) opts.passo = mtMovimentoOk() ? 360 : 160;
+  // Beta 42: 0,36 s por etapa era rápido demais para ler. Cada etapa fica ~1,1 s (o máximo da tela de
+  // montagem) e o "Plano pronto" fica ~1 s visível antes de abrir o plano. Continua sem espera inventada:
+  // são as mesmas etapas reais, e o plano já está gerado quando a tela aparece.
+  opts.passo = 1100; opts.final = 1000;
   const fim = function(){
     window.__mtPlanoNovo = Date.now();
     if(typeof done === 'function') return done.apply(this, arguments);
@@ -109,29 +112,21 @@ const _arcos = (cx,cy,r0,n,gap,a0,a1)=>{ let s=''; for(let i=0;i<n;i++){ const r
   s += `<path class="d-linha" stroke-opacity="${(0.55-i*0.1).toFixed(2)}" d="M${p(a0)}A${r} ${r} 0 0 1 ${p(a1)}"/>`; } return s; };
 const _vel = (x,y,n,len,dx)=>{ let s=''; for(let i=0;i<n;i++){ s += `<path class="d-linha" stroke-opacity="${(0.5-i*0.1).toFixed(2)}" d="M${x+i*dx} ${y+i*9}h${len-i*8}"/>`; } return s; };
 const _B41 = (corpo)=>DECO3(corpo);
+// Beta 42: Perfil, Desafios, Corrida e Histórico voltam a usar os desenhos da Beta 40 (parte 22) — pessoa,
+// medalha e pista — e o Histórico ganha um desenho de registros (parte 45). Estes daqui ficam para as outras abas.
 Object.assign(DECO2_SVG, {
   musculacao: _B41(`<circle class="d-fundo" cx="176" cy="58" r="54"/>${_dpt(130,14,6,3,9)}${_arcos(188,70,30,3,12,190,330)}
     ${_vel(92,58,3,46,6)}
     <g transform="rotate(-18 172 66)"><path class="d-linha" d="M140 66h64" stroke-width="3"/><rect class="d-acf" x="146" y="50" width="8" height="32" rx="3" stroke="none"/><rect class="d-acf" x="190" y="50" width="8" height="32" rx="3" stroke="none"/><rect class="d-fill" x="138" y="56" width="6" height="20" rx="2.5"/><rect class="d-fill" x="200" y="56" width="6" height="20" rx="2.5"/></g>`),
-  corrida: _B41(`<circle class="d-fundo" cx="176" cy="66" r="52"/>${_arcos(220,128,46,4,13,200,272)}${_dpt(118,16,5,3,9)}
-    <path class="d-ac" d="M150 54l9 9-9 9M164 54l9 9-9 9M178 54l9 9-9 9" stroke-width="2.4" stroke-opacity=".9"/>
-    ${_vel(96,40,3,40,5)}`),
   biblioteca: _B41(`<circle class="d-fundo" cx="168" cy="58" r="52"/>${_dpt(126,12,7,2,9)}
     <rect class="d-fill" x="140" y="30" width="46" height="34" rx="8" transform="rotate(-8 163 47)"/><rect class="d-fill" x="160" y="40" width="48" height="36" rx="8"/>
     <circle class="d-ac" cx="184" cy="58" r="10" stroke-width="2"/><path class="d-acf" stroke="none" d="M181 53.5l8 4.5-8 4.5z"/>${_vel(100,86,3,44,5)}`),
   plano: _B41(`<circle class="d-fundo" cx="170" cy="60" r="52"/>
     ${[0,1,2,3].map(c=>[0,1,2].map(r=>{ const on = (c+r)%3===0; return `<rect class="${on?'d-acf':'d-fill'}" ${on?'stroke="none"':''} x="${134+c*18}" y="${30+r*18}" width="12" height="12" rx="3.5"/>`; }).join('')).join('')}
     ${_arcos(170,60,46,2,10,200,330)}${_dpt(110,22,3,4,9)}`),
-  desafios: _B41(`<circle class="d-fundo" cx="172" cy="60" r="54"/>${_arcos(172,60,24,3,11,0,359)}
-    <path class="d-acf" stroke="none" d="M172 44.5l4.6 9.4 10.4 1.5-7.5 7.3 1.8 10.3-9.3-4.9-9.3 4.9 1.8-10.3-7.5-7.3 10.4-1.5z"/>
-    ${[20,70,110,160,250,300].map(a=>{ const r1=60,r2=66; const x1=172+r1*Math.cos(a*Math.PI/180), y1=60+r1*Math.sin(a*Math.PI/180), x2=172+r2*Math.cos(a*Math.PI/180), y2=60+r2*Math.sin(a*Math.PI/180); return `<path class="d-ac" stroke-opacity=".55" d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`; }).join('')}${_dpt(106,18,3,3,9)}`),
-  perfil: _B41(`<circle class="d-fundo" cx="170" cy="60" r="52"/>${_arcos(170,60,26,3,12,150,390)}
-    <path class="d-ac" d="M100 66h34l7-16 9 30 8-22 6 8h40" stroke-width="2.3"/>${_dpt(186,14,3,3,9)}`),
   progresso: _B41(`<circle class="d-fundo" cx="172" cy="58" r="50"/>${_dpt(124,14,7,2,9)}
     <path class="d-fill" stroke="none" d="M112 98L138 80l20 8 24-22 26-24V98z"/><path class="d-ac" d="M112 98L138 80l20 8 24-22 26-24" stroke-width="2.4"/>
     <circle class="d-acf" cx="208" cy="42" r="3.5" stroke="none"/><path class="d-linha" d="M112 98h96" stroke-opacity=".5"/>`),
-  historico: _B41(`<circle class="d-fundo" cx="170" cy="60" r="50"/>${_arcos(170,60,22,3,11,-90,200)}
-    <path class="d-ac" d="M170 44v17l10 7" stroke-width="2.4"/><circle class="d-acf" cx="170" cy="61" r="2.6" stroke="none"/>${_dpt(108,20,3,4,9)}`),
   admin: _B41(`<circle class="d-fundo" cx="170" cy="58" r="50"/>${_dpt(118,14,4,3,9)}
     <rect class="d-fill" x="146" y="22" width="52" height="70" rx="9"/><path class="d-ac" d="M155 42l4 4 8-9M155 60l4 4 8-9" stroke-width="2.2"/><path class="d-linha" d="M172 43h18M172 61h18M155 78h34" stroke-opacity=".7"/>`),
   montarMusculacao: _B41(`<circle class="d-fundo" cx="170" cy="60" r="50"/>${_dpt(116,16,4,4,9)}

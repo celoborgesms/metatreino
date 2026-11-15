@@ -17,7 +17,7 @@ const MT_RECURSOS = {
   pdfAlimentacao: { nome:'PDF do plano alimentar', txt:'O cardápio da semana com refeições, quantidades e valores nutricionais em PDF.' },
   relatorio:      { nome:'Relatório completo de evolução', txt:'Relatório em PDF com gráficos de volume, cargas, quilômetros, ritmo, peso e conquistas.' },
   inicioCompleto: { nome:'Personalização completa do Início', txt:'Escolher bloco por bloco o que aparece e arrastar para mudar a ordem.' },
-  temas:          { nome:'Todos os temas', txt:'Os 8 temas do app e os 2 exclusivos Premium (Ametista e Coral).' },
+  temas:          { nome:'Todos os temas', txt:'Os 10 temas do app. No Básico ficam Brasa (escuro) e Areia (claro).' },
   assistente:     { nome:'Meta Assistente completo', txt:'Análises da sua evolução, aviso de subir de nível, sugestões no dia a dia, orientação para as provas e comandos que ajustam o plano.' },
   clima:          { nome:'Cenário e dicas pelo clima', txt:'O desenho do Início e as dicas de treino acompanham o tempo de agora (usa sua localização).' }
 };
@@ -45,9 +45,9 @@ function mtPlanoStatusTxt(){
   if(p.admin) return 'Administrador: todos os recursos liberados.';
   if(p.tipo === 'teste') return `Teste Premium até ${f(p.ate)} (${accessDaysLeft()} ${accessDaysLeft()===1?'dia':'dias'}).`;
   if(p.tipo === 'premium') return p.ate ? `Premium até ${f(p.ate)}.` : 'Premium sem data de término.';
-  if(p.testeAcabouEm) return `Seu teste Premium terminou em ${f(p.testeAcabouEm)}. Você está no plano Gratuito.`;
-  if(p.premiumAcabouEm) return `Seu Premium terminou em ${f(p.premiumAcabouEm)}. Você está no plano Gratuito.`;
-  return 'Você está no plano Gratuito.';
+  if(p.testeAcabouEm) return `Seu teste Premium terminou em ${f(p.testeAcabouEm)}. Você está no plano Básico.`;
+  if(p.premiumAcabouEm) return `Seu Premium terminou em ${f(p.premiumAcabouEm)}. Você está no plano Básico.`;
+  return 'Você está no plano Básico.';
 }
 function mtPremiumAviso(rec, extra){
   const r = MT_RECURSOS[rec] || { nome:'Recurso Premium', txt:'' };
@@ -59,7 +59,7 @@ function mtPremiumAviso(rec, extra){
       <p class="pl-txt">${mtEsc(r.txt)}</p>
       ${extra ? `<p class="pl-txt pl-extra">${extra}</p>` : ''}
       <div class="pl-status">${mtEsc(mtPlanoStatusTxt())}</div>
-      <div class="pl-continua"><b>No plano Gratuito continua tudo o que você precisa para treinar:</b> musculação e corrida, criar e executar treinos, registrar cargas, séries e repetições, vídeos dos exercícios do seu treino, histórico, evolução, desafios, conquistas e provas.</div>
+      <div class="pl-continua"><b>No plano Básico continua tudo o que você precisa para treinar:</b> musculação e corrida, criar e executar treinos, registrar cargas, séries e repetições, vídeos dos exercícios do seu treino, histórico, evolução, desafios, conquistas e provas.</div>
       ${mtContatoPremiumHtml()}
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openPlanos()">Comparar planos</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Agora não</button></div>`;
@@ -72,15 +72,16 @@ function openPlanos(){
   const L = (t, g, pr)=>`<tr><td>${t}</td><td class="${g?'sim':'nao'}">${g===true?'✓':g===false?'—':g}</td><td class="sim">${pr===true?'✓':pr}</td></tr>`;
   $('modal-inner').innerHTML = `<h3>Planos do MetaTreino</h3>
     <div class="pl-status" style="margin:4px 0 10px">${mtEsc(mtPlanoStatusTxt())}</div>
-    <div class="pl-tabela-wrap"><table class="pl-tabela"><thead><tr><th></th><th>Gratuito</th><th>Premium</th></tr></thead><tbody>
-      ${L('Musculação e corrida (planos, execução e registro)', true, true)}
+    <div class="pl-tabela-wrap"><table class="pl-tabela"><thead><tr><th></th><th>Básico</th><th>Premium</th></tr></thead><tbody>
+      ${L('Musculação, corrida e modalidades (planos, execução e registro)', true, true)}
       ${L('Vídeos dos exercícios durante o treino', true, true)}
-      ${L('Histórico, evolução e gráficos', 'básico', 'completo')}
+      ${L('Troca inteligente de exercícios e favoritos', true, true)}
+      ${L('Histórico de treinos e evolução', true, true)}
       ${L('Desafios, conquistas, metas e provas', true, true)}
-      ${L('Meta Assistente', 'básico', 'completo')}
+      ${L('Meta Assistente', 'dúvidas e treino do dia', 'análises e avisos proativos')}
       ${L('Biblioteca completa de exercícios', false, true)}
-      ${L('Plano alimentar (com PDF)', false, true)}
-      ${L('PDF dos treinos e relatório de evolução', false, true)}
+      ${L('Plano alimentar personalizado (com PDF)', false, true)}
+      ${L('PDF dos treinos e relatório detalhado de evolução', false, true)}
       ${L('Temas', '2', '10')}
       ${L('Personalização do Início', 'básica', 'completa')}
       ${L('Cenário do Início pelo clima', false, true)}
@@ -111,7 +112,7 @@ applyTheme = function(t, naoGuardar){
 };
 const _setThemeB40 = setTheme;
 setTheme = function(t){
-  if(!temaLiberado(t)){ mtPremiumAviso('temas', `O tema <b>${mtEsc(THEMES[normalizaTema(t)].nome)}</b> é exclusivo do Premium. Os temas <b>Brasa</b> (escuro) e <b>Areia</b> (claro) continuam liberados.`); return; }
+  if(!temaLiberado(t)){ mtPremiumAviso('temas', `O tema <b>${mtEsc(THEMES[normalizaTema(t)].nome)}</b> é do Premium. Os temas <b>Brasa</b> (escuro) e <b>Areia</b> (claro) continuam liberados.`); return; }
   const r = _setThemeB40.apply(this, arguments);
   try{ state.prefs = state.prefs || {}; state.prefs.tema = normalizaTema(t); if(mtPremium()) delete state.prefs.temaPremium; saveData(); }catch(e){}
   return r;
@@ -151,16 +152,16 @@ function mtPlanoMudou(antes, depois){
   try{ const t = (state.ui && state.ui.tab) || 'home'; if(!document.querySelector('#modal-back.on')) goTab(t); }catch(e){}
 }
 function mtAvisoFimPremium(antes, troca){
-  const nomeAntes = antes === 'teste' ? 'Seu teste Premium de 30 dias terminou' : antes ? 'Seu Premium terminou' : 'Você está no plano Gratuito';
+  const nomeAntes = antes === 'teste' ? 'Seu teste Premium de 30 dias terminou' : antes ? 'Seu Premium terminou' : 'Você está no plano Básico';
   setTimeout(()=>{
     $('modal-inner').innerHTML = `<div class="pl-aviso">
-      <div class="pl-selo pl-selo-dim">Plano Gratuito</div>
+      <div class="pl-selo pl-selo-dim">Plano Básico</div>
       <h3>${nomeAntes}</h3>
-      <p class="pl-txt">Sua conta passou para o plano Gratuito. <b>Nada foi apagado</b>: treinos, histórico, cargas, evolução, conquistas e provas continuam aqui, e você segue treinando normalmente.</p>
+      <p class="pl-txt">Sua conta passou para o plano Básico. <b>Nada foi apagado</b>: treinos, histórico, cargas, evolução, conquistas e provas continuam aqui, e você segue treinando normalmente.</p>
       ${troca ? `<div class="pl-tema-troca"><span class="pl-tema-bola" style="background:${THEMES[troca.de].prev.bg};border-color:${THEMES[troca.de].prev.a}"></span><span>→</span><span class="pl-tema-bola" style="background:${THEMES[troca.para].prev.bg};border-color:${THEMES[troca.para].prev.a}"></span><span>Tema <b>${mtEsc(THEMES[troca.de].nome)}</b> trocado por <b>${mtEsc(THEMES[troca.para].nome)}</b>. Ele volta sozinho se você voltar ao Premium.</span></div>` : ''}
       <p class="pl-txt">Ficam guardados para quando o Premium voltar: plano alimentar, personalização do Início e o tema escolhido.</p>
       ${mtContatoPremiumHtml()}
-      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Continuar no Gratuito</button></div>`;
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Continuar no Básico</button></div>`;
     $('modal-back').classList.add('on');
   }, 600);
 }
@@ -188,7 +189,7 @@ document.addEventListener('visibilitychange', ()=>{ try{ if(document.visibilityS
 mtGancho('renderProfile', { depois(){
   try{
     const p = planoAtual(); const d = accessDaysLeft();
-    const st = $('pf-status'); if(st) st.innerHTML = p.premium ? `⭐ <span>${p.tipo==='teste'?'Teste Premium':'Premium'}</span>` : '🎫 <span>Plano Gratuito</span>';
+    const st = $('pf-status'); if(st) st.innerHTML = p.premium ? `⭐ <span>${p.tipo==='teste'?'Teste Premium':'Premium'}</span>` : '🎫 <span>Plano Básico</span>';
     const tr = $('pf-trial'); if(tr){ tr.textContent = accessLabel(d); const card = tr.closest('.card'); if(card && !card.dataset.pl){ card.dataset.pl = '1'; card.style.cursor = 'pointer'; card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.onclick = openPlanos; } }
     const g = $('pf-goal'); if(g && !g.querySelector('.pl-ver')) g.insertAdjacentHTML('beforeend', ' · <span class="pl-ver">ver planos ›</span>');
     // estilo dos ícones: linha própria no grupo Aplicativo (antes ficava escondido dentro de Aparência)
@@ -221,7 +222,7 @@ mtGancho('renderHome', { depois(){
 mtGancho('renderPlan', { depois(){
   try{
     const p = planoAtual(); const a = $('pl-access'), d = $('pl-days');
-    if(a) a.textContent = p.premium ? (p.tipo === 'teste' ? '⭐ Teste Premium' : '⭐ Premium') : 'Plano Gratuito';
+    if(a) a.textContent = p.premium ? (p.tipo === 'teste' ? '⭐ Teste Premium' : '⭐ Premium') : 'Plano Básico';
     if(d) d.textContent = p.premium ? accessLabel(accessDaysLeft()) : 'Treinos, histórico e evolução liberados';
     const card = a && a.closest('.card'); if(card && !card.dataset.pl){ card.dataset.pl = '1'; card.style.cursor = 'pointer'; card.onclick = openPlanos; }
   }catch(e){}
@@ -331,7 +332,7 @@ const MA_KEYS_PREMIUM = new Set(['analise_mes','cargas','consistencia','corrida_
   'plano_alimentar','run_desenvolve','run_carga','run_avancar','run_ritmos','cali_analise','prova','calorias']);
 function maRespostaPremium(oQue){
   return `⭐ ${oQue || 'Essa análise'} faz parte do <b>Meta Assistente completo</b>, do plano Premium.<br><br>`
-    + `No plano Gratuito eu continuo te ajudando com: dúvidas sobre o app, o seu treino de hoje e o plano da semana, como fazer os exercícios do seu treino, registrar peso, atividades e dores, e orientações básicas.<br><br>`
+    + `No plano Básico eu continuo te ajudando com: dúvidas sobre o app, o seu treino de hoje e o plano da semana, como fazer os exercícios do seu treino, registrar peso, atividades e dores, e orientações básicas.<br><br>`
     + `<button class="btn btn-primary" style="padding:9px 16px;font-size:13px" onclick="closeAssistant();setTimeout(()=>mtPremiumAviso('assistente'),220)">Conhecer o Premium</button>`;
 }
 Object.keys(MA_ANSWERS).forEach(k=>{
@@ -436,10 +437,10 @@ openAparencia = function(){
   const opt = k=>{ const t = THEMES[k]; const trava = !prem && temaPremium(k); const exclusivo = !!t.premium;
     return `<button type="button" class="ap-opt ${k===cur?'on':''} ${trava?'pl-trava':''}" onclick="setTheme('${k}');setTimeout(openAparencia,30)" aria-label="Tema ${mtEsc(t.nome)}${trava?' (Premium)':''}">
       <span class="wz-tema-prev ap-prev-real" data-theme="${k}" aria-hidden="true"><span class="tp-top"><i></i><b></b></span><span class="tp-card"><b></b><i></i><em></em></span><span class="tp-btn"></span><span class="tp-tab"><i></i><i></i><i></i><i></i></span></span>
-      <div class="ap-name"><span>${mtEsc(t.nome)}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}${trava||exclusivo?`<span class="pl-mini">${PL_EST}${exclusivo?'Exclusivo':''}</span>`:''}</div><small style="color:var(--text-mute);font-size:11px;margin-top:-4px">${mtEsc(t.sub)}</small></button>`; };
+      <div class="ap-name"><span>${mtEsc(t.nome)}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}${trava||exclusivo?`<span class="pl-mini">${PL_EST}Premium</span>`:''}</div><small style="color:var(--text-mute);font-size:11px;margin-top:-4px">${mtEsc(t.sub)}</small></button>`; };
   const deco = (typeof decoEnabled==='function') ? decoEnabled() : true;
   $('modal-inner').innerHTML = `<h3>Aparência</h3>
-    ${!prem ? `<div class="pl-faixa">No plano Gratuito: <b>Brasa</b> (escuro) e <b>Areia</b> (claro). Os outros temas são Premium. <a href="#" onclick="openPlanos();return false">Ver planos ›</a></div>` : ''}
+    ${!prem ? `<div class="pl-faixa">No plano Básico: <b>Brasa</b> (escuro) e <b>Areia</b> (claro). Os outros temas são Premium. <a href="#" onclick="openPlanos();return false">Ver planos ›</a></div>` : ''}
     <div class="mt-sec" style="margin-top:6px">Tema Noturno</div>
     <div class="ap-grid">${TEMAS_NOTURNOS.filter(k=>THEMES[k]).map(opt).join('')}</div>
     <div class="mt-sec">Tema Claro</div>
@@ -461,7 +462,7 @@ mtGancho('wzRenderTemas', { depois(){
       const k = (b.getAttribute('onclick')||'').match(/wzEscolheTema\('(\w+)'\)/); if(!k) return;
       const t = THEMES[k[1]]; if(!t) return;
       const nome = b.querySelector('.wz-tema-nome');
-      if(nome && temaPremium(k[1]) && !nome.querySelector('.pl-mini')) nome.insertAdjacentHTML('beforeend', `<small class="pl-mini">${PL_EST}${t.premium?'Exclusivo':'Premium'}</small>`);
+      if(nome && temaPremium(k[1]) && !nome.querySelector('.pl-mini')) nome.insertAdjacentHTML('beforeend', `<small class="pl-mini">${PL_EST}Premium</small>`);
       b.classList.toggle('pl-trava', !temaLiberado(k[1]));
     });
   }catch(e){}
