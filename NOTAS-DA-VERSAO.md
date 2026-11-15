@@ -1,3 +1,19 @@
+# MetaTreino 2027.1 Beta 46 — Conquistas sem itens presos e troca de exercício mais limpa
+
+Sem mudança nas regras do Firestore.
+
+1. **Fim do registro:** as conquistas aparecem num carrossel, uma por vez ("1 de N"), passando para o lado (deslizando ou pelas setas). Cada cartão que aparece conta como visto. Nada fica preso esperando um toque, nem medalhas do mês.
+2. **Um aviso só:** ponto vermelho na aba Desafios enquanto houver conquista não vista. Saiu o selo "Novidade" do Início e de "Sua coleção". Dentro de Desafios, o cartão Conquistas mostra só o texto "N novas".
+3. **Aba Conquistas:** ao abrir, as não vistas aparecem em "Novas conquistas" e contam como vistas. A lista continua igual enquanto você navega (detalhe e voltar não apaga) e some ao fechar. Saiu o "Marcar todas como vistas".
+4. **Trocar exercício:** "Outras opções do grupo" (não equivalentes) ficam recolhidas e seguem o motivo (ocupado: outro equipamento primeiro; prefiro outro: o mesmo equipamento primeiro).
+
+# MetaTreino 2027.1 Beta 45 — Ajustes finos
+
+Sem mudança nas regras do Firestore.
+
+1. **Fim do cadastro com "Emojis coloridos":** o app não abre mais o Início, mostra a tela de carregamento e volta ao Início. A recarga necessária para os emojis voltarem acontece enquanto ainda aparece "Plano pronto", e o app abre direto no Início com o aviso "Plano criado!".
+2. **Último tema do carrossel:** ao deslizar até o fim, o último tema é aplicado sozinho (em alguns Android ele não chegava ao centro e o app considerava o penúltimo). Os cartões das pontas agora centralizam em qualquer navegador.
+
 # MetaTreino 2027.1 Beta 44 — Correções de uso (temas, conquistas, troca de exercício, descanso)
 
 Sem mudança nas regras do Firestore (use o `firestore.rules` da Beta 43).

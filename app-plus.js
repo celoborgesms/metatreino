@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 44 — app-plus.js
+// MetaTreino 2027.1 Beta 46 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.44' };
+const MTP = { versao: '2027.1-beta.46' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -12622,7 +12622,12 @@ function mtCandidatosTroca(w, cur, motivo, setup){
     }); });
   }
   const ord = (a,b)=> (b.fav?1:0)-(a.fav?1:0) || b.score-a.score || a.ex.name.localeCompare(b.ex.name);
-  out.mais.sort(ord); out.compat.sort(ord); out.mesmoEq.sort(ord); out.secund.sort((a,b)=>b.score-a.score);
+  out.mais.sort(ord); out.compat.sort(ord); out.mesmoEq.sort(ord);
+  // Beta 45: as secundárias também seguem o motivo — ocupado: outro equipamento primeiro (o mesmo tipo de
+  // aparelho por último); preferência: o mesmo equipamento primeiro
+  const eqDe = x=>mtEquipClasse(x.ex) === baseEq ? 1 : 0;
+  out.secund.sort((a,b)=> motivo === 'ocupado' ? (eqDe(a) - eqDe(b)) || (b.score - a.score)
+                        : motivo === 'preferencia' ? (eqDe(b) - eqDe(a)) || (b.score - a.score) : b.score - a.score);
   // favoritos compatíveis no topo; favoritos que só servem como "secundária" ficam fora deste destaque
   out.favs = [...(motivo === 'preferencia' ? out.mesmoEq : []), ...out.mais, ...out.compat].filter(x=>x.fav);
   out.secund = out.secund.slice(0, 6);
@@ -12722,7 +12727,8 @@ function mtTrocaAbrir(exId, motivo){
         ? `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} neste grupo muscular${(mod.setup.lim||[]).length?' com as limitações informadas':''}. Se usar uma das opções abaixo, saiba que <b>não equivalem</b> ao exercício original.</div>`
         : `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} com o seu equipamento${(mod.setup.lim||[]).length?' e as limitações informadas':''}. Se preferir, espere o equipamento liberar ou use uma das opções abaixo, sabendo que <b>não equivalem</b> ao exercício original.</div>`) : ''}
       ${_mtTroca.motivo==='ocupado' ? sec('No mesmo tipo de equipamento', 'Também servem, mas podem estar ocupados', r.mesmoEq.filter(x=>!favIds.has(x.id)), 'compat') : ''}
-      ${sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')}
+      ${r.secund.length ? (nada ? sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')
+        : `<details class="tx-mais-opc"><summary>Outras opções do grupo (${r.secund.length}) — não equivalentes</summary>${sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')}</details>`) : ''}
     </div>
     <label class="tx-salvar"><input type="checkbox" id="tx-salvar" ${_mtTroca.salvar?'checked':''} onchange="_mtTroca.salvar=this.checked"> Manter esta troca nos próximos treinos (altera o plano)</label>
     <p class="tx-nota">Sem marcar, a troca vale só para esta execução do treino. Séries, repetições e descanso continuam os mesmos.</p>
@@ -12914,14 +12920,15 @@ function cqEstado(){
   return state;
 }
 // leitura sem tocar no estado (criar campos vazios aqui faria o app regravar a conta na nuvem sem motivo)
-// Beta 44: as "novas" ficam destacadas até o aluno abrir cada uma (ou por 7 dias). Abrir a aba Conquistas
-// só marca como "apresentada" (a animação não se repete e os avisos somem), sem apagar o destaque.
-const CQ_NOVA_DIAS = 7;
+// Beta 45: modelo simples e sem item "preso".
+//  • "Nova" = ainda não vista. Vê-se de dois jeitos: no carrossel do fim do registro (cada cartão que aparece
+//    conta como visto) ou abrindo a aba Conquistas (todas as novas contam como vistas ao abrir).
+//  • Enquanto a aba fica aberta — inclusive indo ao detalhe e voltando — a seção "Novas conquistas" continua
+//    a mesma (guardada só na memória desta visita). Fechou a aba, ela some. Nada depende de tocar em cada uma.
 function cqPendentes(){ if(!state) return { itens:[], meses:[] };
-  const lim = Date.now() - CQ_NOVA_DIAS*864e5;
-  return { itens: (state.conqPend||[]).filter(p=>(p.at||0) >= lim), meses: (state.desafiosEncerrados||[]).filter(d=>!d.visto) }; }
-function cqTemNovidade(){ const p = cqPendentes(); return p.itens.filter(x=>!x.anim).length + p.meses.length; }
-// tira da lista de novas (abriu o detalhe, ou "marcar como vistas")
+  return { itens: (state.conqPend||[]).slice(), meses: (state.desafiosEncerrados||[]).filter(d=>!d.visto) }; }
+function cqTemNovidade(){ const p = cqPendentes(); return p.itens.length + p.meses.length; }
+// marca como vistas (sai da fila) — usado pelo carrossel do fim do registro
 function cqMarcaVista(pred){
   const s = cqEstado(); if(!s) return false;
   const sai = s.conqPend.filter(pred); if(!sai.length) return false;
@@ -12929,8 +12936,7 @@ function cqMarcaVista(pred){
   s.conqPend = s.conqPend.filter(p=>!sai.includes(p));
   try{ saveData(); }catch(e){} cqIndicadores(); return true;
 }
-function cqVerTodasNovas(){ cqMarcaVista(()=>true); _cqRecentes = new Set(); window.__cqSemAnim = true; openTrophies(); }
-mtGancho('openTrophyDetail', { antes(id){ try{ cqMarcaVista(p=>p.tid===id); _cqRecentes.delete(id); }catch(e){} } });
+let _cqSessao = null;   // novas mostradas nesta visita à aba (memória; recomeça a cada abertura nova)
 
 // ---------- a fila de celebrações vira a fila de "a apresentar" ----------
 window.showAwards = function(){
@@ -12995,14 +13001,18 @@ mtGancho('ensureMonthly', { antes(){
 mtGancho('unlockTrophy', { antes(){ cqEstado(); } });
 
 // ---------- indicadores parados nos pontos de entrada ----------
+// Beta 45: um aviso só. O ponto fica na aba Desafios (parte 48); aqui, dentro de Desafios, o cartão
+// "Conquistas" ganha só o texto "· N novas" — sem outro selo no Início nem em "Sua coleção".
 function cqIndicadores(){
   try{
     const n = cqTemNovidade();
-    const pinta = el=>{ if(!el) return; let b = el.querySelector('.cq-badge');
-      if(n && !b){ b = document.createElement('span'); b.className = 'cq-badge'; el.appendChild(b); }
-      if(b){ if(n) b.textContent = n === 1 ? 'Novidade' : n + ' novidades'; else b.remove(); } };
-    pinta(document.getElementById('home-trofeus'));
-    document.querySelectorAll('.chal-tile[onclick^="openTrophies"]').forEach(pinta);
+    document.querySelectorAll('#home-trofeus .cq-badge, .chal-tile .cq-badge').forEach(b=>b.remove());
+    document.querySelectorAll('.chal-tile[onclick^="openTrophies"]').forEach(el=>{
+      let t = el.querySelector('.cq-novas-txt');
+      if(!n){ if(t) t.remove(); return; }
+      if(!t){ t = document.createElement('span'); t.className = 'cq-novas-txt'; el.appendChild(t); }
+      t.textContent = n === 1 ? '1 nova' : n + ' novas';
+    });
   }catch(e){}
 }
 mtGancho('goTab', { depois(){ cqIndicadores(); } });
@@ -13107,9 +13117,12 @@ window.openTrophies = function(){
   const s = { desafiosEncerrados: (state.desafiosEncerrados||[]) };   // leitura; a gravação abaixo usa cqEstado()
   const semAnim = !!window.__cqSemAnim; window.__cqSemAnim = false;
   const pend = cqPendentes();
-  // o que vai ser apresentado agora: destacado nesta abertura, depois registrado como visto
-  _cqRecentes = new Set(pend.itens.map(p=>p.tid).filter(Boolean));
-  const animar = !semAnim && (pend.itens.some(p=>!p.anim) || pend.meses.length > 0);
+  // abertura nova: as que estão na fila passam a ser "desta visita"; voltando do detalhe, a lista se mantém
+  if(!semAnim || !_cqSessao) _cqSessao = pend.itens.slice();
+  else _cqSessao = _cqSessao.concat(pend.itens.filter(p=>!_cqSessao.some(x=>x.k===p.k)));
+  const novas = _cqSessao;
+  _cqRecentes = new Set(novas.map(p=>p.tid).filter(Boolean));
+  const animar = !semAnim && (pend.itens.length > 0 || pend.meses.length > 0);
   const tot = TROPHIES.length, tenho = state.trophies.length;
   const porNv = { comum:[0,0], rara:[0,0], especial:[0,0] };
   TROPHIES.forEach(t=>{ const n = medalNivel(t); porNv[n][1]++; if(state.trophies.includes(t.id)) porNv[n][0]++; });
@@ -13124,7 +13137,7 @@ window.openTrophies = function(){
     <div class="cq-resumo"><div class="cq-anel" style="--p:${pctAll}"><b>${tenho}</b><small>de ${tot}</small></div>
       <div class="cq-conts">${contagem('comum','Comuns')}${contagem('rara','Raras')}${contagem('especial','Especiais')}</div></div>
     ${meses.map(d=>cqResumoMes(d, animar)).join('')}
-    ${pend.itens.length?`<section class="cq-novos"><div class="cq-sec-t">${pend.itens.length===1?'Nova conquista':'Novas conquistas · '+pend.itens.length}</div>${pend.itens.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${pend.itens.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${pend.itens.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}<button type="button" class="cq-vistas" onclick="cqVerTodasNovas()">Marcar todas como vistas</button></section>`:''}
+    ${novas.length?`<section class="cq-novos"><div class="cq-sec-t">${novas.length===1?'Nova conquista':'Novas conquistas · '+novas.length}</div>${novas.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${novas.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${novas.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}</section>`:''}
     <div class="cq-filtros" id="cq-filtros" role="group" aria-label="Filtrar conquistas">${filtros.map(([f,l])=>`<button type="button" data-f="${f}" class="filter-chip ${_cqFiltro===f?'on':''}" aria-pressed="${_cqFiltro===f}" onclick="cqFiltrar('${f}')">${l}</button>`).join('')}</div>
     <div id="cq-grade-box" class="${animar?'cq-entra':''}">${cqGrade()}</div>
     ${state.specialTrophy ? `<div class="sa-card cq-eterna" role="button" tabindex="0" onclick="openSpecialTrophy()" onkeydown="if(event.key==='Enter')openSpecialTrophy()">
@@ -13136,14 +13149,11 @@ window.openTrophies = function(){
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
   back.classList.add('on');
   // registra a apresentação (uma vez só, sincronizado com a conta)
-  const lim = Date.now() - CQ_NOVA_DIAS*864e5;
-  const vencidas = (state.conqPend||[]).some(p=>(p.at||0) < lim);
-  if(pend.itens.some(p=>!p.anim) || meses.length || vencidas){
+  if(pend.itens.length || meses.length){
     const s = cqEstado();
-    // apresentadas: não animam de novo, mas continuam como "novas" até abrir cada uma (ou 7 dias)
-    s.conqPend.forEach(p=>{ if(!p.anim) p.anim = true; });
-    const velhas = s.conqPend.filter(p=>(p.at||0) < lim).map(p=>p.k);
-    if(velhas.length){ s.conqVistas = s.conqVistas.concat(velhas).slice(-CQ_MAX_VISTAS); s.conqPend = s.conqPend.filter(p=>!velhas.includes(p.k)); }
+    const ks = pend.itens.map(p=>p.k);
+    s.conqVistas = s.conqVistas.concat(ks).slice(-CQ_MAX_VISTAS);
+    s.conqPend = s.conqPend.filter(p=>!ks.includes(p.k));
     const agora = Date.now();
     s.desafiosEncerrados.forEach(d=>{ if(!d.visto && meses.some(m=>m.key===d.key)){ d.visto = true; d.vistoEm = agora; } });
     saveData();
@@ -13768,7 +13778,12 @@ function mtTemaCarrossel(host, ctx){
   tr.addEventListener('scrollend', fim, { passive:true });
   tr.addEventListener('keydown', e=>{ if(e.key === 'ArrowRight'){ e.preventDefault(); _tcVai(tc, tc._idx+1); } else if(e.key === 'ArrowLeft'){ e.preventDefault(); _tcVai(tc, tc._idx-1); } });
   _tcInfo(tc);
-  requestAnimationFrame(()=>{ _tcVai(tc, tc._idx, true); _tcInfo(tc); });
+  // Beta 45: margem dos lados calculada em pixels, para o primeiro e o último tema chegarem ao centro em
+  // qualquer navegador (padding no fim do trilho é ignorado em alguns Android)
+  const lados = ()=>{ const s = tr.children[0]; if(!s || !tr.clientWidth) return; const gap = parseFloat(getComputedStyle(tr).columnGap) || 12;
+    tr.style.setProperty('--tc-lado', Math.max(0, (tr.clientWidth - s.clientWidth)/2 - gap) + 'px'); };
+  lados(); try{ new ResizeObserver(lados).observe(tr); }catch(e){}
+  requestAnimationFrame(()=>{ lados(); _tcVai(tc, tc._idx, true); _tcInfo(tc); });
 }
 function _tcDe(el){ return el && el.closest ? el.closest('.tc') : el; }
 function _tcVai(tc, i, instant){
@@ -13782,6 +13797,11 @@ function _tcAtualiza(tc){
   const tr = tc.querySelector('.tc-trilho'); const meio = tr.scrollLeft + tr.clientWidth/2;
   let melhor = 0, dist = 1e9;
   [...tr.children].forEach((s,i)=>{ const d = Math.abs(s.offsetLeft + s.clientWidth/2 - meio); if(d < dist){ dist = d; melhor = i; } });
+  // Beta 45: no fim (ou no começo) do trilho vale o último (ou o primeiro) tema — em alguns celulares o último
+  // cartão não chega ao centro e o "mais perto do meio" ficava sendo o penúltimo
+  const max = tr.scrollWidth - tr.clientWidth;
+  if(max > 0 && tr.scrollLeft >= max - 4) melhor = tr.children.length - 1;
+  else if(tr.scrollLeft <= 4) melhor = 0;
   if(melhor !== tc._idx){ tc._idx = melhor; _tcInfo(tc); }
 }
 function _tcLivre(k){ return (typeof temaLiberado === 'function') ? temaLiberado(k) : true; }
@@ -13862,7 +13882,8 @@ Object.assign(window, { mtTemaCarrossel, mtTcPasso, mtTcIr, mtTcToque, mtTcUsar 
   s.textContent = `
 .tc-slide .tc-sel{display:none}.tc-slide.on .tc-sel{display:flex}
 #wz-temas .tc{padding-bottom:0}
-.tc-trilho{touch-action:pan-x pan-y}
+.tc-trilho{touch-action:pan-x pan-y;padding-left:0!important;padding-right:0!important}
+.tc-trilho::before,.tc-trilho::after{content:'';flex:0 0 var(--tc-lado,0px)}
 .tc-nome{min-height:38px;margin-top:2px}
 .tc-premium{flex-basis:100%;background:none;border:0;color:var(--primary-2);font:inherit;font-size:12.5px;font-weight:700;padding:6px;cursor:pointer;text-decoration:underline}
 .tc-pontos{margin:6px 0 4px}
@@ -14678,15 +14699,55 @@ function _cqCelTenta(){
   pend.forEach(p=>{ p.cel = true; });
   try{ salvarLocal(); }catch(e){}
   const lista = pend.slice().reverse();
-  const tit = lista.length === 1 ? 'Nova conquista!' : `${lista.length} novas conquistas!`;
-  $('modal-inner').innerHTML = `<div class="cq cq-anim cq-cel">
-    <div class="cq-topo"><h3>🏆 ${tit}</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
-    <p class="cq-cel-p">Desbloqueada${lista.length>1?'s':''} com o registro de agora. Toque em uma para ver os detalhes.</p>
-    <section class="cq-novos">${lista.slice(0, CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${lista.length > CQ_MAX_NOVOS ? `<div class="cq-mais-novos">E mais ${lista.length - CQ_MAX_NOVOS} na aba Conquistas.</div>` : ''}</section>
+  _cqCelLista = lista;
+  const n = lista.length;
+  $('modal-inner').innerHTML = `<div class="cq cq-cel">
+    <div class="cq-topo"><h3>🏆 ${n === 1 ? 'Nova conquista!' : n + ' novas conquistas!'}</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
+    <div class="cel-trilho" id="cel-trilho" role="listbox" aria-label="Conquistas desbloqueadas — deslize para os lados">
+      ${lista.map((p,i)=>cqCelCartao(p, i)).join('')}
+    </div>
+    ${n > 1 ? `<div class="cel-nav"><button type="button" class="cel-seta" aria-label="Anterior" onclick="cqCelPasso(-1)">‹</button>
+      <span class="cel-pos" id="cel-pos" aria-live="polite">1 de ${n}</span>
+      <button type="button" class="cel-seta" aria-label="Próxima" onclick="cqCelPasso(1)">›</button></div>
+      <div class="cel-pontos">${lista.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>` : ''}
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();openTrophies()">Ver todas as conquistas</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Continuar</button></div>`;
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
   $('modal-back').classList.add('on');
+  const tr = document.getElementById('cel-trilho');
+  let parou = 0;
+  tr.addEventListener('scroll', ()=>{ clearTimeout(parou); parou = setTimeout(_cqCelAtual, 120); }, { passive:true });
+  _cqCelIdx = 0; _cqCelVer(0);
   try{ if(typeof mtVibrar === 'function') mtVibrar([20,40,20]); }catch(e){}
+}
+let _cqCelLista = [], _cqCelIdx = 0;
+function cqCelCartao(p, i){
+  const t = p.tid ? TROPHIES.find(x=>x.id===p.tid) : null;
+  const nv = t ? medalNivel(t) : (p.kind==='medalha' || p.kind==='marco' ? 'rara' : p.kind==='secreto' ? 'especial' : 'comum');
+  const ico = t ? trophyIco(t) : (p.emo && /<svg|<span/.test(p.emo) ? p.emo : `<span class="cq-emo">${mtEsc(p.emo||'🏅')}</span>`);
+  const tipo = { trofeu:'Conquista desbloqueada', secreto:'Segredo revelado', medalha:'Medalha do mês', marco:'Marco alcançado', evento:'Desafio concluído' }[p.kind] || p.tipo || 'Conquista';
+  return `<div class="cel-cartao nv-${nv}" role="option" aria-label="${mtEsc(t ? t.name : p.nome)}" data-i="${i}">
+    <div class="cel-med">${ico}</div>
+    <small class="cel-tipo">${mtEsc(tipo)}${nv!=='comum' && typeof CQ_NV!=='undefined' ? ' · ' + CQ_NV[nv] : ''}</small>
+    <b class="cel-nome">${mtEsc(t ? t.name : p.nome)}</b>
+    <span class="cel-desc">${mtEsc(t ? t.desc : p.desc)}</span></div>`;
+}
+function _cqCelAtual(){
+  const tr = document.getElementById('cel-trilho'); if(!tr) return;
+  const i = Math.max(0, Math.min(_cqCelLista.length - 1, Math.round(tr.scrollLeft / Math.max(1, tr.clientWidth))));
+  if(i !== _cqCelIdx){ _cqCelIdx = i; _cqCelVer(i); }
+}
+// o cartão que aparece conta como visto (sai das "novas"); nada fica preso esperando um toque
+function _cqCelVer(i){
+  const p = _cqCelLista[i]; if(p){ try{ cqMarcaVista(x=>x.k===p.k); }catch(e){} }
+  const pos = document.getElementById('cel-pos'); if(pos) pos.textContent = `${i+1} de ${_cqCelLista.length}`;
+  document.querySelectorAll('.cel-pontos i').forEach((d,k)=>d.classList.toggle('on', k===i));
+  document.querySelectorAll('.cel-seta').forEach((b,k)=>{ b.disabled = k===0 ? i===0 : i===_cqCelLista.length-1; });
+}
+function cqCelPasso(d){
+  const tr = document.getElementById('cel-trilho'); if(!tr) return;
+  const i = Math.max(0, Math.min(_cqCelLista.length - 1, _cqCelIdx + d));
+  try{ tr.scrollTo({ left: i * tr.clientWidth, behavior:'smooth' }); }catch(e){ tr.scrollLeft = i * tr.clientWidth; }
+  _cqCelIdx = i; _cqCelVer(i);
 }
 
 // ---------- 2. ponto na aba Desafios ----------
@@ -14754,13 +14815,26 @@ mtGancho('finishLiftWorkout', { antes(k){
   s.textContent = `
 .tab[data-tab="challenges"]{position:relative}
 .tab .cq-dot{position:absolute;top:4px;left:calc(50% + 7px);width:9px;height:9px;border-radius:50%;background:var(--danger,#e5484d);box-shadow:0 0 0 2px var(--bar-bg,var(--bg));pointer-events:none}
-.cq-cel .cq-cel-p{font-size:13px;color:var(--text-dim);line-height:1.5;margin:-4px 0 10px}
+.cel-trilho{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin:4px 0 0}
+.cel-trilho::-webkit-scrollbar{display:none}
+.cel-cartao{flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:14px 10px 10px;box-sizing:border-box}
+.cel-med{width:108px;height:108px;display:flex;align-items:center;justify-content:center;animation:cqMed .7s var(--mt-ease,ease) both}
+.cel-med .tbadge,.cel-med svg{width:108px;height:108px}.cel-med .cq-emo{font-size:64px}
+.cel-cartao.nv-rara .cel-med{filter:drop-shadow(0 0 16px rgba(var(--primary-rgb),.45))}.cel-cartao.nv-especial .cel-med{filter:drop-shadow(0 0 18px rgba(var(--accent-rgb),.55))}
+.cel-tipo{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--primary-2)}
+.cel-nome{font-size:19px;line-height:1.25}.cel-desc{font-size:13px;color:var(--text-dim);line-height:1.45;max-width:280px}
+.cel-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:6px}
+.cel-seta{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:22px;line-height:1;cursor:pointer}
+.cel-seta:disabled{opacity:.3;cursor:default}.cel-pos{font-size:12px;color:var(--text-mute);min-width:56px;text-align:center}
+.cel-pontos{display:flex;justify-content:center;gap:5px;margin-top:8px;flex-wrap:wrap}.cel-pontos i{width:6px;height:6px;border-radius:99px;background:var(--text-mute);opacity:.4;transition:width .2s}.cel-pontos i.on{width:16px;opacity:1;background:var(--primary)}
+.tx-mais-opc{margin:6px 0 2px}.tx-mais-opc>summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--text-dim);padding:10px 2px;list-style:none}.tx-mais-opc>summary::before{content:'▸ ';}.tx-mais-opc[open]>summary::before{content:'▾ ';}
+.cq-novas-txt{display:block;font-size:11.5px;font-weight:800;color:var(--primary-2);margin-top:4px}
+@media (prefers-reduced-motion:reduce){.cel-med{animation:none}}
 .cq-novo-tag{background:rgba(20,20,20,.86)!important;color:#fff!important}
-.cq-vistas{display:block;margin:4px auto 0;background:none;border:0;color:var(--primary-2);font:inherit;font-size:12.5px;font-weight:700;padding:8px;cursor:pointer}
 #session-detail-slot.mt-pulado .ex,#session-detail-slot.mt-pulado .blk,#session-detail-slot.mt-pulado .block{opacity:.55}
 `; document.head.appendChild(s); })();
 
-Object.assign(window, { cqCelebrar });
+Object.assign(window, { cqCelebrar, cqCelPasso });
 
 // ---------- 4. fichas técnicas que estavam erradas ----------
 // A ficha era escolhida pela primeira palavra que casava no nome: "Remada na Máquina (Hammer)" caía no supino,
@@ -14789,3 +14863,26 @@ window.fichaExercicio = function(ex, grupo){
   }catch(e){}
   return _fichaB44.apply(this, arguments);
 };
+
+// ---------- 5. Emojis coloridos escolhidos no cadastro: sem o "Início → carregando → Início" ----------
+// Os emojis originais só voltam recarregando a página (o modo minimalista troca os emojis por desenhos).
+// Antes o app abria o Início e, 1,8 s depois, recarregava. Agora a recarga acontece ainda na tela
+// "Plano pronto" e o app já volta direto no Início (com o aviso "Plano criado!").
+const _buildB44 = window.runBuildingScreen;
+window.runBuildingScreen = function(m, steps, done, opts){
+  if(!window.__icoPendente || !(state.prefs && state.prefs.icones === 'emoji')) return _buildB44.apply(this, arguments);
+  const fim = function(){
+    window.__icoPendente = false;
+    try{ state.ui = state.ui || {}; state.ui.tab = 'home'; saveData(); syncToCloud(); }catch(e){}
+    try{ sessionStorage.setItem('mt_ico_reload', '1'); sessionStorage.setItem('mt_pos_cadastro', '1'); }catch(e){}
+    setTimeout(()=>{ try{ location.reload(); }catch(e){ if(typeof done === 'function') done(); } }, 900);
+  };
+  return _buildB44.call(this, m, steps, fim, opts);
+};
+mtGancho('bootAfterAuth', { depois(){
+  try{
+    if(sessionStorage.getItem('mt_pos_cadastro') !== '1') return;
+    sessionStorage.removeItem('mt_pos_cadastro');
+    setTimeout(()=>{ try{ if(cadastroPronto()){ goTab('home'); toast('🎉 Plano criado!'); } }catch(e){} }, 300);
+  }catch(e){}
+}});
