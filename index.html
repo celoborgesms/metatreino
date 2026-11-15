@@ -2836,6 +2836,66 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
   .btn,.filter-chip,.opt,.seg,.pill,.tab,.chal-tile,.lx-item,.tx-item,.cq-tile,.fav-btn{transition:none}
   .btn:active,.filter-chip:active,.opt:active,.chal-tile:active,.lx-item:active,.tx-item:active,.tab:active{transform:none}
 }
+/* ===================== Beta 42: conta, exclusão, teste Premium, carrossel de temas ===================== */
+.na-status{font-size:12.5px;line-height:1.5;color:var(--accent-2);margin:10px 0 0;min-height:0;text-align:center}
+.na-status:empty{display:none}
+.auth-teste{display:flex;gap:9px;align-items:flex-start;margin:10px 0 2px;padding:10px 12px;border-radius:14px;background:var(--tint-accent);border:1px solid var(--line-warn);font-size:12px;line-height:1.5;color:var(--text-dim)}
+.auth-teste .pl-est{flex:0 0 16px;width:16px;height:16px;margin-top:1px;color:var(--accent-2)}
+.auth-teste b{color:var(--text)}.auth-teste a{color:var(--primary-2);font-weight:700;white-space:nowrap}
+.tf-lista{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.tf-lista>div{padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--border);font-size:13px;line-height:1.5}
+.tf-lista b{display:block;font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-mute);margin-bottom:2px}
+.tf-lista span{color:var(--text-dim)}.tf-lista ul{margin:6px 0 0 18px;padding:0;color:var(--text);font-size:12.5px}
+.fe-linha{display:flex;align-items:center;gap:10px;padding:12px;border-radius:14px;border:1px solid var(--border);background:var(--surface);margin-top:8px}
+.fe-linha>div{flex:1;display:flex;flex-direction:column}.fe-linha small{color:var(--text-mute);font-size:12px}
+.fe-ok{color:var(--primary-2);font-weight:800;font-size:18px;padding:0 6px}.fe-linha .btn{padding:8px 12px;font-size:12.5px}
+#fe-st,#cs-st,#lk-st{text-align:left}
+.adm-del{text-align:center}.adm-del-ico{font-size:38px;margin-bottom:2px}
+.adm-del-quem{display:flex;flex-direction:column;gap:2px;margin:10px 0;padding:12px;border-radius:14px;background:var(--surface);border:1px solid var(--border);word-break:break-word}
+.adm-del-quem b{font-size:16px}.adm-del-quem span{font-size:13px;color:var(--text-dim)}
+.adm-del-aviso{font-size:13px;line-height:1.55;color:var(--text-dim);margin:0 0 6px}.adm-del-aviso b{color:var(--danger-soft)}
+.adm-del-st{font-size:12.5px;line-height:1.5;min-height:18px;margin:6px 0}
+.adm-del-bts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.btn[disabled]{opacity:.6;cursor:progress}
+/* carrossel de temas */
+.wz-temas.tc-host{display:block}
+.tc{margin-top:4px}
+.tc-trilho{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px calc(50% - min(120px,36%)) 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;outline:none;overscroll-behavior-x:contain}
+.tc-trilho::-webkit-scrollbar{display:none}
+.tc-trilho:focus-visible{box-shadow:0 0 0 2px var(--primary);border-radius:20px}
+.tc-slide{position:relative;flex:0 0 min(240px,72%);scroll-snap-align:center;border-radius:22px;cursor:pointer;transition:transform var(--mt-d2,.22s) var(--mt-ease,ease),opacity var(--mt-d2,.22s) ease;transform:scale(.92);opacity:.6}
+.tc-slide.foco{transform:none;opacity:1}
+.tc-slide.on .tc-prev{box-shadow:0 0 0 3px var(--primary)}
+.tc-slide.trava .tc-prev::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.18))}
+.tc-sel{position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;background:var(--primary);color:var(--on-primary);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.tc-prev{position:relative;overflow:hidden;height:196px;border-radius:22px;padding:12px;display:flex;flex-direction:column;gap:9px;background:var(--bg);border:1px solid var(--border);color:var(--text)}
+.tcp-top{display:flex;align-items:center;gap:7px}
+.tcp-logo{width:20px;height:20px;border-radius:7px;background:var(--grad-primary,var(--primary))}
+.tcp-top span{flex:1;display:flex;flex-direction:column;gap:3px}.tcp-top b{width:62px;height:5px;border-radius:9px;background:var(--text-strong,var(--text))}.tcp-top em{width:38px;height:4px;border-radius:9px;background:var(--text-mute)}
+.tcp-av{width:18px;height:18px;border-radius:50%;border:2px solid var(--primary)}
+.tcp-ola{display:flex;flex-direction:column;gap:4px}.tcp-ola b{width:70%;height:9px;border-radius:9px;background:var(--text-strong,var(--text))}.tcp-ola em{width:50%;height:5px;border-radius:9px;background:var(--text-dim)}
+.tcp-card{padding:9px;border-radius:14px;background:var(--card-bg,var(--surface));border:1px solid var(--border);display:flex;flex-direction:column;gap:7px}
+.tcp-l1{display:flex;align-items:center;justify-content:space-between}.tcp-l1 b{width:46%;height:6px;border-radius:9px;background:var(--text)}
+.tcp-chip{width:30px;height:11px;border-radius:9px;background:rgba(var(--primary-rgb),.18);border:1px solid rgba(var(--primary-rgb),.4)}
+.tcp-barra{height:6px;border-radius:9px;background:var(--surface-2,rgba(127,127,127,.2));overflow:hidden}.tcp-barra i{display:block;width:62%;height:100%;background:var(--primary)}
+.tcp-stats{display:flex;gap:6px}.tcp-stats span{flex:1;display:flex;flex-direction:column;gap:3px;padding:5px;border-radius:9px;background:var(--surface)}
+.tcp-stats b{width:60%;height:6px;border-radius:9px;background:var(--accent)}.tcp-stats span:nth-child(2) b{background:var(--primary-2,var(--primary))}.tcp-stats em{width:80%;height:3px;border-radius:9px;background:var(--text-mute)}
+.tcp-btn{height:22px;border-radius:12px;background:var(--grad-primary,var(--primary))}
+.tcp-tab{margin-top:auto;display:flex;justify-content:space-around;padding:6px 4px;border-radius:12px;background:var(--bar-bg,var(--surface));border:1px solid var(--border)}
+.tcp-tab i{width:12px;height:12px;border-radius:4px;background:var(--text-mute);opacity:.55}.tcp-tab i.on{background:var(--primary);opacity:1}
+.tc-info{display:flex;align-items:center;gap:8px;margin-top:2px}
+.tc-seta{flex:0 0 38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:20px;line-height:1;cursor:pointer}
+.tc-seta:disabled{opacity:.35;cursor:default}
+.tc-nome{flex:1;text-align:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 6px;min-height:42px}
+.tc-nome b{font-size:16px}.tc-nome small{flex-basis:100%;font-size:12px;color:var(--text-mute)}
+.tc-atual{font-size:11px;font-weight:800;color:var(--primary-2);padding:2px 7px;border-radius:99px;background:rgba(var(--primary-rgb),.12)}
+.tc-pontos{display:flex;justify-content:center;gap:6px;margin:8px 0 10px}
+.tc-ponto{width:7px;height:7px;padding:0;border:0;border-radius:99px;background:var(--text-mute);opacity:.4;cursor:pointer;transition:width .2s ease,opacity .2s ease}
+.tc-ponto.on{width:18px;opacity:1;background:var(--primary)}
+.tc-usar{margin-top:2px}
+.tc-sug{position:absolute;left:10px;bottom:-8px;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--accent);color:var(--on-primary)}
+#wz-temas .tc{padding-bottom:84px}
+@media (prefers-reduced-motion:reduce){.tc-slide,.tc-ponto{transition:none}}
 </style>
 </head>
 <body>
@@ -2863,6 +2923,7 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
       <span id="google-btn-lbl">Continuar com Google</span>
     </button>
     <div class="auth-google-sub">Recomendado: entra com um toque e não precisa confirmar e-mail.</div>
+    <div class="auth-teste" id="auth-teste"><svg class="pl-est" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2 6.4 20.2l1.1-6.3L2.9 9.5l6.3-.9z" fill="currentColor"/></svg><span><b>Ganhe 30 dias de acesso ao MetaTreino Premium.</b> Após o período de teste, sua conta continuará ativa no plano Básico caso não contrate o Premium. Sem cartão de crédito e sem cobrança automática. <a href="#" onclick="mtComoFuncionaTeste();return false">Como funciona o teste gratuito?</a></span></div>
 
     <div style="display:flex;align-items:center;gap:10px;margin:16px 0 8px">
       <div style="flex:1;height:1px;background:var(--border)"></div>
@@ -2893,7 +2954,7 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
       </div>
     </div>
 
-    <p class="auth-plano-nota">Conta nova é grátis e já começa com <b>30 dias de Premium</b> para você conhecer tudo. Depois, o plano Gratuito continua com seus treinos de musculação e corrida, histórico e evolução. Seus dados ficam salvos na nuvem, vinculados à sua conta.</p>
+    
     <div id="auth-contact" style="margin-top:16px"></div>
   </div>
 </div>
@@ -2983,7 +3044,7 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
       <div class="stat"><div class="stat-lbl">Premium ativos</div><div class="stat-val" id="adm-active">0</div></div>
       <div class="stat"><div class="stat-lbl">Em teste</div><div class="stat-val" style="color:var(--accent-2)" id="adm-exp">0</div></div>
       <div class="stat"><div class="stat-lbl">Total cadastrados</div><div class="stat-val" id="adm-total" style="color:var(--info)">0</div></div>
-      <div class="stat"><div class="stat-lbl">Gratuitos</div><div class="stat-val" style="color:var(--danger-soft)" id="adm-vencidos">0</div></div>
+      <div class="stat"><div class="stat-lbl">Básico</div><div class="stat-val" style="color:var(--danger-soft)" id="adm-vencidos">0</div></div>
     </div>
 
     <button class="btn btn-primary btn-block" style="margin:14px 0" onclick="openModal('add-student')">⭐ Conceder Premium a um e-mail</button>
@@ -3003,7 +3064,7 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
       <div class="filter-chip on" data-f="all" onclick="setAdminFilter('all')">Todos</div>
       <div class="filter-chip" data-f="premium" onclick="setAdminFilter('premium')">Premium</div>
       <div class="filter-chip" data-f="teste" onclick="setAdminFilter('teste')">Teste</div>
-      <div class="filter-chip" data-f="gratuito" onclick="setAdminFilter('gratuito')">Gratuito</div>
+      <div class="filter-chip" data-f="gratuito" onclick="setAdminFilter('gratuito')">Básico</div>
       <div class="filter-chip" data-f="vence" onclick="setAdminFilter('vence')">Vence em 7 dias</div>
       <div class="filter-chip" data-f="bloqueado" onclick="setAdminFilter('bloqueado')">Bloqueados</div>
     </div>

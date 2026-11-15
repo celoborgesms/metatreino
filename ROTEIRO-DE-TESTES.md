@@ -2,7 +2,19 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
-## 00. Beta 42 — motivo da troca
+## 00. Beta 42 (parte 2) — cadastro, entrada, exclusão, backup, temas
+- [ ] Criar conta com e-mail e senha → confirmar → "Já confirmei": entra sem novo login?
+- [ ] Cadastro mostra o aviso dos 30 dias e "Como funciona"? Ao concluir o perfil aparece a data de término?
+- [ ] Conta de e-mail → sair → "Continuar com Google" (mesmo e-mail): pede a senha uma vez e entra na MESMA conta?
+- [ ] Conta do Google: Perfil › Formas de entrar › Criar senha; depois entrar com e-mail e senha: mesma conta?
+- [ ] Painel: excluir um aluno de teste — sem digitar e-mail, sem repetir, painel aberto, seus treinos intactos?
+- [ ] Atualizar / entrar de novo no painel: o excluído não reaparece?
+- [ ] Backup: restaurar na própria conta (funciona) e em outra conta (recusa).
+- [ ] Temas em carrossel; Ametista e Coral como "Premium"; escolha mantida ao reabrir.
+- [ ] Ilustrações de Perfil, Histórico, Desafios e Corrida nos temas claro e escuro.
+- [ ] Montar um plano no Android: dá para ler cada etapa?
+
+## 00a. Beta 42 — motivo da troca
 - [ ] Trocar um exercício com equipamento (ex.: supino na máquina): aparece "Equipamento ocupado"?
 - [ ] Trocar um exercício de peso do corpo (ex.: flexão, prancha): aparece só "Alternativa para este grupo muscular", sem a palavra "ocupado"? As opções são do mesmo grupo e os favoritos compatíveis vêm primeiro?
 - [ ] Depois de salvar o treino, o Histórico mostra "alternativa para o grupo muscular"?

@@ -1,3 +1,18 @@
+# MetaTreino 2027.1 Beta 42 (parte 2) — Cadastro, entrada, exclusão de alunos, backup e temas
+
+**Publique o `firestore.rules` desta versão.**
+
+1. Confirmação de e-mail: "Já confirmei meu e-mail" libera o acesso na hora, sem sair e entrar de novo.
+2. Teste Premium de 30 dias explicado no cadastro; começa ao concluir o perfil; depois a conta passa sozinha para o plano Básico, com todos os dados.
+3. Google e e-mail/senha na mesma conta (Perfil › Formas de entrar).
+4. Ametista e Coral aparecem como Premium.
+5. Montagem do plano: ~1 s por etapa, "Plano pronto" e "Tentar de novo" se falhar.
+6. Excluir aluno: confirmação simples, uma execução só, painel e sessão preservados, excluído não volta.
+7. Backup só restaura na conta que o criou (suporte libera por 24 h quando necessário).
+8. Escolha de tema em carrossel (cadastro e Aparência).
+9. Ilustrações de Perfil, Desafios, Corrida e Histórico revistas.
+10. O plano gratuito passa a se chamar Básico nas telas.
+
 # MetaTreino 2027.1 Beta 42 — Motivo da troca de exercício diferenciado
 
 1. **Exercício com equipamento:** a troca mostra **"Equipamento ocupado"** (e "Prefiro outro"), como antes.

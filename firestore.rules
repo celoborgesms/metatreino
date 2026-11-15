@@ -105,6 +105,13 @@ service cloud.firestore {
         || (emailConfiavel() && request.resource.data.email.lower() == userEmail());
     }
 
+    // Beta 42: conta excluída pelo administrador (marca permanente). O app antigo da pessoa, se ainda
+    // estiver logado, não consegue recriar os dados nem ganhar um novo teste Premium.
+    function contaExcluida() {
+      return signedIn() && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/contasExcluidas/$(userEmail()));
+    }
+
     match /usuarios/{userId} {
       allow get:
         if isOwnerUser(userId) || contaVinculada(userId) || isAdmin()
@@ -113,7 +120,7 @@ service cloud.firestore {
       allow list:
         if isAdmin() || (emailConfiavel() && resource.data.email == request.auth.token.email);
       allow create, update:
-        if ((isOwnerUser(userId) || contaVinculada(userId)) && emailDoDocOk()) || isAdmin();
+        if ((isOwnerUser(userId) || contaVinculada(userId)) && emailDoDocOk() && !contaExcluida()) || isAdmin();
       // Apagar: o proprio aluno (excluir conta / comecar do zero) ou o
       // administrador principal (limpeza de ex-alunos). Secundario nao apaga.
       allow delete:
@@ -124,7 +131,7 @@ service cloud.firestore {
         allow read:
           if isOwnerUser(userId) || contaVinculada(userId) || mesmoEmail(userId) || isAdmin();
         allow create, update:
-          if isOwnerUser(userId) || contaVinculada(userId) || isAdmin();
+          if ((isOwnerUser(userId) || contaVinculada(userId)) && !contaExcluida()) || isAdmin();
         allow delete:
           if isOwnerUser(userId) || contaVinculada(userId) || mesmoEmail(userId) || isOwner();
       }
@@ -181,9 +188,24 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['plano', 'testeInicio', 'origem', 'name'])
         && request.resource.data.plano == 'teste'
         && request.resource.data.testeInicio == request.time
+        && !contaExcluida()
       );
 
       allow update, delete: if isAdmin() && (isOwner() || emailDoc != userEmail());
+    }
+
+    // Beta 42: contas excluídas (marca permanente). Só o administrador principal cria, libera (apaga)
+    // e consulta a lista; a própria pessoa lê o seu (o app mostra a conta como encerrada).
+    match /contasExcluidas/{emailDoc} {
+      allow read: if isOwner() || (signedIn() && request.auth.token.email != null && userEmail() == emailDoc);
+      allow create, update, delete: if isOwner() && emailDoc != userEmail();
+    }
+
+    // Beta 42: liberação excepcional de restauração de backup (suporte), por e-mail e com prazo.
+    // Administradores liberam (nunca para si mesmos, exceto o principal); a pessoa só lê a sua.
+    match /liberacoesBackup/{emailDoc} {
+      allow read: if isAdmin() || (emailConfiavel() && userEmail() == emailDoc);
+      allow create, update, delete: if isAdmin() && (isOwner() || emailDoc != userEmail());
     }
 
     // Beta 40: registro das ações administrativas (quem fez, o quê, em quem, quando).

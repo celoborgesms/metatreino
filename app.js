@@ -1435,7 +1435,7 @@ function accessDaysLeft(){
 function accessLabel(days){
   const p = planoAtual();
   if(p.admin) return '♾️ Premium sem prazo (Admin)';
-  if(!p.premium) return 'Plano Gratuito';
+  if(!p.premium) return 'Plano Básico';
   if(days>=999999) return '♾️ Premium sem prazo';
   return `${p.tipo==='teste'?'Teste Premium':'Premium'}: ${days} ${days===1?'dia restante':'dias restantes'}`;
 }

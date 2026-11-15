@@ -1901,7 +1901,7 @@ runBuildingScreen = function(m, steps, done, opts){
   ov.className = 'mt-build'; ov.removeAttribute('style');
   const titulo = String(opts.titulo || (m==='lift' ? 'Preparando seu plano de treinamento' : 'Preparando seu plano de corrida')).replace(/^\S+\s(?=[A-ZÁÉÍÓÚ])/,'');
   ov.innerHTML = `<div class="mb-box"><div class="mb-spin"></div><div class="mb-t">${titulo}</div><div class="mb-s">${opts.sub || 'Organizando exercícios, dias e progressão com base nas suas escolhas.'}</div>
-    <ol class="mb-list">${steps.map((s,i)=>`<li id="mb-${i}"><span class="mb-ck"></span><span class="mb-tx">${s.txt}</span></li>`).join('')}</ol>
+    <ol class="mb-list" aria-live="polite">${steps.map((s,i)=>`<li id="mb-${i}"><span class="mb-ck"></span><span class="mb-tx">${s.txt}</span></li>`).join('')}</ol>
     <div class="mb-bar"><i id="mb-bar"></i></div><div class="mb-n" id="mb-n">0 de ${steps.length} etapas</div></div>`;
   requestAnimationFrame(()=>ov.classList.add('on'));
   const passo = Math.min(opts.passo || 900, 1100);
@@ -1912,7 +1912,7 @@ runBuildingScreen = function(m, steps, done, opts){
     if(bar) bar.style.width = Math.round(i/steps.length*100)+'%';
     if(n) n.textContent = `${i} de ${steps.length} etapas`;
     if(i >= steps.length){
-      setTimeout(()=>{ ov.classList.remove('on'); setTimeout(()=>{ ov.className=''; ov.innerHTML=''; ov.setAttribute('style','display:none'); if(typeof done==='function') done(); }, 260); }, 450);
+      setTimeout(()=>{ ov.classList.remove('on'); setTimeout(()=>{ ov.className=''; ov.innerHTML=''; ov.setAttribute('style','display:none'); try{ if(typeof done==='function') done(); }catch(e){ console.log('montagem (fim):', e); if(typeof mtMontagemErro==='function') mtMontagemErro(m, e); } }, 260); }, opts.final || 450);
       return;
     }
     const li = $('mb-'+i); if(li) li.classList.add('now');
@@ -10710,7 +10710,7 @@ const MT_RECURSOS = {
   pdfAlimentacao: { nome:'PDF do plano alimentar', txt:'O cardápio da semana com refeições, quantidades e valores nutricionais em PDF.' },
   relatorio:      { nome:'Relatório completo de evolução', txt:'Relatório em PDF com gráficos de volume, cargas, quilômetros, ritmo, peso e conquistas.' },
   inicioCompleto: { nome:'Personalização completa do Início', txt:'Escolher bloco por bloco o que aparece e arrastar para mudar a ordem.' },
-  temas:          { nome:'Todos os temas', txt:'Os 8 temas do app e os 2 exclusivos Premium (Ametista e Coral).' },
+  temas:          { nome:'Todos os temas', txt:'Os 10 temas do app. No Básico ficam Brasa (escuro) e Areia (claro).' },
   assistente:     { nome:'Meta Assistente completo', txt:'Análises da sua evolução, aviso de subir de nível, sugestões no dia a dia, orientação para as provas e comandos que ajustam o plano.' },
   clima:          { nome:'Cenário e dicas pelo clima', txt:'O desenho do Início e as dicas de treino acompanham o tempo de agora (usa sua localização).' }
 };
@@ -10738,9 +10738,9 @@ function mtPlanoStatusTxt(){
   if(p.admin) return 'Administrador: todos os recursos liberados.';
   if(p.tipo === 'teste') return `Teste Premium até ${f(p.ate)} (${accessDaysLeft()} ${accessDaysLeft()===1?'dia':'dias'}).`;
   if(p.tipo === 'premium') return p.ate ? `Premium até ${f(p.ate)}.` : 'Premium sem data de término.';
-  if(p.testeAcabouEm) return `Seu teste Premium terminou em ${f(p.testeAcabouEm)}. Você está no plano Gratuito.`;
-  if(p.premiumAcabouEm) return `Seu Premium terminou em ${f(p.premiumAcabouEm)}. Você está no plano Gratuito.`;
-  return 'Você está no plano Gratuito.';
+  if(p.testeAcabouEm) return `Seu teste Premium terminou em ${f(p.testeAcabouEm)}. Você está no plano Básico.`;
+  if(p.premiumAcabouEm) return `Seu Premium terminou em ${f(p.premiumAcabouEm)}. Você está no plano Básico.`;
+  return 'Você está no plano Básico.';
 }
 function mtPremiumAviso(rec, extra){
   const r = MT_RECURSOS[rec] || { nome:'Recurso Premium', txt:'' };
@@ -10752,7 +10752,7 @@ function mtPremiumAviso(rec, extra){
       <p class="pl-txt">${mtEsc(r.txt)}</p>
       ${extra ? `<p class="pl-txt pl-extra">${extra}</p>` : ''}
       <div class="pl-status">${mtEsc(mtPlanoStatusTxt())}</div>
-      <div class="pl-continua"><b>No plano Gratuito continua tudo o que você precisa para treinar:</b> musculação e corrida, criar e executar treinos, registrar cargas, séries e repetições, vídeos dos exercícios do seu treino, histórico, evolução, desafios, conquistas e provas.</div>
+      <div class="pl-continua"><b>No plano Básico continua tudo o que você precisa para treinar:</b> musculação e corrida, criar e executar treinos, registrar cargas, séries e repetições, vídeos dos exercícios do seu treino, histórico, evolução, desafios, conquistas e provas.</div>
       ${mtContatoPremiumHtml()}
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openPlanos()">Comparar planos</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Agora não</button></div>`;
@@ -10765,15 +10765,16 @@ function openPlanos(){
   const L = (t, g, pr)=>`<tr><td>${t}</td><td class="${g?'sim':'nao'}">${g===true?'✓':g===false?'—':g}</td><td class="sim">${pr===true?'✓':pr}</td></tr>`;
   $('modal-inner').innerHTML = `<h3>Planos do MetaTreino</h3>
     <div class="pl-status" style="margin:4px 0 10px">${mtEsc(mtPlanoStatusTxt())}</div>
-    <div class="pl-tabela-wrap"><table class="pl-tabela"><thead><tr><th></th><th>Gratuito</th><th>Premium</th></tr></thead><tbody>
-      ${L('Musculação e corrida (planos, execução e registro)', true, true)}
+    <div class="pl-tabela-wrap"><table class="pl-tabela"><thead><tr><th></th><th>Básico</th><th>Premium</th></tr></thead><tbody>
+      ${L('Musculação, corrida e modalidades (planos, execução e registro)', true, true)}
       ${L('Vídeos dos exercícios durante o treino', true, true)}
-      ${L('Histórico, evolução e gráficos', 'básico', 'completo')}
+      ${L('Troca inteligente de exercícios e favoritos', true, true)}
+      ${L('Histórico de treinos e evolução', true, true)}
       ${L('Desafios, conquistas, metas e provas', true, true)}
-      ${L('Meta Assistente', 'básico', 'completo')}
+      ${L('Meta Assistente', 'dúvidas e treino do dia', 'análises e avisos proativos')}
       ${L('Biblioteca completa de exercícios', false, true)}
-      ${L('Plano alimentar (com PDF)', false, true)}
-      ${L('PDF dos treinos e relatório de evolução', false, true)}
+      ${L('Plano alimentar personalizado (com PDF)', false, true)}
+      ${L('PDF dos treinos e relatório detalhado de evolução', false, true)}
       ${L('Temas', '2', '10')}
       ${L('Personalização do Início', 'básica', 'completa')}
       ${L('Cenário do Início pelo clima', false, true)}
@@ -10804,7 +10805,7 @@ applyTheme = function(t, naoGuardar){
 };
 const _setThemeB40 = setTheme;
 setTheme = function(t){
-  if(!temaLiberado(t)){ mtPremiumAviso('temas', `O tema <b>${mtEsc(THEMES[normalizaTema(t)].nome)}</b> é exclusivo do Premium. Os temas <b>Brasa</b> (escuro) e <b>Areia</b> (claro) continuam liberados.`); return; }
+  if(!temaLiberado(t)){ mtPremiumAviso('temas', `O tema <b>${mtEsc(THEMES[normalizaTema(t)].nome)}</b> é do Premium. Os temas <b>Brasa</b> (escuro) e <b>Areia</b> (claro) continuam liberados.`); return; }
   const r = _setThemeB40.apply(this, arguments);
   try{ state.prefs = state.prefs || {}; state.prefs.tema = normalizaTema(t); if(mtPremium()) delete state.prefs.temaPremium; saveData(); }catch(e){}
   return r;
@@ -10844,16 +10845,16 @@ function mtPlanoMudou(antes, depois){
   try{ const t = (state.ui && state.ui.tab) || 'home'; if(!document.querySelector('#modal-back.on')) goTab(t); }catch(e){}
 }
 function mtAvisoFimPremium(antes, troca){
-  const nomeAntes = antes === 'teste' ? 'Seu teste Premium de 30 dias terminou' : antes ? 'Seu Premium terminou' : 'Você está no plano Gratuito';
+  const nomeAntes = antes === 'teste' ? 'Seu teste Premium de 30 dias terminou' : antes ? 'Seu Premium terminou' : 'Você está no plano Básico';
   setTimeout(()=>{
     $('modal-inner').innerHTML = `<div class="pl-aviso">
-      <div class="pl-selo pl-selo-dim">Plano Gratuito</div>
+      <div class="pl-selo pl-selo-dim">Plano Básico</div>
       <h3>${nomeAntes}</h3>
-      <p class="pl-txt">Sua conta passou para o plano Gratuito. <b>Nada foi apagado</b>: treinos, histórico, cargas, evolução, conquistas e provas continuam aqui, e você segue treinando normalmente.</p>
+      <p class="pl-txt">Sua conta passou para o plano Básico. <b>Nada foi apagado</b>: treinos, histórico, cargas, evolução, conquistas e provas continuam aqui, e você segue treinando normalmente.</p>
       ${troca ? `<div class="pl-tema-troca"><span class="pl-tema-bola" style="background:${THEMES[troca.de].prev.bg};border-color:${THEMES[troca.de].prev.a}"></span><span>→</span><span class="pl-tema-bola" style="background:${THEMES[troca.para].prev.bg};border-color:${THEMES[troca.para].prev.a}"></span><span>Tema <b>${mtEsc(THEMES[troca.de].nome)}</b> trocado por <b>${mtEsc(THEMES[troca.para].nome)}</b>. Ele volta sozinho se você voltar ao Premium.</span></div>` : ''}
       <p class="pl-txt">Ficam guardados para quando o Premium voltar: plano alimentar, personalização do Início e o tema escolhido.</p>
       ${mtContatoPremiumHtml()}
-      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Continuar no Gratuito</button></div>`;
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Continuar no Básico</button></div>`;
     $('modal-back').classList.add('on');
   }, 600);
 }
@@ -10881,7 +10882,7 @@ document.addEventListener('visibilitychange', ()=>{ try{ if(document.visibilityS
 mtGancho('renderProfile', { depois(){
   try{
     const p = planoAtual(); const d = accessDaysLeft();
-    const st = $('pf-status'); if(st) st.innerHTML = p.premium ? `⭐ <span>${p.tipo==='teste'?'Teste Premium':'Premium'}</span>` : '🎫 <span>Plano Gratuito</span>';
+    const st = $('pf-status'); if(st) st.innerHTML = p.premium ? `⭐ <span>${p.tipo==='teste'?'Teste Premium':'Premium'}</span>` : '🎫 <span>Plano Básico</span>';
     const tr = $('pf-trial'); if(tr){ tr.textContent = accessLabel(d); const card = tr.closest('.card'); if(card && !card.dataset.pl){ card.dataset.pl = '1'; card.style.cursor = 'pointer'; card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.onclick = openPlanos; } }
     const g = $('pf-goal'); if(g && !g.querySelector('.pl-ver')) g.insertAdjacentHTML('beforeend', ' · <span class="pl-ver">ver planos ›</span>');
     // estilo dos ícones: linha própria no grupo Aplicativo (antes ficava escondido dentro de Aparência)
@@ -10914,7 +10915,7 @@ mtGancho('renderHome', { depois(){
 mtGancho('renderPlan', { depois(){
   try{
     const p = planoAtual(); const a = $('pl-access'), d = $('pl-days');
-    if(a) a.textContent = p.premium ? (p.tipo === 'teste' ? '⭐ Teste Premium' : '⭐ Premium') : 'Plano Gratuito';
+    if(a) a.textContent = p.premium ? (p.tipo === 'teste' ? '⭐ Teste Premium' : '⭐ Premium') : 'Plano Básico';
     if(d) d.textContent = p.premium ? accessLabel(accessDaysLeft()) : 'Treinos, histórico e evolução liberados';
     const card = a && a.closest('.card'); if(card && !card.dataset.pl){ card.dataset.pl = '1'; card.style.cursor = 'pointer'; card.onclick = openPlanos; }
   }catch(e){}
@@ -11024,7 +11025,7 @@ const MA_KEYS_PREMIUM = new Set(['analise_mes','cargas','consistencia','corrida_
   'plano_alimentar','run_desenvolve','run_carga','run_avancar','run_ritmos','cali_analise','prova','calorias']);
 function maRespostaPremium(oQue){
   return `⭐ ${oQue || 'Essa análise'} faz parte do <b>Meta Assistente completo</b>, do plano Premium.<br><br>`
-    + `No plano Gratuito eu continuo te ajudando com: dúvidas sobre o app, o seu treino de hoje e o plano da semana, como fazer os exercícios do seu treino, registrar peso, atividades e dores, e orientações básicas.<br><br>`
+    + `No plano Básico eu continuo te ajudando com: dúvidas sobre o app, o seu treino de hoje e o plano da semana, como fazer os exercícios do seu treino, registrar peso, atividades e dores, e orientações básicas.<br><br>`
     + `<button class="btn btn-primary" style="padding:9px 16px;font-size:13px" onclick="closeAssistant();setTimeout(()=>mtPremiumAviso('assistente'),220)">Conhecer o Premium</button>`;
 }
 Object.keys(MA_ANSWERS).forEach(k=>{
@@ -11129,10 +11130,10 @@ openAparencia = function(){
   const opt = k=>{ const t = THEMES[k]; const trava = !prem && temaPremium(k); const exclusivo = !!t.premium;
     return `<button type="button" class="ap-opt ${k===cur?'on':''} ${trava?'pl-trava':''}" onclick="setTheme('${k}');setTimeout(openAparencia,30)" aria-label="Tema ${mtEsc(t.nome)}${trava?' (Premium)':''}">
       <span class="wz-tema-prev ap-prev-real" data-theme="${k}" aria-hidden="true"><span class="tp-top"><i></i><b></b></span><span class="tp-card"><b></b><i></i><em></em></span><span class="tp-btn"></span><span class="tp-tab"><i></i><i></i><i></i><i></i></span></span>
-      <div class="ap-name"><span>${mtEsc(t.nome)}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}${trava||exclusivo?`<span class="pl-mini">${PL_EST}${exclusivo?'Exclusivo':''}</span>`:''}</div><small style="color:var(--text-mute);font-size:11px;margin-top:-4px">${mtEsc(t.sub)}</small></button>`; };
+      <div class="ap-name"><span>${mtEsc(t.nome)}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}${trava||exclusivo?`<span class="pl-mini">${PL_EST}Premium</span>`:''}</div><small style="color:var(--text-mute);font-size:11px;margin-top:-4px">${mtEsc(t.sub)}</small></button>`; };
   const deco = (typeof decoEnabled==='function') ? decoEnabled() : true;
   $('modal-inner').innerHTML = `<h3>Aparência</h3>
-    ${!prem ? `<div class="pl-faixa">No plano Gratuito: <b>Brasa</b> (escuro) e <b>Areia</b> (claro). Os outros temas são Premium. <a href="#" onclick="openPlanos();return false">Ver planos ›</a></div>` : ''}
+    ${!prem ? `<div class="pl-faixa">No plano Básico: <b>Brasa</b> (escuro) e <b>Areia</b> (claro). Os outros temas são Premium. <a href="#" onclick="openPlanos();return false">Ver planos ›</a></div>` : ''}
     <div class="mt-sec" style="margin-top:6px">Tema Noturno</div>
     <div class="ap-grid">${TEMAS_NOTURNOS.filter(k=>THEMES[k]).map(opt).join('')}</div>
     <div class="mt-sec">Tema Claro</div>
@@ -11154,7 +11155,7 @@ mtGancho('wzRenderTemas', { depois(){
       const k = (b.getAttribute('onclick')||'').match(/wzEscolheTema\('(\w+)'\)/); if(!k) return;
       const t = THEMES[k[1]]; if(!t) return;
       const nome = b.querySelector('.wz-tema-nome');
-      if(nome && temaPremium(k[1]) && !nome.querySelector('.pl-mini')) nome.insertAdjacentHTML('beforeend', `<small class="pl-mini">${PL_EST}${t.premium?'Exclusivo':'Premium'}</small>`);
+      if(nome && temaPremium(k[1]) && !nome.querySelector('.pl-mini')) nome.insertAdjacentHTML('beforeend', `<small class="pl-mini">${PL_EST}Premium</small>`);
       b.classList.toggle('pl-trava', !temaLiberado(k[1]));
     });
   }catch(e){}
@@ -11186,7 +11187,7 @@ async function admRegistrar(acao, alvo, detalhe){
 }
 function admPlanoDe(email){ return planoDe(false, allowCache[email] || null); }
 function admPlanoSelo(p){
-  const nome = { premium:'Premium', teste:'Teste', gratuito:'Gratuito', bloqueado:'Bloqueado' }[p.tipo] || p.tipo;
+  const nome = { premium:'Premium', teste:'Teste', gratuito:'Básico', bloqueado:'Bloqueado' }[p.tipo] || p.tipo;
   return `<span class="adm-plano ${p.tipo}">${p.tipo==='premium'||p.tipo==='teste'?'⭐ ':''}${nome}</span>`;
 }
 function admDias(p){ if(!p.premium) return p.tipo === 'bloqueado' ? '🔒' : '—'; if(!p.ate) return '∞'; return Math.max(0, Math.ceil((p.ate - Date.now())/DIA_MS)) + 'd'; }
@@ -11259,7 +11260,7 @@ mtGancho('openStudent', { depois(email){
       </div>
       <div class="row" style="gap:6px;margin-top:8px">
         <button class="btn btn-outline" style="flex:1" onclick="admPremium('${eJs}',0)">♾️ Premium sem prazo</button>
-        ${p.premium ? `<button class="btn btn-ghost" style="flex:1" onclick="admEncerrar('${eJs}')">Passar para Gratuito</button>` : ''}
+        ${p.premium ? `<button class="btn btn-ghost" style="flex:1" onclick="admEncerrar('${eJs}')">Passar para Básico</button>` : ''}
       </div>
       <div class="mt-muted" style="font-size:11.5px;margin-top:6px;line-height:1.45">Os dias somam a partir do fim do Premium atual (ou de hoje, se não houver). Trocar de plano nunca apaga treinos nem histórico.</div>
       <div class="section-lbl">Gerenciar</div>
@@ -11279,11 +11280,11 @@ function admDiasLongo(p){
 function admPlanoTexto(a, p){
   const f = t=>new Date(t).toLocaleDateString('pt-BR');
   if(p.tipo==='bloqueado') return `Conta suspensa${a.bloqueioMotivo?' — '+a.bloqueioMotivo:''}${a.bloqueadoEm?' (desde '+f(msDe(a.bloqueadoEm))+')':''}. A pessoa não entra no app; os dados continuam guardados.`;
-  if(p.tipo==='teste') return `Teste Premium até ${f(p.ate)} (começou em ${f(p.inicio)}). Ao terminar, passa sozinho para o Gratuito.`;
+  if(p.tipo==='teste') return `Teste Premium até ${f(p.ate)} (começou em ${f(p.inicio)}). Ao terminar, passa sozinho para o Básico.`;
   if(p.tipo==='premium') return p.ate ? `Premium até ${f(p.ate)}.` : 'Premium sem data de término.';
-  if(p.testeAcabouEm) return `Gratuito (teste encerrado em ${f(p.testeAcabouEm)}).`;
-  if(p.premiumAcabouEm) return `Gratuito (Premium encerrado em ${f(p.premiumAcabouEm)}).`;
-  return a._semDoc ? 'Gratuito (conta criada sem teste — ex.: login de usuário sem e-mail).' : 'Gratuito.';
+  if(p.testeAcabouEm) return `Básico (teste encerrado em ${f(p.testeAcabouEm)}).`;
+  if(p.premiumAcabouEm) return `Básico (Premium encerrado em ${f(p.premiumAcabouEm)}).`;
+  return a._semDoc ? 'Básico (conta criada sem teste — ex.: login de usuário sem e-mail).' : 'Básico.';
 }
 async function admGravarPlano(email, dados, acao, detalhe){
   if(email === admEu()){ toast('🛡️ Sua própria conta não é alterada por aqui.'); return false; }
@@ -11308,10 +11309,10 @@ async function admPremium(email, dias){
   if(ok){ toast(dias ? `⭐ Premium até ${new Date(ate).toLocaleDateString('pt-BR')}` : '⭐ Premium sem prazo'); openStudent(email); }
 }
 function admEncerrar(email){
-  appConfirm(`${email} passa para o plano Gratuito agora. Treinos, histórico e dados continuam; o que é Premium fica guardado.`, async ()=>{
+  appConfirm(`${email} passa para o plano Básico agora. Treinos, histórico e dados continuam; o que é Premium fica guardado.`, async ()=>{
     const ok = await admGravarPlano(email, { plano:'gratuito', premiumAte:null, active:true, expiresAt:Date.now()-1000 }, 'gratuito');
-    if(ok){ toast('Plano Gratuito'); openStudent(email); }
-  }, { title:'Encerrar o Premium?', okLabel:'Passar para Gratuito', onCancel:()=>setTimeout(()=>openStudent(email), 80) });
+    if(ok){ toast('Plano Básico'); openStudent(email); }
+  }, { title:'Encerrar o Premium?', okLabel:'Passar para Básico', onCancel:()=>setTimeout(()=>openStudent(email), 80) });
 }
 function admBloquear(email, bloquear){
   if(!bloquear){
@@ -11433,62 +11434,166 @@ async function fnChamar(nome, dados){
   if(j && j.error) throw Object.assign(new Error(j.error.message || 'erro'), { code: j.error.status || 'erro' });
   return j ? j.result : null;
 }
+// Beta 42: confirmação por janela (sem digitar o e-mail), uma exclusão por vez, painel e sessão do
+// administrador preservados, e marca permanente contasExcluidas/{email}:
+//  • o app de quem foi excluído (se ainda estiver aberto ou logado) NÃO consegue recriar os dados nem um
+//    novo teste Premium (firestore.rules), e a lista do painel não mostra mais a conta;
+//  • a exclusão só apaga documentos cujo e-mail é o da conta excluída — nunca o do administrador.
+// Sem a função do servidor publicada (plano Blaze), o painel faz o que o navegador pode fazer de verdade
+// (dados + bloqueio + marca) e diz claramente que o login segue no Authentication.
+let _admExcluindo = false;
+function _admNomeDe(email){ const u = usuariosCache[email]; const d = u && u.estadoApp; const p = d && d.user && d.user.profile; return (p && p.nickname) || (u && u.nome) || (allowCache[email]||{}).name || email.split('@')[0]; }
+function _admProtegido(email){
+  const e = String(email||'').toLowerCase();
+  return !e || e === admEu() || e === String(ADMIN_EMAIL).toLowerCase();
+}
 function admExcluirConta(email){
   if(!mtPrincipal()){ toast('🔒 Somente o administrador principal exclui contas.'); return; }
-  if(email === admEu() || email === String(ADMIN_EMAIL).toLowerCase()){ toast('🛡️ Esta conta não pode ser excluída por aqui.'); return; }
-  const u = usuariosCache[email]; const d = u && u.estadoApp; const p = d && d.user && d.user.profile;
-  const treinos = ((d&&d.modules&&d.modules.lift&&d.modules.lift.history)||[]).length + ((d&&d.modules&&d.modules.run&&d.modules.run.history)||[]).length;
-  const ult = u && +u.atualizadoEm ? new Date(+u.atualizadoEm).toLocaleString('pt-BR') : '—';
-  $('modal-inner').innerHTML = `<h3>🗑️ Excluir conta</h3>
-    <div class="card" style="font-size:13px;line-height:1.7;word-break:break-word">
-      <b>E-mail:</b> ${mtEsc(email)}<br><b>Nome:</b> ${mtEsc((p&&p.nickname) || (u&&u.nome) || (allowCache[email]||{}).name || '—')}<br>
-      <b>Documentos de dados:</b> ${(u&&u._uids||[]).length || 0} · <b>Treinos registrados:</b> ${treinos}<br><b>Último uso:</b> ${mtEsc(ult)}<br><b>Plano:</b> ${admPlanoSelo(admPlanoDe(email))}</div>
-    <p class="mt-muted" style="font-size:12.5px;line-height:1.5">Apaga o login (Authentication), os dados do aluno, o arquivo anual, as participações em desafios, o vínculo da conta e o cargo de administrador, se houver. <b>Não pode ser desfeito.</b> Fica só a marca de conta excluída no plano, para o mesmo e-mail não ganhar outro teste Premium.</p>
-    <div class="field"><label>Para confirmar, digite o e-mail da conta</label><input class="input" id="adm-del-conf" autocapitalize="none" spellcheck="false" autocomplete="off" placeholder="${mtEsc(email)}" data-teclado></div>
-    <div id="adm-del-st" class="mt-muted" style="font-size:12.5px;min-height:18px"></div>
-    <button class="btn btn-perigo btn-block" id="adm-del-go" onclick="admExcluirContaGo('${jsAttr(email)}')">Excluir conta definitivamente</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();setTimeout(()=>openStudent('${jsAttr(email)}'),60)">Cancelar</button>`;
+  if(_admProtegido(email)){ toast('🛡️ Esta conta não pode ser excluída por aqui.'); return; }
+  if(_admExcluindo){ toast('Já existe uma exclusão em andamento.'); return; }
+  $('modal-inner').innerHTML = `<div class="adm-del">
+    <div class="adm-del-ico" aria-hidden="true">🗑️</div>
+    <h3>Excluir aluno?</h3>
+    <div class="adm-del-quem"><b>${mtEsc(_admNomeDe(email))}</b><span>${mtEsc(email)}</span></div>
+    <p class="adm-del-aviso"><b>Esta operação é permanente.</b> Apaga os treinos, o histórico, o arquivo anual, as participações em desafios e o acesso desta conta. Não pode ser desfeita.</p>
+    <div id="adm-del-st" class="adm-del-st" role="status" aria-live="polite"></div>
+    <div class="adm-del-bts"><button class="btn btn-ghost" id="adm-del-cancel" onclick="closeModal();setTimeout(()=>openStudent('${jsAttr(email)}'),60)">Cancelar</button>
+    <button class="btn btn-perigo" id="adm-del-go" onclick="admExcluirContaGo('${jsAttr(email)}')">Excluir aluno</button></div></div>`;
   $('modal-back').classList.add('on');
 }
+function _admBloqueiaBotoes(on, txt){
+  ['adm-del-go','adm-del-cancel'].forEach(id=>{ const b = $(id); if(b){ b.disabled = on; if(id==='adm-del-go' && txt) b.textContent = txt; } });
+  const back = $('modal-back'); if(back) back.classList.toggle('adm-ocupado', on);
+}
 async function admExcluirContaGo(email){
-  const conf = String(($('adm-del-conf')||{}).value||'').trim().toLowerCase();
-  const st = $('adm-del-st'), bt = $('adm-del-go'); const fala = (t, cor)=>{ if(st){ st.innerHTML = t; st.style.color = cor || ''; } };
-  if(conf !== email){ fala('O e-mail digitado não confere. Nada foi excluído.', 'var(--danger-soft)'); return; }
-  if(bt){ bt.disabled = true; bt.textContent = 'Excluindo…'; }
+  if(_admExcluindo) return;                         // um clique só (toques repetidos são ignorados)
+  if(!mtPrincipal() || _admProtegido(email)) return;
+  _admExcluindo = true;
+  const st = $('adm-del-st'); const fala = (t, cor)=>{ if(st){ st.innerHTML = t; st.style.color = cor || ''; } };
+  _admBloqueiaBotoes(true, 'Excluindo…'); fala('Excluindo… não feche esta janela.');
   try{
-    const r = await fnChamar('adminExcluirConta', { email, confirmacao: conf });
-    if(!r || !r.ok) throw new Error('resposta inesperada do servidor');
-    delete allowCache[email]; delete usuariosCache[email];
-    $('modal-inner').innerHTML = `<h3>✅ Conta excluída</h3><p class="mt-muted" style="font-size:13px;line-height:1.55"><b>${mtEsc(email)}</b>: ${r.logins} login(s) excluído(s) do Authentication, ${r.documentos} documento(s) de dados e ${r.participacoes} participação(ões) em desafios apagados.</p><button class="btn btn-primary btn-block" onclick="closeModal();goAdmin()">Voltar ao painel</button>`;
+    let r = null, semFuncao = false;
+    if(!window.__admSemFuncao){
+      try{ r = await fnChamar('adminExcluirConta', { email, confirmacao: email, confirmado: true }); }
+      catch(e){ if(e && e.code === 'sem-funcao'){ semFuncao = true; window.__admSemFuncao = true; } else throw e; }
+    } else semFuncao = true;
+    if(r && r.ok){
+      await _admMarcaExcluida(email, { origem:'servidor', logins:r.logins });
+      await _admDepoisDeExcluir(email);
+      $('modal-inner').innerHTML = `<h3>✅ Aluno excluído</h3><p class="mt-muted" style="font-size:13px;line-height:1.55"><b>${mtEsc(email)}</b>: ${r.logins} login(s) excluído(s) do Authentication, ${r.documentos} documento(s) de dados e ${r.participacoes} participação(ões) em desafios apagados.</p><button class="btn btn-primary btn-block" onclick="admVoltarLista()">Voltar ao painel</button>`;
+      return;
+    }
+    if(!semFuncao) throw new Error('resposta inesperada do servidor');
+    // sem a função do servidor: dados + bloqueio + marca de excluída
+    const res = await admExcluirSoDados(email, true);
+    await _admDepoisDeExcluir(email);
+    $('modal-inner').innerHTML = `<h3>${res.falhou.length ? '⚠️ Exclusão parcial' : '✅ Dados do aluno excluídos'}</h3>
+      <p class="mt-muted" style="font-size:13px;line-height:1.55">${res.feito.length ? 'Feito: ' + mtEsc([...new Set(res.feito)].join(', ')) + '.' : ''}${res.falhou.length ? '<br><b>Não foi possível:</b> ' + mtEsc(res.falhou.join(', ')) + '. Toque em Excluir de novo para tentar o que faltou.' : ''}</p>
+      ${res.ignorados && res.ignorados.length ? `<p class="mt-muted" style="font-size:12px;line-height:1.5">${res.ignorados.length} documento(s) ligado(s) a este e-mail pertencem a outra conta e foram preservados.</p>` : ''}
+      <p class="mt-muted" style="font-size:12.5px;line-height:1.55">A conta está bloqueada e não consegue recriar dados nem ganhar outro teste. <b>O login (Firebase Authentication) só é apagado com a função do servidor publicada</b> (plano Blaze) ou pelo Console do Firebase › Authentication.</p>
+      <button class="btn btn-primary btn-block" onclick="admVoltarLista()">Voltar ao painel</button>`;
   }catch(e){
     console.log('excluir conta:', e);
-    if(bt){ bt.disabled = false; bt.textContent = 'Excluir conta definitivamente'; }
-    if(e && e.code === 'sem-funcao'){
-      fala(`<b>A exclusão completa precisa da função do servidor</b> (functions/, plano Blaze do Firebase), e ela ainda não respondeu. <b>Nada foi excluído.</b><br><br>Sem ela, o navegador só consegue apagar os dados e suspender a conta — o login continua no Authentication até você apagar no Console.
-        <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="admExcluirSoDados('${jsAttr(email)}')">Apagar só os dados e suspender</button>`, 'var(--text-dim)');
-    } else fala('⚠️ O servidor recusou: ' + mtEsc(e && e.message || 'erro') + '. <b>Nada foi dado como excluído.</b>', 'var(--danger-soft)');
-  }
+    _admBloqueiaBotoes(false, 'Excluir aluno');
+    fala('⚠️ Não foi possível excluir: ' + mtEsc((e && e.message) || 'erro') + '. <b>Nada foi dado como excluído.</b>', 'var(--danger-soft)');
+  }finally{ _admExcluindo = false; const back = $('modal-back'); if(back) back.classList.remove('adm-ocupado'); }
 }
-async function admExcluirSoDados(email){
-  const st = $('adm-del-st'); const fala = t=>{ if(st) st.innerHTML = t; };
-  const u = usuariosCache[email] || {}; const uids = [...new Set([...(u._uids||[]), u._uid].filter(Boolean))];
-  const feito = []; const falhou = [];
+// enquanto exclui, a janela não fecha (toque fora, voltar do Android) — o painel fica onde está
+const _closeModalB42 = window.closeModal;
+window.closeModal = function(){ if(_admExcluindo) return; return _closeModalB42.apply(this, arguments); };
+// volta para a lista do painel SEM recarregar tudo (a sessão e a tela do administrador continuam)
+function admVoltarLista(){ closeModal(); try{ showScreen('scr-admin'); renderAdminStats(); renderAdminList(); window.scrollTo(0,0); }catch(e){ goAdmin(); } }
+async function _admMarcaExcluida(email, extra){
+  await db.collection('contasExcluidas').doc(email).set(Object.assign({ em:Date.now(), por:admEu() }, extra||{}));
+}
+// depois de excluir: tira da lista NA HORA (sem recarregar o painel), confere que os dados do administrador
+// continuam na nuvem e regrava se algo faltar
+async function _admDepoisDeExcluir(email){
+  delete allowCache[email]; delete usuariosCache[email];
+  window.__admExcluidas = Object.assign(window.__admExcluidas || {}, { [email]: { em:Date.now() } });
+  try{ renderAdminStats(); renderAdminList(); }catch(e){}
+  try{
+    const meu = await db.collection('usuarios').doc(uidDados()).get();
+    if(!meu.exists){ console.log('documento do administrador ausente: regravando'); try{ _assinaturaNuvem = ''; }catch(x){} saveData(); syncToCloud(); }
+  }catch(e){}
+}
+async function admExcluirSoDados(email, interno){
+  if(!mtPrincipal() || _admProtegido(email)) return { feito:[], falhou:['conta protegida'] };
+  const u = usuariosCache[email] || {};
+  const proibidos = new Set([fbUser && fbUser.uid, uidDados()].filter(Boolean));
+  const candidatos = [...new Set([...(u._uids||[]), u._uid].filter(Boolean))].filter(x=>!proibidos.has(x));
+  const feito = []; const falhou = []; const ignorados = [...proibidos].filter(x=>(u._uids||[]).includes(x));
   const tenta = async (nome, f)=>{ try{ await f(); feito.push(nome); }catch(e){ falhou.push(nome + ' (' + ((e&&e.code)||'erro') + ')'); } };
-  fala('Apagando…');
-  for(const uid of uids){
-    await tenta('arquivo anual', async ()=>{ const s = await db.collection('usuarios').doc(uid).collection('arquivo').get(); for(const d of s.docs || []) await db.collection('usuarios').doc(uid).collection('arquivo').doc(d.id).delete(); });
+  // marca ANTES de apagar: a partir daqui o app do aluno já não recria nada
+  await tenta('marca de conta excluída', ()=>_admMarcaExcluida(email, { origem:'painel' }));
+  await tenta('bloqueio', ()=>db.collection('usuariosAutorizados').doc(email).set({ plano:'gratuito', bloqueado:true, bloqueioMotivo:'Conta excluída pela administração', contaExcluidaEm:Date.now(), atualizadoPor:admEu() }));
+  for(const uid of candidatos){
+    // só apaga documento que é MESMO desta conta (o e-mail gravado no documento confere)
+    let ok = false;
+    try{ const d = await db.collection('usuarios').doc(uid).get(); ok = !d.exists || String((d.data()||{}).email||'').toLowerCase() === email; }catch(e){}
+    if(!ok){ ignorados.push(uid); continue; }   // documento de outra pessoa: não é tocado
+    for(const sub of ['arquivo','backups']){
+      await tenta(sub === 'arquivo' ? 'arquivo anual' : 'registros de backup', async ()=>{ const s = await db.collection('usuarios').doc(uid).collection(sub).get(); for(const d of s.docs || []) await db.collection('usuarios').doc(uid).collection(sub).doc(d.id).delete(); });
+    }
     await tenta('participações', async ()=>{ const ds = await db.collection('desafiosTematicos').get(); for(const d of ds.docs || []){ const r = db.collection('desafiosTematicos').doc(d.id).collection('participantes').doc(uid); const x = await r.get(); if(x.exists) await r.delete(); } });
     await tenta('dados do aluno', ()=>db.collection('usuarios').doc(uid).delete());
   }
   await tenta('vínculo da conta', ()=>db.collection('contas').doc(email).delete());
   await tenta('cargo de administrador', ()=>db.collection('admins').doc(email).delete());
-  await tenta('suspensão', ()=>db.collection('usuariosAutorizados').doc(email).set({ plano:'gratuito', bloqueado:true, bloqueioMotivo:'Conta excluída pela administração', contaExcluidaEm:Date.now(), atualizadoPor:admEu() }));
-  await admRegistrar(falhou.length ? 'excluir-dados-parcial' : 'excluir-dados', email, { feito, falhou });
-  $('modal-inner').innerHTML = `<h3>${falhou.length ? '⚠️ Exclusão parcial' : '✅ Dados apagados e conta suspensa'}</h3>
-    <p class="mt-muted" style="font-size:13px;line-height:1.55">${feito.length ? 'Feito: ' + mtEsc([...new Set(feito)].join(', ')) + '.' : ''}${falhou.length ? '<br><b>Não foi possível:</b> ' + mtEsc(falhou.join(', ')) + '.' : ''}</p>
-    <p class="mt-muted" style="font-size:12.5px;line-height:1.55"><b>O login da pessoa continua existindo no Firebase Authentication.</b> Para apagá-lo: Console do Firebase › Authentication › Usuários › ${mtEsc(email)} › Excluir. Ou publique a função (functions/) para que o painel faça tudo sozinho.</p>
-    <button class="btn btn-primary btn-block" onclick="closeModal();goAdmin()">Voltar ao painel</button>`;
+  await admRegistrar(falhou.length ? 'excluir-dados-parcial' : 'excluir-dados', email, { feito, falhou, ignorados });
+  return { feito, falhou, ignorados };
 }
+// lista: contas marcadas como excluídas não aparecem (mesmo que o app antigo do aluno tenha regravado algo)
+const _loadAdminDataB42 = window.loadAdminData;
+window.loadAdminData = async function(){
+  const r = await _loadAdminDataB42.apply(this, arguments);
+  try{
+    const s = await db.collection('contasExcluidas').get();
+    const m = {}; s.forEach(d=>{ m[d.id] = d.data() || {}; }); window.__admExcluidas = m;
+  }catch(e){}
+  Object.keys(window.__admExcluidas || {}).forEach(em=>{ delete allowCache[em]; delete usuariosCache[em]; });
+  return r;
+};
+// contas excluídas: o principal pode liberar o e-mail para um cadastro novo (sem novo teste Premium)
+function openContasExcluidas(){
+  if(!mtPrincipal()) return;
+  const m = window.__admExcluidas || {}; const L = Object.keys(m).sort();
+  $('modal-inner').innerHTML = `<h3>Contas excluídas</h3>
+    <p class="mt-muted" style="font-size:12.5px;line-height:1.5">Estes e-mails não aparecem na lista e não conseguem recriar dados. "Liberar" permite que a pessoa volte a usar o app com este e-mail (no plano Básico, sem novo teste).</p>
+    <div style="max-height:55vh;overflow:auto">${L.map(em=>`<div class="adm-log" style="display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0;word-break:break-all">${mtEsc(em)}<br><small>${m[em].em?new Date(+m[em].em).toLocaleString('pt-BR'):''}</small></span><button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" onclick="admLiberarEmail('${jsAttr(em)}')">Liberar</button></div>`).join('') || '<div class="mt-muted">Nenhuma conta excluída.</div>'}</div>
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function admLiberarEmail(email){
+  appConfirm(`Liberar ${email} para usar o app de novo? A conta volta no plano Básico (sem novo teste Premium).`, async ()=>{
+    try{
+      await db.collection('contasExcluidas').doc(email).delete();
+      await db.collection('usuariosAutorizados').doc(email).set({ plano:'gratuito', bloqueado:false, exclusaoAnteriorEm:Date.now(), atualizadoPor:admEu() });
+      await admRegistrar('liberar-email', email);
+      delete (window.__admExcluidas||{})[email]; toast('E-mail liberado'); goAdmin();
+    }catch(e){ toast('⚠️ O Firestore recusou (' + ((e&&e.code)||'erro') + ').'); }
+  }, { title:'Liberar e-mail?', okLabel:'Liberar' });
+}
+mtGancho('goAdmin', { depois(){
+  try{
+    if(!mtPrincipal() || $('adm-excl-row')) return;
+    const ref = $('adm-tam-row') || $('adm-log-row'); if(!ref) return;
+    const d = document.createElement('div'); d.className = 'list-row'; d.id = 'adm-excl-row'; d.onclick = openContasExcluidas;
+    d.innerHTML = '🗂️ <span>Contas excluídas</span><span style="margin-left:auto;font-size:11px;color:var(--text-dim)">liberar e-mail</span>'; ref.after(d);
+  }catch(e){}
+}});
+// suporte: liberar a restauração de um backup que não é desta conta (24 h), depois de conferir a identidade
+function admLiberarBackup(email){
+  appConfirm(`Liberar ${email} para restaurar um backup que não foi criado nesta conta, pelas próximas 24 horas?\n\nFaça isso só depois de confirmar que os dados são da própria pessoa.`, async ()=>{
+    try{ await db.collection('liberacoesBackup').doc(email).set({ ate:Date.now()+24*3600000, por:admEu(), em:Date.now() }); await admRegistrar('liberar-backup', email); toast('Restauração liberada por 24 h'); }
+    catch(e){ toast('⚠️ O Firestore recusou (' + ((e&&e.code)||'erro') + '). Publique as regras da Beta 42.'); }
+  }, { title:'Liberar restauração de backup?', okLabel:'Liberar por 24 h' });
+}
+mtGancho('openStudent', { depois(email){
+  try{ const box = $('stud-content'); if(!box || box.querySelector('#adm-lib-bkp') || email === admEu()) return;
+    box.insertAdjacentHTML('beforeend', `<button class="btn btn-ghost btn-block" id="adm-lib-bkp" style="margin-top:8px" onclick="admLiberarBackup('${jsAttr(email)}')">📥 Liberar restauração de backup (24 h)</button>`);
+  }catch(e){}
+}});
 
 // ---------- 5. Registro das ações ----------
 async function openAdminLog(){
@@ -11498,13 +11603,13 @@ async function openAdminLog(){
     const s = await db.collection('adminLog').orderBy('em','desc').limit(80).get();
     const L = []; s.forEach(d=>L.push(d.data()));
     L.sort((a,b)=>msDe(b.em)-msDe(a.em));
-    const nome = { premium:'Premium concedido/renovado', gratuito:'Passou para Gratuito', bloquear:'Conta suspensa', desbloquear:'Conta desbloqueada', 'admin-conceder':'Administrador autorizado', 'admin-remover':'Administrador removido', 'admin-apagar-registro':'Registro de admin apagado', 'excluir-conta':'Conta excluída', 'excluir-conta-parcial':'Exclusão parcial', 'excluir-dados':'Dados apagados e conta suspensa', 'excluir-dados-parcial':'Dados apagados (parcial)' };
+    const nome = { premium:'Premium concedido/renovado', gratuito:'Passou para Básico', bloquear:'Conta suspensa', desbloquear:'Conta desbloqueada', 'admin-conceder':'Administrador autorizado', 'admin-remover':'Administrador removido', 'admin-apagar-registro':'Registro de admin apagado', 'excluir-conta':'Conta excluída', 'excluir-conta-parcial':'Exclusão parcial', 'excluir-dados':'Dados apagados e conta suspensa', 'excluir-dados-parcial':'Dados apagados (parcial)', 'liberar-email':'E-mail liberado após exclusão', 'liberar-backup':'Restauração de backup liberada' };
     $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><div style="max-height:60vh;overflow:auto">${L.map(x=>`<div class="adm-log"><b>${mtEsc(nome[x.acao]||x.acao)}</b> · ${mtEsc(x.alvo||'')}<br>${mtEsc(msDe(x.em)?new Date(msDe(x.em)).toLocaleString('pt-BR'):'')} · por ${mtEsc(x.por||'')}${x.origem==='servidor'?' (servidor)':''}</div>`).join('') || '<div class="mt-muted">Nenhuma ação registrada ainda.</div>'}</div>
       <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
   }catch(e){ $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><p class="mt-muted">Não consegui ler o registro (${mtEsc((e&&e.code)||'erro')}). Publique as regras desta versão (coleção adminLog).</p><button class="btn btn-ghost btn-block" onclick="closeModal()">Fechar</button>`; }
 }
 
-Object.assign(window, { admPremium, admEncerrar, admBloquear, admBloquearConfirma, admExcluirConta, admExcluirContaGo, admExcluirSoDados, admApagarRegistroAdmin, openAdminLog, admRegistrar, fnChamar });
+Object.assign(window, { admPremium, admEncerrar, admBloquear, admBloquearConfirma, admExcluirConta, admExcluirContaGo, admExcluirSoDados, admApagarRegistroAdmin, openAdminLog, admRegistrar, fnChamar, openContasExcluidas, admLiberarEmail, admLiberarBackup, admVoltarLista });
 
 // =====================================================================
 // 38. Beta 40 — Correções de cadastro e usabilidade
@@ -13081,12 +13186,15 @@ window.setTheme = function(){
 
 // ---------- montagem do plano ----------
 // As etapas são as mesmas (reais). Antes eram até 6 × 0,9–1,1 s (~6 s de espera); agora cada etapa
-// marca em 0,36 s — tempo de ler o que foi considerado, sem fingir processamento. No fim, o título vira
+// marca em ~1,1 s (Beta 42) — tempo de ler o que foi considerado, sem fingir processamento. No fim, o título vira
 // "Plano pronto" e a tela de treinos entra com os dias e exercícios em sequência.
 const _buildB41 = window.runBuildingScreen;
 window.runBuildingScreen = function(m, steps, done, opts){
   opts = Object.assign({}, opts || {});
-  if(!opts.passo || opts.passo > 360) opts.passo = mtMovimentoOk() ? 360 : 160;
+  // Beta 42: 0,36 s por etapa era rápido demais para ler. Cada etapa fica ~1,1 s (o máximo da tela de
+  // montagem) e o "Plano pronto" fica ~1 s visível antes de abrir o plano. Continua sem espera inventada:
+  // são as mesmas etapas reais, e o plano já está gerado quando a tela aparece.
+  opts.passo = 1100; opts.final = 1000;
   const fim = function(){
     window.__mtPlanoNovo = Date.now();
     if(typeof done === 'function') return done.apply(this, arguments);
@@ -13124,29 +13232,21 @@ const _arcos = (cx,cy,r0,n,gap,a0,a1)=>{ let s=''; for(let i=0;i<n;i++){ const r
   s += `<path class="d-linha" stroke-opacity="${(0.55-i*0.1).toFixed(2)}" d="M${p(a0)}A${r} ${r} 0 0 1 ${p(a1)}"/>`; } return s; };
 const _vel = (x,y,n,len,dx)=>{ let s=''; for(let i=0;i<n;i++){ s += `<path class="d-linha" stroke-opacity="${(0.5-i*0.1).toFixed(2)}" d="M${x+i*dx} ${y+i*9}h${len-i*8}"/>`; } return s; };
 const _B41 = (corpo)=>DECO3(corpo);
+// Beta 42: Perfil, Desafios, Corrida e Histórico voltam a usar os desenhos da Beta 40 (parte 22) — pessoa,
+// medalha e pista — e o Histórico ganha um desenho de registros (parte 45). Estes daqui ficam para as outras abas.
 Object.assign(DECO2_SVG, {
   musculacao: _B41(`<circle class="d-fundo" cx="176" cy="58" r="54"/>${_dpt(130,14,6,3,9)}${_arcos(188,70,30,3,12,190,330)}
     ${_vel(92,58,3,46,6)}
     <g transform="rotate(-18 172 66)"><path class="d-linha" d="M140 66h64" stroke-width="3"/><rect class="d-acf" x="146" y="50" width="8" height="32" rx="3" stroke="none"/><rect class="d-acf" x="190" y="50" width="8" height="32" rx="3" stroke="none"/><rect class="d-fill" x="138" y="56" width="6" height="20" rx="2.5"/><rect class="d-fill" x="200" y="56" width="6" height="20" rx="2.5"/></g>`),
-  corrida: _B41(`<circle class="d-fundo" cx="176" cy="66" r="52"/>${_arcos(220,128,46,4,13,200,272)}${_dpt(118,16,5,3,9)}
-    <path class="d-ac" d="M150 54l9 9-9 9M164 54l9 9-9 9M178 54l9 9-9 9" stroke-width="2.4" stroke-opacity=".9"/>
-    ${_vel(96,40,3,40,5)}`),
   biblioteca: _B41(`<circle class="d-fundo" cx="168" cy="58" r="52"/>${_dpt(126,12,7,2,9)}
     <rect class="d-fill" x="140" y="30" width="46" height="34" rx="8" transform="rotate(-8 163 47)"/><rect class="d-fill" x="160" y="40" width="48" height="36" rx="8"/>
     <circle class="d-ac" cx="184" cy="58" r="10" stroke-width="2"/><path class="d-acf" stroke="none" d="M181 53.5l8 4.5-8 4.5z"/>${_vel(100,86,3,44,5)}`),
   plano: _B41(`<circle class="d-fundo" cx="170" cy="60" r="52"/>
     ${[0,1,2,3].map(c=>[0,1,2].map(r=>{ const on = (c+r)%3===0; return `<rect class="${on?'d-acf':'d-fill'}" ${on?'stroke="none"':''} x="${134+c*18}" y="${30+r*18}" width="12" height="12" rx="3.5"/>`; }).join('')).join('')}
     ${_arcos(170,60,46,2,10,200,330)}${_dpt(110,22,3,4,9)}`),
-  desafios: _B41(`<circle class="d-fundo" cx="172" cy="60" r="54"/>${_arcos(172,60,24,3,11,0,359)}
-    <path class="d-acf" stroke="none" d="M172 44.5l4.6 9.4 10.4 1.5-7.5 7.3 1.8 10.3-9.3-4.9-9.3 4.9 1.8-10.3-7.5-7.3 10.4-1.5z"/>
-    ${[20,70,110,160,250,300].map(a=>{ const r1=60,r2=66; const x1=172+r1*Math.cos(a*Math.PI/180), y1=60+r1*Math.sin(a*Math.PI/180), x2=172+r2*Math.cos(a*Math.PI/180), y2=60+r2*Math.sin(a*Math.PI/180); return `<path class="d-ac" stroke-opacity=".55" d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`; }).join('')}${_dpt(106,18,3,3,9)}`),
-  perfil: _B41(`<circle class="d-fundo" cx="170" cy="60" r="52"/>${_arcos(170,60,26,3,12,150,390)}
-    <path class="d-ac" d="M100 66h34l7-16 9 30 8-22 6 8h40" stroke-width="2.3"/>${_dpt(186,14,3,3,9)}`),
   progresso: _B41(`<circle class="d-fundo" cx="172" cy="58" r="50"/>${_dpt(124,14,7,2,9)}
     <path class="d-fill" stroke="none" d="M112 98L138 80l20 8 24-22 26-24V98z"/><path class="d-ac" d="M112 98L138 80l20 8 24-22 26-24" stroke-width="2.4"/>
     <circle class="d-acf" cx="208" cy="42" r="3.5" stroke="none"/><path class="d-linha" d="M112 98h96" stroke-opacity=".5"/>`),
-  historico: _B41(`<circle class="d-fundo" cx="170" cy="60" r="50"/>${_arcos(170,60,22,3,11,-90,200)}
-    <path class="d-ac" d="M170 44v17l10 7" stroke-width="2.4"/><circle class="d-acf" cx="170" cy="61" r="2.6" stroke="none"/>${_dpt(108,20,3,4,9)}`),
   admin: _B41(`<circle class="d-fundo" cx="170" cy="58" r="50"/>${_dpt(118,14,4,3,9)}
     <rect class="d-fill" x="146" y="22" width="52" height="70" rx="9"/><path class="d-ac" d="M155 42l4 4 8-9M155 60l4 4 8-9" stroke-width="2.2"/><path class="d-linha" d="M172 43h18M172 61h18M155 78h34" stroke-opacity=".7"/>`),
   montarMusculacao: _B41(`<circle class="d-fundo" cx="170" cy="60" r="50"/>${_dpt(116,16,4,4,9)}
@@ -13160,3 +13260,532 @@ Object.assign(DECO2_SVG, {
 try{ const el = document.getElementById('app-deco'); if(el) delete el.dataset.k; }catch(e){}
 
 Object.assign(window, { mtMovimentoOk });
+
+// =====================================================================
+// 44. Beta 42 — Confirmação de e-mail, Google × e-mail e senha, teste Premium, backup protegido
+// =====================================================================
+
+// ---------- 1. Confirmação de e-mail sem precisar sair e entrar de novo ----------
+// CAUSA: depois que o aluno clica no link, o Firebase só muda o estado no servidor. No aparelho, o objeto
+// do usuário (emailVerified) e o TOKEN de acesso continuam os antigos até o login seguinte — e as regras
+// do Firestore olham o token (email_verified). O botão "Já confirmei" só recarregava a página: o app subia
+// com o mesmo token antigo, a leitura do plano era recusada (permission-denied) e aparecia "Não foi
+// possível entrar". Sair e entrar gerava um token novo — por isso "funcionava" assim.
+// AGORA: user.reload() busca o estado no servidor e getIdToken(true) troca o token na hora; a checagem de
+// acesso roda de novo sem recarregar a página e sem criar nada novo.
+function _mtPrazo(p, ms){ return Promise.race([p, new Promise((_, r)=>setTimeout(()=>r(Object.assign(new Error('timeout'), { code:'timeout' })), ms))]); }
+function _mtEmailReal(u){ const em = String((u && u.email) || '').toLowerCase(); return !!em && !ehLoginInterno(em); }
+async function mtAtualizaVerificacao(user){
+  if(!user || !_mtEmailReal(user)) return user;
+  try{
+    if(!user.emailVerified && typeof user.reload === 'function'){ await _mtPrazo(user.reload(), 9000); user = fbAuth.currentUser || user; }
+    if(user.emailVerified && typeof user.getIdTokenResult === 'function'){
+      const r = await _mtPrazo(user.getIdTokenResult(), 9000);
+      if(!r || !r.claims || r.claims.email_verified !== true) await _mtPrazo(user.getIdToken(true), 9000);
+    }
+  }catch(e){ console.log('verificação do e-mail:', e); }
+  return user;
+}
+const _afterSignInB42 = window.afterGoogleSignIn;
+window.afterGoogleSignIn = async function(user){
+  user = await mtAtualizaVerificacao(user);
+  return _afterSignInB42.call(this, user);
+};
+let _mtConferindo = false;
+window.retryAccessCheck = async function(){
+  if(_mtConferindo) return;                       // um toque só: nada de checagens em paralelo
+  const b = $('noaccess-retry'); const st = mtNoaccessStatus();
+  let u = fbAuth.currentUser || fbUser;
+  if(!u){ try{ location.reload(); }catch(e){} return; }
+  _mtConferindo = true;
+  if(b){ b.disabled = true; b.dataset.txt = b.dataset.txt || b.textContent; b.textContent = 'Verificando...'; }
+  if(st) st.textContent = '';
+  try{
+    try{ localStorage.removeItem('metatreino_access_' + String(u.email||'').toLowerCase()); }catch(e){}
+    u = await mtAtualizaVerificacao(u);
+    if(_mtEmailReal(u) && !u.emailVerified){
+      if(st) st.innerHTML = 'Ainda não recebemos a confirmação deste e-mail. Abra o link que enviamos (veja também o spam) e toque de novo. Se o link expirou, use <b>Reenviar</b>.';
+      return;
+    }
+    window.__acessoErro = '';
+    await window.afterGoogleSignIn(u);            // segue direto para o app, sem novo login
+  }catch(e){
+    if(st) st.textContent = 'Não consegui confirmar agora (' + ((e && e.code) || 'erro') + '). Confira a internet e tente de novo.';
+  }finally{
+    _mtConferindo = false;
+    if(b){ b.disabled = false; b.textContent = b.dataset.txt || 'Tentar de novo'; }
+  }
+};
+function mtNoaccessStatus(){
+  let st = $('noaccess-st');
+  if(!st){ const rt = $('noaccess-retry'); if(!rt) return null; st = document.createElement('div'); st.id = 'noaccess-st'; st.className = 'na-status'; st.setAttribute('role','status'); st.setAttribute('aria-live','polite'); rt.before(st); }
+  return st;
+}
+
+// ---------- 2. Google × e-mail e senha: a MESMA conta ----------
+// O app já junta os dados de logins diferentes com o mesmo e-mail VERIFICADO (contas/{email}, Beta 34).
+// Isso falhava quando a primeira sessão por e-mail ficava com o token antigo (item 1): o vínculo não era
+// gravado e o login pelo Google, sem achar nada, abria um cadastro novo. Corrigido o item 1, o vínculo
+// nasce na primeira entrada confirmada. Além disso, agora os métodos são VINCULADOS no Firebase
+// Authentication (um UID só), sempre provando a posse dos dois lados:
+//   • Google com e-mail que já tem senha (erro account-exists-with-different-credential): pede a senha
+//     da conta existente, entra nela e liga o Google a ela (linkWithCredential).
+//   • Perfil › Formas de entrar: "Vincular Google" (linkWithPopup) e "Criar senha" (linkWithCredential),
+//     com nova autenticação quando o Firebase pede (requires-recent-login).
+// Nunca junta contas só porque o texto do e-mail é igual.
+function _mtGoogleProvider(){ const p = new firebase.auth.GoogleAuthProvider(); try{ p.setCustomParameters({ prompt:'select_account' }); }catch(e){} return p; }
+function _mtProvedores(u){ return ((u && u.providerData) || []).map(p=>p && p.providerId).filter(Boolean); }
+window.doGoogleSignIn = function(){
+  const btn = $('google-btn'), lbl = $('google-btn-lbl'), err = $('auth-err');
+  if(btn && btn.dataset.ocupado === '1') return;
+  if(err) err.innerHTML = '';
+  if(btn){ btn.style.opacity = '0.7'; btn.dataset.ocupado = '1'; }
+  if(lbl) lbl.textContent = 'Entrando...';
+  const volta = ()=>{ if(btn){ btn.style.opacity = '1'; btn.dataset.ocupado = ''; } if(lbl) lbl.textContent = 'Continuar com Google'; };
+  fbAuth.signInWithPopup(_mtGoogleProvider()).then(volta, e=>{
+    console.log('Erro no login Google:', e); volta();
+    if(e && e.code === 'auth/account-exists-with-different-credential') return mtVincularGoogleNaContaExistente(e);
+    if(err && e && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request')
+      err.innerHTML = '<div class="err">' + (e.code === 'auth/popup-blocked' ? 'O navegador bloqueou a janela do Google. Permita pop-ups para este site e tente de novo.' : 'Não foi possível entrar com o Google. Tente novamente.') + '</div>';
+  });
+};
+function mtVincularGoogleNaContaExistente(e){
+  const pend = e.credential || (firebase.auth.GoogleAuthProvider.credentialFromError ? firebase.auth.GoogleAuthProvider.credentialFromError(e) : null);
+  const email = String(e.email || (e.customData && e.customData.email) || '').toLowerCase();
+  window.__mtGooglePendente = pend;
+  $('modal-inner').innerHTML = `<h3>Este e-mail já tem conta</h3>
+    <p class="mt-muted" style="font-size:13.5px;line-height:1.55">A conta <b>${mtEsc(email)}</b> foi criada com e-mail e senha. Para entrar também pelo Google <b>na mesma conta</b> (com seus treinos, plano e histórico), confirme a senha uma vez.</p>
+    <div class="field"><label>Senha da conta</label><input class="input" type="password" id="lk-pass" autocomplete="current-password"></div>
+    <div id="lk-st" class="na-status" role="status" aria-live="polite"></div>
+    <button class="btn btn-primary btn-block" id="lk-go" onclick="mtVincularGoogleConfirma('${jsAttr(email)}')">Confirmar e vincular o Google</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="mtEsqueciSenhaVinculo('${jsAttr(email)}')">Esqueci a senha</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+}
+async function mtVincularGoogleConfirma(email){
+  const b = $('lk-go'), st = $('lk-st'); if(b && b.disabled) return;
+  const pass = ($('lk-pass')||{}).value || '';
+  if(pass.length < 6){ if(st) st.textContent = 'Digite a senha da conta.'; return; }
+  if(b){ b.disabled = true; b.textContent = 'Vinculando...'; }
+  try{
+    const cred = await fbAuth.signInWithEmailAndPassword(email, pass);   // prova que é o dono da conta
+    if(window.__mtGooglePendente) await cred.user.linkWithCredential(window.__mtGooglePendente);   // e liga o Google a ela (mesmo UID)
+    window.__mtGooglePendente = null;
+    closeModal(); toast('Google vinculado: agora você entra pelos dois jeitos na mesma conta.');
+  }catch(e){
+    console.log('vincular Google:', e);
+    if(b){ b.disabled = false; b.textContent = 'Confirmar e vincular o Google'; }
+    if(st) st.textContent = (e && (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential')) ? 'Senha incorreta.' : authMsgErro(e && e.code);
+  }
+}
+function mtEsqueciSenhaVinculo(email){
+  fbAuth.sendPasswordResetEmail(email).then(()=>toast('Enviamos o link para criar uma nova senha. Depois volte e vincule o Google.'), e=>toast(authMsgErro(e && e.code)));
+}
+// mensagens: conta criada pelo Google e tentativa com e-mail e senha
+const _authMsgErroB42 = window.authMsgErro;
+window.authMsgErro = function(code){
+  if(code === 'auth/email-already-in-use') return 'Já existe uma conta com esse e-mail — talvez criada pelo <b>Google</b>. Toque em <b>Continuar com Google</b> ou em <b>Já tenho conta</b>. Nenhuma conta nova foi criada.';
+  if((code === 'auth/invalid-credential' || code === 'auth/wrong-password') && typeof authModo !== 'undefined' && authModo === 'entrar')
+    return 'E-mail ou senha incorretos. <span style="display:block;margin-top:6px;font-size:12.5px;opacity:.9">Criou a conta pelo <b>Google</b>? Entre pelo botão do Google. Depois, em <b>Perfil › Formas de entrar</b>, você pode criar uma senha para a mesma conta (ou use <b>Esqueci a senha</b>).</span>';
+  return _authMsgErroB42.apply(this, arguments);
+};
+// Perfil › Formas de entrar
+function openFormasDeEntrar(){
+  const u = fbAuth.currentUser || fbUser; if(!u) return;
+  const prov = _mtProvedores(u); const temG = prov.includes('google.com'), temS = prov.includes('password');
+  const linha = (nome, ok, acao)=>`<div class="fe-linha"><div><b>${nome}</b><small>${ok ? 'ativo nesta conta' : 'não vinculado'}</small></div>${ok ? '<span class="fe-ok">✓</span>' : acao}</div>`;
+  $('modal-inner').innerHTML = `<h3>Formas de entrar</h3>
+    <p class="mt-muted" style="font-size:13px;line-height:1.5">Todas levam à <b>mesma conta</b> (${mtEsc(u.email||'')}), com os mesmos treinos, plano e histórico.</p>
+    ${linha('Google', temG, `<button class="btn btn-ghost" onclick="mtVincularGoogle()">Vincular</button>`)}
+    ${linha('E-mail e senha', temS, `<button class="btn btn-ghost" onclick="mtCriarSenha()">Criar senha</button>`)}
+    <div id="fe-st" class="na-status" role="status" aria-live="polite"></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function _feFala(t){ const s = $('fe-st'); if(s) s.innerHTML = t; }
+async function mtVincularGoogle(){
+  const u = fbAuth.currentUser; if(!u) return;
+  try{
+    const r = await u.linkWithPopup(_mtGoogleProvider());
+    const g = ((r && r.user && r.user.providerData) || []).find(p=>p.providerId === 'google.com');
+    if(g && g.email && u.email && g.email.toLowerCase() !== u.email.toLowerCase()){
+      await r.user.unlink('google.com');            // conta Google de outro e-mail: desfaz para não confundir
+      _feFala('Essa conta Google usa outro e-mail (' + mtEsc(g.email) + '). Escolha a conta Google de <b>' + mtEsc(u.email) + '</b>.'); return;
+    }
+    toast('Google vinculado à sua conta.'); openFormasDeEntrar();
+  }catch(e){
+    console.log('vincular Google (perfil):', e);
+    if(e && (e.code === 'auth/credential-already-in-use' || e.code === 'auth/email-already-in-use'))
+      _feFala('Esse Google já tem um login próprio no MetaTreino. Entre com ele uma vez: com o mesmo e-mail confirmado, o app usa os <b>mesmos dados</b> desta conta.');
+    else if(e && e.code === 'auth/requires-recent-login') _feFala('Por segurança, saia e entre de novo e tente outra vez.');
+    else if(e && e.code !== 'auth/popup-closed-by-user') _feFala('Não foi possível vincular agora (' + mtEsc(e.code || 'erro') + ').');
+  }
+}
+function mtCriarSenha(){
+  const u = fbAuth.currentUser; if(!u) return;
+  $('modal-inner').innerHTML = `<h3>Criar senha</h3>
+    <p class="mt-muted" style="font-size:13px;line-height:1.5">Para entrar também com <b>${mtEsc(u.email||'')}</b> e senha, na mesma conta.</p>
+    <div class="field"><label>Nova senha (mín. 6)</label><input class="input" type="password" id="cs-1" autocomplete="new-password"></div>
+    <div class="field"><label>Repita a senha</label><input class="input" type="password" id="cs-2" autocomplete="new-password"></div>
+    <div id="cs-st" class="na-status" role="status" aria-live="polite"></div>
+    <button class="btn btn-primary btn-block" id="cs-go" onclick="mtCriarSenhaGo()">Criar senha</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openFormasDeEntrar()">Voltar</button>`;
+}
+async function mtCriarSenhaGo(){
+  const u = fbAuth.currentUser; const b = $('cs-go'), st = $('cs-st'); if(!u || (b && b.disabled)) return;
+  const p1 = ($('cs-1')||{}).value || '', p2 = ($('cs-2')||{}).value || '';
+  if(p1.length < 6) return st && (st.textContent = 'A senha precisa ter pelo menos 6 caracteres.');
+  if(p1 !== p2) return st && (st.textContent = 'As duas senhas não são iguais.');
+  if(b){ b.disabled = true; b.textContent = 'Criando...'; }
+  const cred = firebase.auth.EmailAuthProvider.credential(u.email, p1);
+  const liga = ()=>u.linkWithCredential(cred);
+  try{
+    try{ await liga(); }
+    catch(e){
+      if(e && e.code === 'auth/requires-recent-login'){ await u.reauthenticateWithPopup(_mtGoogleProvider()); await liga(); }   // prova a identidade pelo Google
+      else throw e;
+    }
+    toast('Senha criada: agora você também entra com e-mail e senha.'); openFormasDeEntrar();
+  }catch(e){
+    console.log('criar senha:', e);
+    if(b){ b.disabled = false; b.textContent = 'Criar senha'; }
+    if(st) st.innerHTML = (e && (e.code === 'auth/email-already-in-use' || e.code === 'auth/credential-already-in-use' || e.code === 'auth/provider-already-linked'))
+      ? 'Já existe um login com e-mail e senha para este endereço. Entre com ele uma vez: com o e-mail confirmado, o app usa os <b>mesmos dados</b>. Esqueceu a senha? Use "Esqueci a senha" na tela de entrada.'
+      : authMsgErro(e && e.code);
+  }
+}
+// trocar senha: quem tem Google E senha também pode trocar a senha
+const _openChangePasswordB42 = window.openChangePassword;
+window.openChangePassword = function(){
+  const u = fbAuth.currentUser || fbUser; const prov = _mtProvedores(u);
+  if(prov.includes('google.com') && !prov.includes('password')){
+    $('modal-inner').innerHTML = `<h3>Senha</h3><p class="mt-muted" style="font-size:13px;line-height:1.5">Sua conta entra pelo <b>Google</b>. Se quiser entrar também com e-mail e senha, crie uma senha para esta mesma conta.</p>
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="mtCriarSenha()">Criar senha</button><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+    $('modal-back').classList.add('on'); return;
+  }
+  if(prov.includes('google.com')){   // tem as duas: o formulário de troca de senha de sempre
+    $('modal-inner').innerHTML = `<h3>🔑 Trocar minha senha</h3>
+      <p style="color:var(--text-dim);font-size:13px;line-height:1.5">Sua conta: <b>${mtEsc(u.email||'')}</b> (entra também pelo Google)</p>
+      <div class="field" style="margin-top:12px"><label>Senha atual</label><input class="input" type="password" id="cp-old" autocomplete="current-password"></div>
+      <div class="field"><label>Nova senha (mín. 6)</label><input class="input" type="password" id="cp-new" autocomplete="new-password"></div>
+      <div class="field"><label>Repita a nova senha</label><input class="input" type="password" id="cp-new2" autocomplete="new-password"></div>
+      <div id="cp-err"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="doChangePassword()">Salvar nova senha</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Cancelar</button>`;
+    $('modal-back').classList.add('on'); return;
+  }
+  return _openChangePasswordB42.apply(this, arguments);
+};
+mtGancho('renderProfile', { depois(){
+  try{
+    if($('formas-row')) return;
+    const ref = [...document.querySelectorAll('#scr-profile .list-row')].find(r=>/openChangePassword/.test(r.getAttribute('onclick')||''));
+    const row = document.createElement('div'); row.className = 'list-row'; row.id = 'formas-row'; row.setAttribute('onclick', 'openFormasDeEntrar()');
+    row.innerHTML = '<span>🔐</span> <span>Formas de entrar</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">Google · e-mail ›</span>';
+    if(ref) ref.before(row);
+  }catch(e){}
+}});
+
+// ---------- 3. Teste Premium de 30 dias: começa ao concluir o perfil ----------
+// Regra: a contagem começa quando o aluno conclui a configuração inicial do perfil (antes começava na primeira
+// entrada com e-mail confirmado, ainda no meio do cadastro). Uma vez por e-mail: o documento do plano já
+// existir impede um novo teste (regras do Firestore) — "Começar do zero" não reinicia nada.
+// Durante o cadastro, quem ainda vai ganhar o teste já pode escolher os temas Premium.
+const _criaTesteB42 = window.criaTestePremium;
+window.__mtPodeCriarTeste = false;
+window.criaTestePremium = async function(){
+  if(!window.__mtPodeCriarTeste) return null;          // login: não cria; quem cria é o fim do perfil
+  return _criaTesteB42.apply(this, arguments);
+};
+function mtPerfilPronto(){ return !!(state && state.user && state.user.profile && state.user.profile.quiz_done); }
+function mtTestePendente(){
+  try{
+    const u = fbAuth.currentUser || fbUser;
+    return !!(u && _mtEmailReal(u) && u.emailVerified && !myAccess && state && state.user && !state.user.isAdmin && !mtPerfilPronto());
+  }catch(e){ return false; }
+}
+const _mtPremiumB42 = window.mtPremium;
+window.mtPremium = function(){ return _mtPremiumB42.apply(this, arguments) || mtTestePendente(); };
+let _mtTesteCriando = false;
+async function mtTesteIniciar(origem){
+  const u = fbAuth.currentUser || fbUser;
+  if(_mtTesteCriando || !u || !_mtEmailReal(u) || !u.emailVerified || !state.user || state.user.isAdmin || !mtPerfilPronto()) return null;
+  if(myAccess) return null;
+  _mtTesteCriando = true;
+  try{
+    const email = String(u.email).toLowerCase();
+    const d = await _mtPrazo(db.collection('usuariosAutorizados').doc(email).get(), 9000);
+    if(d.exists){ myAccess = d.data(); return null; }           // já teve teste/plano: nunca cria outro
+    window.__mtPodeCriarTeste = true;
+    const al = await window.criaTestePremium(email, (state.user.profile && state.user.profile.nickname) || u.displayName);
+    myAccess = al;
+    try{ localStorage.setItem('metatreino_access_' + email, JSON.stringify({ v:40, isAdmin:false, allowData:al, at:Date.now() })); }catch(e){}
+    try{ mtPlanoVerifica(); }catch(e){}
+    const ate = new Date(Date.now() + TESTE_PREMIUM_DIAS*86400000).toLocaleDateString('pt-BR');
+    setTimeout(()=>toast(`⭐ Seu teste Premium de 30 dias começou hoje e vai até ${ate}.`, 5000), origem === 'perfil' ? 900 : 2500);
+    return al;
+  }catch(e){ console.log('teste Premium (segue no Básico):', e); return null; }
+  finally{ window.__mtPodeCriarTeste = false; _mtTesteCriando = false; }
+}
+mtGancho('saveQuiz', { depois(){ if(mtPerfilPronto()) mtTesteIniciar('perfil'); } });
+mtGancho('bootAfterAuth', { depois(){ setTimeout(()=>{ if(mtPerfilPronto()) mtTesteIniciar('entrada'); }, 1200); } });
+
+// texto do cadastro: fica no index.html (#auth-teste), logo abaixo do botão do Google — vale para as duas formas de criar conta
+function mtComoFuncionaTeste(){
+  const inc = ['biblioteca','alimentacao','relatorio','assistente','temas','inicioCompleto','clima'].map(k=>MT_RECURSOS[k] && `<li>${mtEsc(MT_RECURSOS[k].nome)}</li>`).filter(Boolean).join('');
+  $('modal-inner').innerHTML = `<h3>Como funciona o teste gratuito</h3>
+    <div class="tf-lista">
+      <div><b>Quando começa</b><span>Os 30 dias começam a contar quando você conclui a configuração inicial do seu perfil (depois de confirmar o e-mail). O app avisa a data de término.</span></div>
+      <div><b>O que está incluído</b><span>Tudo do plano Básico e mais:</span><ul>${inc}</ul></div>
+      <div><b>Quando termina</b><span>A conta passa sozinha para o plano Básico, que é gratuito. Não existe cobrança automática nem cartão de crédito.</span></div>
+      <div><b>Seus dados</b><span>Treinos, histórico, cargas, evolução e conquistas continuam todos com você. O que é Premium fica guardado e volta se você contratar.</span></div>
+      <div><b>Uma vez por conta</b><span>O teste vale uma vez por e-mail. Usar "Começar do zero" não reinicia a contagem.</span></div>
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal()">Entendi</button>`;
+  $('modal-back').classList.add('on');
+}
+
+// ---------- 4. Backup ligado à conta que o criou ----------
+// O arquivo leva o UID do dono e um resumo (SHA-256) do conteúdo; o mesmo resumo é registrado na nuvem em
+// usuarios/{uid}/backups/{resumo}, que só a própria conta lê (regras do Firestore). Para importar:
+//   1) o resumo tem que bater com o conteúdo (arquivo editado = recusado);
+//   2) o registro tem que existir NA CONTA DE QUEM IMPORTA — editar o "dono" dentro do JSON não adianta.
+// Backups antigos (sem resumo) entram se forem da mesma conta (e-mail do backup = e-mail da conta).
+// Exceção: o suporte (administrador) libera a restauração para um e-mail por 24 h (liberacoesBackup/{email}).
+async function _mtSha256(txt){
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+window.exportMyData = async function(){
+  let arquivo = null;
+  if(typeof arqTemArquivo === 'function' && arqTemArquivo()){
+    toast('📦 Juntando seu arquivo anual...');
+    try{ const docs = (await arqCarregar()).docs; arquivo = {}; Object.keys(docs).forEach(id=>{ arquivo[id] = _arqLer(docs[id]); }); }catch(e){ toast('📶 Sem conexão: o backup vai sem o arquivo anual (os últimos 90 dias vão completos)'); }
+  }
+  const dados = JSON.parse(JSON.stringify(arquivo ? { estado:state, arquivo } : { estado:state }));
+  const hash = await _mtSha256(JSON.stringify(dados));
+  const dono = uidDados();
+  try{ await _mtPrazo(db.collection('usuarios').doc(dono).collection('backups').doc(hash).set({ em:Date.now(), versao:APP_VERSION, tam:JSON.stringify(dados).length }), 9000); }
+  catch(e){ console.log('registro do backup (fica na fila e sobe quando a internet voltar):', e); }
+  const data = { app:'MetaTreino', versao:APP_VERSION, formato:2, exportadoEm:new Date().toISOString(), dono, hash, dados };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `metatreino-backup-${chaveDia(new Date())}.json`;
+  a.click();
+  toast('📥 Backup baixado — ele só pode ser restaurado nesta conta');
+};
+async function mtBackupLiberado(){
+  try{ const em = String((fbUser && fbUser.email) || '').toLowerCase(); if(!em) return false;
+    const d = await _mtPrazo(db.collection('liberacoesBackup').doc(em).get(), 8000);
+    return d.exists && +d.data().ate > Date.now(); }catch(e){ return false; }
+}
+function mtBackupRecusado(motivo){
+  const c = (typeof coachContact !== 'undefined' && coachContact) || {};
+  const n = String(c.whatsapp||'').replace(/\D/g,'');
+  const msg = encodeURIComponent('Olá! Preciso restaurar um backup do MetaTreino na minha conta' + (fbUser && fbUser.email ? ' (' + fbUser.email + ')' : '') + '.');
+  $('modal-inner').innerHTML = `<h3>Backup não pode ser restaurado</h3>
+    <p class="mt-muted" style="font-size:13.5px;line-height:1.55">${motivo}</p>
+    <p class="mt-muted" style="font-size:12.5px;line-height:1.5">Seus dados atuais <b>não foram alterados</b>. Se este backup é realmente seu (por exemplo, de uma conta antiga), o suporte pode confirmar sua identidade e liberar a restauração.</p>
+    ${n ? `<a class="btn btn-ghost btn-block" href="https://wa.me/${n}?text=${msg}" target="_blank" rel="noopener">Falar com o suporte</a>` : ''}
+    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+function _mtRestaura(est, data, liberado){
+  appConfirm(`Seus dados atuais serão SUBSTITUÍDOS pelos do arquivo.${liberado ? '\n\nRestauração liberada pelo suporte.' : ''}`, ()=>{
+    const keepUser = { ...est.user, email: state.user.email, isAdmin: state.user.isAdmin };
+    state = {...state, ...est, user:keepUser, ui:{tab:'home',selectedSession:null}};
+    if(!state.modules || typeof state.modules !== 'object') state.modules = {lift:null, run:null};
+    try{ migrateExerciseIds(); }catch(e){ console.log('Erro ao sanear o backup:', e); }
+    ensureStats(); saveData(); syncToCloud();
+    const arq = (data.dados && data.dados.arquivo) || data.arquivo;
+    try{ if(arq && typeof arqRestaurar==='function') arqRestaurar(arq); }catch(e){ console.log('arquivo do backup:', e); }
+    toast('✅ Backup restaurado com sucesso!'); goTab('home');
+  }, {title:'Restaurar backup?', emo:'📥', okLabel:'Sim, restaurar', danger:true});
+}
+window.importMyData = function(ev){
+  const file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    let data;
+    try{ data = JSON.parse(reader.result); }catch(e){ toast('⚠️ Não foi possível ler o arquivo'); return; }
+    const est = (data && data.dados && data.dados.estado) || (data && data.estado) || data;
+    if(!est || !est.user){ toast('⚠️ Arquivo inválido — não parece um backup do MetaTreino'); return; }
+    if('modules' in est && (est.modules === null || typeof est.modules !== 'object')){ toast('⚠️ Backup corrompido: a parte dos treinos está inválida'); return; }
+    if(navigator.onLine === false){ toast('📶 Para restaurar um backup é preciso internet (a conta dona do arquivo é conferida na nuvem).'); return; }
+    toast('Conferindo o backup...');
+    try{
+      if(data.formato === 2 && data.dados){
+        const h = await _mtSha256(JSON.stringify(data.dados));
+        if(h !== data.hash) return mtBackupRecusado('O conteúdo deste arquivo foi <b>alterado</b> depois de ser criado.');
+        const reg = await _mtPrazo(db.collection('usuarios').doc(uidDados()).collection('backups').doc(h).get(), 9000);
+        if(reg.exists) return _mtRestaura(est, data, false);
+        if(await mtBackupLiberado()) return _mtRestaura(est, data, true);
+        return mtBackupRecusado('Este backup foi criado em <b>outra conta</b> do MetaTreino e só pode ser restaurado nela.');
+      }
+      // formato antigo (antes da Beta 42): sem resumo — vale se for desta mesma conta
+      const emArq = String((est.user && est.user.email) || '').toLowerCase();
+      const meu = String((state.user && state.user.email) || '').toLowerCase();
+      if(emArq && emArq === meu) return _mtRestaura(est, data, false);
+      if(await mtBackupLiberado()) return _mtRestaura(est, data, true);
+      return mtBackupRecusado(emArq ? 'Este backup antigo pertence a <b>outra conta</b> do MetaTreino.' : 'Não foi possível confirmar a conta dona deste backup antigo.');
+    }catch(e){ console.log('importar backup:', e); toast('⚠️ Não consegui conferir o backup agora (' + ((e && e.code) || 'erro') + '). Nada foi alterado.'); }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+};
+
+// ---------- 5. Montagem do plano: erro vira mensagem com "Tentar de novo" ----------
+// O plano é gerado ANTES da tela de montagem aparecer (ela mostra o que foi feito de verdade), então a tela
+// nunca some antes do resultado. Se a geração falhar, antes nada acontecia (o botão parecia não funcionar).
+const _finishSetupB42 = window.finishSetup;
+window.finishSetup = function(m){
+  try{ return _finishSetupB42.apply(this, arguments); }
+  catch(e){
+    console.log('montar plano:', e);
+    try{ const ov = $('building-ov'); if(ov){ ov.className = ''; ov.innerHTML = ''; ov.setAttribute('style','display:none'); } }catch(x){}
+    $('modal-inner').innerHTML = `<h3>Não consegui montar seu plano</h3>
+      <p class="mt-muted" style="font-size:13.5px;line-height:1.55">Algo deu errado ao preparar o planejamento. Suas respostas continuam aqui — nada foi perdido.</p>
+      <p class="mt-muted" style="font-size:11.5px">Detalhe técnico: ${mtEsc((e && e.message) || 'erro')}</p>
+      <button class="btn btn-primary btn-block" onclick="closeModal();setTimeout(()=>finishSetup('${m==='run'?'run':'lift'}'),80)">Tentar de novo</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Voltar e revisar</button>`;
+    $('modal-back').classList.add('on');
+  }
+};
+
+// o plano já foi gerado e salvo; se a abertura dele falhar no fim da tela de montagem, o aluno não fica preso
+function mtMontagemErro(m, e){
+  try{ const ov = $('building-ov'); if(ov){ ov.className = ''; ov.innerHTML = ''; ov.setAttribute('style','display:none'); } }catch(x){}
+  $('modal-inner').innerHTML = `<h3>Seu plano está pronto</h3>
+    <p class="mt-muted" style="font-size:13.5px;line-height:1.55">O plano foi montado e salvo, mas não consegui abrir a tela dele agora.</p>
+    <button class="btn btn-primary btn-block" onclick="closeModal();goTab('home')">Abrir meu plano</button>`;
+  $('modal-back').classList.add('on');
+}
+
+Object.assign(window, { mtMontagemErro, mtAtualizaVerificacao, openFormasDeEntrar, mtVincularGoogle, mtCriarSenha, mtCriarSenhaGo, mtVincularGoogleConfirma, mtEsqueciSenhaVinculo,
+  mtTesteIniciar, mtTestePendente, mtComoFuncionaTeste, mtBackupLiberado });
+
+// =====================================================================
+// 45. Beta 42 — Escolha de tema em carrossel e ilustrações de Histórico e Corrida
+// =====================================================================
+// Um componente só (mtTemaCarrossel) no cadastro e em Perfil › Aparência: um tema por vez, deslizando para
+// os lados (ou pelas setas/pontos/teclado), com uma prévia grande do próprio app naquele tema. A prévia usa
+// as variáveis do tema (data-theme), então é fiel e instantânea; "Usar este tema" aplica no app. Regras de
+// Básico × Premium, cores dos temas e a preferência salva continuam as mesmas (setTheme de sempre).
+
+function _tcOrdem(){
+  const base = (typeof TEMA_ORDEM_CAD !== 'undefined' ? TEMA_ORDEM_CAD : Object.keys(THEMES)).filter(k=>THEMES[k]);
+  Object.keys(THEMES).forEach(k=>{ if(!base.includes(k)) base.push(k); });
+  return base;
+}
+function _tcPrevia(k){
+  return `<div class="tc-prev" data-theme="${k}" aria-hidden="true">
+    <div class="tcp-top"><i class="tcp-logo"></i><span><b></b><em></em></span><i class="tcp-av"></i></div>
+    <div class="tcp-ola"><b></b><em></em></div>
+    <div class="tcp-card"><div class="tcp-l1"><b></b><i class="tcp-chip"></i></div><div class="tcp-barra"><i></i></div>
+      <div class="tcp-stats"><span><b></b><em></em></span><span><b></b><em></em></span><span><b></b><em></em></span></div></div>
+    <div class="tcp-btn"></div>
+    <div class="tcp-tab"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+  </div>`;
+}
+function mtTemaCarrossel(host, ctx){
+  if(!host) return;
+  const ordem = _tcOrdem(), cur = currentTheme();
+  const premiumOk = k=>(typeof temaLiberado === 'function') ? temaLiberado(k) : true;
+  const ehPrem = k=>(typeof temaPremium === 'function') ? temaPremium(k) : !!THEMES[k].premium;
+  host.classList.add('tc-host');
+  host.innerHTML = `<div class="tc" data-ctx="${ctx}">
+    <div class="tc-trilho" role="listbox" aria-label="Temas do app — deslize para os lados" tabindex="0">
+      ${ordem.map((k,i)=>`<div class="tc-slide${k===cur?' on':''}${premiumOk(k)?'':' trava'}" role="option" aria-selected="${k===cur}" aria-label="Tema ${mtEsc(THEMES[k].nome)}${ehPrem(k)?' (Premium)':''}" data-k="${k}" data-i="${i}" onclick="mtTcToque(this)">
+        ${_tcPrevia(k)}${k===cur?'<span class="tc-sel" aria-hidden="true">✓</span>':''}${ctx==='cadastro' && k==='areia'?'<span class="tc-sug">Sugerido</span>':''}</div>`).join('')}
+    </div>
+    <div class="tc-info">
+      <button type="button" class="tc-seta" aria-label="Tema anterior" onclick="mtTcPasso(this,-1)">‹</button>
+      <div class="tc-nome" aria-live="polite"></div>
+      <button type="button" class="tc-seta" aria-label="Próximo tema" onclick="mtTcPasso(this,1)">›</button>
+    </div>
+    <div class="tc-pontos">${ordem.map((k,i)=>`<button type="button" class="tc-ponto" aria-label="${mtEsc(THEMES[k].nome)}" onclick="mtTcIr(this,${i})"></button>`).join('')}</div>
+    <button type="button" class="btn btn-primary btn-block tc-usar" onclick="mtTcUsar(this)"></button>
+  </div>`;
+  const tc = host.querySelector('.tc'), tr = tc.querySelector('.tc-trilho');
+  tc._ordem = ordem; tc._idx = Math.max(0, ordem.indexOf(cur));
+  let raf = 0;
+  tr.addEventListener('scroll', ()=>{ cancelAnimationFrame(raf); raf = requestAnimationFrame(()=>_tcAtualiza(tc)); }, { passive:true });
+  tr.addEventListener('keydown', e=>{ if(e.key === 'ArrowRight'){ e.preventDefault(); _tcVai(tc, tc._idx+1); } else if(e.key === 'ArrowLeft'){ e.preventDefault(); _tcVai(tc, tc._idx-1); } else if(e.key === 'Enter'){ e.preventDefault(); mtTcUsar(tc); } });
+  requestAnimationFrame(()=>{ _tcVai(tc, tc._idx, true); _tcInfo(tc); });
+}
+function _tcDe(el){ return el && el.closest ? el.closest('.tc') : el; }
+function _tcVai(tc, i, instant){
+  const n = tc._ordem.length; i = Math.max(0, Math.min(n-1, i));
+  const tr = tc.querySelector('.tc-trilho'), s = tr.children[i]; if(!s) return;
+  const alvo = s.offsetLeft - (tr.clientWidth - s.clientWidth)/2;
+  try{ tr.scrollTo({ left:alvo, behavior: instant || !(typeof mtMovimentoOk!=='function' || mtMovimentoOk()) ? 'auto' : 'smooth' }); }catch(e){ tr.scrollLeft = alvo; }
+  tc._idx = i; _tcInfo(tc);
+}
+function _tcAtualiza(tc){
+  const tr = tc.querySelector('.tc-trilho'); const meio = tr.scrollLeft + tr.clientWidth/2;
+  let melhor = 0, dist = 1e9;
+  [...tr.children].forEach((s,i)=>{ const d = Math.abs(s.offsetLeft + s.clientWidth/2 - meio); if(d < dist){ dist = d; melhor = i; } });
+  if(melhor !== tc._idx){ tc._idx = melhor; _tcInfo(tc); }
+}
+function _tcInfo(tc){
+  const k = tc._ordem[tc._idx]; const t = THEMES[k]; if(!t) return;
+  const cur = currentTheme(); const livre = (typeof temaLiberado === 'function') ? temaLiberado(k) : true;
+  const prem = (typeof temaPremium === 'function') ? temaPremium(k) : !!t.premium;
+  tc.querySelector('.tc-nome').innerHTML = `<b>${mtEsc(t.nome)}</b>${tc.dataset.ctx==='cadastro' && k==='areia'?'<span class="tc-atual">Sugerido</span>':''}${prem?`<span class="pl-mini tc-prem">${typeof PL_EST!=='undefined'?PL_EST:''}Premium</span>`:''}${k===cur?'<span class="tc-atual">Selecionado</span>':''}<small>${mtEsc(t.sub||'')}</small>`;
+  tc.querySelectorAll('.tc-ponto').forEach((p,i)=>{ p.classList.toggle('on', i===tc._idx); p.setAttribute('aria-current', i===tc._idx ? 'true' : 'false'); });
+  [...tc.querySelectorAll('.tc-slide')].forEach((s,i)=>s.classList.toggle('foco', i===tc._idx));
+  const b = tc.querySelector('.tc-usar');
+  b.disabled = false; b.classList.toggle('btn-ghost', k===cur || !livre); b.classList.toggle('btn-primary', !(k===cur || !livre));
+  b.textContent = k===cur ? '✓ Tema em uso' : (!livre ? 'Disponível no Premium' : 'Usar este tema');
+  const setas = tc.querySelectorAll('.tc-seta'); setas[0].disabled = tc._idx === 0; setas[1].disabled = tc._idx === tc._ordem.length-1;
+}
+function mtTcPasso(el, d){ const tc = _tcDe(el); _tcVai(tc, tc._idx + d); }
+function mtTcIr(el, i){ _tcVai(_tcDe(el), i); }
+function mtTcToque(slide){ const tc = _tcDe(slide); const i = +slide.dataset.i; if(i !== tc._idx) return _tcVai(tc, i); mtTcUsar(tc); }
+function mtTcUsar(el){
+  const tc = _tcDe(el); const k = tc._ordem[tc._idx]; if(!k || k === currentTheme()) return;
+  const ctx = tc.dataset.ctx; const host = tc.parentNode; const idx = tc._idx;
+  if(ctx === 'cadastro' && typeof wzEscolheTema === 'function') wzEscolheTema(k);   // setTheme + guarda na conta
+  else setTheme(k);                                                                   // aviso Premium se travado
+  if(currentTheme() !== k) return;                                                    // não aplicou (Premium)
+  mtTemaCarrossel(host, ctx);
+  const novo = host.querySelector('.tc'); if(novo){ novo._idx = idx; requestAnimationFrame(()=>_tcVai(novo, idx, true)); }
+  try{ const rv = $('theme-row-val'); if(rv) rv.textContent = (temaClaro(k)?'Tema Claro':'Tema Noturno')+' · '+THEMES[k].nome+' ›'; }catch(e){}
+}
+// cadastro: o carrossel no lugar da grade de 10
+window.wzRenderTemas = function(){ const box = $('wz-temas'); if(box) mtTemaCarrossel(box, 'cadastro'); try{ if(typeof wzRenderIcones === 'function') wzRenderIcones(); }catch(e){} };   // o estilo dos ícones continua junto
+window.wzEscolheTema = function(k){ setTheme(k); };
+// Perfil › Aparência: o carrossel no lugar das duas grades (Noturno/Claro)
+const _openAparenciaB42 = window.openAparencia;
+window.openAparencia = function(){
+  _openAparenciaB42.apply(this, arguments);
+  try{
+    const mi = $('modal-inner'); const grades = mi.querySelectorAll('.ap-grid'); if(!grades.length) return;
+    grades.forEach(g=>{ const t = g.previousElementSibling; if(t && t.classList.contains('mt-sec')) t.remove(); });
+    const host = document.createElement('div'); grades[0].before(host); grades.forEach(g=>g.remove());
+    const tit = document.createElement('div'); tit.className = 'mt-sec'; tit.style.marginTop = '6px'; tit.textContent = 'Tema'; host.before(tit);
+    mtTemaCarrossel(host, 'perfil');
+  }catch(e){ console.log('aparência (carrossel):', e); }
+};
+
+// ---------- Ilustrações ----------
+// Histórico: registros e evolução (ficha com treinos feitos e a linha de progresso subindo); Corrida: a pista
+// da Beta 40 com um corredor. Perfil e Desafios voltaram aos desenhos da Beta 40 (pessoa; medalha).
+Object.assign(DECO2_SVG, {
+  historico: DECO3(`<circle class="d-fundo" cx="166" cy="60" r="50"/>
+    <rect class="d-fill" x="124" y="18" width="66" height="84" rx="10"/>
+    <path class="d-ac" d="M134 38l4 4 7-8M134 56l4 4 7-8M134 74l4 4 7-8" stroke-width="2.1"/>
+    <path class="d-linha" d="M152 38h26M152 56h20M152 74h24" stroke-opacity=".7"/>
+    <path class="d-ac" d="M150 96l14-10 12 4 20-18" stroke-width="2.4"/><path class="d-acf" stroke="none" d="M201 68l-1 11-9-6z"/>`),
+  corrida: DECO3(`<circle class="d-fundo" cx="172" cy="64" r="48"/>
+    <path class="d-fill" d="M96 120a124 124 0 0 1 124-124v26a98 98 0 0 0-98 98z"/>
+    <path class="d-linha" d="M96 120a124 124 0 0 1 124-124M122 120a98 98 0 0 1 98-98"/>
+    <path class="d-ac" d="M109 120a111 111 0 0 1 111-111" stroke-width="2.2" stroke-dasharray="2 7"/>
+    <g transform="translate(150 44)"><circle class="d-acf" cx="14" cy="4" r="5" stroke="none"/>
+      <path class="d-ac" d="M12 11l-5 13 9 5 -4 13M7 24l-9 9M12 13l10 6 7-4M10 15l-8 2-5 7" stroke-width="3"/></g>`)
+});
+try{ const el = document.getElementById('app-deco'); if(el) delete el.dataset.k; }catch(e){}
+
+Object.assign(window, { mtTemaCarrossel, mtTcPasso, mtTcIr, mtTcToque, mtTcUsar });
