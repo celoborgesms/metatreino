@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 39 =====
-const APP_VERSION = '2027.1-beta.39';
+// ===== MetaTreino 2027.1 Beta 42 =====
+const APP_VERSION = '2027.1-beta.42';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -640,8 +640,12 @@ function dicaLogin(){
     box.style.color = (authModo==='criar' && !valido) ? 'var(--accent-2)' : 'var(--text-mute)';
   } else {
     const limpo = v.toLowerCase().replace(/[^a-z0-9._-]/g,'');
+    if(authModo==='criar'){
+      box.innerHTML = '📧 Para criar conta, digite um <b>e-mail real</b> (vamos mandar um link de confirmação) ou use o Google.';
+      box.style.color = 'var(--accent-2)'; return;
+    }
     box.innerHTML = limpo
-      ? `👤 Login de <b>usuário</b> — sem e-mail e <b>sem confirmação</b>. Você vai entrar digitando <b>${limpo}</b> e a senha.`
+      ? `👤 Entrando com o usuário <b>${limpo}</b> (conta antiga, sem e-mail).`
       : '⚠️ Use letras e números (ex: joao123).';
     box.style.color = limpo ? 'var(--primary-2)' : 'var(--accent-2)';
   }
@@ -653,6 +657,8 @@ function toggleAuthMode(){
   if(el('auth-submit')) el('auth-submit').textContent = criar ? 'Criar conta' : 'Entrar';
   if(el('auth-toggle-lbl')) el('auth-toggle-lbl').textContent = criar ? 'Já tenho conta' : 'Criar uma conta';
   if(el('auth-name-field')) el('auth-name-field').classList.toggle('hidden', !criar);
+  if(el('auth-user-lbl')) el('auth-user-lbl').textContent = criar ? 'E-mail' : 'E-mail ou usuário';
+  if(el('auth-email')) el('auth-email').setAttribute('placeholder', criar ? 'seu@email.com' : 'seu@email.com ou seu usuário');
   if(el('auth-forgot')) el('auth-forgot').style.display = criar ? 'none' : '';
   if(el('auth-pass')) el('auth-pass').setAttribute('autocomplete', criar ? 'new-password' : 'current-password');
   const e=el('auth-err'); if(e) e.innerHTML='';
@@ -679,7 +685,7 @@ function resetAuthUI(){
   const btn=g('auth-submit');
   if(btn){ btn.disabled=false; btn.textContent = authModo==='criar' ? 'Criar conta' : 'Entrar'; }
   const gb=g('google-btn'); if(gb){ gb.style.opacity='1'; gb.disabled=false; }
-  const gl=g('google-btn-lbl'); if(gl) gl.textContent='Entrar com Google';
+  const gl=g('google-btn-lbl'); if(gl) gl.textContent='Continuar com Google';
   const err=g('auth-err'); if(err) err.innerHTML='';
   const p=g('auth-pass'); if(p) p.value='';
   const rt=g('noaccess-retry'); if(rt){ rt.disabled=false; rt.textContent='🔄 Tentar de novo'; rt.classList.add('hidden'); }
@@ -691,6 +697,10 @@ function doEmailAuth(){
   const pass  = (el('auth-pass') && el('auth-pass').value) || '';
   const nome  = (el('auth-name') && el('auth-name').value || '').trim();
   if(!email) return authErro('Digite seu e-mail ou um nome de usuário.');
+  // Beta 40: conta nova só com e-mail real (ou Google). Assim cada pessoa tem um teste Premium só e dá para
+  // recuperar a senha. Contas antigas de "usuário" (sem e-mail) continuam entrando normalmente.
+  if(authModo==='criar' && ehLoginInterno(email)) return authErro('Para criar uma conta nova, use um <b>e-mail real</b> ou o botão <b>Continuar com Google</b>. Contas antigas de usuário (sem e-mail) continuam entrando em "Já tenho conta".');
+  if(authModo==='criar' && !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) return authErro('Esse e-mail parece incompleto. Confira e tente de novo.');
   if(pass.length < 6) return authErro('A senha precisa ter pelo menos 6 caracteres.');
   if(authModo==='criar' && !nome) return authErro('Diga como você quer ser chamado.');
   const btn=el('auth-submit');
@@ -791,7 +801,7 @@ function doGoogleSignIn(){
   fbAuth.signInWithPopup(provider).catch(e=>{
     console.log('Erro no login Google:', e);
     if(btn) btn.style.opacity='1';
-    if(lbl) lbl.textContent='Entrar com Google';
+    if(lbl) lbl.textContent='Continuar com Google';
     if(err && e.code!=='auth/popup-closed-by-user') err.innerHTML='<div class="err">Não foi possível entrar com o Google. Tente novamente.</div>';
   });
 }
@@ -940,8 +950,23 @@ function acessoCacheValido(c){
   if(!c || !c.at) return false;
   if(Date.now() - c.at > ACESSO_OFFLINE_DIAS*86400000) return false;
   if(c.isAdmin) return true;
-  const a = c.allowData; if(!a || !a.active) return false;
-  return !a.expiresAt || a.expiresAt > Date.now();
+  // Beta 40: Gratuito também entra (o plano decide os recursos, não a entrada). Só conta suspensa fica de fora.
+  return !(c.allowData && c.allowData.bloqueado === true) && c.v === 40;
+}
+// Beta 40: conta nova (e-mail verificado, sem documento de plano) ganha o Teste Premium de 30 dias.
+// As regras do Firestore só deixam criar uma vez, com plano 'teste' e a data do próprio servidor.
+async function criaTestePremium(email, nome){
+  const dados = { plano:'teste', testeInicio: firebase.firestore.FieldValue.serverTimestamp(), origem:'cadastro', name: String(nome||'').slice(0,60) };
+  await fbTimeout(db.collection('usuariosAutorizados').doc(email).set(dados), 9000);
+  try{ const d = await fbTimeout(db.collection('usuariosAutorizados').doc(email).get(), 9000); if(d.exists) return d.data(); }catch(e){}
+  return Object.assign({}, dados, { testeInicio: Date.now() });
+}
+function telaContaSuspensa(email, motivo){
+  const el = $('noaccess-msg');
+  if(el) el.innerHTML = `<b>Esta conta está suspensa pela administração do MetaTreino.</b><br><br>${motivo?`Motivo informado: ${escHtml(motivo)}<br><br>`:''}<span style="font-size:12px;color:var(--text-mute)">Seus dados continuam guardados. Se acha que é um engano, fale com a administração.<br>Conta: <b>${escHtml(ehLoginInterno(email)?email.split('@')[0]:email)}</b></span>`;
+  const t = document.querySelector('#scr-noaccess h1'); if(t) t.textContent = 'Conta suspensa';
+  const rt = $('noaccess-retry'); if(rt) rt.classList.remove('hidden');
+  showScreen('scr-noaccess');
 }
 // confere o acesso em segundo plano; sem internet, tenta de novo quando ela voltar.
 // Se o treinador tirou o acesso (ou ele venceu), mostra a tela de acesso — os dados ficam salvos.
@@ -956,17 +981,24 @@ async function acessoConfereDepois(email, chave){
     const adminDoc = await fbTimeout(db.collection('admins').doc(email).get(), 12000);
     const adm = adminDoc.exists && adminDoc.data().ativo === true;
     const allowDoc = await fbTimeout(db.collection('usuariosAutorizados').doc(email).get(), 12000);
-    const al = allowDoc.exists ? allowDoc.data() : null;
-    try{ localStorage.setItem(chave, JSON.stringify({ isAdmin:adm, allowData:al, at:Date.now() })); }catch(e){}
-    const ok = adm || (al && al.active && (!al.expiresAt || al.expiresAt > Date.now()));
-    if(ok){ if(al) myAccess = al; return; }
+    let al = allowDoc.exists ? allowDoc.data() : null;
+    if(!al && !adm && fbUser && fbUser.emailVerified){ try{ al = await criaTestePremium(email, fbUser.displayName); }catch(e){ console.log('teste premium:', e); } }
+    try{ localStorage.setItem(chave, JSON.stringify({ v:40, isAdmin:adm, allowData:al, at:Date.now() })); }catch(e){}
+    // Beta 40: o cargo de administrador é conferido de novo aqui. Antes, quem perdia o cargo continuava
+    // vendo o painel por até 30 dias (o acesso guardado no aparelho mantinha isAdmin = true).
+    const eraAdmin = !!(state.user && state.user.isAdmin);
+    if(state.user) state.user.isAdmin = adm;
+    const antes = planoAtual().tipo;
+    myAccess = al;
+    if(eraAdmin && !adm){ try{ toast('Seu acesso de administrador foi removido.'); if(document.querySelector('#scr-admin.active, #scr-admin-student.active')) goTab('home'); else if(state.ui) goTab(state.ui.tab||'home'); }catch(e){} }
+    if(!(al && al.bloqueado === true) || adm){
+      try{ if(typeof mtPlanoMudou === 'function') mtPlanoMudou(antes, planoAtual().tipo); }catch(e){ console.log('plano:', e); }
+      return;
+    }
     try{ saveData(); }catch(e){}
     if(state.user) state.user.blocked = true;
-    const el = $('noaccess-msg');
-    if(el) el.innerHTML = `Seu acesso não está mais ativo.<br><br><span style="font-size:12px;color:var(--text-mute)">Seus treinos e seu histórico continuam salvos. Fale com o treinador para renovar.</span>`;
-    const rt = $('noaccess-retry'); if(rt) rt.classList.remove('hidden');
     try{ closeModal(); }catch(e){}
-    showScreen('scr-noaccess');
+    telaContaSuspensa(email, al.bloqueioMotivo);
   }catch(e){
     // ainda sem resposta: tenta de novo quando a conexão mudar, sem incomodar o aluno
     if(!_acessoEsperandoRede){ _acessoEsperandoRede = true; window.addEventListener('online', ()=>{ _acessoEsperandoRede = false; setTimeout(()=>acessoConfereDepois(email, chave), 2500); }, { once:true }); }
@@ -992,6 +1024,11 @@ async function afterGoogleSignIn(user){
     const allowDoc = await fbTimeout(db.collection('usuariosAutorizados').doc(email).get(), 9000);
     if(allowDoc.exists) allowData = allowDoc.data();
     checkedOnline = true;
+    // Beta 40: cadastro automático — conta nova com e-mail verificado começa no Teste Premium
+    if(!allowData && !isAdmin && user.emailVerified){
+      try{ allowData = await criaTestePremium(email, user.displayName); window.__mtTesteNovo = true; }
+      catch(e){ console.log('Não consegui criar o teste Premium (segue no Gratuito):', e); }
+    }
   };
   if(cacheValid){
     isAdmin = cached.isAdmin; allowData = cached.allowData;
@@ -1001,7 +1038,7 @@ async function afterGoogleSignIn(user){
     try{
       try{ await tentar(); }
       catch(e1){ console.log('1ª tentativa falhou, tentando de novo:', e1); await new Promise(r=>setTimeout(r,1200)); await tentar(); }
-      try{ localStorage.setItem(accessCacheKey, JSON.stringify({isAdmin, allowData, at:Date.now()})); }catch(e){}
+      try{ localStorage.setItem(accessCacheKey, JSON.stringify({v:40, isAdmin, allowData, at:Date.now()})); }catch(e){}
     }catch(e){
       window.__acessoErro = (e && (e.code || e.message)) || 'erro desconhecido';
       console.log('Sem conexão/timeout para verificar acesso — usando cache offline:', e);
@@ -1013,7 +1050,14 @@ async function afterGoogleSignIn(user){
   }
 
   const now = Date.now();
-  const temAcesso = allowData && allowData.active && (!allowData.expiresAt || allowData.expiresAt > now);
+  // Beta 40: ninguém precisa mais ser autorizado pelo treinador. Entra quem foi verificado (ou tem o acesso
+  // guardado neste aparelho); só a conta SUSPENSA pelo administrador fica de fora.
+  const temAcesso = isAdmin || checkedOnline || cacheValid;
+  if(!isAdmin && allowData && allowData.bloqueado === true){
+    state.user = { name:user.displayName||'', email, blocked:true };
+    telaContaSuspensa(email, allowData.bloqueioMotivo);
+    return;
+  }
 
   if(!isAdmin && !temAcesso){
     state.user = { name:user.displayName||'', email, blocked:true };
@@ -1023,7 +1067,8 @@ async function afterGoogleSignIn(user){
     const el = $('noaccess-msg');
     if(el && naoVerificado && !checkedOnline){
       // causa mais comum agora: conta criada por e-mail e ainda não confirmada
-      el.innerHTML = `📧 <b>Confirme seu e-mail para continuar</b><br><br>Enviamos um link de confirmação para <b>${email}</b>. Abra o e-mail, clique no link e volte aqui.<br><br><span style="font-size:12px;color:var(--text-mute)">Não achou? Veja a caixa de spam.</span>`;
+      { const tt = $('noaccess-tit'); if(tt) tt.textContent = 'Confirme seu e-mail'; }
+      el.innerHTML = `📧 <b>Falta só confirmar seu e-mail</b><br><br>Enviamos um link de confirmação para <b>${email}</b>. Abra o e-mail, clique no link e volte aqui.<br><br><span style="font-size:12px;color:var(--text-mute)">Não achou? Veja a caixa de spam.</span>`;
       const rt0 = $('noaccess-retry'); if(rt0){ rt0.classList.remove('hidden'); rt0.textContent = '🔄 Já confirmei, verificar de novo'; }
       const rs = $('noaccess-resend'); if(rs) rs.classList.remove('hidden');
       showScreen('scr-noaccess');
@@ -1345,16 +1390,54 @@ function firstWeight(){ if(!state.weights.length) return null; return state.weig
 
 // ---------- ACCESS ----------
 let myAccess = null; // dados de acesso (usuariosAutorizados) do usuário logado, carregados no login
+// ---------- PLANOS (Beta 40): Gratuito · Teste Premium (30 dias) · Premium · Bloqueado ----------
+// O documento usuariosAutorizados/{email} é a fonte do plano. O aluno não consegue gravar nele
+// (só criar UMA vez o próprio teste, com a data do servidor — ver firestore.rules). Sem documento = Gratuito.
+// Campos novos: plano ('teste'|'premium'|'gratuito'), testeInicio (data do servidor), premiumAte (ms ou null =
+// sem prazo), bloqueado (true = conta suspensa). Documentos antigos (active/expiresAt) continuam valendo:
+// aluno liberado e dentro da validade = Premium até a validade; vencido ou desligado = Gratuito.
+const TESTE_PREMIUM_DIAS = 30;
+function msDe(v){
+  if(!v) return 0;
+  if(typeof v === 'number') return v;
+  if(typeof v.toMillis === 'function') return v.toMillis();
+  if(typeof v.seconds === 'number') return v.seconds*1000;
+  const n = +new Date(v); return isNaN(n) ? 0 : n;
+}
+function planoDe(isAdmin, a, agora){
+  agora = agora || Date.now();
+  if(isAdmin) return { tipo:'premium', premium:true, vitalicio:true, ate:null, admin:true };
+  if(a && a.bloqueado === true) return { tipo:'bloqueado', premium:false, bloqueado:true, motivo:a.bloqueioMotivo||'' };
+  if(!a) return { tipo:'gratuito', premium:false };
+  if(a.plano === 'premium' || (!a.plano && a.active === true)){
+    const ate = a.plano === 'premium' ? msDe(a.premiumAte) : msDe(a.expiresAt);
+    if(!ate) return { tipo:'premium', premium:true, vitalicio:true, ate:null };
+    if(ate > agora) return { tipo:'premium', premium:true, ate };
+    return { tipo:'gratuito', premium:false, premiumAcabouEm:ate };
+  }
+  if(a.plano === 'teste'){
+    const ini = msDe(a.testeInicio) || msDe(a.addedAt);
+    const ate = ini + TESTE_PREMIUM_DIAS*86400000;
+    if(ini && ate > agora) return { tipo:'teste', premium:true, ate, inicio:ini };
+    return { tipo:'gratuito', premium:false, testeAcabouEm:ate||null };
+  }
+  if(!a.plano && a.expiresAt) return { tipo:'gratuito', premium:false, premiumAcabouEm:msDe(a.expiresAt) };
+  return { tipo:'gratuito', premium:false };
+}
+function planoAtual(){ return planoDe(!!(state.user && state.user.isAdmin), myAccess); }
+// dias de Premium que faltam (999999 = sem prazo; 0 = Gratuito)
 function accessDaysLeft(){
-  if(state.user && state.user.isAdmin) return 999999;
-  if(!myAccess || !myAccess.active) return 0;
-  if(!myAccess.expiresAt) return 999999;
-  return Math.max(0, Math.ceil((myAccess.expiresAt - Date.now())/86400000));
+  const p = planoAtual();
+  if(!p.premium) return 0;
+  if(p.vitalicio || !p.ate) return 999999;
+  return Math.max(0, Math.ceil((p.ate - Date.now())/86400000));
 }
 function accessLabel(days){
-  if(days>=999999) return '♾️ Acesso vitalício';
-  if(days<=0) return 'Acesso expirado';
-  return `${days} dias restantes`;
+  const p = planoAtual();
+  if(p.admin) return '♾️ Premium sem prazo (Admin)';
+  if(!p.premium) return 'Plano Gratuito';
+  if(days>=999999) return '♾️ Premium sem prazo';
+  return `${p.tipo==='teste'?'Teste Premium':'Premium'}: ${days} ${days===1?'dia restante':'dias restantes'}`;
 }
 
 // ---------- CLEANUP HISTORY (90 days) ----------
@@ -4213,8 +4296,23 @@ function smartProgressionHint(exId){
   const lastW = Math.max(...last.sets.map(s=>+s.peso||0));
   const allTop = arr => arr.sets.every(s=>(+s.reps||0) >= range.hi);
   const anyBelow = last.sets.some(s=>(+s.reps||0) > 0 && (+s.reps||0) < range.lo);
-  const lastFeel = (state.modules.lift?.history||[]).filter(x=>x.feel).slice(-1)[0]?.feel;
+  // Beta 40: o esforço (RPE 1 a 10) que vale é o da SESSÃO em que este exercício foi feito por último —
+  // antes era o do último treino de qualquer grupo, e só o 9–10 ("exausto") mudava alguma coisa.
+  const _hist = (state.modules.lift?.history||[]);
+  const _diaDe = t=>{ const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+  const _sessDe = log=>_hist.filter(x=>_diaDe(x.at)===_diaDe(log.date) && (!(x.exercisesDone||[]).length || (x.exercisesDone||[]).some(e=>e.id===exId))).slice(-1)[0];
+  const _sLast = _sessDe(last);
+  const rpeLast = _sLast && +_sLast.rpe ? +_sLast.rpe : null;
+  const lastFeel = (_sLast && _sLast.feel) || (rpeLast ? rpeToFeel(rpeLast) : null) || _hist.filter(x=>x.feel).slice(-1)[0]?.feel;
   const isBodyweight = lastW === 0 || exCargaOpcional(exId);
+  // duas sessões seguidas deste exercício no limite (RPE 9+) e repetições caindo abaixo da faixa = cansaço acumulado
+  if(!isTempo && prev.length >= 2 && !isBodyweight){
+    const s2 = _sessDe(prev[prev.length-2]); const r2 = s2 && +s2.rpe;
+    if(rpeLast >= 9 && r2 >= 9 && anyBelow){
+      const reduz = Math.max(0, Math.round(lastW*0.9*2)/2);
+      return {cls:'card-warn', txt:`🔋 As duas últimas sessões deste exercício foram no limite (esforço ${r2} e ${rpeLast}/10) e as repetições caíram. Hoje use cerca de ${String(reduz).replace('.',',')}kg (−10%) e caprichem na técnica: recuperar agora faz a carga voltar a subir depois.`};
+    }
+  }
 
   // ISOMÉTRICOS: mesma lógica de decisão, vocabulário de tempo em vez de reps
   if(isTempo){
@@ -4236,9 +4334,19 @@ function smartProgressionHint(exId){
       : {cls:'card-ok', txt:`📈 Você bateu o topo da faixa (${range.hi} reps) 2 sessões seguidas com ${lastW}kg — o app sugere subir para ${String(proxCarga(lastW)).replace('.',',')}kg hoje.`};
   }
   if(allTop(last)){
+    // Beta 40: topo da faixa com esforço de até 7/10 = sobrou margem → já pode subir (não precisa esperar outra sessão)
+    if(rpeLast && rpeLast <= 7){
+      return isBodyweight
+        ? {cls:'card-ok', txt:`📈 Sessão passada você fechou todas as séries em ${range.hi}+ reps com esforço ${rpeLast}/10 — sobrou margem. Hoje: +2 repetições por série ou uma variação mais difícil.`}
+        : {cls:'card-ok', txt:`📈 Sessão passada: todas as séries no topo da faixa com ${lastW}kg e esforço ${rpeLast}/10 — sobrou margem. Hoje o app sugere ${String(proxCarga(lastW)).replace('.',',')}kg.`};
+    }
     return isBodyweight
-      ? {cls:'card-info', txt:`💪 Sessão passada você fechou todas as séries em ${range.hi}+ reps. Repita hoje — mais uma assim e sobe o desafio.`}
-      : {cls:'card-info', txt:`💪 Sessão passada: todas as séries no topo da faixa com ${lastW}kg. Repita hoje — mais uma assim e o app sugere aumentar.`};
+      ? {cls:'card-info', txt:`💪 Sessão passada você fechou todas as séries em ${range.hi}+ reps${rpeLast?` (esforço ${rpeLast}/10)`:''}. Repita hoje — mais uma assim e sobe o desafio.`}
+      : {cls:'card-info', txt:`💪 Sessão passada: todas as séries no topo da faixa com ${lastW}kg${rpeLast?` (esforço ${rpeLast}/10)`:''}. Repita hoje — mais uma assim e o app sugere aumentar.`};
+  }
+  // Beta 40: treino que pareceu leve (esforço até 4/10) sem fechar a faixa → pede mais repetições hoje
+  if(rpeLast && rpeLast <= 4 && !anyBelow){
+    return {cls:'card-info', txt:`🎯 Na última vez o treino pareceu leve (esforço ${rpeLast}/10). Hoje busque o topo da faixa (${range.hi} reps) em todas as séries${isBodyweight?'':` com ${lastW}kg`} — fechando, a carga sobe.`};
   }
   if(anyBelow){
     return isBodyweight
@@ -6185,7 +6293,7 @@ const MODAL_CONTENT = {
   'edit-profile':()=>{ const p = state.user.profile||{}; return `<h3>✏️ Editar perfil</h3><div class="field"><label>Como quer ser chamado</label><input class="input" id="ep-nick" value="${escHtml(p.nickname||'')}"></div><div class="field"><label>Data de nascimento</label><input class="input mono" type="date" id="ep-birth" value="${p.birth||''}" max="${chaveDia(new Date())}"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">${p.birth?`Idade: ${ageFromBirth(p.birth)} anos`:'Preencha para receber os parabéns no seu aniversário 🎂'}</div></div>
     <div class="field"><label>Idade (usada se não informar a data)</label><input class="input mono" type="number" id="ep-age" value="${p.age||''}"></div><div class="field"><label>Altura (cm)</label><input class="input mono" type="number" id="ep-height" value="${p.height||''}"></div><div class="field"><label>WhatsApp</label><input class="input mono" id="ep-whats" value="${p.whatsapp||''}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveProfileEdit()">Salvar</button>`; },
   'add-weight':()=>{ const cur=latestWeight()||state.user.profile?.currentWeight||70; return `<h3>⚖️ Registrar peso hoje</h3><p style="color:var(--text-dim);font-size:13px">Última medição: <b>${cur}kg</b></p><div class="field"><label>Peso agora (kg)</label><input class="input mono" type="number" step="0.1" id="wt-val" value="${cur}"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveWeight()">Salvar</button>`; },
-  'add-student':`<h3>➕ Liberar acesso a aluno</h3><div class="field"><label>E-mail ou usuário do aluno</label><input class="input" type="text" id="as-email" placeholder="aluno@email.com ou joao123" autocapitalize="none" spellcheck="false"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">Use o mesmo que ele digita para entrar. Sem "@" vira login de usuário.</div></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do acesso</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="7">🎁 Teste 7 dias</div><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: Alunos plano premium"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Liberar acesso</button>`,
+  'add-student':`<h3>⭐ Conceder Premium</h3><p style="color:var(--text-dim);font-size:12.5px;line-height:1.5;margin:0 0 8px">Ninguém precisa mais de liberação para entrar: toda conta nova já começa no Teste Premium de 30 dias e depois segue no Gratuito. Use aqui para dar ou renovar o Premium.</p><div class="field"><label>E-mail ou usuário do aluno</label><input class="input" type="text" id="as-email" placeholder="aluno@email.com ou joao123" autocapitalize="none" spellcheck="false"><div style="color:var(--text-mute);font-size:11.5px;margin-top:4px">Use o mesmo que ele digita para entrar. Sem "@" vira login de usuário.</div></div><div class="field"><label>Nome (opcional)</label><input class="input" id="as-name" placeholder="Nome do aluno"></div><div class="field"><label>WhatsApp (opcional)</label><input class="input mono" id="as-whats" placeholder="61999999999"></div><div class="field"><label>Duração do Premium</label><div class="radio-grid g3" id="as-dur"><div class="opt" data-val="30">30 dias</div><div class="opt on" data-val="60">60 dias</div><div class="opt" data-val="90">90 dias</div><div class="opt" data-val="180">6 meses</div><div class="opt" data-val="365">1 ano</div><div class="opt" data-val="9999">Vitalício</div></div></div><div class="field"><label>Notas (opcional)</label><input class="input" id="as-notes" placeholder="Ex: pagamento via Pix em 14/11"></div><div id="as-err"></div><button class="btn btn-primary btn-block" style="margin-top:12px" onclick="doAddStudent()">Conceder Premium</button>`,
   'restart':()=>`<h3>🔄 Começar do zero</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Apaga todo o seu progresso — treinos, séries registradas, recordes, histórico de peso e conquistas — e refaz o questionário inicial.<br><br>Sua <b>conta e seu acesso continuam ativos</b> (diferente de excluir a conta).<br><br>Essa ação <b>não pode ser desfeita</b> — mas dá para guardar tudo antes num backup. 💾</p>
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="exportMyData()">💾 Fazer backup antes</button>
     <button class="btn btn-outline btn-block" style="margin-top:16px;border-color:var(--accent);color:var(--accent-2)" onclick="doRestart()">🔄 Sim, começar do zero</button>
@@ -9951,7 +10059,7 @@ async function loadCoachContact(){
 function waLink(){
   const n = (coachContact.whatsapp||'').replace(/\D/g,'');
   if(!n) return null;
-  const msg = encodeURIComponent('Olá! Quero pedir um teste do MetaTreino. Meu nome: ');
+  const msg = encodeURIComponent('Olá! Tenho uma dúvida sobre o MetaTreino. Meu nome: ');
   return `https://wa.me/${n}?text=${msg}`;
 }
 function renderContactButtons(){
@@ -9960,15 +10068,15 @@ function renderContactButtons(){
     const el = $(id); if(!el) return;
     const mail = coachContact.email || 'metatreinooficial@gmail.com';
     el.innerHTML = `
-      ${wa?`<a href="${wa}" target="_blank" rel="noopener" class="btn btn-primary btn-block" style="text-decoration:none;margin-bottom:8px">💬 Pedir teste pelo WhatsApp</a>`:''}
-      <a href="mailto:${mail}?subject=Quero%20acesso%20ao%20MetaTreino" class="btn btn-ghost btn-block" style="text-decoration:none">✉️ Pedir por e-mail</a>
+      ${wa?`<a href="${wa}" target="_blank" rel="noopener" class="btn btn-ghost btn-block" style="text-decoration:none;margin-bottom:8px">💬 Falar com a administração (WhatsApp)</a>`:''}
+      <a href="mailto:${mail}?subject=MetaTreino" class="btn btn-ghost btn-block" style="text-decoration:none">✉️ Falar por e-mail</a>
       <div style="text-align:center;margin-top:8px;color:var(--text-mute);font-size:12px">${wa?(coachContact.whatsapp+' · '):''}${mail}</div>`;
   });
 }
 function openContactAdmin(){
   $('modal-inner').innerHTML = `
     <h3>📞 Contato do treinador</h3>
-    <p style="color:var(--text-dim);font-size:13px">Aparece na tela de login e para alunos sem acesso liberado.</p>
+    <p style="color:var(--text-dim);font-size:13px">Aparece na tela de login, para contas suspensas e no botão "Contratar" dos avisos Premium.</p>
     <div class="field" style="margin-top:12px"><label>WhatsApp (com DDI e DDD)</label>
       <input class="input mono" id="ct-wa" placeholder="5566999999999" value="${(coachContact.whatsapp||'').replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>E-mail de contato</label>

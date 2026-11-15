@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 39 — app-plus.js
+// MetaTreino 2027.1 Beta 42 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.39' };
+const MTP = { versao: '2027.1-beta.42' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -6446,7 +6446,9 @@ async function arqGerarPDF(){
     }
     fala('Montando gráficos...');
     const jsPDF = await _carregaJsPDF();
-    const { doc, nome } = arqMontarPDF(jsPDF, _pdfOpt, aviso);
+    // Beta 40: a mesma identidade dos outros PDFs (desenhos vetoriais e cores do tema). Sem o desenho, sai como antes.
+    let arte = null; try{ if(typeof pdfPrepArte === 'function') arte = await pdfPrepArte('evolucao'); }catch(e){ console.log('arte do PDF:', e); }
+    const { doc, nome } = arqMontarPDF(jsPDF, _pdfOpt, aviso, arte);
     const blob = doc.output('blob');
     _pdfMostrar(blob, nome);
   }catch(e){
@@ -6486,14 +6488,17 @@ function _T(s){
 function _dataBR(t, ano){ return new Date(t).toLocaleDateString('pt-BR', ano ? {day:'2-digit', month:'2-digit', year:'2-digit'} : {day:'2-digit', month:'2-digit'}); }
 const _MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
-function arqMontarPDF(jsPDF, opt, aviso){
+function arqMontarPDF(jsPDF, opt, aviso, arte){
   const doc = new jsPDF({ unit:'mm', format:'a4', compress:true });
   const PW = 210, PH = 297, M = 14, W = PW - 2*M;
   const C = { ink:[22,27,34], dim:[96,106,118], linha:[222,226,232], fundo:[245,247,249], lift:[86,130,20], run:[14,116,144], acc:[217,95,24], band:[11,15,20], lime:[182,242,58], peso:[124,58,237] };
+  // Beta 40: cores do tema do aluno (já ajustadas para papel branco); os números e gráficos não mudam
+  if(arte && arte.C){ C.lift = arte.C.p; C.run = arte.C.a; C.acc = arte.C.p; C.fundo = arte.C.zebra; }
+  const marcaDagua = ()=>{ if(arte) try{ doc.addImage(arte.marca, 'PNG', PW - 92, PH - 112, 86, 90, 'mt-marca', 'FAST'); }catch(e){} };
   let y = 0;
   const cor = c=>doc.setTextColor(c[0], c[1], c[2]);
   const fonte = (tam, est)=>{ doc.setFont('helvetica', est||'normal'); doc.setFontSize(tam); };
-  const nova = ()=>{ doc.addPage(); y = M + 2; };
+  const nova = ()=>{ doc.addPage(); marcaDagua(); if(arte){ doc.setFillColor(...arte.C.p); doc.rect(0, 0, PW, 2.2, 'F'); } y = M + 2; };
   const precisa = h=>{ if(y + h > PH - 16) nova(); };
   const txt = (s, x, yy, o)=>doc.text(_T(s), x, yy, o);
 
@@ -6601,13 +6606,26 @@ function arqMontarPDF(jsPDF, opt, aviso){
   function nota(s){ precisa(8); fonte(7.5, 'italic'); cor(C.dim); const ls = doc.splitTextToSize(_T(s), W); doc.text(ls, M, y + 3); y += ls.length*3.6 + 3; }
 
   // ----- capa -----
-  doc.setFillColor(...C.band); doc.rect(0, 0, PW, 42, 'F');
-  fonte(9, 'bold'); doc.setTextColor(...C.lime); txt('METATREINO', M, 13);
-  fonte(21, 'bold'); doc.setTextColor(255, 255, 255); txt('Relatório de treinos', M, 25);
-  fonte(9.5); doc.setTextColor(200, 206, 214);
-  txt(`${nomeAluno} · ${perTxt} (${_dataBR(ini, true)} a ${_dataBR(agora, true)})`, M, 33);
-  txt(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, PW - M, 13, {align:'right'});
-  y = 50;
+  if(arte){
+    marcaDagua();
+    doc.setFillColor(...arte.C.pClaro); doc.rect(0, 0, PW, 46, 'F');
+    try{ doc.addImage(arte.cab, 'PNG', 0, 0, PW, 45.5, 'mt-cab', 'FAST'); }catch(e){}
+    doc.setFillColor(...arte.C.p); doc.rect(0, 46, PW, 1.2, 'F');
+    doc.setFillColor(...arte.C.p); doc.roundedRect(M, 9, 7.5, 7.5, 1.8, 1.8, 'F'); fonte(9, 'bold'); doc.setTextColor(255,255,255); txt('M', M + 3.75, 14.3, {align:'center'});
+    fonte(9, 'bold'); cor(arte.C.p); txt('METATREINO', M + 10, 14.4);
+    fonte(19, 'bold'); cor(C.ink); txt('Relatório de evolução', M, 27.5);
+    fonte(9.5); cor(C.dim); txt(`${nomeAluno} · ${perTxt} (${_dataBR(ini, true)} a ${_dataBR(agora, true)})`, M, 34.5);
+    fonte(8.5); txt(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, M, 40);
+    y = 55;
+  } else {
+    doc.setFillColor(...C.band); doc.rect(0, 0, PW, 42, 'F');
+    fonte(9, 'bold'); doc.setTextColor(...C.lime); txt('METATREINO', M, 13);
+    fonte(21, 'bold'); doc.setTextColor(255, 255, 255); txt('Relatório de treinos', M, 25);
+    fonte(9.5); doc.setTextColor(200, 206, 214);
+    txt(`${nomeAluno} · ${perTxt} (${_dataBR(ini, true)} a ${_dataBR(agora, true)})`, M, 33);
+    txt(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, PW - M, 13, {align:'right'});
+    y = 50;
+  }
   if(aviso) nota(aviso);
 
   const diasAtivos = new Set([...(opt.lift ? L : []), ...(opt.run ? R : [])].map(x=>mtDia0(x.at))).size;
@@ -6727,7 +6745,8 @@ function arqMontarPDF(jsPDF, opt, aviso){
   const n = doc.getNumberOfPages();
   for(let i = 1; i <= n; i++){
     doc.setPage(i); fonte(7); cor(C.dim);
-    doc.setDrawColor(...C.linha); doc.setLineWidth(0.2); doc.line(M, PH - 11, PW - M, PH - 11);
+    if(arte){ doc.setDrawColor(...arte.C.p); doc.setLineWidth(0.5); doc.line(M, PH - 11, M + 18, PH - 11); }
+    doc.setDrawColor(...C.linha); doc.setLineWidth(0.2); doc.line(arte ? M + 19 : M, PH - 11, PW - M, PH - 11);
     txt(`MetaTreino · ${nomeAluno}`, M, PH - 7); txt(`Página ${i} de ${n}`, PW - M, PH - 7, {align:'right'});
   }
   const nome = `metatreino-relatorio-${chaveDia(new Date())}.pdf`;
@@ -7495,7 +7514,7 @@ let _janFechandoPorVoltar = false;
   back.removeAttribute('onclick');
   back.addEventListener('click', e=>{
     if(e.target !== back) return;
-    if(_janSuja){ mi.classList.remove('jan-avisa'); void mi.offsetWidth; mi.classList.add('jan-avisa'); toast('Você digitou algo que ainda não foi salvo. Use Salvar ou Cancelar.'); return; }
+    if(_janSuja){ janPerguntaDescartar(); return; }
     closeModal();
   });
   // Voltar do Android: um registro no histórico enquanto a janela está aberta
@@ -7506,7 +7525,7 @@ let _janFechandoPorVoltar = false;
   }).observe(back, { attributes:true, attributeFilter:['class'] });
   window.addEventListener('popstate', ()=>{
     if(!back.classList.contains('on')) return;
-    if(_janSuja){ try{ history.pushState({ mtJanela:1 }, ''); }catch(err){} toast('Você digitou algo que ainda não foi salvo. Use Salvar ou Cancelar.'); return; }
+    if(_janSuja){ try{ history.pushState({ mtJanela:1 }, ''); }catch(err){} janPerguntaDescartar(); return; }
     _janHist = false; _janFechandoPorVoltar = true; closeModal();
   });
 })();
@@ -7522,6 +7541,23 @@ mtGancho('closeModal', { depois(){
   // fica curta por um instante e o navegador puxava a tela para cima)
   if(ao === 'perfil'){ const y = window.scrollY; try{ renderProfile(); }catch(e){} if(Math.abs(window.scrollY - y) > 1) window.scrollTo({ top:y, behavior:'instant' }); requestAnimationFrame(()=>{ if(Math.abs(window.scrollY - y) > 1) window.scrollTo({ top:y, behavior:'instant' }); }); }
 }});
+// Beta 40: sair com algo digitado e não salvo → pergunta, dentro da própria janela, se quer descartar
+// (antes só aparecia um aviso pedindo "Salvar ou Cancelar", e algumas janelas nem tinham Cancelar)
+function janPerguntaDescartar(){
+  const mi = document.getElementById('modal-inner'); if(!mi) return;
+  let bar = mi.querySelector('.jan-descarta');
+  if(!bar){
+    bar = document.createElement('div'); bar.className = 'jan-descarta'; bar.setAttribute('role','alertdialog'); bar.setAttribute('aria-label','Descartar alteração?');
+    bar.innerHTML = `<b>Descartar a alteração?</b><span>O que você mudou ainda não foi salvo.</span><div class="jan-descarta-a"><button type="button" class="btn btn-ghost" data-k="fica">Continuar editando</button><button type="button" class="btn btn-perigo" data-k="sai">Descartar</button></div>`;
+    bar.addEventListener('click', e=>{ const k = e.target.closest('button') && e.target.closest('button').dataset.k; if(!k) return;
+      if(k === 'sai'){ _janSuja = false; closeModal(); } else bar.remove(); });
+    mi.appendChild(bar);
+  }
+  mi.classList.remove('jan-avisa'); void mi.offsetWidth; mi.classList.add('jan-avisa');
+  try{ bar.scrollIntoView({ block:'nearest', behavior:'smooth' }); bar.querySelector('[data-k="fica"]').focus({ preventScroll:true }); }catch(e){}
+}
+// janela com "Cancelar": cancelar nunca dispara o aviso de alteração não salva
+function janCancelar(){ _janSuja = false; closeModal(); }
 // janelas que salvam na hora: troca o "Pronto" por um ✕ discreto
 function janelaInstantanea(aoFechar){
   const mi = document.getElementById('modal-inner'); if(!mi) return;
@@ -9924,7 +9960,8 @@ function nrRegua(o){
   let kAtual = clampK(Math.round(((o.valor != null ? o.valor : o.min) - o.min)/o.step));
   let raf = 0, toque = false, mouse = false, fimT = 0, ultVib = 0, inercia = 0;
   // a folha pode ter fechado enquanto a régua ainda terminava o encaixe: aí não avisa mais ninguém
-  const muda = v=>{ if(NR && o.onChange) o.onChange(v); };
+  // Beta 40: régua que já saiu da folha (ex.: a do dia, refeita ao trocar o mês) não muda mais nada
+  const muda = v=>{ if(NR && o.onChange && el.isConnected) o.onChange(v); };
   const aria = ()=>{ el.setAttribute('aria-valuenow', valDe(kAtual)); el.setAttribute('aria-valuetext', o.fmt(valDe(kAtual)) + (o.un ? ' '+o.un : '')); };
   const vibra = ()=>{ const t = Date.now(); if(t - ultVib > 35 && navigator.vibrate && matchMedia('(pointer:coarse)').matches){ ultVib = t; try{ navigator.vibrate(3); }catch(e){} } };
   const ler = ()=>{
@@ -10068,24 +10105,30 @@ function nrAbrir(el){
     const [mnA] = c.min.split('-').map(Number), [mxA] = c.max.split('-').map(Number);
     let base = el.value || (c.nasc ? `${new Date().getFullYear()-30}-01-01` : (c.min > _nrIsoHoje() ? c.min : _nrIsoHoje()));
     if(base < c.min) base = c.min; if(base > c.max) base = c.max;
-    let [a, m, d] = base.split('-').map(Number);
+    let [a, m, dEsc] = base.split('-').map(Number);
+    // Beta 40: "dEsc" é o dia que a PESSOA escolheu; o dia mostrado é ele, limitado ao último dia do mês.
+    // Antes o dia era cortado de vez: rolando o mês por fevereiro, o dia 31 virava 28 e não voltava;
+    // trocando o ano (29/02 → ano comum) acontecia o mesmo. Agora só o dia mostrado se ajusta.
     let rDia, dmAtual = 0;
-    const iso =()=>`${a}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dEf = ()=>Math.min(dEsc, _nrDiasMes(a, m));
+    const iso = (d)=>`${a}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const up = ()=>{
-      const dm = _nrDiasMes(a, m); if(d > dm) d = dm;
-      let v = iso(); if(v < c.min){ [a,m,d] = c.min.split('-').map(Number); v = iso(); } if(v > c.max){ [a,m,d] = c.max.split('-').map(Number); v = iso(); }
-      NR.val = v; const t = _nrDataTxt(a, m, d); nrMostra(t.num, '', t.sub);
+      let d = dEf(), v = iso(d);
+      // fora da faixa permitida: mostra o limite, sem mexer no que a pessoa escolheu nas réguas
+      if(v < c.min) v = c.min; else if(v > c.max) v = c.max;
+      NR.val = v; const [aa, mm, dd] = v.split('-').map(Number); const t = _nrDataTxt(aa, mm, dd); nrMostra(t.num, '', t.sub);
     };
-    // o dia acompanha o mês: fevereiro tem 28/29, abril 30…
+    // o dia acompanha o mês: fevereiro tem 28/29, abril 30… (a régua do dia é refeita só quando o total muda)
     const novoDia = ()=>{
-      const dm = _nrDiasMes(a, m); if(d > dm) d = dm; dmAtual = dm;
-      const r = nrRegua({ min:1, max:dm, step:1, valor:d, fmt:v=>String(v), rotulo:'dia', nome:'Dia', compacta:true, maior:1, tk:40, onChange:v=>{ d = v; up(); } });
+      const dm = _nrDiasMes(a, m); if(rDia && dm === dmAtual) return; dmAtual = dm;
+      const r = nrRegua({ min:1, max:dm, step:1, valor:dEf(), fmt:v=>String(v), rotulo:'dia', nome:'Dia', compacta:true, maior:1, tk:40, onChange:v=>{ dEsc = v; up(); } });
       if(rDia){ box.replaceChild(r.el, rDia.el); NR.reguas[0] = r; requestAnimationFrame(()=>r.montar()); } else add(r);
       rDia = r;
     };
     novoDia();
-    add(nrRegua({ min:1, max:12, step:1, valor:m, fmt:v=>NR_MESES[v-1], rotulo:'mês', nome:'Mês', compacta:true, maior:1, tk:64, onChange:v=>{ m = v; if(_nrDiasMes(a, m) !== dmAtual) novoDia(); up(); } }));
-    add(nrRegua({ min:mnA, max:mxA, step:1, valor:a, fmt:v=>String(v), rotulo:'ano', nome:'Ano', compacta:true, maior:1, tk:64, onChange:v=>{ a = v; if(_nrDiasMes(a, m) !== dmAtual) novoDia(); up(); } }));
+    add(nrRegua({ min:1, max:12, step:1, valor:m, fmt:v=>NR_MESES[v-1], rotulo:'mês', nome:'Mês', compacta:true, maior:1, tk:64, onChange:v=>{ m = v; novoDia(); up(); } }));
+    add(nrRegua({ min:mnA, max:mxA, step:1, valor:a, fmt:v=>String(v), rotulo:'ano', nome:'Ano', compacta:true, maior:1, tk:64, onChange:v=>{ a = v; novoDia(); up(); } }));
+    NR.dataTeste = ()=>({ a, m, dEsc, d:dEf() });   // usado pelos testes automáticos
     up();
     lim.textContent = 'Sem data'; lim.hidden = !c.opcional;
   } else if(c.tipo === 'hora'){
@@ -10648,3 +10691,2472 @@ window.renderHomeSmart = function(){
   return r;
 };
 Object.assign(window, { evoResponder, evoPorque, evoAtualizar, evoLiftAvaliar, evoPodeOferecer, provaOrientacao, provaRegistrar, maBoasVindasTexto });
+
+// =====================================================================
+// 36. Beta 40 — Planos Gratuito e Premium
+// =====================================================================
+// Fonte do plano: usuariosAutorizados/{email} (app.js: planoDe / planoAtual). O aluno não grava nesse
+// documento (só cria o próprio Teste Premium uma vez — firestore.rules). Cada recurso Premium é conferido
+// AQUI, na função que faz o trabalho (abrir, gerar, responder), e não só escondendo o botão.
+// O que NUNCA é bloqueado: musculação, corrida, criar e executar planos, registrar cargas/séries/reps,
+// vídeos dos exercícios do próprio treino, histórico, evolução básica, desafios, conquistas, metas e provas.
+// Nenhum dado é apagado ao mudar de plano: o que é Premium fica guardado e volta quando o Premium volta.
+
+const MT_RECURSOS = {
+  biblioteca:     { nome:'Biblioteca completa de exercícios', txt:'Consultar os exercícios do catálogo inteiro, com ficha técnica e vídeo, fora do seu treino.' },
+  exercicioLivre: { nome:'Consulta livre de exercícios e vídeos', txt:'Abrir a ficha e o vídeo de qualquer exercício, mesmo os que não estão no seu plano.' },
+  alimentacao:    { nome:'Plano alimentar', txt:'Cardápio da semana calculado pelo seu peso, treinos e objetivo, com ajustes, trocas e lista de compras.' },
+  pdfTreino:      { nome:'PDF do plano de treino', txt:'Seu plano de musculação ou corrida em um documento pronto para imprimir.' },
+  pdfAlimentacao: { nome:'PDF do plano alimentar', txt:'O cardápio da semana com refeições, quantidades e valores nutricionais em PDF.' },
+  relatorio:      { nome:'Relatório completo de evolução', txt:'Relatório em PDF com gráficos de volume, cargas, quilômetros, ritmo, peso e conquistas.' },
+  inicioCompleto: { nome:'Personalização completa do Início', txt:'Escolher bloco por bloco o que aparece e arrastar para mudar a ordem.' },
+  temas:          { nome:'Todos os temas', txt:'Os 8 temas do app e os 2 exclusivos Premium (Ametista e Coral).' },
+  assistente:     { nome:'Meta Assistente completo', txt:'Análises da sua evolução, aviso de subir de nível, sugestões no dia a dia, orientação para as provas e comandos que ajustam o plano.' },
+  clima:          { nome:'Cenário e dicas pelo clima', txt:'O desenho do Início e as dicas de treino acompanham o tempo de agora (usa sua localização).' }
+};
+const TEMAS_GRATIS = ['zepp', 'areia'];   // um escuro e um claro
+// estrela dos selos Premium em SVG (o cadastro e as telas sóbrias não usam emoji)
+const PL_EST = '<svg class="pl-est" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2 6.4 20.2l1.1-6.3L2.9 9.5l6.3-.9z" fill="currentColor"/></svg>';
+function mtPremium(){ try{ return !!planoAtual().premium; }catch(e){ return false; } }
+function mtTem(r){ return MT_RECURSOS[r] ? mtPremium() : true; }
+function _planoConhecido(){ return !!(window.__mtPlanoPronto && state && state.user && fbUser); }
+
+// ---------- 1. Explicação + contato para contratar ----------
+function mtContatoPremiumHtml(){
+  const c = (typeof coachContact !== 'undefined' && coachContact) || {};
+  const n = String(c.whatsapp||'').replace(/\D/g,'');
+  const conta = (state && state.user && state.user.email) || '';
+  const msg = encodeURIComponent(`Olá! Quero contratar o MetaTreino Premium.${conta && !ehLoginInterno(conta) ? ' Minha conta: ' + conta : ''}`);
+  const mail = c.email || 'metatreinooficial@gmail.com';
+  return `<div class="pl-contato">
+    ${n ? `<a class="btn btn-primary btn-block" href="https://wa.me/${n}?text=${msg}" target="_blank" rel="noopener">💬 Contratar pelo WhatsApp</a>` : ''}
+    <a class="btn ${n?'btn-ghost':'btn-primary'} btn-block" href="mailto:${mtEsc(mail)}?subject=${encodeURIComponent('MetaTreino Premium')}&body=${msg}" style="margin-top:8px">✉️ Contratar por e-mail</a>
+    <div class="pl-contato-sub">A administração ativa o Premium na sua conta. Seus treinos e dados continuam os mesmos.</div></div>`;
+}
+function mtPlanoStatusTxt(){
+  const p = planoAtual(); const f = t=>new Date(t).toLocaleDateString('pt-BR');
+  if(p.admin) return 'Administrador: todos os recursos liberados.';
+  if(p.tipo === 'teste') return `Teste Premium até ${f(p.ate)} (${accessDaysLeft()} ${accessDaysLeft()===1?'dia':'dias'}).`;
+  if(p.tipo === 'premium') return p.ate ? `Premium até ${f(p.ate)}.` : 'Premium sem data de término.';
+  if(p.testeAcabouEm) return `Seu teste Premium terminou em ${f(p.testeAcabouEm)}. Você está no plano Gratuito.`;
+  if(p.premiumAcabouEm) return `Seu Premium terminou em ${f(p.premiumAcabouEm)}. Você está no plano Gratuito.`;
+  return 'Você está no plano Gratuito.';
+}
+function mtPremiumAviso(rec, extra){
+  const r = MT_RECURSOS[rec] || { nome:'Recurso Premium', txt:'' };
+  try{ closeModal(); }catch(e){}
+  setTimeout(()=>{
+    $('modal-inner').innerHTML = `<div class="pl-aviso">
+      <div class="pl-selo">${PL_EST}Premium</div>
+      <h3>${mtEsc(r.nome)}</h3>
+      <p class="pl-txt">${mtEsc(r.txt)}</p>
+      ${extra ? `<p class="pl-txt pl-extra">${extra}</p>` : ''}
+      <div class="pl-status">${mtEsc(mtPlanoStatusTxt())}</div>
+      <div class="pl-continua"><b>No plano Gratuito continua tudo o que você precisa para treinar:</b> musculação e corrida, criar e executar treinos, registrar cargas, séries e repetições, vídeos dos exercícios do seu treino, histórico, evolução, desafios, conquistas e provas.</div>
+      ${mtContatoPremiumHtml()}
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openPlanos()">Comparar planos</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Agora não</button></div>`;
+    $('modal-back').classList.add('on');
+  }, 40);
+  return false;
+}
+function openPlanos(){
+  const p = planoAtual();
+  const L = (t, g, pr)=>`<tr><td>${t}</td><td class="${g?'sim':'nao'}">${g===true?'✓':g===false?'—':g}</td><td class="sim">${pr===true?'✓':pr}</td></tr>`;
+  $('modal-inner').innerHTML = `<h3>Planos do MetaTreino</h3>
+    <div class="pl-status" style="margin:4px 0 10px">${mtEsc(mtPlanoStatusTxt())}</div>
+    <div class="pl-tabela-wrap"><table class="pl-tabela"><thead><tr><th></th><th>Gratuito</th><th>Premium</th></tr></thead><tbody>
+      ${L('Musculação e corrida (planos, execução e registro)', true, true)}
+      ${L('Vídeos dos exercícios durante o treino', true, true)}
+      ${L('Histórico, evolução e gráficos', 'básico', 'completo')}
+      ${L('Desafios, conquistas, metas e provas', true, true)}
+      ${L('Meta Assistente', 'básico', 'completo')}
+      ${L('Biblioteca completa de exercícios', false, true)}
+      ${L('Plano alimentar (com PDF)', false, true)}
+      ${L('PDF dos treinos e relatório de evolução', false, true)}
+      ${L('Temas', '2', '10')}
+      ${L('Personalização do Início', 'básica', 'completa')}
+      ${L('Cenário do Início pelo clima', false, true)}
+    </tbody></table></div>
+    ${p.premium && !p.admin ? '' : (p.admin ? '' : mtContatoPremiumHtml())}
+    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+
+// ---------- 2. Temas: 2 no Gratuito, 10 no Premium ----------
+Object.assign(THEMES, {
+  ametista: { nome:'Ametista', sub:'Escuro · ametista e menta', bar:'#100b17', prev:{bg:'#100b17', a:'#b197fc', b:'#63e6be', c:'#241a33'}, premium:true },
+  coral:    { nome:'Coral', sub:'Claro · coral e azul-marinho', bar:'#fff8f4', prev:{bg:'#fff8f4', a:'#d9482b', b:'#1d3557', c:'#f4e2d8'}, premium:true }
+});
+// "Premium" era o nome do tema preto e laranja — com um plano chamado Premium, isso confundia
+THEMES.zepp.nome = 'Brasa'; THEMES.zepp.sub = 'Preto e laranja · estilo relógio';
+if(!TEMAS_CLAROS.includes('coral')) TEMAS_CLAROS.push('coral');
+if(typeof TEMAS_NOTURNOS !== 'undefined' && !TEMAS_NOTURNOS.includes('ametista')) TEMAS_NOTURNOS.push('ametista');
+if(typeof TEMA_ORDEM_CAD !== 'undefined'){ ['coral','ametista'].forEach(k=>{ if(!TEMA_ORDEM_CAD.includes(k)) TEMA_ORDEM_CAD.push(k); }); }
+function temaPremium(t){ return !TEMAS_GRATIS.includes(normalizaTema(t)); }
+function temaLiberado(t){ return !_planoConhecido() || mtPremium() || !temaPremium(t); }
+function temaGratisDe(t){ return temaClaro(normalizaTema(t)) ? 'areia' : 'zepp'; }
+const _applyThemeB40 = applyTheme;
+applyTheme = function(t, naoGuardar){
+  t = normalizaTema(t);
+  if(!temaLiberado(t)) t = temaGratisDe(t);   // nunca aplica um tema Premium sem Premium (o salvo na conta não é apagado)
+  return _applyThemeB40.call(this, t, naoGuardar);
+};
+const _setThemeB40 = setTheme;
+setTheme = function(t){
+  if(!temaLiberado(t)){ mtPremiumAviso('temas', `O tema <b>${mtEsc(THEMES[normalizaTema(t)].nome)}</b> é exclusivo do Premium. Os temas <b>Brasa</b> (escuro) e <b>Areia</b> (claro) continuam liberados.`); return; }
+  const r = _setThemeB40.apply(this, arguments);
+  try{ state.prefs = state.prefs || {}; state.prefs.tema = normalizaTema(t); if(mtPremium()) delete state.prefs.temaPremium; saveData(); }catch(e){}
+  return r;
+};
+// troca de plano: tema Premium vira o equivalente gratuito, guardando o escolhido para quando o Premium voltar
+function mtTemaConfere(avisar){
+  if(!_planoConhecido()) return;
+  state.prefs = state.prefs || {};
+  let salvo = null; try{ salvo = localStorage.getItem(THEME_KEY); }catch(e){}
+  const escolhido = normalizaTema(state.prefs.tema || salvo || currentTheme());
+  if(!mtPremium() && temaPremium(escolhido)){
+    const novo = temaGratisDe(escolhido);
+    state.prefs.temaPremium = escolhido; state.prefs.tema = novo;
+    _applyThemeB40(novo); saveData();
+    if(avisar) return { de:escolhido, para:novo };
+  } else if(mtPremium() && state.prefs.temaPremium && THEMES[state.prefs.temaPremium]){
+    const volta = state.prefs.temaPremium; delete state.prefs.temaPremium;
+    state.prefs.tema = volta; _applyThemeB40(volta); saveData();
+    if(avisar) toast(`🎨 Seu tema ${THEMES[volta].nome} voltou.`);
+  } else {
+    applyTheme(currentTheme(), true);
+  }
+  return null;
+}
+
+// ---------- 3. Mudança de plano (fim do teste, Premium renovado) ----------
+function mtPlanoMudou(antes, depois){
+  if(!_planoConhecido()) return;
+  const ehP = t=>t==='premium' || t==='teste';
+  const troca = mtTemaConfere(true);
+  // fim do teste/Premium — ou a primeira entrada na Beta 40 de quem já estava sem acesso e usava um tema Premium
+  const caiu = (antes && ehP(antes) && !ehP(depois)) || (!antes && !ehP(depois) && !!troca);
+  if(!ehP(depois)){ try{ weatherData = null; }catch(e){} }
+  else if(antes && !ehP(antes)){ try{ loadWeather(); }catch(e){} toast('⭐ Premium ativo: todos os recursos liberados.'); }
+  state.planoVisto = depois; saveData();
+  if(caiu) mtAvisoFimPremium(antes, troca);
+  try{ const t = (state.ui && state.ui.tab) || 'home'; if(!document.querySelector('#modal-back.on')) goTab(t); }catch(e){}
+}
+function mtAvisoFimPremium(antes, troca){
+  const nomeAntes = antes === 'teste' ? 'Seu teste Premium de 30 dias terminou' : antes ? 'Seu Premium terminou' : 'Você está no plano Gratuito';
+  setTimeout(()=>{
+    $('modal-inner').innerHTML = `<div class="pl-aviso">
+      <div class="pl-selo pl-selo-dim">Plano Gratuito</div>
+      <h3>${nomeAntes}</h3>
+      <p class="pl-txt">Sua conta passou para o plano Gratuito. <b>Nada foi apagado</b>: treinos, histórico, cargas, evolução, conquistas e provas continuam aqui, e você segue treinando normalmente.</p>
+      ${troca ? `<div class="pl-tema-troca"><span class="pl-tema-bola" style="background:${THEMES[troca.de].prev.bg};border-color:${THEMES[troca.de].prev.a}"></span><span>→</span><span class="pl-tema-bola" style="background:${THEMES[troca.para].prev.bg};border-color:${THEMES[troca.para].prev.a}"></span><span>Tema <b>${mtEsc(THEMES[troca.de].nome)}</b> trocado por <b>${mtEsc(THEMES[troca.para].nome)}</b>. Ele volta sozinho se você voltar ao Premium.</span></div>` : ''}
+      <p class="pl-txt">Ficam guardados para quando o Premium voltar: plano alimentar, personalização do Início e o tema escolhido.</p>
+      ${mtContatoPremiumHtml()}
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Continuar no Gratuito</button></div>`;
+    $('modal-back').classList.add('on');
+  }, 600);
+}
+// confere na entrada e de hora em hora (o teste pode terminar com o app aberto)
+function mtPlanoVerifica(){
+  if(!_planoConhecido()) return;
+  const agora = planoAtual().tipo;
+  const visto = state.planoVisto || null;
+  if(visto !== agora) mtPlanoMudou(visto, agora);
+  else mtTemaConfere(false);
+  // aviso de fim próximo do teste (3 dias, uma vez por dia)
+  try{
+    const p = planoAtual();
+    if(p.tipo === 'teste' && accessDaysLeft() <= 3 && mtLS('mt_aviso_teste') !== mtDia0()+''){
+      mtLS('mt_aviso_teste', mtDia0()+'');
+      setTimeout(()=>toast(`⭐ Seu teste Premium termina em ${accessDaysLeft()} ${accessDaysLeft()===1?'dia':'dias'}. Seus dados continuam depois.`, 5000), 2500);
+    }
+  }catch(e){}
+}
+mtGancho('bootAfterAuth', { antes(){ window.__mtPlanoPronto = true; }, depois(){ try{ mtPlanoVerifica(); }catch(e){ console.log('plano:', e); } } });
+setInterval(()=>{ try{ if(document.visibilityState === 'visible') mtPlanoVerifica(); }catch(e){} }, 3600000);
+document.addEventListener('visibilitychange', ()=>{ try{ if(document.visibilityState === 'visible') mtPlanoVerifica(); }catch(e){} });
+
+// ---------- 4. Perfil e Início: o plano aparece com clareza ----------
+mtGancho('renderProfile', { depois(){
+  try{
+    const p = planoAtual(); const d = accessDaysLeft();
+    const st = $('pf-status'); if(st) st.innerHTML = p.premium ? `⭐ <span>${p.tipo==='teste'?'Teste Premium':'Premium'}</span>` : '🎫 <span>Plano Gratuito</span>';
+    const tr = $('pf-trial'); if(tr){ tr.textContent = accessLabel(d); const card = tr.closest('.card'); if(card && !card.dataset.pl){ card.dataset.pl = '1'; card.style.cursor = 'pointer'; card.setAttribute('role','button'); card.setAttribute('tabindex','0'); card.onclick = openPlanos; } }
+    const g = $('pf-goal'); if(g && !g.querySelector('.pl-ver')) g.insertAdjacentHTML('beforeend', ' · <span class="pl-ver">ver planos ›</span>');
+    // estilo dos ícones: linha própria no grupo Aplicativo (antes ficava escondido dentro de Aparência)
+    const ap = $('theme-row');
+    if(ap && !$('icones-row')){
+      ap.insertAdjacentHTML('afterend', `<div class="list-row" onclick="openEstiloIconesB40()" id="icones-row"><span>✨</span> <span>Estilo dos ícones</span><span id="icones-row-val" style="margin-left:auto;color:var(--text-mute);font-size:12px"></span></div>`);
+    }
+    const iv = $('icones-row-val'); if(iv) iv.textContent = (document.documentElement.classList.contains('sobrio') ? 'Minimalistas' : 'Emojis coloridos') + ' ›';
+    // linhas Premium ganham o selo (o recurso continua conferido na função)
+    if(!p.premium){
+      [['inicio-row','Personalizar início'],['theme-row','Aparência']].forEach(([id])=>{ const r = $(id); if(r && !r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">'+PL_EST+'</span>'); });
+      document.querySelectorAll('#scr-profile .list-row[onclick*="arqRelatorio"], #scr-profile .list-row[onclick*="library"]').forEach(r=>{ if(!r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">${PL_EST}Premium</span>'); });
+    } else document.querySelectorAll('#scr-profile .pl-mini').forEach(x=>x.remove());
+  }catch(e){ console.log('perfil (plano):', e); }
+}});
+mtGancho('renderHome', { depois(){
+  try{
+    const c = $('card-access-info'); if(!c) return;
+    const p = planoAtual(); const d = accessDaysLeft();
+    const t = c.querySelector('.card-title');
+    if(p.premium && !p.vitalicio && d <= 15){
+      c.classList.remove('hidden');
+      if(t) t.textContent = p.tipo === 'teste' ? '⭐ Teste Premium' : '⭐ Premium';
+      const s = $('access-days'); if(s) s.textContent = `Termina em ${d} ${d===1?'dia':'dias'} · seus dados continuam depois`;
+      c.style.cursor = 'pointer'; c.onclick = openPlanos;
+    } else c.classList.add('hidden');
+  }catch(e){}
+}});
+
+mtGancho('renderPlan', { depois(){
+  try{
+    const p = planoAtual(); const a = $('pl-access'), d = $('pl-days');
+    if(a) a.textContent = p.premium ? (p.tipo === 'teste' ? '⭐ Teste Premium' : '⭐ Premium') : 'Plano Gratuito';
+    if(d) d.textContent = p.premium ? accessLabel(accessDaysLeft()) : 'Treinos, histórico e evolução liberados';
+    const card = a && a.closest('.card'); if(card && !card.dataset.pl){ card.dataset.pl = '1'; card.style.cursor = 'pointer'; card.onclick = openPlanos; }
+  }catch(e){}
+}});
+
+// ---------- 5. Biblioteca e consulta livre de exercícios ----------
+function mtExNoPlano(nome, idKey){
+  const id = slug(String(nome||'')); const n = mtNorm(nome);
+  if(idKey && /^mob-|^cali|^aq-/.test(String(idKey))) return true;
+  const L = ((state.modules.lift||{}).plan||{}).workouts || [];
+  if(L.some(w=>(w.exercises||[]).some(e=>e.id===id || e.id===idKey || mtNorm(e.name)===n))) return true;
+  const R = ((state.modules.run||{}).plan||{}).workouts || [];
+  if(R.some(w=>JSON.stringify(w.blocks||w.exercises||[]).toLowerCase().includes(n))) return true;
+  // exercícios feitos nos últimos 14 dias (treino extra, troca de exercício)
+  const H = ((state.modules.lift||{}).history||[]).filter(x=>x.at > Date.now()-14*DIA_MS);
+  return H.some(x=>(x.exercisesDone||[]).some(e=>e.id===id || mtNorm(e.name)===n));
+}
+function mtEmTreino(){
+  const a = document.querySelector('.screen.active');
+  return !!(a && (a.id === 'scr-sessions' || a.id === 'scr-runlog' || a.id === 'scr-plan'));
+}
+const _openExSheetB40 = window.openExerciseSheet;
+window.openExerciseSheet = function(name, idKey, opts){
+  if(mtPremium() || mtEmTreino() || mtExNoPlano(name, idKey)) return _openExSheetB40.apply(this, arguments);
+  return mtPremiumAviso('exercicioLivre', `<b>${mtEsc(name)}</b> não está no seu plano. Os vídeos e fichas dos exercícios do seu treino continuam liberados, inclusive durante a execução.`);
+};
+const _goTabB40 = window.goTab;
+window.goTab = function(t){
+  if(t === 'library' && _planoConhecido() && !mtTem('biblioteca')){ mtPremiumAviso('biblioteca'); return; }
+  return _goTabB40.apply(this, arguments);
+};
+const _renderLibraryB40 = window.renderLibrary;
+window.renderLibrary = function(){
+  if(_planoConhecido() && !mtTem('biblioteca')){
+    const l = $('lib-list'); if(l) l.innerHTML = `<div class="pl-bloqueio"><div class="pl-selo">${PL_EST}Premium</div><b>Biblioteca completa de exercícios</b><span>Os vídeos dos exercícios do seu treino continuam na aba Treinos.</span><button class="btn btn-primary" onclick="mtPremiumAviso('biblioteca')">Conhecer o Premium</button></div>`;
+    return;
+  }
+  return _renderLibraryB40.apply(this, arguments);
+};
+mtGancho('renderSessions', { depois(){ try{ const ql = $('ql-lib'); if(ql && !mtPremium()){ if(!ql.querySelector('.pl-mini')) ql.insertAdjacentHTML('beforeend','<span class="pl-mini">'+PL_EST+'</span>'); } else if(ql){ const m = ql.querySelector('.pl-mini'); if(m) m.remove(); } }catch(e){} }});
+
+// ---------- 6. Plano alimentar (Premium) — os registros ficam guardados ----------
+const _openNutriB40 = window.openNutri;
+window.openNutri = function(){
+  if(!mtTem('alimentacao')){ window.__nutriAberto = false; return mtPremiumAviso('alimentacao', (state.nutri || state.nutriLog) ? 'Seu plano alimentar e o que você já registrou continuam guardados na sua conta e voltam assim que o Premium for ativado.' : ''); }
+  return _openNutriB40.apply(this, arguments);
+};
+['nutriSet','nutriTrocar','nutriComi','nutriListaCompras','nutriEditar','nutriRemover','nutriAddAbrir'].forEach(f=>{
+  const o = window[f]; if(typeof o !== 'function') return;
+  window[f] = function(){ if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao'); return o.apply(this, arguments); };
+});
+
+// ---------- 7. PDFs e relatório completo ----------
+const _arqRelatorioB40 = window.arqRelatorio;
+window.arqRelatorio = function(){ if(!mtTem('relatorio')) return mtPremiumAviso('relatorio', 'Seu histórico e seus gráficos continuam completos no app — só a exportação em PDF é Premium.'); return _arqRelatorioB40.apply(this, arguments); };
+const _arqGerarPDFB40 = window.arqGerarPDF;
+window.arqGerarPDF = function(){ if(!mtTem('relatorio')) return mtPremiumAviso('relatorio'); return _arqGerarPDFB40.apply(this, arguments); };
+
+// ---------- 8. Personalização do Início ----------
+// Gratuito: "Tudo" ou "Só o essencial". Premium: bloco por bloco + ordem. A escolha Premium fica guardada.
+const _inicioOcultosB40 = window.inicioOcultos;
+window.inicioOcultos = function(){
+  let oc;
+  if(!_planoConhecido() || mtTem('inicioCompleto')) oc = _inicioOcultosB40.apply(this, arguments);
+  else oc = state.inicioBasico === 'essencial' ? INICIO_ESSENCIAL.slice() : [];
+  if(_planoConhecido() && !mtTem('alimentacao') && !oc.includes('alimentacao')) oc = oc.concat('alimentacao');
+  return oc;
+};
+const _inicioAplicaOrdemB40 = window.inicioAplicaOrdem;
+window.inicioAplicaOrdem = function(){
+  if(!_planoConhecido() || mtTem('inicioCompleto')) return _inicioAplicaOrdemB40.apply(this, arguments);
+  const a = state.inicioOrdem, b = state.inicioOrdemInd;
+  state.inicioOrdem = null; state.inicioOrdemInd = null;
+  try{ return _inicioAplicaOrdemB40.apply(this, arguments); } finally { state.inicioOrdem = a; state.inicioOrdemInd = b; }
+};
+const _openPersonalizarB40 = window.openPersonalizarInicio;
+window.openPersonalizarInicio = function(){
+  if(mtTem('inicioCompleto')) return _openPersonalizarB40.apply(this, arguments);
+  const ess = state.inicioBasico === 'essencial';
+  $('modal-inner').classList.remove('modal-video');
+  $('modal-inner').innerHTML = `<h3>🏠 Personalizar início</h3>
+    <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Escolha como a tela inicial aparece. Vale na hora e fica salvo na sua conta.</p>
+    <div class="pl-opcoes">
+      <button type="button" class="pl-op ${!ess?'on':''}" onclick="piBasico('completo')"><b>Completo</b><small>todos os blocos do Início</small></button>
+      <button type="button" class="pl-op ${ess?'on':''}" onclick="piBasico('essencial')"><b>Só o essencial</b><small>treino de hoje, avisos e o principal</small></button>
+    </div>
+    <div class="pl-bloqueio pl-bloqueio-sm"><div class="pl-selo">${PL_EST}Premium</div><span>Escolher bloco por bloco, esconder e mostrar seções e arrastar para mudar a ordem.</span>
+      <button class="btn btn-ghost" onclick="mtPremiumAviso('inicioCompleto')">Ver o Premium</button></div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();goTab('home')">Pronto</button>`;
+  $('modal-back').classList.add('on');
+};
+function piBasico(k){ state.inicioBasico = k === 'essencial' ? 'essencial' : 'completo'; saveData(); aplicaInicio(); openPersonalizarInicio(); }
+['piAlterar','piPreset'].forEach(f=>{ const o = window[f]; if(typeof o !== 'function') return; window[f] = function(){ if(!mtTem('inicioCompleto')) return mtPremiumAviso('inicioCompleto'); return o.apply(this, arguments); }; });
+
+// ---------- 9. Clima e cenário do Início ----------
+// Gratuito: cenário estável pelo horário e datas especiais, SEM pedir localização nem buscar o clima.
+const _loadWeatherB40 = window.loadWeather;
+window.loadWeather = function(){
+  if(!mtTem('clima')){ try{ weatherData = null; }catch(e){} return; }
+  return _loadWeatherB40.apply(this, arguments);
+};
+const _cenaClimaB40 = window._cenaClima;
+window._cenaClima = function(){ if(!mtTem('clima')) return null; return _cenaClimaB40.apply(this, arguments); };
+
+// ---------- 10. Meta Assistente: o mesmo assistente, com recursos conforme o plano ----------
+const MA_KEYS_PREMIUM = new Set(['analise_mes','cargas','consistencia','corrida_analise','retomada','evolucao','analise_semana','_correndobem','_treinandobem',
+  'plano_alimentar','run_desenvolve','run_carga','run_avancar','run_ritmos','cali_analise','prova','calorias']);
+function maRespostaPremium(oQue){
+  return `⭐ ${oQue || 'Essa análise'} faz parte do <b>Meta Assistente completo</b>, do plano Premium.<br><br>`
+    + `No plano Gratuito eu continuo te ajudando com: dúvidas sobre o app, o seu treino de hoje e o plano da semana, como fazer os exercícios do seu treino, registrar peso, atividades e dores, e orientações básicas.<br><br>`
+    + `<button class="btn btn-primary" style="padding:9px 16px;font-size:13px" onclick="closeAssistant();setTimeout(()=>mtPremiumAviso('assistente'),220)">Conhecer o Premium</button>`;
+}
+Object.keys(MA_ANSWERS).forEach(k=>{
+  if(!MA_KEYS_PREMIUM.has(k) || typeof MA_ANSWERS[k] !== 'function') return;
+  const f = MA_ANSWERS[k];
+  MA_ANSWERS[k] = function(){ return mtTem('assistente') ? f.apply(this, arguments) : maRespostaPremium(); };
+});
+const _maNudgeB40 = window.maNudge;
+window.maNudge = function(){
+  const n = _maNudgeB40.apply(this, arguments);
+  if(!n || mtTem('assistente')) return n;
+  if(n.dica && n.dica.boasVindas) return n;
+  if(n.tone === 'special' || n.tone === 'rare') return n;   // comemorações de marcos continuam
+  if(n.tone === 'important' && /recorde|seguidos|treino!/i.test(n.text||'') && !/prova|n[íi]vel|resultado/i.test(n.text||'')) return n;
+  return null;                                              // dicas proativas, oferta de nível e orientação de prova: Premium
+};
+['evoOfertaPendente','provaOrientacao','provaAviso','provaPosAviso'].forEach(f=>{
+  const o = window[f]; if(typeof o !== 'function') return;
+  window[f] = function(){ if(_planoConhecido() && !mtTem('assistente')) return null; return o.apply(this, arguments); };
+});
+const _evoComandoB40 = window.evoComando;
+if(typeof _evoComandoB40 === 'function') window.evoComando = function(t){
+  if(!mtTem('assistente') && /n[íi]vel/.test(String(t||''))) return { done:true, msg: maRespostaPremium('O acompanhamento de nível') };
+  return _evoComandoB40.apply(this, arguments);
+};
+const _maExtraB40 = window.maExtraWorkout;
+if(typeof _maExtraB40 === 'function') window.maExtraWorkout = function(){ if(!mtTem('assistente')) return { done:true, msg: maRespostaPremium('Montar treino extra pelo assistente') }; return _maExtraB40.apply(this, arguments); };
+const _maTryCommandB40 = window.maTryCommand;
+window.maTryCommand = function(txt){
+  const premium = mtTem('assistente');
+  if(!premium){
+    // "como fazer X": só os exercícios do plano (o vídeo do treino é livre; a consulta livre é Premium)
+    const t = String(txt||'').toLowerCase().trim();
+    const m = t.match(/(?:como (?:fazer|faço|se faz|executa)|me mostra|v[íi]deo d[eo])\s+(?:o |a |um |uma )?(.+)/);
+    if(m){
+      const busca = m[1].replace(/[?!.]/g,'').trim(); let achou = null, melhor = 0;
+      EX_BANK.forEach(c=>c.items.forEach(ex=>{ const s = busca.split(/\s+/).filter(p=>p.length>2).filter(p=>ex.name.toLowerCase().includes(p)).length; if(s > melhor){ melhor = s; achou = ex; } }));
+      if(achou && melhor > 0 && !mtExNoPlano(achou.name)) return { done:true, msg:`<b>${mtEsc(achou.name)}</b> não está no seu plano. ${maRespostaPremium('A consulta de qualquer exercício do catálogo')}` };
+    }
+  }
+  const r = _maTryCommandB40.apply(this, arguments);
+  if(!premium && typeof maPending !== 'undefined' && maPending && (maPending.type === 'equip' || maPending.type === 'schedule')){
+    maPending = null;
+    return { done:true, msg: maRespostaPremium(maPendingTxt()) + `<br><br>Dá para fazer essa mudança você mesmo em <b>Perfil › Ajustar plano</b>. 😉` };
+  }
+  return r;
+};
+function maPendingTxt(){ return 'Reorganizar o plano pelo assistente'; }
+
+// ---------- 11. Estilo dos ícones (na conta, aplicado no app inteiro) ----------
+function iconeEstiloAtual(){ return document.documentElement.classList.contains('sobrio') ? 'linha' : 'emoji'; }
+function iconeEstiloSalvar(v){
+  v = v === 'emoji' ? 'emoji' : 'linha';
+  try{ state.prefs = state.prefs || {}; state.prefs.icones = v; saveData(); }catch(e){}
+  try{ localStorage.setItem('metatreino_estilo', v === 'emoji' ? 'colorido' : 'sobrio'); }catch(e){}
+}
+// troca na hora quando dá (minimalista), recarrega quando precisa (os emojis originais voltam)
+function iconeEstiloAplicar(v, recarregar){
+  if(v === iconeEstiloAtual()) return;
+  if(v === 'linha'){ document.documentElement.classList.add('sobrio'); try{ iniciaEstiloSobrio(); }catch(e){} return; }
+  if(recarregar !== false){ try{ syncToCloud(); }catch(e){} setTimeout(()=>location.reload(), 700); }
+}
+setEstiloIcones = function(v){
+  const k = v === 'colorido' ? 'emoji' : 'linha';
+  iconeEstiloSalvar(k); try{ closeModal(); }catch(e){}
+  iconeEstiloAplicar(k);
+  if(k === 'linha') try{ renderProfile(); }catch(e){}
+};
+function openEstiloIconesB40(){
+  const cur = iconeEstiloAtual();
+  const amostraLinha = ['dumbbell','flame','trophy','calendar','heart'].map(n=>`<svg viewBox="0 0 24 24">${ICO_SVG[n]}</svg>`).join('');
+  $('modal-inner').innerHTML = `<h3>Estilo dos ícones</h3>
+    <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Vale para o app inteiro e fica salvo na sua conta (aparece igual nos outros aparelhos).</p>
+    <div class="ic-opcoes">${iconeOpcoesHtml(cur, 'setEstiloIcones')}</div>
+    ${cur==='linha' ? `<div class="mt-sec">Traço</div>${['fina','linha','duo'].map(k=>`<div class="ap-pack ${k===getPacote()?'on':''}" onclick="setPacote('${k}');setTimeout(openEstiloIconesB40,30)"><div><b style="font-size:14px">${ICO_PACOTES[k].nome}</b><div style="font-size:11.5px;color:var(--text-mute)">${ICO_PACOTES[k].sub}</div></div><div class="ap-sample ${k}">${amostraLinha}</div></div>`).join('')}` : ''}
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();renderProfile()">Pronto</button>`;
+  $('modal-back').classList.add('on');
+}
+function iconeOpcoesHtml(cur, fn){
+  const linha = ['dumbbell','run','droplet','trophy'].map(n=>`<svg viewBox="0 0 24 24" aria-hidden="true">${ICO_SVG[n]}</svg>`).join('');
+  return `<button type="button" class="ic-op ${cur==='linha'?'on':''}" onclick="${fn}('${fn==='setEstiloIcones'?'sobrio':'linha'}')" aria-pressed="${cur==='linha'}">
+      <span class="ic-am ic-am-linha">${linha}</span><b>Ícones minimalistas</b><small>Linhas finas na cor do tema. Visual limpo e profissional.</small></button>
+    <button type="button" class="ic-op ${cur==='emoji'?'on':''}" onclick="${fn}('${fn==='setEstiloIcones'?'colorido':'emoji'}')" aria-pressed="${cur==='emoji'}">
+      <span class="ic-am ic-am-emoji" data-manter-emoji>💪🏃💧🏆</span><b>Emojis coloridos</b><small>Mais cor e descontração, nos lugares que usam emojis.</small></button>`;
+}
+openEstiloIcones = openEstiloIconesB40;
+// conta → aparelho: na entrada, o estilo salvo na conta passa a valer neste aparelho
+mtGancho('bootAfterAuth', { antes(){
+  try{
+    const v = state && state.prefs && state.prefs.icones; if(!v) return;
+    try{ localStorage.setItem('metatreino_estilo', v === 'emoji' ? 'colorido' : 'sobrio'); }catch(e){}
+    if(v !== iconeEstiloAtual()){
+      if(v === 'linha') iconeEstiloAplicar('linha');
+      else if(sessionStorage.getItem('mt_ico_reload') !== '1'){ sessionStorage.setItem('mt_ico_reload','1'); setTimeout(()=>location.reload(), 300); }
+    }
+  }catch(e){}
+}});
+
+// ---------- 12. Aparência: os 10 temas com as prévias reais, Premium marcado ----------
+openAparencia = function(){
+  const cur = currentTheme(); const prem = mtPremium() || !_planoConhecido();
+  const opt = k=>{ const t = THEMES[k]; const trava = !prem && temaPremium(k); const exclusivo = !!t.premium;
+    return `<button type="button" class="ap-opt ${k===cur?'on':''} ${trava?'pl-trava':''}" onclick="setTheme('${k}');setTimeout(openAparencia,30)" aria-label="Tema ${mtEsc(t.nome)}${trava?' (Premium)':''}">
+      <span class="wz-tema-prev ap-prev-real" data-theme="${k}" aria-hidden="true"><span class="tp-top"><i></i><b></b></span><span class="tp-card"><b></b><i></i><em></em></span><span class="tp-btn"></span><span class="tp-tab"><i></i><i></i><i></i><i></i></span></span>
+      <div class="ap-name"><span>${mtEsc(t.nome)}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}${trava||exclusivo?`<span class="pl-mini">${PL_EST}${exclusivo?'Exclusivo':''}</span>`:''}</div><small style="color:var(--text-mute);font-size:11px;margin-top:-4px">${mtEsc(t.sub)}</small></button>`; };
+  const deco = (typeof decoEnabled==='function') ? decoEnabled() : true;
+  $('modal-inner').innerHTML = `<h3>Aparência</h3>
+    ${!prem ? `<div class="pl-faixa">No plano Gratuito: <b>Brasa</b> (escuro) e <b>Areia</b> (claro). Os outros temas são Premium. <a href="#" onclick="openPlanos();return false">Ver planos ›</a></div>` : ''}
+    <div class="mt-sec" style="margin-top:6px">Tema Noturno</div>
+    <div class="ap-grid">${TEMAS_NOTURNOS.filter(k=>THEMES[k]).map(opt).join('')}</div>
+    <div class="mt-sec">Tema Claro</div>
+    <div class="ap-grid">${TEMAS_CLAROS.filter(k=>THEMES[k]).map(opt).join('')}</div>
+    <div class="mt-sec">Estilo dos ícones</div>
+    <div class="list-row" onclick="openEstiloIconesB40()"><span>✨</span> <span>${iconeEstiloAtual()==='linha'?'Ícones minimalistas':'Emojis coloridos'}</span><span style="margin-left:auto;color:var(--text-mute);font-size:12px">trocar ›</span></div>
+    <div class="mt-sec">Detalhes</div>
+    <div class="ap-switch" onclick="toggleDeco();openAparencia()"><div><b style="font-size:14px">Fundo decorativo</b><div style="font-size:11.5px;color:var(--text-mute)">Desenho discreto no fundo de cada aba</div></div><span class="ap-tog ${deco?'on':''}"></span></div>
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();renderProfile()">Pronto</button>`;
+  $('modal-back').classList.add('on');
+  const rv = $('theme-row-val'); if(rv) rv.textContent = (temaClaro(cur)?'Tema Claro':'Tema Noturno')+' · '+THEMES[cur].nome+' ›';
+  try{ janelaInstantanea('perfil'); }catch(e){}
+};
+// cadastro: os temas Premium aparecem marcados (quem está no teste pode escolher; no Gratuito ficam travados)
+mtGancho('wzRenderTemas', { depois(){
+  try{
+    const box = $('wz-temas'); if(!box) return;
+    box.querySelectorAll('.wz-tema').forEach(b=>{
+      const k = (b.getAttribute('onclick')||'').match(/wzEscolheTema\('(\w+)'\)/); if(!k) return;
+      const t = THEMES[k[1]]; if(!t) return;
+      const nome = b.querySelector('.wz-tema-nome');
+      if(nome && temaPremium(k[1]) && !nome.querySelector('.pl-mini')) nome.insertAdjacentHTML('beforeend', `<small class="pl-mini">${PL_EST}${t.premium?'Exclusivo':'Premium'}</small>`);
+      b.classList.toggle('pl-trava', !temaLiberado(k[1]));
+    });
+  }catch(e){}
+}});
+
+Object.assign(window, { mtPremium, mtTem, mtPremiumAviso, openPlanos, mtPlanoMudou, mtPlanoVerifica, mtTemaConfere, temaLiberado, temaPremium,
+  piBasico, openEstiloIconesB40, iconeEstiloSalvar, iconeEstiloAplicar, iconeOpcoesHtml, mtExNoPlano, MT_RECURSOS, TEMAS_GRATIS });
+
+// =====================================================================
+// 37. Beta 40 — Painel: plano de cada aluno, remover administrador, excluir conta
+// =====================================================================
+// • A lista mostra TODAS as contas (com ou sem documento de plano), com o plano de cada uma.
+// • Plano: conceder/renovar Premium, encerrar, suspender (bloquear) e desbloquear — tudo em
+//   usuariosAutorizados/{email}, que só administradores gravam (firestore.rules).
+// • Remover administrador: APAGA admins/{email} (antes só marcava ativo:false). As regras leem esse
+//   documento em cada pedido, então o acesso cai na hora no servidor; o app da pessoa também percebe
+//   na hora (escuta o próprio documento) e sai do painel. A conta e os dados de aluno continuam.
+//   O app não usa custom claims — não há nada a revogar além do documento.
+// • Excluir conta: Cloud Function adminExcluirConta (functions/index.js), com Admin SDK. Sem a função
+//   publicada, o painel oferece só o que o navegador pode fazer de verdade (apagar os dados e suspender)
+//   e diz com todas as letras que o login continua no Authentication.
+// • Toda ação vai para adminLog (quem, o quê, em quem, quando).
+
+const FN_REGIAO = 'southamerica-east1';
+function admEu(){ return String((fbUser && fbUser.email) || (state.user && state.user.email) || '').toLowerCase(); }
+async function admRegistrar(acao, alvo, detalhe){
+  try{ await db.collection('adminLog').add({ acao, alvo: alvo||null, detalhe: detalhe||null, por: admEu(), em: firebase.firestore.FieldValue.serverTimestamp() }); }
+  catch(e){ console.log('adminLog:', e); }
+}
+function admPlanoDe(email){ return planoDe(false, allowCache[email] || null); }
+function admPlanoSelo(p){
+  const nome = { premium:'Premium', teste:'Teste', gratuito:'Gratuito', bloqueado:'Bloqueado' }[p.tipo] || p.tipo;
+  return `<span class="adm-plano ${p.tipo}">${p.tipo==='premium'||p.tipo==='teste'?'⭐ ':''}${nome}</span>`;
+}
+function admDias(p){ if(!p.premium) return p.tipo === 'bloqueado' ? '🔒' : '—'; if(!p.ate) return '∞'; return Math.max(0, Math.ceil((p.ate - Date.now())/DIA_MS)) + 'd'; }
+
+// ---------- 1. Carregar: contas com e sem documento de plano ----------
+const _loadAdminDataB40 = window.loadAdminData;
+window.loadAdminData = async function(){
+  const r = await _loadAdminDataB40.apply(this, arguments);
+  try{ Object.keys(usuariosCache||{}).forEach(em=>{ if(!allowCache[em]) allowCache[em] = { _semDoc:true }; }); }catch(e){}
+  return r;
+};
+renderAdminStats = function(){
+  const ps = Object.keys(allowCache).filter(e=>!allowCache[e].contaExcluidaEm).map(admPlanoDe);
+  $('adm-active').textContent = ps.filter(p=>p.tipo==='premium').length;
+  $('adm-exp').textContent = ps.filter(p=>p.tipo==='teste').length;
+  $('adm-total').textContent = ps.length;
+  $('adm-vencidos').textContent = ps.filter(p=>p.tipo==='gratuito').length;
+};
+renderAdminList = function(){
+  const q = ($('adm-search').value||'').toLowerCase();
+  let items = Object.entries(allowCache).filter(([,a])=>!a.contaExcluidaEm).map(([email,a])=>({ email, a, user:usuariosCache[email], p:admPlanoDe(email) }));
+  items = items.filter(x=>{
+    if(q && !x.email.includes(q) && !String(x.user&&x.user.nome||'').toLowerCase().includes(q) && !String(x.a.name||'').toLowerCase().includes(q)) return false;
+    const vence = x.p.premium && x.p.ate && x.p.ate - Date.now() < 7*DIA_MS;
+    return admFilter==='all' || x.p.tipo===admFilter || (admFilter==='vence' && vence);
+  });
+  items.sort((x,y)=>(+(y.user&&y.user.atualizadoEm)||msDe(y.a.addedAt)||msDe(y.a.testeInicio)||0) - (+(x.user&&x.user.atualizadoEm)||msDe(x.a.addedAt)||msDe(x.a.testeInicio)||0));
+  $('adm-list-count').textContent = items.length + (items.length===1?' conta':' contas');
+  const pager = $('adm-pager'); if(pager) pager.innerHTML = '';
+  if(!items.length){ $('adm-list').innerHTML = `<div class="rest-card"><div style="font-size:44px">👥</div><div class="rest-title">Nenhuma conta</div><div class="rest-sub">As contas aparecem aqui assim que a pessoa se cadastra.</div></div>`; return; }
+  const total = Math.max(1, Math.ceil(items.length/ADM_PAGE_SIZE)); admPage = Math.min(Math.max(0, admPage), total-1);
+  $('adm-list').innerHTML = items.slice(admPage*ADM_PAGE_SIZE, admPage*ADM_PAGE_SIZE+ADM_PAGE_SIZE).map(x=>{
+    const cls = !x.p.premium ? (x.p.tipo==='bloqueado'?'off':'') : (x.p.ate && x.p.ate-Date.now() < 7*DIA_MS ? 'warn' : 'on');
+    return `<div class="stud" onclick="openStudent('${jsAttr(x.email)}')">
+      <div class="stud-top"><div><div class="stud-name">${escHtml(x.user&&x.user.nome || x.a.name || x.email.split('@')[0])}</div><div class="stud-email">${escHtml(x.email)}</div></div><div class="stud-days ${cls}">${admDias(x.p)}</div></div>
+      <div class="stud-meta">${admPlanoSelo(x.p)}${x.a.phone?`<span>📱 <b>${escHtml(x.a.phone)}</b></span>`:''}${x.a.notes?`<span>📝 ${escHtml(x.a.notes)}</span>`:''}</div></div>`;
+  }).join('');
+  if(pager && total > 1){
+    pager.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center;margin-top:12px;gap:8px">
+      <button class="btn btn-ghost" style="padding:8px 14px" onclick="admGoPage(${admPage-1})" ${admPage===0?'disabled':''}>‹ Anterior</button>
+      <span class="text-dim" style="font-size:12.5px;white-space:nowrap">pág. ${admPage+1}/${total}</span>
+      <button class="btn btn-ghost" style="padding:8px 14px" onclick="admGoPage(${admPage+1})" ${admPage>=total-1?'disabled':''}>Próximo ›</button></div>`;
+  }
+};
+mtGancho('goAdmin', { depois(){ try{ const r = $('adm-log-row'); if(r) r.classList.toggle('hidden', !mtPrincipal()); }catch(e){} } });
+
+// ---------- 2. Ficha do aluno: plano e gestão ----------
+mtGancho('openStudent', { depois(email){
+  try{
+    const box = $('stud-content'); if(!box) return;
+    const a = allowCache[email] || {}; const p = admPlanoDe(email); const eJs = jsAttr(email);
+    const tag = box.querySelector('.profile-tag'); if(tag) tag.innerHTML = admPlanoSelo(p) + ' · ' + mtEsc(admDiasLongo(p));
+    // tira os blocos antigos (tempo de acesso / bloquear / remover) — a gestão agora é pelo plano
+    const kids = [...box.children]; let apagando = false;
+    kids.forEach(k=>{
+      if(k.classList && k.classList.contains('section-lbl')) apagando = /Ajustar tempo de acesso|^Gerenciar$/.test(k.textContent.trim());
+      if(apagando) k.remove();
+    });
+    const eu = email === admEu();
+    const ehAdm = !!(window.__admListaCache && window.__admListaCache[email]);
+    const principal = mtPrincipal();
+    box.insertAdjacentHTML('beforeend', `
+      <div class="section-lbl">Plano</div>
+      <div class="card" style="font-size:13px;line-height:1.55">${mtEsc(admPlanoTexto(a, p))}</div>
+      ${eu ? '<div class="mt-muted" style="text-align:center;font-size:12.5px;margin:8px 0">🛡️ Sua própria conta não é alterada por aqui.</div>' : `
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-ghost" style="flex:1" onclick="admPremium('${eJs}',30)">+30 dias</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="admPremium('${eJs}',90)">+90 dias</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="admPremium('${eJs}',365)">+1 ano</button>
+      </div>
+      <div class="row" style="gap:6px;margin-top:8px">
+        <button class="btn btn-outline" style="flex:1" onclick="admPremium('${eJs}',0)">♾️ Premium sem prazo</button>
+        ${p.premium ? `<button class="btn btn-ghost" style="flex:1" onclick="admEncerrar('${eJs}')">Passar para Gratuito</button>` : ''}
+      </div>
+      <div class="mt-muted" style="font-size:11.5px;margin-top:6px;line-height:1.45">Os dias somam a partir do fim do Premium atual (ou de hoje, se não houver). Trocar de plano nunca apaga treinos nem histórico.</div>
+      <div class="section-lbl">Gerenciar</div>
+      ${p.tipo==='bloqueado'
+        ? `<button class="btn btn-ghost btn-block" onclick="admBloquear('${eJs}', false)">🔓 Desbloquear conta</button>`
+        : `<button class="btn btn-ghost btn-block" onclick="admBloquear('${eJs}', true)">🔒 Suspender conta (bloquear)</button>`}
+      ${principal && ehAdm ? `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="admSetAdmin('${eJs}', false)">🛡️ Remover cargo de administrador</button>` : ''}
+      ${principal ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--danger-soft);border-color:var(--line-danger)" onclick="admExcluirConta('${eJs}')">🗑️ Excluir conta…</button>` : ''}`}`);
+  }catch(e){ console.log('ficha do aluno (plano):', e); }
+}});
+function admDiasLongo(p){
+  if(p.tipo==='bloqueado') return 'conta suspensa';
+  if(!p.premium) return p.testeAcabouEm ? 'teste encerrado' : 'sem Premium';
+  if(!p.ate) return 'sem prazo';
+  const d = Math.max(0, Math.ceil((p.ate - Date.now())/DIA_MS)); return `${d} ${d===1?'dia':'dias'}`;
+}
+function admPlanoTexto(a, p){
+  const f = t=>new Date(t).toLocaleDateString('pt-BR');
+  if(p.tipo==='bloqueado') return `Conta suspensa${a.bloqueioMotivo?' — '+a.bloqueioMotivo:''}${a.bloqueadoEm?' (desde '+f(msDe(a.bloqueadoEm))+')':''}. A pessoa não entra no app; os dados continuam guardados.`;
+  if(p.tipo==='teste') return `Teste Premium até ${f(p.ate)} (começou em ${f(p.inicio)}). Ao terminar, passa sozinho para o Gratuito.`;
+  if(p.tipo==='premium') return p.ate ? `Premium até ${f(p.ate)}.` : 'Premium sem data de término.';
+  if(p.testeAcabouEm) return `Gratuito (teste encerrado em ${f(p.testeAcabouEm)}).`;
+  if(p.premiumAcabouEm) return `Gratuito (Premium encerrado em ${f(p.premiumAcabouEm)}).`;
+  return a._semDoc ? 'Gratuito (conta criada sem teste — ex.: login de usuário sem e-mail).' : 'Gratuito.';
+}
+async function admGravarPlano(email, dados, acao, detalhe){
+  if(email === admEu()){ toast('🛡️ Sua própria conta não é alterada por aqui.'); return false; }
+  dados = Object.assign({}, dados, { atualizadoEm: Date.now(), atualizadoPor: admEu() });
+  try{
+    await db.collection('usuariosAutorizados').doc(email).set(dados, { merge:true });
+    allowCache[email] = Object.assign({}, allowCache[email]||{}, dados); delete allowCache[email]._semDoc;
+    await admRegistrar(acao, email, detalhe);
+    return true;
+  }catch(e){
+    console.log('plano (admin):', e);
+    toast('⚠️ O Firestore recusou (' + ((e && e.code) || 'erro') + '). Nada foi alterado.');
+    return false;
+  }
+}
+async function admPremium(email, dias){
+  const p = admPlanoDe(email);
+  const base = (p.premium && p.ate && p.ate > Date.now()) ? p.ate : Date.now();
+  const ate = dias ? base + dias*DIA_MS : null;
+  // active/expiresAt continuam preenchidos: versões antigas do app (ainda não atualizadas) leem esses campos
+  const ok = await admGravarPlano(email, { plano:'premium', premiumAte:ate, active:true, expiresAt:ate, bloqueado:false }, 'premium', { dias: dias||'sem prazo', ate });
+  if(ok){ toast(dias ? `⭐ Premium até ${new Date(ate).toLocaleDateString('pt-BR')}` : '⭐ Premium sem prazo'); openStudent(email); }
+}
+function admEncerrar(email){
+  appConfirm(`${email} passa para o plano Gratuito agora. Treinos, histórico e dados continuam; o que é Premium fica guardado.`, async ()=>{
+    const ok = await admGravarPlano(email, { plano:'gratuito', premiumAte:null, active:true, expiresAt:Date.now()-1000 }, 'gratuito');
+    if(ok){ toast('Plano Gratuito'); openStudent(email); }
+  }, { title:'Encerrar o Premium?', okLabel:'Passar para Gratuito', onCancel:()=>setTimeout(()=>openStudent(email), 80) });
+}
+function admBloquear(email, bloquear){
+  if(!bloquear){
+    admGravarPlano(email, { bloqueado:false, bloqueioMotivo:null }, 'desbloquear').then(ok=>{ if(ok){ toast('🔓 Conta desbloqueada'); openStudent(email); } });
+    return;
+  }
+  $('modal-inner').innerHTML = `<h3>🔒 Suspender conta</h3>
+    <p class="mt-muted" style="font-size:13px;line-height:1.5">A pessoa deixa de entrar no app até você desbloquear. Os dados continuam guardados. Conta: <b>${mtEsc(email)}</b></p>
+    <div class="field"><label>Motivo (aparece para a pessoa — opcional)</label><input class="input" id="adm-motivo" maxlength="120" placeholder="Ex.: uso indevido da conta"></div>
+    <button class="btn btn-perigo btn-block" onclick="admBloquearConfirma('${jsAttr(email)}')">Suspender conta</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();setTimeout(()=>openStudent('${jsAttr(email)}'),60)">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+}
+async function admBloquearConfirma(email){
+  const motivo = String(($('adm-motivo')||{}).value||'').trim().slice(0,120);
+  closeModal();
+  const ok = await admGravarPlano(email, { bloqueado:true, bloqueioMotivo:motivo||null, bloqueadoEm:Date.now() }, 'bloquear', { motivo });
+  if(ok){ toast('🔒 Conta suspensa'); openStudent(email); }
+}
+// "Conceder Premium" (antigo "Liberar acesso"): grava o plano novo + os campos antigos
+const _doAddStudentB40 = window.doAddStudent;
+window.doAddStudent = async function(){
+  const email = normalizaLogin($('as-email').value); const dur = parseInt(readOpt('as-dur'));
+  const err = $('as-err'); if(err) err.innerHTML = '';
+  if(!email || !email.includes('@')){ if(err) err.innerHTML = '<div class="err">Digite um e-mail válido (ou o usuário de uma conta antiga).</div>'; return; }
+  if(!dur){ if(err) err.innerHTML = '<div class="err">Selecione a duração.</div>'; return; }
+  const p = admPlanoDe(email); const base = (p.premium && p.ate && p.ate > Date.now()) ? p.ate : Date.now();
+  const ate = dur >= 9999 ? null : base + dur*DIA_MS;
+  const ok = await admGravarPlano(email, { plano:'premium', premiumAte:ate, active:true, expiresAt:ate, bloqueado:false, addedAt: msDe((allowCache[email]||{}).addedAt) || Date.now(),
+    name: $('as-name').value.trim() || (allowCache[email]||{}).name || '', phone: $('as-whats').value.trim(), notes: $('as-notes').value.trim() }, 'premium', { dias: dur>=9999?'sem prazo':dur, ate });
+  if(ok){ toast('⭐ Premium concedido'); closeModal(); goAdmin(); }
+};
+// funções antigas (botões que não existem mais): passam pelo plano novo, sem gravar campos soltos
+adjustDays = function(email, d){ return d > 0 ? admPremium(email, d) : admEncerrar(email); };
+setLifetime = function(email){ return admPremium(email, 0); };
+unsetLifetime = function(email){ return admPremium(email, 30); };
+toggleStudent = function(email){ return admBloquear(email, admPlanoDe(email).tipo !== 'bloqueado'); };
+removeStudent = function(email){ return admEncerrar(email); };
+
+// ---------- 3. Administradores ----------
+const _openAdminPermissoesB40 = window.openAdminPermissoes;
+window.openAdminPermissoes = async function(){
+  const r = await _openAdminPermissoesB40.apply(this, arguments);
+  try{
+    const box = $('modal-inner'); if(!box) return r;
+    const ajuda = box.querySelector('p.mt-muted');
+    if(ajuda && !box.querySelector('.adm-nota-b40')) ajuda.insertAdjacentHTML('afterend', `<p class="mt-muted adm-nota-b40" style="margin:0 0 10px;font-size:12px;line-height:1.5">Remover tira só o cargo: a conta e os dados de aluno continuam. O acesso ao painel cai na hora, no servidor e no app da pessoa.</p>`);
+    // registros antigos "Removido" (ativo:false) podem ser apagados de vez
+    box.querySelectorAll('.ev-list-item').forEach(li=>{
+      const st = li.querySelector('.mt-muted'); const bt = li.querySelector('button');
+      if(st && bt && /Removido/.test(st.textContent)){ bt.textContent = 'Apagar registro'; const em = li.querySelector('b').textContent.trim(); bt.setAttribute('onclick', `admApagarRegistroAdmin('${mtJsStr(em)}')`); }
+    });
+  }catch(e){}
+  return r;
+};
+admSetAdmin = async function(email, ativo){
+  email = String(email||'').trim().toLowerCase();
+  if(!mtPrincipal()){ toast('🔒 Somente o administrador principal gerencia administradores.'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast('E-mail inválido'); return; }
+  if(email === String(ADMIN_EMAIL).toLowerCase() || email === admEu()){ toast('🛡️ O administrador principal não pode ser alterado'); return; }
+  const volta = ()=>{ const f = $('scr-admin-student') && $('scr-admin-student').classList.contains('active') ? ()=>openStudent(email) : openAdminPermissoes; setTimeout(f, 80); };
+  if(ativo){
+    try{ await db.collection('admins').doc(email).set({ ativo:true, atualizadoEm:Date.now(), atualizadoPor:admEu() }); await admRegistrar('admin-conceder', email); (window.__admListaCache = window.__admListaCache || {})[email] = true; toast('✅ Administrador autorizado'); }
+    catch(e){ toast('⚠️ O Firestore recusou (' + ((e&&e.code)||'erro') + '). Nada mudou.'); }
+    openAdminPermissoes(); return;
+  }
+  appConfirm(`${email} perde o acesso ao painel administrativo agora.\n\nA conta e os dados de aluno dessa pessoa NÃO são apagados.`, async ()=>{
+    try{
+      await db.collection('admins').doc(email).delete();
+      // confere de verdade: o documento sumiu?
+      const d = await db.collection('admins').doc(email).get();
+      if(d.exists) throw Object.assign(new Error('o documento continua no Firestore'), { code:'nao-removido' });
+      if(window.__admListaCache) delete window.__admListaCache[email];
+      await admRegistrar('admin-remover', email);
+      toast('🛡️ Cargo de administrador removido');
+    }catch(e){ console.log('remover admin:', e); toast('⚠️ Não foi possível remover (' + ((e&&e.code)||'erro') + '). Confira as regras publicadas.'); }
+    volta();
+  }, { title:'Remover administrador?', emo:'🛡️', okLabel:'Remover cargo', danger:true, onCancel:volta });
+};
+async function admApagarRegistroAdmin(email){
+  try{ await db.collection('admins').doc(email).delete(); await admRegistrar('admin-apagar-registro', email); toast('Registro apagado'); }
+  catch(e){ toast('⚠️ O Firestore recusou (' + ((e&&e.code)||'erro') + ').'); }
+  openAdminPermissoes();
+}
+// quem é administrador (para o botão "Remover cargo" na ficha do aluno)
+mtGancho('goAdmin', { depois(){
+  if(!mtPrincipal()) return;
+  db.collection('admins').get().then(s=>{ const m = {}; s.forEach(d=>{ if(d.data() && d.data().ativo === true) m[d.id] = true; }); window.__admListaCache = m; }).catch(()=>{});
+}});
+// app do administrador secundário: perdeu o cargo → sai do painel na hora
+let _admOuvinte = null;
+mtGancho('bootAfterAuth', { depois(){
+  try{
+    if(_admOuvinte || !state.user || !state.user.isAdmin || mtPrincipal()) return;
+    const em = admEu(); if(!em) return;
+    _admOuvinte = db.collection('admins').doc(em).onSnapshot(d=>{
+      const ok = !!(d && d.exists && d.data() && d.data().ativo === true);
+      if(ok || !state.user || !state.user.isAdmin) return;
+      if(d && d.metadata && d.metadata.fromCache) return;
+      state.user.isAdmin = false;
+      try{ const k = 'metatreino_access_' + em; const c = JSON.parse(localStorage.getItem(k)||'null'); if(c){ c.isAdmin = false; localStorage.setItem(k, JSON.stringify(c)); } }catch(e){}
+      toast('Seu acesso de administrador foi removido.');
+      try{ if(document.querySelector('#scr-admin.active, #scr-admin-student.active')) sairDoPainel(); else renderProfile(); }catch(e){}
+      try{ _admOuvinte(); }catch(e){} _admOuvinte = null;
+    }, ()=>{ _admOuvinte = null; });
+  }catch(e){}
+}});
+
+// ---------- 4. Excluir conta (administrador principal) ----------
+async function fnChamar(nome, dados){
+  if(!fbUser) throw Object.assign(new Error('Sessão expirada'), { code:'unauthenticated' });
+  const token = await fbUser.getIdToken();
+  const url = `https://${FN_REGIAO}-${firebaseConfig.projectId}.cloudfunctions.net/${nome}`;
+  let resp;
+  try{ resp = await _comPrazo(fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token }, body: JSON.stringify({ data: dados }) }), 30000); }
+  catch(e){ throw Object.assign(new Error('A função do servidor não respondeu (não publicada ou sem internet).'), { code:'sem-funcao' }); }
+  let j = null; try{ j = await resp.json(); }catch(e){}
+  if(resp.status === 404 || (!j && !resp.ok)) throw Object.assign(new Error('A função do servidor ainda não foi publicada.'), { code:'sem-funcao' });
+  if(j && j.error) throw Object.assign(new Error(j.error.message || 'erro'), { code: j.error.status || 'erro' });
+  return j ? j.result : null;
+}
+function admExcluirConta(email){
+  if(!mtPrincipal()){ toast('🔒 Somente o administrador principal exclui contas.'); return; }
+  if(email === admEu() || email === String(ADMIN_EMAIL).toLowerCase()){ toast('🛡️ Esta conta não pode ser excluída por aqui.'); return; }
+  const u = usuariosCache[email]; const d = u && u.estadoApp; const p = d && d.user && d.user.profile;
+  const treinos = ((d&&d.modules&&d.modules.lift&&d.modules.lift.history)||[]).length + ((d&&d.modules&&d.modules.run&&d.modules.run.history)||[]).length;
+  const ult = u && +u.atualizadoEm ? new Date(+u.atualizadoEm).toLocaleString('pt-BR') : '—';
+  $('modal-inner').innerHTML = `<h3>🗑️ Excluir conta</h3>
+    <div class="card" style="font-size:13px;line-height:1.7;word-break:break-word">
+      <b>E-mail:</b> ${mtEsc(email)}<br><b>Nome:</b> ${mtEsc((p&&p.nickname) || (u&&u.nome) || (allowCache[email]||{}).name || '—')}<br>
+      <b>Documentos de dados:</b> ${(u&&u._uids||[]).length || 0} · <b>Treinos registrados:</b> ${treinos}<br><b>Último uso:</b> ${mtEsc(ult)}<br><b>Plano:</b> ${admPlanoSelo(admPlanoDe(email))}</div>
+    <p class="mt-muted" style="font-size:12.5px;line-height:1.5">Apaga o login (Authentication), os dados do aluno, o arquivo anual, as participações em desafios, o vínculo da conta e o cargo de administrador, se houver. <b>Não pode ser desfeito.</b> Fica só a marca de conta excluída no plano, para o mesmo e-mail não ganhar outro teste Premium.</p>
+    <div class="field"><label>Para confirmar, digite o e-mail da conta</label><input class="input" id="adm-del-conf" autocapitalize="none" spellcheck="false" autocomplete="off" placeholder="${mtEsc(email)}" data-teclado></div>
+    <div id="adm-del-st" class="mt-muted" style="font-size:12.5px;min-height:18px"></div>
+    <button class="btn btn-perigo btn-block" id="adm-del-go" onclick="admExcluirContaGo('${jsAttr(email)}')">Excluir conta definitivamente</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal();setTimeout(()=>openStudent('${jsAttr(email)}'),60)">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+}
+async function admExcluirContaGo(email){
+  const conf = String(($('adm-del-conf')||{}).value||'').trim().toLowerCase();
+  const st = $('adm-del-st'), bt = $('adm-del-go'); const fala = (t, cor)=>{ if(st){ st.innerHTML = t; st.style.color = cor || ''; } };
+  if(conf !== email){ fala('O e-mail digitado não confere. Nada foi excluído.', 'var(--danger-soft)'); return; }
+  if(bt){ bt.disabled = true; bt.textContent = 'Excluindo…'; }
+  try{
+    const r = await fnChamar('adminExcluirConta', { email, confirmacao: conf });
+    if(!r || !r.ok) throw new Error('resposta inesperada do servidor');
+    delete allowCache[email]; delete usuariosCache[email];
+    $('modal-inner').innerHTML = `<h3>✅ Conta excluída</h3><p class="mt-muted" style="font-size:13px;line-height:1.55"><b>${mtEsc(email)}</b>: ${r.logins} login(s) excluído(s) do Authentication, ${r.documentos} documento(s) de dados e ${r.participacoes} participação(ões) em desafios apagados.</p><button class="btn btn-primary btn-block" onclick="closeModal();goAdmin()">Voltar ao painel</button>`;
+  }catch(e){
+    console.log('excluir conta:', e);
+    if(bt){ bt.disabled = false; bt.textContent = 'Excluir conta definitivamente'; }
+    if(e && e.code === 'sem-funcao'){
+      fala(`<b>A exclusão completa precisa da função do servidor</b> (functions/, plano Blaze do Firebase), e ela ainda não respondeu. <b>Nada foi excluído.</b><br><br>Sem ela, o navegador só consegue apagar os dados e suspender a conta — o login continua no Authentication até você apagar no Console.
+        <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="admExcluirSoDados('${jsAttr(email)}')">Apagar só os dados e suspender</button>`, 'var(--text-dim)');
+    } else fala('⚠️ O servidor recusou: ' + mtEsc(e && e.message || 'erro') + '. <b>Nada foi dado como excluído.</b>', 'var(--danger-soft)');
+  }
+}
+async function admExcluirSoDados(email){
+  const st = $('adm-del-st'); const fala = t=>{ if(st) st.innerHTML = t; };
+  const u = usuariosCache[email] || {}; const uids = [...new Set([...(u._uids||[]), u._uid].filter(Boolean))];
+  const feito = []; const falhou = [];
+  const tenta = async (nome, f)=>{ try{ await f(); feito.push(nome); }catch(e){ falhou.push(nome + ' (' + ((e&&e.code)||'erro') + ')'); } };
+  fala('Apagando…');
+  for(const uid of uids){
+    await tenta('arquivo anual', async ()=>{ const s = await db.collection('usuarios').doc(uid).collection('arquivo').get(); for(const d of s.docs || []) await db.collection('usuarios').doc(uid).collection('arquivo').doc(d.id).delete(); });
+    await tenta('participações', async ()=>{ const ds = await db.collection('desafiosTematicos').get(); for(const d of ds.docs || []){ const r = db.collection('desafiosTematicos').doc(d.id).collection('participantes').doc(uid); const x = await r.get(); if(x.exists) await r.delete(); } });
+    await tenta('dados do aluno', ()=>db.collection('usuarios').doc(uid).delete());
+  }
+  await tenta('vínculo da conta', ()=>db.collection('contas').doc(email).delete());
+  await tenta('cargo de administrador', ()=>db.collection('admins').doc(email).delete());
+  await tenta('suspensão', ()=>db.collection('usuariosAutorizados').doc(email).set({ plano:'gratuito', bloqueado:true, bloqueioMotivo:'Conta excluída pela administração', contaExcluidaEm:Date.now(), atualizadoPor:admEu() }));
+  await admRegistrar(falhou.length ? 'excluir-dados-parcial' : 'excluir-dados', email, { feito, falhou });
+  $('modal-inner').innerHTML = `<h3>${falhou.length ? '⚠️ Exclusão parcial' : '✅ Dados apagados e conta suspensa'}</h3>
+    <p class="mt-muted" style="font-size:13px;line-height:1.55">${feito.length ? 'Feito: ' + mtEsc([...new Set(feito)].join(', ')) + '.' : ''}${falhou.length ? '<br><b>Não foi possível:</b> ' + mtEsc(falhou.join(', ')) + '.' : ''}</p>
+    <p class="mt-muted" style="font-size:12.5px;line-height:1.55"><b>O login da pessoa continua existindo no Firebase Authentication.</b> Para apagá-lo: Console do Firebase › Authentication › Usuários › ${mtEsc(email)} › Excluir. Ou publique a função (functions/) para que o painel faça tudo sozinho.</p>
+    <button class="btn btn-primary btn-block" onclick="closeModal();goAdmin()">Voltar ao painel</button>`;
+}
+
+// ---------- 5. Registro das ações ----------
+async function openAdminLog(){
+  if(!mtPrincipal()) return;
+  $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><div class="mt-muted">Carregando…</div>`; $('modal-back').classList.add('on');
+  try{
+    const s = await db.collection('adminLog').orderBy('em','desc').limit(80).get();
+    const L = []; s.forEach(d=>L.push(d.data()));
+    L.sort((a,b)=>msDe(b.em)-msDe(a.em));
+    const nome = { premium:'Premium concedido/renovado', gratuito:'Passou para Gratuito', bloquear:'Conta suspensa', desbloquear:'Conta desbloqueada', 'admin-conceder':'Administrador autorizado', 'admin-remover':'Administrador removido', 'admin-apagar-registro':'Registro de admin apagado', 'excluir-conta':'Conta excluída', 'excluir-conta-parcial':'Exclusão parcial', 'excluir-dados':'Dados apagados e conta suspensa', 'excluir-dados-parcial':'Dados apagados (parcial)' };
+    $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><div style="max-height:60vh;overflow:auto">${L.map(x=>`<div class="adm-log"><b>${mtEsc(nome[x.acao]||x.acao)}</b> · ${mtEsc(x.alvo||'')}<br>${mtEsc(msDe(x.em)?new Date(msDe(x.em)).toLocaleString('pt-BR'):'')} · por ${mtEsc(x.por||'')}${x.origem==='servidor'?' (servidor)':''}</div>`).join('') || '<div class="mt-muted">Nenhuma ação registrada ainda.</div>'}</div>
+      <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  }catch(e){ $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><p class="mt-muted">Não consegui ler o registro (${mtEsc((e&&e.code)||'erro')}). Publique as regras desta versão (coleção adminLog).</p><button class="btn btn-ghost btn-block" onclick="closeModal()">Fechar</button>`; }
+}
+
+Object.assign(window, { admPremium, admEncerrar, admBloquear, admBloquearConfirma, admExcluirConta, admExcluirContaGo, admExcluirSoDados, admApagarRegistroAdmin, openAdminLog, admRegistrar, fnChamar });
+
+// =====================================================================
+// 38. Beta 40 — Correções de cadastro e usabilidade
+// =====================================================================
+// 1. Registrar peso: Cancelar, descartar com confirmação, nada salvo sem "Salvar".
+// 2. Estilo dos ícones escolhido no cadastro, junto do tema (salvo na conta).
+// 4. IMC estimado discreto abaixo de altura e peso (sem rótulos sobre o corpo).
+// 5/6. Explicação só da opção escolhida (nível de atividade, objetivo principal, objetivo do plano).
+// 7. Calistenia e Híbrido: objetivos próprios, coerentes com o objetivo principal, e o texto mostra
+//    exatamente o que o gerador vai usar.
+// 8. Data de início: a mensagem diz quando é o PRIMEIRO TREINO de verdade (dias escolhidos).
+// 9. Tempo recente na corrida: seletor próprio do MetaTreino (distância + h/min/s por gesto), sem o do sistema.
+// (3. data de nascimento: corrigida na régua de datas, parte 34.)
+
+// ---------- 1. Registrar peso ----------
+mtGancho('openModal', { depois(k){ if(k === 'add-weight') try{ wtPrepara(); }catch(e){ console.log('peso:', e); } } });
+function wtPrepara(){
+  const mi = $('modal-inner'), inp = $('wt-val'); if(!mi || !inp || mi.querySelector('.wt-acoes')) return;
+  const ini = inp.value;
+  const bt = [...mi.querySelectorAll('button')].find(b=>/saveWeight/.test(b.getAttribute('onclick')||''));
+  if(bt){
+    const row = document.createElement('div'); row.className = 'wt-acoes';
+    row.innerHTML = `<button type="button" class="btn btn-ghost" onclick="janCancelar()">Cancelar</button>`;
+    bt.parentNode.insertBefore(row, bt); bt.classList.remove('btn-block'); bt.style.marginTop = '0'; row.appendChild(bt);
+  }
+  // "com alteração" = o valor é diferente do que abriu (mexer e voltar ao mesmo número não pede confirmação)
+  inp.addEventListener('input', ()=>{ _janSuja = String(inp.value) !== String(ini); });
+}
+
+// ---------- 2. Estilo dos ícones no cadastro ----------
+function wzRenderIcones(){
+  const box = $('wz-icones'); if(!box) return;
+  const v = (state.prefs && state.prefs.icones) || iconeEstiloAtual();
+  box.innerHTML = iconeOpcoesHtml(v, 'wzEscolheIcone');
+  const n = $('wz-icones-nota');
+  if(n) n.textContent = v === 'emoji' && iconeEstiloAtual() !== 'emoji' ? 'Os emojis coloridos entram ao terminar o cadastro. Você troca quando quiser em Perfil › Estilo dos ícones.' : 'Você troca quando quiser em Perfil › Estilo dos ícones.';
+}
+function wzEscolheIcone(v){
+  iconeEstiloSalvar(v);
+  if(v === 'linha') iconeEstiloAplicar('linha');
+  else window.__icoPendente = iconeEstiloAtual() !== 'emoji';
+  wzRenderIcones();
+}
+mtGancho('wzRenderTemas', { depois(){ try{ wzRenderIcones(); }catch(e){} } });
+// os emojis originais só voltam recarregando: isso acontece uma vez, quando o cadastro termina
+mtGancho('goTab', { depois(t){
+  try{ if(window.__icoPendente && t === 'home' && cadastroPronto()){ window.__icoPendente = false; setTimeout(()=>iconeEstiloAplicar('emoji'), 1800); } }catch(e){}
+}});
+
+// ---------- 4. IMC estimado ----------
+function wzImc(){
+  const box = $('wz-imc'); if(!box) return;
+  const h = parseFloat(($('q-height')||{}).value), w = parseFloat(($('q-weight')||{}).value);
+  if(!(h >= 100 && h <= 230 && w >= 25 && w <= 400)){ box.hidden = true; return; }
+  const imc = w / Math.pow(h/100, 2);
+  box.hidden = false;
+  box.innerHTML = `IMC estimado: <b>${imc.toFixed(1).replace('.',',')}</b>. É uma referência baseada na relação entre peso e altura, não uma avaliação da composição corporal: ele não diferencia músculo de gordura.`;
+}
+document.addEventListener('input', e=>{ if(e.target && (e.target.id === 'q-height' || e.target.id === 'q-weight')) wzImc(); }, true);
+document.addEventListener('change', e=>{ if(e.target && (e.target.id === 'q-height' || e.target.id === 'q-weight')) wzImc(); }, true);
+
+// ---------- 5, 6 e 7. Explicação só da opção escolhida ----------
+const WZ_EXPL = {
+  'q-level': {
+    sedentario:'Hoje você quase não pratica exercícios (até 1 vez por semana, ou nada). O plano começa com menos volume e mais tempo de adaptação.',
+    ativo:'Você se exercita às vezes, de 1 a 3 vezes por semana, sem uma rotina fixa. O plano começa num ponto intermediário.',
+    atleta:'Você treina com regularidade há meses, 4 vezes ou mais por semana. O plano já começa com mais volume e intensidade.'
+  },
+  'q-goal': {
+    emagrecer:'Reduzir gordura corporal. O app prioriza exercícios que trabalham mais músculos, descansos mais curtos e constância. A alimentação tem um papel grande nesse objetivo.',
+    massa:'Aumentar a massa muscular. Séries de 8 a 12 repetições perto do limite, com aumento gradual de carga ao longo das semanas.',
+    forca:'Levantar mais peso nos exercícios principais. Menos repetições, mais carga e descansos maiores entre as séries.',
+    condicionamento:'Ter mais fôlego e disposição no dia a dia. Treinos em ritmo mais dinâmico, com menos tempo parado.',
+    tonificar:'Firmar e definir os músculos, ganhando força sem foco em volume. Repetições moderadas e treinos de corpo todo ao longo da semana.',
+    saude:'Movimentar o corpo com segurança e regularidade, sem metas extremas. Intensidade moderada e progressão tranquila.'
+  },
+  'lift-goal': {
+    hipertrofia:'Ganho de massa muscular: 8 a 12 repetições por série, descanso de 1 a 1,5 min e carga que sobe quando você fecha a faixa.',
+    forca:'Força máxima: exercícios compostos primeiro, 4 a 6 repetições e descansos de 2 a 3 min.',
+    emagrecimento:'Gasto energético: exercícios multiarticulares primeiro, 12 a 15 repetições e descansos curtos.',
+    resistencia:'Resistência muscular: 15 a 20 repetições, cargas leves e descansos bem curtos.'
+  },
+  'cali-goal': {
+    hipertrofia:'Massa muscular com o peso do corpo: variações mais difíceis em 6 a 12 repetições, descanso de 90 s.',
+    forca:'Força: progressões difíceis em 3 a 6 repetições e isometrias curtas, com descanso longo.',
+    resistencia:'Resistência e saúde: mais repetições (12 a 20) com descanso curto. Bom para quem quer constância.',
+    condicionamento:'Condicionamento e emagrecimento: blocos de 10 a 15 repetições com descanso de 30 a 45 s, para gastar mais energia.',
+    habilidades:'Habilidades (parada de mão, barra, muscle-up…): progressões técnicas em poucas repetições, com descanso completo.'
+  }
+};
+// no Híbrido, os dias de academia seguem o mesmo objetivo (convertido assim — a mesma tabela de caliLerSetup)
+const HIB_GYM_DE_CALI = { forca:'Força', hipertrofia:'Hipertrofia', resistencia:'Resistência', condicionamento:'Emagrecimento', habilidades:'Força' };
+function wzExplica(gid){
+  const g = $(gid); if(!g) return;
+  const on = g.querySelector('.opt.on'); const T = WZ_EXPL[gid] || {};
+  let box = g.parentElement.querySelector(`.wz-expl[data-de="${gid}"]`);
+  if(!on || !T[on.dataset.val]){ if(box) box.remove(); return; }
+  if(!box){ box = document.createElement('div'); box.className = 'wz-expl'; box.dataset.de = gid; box.setAttribute('aria-live','polite'); g.after(box); }
+  let txt = `<b>${mtEsc(on.textContent.trim())}:</b> ${T[on.dataset.val]}`;
+  if(gid === 'cali-goal' && readOpt('lift-modalidade') === 'hibrido') txt += ` Nos dias de academia do Híbrido: <b>${HIB_GYM_DE_CALI[on.dataset.val]}</b>.`;
+  box.innerHTML = txt;
+}
+function wzExplicaTudo(){ Object.keys(WZ_EXPL).forEach(wzExplica); }
+document.addEventListener('click', e=>{
+  const o = e.target.closest && e.target.closest('.opt'); if(!o) return;
+  const g = o.parentElement; if(g && WZ_EXPL[g.id]) setTimeout(()=>{ wzExplica(g.id); if(g.id === 'cali-goal' || g.id === 'lift-goal') wzObjetivoAtualiza(); }, 0);
+  if(g && g.id === 'lift-modalidade') setTimeout(()=>{ wzExplica('cali-goal'); wzObjetivoAtualiza(); }, 20);
+}, true);
+// a nota antiga com as três explicações juntas sai (fica só a da opção escolhida)
+function wzLimpaNotas(){ const g = $('q-level'); const n = g && g.parentElement.querySelector('.wz-nota'); if(n && /Sedentário:/.test(n.textContent)) n.remove(); }
+
+// ---------- 7. Objetivo do plano coerente (Calistenia e Híbrido) ----------
+// Os rótulos das opções de calistenia passam a dizer o que fazem; o objetivo sugerido vem do objetivo
+// principal com a mesma tabela usada para montar o plano (GOAL_CALI_DO_QUIZ); e o cartão "Objetivo do plano"
+// é refeito a cada troca, mostrando a opção que o gerador vai ler (readOpt).
+function wzRotulosCali(){
+  const g = $('cali-goal'); if(!g) return;
+  const L = { hipertrofia:'Hipertrofia (massa)', forca:'Força', resistencia:'Resistência e saúde', condicionamento:'Condicionamento e emagrecimento', habilidades:'Domínio de habilidades' };
+  g.querySelectorAll('.opt').forEach(o=>{ const t = L[o.dataset.val]; if(!t) return; const ic = o.querySelector('[data-ico]'); const last = o.lastChild;
+    if(last && last.nodeType === 3) last.textContent = t; else o.insertAdjacentText('beforeend', t); if(ic && ic.parentElement !== o) o.prepend(ic); });
+  if(!g.querySelector('.opt.on')){ const d = g.querySelector('.opt[data-val="hipertrofia"]'); if(d) d.classList.add('on'); }
+}
+function wzObjetivoAtualiza(){
+  ['lift-goal','cali-goal'].forEach(gid=>{
+    const g = $(gid); if(!g) return; const f = g.closest('.field'); const s = f && f.querySelector('.wz-sug'); if(!s) return;
+    const on = g.querySelector('.opt.on'); const b = s.querySelector('b'); if(b) b.textContent = on ? on.textContent.trim() : '—';
+    const sm = s.querySelector('small'); const p = state.user && state.user.profile;
+    if(sm && p) sm.textContent = `Sugerido a partir de “${QUIZ_GOAL_LBL[p.goal] || p.goal}”.` + (gid === 'cali-goal' && readOpt('lift-modalidade') === 'hibrido' && on ? ` Academia: ${HIB_GYM_DE_CALI[on.dataset.val]}.` : '');
+  });
+}
+mtGancho('wzObjetivoSugerido', { antes(){ try{ wzRotulosCali(); }catch(e){} }, depois(){ try{ wzObjetivoAtualiza(); wzExplicaTudo(); }catch(e){} } });
+// ao "Alterar": o objetivo continua o mesmo marcado (só abre as opções), e a explicação aparece junto
+mtGancho('wzAbreObjetivo', { depois(gid){ try{ wzExplica(gid); }catch(e){} } });
+// segurança: o objetivo que o gerador usa é sempre o que está marcado na tela (nunca vazio)
+const _caliLerSetupB40 = window.caliLerSetup;
+window.caliLerSetup = function(){
+  try{ const g = $('cali-goal'); if(g && !g.querySelector('.opt.on')){ const d = g.querySelector('.opt[data-val="hipertrofia"]'); if(d) d.classList.add('on'); } }catch(e){}
+  return _caliLerSetupB40.apply(this, arguments);
+};
+
+// ---------- 8. Data de início ----------
+const _DIAS_NOME = ['segunda','terça','quarta','quinta','sexta','sábado','domingo'];
+function _isoLocal(t){ const d = new Date(t); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`; }
+function wzPrimeiroTreino(m){
+  const sel = readSelectedDays(m+'-week-days') || [];
+  const inp = $(m+'-start-date'); const hoje = mtDia0();
+  let ini = hoje;
+  if(inp && inp.value){ const d = new Date(inp.value + 'T00:00:00').getTime(); if(!isNaN(d) && d > hoje) ini = d; }
+  if(!sel.length) return { ini, primeiro:null, sel };
+  for(let k = 0; k < 7; k++){
+    const t = ini + k*DIA_MS; const dt = new Date(t); const di = dt.getDay() === 0 ? 7 : dt.getDay();
+    if(sel.includes(di)) return { ini, primeiro: mtDia0(t), sel };
+  }
+  return { ini, primeiro:null, sel };
+}
+function wzInicioMsg(m){
+  const inp = $(m+'-start-date'); if(!inp) return;
+  const f = inp.closest('.field'); if(!f) return;
+  let box = f.querySelector('.wz-inicio-msg');
+  if(!box){ [...f.children].filter(x=>x.tagName === 'DIV' && /Deixe vazio/.test(x.textContent)).forEach(x=>x.remove()); box = document.createElement('div'); box.className = 'wz-inicio-msg'; box.setAttribute('aria-live','polite'); f.appendChild(box); }
+  const r = wzPrimeiroTreino(m); const hoje = mtDia0();
+  const nomeDia = t=>{ const d = new Date(t).getDay(); return _DIAS_NOME[d === 0 ? 6 : d-1]; };
+  const quando = t=> t === hoje ? `<b>hoje</b> (${nomeDia(t)})` : t === hoje + DIA_MS ? `<b>amanhã</b> (${nomeDia(t)}, ${_isoLocal(t)})` : `<b>${nomeDia(t)}, ${_isoLocal(t)}</b>`;
+  const manual = !!(inp.value && r.ini > hoje);
+  let txt;
+  if(!r.sel.length) txt = manual ? `Início em ${quando(r.ini)}. O primeiro treino será no primeiro dia de treino escolhido a partir dessa data.` : 'Sem data definida: o planejamento começa na próxima ocorrência dos dias de treino que você escolher.';
+  else if(!manual) txt = r.primeiro === hoje ? `Sem data definida: hoje é um dos seus dias de treino, então o treino <b>pode começar hoje</b>.` : `Sem data definida: o planejamento começa na próxima ocorrência dos dias escolhidos. Primeiro treino: ${quando(r.primeiro)}.`;
+  else txt = `Início em ${quando(r.ini)}${r.primeiro !== r.ini ? `. Como esse não é um dos dias escolhidos, o primeiro treino será ${quando(r.primeiro)}` : ', que já é um dia de treino'}. Dias antes do início não contam como falta.`;
+  box.innerHTML = txt;
+}
+['lift','run'].forEach(m=>{
+  document.addEventListener('change', e=>{ if(e.target && e.target.id === m+'-start-date') wzInicioMsg(m); }, true);
+  document.addEventListener('input', e=>{ if(e.target && e.target.id === m+'-start-date') wzInicioMsg(m); }, true);
+  document.addEventListener('click', e=>{ if(e.target.closest && (e.target.closest('#'+m+'-week-days') || e.target.closest('#'+m+'-days') || e.target.closest('#scr-setup-'+m+' .nr-limpa'))) setTimeout(()=>wzInicioMsg(m), 30); }, true);
+});
+
+// ---------- 9. Tempo recente na corrida (seletor próprio) ----------
+const MC_DIST = [['3','3 km',3],['5','5 km',5],['10','10 km',10],['21.0975','21 km',21.0975],['42.195','42 km',42.195]];
+function mcLer(){
+  const d = $('run-marca-dist'); const h = +(($('run-marca-h')||{}).value||0), mi = +(($('run-marca-m')||{}).value||0), s = +(($('run-marca-s')||{}).value||0);
+  return { dist: d ? d.value : '', seg: h*3600 + mi*60 + s };
+}
+function mcTxt(seg){ const h = Math.floor(seg/3600), m = Math.floor(seg%3600/60), s = seg%60; return (h ? `${h}h ` : '') + `${String(m).padStart(h?2:1,'0')}min ${String(s).padStart(2,'0')}s`; }
+function mcRitmo(km, seg){ if(!km || !seg) return ''; const p = seg/km/60; const mm = Math.floor(p), ss = Math.round((p-mm)*60); return `${mm}:${String(ss===60?0:ss).padStart(2,'0')}/km`; }
+// faixa plausível de ritmo por distância (min/km): abaixo do recorde mundial ou acima de caminhada lenta = impossível
+const MC_LIM = { 3:[2.4,15], 5:[2.45,15], 10:[2.55,15.5], 21.0975:[2.7,16], 42.195:[2.8,17] };
+function mcValida(dist, seg){
+  if(!dist && !seg) return '';
+  if(!dist) return 'Escolha a distância.';
+  if(!seg) return 'Informe o tempo.';
+  const km = +dist; const p = seg/km/60; const [lo, hi] = MC_LIM[km] || [2.4, 17];
+  if(p < lo) return `Esse tempo daria ${mcRitmo(km, seg)}, mais rápido que o recorde mundial. Confira o valor.`;
+  if(p > hi) return `Esse tempo daria ${mcRitmo(km, seg)}: para um tempo "correndo forte", parece lento demais. Se caminhou parte, deixe em branco.`;
+  return '';
+}
+function mcPrepara(){
+  const sel = $('run-marca-dist'); if(!sel || sel.dataset.mc) return;
+  sel.dataset.mc = '1';
+  const row = sel.closest('.row'); if(!row) return;
+  row.style.display = 'none';
+  const b = document.createElement('div'); b.className = 'marca-btn'; b.id = 'mc-btn'; b.setAttribute('role','button'); b.tabIndex = 0;
+  b.setAttribute('aria-haspopup','dialog');
+  b.addEventListener('click', e=>{ if(e.target.closest('.mb-limpa')){ e.stopPropagation(); mcGravar('', 0); return; } mcAbrir(); });
+  b.addEventListener('keydown', e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); mcAbrir(); } });
+  row.after(b); mcMostraBtn();
+}
+function mcMostraBtn(){
+  const b = $('mc-btn'); if(!b) return; const v = mcLer();
+  const nome = (MC_DIST.find(x=>x[0] === v.dist)||[])[1];
+  b.innerHTML = v.dist && v.seg ? `<span><span class="mb-val">${nome} em ${mcTxt(v.seg)}</span> <small style="color:var(--text-mute)">· ${mcRitmo(+v.dist, v.seg)}</small></span><button type="button" class="mb-limpa" aria-label="Apagar tempo">×</button>`
+    : `<span class="mb-vazio">Escolher distância e tempo</span><span aria-hidden="true">›</span>`;
+  b.setAttribute('aria-label', v.dist && v.seg ? `Tempo recente: ${nome} em ${mcTxt(v.seg)}. Tocar para mudar` : 'Escolher distância e tempo recente');
+}
+function mcGravar(dist, seg){
+  const sel = $('run-marca-dist'); if(!sel) return;
+  sel.value = dist || '';
+  const h = Math.floor(seg/3600), m = Math.floor(seg%3600/60), s = seg%60;
+  [['run-marca-h', seg ? h : ''], ['run-marca-m', seg ? m : ''], ['run-marca-s', seg ? s : '']].forEach(([id, v])=>{ const e = $(id); if(e){ e.value = v === '' ? '' : String(v); e.dispatchEvent(new Event('input', { bubbles:true })); e.dispatchEvent(new Event('change', { bubbles:true })); } });
+  sel.dispatchEvent(new Event('change', { bubbles:true }));
+  mcMostraBtn();
+  try{ runAtualizaDicaNivel(); }catch(e){}
+}
+let MC = null;
+function mcAbrir(){
+  const v = mcLer(); MC = { dist: v.dist || '5', seg: v.seg || 0, reguas:[] };
+  if(!v.seg){ MC.seg = { '3':15*60, '5':28*60, '10':58*60, '21.0975':2*3600+10*60, '42.195':4*3600+30*60 }[MC.dist]; }
+  let f = $('mc-fundo');
+  if(!f){
+    f = document.createElement('div'); f.id = 'mc-fundo'; f.className = 'nr-fundo';
+    f.innerHTML = `<div class="nr-folha" role="dialog" aria-modal="true" aria-labelledby="mc-tit">
+      <div class="nr-alca" aria-hidden="true"></div>
+      <div class="nr-topo"><div class="nr-tit" id="mc-tit">Tempo recente</div><button type="button" class="nr-x" aria-label="Fechar sem mudar" onclick="mcFechar()">×</button></div>
+      <div class="mc-dists" role="radiogroup" aria-label="Distância"></div>
+      <div class="nr-mostra" aria-live="polite"><span class="nr-num"></span></div>
+      <div class="mc-ritmo"></div>
+      <div class="nr-reguas"></div>
+      <div class="nr-dig" hidden><input class="input mono" id="mc-dig" autocomplete="off" inputmode="numeric" placeholder="Ex.: 27:45 ou 1:05:30" data-teclado><div class="nr-dig-dica">h:mm:ss ou mm:ss</div></div>
+      <div class="mc-erro" role="alert"></div>
+      <div class="nr-acoes"><button type="button" class="btn btn-ghost" onclick="mcFechar()">Cancelar</button><button type="button" class="btn btn-ghost" id="mc-bdig" onclick="mcDigitar()">Digitar</button><button type="button" class="btn btn-primary nr-ok" onclick="mcConfirmar()">Confirmar</button></div>
+    </div>`;
+    document.body.appendChild(f);
+    f.addEventListener('click', e=>{ if(e.target === f) mcFechar(); });
+    f.addEventListener('keydown', e=>{ if(e.key === 'Escape'){ e.preventDefault(); mcFechar(); } else if(e.key === 'Enter' && !e.target.closest('button')){ e.preventDefault(); mcConfirmar(); } });
+    f.querySelector('#mc-dig').addEventListener('input', mcDigitado);
+  }
+  f.querySelector('.mc-dists').innerHTML = MC_DIST.map(([k,l])=>`<button type="button" role="radio" aria-checked="${k===MC.dist}" class="${k===MC.dist?'on':''}" onclick="mcDist('${k}')">${l}</button>`).join('');
+  f.querySelector('.nr-dig').hidden = true; const box = f.querySelector('.nr-reguas'); box.hidden = false; box.innerHTML = '';
+  let t = { h:Math.floor(MC.seg/3600), m:Math.floor(MC.seg%3600/60), s:MC.seg%60 };
+  const up = ()=>{ MC.seg = t.h*3600 + t.m*60 + t.s; mcMostra(); };
+  NR = { mc:true };   // as réguas por gesto (parte 34) só avisam enquanto há uma folha aberta
+  MC.reguas = [
+    nrRegua({ min:0, max:9, step:1, valor:t.h, fmt:v=>String(v), rotulo:'horas', nome:'Horas', compacta:true, maior:1, tk:48, onChange:v=>{ t.h = v; up(); } }),
+    nrRegua({ min:0, max:59, step:1, valor:t.m, fmt:v=>String(v), rotulo:'min', nome:'Minutos', compacta:true, maior:5, tk:20, onChange:v=>{ t.m = v; up(); } }),
+    nrRegua({ min:0, max:59, step:1, valor:t.s, fmt:v=>String(v).padStart(2,'0'), rotulo:'seg', nome:'Segundos', compacta:true, maior:5, tk:20, onChange:v=>{ t.s = v; up(); } })
+  ];
+  MC.reguas.forEach(r=>box.appendChild(r.el));
+  MC.t = t; up();
+  f.classList.add('on'); document.documentElement.classList.add('nr-aberta');
+  requestAnimationFrame(()=>{ MC && MC.reguas.forEach(r=>r.montar()); try{ f.querySelector('.mc-dists button.on').focus({ preventScroll:true }); }catch(e){} });
+}
+function mcMostra(){
+  const f = $('mc-fundo'); if(!f || !MC) return;
+  f.querySelector('.nr-num').textContent = mcTxt(MC.seg);
+  f.querySelector('.mc-ritmo').textContent = MC.seg ? `Ritmo médio: ${mcRitmo(+MC.dist, MC.seg)}` : '';
+  f.querySelector('.mc-erro').textContent = '';
+}
+function mcDist(k){
+  if(!MC) return; MC.dist = k;
+  document.querySelectorAll('#mc-fundo .mc-dists button').forEach(b=>{ const on = b.getAttribute('onclick').includes(`'${k}'`); b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  mcMostra();
+}
+function mcDigitar(){
+  const f = $('mc-fundo'); if(!f) return; const d = f.querySelector('.nr-dig'); const inp = f.querySelector('#mc-dig');
+  d.hidden = false; f.querySelector('.nr-reguas').hidden = true; inp.value = ''; setTimeout(()=>inp.focus(), 30);
+}
+function mcDigitado(){
+  const inp = $('mc-dig'); if(!inp || !MC) return null;
+  const p = inp.value.trim().split(/[:.,h ]+/).filter(Boolean).map(x=>parseInt(x,10));
+  let seg = null;
+  if(p.length && !p.some(isNaN)){
+    if(p.length === 3 && p[1] < 60 && p[2] < 60) seg = p[0]*3600 + p[1]*60 + p[2];
+    else if(p.length === 2 && p[1] < 60) seg = p[0]*60 + p[1];
+  }
+  inp.classList.toggle('nr-ruim', !!inp.value.trim() && seg == null);
+  if(seg != null && seg < 10*3600){ MC.seg = seg; mcMostra(); }
+  return seg;
+}
+function mcConfirmar(){
+  if(!MC) return; const f = $('mc-fundo');
+  if(!f.querySelector('.nr-dig').hidden && mcDigitado() == null){ f.querySelector('.mc-erro').textContent = 'Formato do tempo: 27:45 ou 1:05:30.'; return; }
+  const erro = mcValida(MC.dist, MC.seg);
+  if(erro){ f.querySelector('.mc-erro').textContent = erro; return; }
+  mcGravar(MC.dist, MC.seg); mcFechar();
+}
+function mcFechar(){
+  const f = $('mc-fundo'); if(f) f.classList.remove('on'); document.documentElement.classList.remove('nr-aberta');
+  if(NR && NR.mc) NR = null; MC = null;
+  try{ $('mc-btn').focus({ preventScroll:true }); }catch(e){}
+}
+
+// ---------- preparar as telas do cadastro ----------
+mtGancho('wzIr', { depois(id){
+  try{
+    if(id === 'scr-quiz'){ wzLimpaNotas(); wzExplica('q-level'); wzExplica('q-goal'); wzImc(); }
+    if(id === 'scr-setup-lift'){ wzRotulosCali(); wzExplicaTudo(); wzInicioMsg('lift'); }
+    if(id === 'scr-setup-run'){ mcPrepara(); mcMostraBtn(); wzInicioMsg('run'); }
+  }catch(e){ console.log('cadastro (Beta 40):', e); }
+}});
+mtGancho('openSetupScreen', { depois(m){ try{ if(m === 'run'){ mcPrepara(); mcMostraBtn(); } wzInicioMsg(m); }catch(e){} } });
+
+Object.assign(window, { wtPrepara, wzRenderIcones, wzEscolheIcone, wzImc, wzExplica, wzObjetivoAtualiza, wzInicioMsg, wzPrimeiroTreino,
+  mcAbrir, mcFechar, mcDist, mcDigitar, mcConfirmar, mcGravar, mcValida, mcPrepara });
+
+// =====================================================================
+// 39. Beta 40 — Treinos que respeitam as dores/limitações e o terreno da corrida
+// =====================================================================
+// Musculação (todas as modalidades): setup.lim = regiões marcadas no cadastro. Cada exercício que força a
+// região é TROCADO por outro do mesmo grupo que o aluno consegue fazer com o equipamento dele (ou sai, se
+// não houver), e o volume dos grupos envolvidos é contido. O aluno vê o que mudou (montagem do plano e
+// tela do treino). Não é diagnóstico: o texto orienta a procurar avaliação se a dor persistir.
+// Corrida: o terreno passa a mudar o plano de verdade (tipos de treino, metas de ritmo/velocidade, km).
+
+const LIM_NOME = { joelho:'joelho', ombro:'ombro', lombar:'costas/lombar', punho:'punho/cotovelo', quadril:'quadril', tornozelo:'tornozelo/pé', semimpacto:'saltos e impacto' };
+const LIM_REGRAS = {
+  joelho:    { evitar:/agachamento (livre|no smith|b[uú]lgaro|jump|goblet|sum[ôo])|leg press|hack machine|cadeira extensora|afundo|step-up|nordic|cadeira contra parede|mountain climber/i,
+               prefer:/flexora|stiff|eleva[çc][aã]o p[ée]lvica|ponte|coice|abdu|concha|adutora|panturrilha sentada/i, grupos:['Pernas','Glúteos'] },
+  ombro:     { evitar:/desenvolvimento|arnold|pike|eleva[çc][aã]o (y|frontal)|mergulho|supino inclinado|supino reto com barra|crucifixo|pullover|crossover no cabo \(alto\)|flex[aã]o (arqueiro|inclinada)|tr[íi]ceps testa|acima da cabe[çc]a|tr[íi]ceps franc[êe]s|puxada aberta|encolhimento com barra/i,
+               prefer:/supino na m[aá]quina \(hammer\)|supino reto com halteres|m[aã]os elevadas|crossover no cabo \(baixo\)|eleva[çc][aã]o lateral|face pull|posterior|corda|polia com barra|coice|puxada (frontal|com tri[aâ]ngulo)|remada/i, grupos:['Ombro','Peito','Tríceps'] },
+  lombar:    { evitar:/levantamento terra|stiff|remada curvada|agachamento livre com barra|agachamento no smith|hack machine|nordic|superman|farmer|russian twist|abdominal (crunch|bicicleta)|eleva[çc][aã]o de pernas|remada cavalinho|desenvolvimento com barra|good morning/i,
+               prefer:/m[aá]quina|cabo|polia|articulada|extensora|flexora|leg press horizontal|prancha|dead bug|pallof|ponte/i, grupos:['Costas','Pernas','Core'] },
+  punho:     { evitar:/flex[aã]o|mountain climber|rosca direta com barra|rosca scott no banco|tr[íi]ceps testa \(barra|supino (reto|inclinado) com barra|supino pegada fechada|mergulho|pike|remada curvada com barra|farmer|encolhimento com barra/i,
+               prefer:/m[aá]quina|cabo|polia|martelo|corda|halteres/i, grupos:['Bíceps','Tríceps','Peito'] },
+  quadril:   { evitar:/agachamento (sum[ôo]|b[uú]lgaro|jump|livre com barra)|afundo|step-up|levantamento terra|mountain climber|nordic/i,
+               prefer:/leg press horizontal|cadeira|mesa flexora|ponte|eleva[çc][aã]o p[ée]lvica/i, grupos:['Pernas','Glúteos'] },
+  tornozelo: { evitar:/jump|step-up|afundo|panturrilha em p[ée]|panturrilha unilateral|panturrilha donkey|mountain climber|farmer|b[uú]lgaro/i,
+               prefer:/panturrilha sentada|panturrilha no leg press|cadeira|mesa flexora|leg press/i, grupos:['Panturrilha','Pernas'] },
+  semimpacto:{ evitar:/jump|mountain climber|burpee|salto|polichinelo|pliom/i, prefer:null, grupos:[] }
+};
+function limDoSetup(setup){ return ((setup && setup.lim) || []).filter(k=>LIM_REGRAS[k]); }
+function limEquipOk(setup){
+  const equip = (setup && setup.equip) || 'academia';
+  const ef = equip==='basico' ? ['casa','halteres'] : equip==='academia' ? ['academia','halteres','casa'] : equip==='halteres' ? ['halteres','casa'] : ['casa'];
+  return ex => equip === 'custom' ? (typeof podeFazerCom === 'function' ? podeFazerCom(ex, setup.equipList||[]) : true)
+    : (ex.equip||[]).some(q=>ef.includes(q)) && (equip==='casa' || !ex.improv);
+}
+function limAdapta(list, setup){
+  const lims = limDoSetup(setup); if(!lims.length || !Array.isArray(list)) return list;
+  const qualLim = ex=>lims.find(k=>LIM_REGRAS[k].evitar.test(ex.name||''));
+  const ok = limEquipOk(setup);
+  const usados = new Set(list.map(e=>e.id));
+  const out = []; const log = window.__limLog = window.__limLog || [];
+  list.forEach(e=>{
+    const k = qualLim(e); if(!k){ out.push(e); return; }
+    const cat = EX_BANK.find(c=>c.name===e.part);
+    let cands = cat ? cat.items.filter(x=>!qualLim(x) && ok(x) && !usados.has(slug(x.name))) : [];
+    const pref = LIM_REGRAS[k].prefer;
+    if(pref) cands = [...cands].sort((a,b)=>(pref.test(b.name)?1:0)-(pref.test(a.name)?1:0));
+    const alt = cands[0];
+    if(alt){
+      usados.add(slug(alt.name));
+      const reps = alt.iso ? (e.unit==='tempo' ? e.reps : '20-30s') : (e.unit==='tempo' ? '10-12' : e.reps);
+      out.push(Object.assign({}, e, { id:slug(alt.name), name:alt.name, sub:alt.sub, equip:alt.equip, unit:alt.iso?'tempo':'reps', reps, lim:k, adaptadoDe:e.name }));
+      log.push({ de:e.name, para:alt.name, lim:k });
+    } else log.push({ de:e.name, para:null, lim:k });
+  });
+  // volume e intensidade dos grupos da região: no máximo 3 séries e nada de faixa de força pura (4–6)
+  const grupos = new Set(lims.flatMap(k=>LIM_REGRAS[k].grupos));
+  out.forEach(e=>{ if(!grupos.has(e.part)) return; if(+e.sets > 3) e.sets = 3; if(/^4-6$|^3-6$/.test(String(e.reps))) e.reps = '8-10'; });
+  return out.length ? out : list.filter(e=>!qualLim(e));
+}
+const _buildLiftB40 = window.buildLiftExercises;
+window.buildLiftExercises = function(parts, setup){
+  const list = _buildLiftB40.apply(this, arguments);
+  try{ return limAdapta(list, setup); }catch(e){ console.log('limitações:', e); return list; }
+};
+// o cardio "bônus" do fim do treino tinha agachamento com salto e polichinelo: sem impacto para quem marcou limitação
+const _cardioFinB40 = window.cardioFinisherCard;
+window.cardioFinisherCard = function(){
+  const lims = limDoSetup(state.modules.lift && state.modules.lift.setup);
+  if(!lims.some(k=>['joelho','tornozelo','quadril','semimpacto','lombar'].includes(k))) return _cardioFinB40.apply(this, arguments);
+  return `<div class="card card-info card-row hl-warn" style="margin-top:14px;background:rgba(var(--accent-rgb),0.06)"><div class="card-icon">🔥</div><div><div class="card-title" style="color:var(--accent)">Bônus cardio (opcional, sem impacto)</div><div class="card-sub">Quer turbinar? Finalize com ~8 min de <b>bike ergométrica, elíptico ou caminhada rápida</b>, alternando 1 min mais forte e 1 min leve. Sem saltos, respeitando a limitação que você informou.</div></div></div>`;
+};
+// cadastro: lê o campo de limitações, leva para a calistenia (mesmas regiões) e grava no plano
+function limLerTela(){ return [...document.querySelectorAll('#lift-lim .opt-multi.on')].map(o=>o.dataset.val); }
+const _finishSetupB40 = window.finishSetup;
+window.finishSetup = function(m){
+  if(m === 'lift'){
+    try{
+      const lim = limLerTela(); window.__liftLim = lim; window.__limLog = [];
+      const caliMap = new Set(); lim.forEach(k=>{ if(['joelho','ombro','punho'].includes(k)) caliMap.add(k); if(['joelho','tornozelo','semimpacto','quadril'].includes(k)) caliMap.add('semimpacto'); });
+      document.querySelectorAll('#cali-limites .opt-multi').forEach(o=>o.classList.toggle('on', caliMap.has(o.dataset.val)));
+    }catch(e){}
+  }
+  return _finishSetupB40.apply(this, arguments);
+};
+const _generatePlanB40 = window.generatePlan;
+window.generatePlan = function(module, setup){
+  if(module === 'lift' && setup && Array.isArray(window.__liftLim)){ setup.lim = window.__liftLim; window.__liftLim = null; }
+  return _generatePlanB40.apply(this, arguments);
+};
+mtGancho('openSetupScreen', { depois(m){
+  if(m !== 'lift') return;
+  try{
+    const st = state.modules.lift && state.modules.lift.setup;
+    const lista = (st && (st.lim || (st.caliLimites||[]).filter(x=>x!=='semimpacto').concat((st.caliLimites||[]).includes('semimpacto')?['semimpacto']:[]))) || [];
+    document.querySelectorAll('#lift-lim .opt-multi').forEach(o=>{ o.classList.toggle('on', lista.includes(o.dataset.val)); o.onclick = ()=>o.classList.toggle('on'); });
+  }catch(e){}
+}});
+// a montagem do plano conta o que foi adaptado
+const _buildingStepsB40 = window.buildingSteps;
+window.buildingSteps = function(m, setup){
+  const steps = _buildingStepsB40.apply(this, arguments);
+  try{
+    const lims = m === 'lift' ? limDoSetup(setup) : [];
+    if(lims.length){
+      const log = (window.__limLog||[]); const trocas = [...new Map(log.filter(x=>x.para).map(x=>[x.de, x])).values()];
+      const txt = trocas.length ? `${trocas.length} ${trocas.length===1?'exercício trocado':'exercícios trocados'} (ex.: ${mtEsc(trocas[0].de)} → <b>${mtEsc(trocas[0].para)}</b>)` : 'nenhum exercício precisou ser trocado';
+      const pos = Math.max(1, steps.length-1);
+      steps.splice(pos, 0, { pri:1, txt:`Adaptando ao que você informou (${lims.map(k=>LIM_NOME[k]).join(', ')}): ${txt}` });
+    }
+  }catch(e){}
+  return steps;
+};
+// tela do treino: aviso do que mudou por causa da limitação
+mtGancho('renderSessionDetail', { depois(w){
+  try{
+    if(state.active !== 'lift' || !w) return;
+    const ad = (w.exercises||[]).filter(e=>e.lim && e.adaptadoDe);
+    const slot = $('session-detail-slot'); if(!slot || !ad.length || slot.querySelector('.lim-aviso')) return;
+    const regs = [...new Set(ad.map(e=>LIM_NOME[e.lim]))].join(', ');
+    slot.insertAdjacentHTML('afterbegin', `<div class="note note-info lim-aviso" style="margin-top:0"><div class="note-title">🩹 Treino adaptado (${mtEsc(regs)})</div>
+      <div class="note-line">${ad.slice(0,4).map(e=>`<b>${mtEsc(e.name)}</b> no lugar de ${mtEsc(e.adaptadoDe)}`).join(' · ')}${ad.length>4?` · +${ad.length-4}`:''}.</div>
+      <div class="note-line" style="margin-top:4px">Use cargas que não provoquem dor. Se a dor for persistente, forte ou piorar com o treino, procure avaliação profissional — o app não faz diagnóstico.</div></div>`);
+  }catch(e){ console.log('aviso de limitação:', e); }
+}});
+
+// ---------- Corrida: o terreno muda o plano ----------
+// Trilha: sem tiros curtos/velocidade (precisam de chão regular) → fartlek ou subidas; metas por ESFORÇO;
+//         km previstos menores (o mesmo tempo rende menos na trilha). Treinos que dependem de ritmo
+//         constante dizem que o melhor é um trecho plano e firme.
+// Esteira: cada ritmo ganha a velocidade equivalente em km/h; subidas pela inclinação.
+// Pista:   tiros em metros (já era), voltas de 400 m nos treinos contínuos; longão: sugestão de rua/parque.
+// Asfalto: como antes (percurso plano, ladeira moderada para as subidas).
+const _rComposicaoB40 = window.rComposicao;
+window.rComposicao = function(ctx, M, F, n, opts){
+  const L = _rComposicaoB40.apply(this, arguments);
+  try{
+    const setup = (ctx.run||{}).setup||{}; const ter = setup.terrain || 'asfalto';
+    const lim = ((setup.aval||{}).lim||[]).length > 0;
+    if(ter === 'trilha') return L.map(t=>['velocidade','tiros_curtos'].includes(t) ? (!L.includes('fartlek') ? 'fartlek' : (!lim && !L.includes('subida') ? 'subida' : 'tempo')) : t);
+  }catch(e){}
+  return L;
+};
+const RT_ZONA = { leve:'leve', longao:'leve', continua:'leve', regenerativo:'regenerativo', tempo:'limiar', limiar:'limiar', tiros_longos:'intervalado', tiros_curtos:'intervalado', velocidade:'velocidade' };
+function _kmh(p){ return p > 0 ? (60/p).toFixed(1).replace('.',',') : null; }
+const _rSessaoB40 = window.rSessao;
+window.rSessao = function(tipo, o){
+  const r = _rSessaoB40.apply(this, arguments);
+  try{
+    const ter = (o && o.terreno) || 'asfalto'; const Z = o && o.Z;
+    const z = tipo === 'ritmo_prova' ? (typeof _ritmoProva === 'function' ? _ritmoProva(Z, o.goal) : null) : (Z && RT_ZONA[tipo] ? Z[RT_ZONA[tipo]] : null);
+    r.terreno = ter;
+    if(ter === 'trilha' && !['caminhada','camcorre'].includes(tipo)){
+      const esf = (RZ_INFO[RT_ZONA[tipo]]||{}).rpe;
+      if(esf) r.alvo = `por esforço: ${esf}/10 (na trilha o ritmo varia com o terreno)`;
+      if(r.km) r.km = Math.round(r.km*0.85*10)/10;
+      if(['ritmo_prova','tiros_longos','limiar','tempo'].includes(tipo)) r.orient.unshift('Este treino depende de ritmo constante: faça no trecho mais plano e firme da trilha (estrada de terra ou parque). Se não houver, vale o asfalto só neste dia.');
+      if(tipo === 'longao' || tipo === 'leve') r.orient.push('Trilha: passos curtos nas descidas, olhar 3–4 m à frente e tênis com boa aderência. Caminhar nas subidas íngremes faz parte.');
+    } else if(ter === 'esteira' && z && z.a && z.b){
+      const v1 = _kmh(z.b), v2 = _kmh(z.a);
+      if(v1 && v2) r.alvo = `${r.alvo} · na esteira: ${v1}–${v2} km/h`;
+      if(!r.orient.some(t=>/inclina/.test(t))) r.orient.push('Na esteira, deixe 1% de inclinação para compensar a falta de vento.');
+    } else if(ter === 'pista'){
+      if(['tempo','limiar','leve','continua','regenerativo'].includes(tipo) && z && z.a){
+        const min = (r.blocks[1].exs[0]||{}).min || 0; const p = (z.a + z.b)/2; const voltas = min && p ? Math.round(min/(p*0.4)) : 0;
+        if(voltas >= 3) r.orient.push(`Na pista: ${min} min ≈ ${voltas} voltas de 400 m nesse ritmo.`);
+      }
+      if(tipo === 'longao') r.orient.push('Longões muito longos na pista cansam a cabeça: se puder, faça este na rua ou num parque — o plano não depende disso.');
+    }
+  }catch(e){ console.log('terreno:', e); }
+  return r;
+};
+
+Object.assign(window, { limAdapta, limDoSetup, LIM_REGRAS, LIM_NOME });
+
+// =====================================================================
+// 40. Beta 40 — PDFs com a identidade do MetaTreino (Premium)
+// =====================================================================
+// Três documentos novos — plano de musculação, plano de corrida e plano alimentar — e o relatório de
+// evolução com a mesma apresentação. Tudo vetorial, desenhado aqui (sem fotos): o desenho em SVG vira
+// imagem PNG transparente no próprio aparelho e entra no PDF com opacidade baixa, atrás do conteúdo.
+// As cores vêm do tema do aluno, escurecidas quando preciso para manter contraste no papel branco.
+// O conteúdo e os cálculos são os mesmos do app (plano gerado, nutriMontarPlano, histórico).
+
+// ---------- cores do tema → papel ----------
+function _pdfHex(v){
+  v = String(v||'').trim();
+  let m = /^#([0-9a-f]{6})$/i.exec(v); if(m) return [parseInt(m[1].slice(0,2),16), parseInt(m[1].slice(2,4),16), parseInt(m[1].slice(4,6),16)];
+  m = /^#([0-9a-f]{3})$/i.exec(v); if(m) return m[1].split('').map(c=>parseInt(c+c,16));
+  m = /rgba?\(([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)/.exec(v); if(m) return [+m[1], +m[2], +m[3]];
+  return null;
+}
+function _pdfLum(c){ const f = x=>{ x /= 255; return x <= 0.03928 ? x/12.92 : Math.pow((x+0.055)/1.055, 2.4); }; return 0.2126*f(c[0]) + 0.7152*f(c[1]) + 0.0722*f(c[2]); }
+function _pdfContraste(c){ return 1.05 / (_pdfLum(c) + 0.05); }   // contra o branco
+function _pdfEscurece(c, alvo){ let x = c.slice(); for(let i = 0; i < 30 && _pdfContraste(x) < alvo; i++) x = x.map(v=>Math.round(v*0.9)); return x; }
+function _pdfMistura(c, f){ return c.map(v=>Math.round(v + (255 - v)*f)); }   // f = quanto de branco
+function _pdfHexDe(c){ return '#' + c.map(v=>Math.max(0,Math.min(255,v|0)).toString(16).padStart(2,'0')).join(''); }
+function pdfCores(){
+  const cs = getComputedStyle(document.documentElement);
+  const p0 = _pdfHex(cs.getPropertyValue('--primary')) || [255,106,43];
+  const a0 = _pdfHex(cs.getPropertyValue('--accent')) || [47,212,181];
+  const p = _pdfEscurece(p0, 4.6), a = _pdfEscurece(a0, 3.2);
+  return { p, a, pArte:_pdfEscurece(p0, 2.2), aArte:_pdfEscurece(a0, 2.0), pClaro:_pdfMistura(p, 0.90), aClaro:_pdfMistura(a, 0.88),
+    ink:[24,29,38], dim:[92,101,116], linha:[223,227,233], zebra:[247,248,250], tema: currentTheme() };
+}
+
+// ---------- ilustrações (SVG vetorial próprio) ----------
+// Cabeçalho: 600×130, desenho à direita. Marca d'água: 400×400.
+function _svgFig(corpo, vb){ return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}">${corpo}</svg>`; }
+function pdfArteCab(tipo, C){
+  const P = _pdfHexDe(C.pArte), A = _pdfHexDe(C.aArte), PC = _pdfHexDe(_pdfMistura(C.p, 0.82)), AC = _pdfHexDe(_pdfMistura(C.a, 0.78));
+  const fundo = `<defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="${PC}" stop-opacity="0"/><stop offset=".55" stop-color="${PC}" stop-opacity=".55"/><stop offset="1" stop-color="${AC}" stop-opacity=".75"/></linearGradient></defs>
+    <path d="M330 130 C 390 70 460 110 520 40 C 555 0 585 8 600 0 V130 Z" fill="url(#g)"/>
+    <circle cx="505" cy="62" r="58" fill="${PC}" opacity=".55"/>`;
+  const L = (d, c, w, o)=>`<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" opacity="${o==null?1:o}"/>`;
+  if(tipo === 'musculacao') return _svgFig(fundo
+    // barra com anilhas acima da cabeça (desenvolvimento)
+    + L('M432 26 H578', P, 4) + `<rect x="440" y="10" width="9" height="32" rx="2.5" fill="${P}"/><rect x="451" y="15" width="6" height="22" rx="2" fill="${P}" opacity=".8"/><rect x="561" y="10" width="9" height="32" rx="2.5" fill="${P}"/><rect x="553" y="15" width="6" height="22" rx="2" fill="${P}" opacity=".8"/>`
+    // atleta em traço
+    + `<circle cx="505" cy="47" r="9.5" fill="${A}"/>` + L('M505 58 V92', A, 11) + L('M499 62 L484 44 L482 27 M511 62 L526 44 L528 27', A, 7) + L('M500 92 L491 110 L489 125 M510 92 L519 110 L521 125', A, 8)
+    // halter e kettlebell no chão
+    + L('M392 117 H422', P, 4, .9) + `<rect x="386" y="108" width="7" height="18" rx="2" fill="${P}" opacity=".9"/><rect x="421" y="108" width="7" height="18" rx="2" fill="${P}" opacity=".9"/>`
+    + `<path d="M572 96 a10 10 0 0 1 20 0" fill="none" stroke="${P}" stroke-width="4" opacity=".9"/><circle cx="582" cy="113" r="13" fill="${P}" opacity=".9"/>`
+    + L('M355 60 h18 M362 74 h18 M350 88 h18', A, 3, .45), '0 0 600 130');
+  if(tipo === 'corrida') return _svgFig(fundo
+    // pista: raias curvas
+    + [0,1,2].map(i=>L(`M${340+i*10} 130 C ${420+i*8} ${96-i*10} ${520+i*6} ${100-i*12} 600 ${72-i*14}`, P, 2.6, .55 - i*.12)).join('')
+    // corredor em traço
+    + `<circle cx="512" cy="30" r="9" fill="${A}"/>` + L('M507 41 L494 74', A, 10) + L('M503 50 L520 60 L533 51 M503 50 L486 60 L476 72', A, 6.5) + L('M494 74 L514 91 L508 113 M494 74 L476 97 L455 101', A, 7.5)
+    + L('M428 46 h34 M418 60 h38 M432 74 h26', P, 3.2, .55)
+    // percurso com marcador e bicicleta
+    + L('M338 116 C 356 104 368 122 386 108 S 414 100 424 112', A, 2.5, .8) + `<circle cx="338" cy="116" r="4" fill="${A}"/><path d="M424 112 m-6 -16 a6 6 0 1 1 12 0 c0 6 -6 10 -6 16 c0 -6 -6 -10 -6 -16z" fill="${P}"/>`
+    + `<g opacity=".85">${L('M560 112 m-11 0 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0', P, 3)}${L('M590 112 m-11 0 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0', P, 3)}${L('M560 112 L571 96 H584 L590 112 M571 96 L577 112 H560 M584 96 L588 89', P, 3)}</g>`, '0 0 600 130');
+  if(tipo === 'alimentacao') return _svgFig(fundo
+    // prato com talheres
+    + `<circle cx="500" cy="68" r="46" fill="#ffffff" opacity=".9"/><circle cx="500" cy="68" r="46" fill="none" stroke="${P}" stroke-width="3"/><circle cx="500" cy="68" r="33" fill="none" stroke="${P}" stroke-width="1.5" opacity=".5"/>`
+    + L('M436 28 V108 M430 28 V48 Q436 56 442 48 V28', P, 3) + L('M564 28 Q576 48 566 70 V108', P, 3)
+    // brócolis, cenoura e folhas no prato
+    + `<g><circle cx="484" cy="58" r="10" fill="#4f9a5f"/><circle cx="495" cy="51" r="9" fill="#5fae6c"/><circle cx="476" cy="66" r="8" fill="#5fae6c"/><path d="M487 66 L483 86" stroke="#4f8a57" stroke-width="5" stroke-linecap="round"/></g>`
+    + `<path d="M510 86 L534 56 L540 62 Z" fill="#e8893a"/><path d="M534 56 l6 -8 M537 59 l9 -4 M533 55 l1 -10" stroke="#5fae6c" stroke-width="2.5" stroke-linecap="round"/>`
+    + `<ellipse cx="504" cy="74" rx="9" ry="6" fill="${A}" opacity=".9"/>`
+    // maçã e folhas soltas
+    + `<path d="M386 92 c-12 -14 2 -30 14 -22 c12 -8 26 8 14 22 c-6 8 -12 10 -14 6 c-2 4 -8 2 -14 -6z" fill="${A}" opacity=".9"/><path d="M400 70 q2 -8 9 -10" stroke="#4f8a57" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
+    + `<path d="M582 104 q-16 -22 4 -40 q12 20 -4 40z" fill="#5fae6c" opacity=".85"/><path d="M584 104 q-2 -18 2 -38" stroke="#ffffff" stroke-width="1.2" fill="none" opacity=".8"/>`
+    + `<path d="M352 50 q-10 -14 2 -26 q8 14 -2 26z" fill="#5fae6c" opacity=".6"/>`, '0 0 600 130');
+  // evolução / relatório
+  return _svgFig(fundo
+    + `<path d="M372 112 L410 92 L442 100 L478 70 L508 78 L544 40 V122 H372 Z" fill="${PC}" opacity=".8"/>`
+    + L('M372 112 L410 92 L442 100 L478 70 L508 78 L544 40', P, 4) + L('M530 38 L546 38 L546 54', P, 4)
+    + [[410,92],[442,100],[478,70],[508,78]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4.5" fill="#fff" stroke="${P}" stroke-width="3"/>`).join('')
+    // troféu e medalha
+    + `<path d="M560 72 h24 v7 a12 12 0 0 1 -24 0z" fill="${A}"/><path d="M569 91 h6 v9 h7 v6 h-20 v-6 h7z" fill="${A}"/><path d="M560 75 h-5 a5 5 0 0 0 5 9 M584 75 h5 a5 5 0 0 1 -5 9" fill="none" stroke="${A}" stroke-width="2.5"/>`
+    + `<path d="M352 22 l8 18 M368 22 l-8 18" stroke="${A}" stroke-width="5" stroke-linecap="round"/><circle cx="360" cy="48" r="10" fill="${P}"/><circle cx="360" cy="48" r="5" fill="#fff" opacity=".7"/>`
+    + L('M400 30 a14 14 0 1 0 0.1 0 M400 36 a8 8 0 1 0 0.1 0', A, 2.5, .6), '0 0 600 130');
+}
+function pdfArteMarca(tipo, C){
+  const P = _pdfHexDe(C.pArte), A = _pdfHexDe(C.aArte);
+  const L = (d, c, w)=>`<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if(tipo === 'musculacao') return _svgFig(`<g opacity="1">${[150,112,74,40].map((r,i)=>`<circle cx="250" cy="250" r="${r}" fill="none" stroke="${i%2?A:P}" stroke-width="${i===0?14:6}"/>`).join('')}<circle cx="250" cy="250" r="16" fill="${P}"/>${L('M40 380 H180', P, 12)}<rect x="24" y="350" width="22" height="60" rx="6" fill="${P}"/><rect x="176" y="350" width="22" height="60" rx="6" fill="${P}"/></g>`, '0 0 400 420');
+  if(tipo === 'corrida') return _svgFig(`${[0,1,2,3].map(i=>L(`M${20+i*26} 420 C ${120+i*20} ${260-i*24} ${260+i*14} ${250-i*26} 400 ${120-i*26}`, i%2?A:P, 9)).join('')}<path d="M300 150 m-14 -36 a14 14 0 1 1 28 0 c0 14 -14 22 -14 36 c0 -14 -14 -22 -14 -36z" fill="${P}"/>`, '0 0 400 420');
+  if(tipo === 'alimentacao') return _svgFig(`<path d="M120 380 q-90 -120 20 -230 q80 110 -20 230z" fill="${A}"/><path d="M122 376 q-14 -110 14 -220" stroke="#fff" stroke-width="5" fill="none"/><circle cx="270" cy="270" r="92" fill="none" stroke="${P}" stroke-width="12"/><path d="M262 178 q8 -30 30 -36" stroke="${A}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M330 120 q-50 -40 -10 -90 q40 46 10 90z" fill="${P}"/>`, '0 0 400 420');
+  return _svgFig(`${L('M30 380 L130 300 L200 330 L290 220 L370 90', P, 14)}${L('M330 84 L376 84 L376 130', P, 14)}${[[130,300],[200,330],[290,220]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="16" fill="${A}"/>`).join('')}${[0,1,2].map(i=>`<rect x="${60+i*90}" y="${400-60-i*40}" width="50" height="${60+i*40}" rx="8" fill="${i%2?A:P}" opacity=".7"/>`).join('')}`, '0 0 400 420');
+}
+function _svgPng(svg, w, h, opacidade){
+  return new Promise((res, rej)=>{
+    const img = new Image();
+    img.onload = ()=>{ try{ const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.globalAlpha = opacidade == null ? 1 : opacidade; x.drawImage(img, 0, 0, w, h); res(c.toDataURL('image/png')); }catch(e){ rej(e); } };
+    img.onerror = ()=>rej(new Error('desenho do PDF não carregou'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+async function pdfPrepArte(tipo){
+  const C = pdfCores();
+  const [cab, marca] = await Promise.all([ _svgPng(pdfArteCab(tipo, C), 1800, 390, 1), _svgPng(pdfArteMarca(tipo, C), 700, 735, 0.07) ]);
+  return { C, cab, marca, tipo };
+}
+
+// ---------- montagem comum ----------
+function _pdfTxt(s){ return _T(String(s==null?'':s).replace(/≈/g,'~').replace(/×/g,'x').replace(/–/g,'-').replace(/·/g,'·')); }
+function pdfDoc(jsPDF, arte, cab){
+  const doc = new jsPDF({ unit:'mm', format:'a4', compress:true });
+  const PW = 210, PH = 297, M = 14, W = PW - 2*M; const C = arte.C;
+  const S = { doc, PW, PH, M, W, C, y:0 };
+  const cor = c=>doc.setTextColor(c[0], c[1], c[2]);
+  const fonte = (t, e)=>{ doc.setFont('helvetica', e||'normal'); doc.setFontSize(t); };
+  const txt = (s, x, y, o)=>doc.text(_pdfTxt(s), x, y, o);
+  S.cor = cor; S.fonte = fonte; S.txt = txt;
+  const marca = ()=>{ try{ doc.addImage(arte.marca, 'PNG', PW - 92, PH - 112, 86, 90, 'mt-marca', 'FAST'); }catch(e){} };
+  S.nova = ()=>{
+    doc.addPage(); marca();
+    // faixa fina no topo das páginas seguintes
+    doc.setFillColor(...C.p); doc.rect(0, 0, PW, 2.2, 'F');
+    fonte(7.5, 'bold'); cor(C.p); txt('METATREINO', M, 9); fonte(7.5); cor(C.dim); txt(cab.titulo, PW - M, 9, { align:'right' });
+    S.y = 15;
+  };
+  S.precisa = h=>{ if(S.y + h > PH - 18) S.nova(); };
+  // capa (primeira página): faixa clara com o desenho, marca e título
+  marca();
+  doc.setFillColor(...C.pClaro); doc.rect(0, 0, PW, 46, 'F');
+  try{ doc.addImage(arte.cab, 'PNG', 0, 0, PW, 45.5, 'mt-cab', 'FAST'); }catch(e){}
+  doc.setFillColor(...C.p); doc.rect(0, 46, PW, 1.2, 'F');
+  doc.setFillColor(...C.p); doc.roundedRect(M, 9, 7.5, 7.5, 1.8, 1.8, 'F'); fonte(9, 'bold'); doc.setTextColor(255,255,255); txt('M', M + 3.75, 14.3, { align:'center' });
+  fonte(9, 'bold'); cor(C.p); txt('METATREINO', M + 10, 14.4);
+  fonte(19, 'bold'); cor(C.ink); txt(cab.titulo, M, 27.5);
+  fonte(9.5); cor(C.dim); txt(cab.sub, M, 34.5);
+  if(cab.sub2){ fonte(8.5); txt(cab.sub2, M, 40); }
+  S.y = 55;
+  // ----- componentes -----
+  S.secao = (t, sub, c)=>{
+    c = c || C.p; S.precisa(18); S.y += 2;
+    doc.setFillColor(...c); doc.roundedRect(M, S.y, 2.2, 8, 1, 1, 'F');
+    fonte(13, 'bold'); cor(C.ink); txt(t, M + 5.5, S.y + 6);
+    if(sub){ fonte(8); cor(C.dim); txt(sub, PW - M, S.y + 6, { align:'right' }); }
+    S.y += 12;
+  };
+  S.cartoes = (itens, c)=>{
+    c = c || C.p; const n = itens.length, gap = 3, w = (W - gap*(n-1))/n, h = 17; S.precisa(h + 4);
+    itens.forEach((it, i)=>{ const x = M + i*(w + gap);
+      doc.setFillColor(...C.zebra); doc.roundedRect(x, S.y, w, h, 2.5, 2.5, 'F'); doc.setFillColor(...c); doc.roundedRect(x, S.y + 3, 1.1, h - 6, .5, .5, 'F');
+      fonte(n > 4 ? 11 : 12.5, 'bold'); cor(C.ink); txt(it.v, x + 4, S.y + 8); fonte(7.3); cor(C.dim); txt(it.l, x + 4, S.y + 13); });
+    S.y += h + 5;
+  };
+  S.nota = (s, o)=>{ o = o || {}; fonte(o.t || 7.8, o.e || 'normal'); const ls = doc.splitTextToSize(_pdfTxt(s), W - (o.caixa ? 8 : 0));
+    const h = ls.length*3.7 + (o.caixa ? 6 : 2); S.precisa(h + 2);
+    if(o.caixa){ doc.setFillColor(...(o.fundo || C.aClaro)); doc.roundedRect(M, S.y, W, h, 2.5, 2.5, 'F'); cor(o.cor || C.ink); doc.text(ls, M + 4, S.y + 5); }
+    else { cor(o.cor || C.dim); doc.text(ls, M, S.y + 3); }
+    S.y += h + 2; };
+  // tabela com quebra de linha nas colunas de texto, cabeçalho repetido em página nova e linhas alternadas
+  S.tabela = (cols, linhas, o)=>{
+    o = o || {}; const tot = cols.reduce((a,c)=>a+c.w, 0); const k = W/tot; const xs = []; let acc = M; cols.forEach(c=>{ xs.push(acc); acc += c.w*k; });
+    const cabec = ()=>{ S.precisa(9); doc.setFillColor(...(o.cabCor || C.pClaro)); doc.roundedRect(M, S.y, W, 7, 1.5, 1.5, 'F'); fonte(7.4, 'bold'); cor(o.cabTxt || C.p);
+      cols.forEach((c, i)=>txt(c.t, c.dir ? xs[i] + c.w*k - 1.8 : xs[i] + 1.8, S.y + 4.7, c.dir ? { align:'right' } : undefined)); S.y += 8.2; };
+    cabec();
+    linhas.forEach((l, li)=>{
+      fonte(o.t || 8.2);
+      const cel = l.map((v, i)=>{ const c = cols[i]; const s = _pdfTxt(v); return c.quebra ? doc.splitTextToSize(s, c.w*k - 3.6) : [s]; });
+      const h = Math.max(...cel.map(x=>x.length))*3.6 + 2.8;
+      if(S.y + h > PH - 18){ S.nova(); cabec(); fonte(o.t || 8.2); }
+      if(li % 2 === 1){ doc.setFillColor(...C.zebra); doc.rect(M, S.y - 0.4, W, h, 'F'); }
+      cel.forEach((ls, i)=>{ const c = cols[i]; cor(c.cor || C.ink); doc.setFont('helvetica', c.negrito ? 'bold' : 'normal');
+        doc.text(ls, c.dir ? xs[i] + c.w*k - 1.8 : xs[i] + 1.8, S.y + 3.3, c.dir ? { align:'right' } : undefined); });
+      S.y += h;
+    });
+    doc.setDrawColor(...C.linha); doc.setLineWidth(0.2); doc.line(M, S.y, M + W, S.y); S.y += 4;
+  };
+  S.fim = (nomeArq, aluno)=>{
+    const n = doc.getNumberOfPages();
+    for(let i = 1; i <= n; i++){
+      doc.setPage(i);
+      doc.setDrawColor(...C.p); doc.setLineWidth(0.5); doc.line(M, PH - 12, M + 18, PH - 12);
+      doc.setDrawColor(...C.linha); doc.setLineWidth(0.2); doc.line(M + 19, PH - 12, PW - M, PH - 12);
+      fonte(7); cor(C.dim); txt(`MetaTreino · ${aluno} · gerado em ${new Date().toLocaleDateString('pt-BR')}`, M, PH - 7.5); txt(`Página ${i} de ${n}`, PW - M, PH - 7.5, { align:'right' });
+    }
+    return { doc, nome: nomeArq };
+  };
+  return S;
+}
+function _pdfAluno(){ return (state.user && state.user.profile && state.user.profile.nickname) || (state.user && state.user.name) || (fbUser && fbUser.displayName) || 'Aluno'; }
+async function _pdfGerar(rec, tipo, montar, rotulo){
+  if(!mtTem(rec)) return mtPremiumAviso(rec);
+  toast('📄 Montando o PDF...');
+  try{
+    const [jsPDF, arte] = await Promise.all([_carregaJsPDF(), pdfPrepArte(tipo)]);
+    const r = montar(jsPDF, arte);
+    _pdfMostrarB40(r.doc.output('blob'), r.nome, rotulo);
+  }catch(e){
+    console.log('PDF:', e);
+    toast('⚠️ Não foi possível gerar o PDF' + (navigator.onLine === false ? ' — abra o app com internet uma vez para baixar o gerador.' : '.'));
+  }
+}
+function _pdfMostrarB40(blob, nome, rotulo){
+  _pdfMostrar(blob, nome);
+  try{ const h = document.querySelector('#modal-inner h3'); if(h && rotulo) h.textContent = '✅ ' + rotulo + ' pronto'; }catch(e){}
+  $('modal-back').classList.add('on');
+}
+
+// ---------- 1. Plano de musculação ----------
+const _GOAL_LIFT = { hipertrofia:'Hipertrofia', forca:'Força', emagrecimento:'Emagrecimento', resistencia:'Resistência' };
+const _NIVEL_LIFT = { iniciante:'Iniciante', intermediario:'Intermediário', avancado:'Avançado' };
+function _ultimaCarga(id){
+  const L = (state.progress[id]||[]).filter(p=>p.sets && p.sets.length); if(!L.length) return '';
+  const u = L[L.length-1]; const kg = Math.max(...u.sets.map(s=>+s.peso||0));
+  return kg > 0 ? _fmtN(kg, kg % 1 ? 1 : 0) + ' kg' : '';
+}
+function pdfMontarTreino(jsPDF, arte){
+  const mod = state.modules.lift; const st = mod.setup || {}; const ws = (mod.plan && mod.plan.workouts) || [];
+  const modal = { calistenia:'Calistenia', hibrido:'Híbrido (musculação + calistenia)' }[st.modalidade] || 'Musculação';
+  const ini = mod.startAt ? new Date(mod.startAt).toLocaleDateString('pt-BR') : '';
+  const S = pdfDoc(jsPDF, arte, { titulo:`Plano de treino · ${modal}`, sub:`${_pdfAluno()} · ${_GOAL_LIFT[st.goal]||st.goal||''} · nível ${_NIVEL_LIFT[st.level]||st.level||''}`, sub2:`${ws.length} treinos por semana${ini?` · início em ${ini}`:''}` });
+  const totalEx = ws.reduce((s,w)=>s+(w.exercises||[]).length, 0), totalSer = ws.reduce((s,w)=>s+(w.exercises||[]).reduce((a,e)=>a+(+e.sets||0),0), 0);
+  S.cartoes([{ v:String(ws.length), l:'treinos na semana' }, { v:String(totalEx), l:'exercícios' }, { v:String(totalSer), l:'séries por semana' }, { v:_fmtN(ws.reduce((s,w)=>s+(+w.duration||0),0)/Math.max(1,ws.length)) + ' min', l:'duração média' }]);
+  const lims = (typeof limDoSetup === 'function') ? limDoSetup(st) : [];
+  if(lims.length) S.nota(`Adaptado ao que você informou (${lims.map(k=>LIM_NOME[k]).join(', ')}): exercícios que forçam essas regiões foram trocados e o volume foi contido. Use cargas que não provoquem dor; se a dor persistir ou piorar, procure avaliação profissional.`, { caixa:true });
+  ws.slice().sort((a,b)=>(a.dayIdx||9)-(b.dayIdx||9)).forEach(w=>{
+    S.secao(`${w.k ? 'Treino ' + w.k + ' · ' : ''}${String(w.name||'').replace(/^Treino\s+\w\s*[—-]\s*/,'')}`, `${w.dayName||''}${w.duration?` · ~${w.duration} min`:''}`);
+    const ex = w.exercises || [];
+    S.tabela([{t:'#', w:6}, {t:'Exercício', w:66, quebra:true, negrito:true}, {t:'Grupo', w:24, quebra:true, cor:arte.C.dim}, {t:'Séries', w:14, dir:1}, {t:'Repetições', w:22, dir:1}, {t:'Descanso', w:20, dir:1}, {t:'Última carga', w:22, dir:1}, {t:'Anotações', w:26}],
+      ex.map((e, i)=>[String(i+1), e.name + (e.adaptadoDe ? ` (no lugar de ${e.adaptadoDe})` : ''), e.part || e.sub || '', String(e.sets||''), String(e.reps||''), String(e.rest||''), _ultimaCarga(e.id), '']));
+  });
+  S.secao('Como usar este plano', null, arte.C.a);
+  S.nota('Aquecimento: 5 a 8 minutos de cardio leve e 1 a 2 séries leves do primeiro exercício. Faça as repetições com técnica controlada; quando fechar o topo da faixa em todas as séries com folga, suba a carga no treino seguinte (o app mostra a sugestão em cada exercício). Ao terminar, registre o esforço de 1 a 10: ele ajusta as próximas sugestões.', { cor:arte.C.ink, t:8.4 });
+  S.nota('Plano gerado pelo MetaTreino a partir das suas respostas e do seu histórico. É uma orientação geral e não substitui avaliação médica nem o acompanhamento de um profissional de educação física.');
+  return S.fim(`metatreino-plano-treino-${chaveDia(new Date())}.pdf`, _pdfAluno());
+}
+// ---------- 2. Plano de corrida ----------
+function pdfMontarCorrida(jsPDF, arte){
+  const mod = state.modules.run; const st = mod.setup || {}; const ws = (mod.plan && mod.plan.workouts) || [];
+  const TER = { asfalto:'Asfalto', esteira:'Esteira', trilha:'Trilha', pista:'Pista' };
+  const OBJ = { comecar:'Começar a correr', condicionamento:'Condicionamento', '5km':'5 km', '10km':'10 km', '21km':'Meia maratona (21 km)', '42km':'Maratona (42 km)' };
+  const prova = st.raceDate ? new Date(st.raceDate + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+  const S = pdfDoc(jsPDF, arte, { titulo:'Plano de corrida', sub:`${_pdfAluno()} · objetivo: ${OBJ[st.goal]||st.goal||''} · nível ${({iniciante:'iniciante',intermediario:'intermediário',avancado:'avançado'})[(mod.plan||{}).level] || (mod.plan||{}).level || ''}`, sub2:`${ws.length} treinos por semana · terreno: ${TER[st.terrain]||'asfalto'}${prova?` · prova em ${prova}`:''}` });
+  const min = ws.reduce((s,w)=>s+(+w.duration||0), 0);
+  S.cartoes([{ v:String(ws.length), l:'treinos na semana' }, { v:_fmtHoras(min), l:'tempo total previsto' }, { v:TER[st.terrain]||'Asfalto', l:'terreno preferido' }, { v:prova || '-', l:'prova alvo' }], arte.C.a);
+  ws.slice().sort((a,b)=>(a.dayIdx||9)-(b.dayIdx||9)).forEach(w=>{
+    const mo = w.motor || {};
+    S.secao(`${w.dayName||''} · ${String(w.name||'Treino').replace(/^[^\wÀ-ú]+/,'')}`, `${w.duration?`~${w.duration} min`:''}${mo.int?` · ${mo.int}`:''}`, arte.C.a);
+    const linhas = [];
+    (w.blocks||[]).forEach(b=>(b.exs||[]).forEach(e=>linhas.push([b.name, e.name, e.desc||'', e.min ? e.min + ' min' : ''])));
+    if(linhas.length) S.tabela([{t:'Etapa', w:24, cor:arte.C.dim}, {t:'O que fazer', w:52, quebra:true, negrito:true}, {t:'Como', w:84, quebra:true}, {t:'Tempo', w:16, dir:1}], linhas, { cabCor:arte.C.aClaro, cabTxt:arte.C.a, t:7.9 });
+    const alvo = mo.alvo || w.targetPace; if(alvo) S.nota(`Meta: ${alvo}`, { cor:arte.C.ink, e:'bold', t:8.2 });
+    if((mo.orient||[]).length) S.nota(mo.orient.join(' '), { t:7.8 });
+  });
+  S.secao('Escala de esforço (1 a 10)', null, arte.C.a);
+  S.tabela([{t:'Esforço', w:20, negrito:true}, {t:'Como fica', w:150, quebra:true}], [['2-3','Muito leve: dá para conversar sem esforço.'],['3-4','Leve: frases inteiras sem perder o fôlego (a maior parte dos treinos).'],['5-6','Moderado: frases curtas.'],['7','Forte e sustentável: só palavras soltas.'],['8-9','Muito forte: sem conseguir falar, só por alguns minutos.']], { cabCor:arte.C.aClaro, cabTxt:arte.C.a });
+  S.nota('Plano gerado pelo MetaTreino. Registre cada treino com o esforço: o plano avança ou segura conforme você responde. Dor que persiste ou piora correndo precisa de avaliação profissional.');
+  return S.fim(`metatreino-plano-corrida-${chaveDia(new Date())}.pdf`, _pdfAluno());
+}
+// ---------- 3. Plano alimentar ----------
+function pdfMontarAlimentacao(jsPDF, arte){
+  const p0 = nutriMontarPlano(getDayIdx());
+  if(p0.erro) throw new Error(p0.erro === 'menor' ? 'Plano alimentar não disponível para menores de 18 anos' : 'Complete peso, altura, idade e sexo no cadastro');
+  const n = nutriConfig(); const c = p0.calc;
+  const FL = { emagrecer:'Emagrecer', massa:'Ganhar massa', manter:'Manter / recomposição' };
+  const extras = [n.vegetariano?'vegetariano':'', n.semLactose?'sem lactose':'', n.semGluten?'sem glúten':'', n.economico?'econômico':''].filter(Boolean).join(', ');
+  const S = pdfDoc(jsPDF, arte, { titulo:'Plano alimentar da semana', sub:`${_pdfAluno()} · objetivo: ${FL[c.objetivo]||c.objetivo} · ${n.refeicoes} refeições por dia`, sub2:extras ? `Preferências: ${extras}` : 'Valores calculados pelo seu peso, altura, idade, sexo, treinos e objetivo' });
+  S.cartoes([{ v:_fmtN(c.kcal) + ' kcal', l:'meta média do dia' }, { v:c.prot + ' g', l:'proteína' }, { v:c.carb + ' g', l:'carboidrato' }, { v:c.gord + ' g', l:'gordura' }, { v:String(c.agua).replace('.',',') + ' L', l:'água' }]);
+  S.nota(`Gasto estimado: ${_fmtN(c.tdee)} kcal por dia com ${c.dias} treinos por semana. Dias de treino têm um pouco mais de calorias; dias de descanso, um pouco menos — a média da semana fica na meta. ${c.ajusteNota||''}`);
+  const DN = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+  for(let d = 1; d <= 7; d++){
+    const pl = nutriMontarPlano(d); if(pl.erro) continue;
+    const lg = nutriLogDe(nutriKeyDia(d));
+    const refs = pl.refeicoes.map(m=>{ const l = lg(m.id); const itens = [...m.itens.map(i=>nutriEfetivo(i, l.adj[i.id])), ...(l.add||[]).map((a,i)=>nutriItemExtra(a,i)).filter(Boolean)].filter(i=>!i.removido); return { m, itens, tot:nutriSomaItens(itens) }; });
+    const dia = nutriSomaItens(refs.map(r=>r.tot));
+    if(d > 1) S.precisa(70);
+    S.secao(`${DN[d-1]} · ${pl.treino ? 'dia de treino' : 'dia de descanso'}`, `${_fmtN(dia.kcal)} kcal · P ${_fmtN(dia.p)} g · C ${_fmtN(dia.c)} g · G ${_fmtN(dia.g)} g`);
+    S.tabela([{t:'Refeição', w:30, negrito:true, quebra:true}, {t:'Alimentos e quantidades', w:92, quebra:true}, {t:'kcal', w:13, dir:1}, {t:'P', w:11, dir:1}, {t:'C', w:11, dir:1}, {t:'G', w:11, dir:1}],
+      refs.map(r=>[`${r.m.nome}\n${r.m.hora}`, r.itens.map(i=>`${i.nome}: ${i.texto}`).join('\n'), _fmtN(r.tot.kcal), _fmtN(r.tot.p), _fmtN(r.tot.c), _fmtN(r.tot.g)]), { t:7.8 });
+  }
+  const eq = nutriEquivalencias();
+  S.secao('Trocas equivalentes', 'mesma quantidade do nutriente', arte.C.a);
+  S.tabela([{t:'Grupo', w:34, negrito:true, quebra:true}, {t:'Opções (cada uma vale o mesmo)', w:142, quebra:true}], eq.map(g=>[`${g.t.replace(/^[^\wÀ-ú]+/,'')}\n${g.sub}`, g.l.join(' · ')]), { cabCor:arte.C.aClaro, cabTxt:arte.C.a, t:7.8 });
+  S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se você tem doença, alergia ou usa medicação, procure um profissional. P = proteína, C = carboidrato, G = gordura (em gramas).');
+  return S.fim(`metatreino-plano-alimentar-${chaveDia(new Date())}.pdf`, _pdfAluno());
+}
+function pdfTreino(m){
+  m = m || (state.active === 'run' ? 'run' : 'lift');
+  if(!state.modules[m] || !state.modules[m].plan) return toast('Você ainda não tem esse plano.');
+  return _pdfGerar('pdfTreino', m === 'run' ? 'corrida' : 'musculacao', m === 'run' ? pdfMontarCorrida : pdfMontarTreino, m === 'run' ? 'Plano de corrida' : 'Plano de treino');
+}
+function pdfAlimentacao(){ return _pdfGerar('pdfAlimentacao', 'alimentacao', pdfMontarAlimentacao, 'Plano alimentar'); }
+
+// ---------- 4. botões ----------
+mtGancho('renderPlan', { depois(){
+  try{
+    const box = $('plan-details'); if(!box) return;
+    const ex = $('pl-pdf'); if(ex) ex.remove();
+    box.insertAdjacentHTML('afterend', `<button class="btn btn-outline btn-block" id="pl-pdf" style="margin-top:12px" onclick="pdfTreino()">📄 Baixar o plano em PDF${mtPremium()?'':' <span class="pl-mini">'+PL_EST+'Premium</span>'}</button>`);
+  }catch(e){}
+}});
+mtGancho('openNutri', { depois(){
+  try{
+    if(!mtTem('alimentacao')) return;
+    const mi = $('modal-inner'); if(!mi || mi.querySelector('#nutri-pdf')) return;
+    const bt = [...mi.querySelectorAll('button')].find(b=>/nutriListaCompras\(\)/.test(b.getAttribute('onclick')||''));
+    if(bt) bt.insertAdjacentHTML('afterend', `<button class="btn btn-ghost btn-block" id="nutri-pdf" style="margin:0 0 8px" onclick="pdfAlimentacao()">📄 Plano alimentar em PDF</button>`);
+  }catch(e){}
+}});
+mtGancho('renderProfile', { depois(){
+  try{
+    const rel = document.querySelector('#scr-profile .list-row[onclick*="arqRelatorio"]'); if(!rel || $('pf-pdf-plano')) return;
+    rel.insertAdjacentHTML('afterend', `<div class="list-row" id="pf-pdf-plano" onclick="pdfTreino()">📋 <span>Plano de treino em PDF</span>${mtPremium()?'<span style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span>':'<span class="pl-mini" style="margin-left:auto">'+PL_EST+'Premium</span>'}</div>`);
+  }catch(e){}
+}});
+
+Object.assign(window, { pdfCores, pdfPrepArte, pdfArteCab, pdfArteMarca, pdfDoc, pdfTreino, pdfAlimentacao, pdfMontarTreino, pdfMontarCorrida, pdfMontarAlimentacao });
+
+// =====================================================================
+// 41. Beta 41 — Substituição inteligente de exercícios e exercícios favoritos
+// =====================================================================
+// Trocar um exercício (aparelho ocupado ou preferência) passa a considerar, para CADA candidato:
+//   grupo principal (mesma categoria do catálogo) · músculos secundários/ênfase (texto "sub") ·
+//   padrão de movimento e tipo (multiarticular × isolador) · equipamento disponível e o aparelho ocupado ·
+//   objetivo · os outros exercícios do dia (evita repetir estímulo) · nível · limitações do cadastro.
+// O resultado vem em três faixas — Mais compatíveis / Compatíveis / Alternativas secundárias — e os
+// favoritos compatíveis aparecem primeiro. Favorito que não serve como substituto NÃO é sugerido como tal.
+//
+// Preservação: a troca vale SÓ para a execução daquele treino (o dia em que ele acontece). O plano não muda.
+// O exercício original fica guardado no próprio item (troca.orig) e volta sozinho no dia seguinte; o
+// histórico do treino salvo registra o que foi feito E o que ele substituiu. Séries, repetições e descanso
+// são mantidos; a carga é sugerida a partir do que o aluno já fez. O aluno pode desfazer durante o treino
+// ou escolher "Salvar no plano" (aí sim vira troca fixa, pelo mecanismo de fixar que já existia).
+// Calistenia continua com a troca própria (progressão/regressão da cadeia), sem mudança.
+
+// ---------- classificação biomecânica do catálogo ----------
+// [regex no nome normalizado, padrão, tipo]  (a ordem importa: o primeiro que casar vence)
+const MT_PADROES = [
+  [/pullover/, 'pullover', 'iso'],
+  [/crucifixo|voador|peck deck|crossover/, 'aducao-horizontal', 'iso'],
+  [/supino (reto|na maquina \(hammer\))|supino reto com halteres|flexao de braco|maos elevadas|flexao arqueiro/, 'empurrar-horizontal', 'comp'],
+  [/supino inclinado|supino na maquina inclinado|flexao inclinada/, 'empurrar-inclinado', 'comp'],
+  [/supino pegada fechada|mergulho|flexao (fechada|diamante)|maquina \(mergulho\)/, 'empurrar-triceps', 'comp'],
+  [/desenvolvimento|arnold|pike/, 'empurrar-vertical', 'comp'],
+  [/elevacao lateral/, 'abducao-ombro', 'iso'],
+  [/elevacao y/, 'abducao-ombro', 'iso'],
+  [/elevacao frontal/, 'flexao-ombro', 'iso'],
+  [/face pull|elevacao posterior/, 'deltoide-posterior', 'iso'],
+  [/chin-up|barra fixa|puxada|pulldown/, 'puxar-vertical', 'comp'],
+  [/remada/, 'puxar-horizontal', 'comp'],
+  [/levantamento terra|stiff/, 'dobradica-quadril', 'comp'],
+  [/superman/, 'extensao-lombar', 'iso'],
+  [/rosca/, 'flexao-cotovelo', 'iso'],
+  [/triceps|frances|extensao de triceps/, 'extensao-cotovelo', 'iso'],
+  [/bulgaro|afundo|step-up/, 'joelho-unilateral', 'comp'],
+  [/agachamento|leg press|hack/, 'agachamento', 'comp'],
+  [/cadeira extensora|cadeira contra parede/, 'extensao-joelho', 'iso'],
+  [/flexora|nordic/, 'flexao-joelho', 'iso'],
+  [/adutora/, 'aducao-quadril', 'iso'],
+  [/abdutora|concha|abducao lateral/, 'abducao-quadril', 'iso'],
+  [/elevacao pelvica|hip thrust|ponte/, 'extensao-quadril', 'comp'],
+  [/coice|kickback/, 'extensao-quadril-iso', 'iso'],
+  [/panturrilha sentada/, 'panturrilha-sentada', 'iso'],
+  [/panturrilha/, 'panturrilha-em-pe', 'iso'],
+  [/encolhimento/, 'encolhimento', 'iso'],
+  [/prancha|dead bug|hollow|pallof/, 'core-estabilizacao', 'iso'],
+  [/abdominal|elevacao de pernas|russian/, 'core-flexao', 'iso'],
+  [/farmer/, 'carregamento', 'comp'],
+  [/mountain climber/, 'core-dinamico', 'comp']
+];
+// padrões "vizinhos": servem como substituto, mas não são o mesmo movimento → faixa "Compatíveis"
+const MT_VIZINHOS = {
+  'empurrar-horizontal':['empurrar-inclinado'], 'empurrar-inclinado':['empurrar-horizontal'],
+  'agachamento':['joelho-unilateral'], 'joelho-unilateral':['agachamento'],
+  'dobradica-quadril':['extensao-quadril'], 'extensao-quadril':['dobradica-quadril','extensao-quadril-iso'],
+  'extensao-quadril-iso':['extensao-quadril'],
+  'panturrilha-em-pe':['panturrilha-sentada'], 'panturrilha-sentada':['panturrilha-em-pe'],
+  'abducao-ombro':['deltoide-posterior'], 'core-flexao':['core-estabilizacao'], 'core-estabilizacao':['core-flexao']
+};
+const MT_PADRAO_NOME = {
+  'empurrar-horizontal':'empurrar à frente', 'empurrar-inclinado':'empurrar inclinado', 'empurrar-triceps':'empurrar com ênfase no tríceps',
+  'empurrar-vertical':'empurrar acima da cabeça', 'aducao-horizontal':'fechar os braços (isolador)', 'pullover':'pullover',
+  'abducao-ombro':'elevar os braços pela lateral', 'flexao-ombro':'elevar os braços à frente', 'deltoide-posterior':'abrir os braços para trás',
+  'puxar-vertical':'puxar de cima para baixo', 'puxar-horizontal':'remar (puxar em direção ao tronco)', 'dobradica-quadril':'dobrar o quadril',
+  'extensao-lombar':'estender a lombar', 'flexao-cotovelo':'flexionar o cotovelo', 'extensao-cotovelo':'estender o cotovelo',
+  'joelho-unilateral':'agachar com uma perna à frente', 'agachamento':'agachar', 'extensao-joelho':'estender o joelho', 'flexao-joelho':'flexionar o joelho',
+  'aducao-quadril':'fechar as pernas', 'abducao-quadril':'abrir as pernas', 'extensao-quadril':'estender o quadril', 'extensao-quadril-iso':'estender o quadril (isolador)',
+  'panturrilha-em-pe':'panturrilha em pé', 'panturrilha-sentada':'panturrilha sentado', 'encolhimento':'encolher os ombros',
+  'core-estabilizacao':'estabilizar o tronco', 'core-flexao':'flexionar o tronco', 'carregamento':'carregar peso', 'core-dinamico':'core dinâmico'
+};
+function mtPadrao(ex){
+  const n = mtNorm(ex && ex.name);
+  for(const [re, p, t] of MT_PADROES) if(re.test(n)) return { pad:p, tipo:t };
+  return { pad:'outro:' + n, tipo:'comp' };
+}
+// classe do equipamento (para o "aparelho ocupado" e para estimar a carga)
+function mtEquipClasse(ex){
+  const n = mtNorm(ex && ex.name);
+  if(ex && ex.improv) return 'improvisado';
+  if(/smith/.test(n)) return 'smith';
+  if(/cabo|polia|pulley|pulldown|crossover|corda|pallof|face pull/.test(n)) return 'cabo';
+  if(/maquina|hammer|leg press|hack|cadeira|mesa flexora|voador|peck deck|articulada|kickback/.test(n)) return 'maquina';
+  if(/halter/.test(n) || /goblet|farmer/.test(n)) return 'halter';
+  if(/barra ez|com barra|t-bar|cavalinho|levantamento terra|encolhimento com barra|supino pegada fechada/.test(n)) return 'barra';
+  return 'corpo';
+}
+const MT_EQUIP_NOME = { maquina:'máquina', cabo:'cabo/polia', barra:'barra', halter:'halteres', smith:'Smith', corpo:'peso do corpo', improvisado:'objetos de casa' };
+// ênfase muscular: palavras do "sub" (Peito Superior, Dorsais, Tríceps…)
+function mtEnfase(ex){
+  return new Set(mtNorm(ex && ex.sub).replace(/[()]/g,' ').split(/[\s/,]+/)
+    .filter(w=>w.length > 3 && !/^(forca|isolador|unilateral|avancado|iniciante|isometria|resistencia|foco|central)$/.test(w)));
+}
+const MT_AVANCADOS = /arqueiro|nordic|pike elevada|paralelas|jump/;
+
+// ---------- favoritos (sincronizados com a conta: ficam em state.favoritos) ----------
+function mtFavs(){ if(!state) return []; if(!Array.isArray(state.favoritos)) state.favoritos = []; return state.favoritos; }
+function mtEhFav(id){ return !!state && Array.isArray(state.favoritos) && state.favoritos.includes(id); }
+function mtFavAlternar(id, ev){
+  try{ if(ev){ ev.stopPropagation(); ev.preventDefault(); } }catch(e){}
+  if(!id) return;
+  const f = mtFavs(); const i = f.indexOf(id);
+  if(i >= 0) f.splice(i, 1); else f.push(id);
+  state.favoritosEm = Date.now();
+  saveData();
+  const on = i < 0;
+  document.querySelectorAll('[data-fav="' + CSS.escape(id) + '"]').forEach(b=>{
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.setAttribute('aria-label', on ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
+    b.classList.remove('fav-pulse'); void b.offsetWidth; if(on) b.classList.add('fav-pulse');
+  });
+  toast(on ? 'Adicionado aos favoritos' : 'Removido dos favoritos');
+  if(typeof libFilter !== 'undefined' && libFilter === 'Favoritos' && document.querySelector('#scr-library.active')) renderLibrary();
+}
+const MT_ESTRELA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.6l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/></svg>';
+function mtFavBtn(id, extra){
+  const on = mtEhFav(id);
+  return `<button type="button" class="fav-btn${on?' on':''}${extra?' '+extra:''}" data-fav="${mtEsc(id)}" aria-pressed="${on}" aria-label="${on?'Remover dos favoritos':'Adicionar aos favoritos'}" onclick="mtFavAlternar('${mtJsStr(id)}', event)">${MT_ESTRELA}</button>`;
+}
+function mtExPorId(id){ for(const c of EX_BANK){ const it = c.items.find(x=>slug(x.name)===id); if(it) return { ex:it, grupo:c.name }; } return null; }
+
+// ---------- motor de compatibilidade ----------
+// devolve { mais:[], compat:[], secund:[], favs:[] } — cada item: { ex, id, score, motivos:[], aviso }
+function mtCandidatosTroca(w, cur, motivo, setup){
+  setup = setup || (state.modules.lift && state.modules.lift.setup) || {};
+  const cat = EX_BANK.find(c=>c.name===cur.part) || EX_BANK.find(c=>c.items.some(x=>slug(x.name)===cur.id));
+  if(!cat) return null;
+  const origId = (cur.troca && cur.troca.orig && cur.troca.orig.id) || cur.id;
+  const usados = new Set((w.exercises||[]).map(e=>e.id)); usados.delete(cur.id);
+  const okEquip = (typeof limEquipOk === 'function') ? limEquipOk(setup) : (()=>true);
+  const lims = (typeof limDoSetup === 'function') ? limDoSetup(setup) : [];
+  const limBloq = ex => lims.find(k=>LIM_REGRAS[k].evitar.test(ex.name||''));
+  const iniciante = setup.level === 'iniciante';
+  const objetivo = setup.goal || '';
+  const stim = s => mtNorm(s).replace(/[()]/g,'').trim();
+  const outrosStims = new Set((w.exercises||[]).filter(e=>e.id!==cur.id).map(e=>stim(e.sub)));
+  const base = mtPadrao(cur), baseEq = mtEquipClasse(cur), baseEnf = mtEnfase(cur);
+  const viz = MT_VIZINHOS[base.pad] || [];
+  const out = { mais:[], compat:[], secund:[], favs:[], cat:cat.name };
+  cat.items.forEach(ex=>{
+    const id = slug(ex.name);
+    if(id === cur.id || usados.has(id)) return;
+    if(!okEquip(ex)) return;                                   // equipamento que o aluno não tem
+    if(limBloq(ex)) return;                                    // força a região marcada nas limitações
+    if(iniciante && (MT_AVANCADOS.test(mtNorm(ex.name)) || /avancado/.test(mtNorm(ex.sub)))) return;
+    const p = mtPadrao(ex), eq = mtEquipClasse(ex), enf = mtEnfase(ex);
+    const motivos = []; let score = 0, aviso = '';
+    const mesmoPad = p.pad === base.pad, vizinho = viz.includes(p.pad);
+    if(mesmoPad){ score += 50; motivos.push('mesmo movimento'); }
+    else if(vizinho){ score += 30; motivos.push('movimento parecido'); }
+    if(p.tipo === base.tipo){ score += 12; } else motivos.push(p.tipo==='comp' ? 'multiarticular' : 'isolador');
+    const inter = [...enf].filter(x=>baseEnf.has(x)).length;
+    if(stim(ex.sub) === stim(cur.sub)){ score += 18; motivos.push('mesma ênfase'); }
+    else if(inter){ score += 8 * Math.min(2, inter); motivos.push('mesmos músculos'); }
+    if(id === origId){ score += 10; motivos.unshift('exercício original do plano'); }
+    // aparelho ocupado: o mesmo tipo de aparelho costuma estar no mesmo lugar (cabo/máquina/Smith) → cai na fila
+    if(motivo === 'ocupado' && eq === baseEq && ['cabo','maquina','smith'].includes(eq) && id !== origId){
+      score -= 22; aviso = 'usa o mesmo tipo de equipamento (' + MT_EQUIP_NOME[eq] + ') — pode estar ocupado também';
+    } else if(eq !== baseEq) motivos.push(MT_EQUIP_NOME[eq] || eq);
+    if(outrosStims.has(stim(ex.sub))){ score -= 14; aviso = aviso || 'repete o estímulo de outro exercício de hoje'; }
+    if(objetivo === 'forca' && p.tipo === 'comp' && ['barra','halter','smith'].includes(eq)) score += 6;
+    if((objetivo === 'emagrecimento' || objetivo === 'resistencia') && p.tipo === 'comp') score += 3;
+    if(ex.improv) score -= 4;
+    // carga externa → peso do corpo muda a intensidade: continua opção, mas não na frente
+    if(eq === 'corpo' && baseEq !== 'corpo' && baseEq !== 'improvisado'){ score -= 14; }
+    if(MT_AVANCADOS.test(mtNorm(ex.name)) && setup.level !== 'avancado' && !MT_AVANCADOS.test(mtNorm(cur.name))) score -= 12;
+    const item = { ex, id, score, motivos, aviso, pad:p.pad, fav:mtEhFav(id) };
+    if(mesmoPad && score >= 60) out.mais.push(item);
+    else if(mesmoPad || (vizinho && score >= 38)) out.compat.push(item);
+    else out.secund.push(item);
+  });
+  // mesmo movimento catalogado em outro grupo (ex.: pullover com halter está em Peito; chin-up em Bíceps)
+  if(!base.pad.startsWith('outro:')){
+    EX_BANK.forEach(c=>{ if(c === cat) return; c.items.forEach(ex=>{
+      const id = slug(ex.name); if(id === cur.id || usados.has(id) || !okEquip(ex) || limBloq(ex)) return;
+      if(iniciante && MT_AVANCADOS.test(mtNorm(ex.name))) return;
+      if(mtPadrao(ex).pad !== base.pad) return;
+      const eq = mtEquipClasse(ex);
+      out.compat.push({ ex, id, score: 40 - (eq==='corpo' && baseEq!=='corpo' ? 10 : 0), motivos:['mesmo movimento', 'catalogado em ' + c.name], aviso:'', pad:base.pad, fav:mtEhFav(id) });
+    }); });
+  }
+  const ord = (a,b)=> (b.fav?1:0)-(a.fav?1:0) || b.score-a.score || a.ex.name.localeCompare(b.ex.name);
+  out.mais.sort(ord); out.compat.sort(ord); out.secund.sort((a,b)=>b.score-a.score);
+  // favoritos compatíveis no topo; favoritos que só servem como "secundária" ficam fora deste destaque
+  out.favs = [...out.mais, ...out.compat].filter(x=>x.fav);
+  out.secund = out.secund.slice(0, 6);
+  return out;
+}
+
+// carga sugerida para o substituto (estimativa honesta: sempre "comece e ajuste")
+const MT_FATOR_EQ = { barra:1, smith:0.9, maquina:1, cabo:0.6, halter:0.4, corpo:0, improvisado:0 };
+function mtTopo(id){
+  const arr = ((state.progress||{})[id]||[]).filter(p=>p.sets && p.sets.length).sort((a,b)=>a.date-b.date);
+  const u = arr[arr.length-1]; if(!u) return 0;
+  return Math.max(0, ...u.sets.map(s=>+s.peso||0));
+}
+function mtCargaSugerida(orig, novo){
+  const proprio = mtTopo(novo.id || slug(novo.name));
+  if(proprio > 0) return { kg: proprio, txt: 'Última vez neste exercício: ' + proprio + ' kg' };
+  const eqN = mtEquipClasse(novo), eqO = mtEquipClasse(orig);
+  if(!MT_FATOR_EQ[eqN]) return { kg:0, txt: eqN === 'corpo' ? 'Peso do corpo — ajuste pela dificuldade das repetições' : '' };
+  const w0 = mtTopo(orig.id); if(!(w0 > 0) || !MT_FATOR_EQ[eqO]) return { kg:0, txt:'Comece leve e ajuste na primeira série' };
+  let kg = w0 * MT_FATOR_EQ[eqN] / MT_FATOR_EQ[eqO];
+  if(mtPadrao(orig).pad !== mtPadrao(novo).pad) kg *= 0.85;
+  kg = kg < 12 ? Math.round(kg) : Math.round(kg/2)*2;
+  if(kg <= 0) return { kg:0, txt:'Comece leve e ajuste na primeira série' };
+  return { kg, txt: 'Sugestão inicial: ~' + kg + ' kg' + (eqN==='halter' ? ' em cada halter' : '') + ' (estimada a partir de ' + w0 + ' kg no ' + orig.name + ') — ajuste na primeira série' };
+}
+
+// ---------- troca temporária (só a execução do treino) ----------
+function mtProximaData(dayIdx){
+  const d = new Date(); d.setHours(12,0,0,0);
+  for(let k=0;k<7;k++){ const x = new Date(d.getTime() + k*86400000); const idx = x.getDay()||7; if(idx === dayIdx) return chaveDia(x); }
+  return chaveDia(d);
+}
+function mtTreinoDoEx(exId){
+  const mod = state.modules.lift; if(!mod || !mod.plan) return null;
+  const sel = (typeof currentSelectedWorkout === 'function') ? currentSelectedWorkout(mod) : null;
+  if(sel && (sel.exercises||[]).some(e=>e.id===exId)) return sel;
+  return (mod.plan.workouts||[]).find(w=>(w.exercises||[]).some(e=>e.id===exId)) || null;
+}
+// devolve ao plano o original das trocas cujo dia já passou (roda antes de desenhar as telas)
+function mtTrocasExpirar(){
+  try{
+    const mod = state && state.modules && state.modules.lift; if(!mod || !mod.plan) return false;
+    const hoje = chaveDia(new Date()); let mudou = false;
+    (mod.plan.workouts||[]).forEach(w=>{
+      (w.exercises||[]).forEach((e, i)=>{
+        if(e && e.troca && e.troca.orig && e.troca.dia < hoje){ w.exercises[i] = e.troca.orig; mudou = true; }
+      });
+    });
+    if(mudou) saveData();
+    return mudou;
+  }catch(e){ return false; }
+}
+let _mtTroca = { exId:null, motivo:'ocupado', salvar:false };
+// Beta 42: o motivo depende do exercício. Com equipamento: "Equipamento ocupado" (ou "Prefiro outro").
+// Sem equipamento / peso do corpo: "Alternativa para este grupo muscular" — "ocupado" não faz sentido aí.
+// A lógica de compatibilidade é a mesma da Beta 41 (o motivo 'grupo' só não aplica a regra do aparelho ocupado).
+function mtSemEquipamento(ex){ return ['corpo','improvisado'].includes(mtEquipClasse(ex)); }
+const MT_MOTIVO_NOME = { ocupado:'equipamento ocupado', preferencia:'por preferência', grupo:'alternativa para o grupo muscular' };
+function mtMotivoNome(m){ return MT_MOTIVO_NOME[m] || MT_MOTIVO_NOME.ocupado; }
+function mtTrocaAbrir(exId, motivo){
+  const mod = state.modules.lift; const w = mtTreinoDoEx(exId); if(!w) return;
+  const cur = w.exercises.find(e=>e.id===exId); if(!cur) return;
+  const semEq = mtSemEquipamento(cur);
+  let mot = motivo || _mtTroca.motivo || 'ocupado';
+  if(semEq) mot = 'grupo'; else if(mot === 'grupo') mot = 'ocupado';
+  _mtTroca = { exId, motivo: mot, salvar:false, k:w.k };
+  const r = mtCandidatosTroca(w, cur, _mtTroca.motivo, mod.setup);
+  if(!r){ toast('Não foi possível analisar este exercício.'); return; }
+  const orig = cur.troca && cur.troca.orig;
+  const linha = (it, faixa)=>{
+    const m = it.motivos.slice(0,3).map(t=>`<span class="tx-tag">${mtEsc(t)}</span>`).join('');
+    return `<div class="tx-item tx-${faixa}" role="button" tabindex="0" onclick="mtTrocaAplicar('${mtJsStr(it.id)}')" onkeydown="if(event.key==='Enter')mtTrocaAplicar('${mtJsStr(it.id)}')">
+      <div class="tx-info"><div class="tx-nome">${mtEsc(it.ex.name)}</div><div class="tx-sub">${mtEsc(it.ex.sub||'')}</div>
+      <div class="tx-tags">${m}</div>${it.aviso?`<div class="tx-aviso">${mtEsc(it.aviso)}</div>`:''}</div>
+      ${mtFavBtn(it.id, 'fav-sm')}<span class="tx-go" aria-hidden="true">›</span></div>`;
+  };
+  const sec = (titulo, desc, itens, faixa)=> itens.length ? `<div class="tx-sec tx-sec-${faixa}"><div class="tx-sec-t">${titulo}</div>${desc?`<div class="tx-sec-d">${desc}</div>`:''}${itens.map(it=>linha(it, faixa)).join('')}</div>` : '';
+  const favIds = new Set(r.favs.map(x=>x.id));
+  const nada = !r.mais.length && !r.compat.length;
+  const p = mtPadrao(cur);
+  $('modal-inner').innerHTML = `
+    <h3>Trocar exercício</h3>
+    <p class="tx-lead">No lugar de <b>${mtEsc(cur.name)}</b>${orig?` <span class="tx-orig">(substituto de ${mtEsc(orig.name)})</span>`:''}<br><span>${mtEsc(cur.sub||'')} · ${mtEsc(MT_PADRAO_NOME[p.pad] || 'movimento')} · ${cur.sets}× ${mtEsc(cur.reps)}</span></p>
+    ${semEq ? `<div class="seg-mini" role="group" aria-label="Motivo da troca">
+      <button type="button" class="on" aria-pressed="true">Alternativa para este grupo muscular</button>
+    </div><p class="tx-motivo-d">Outros exercícios que trabalham ${mtEsc(cur.part ? 'o mesmo grupo (' + cur.part + ')' : 'a mesma região')}, pelos mesmos critérios de compatibilidade.</p>` : `<div class="seg-mini" role="group" aria-label="Motivo da troca">
+      <button type="button" class="${_mtTroca.motivo==='ocupado'?'on':''}" aria-pressed="${_mtTroca.motivo==='ocupado'}" onclick="mtTrocaAbrir('${mtJsStr(exId)}','ocupado')">Equipamento ocupado</button>
+      <button type="button" class="${_mtTroca.motivo==='preferencia'?'on':''}" aria-pressed="${_mtTroca.motivo==='preferencia'}" onclick="mtTrocaAbrir('${mtJsStr(exId)}','preferencia')">Prefiro outro</button>
+    </div>`}
+    <div class="tx-lista">
+      ${orig ? `<div class="tx-sec"><div class="tx-item tx-volta" role="button" tabindex="0" onclick="mtTrocaDesfazer('${mtJsStr(exId)}')"><div class="tx-info"><div class="tx-nome">Voltar ao original: ${mtEsc(orig.name)}</div><div class="tx-sub">Desfaz a troca deste treino</div></div><span class="tx-go">↩</span></div></div>` : ''}
+      ${sec('Seus favoritos compatíveis', '', r.favs, 'fav')}
+      ${sec('Mais compatíveis', 'Mesmo movimento e mesma função no treino', r.mais.filter(x=>!favIds.has(x.id)), 'mais')}
+      ${sec('Compatíveis', 'Mesmo grupo, variação do movimento ou da ênfase', r.compat.filter(x=>!favIds.has(x.id)), 'compat')}
+      ${nada ? (semEq
+        ? `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} neste grupo muscular${(mod.setup.lim||[]).length?' com as limitações informadas':''}. Se usar uma das opções abaixo, saiba que <b>não equivalem</b> ao exercício original.</div>`
+        : `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} com o seu equipamento${(mod.setup.lim||[]).length?' e as limitações informadas':''}. Se preferir, espere o equipamento liberar ou use uma das opções abaixo, sabendo que <b>não equivalem</b> ao exercício original.</div>`) : ''}
+      ${sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')}
+    </div>
+    <label class="tx-salvar"><input type="checkbox" id="tx-salvar" ${_mtTroca.salvar?'checked':''} onchange="_mtTroca.salvar=this.checked"> Manter esta troca nos próximos treinos (altera o plano)</label>
+    <p class="tx-nota">Sem marcar, a troca vale só para esta execução do treino. Séries, repetições e descanso continuam os mesmos.</p>
+    <button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="closeModal()">Cancelar</button>`;
+  $('modal-back').classList.add('on');
+}
+function mtTrocaAplicar(newId){
+  const mod = state.modules.lift; const exId = _mtTroca.exId;
+  const w = mtTreinoDoEx(exId); if(!w) return;
+  const idx = w.exercises.findIndex(e=>e.id===exId); if(idx < 0) return;
+  const cur = w.exercises[idx];
+  const achado = mtExPorId(newId); if(!achado) return;
+  const nx = achado.ex;
+  const orig = (cur.troca && cur.troca.orig) || cur;
+  if(newId === orig.id){ mtTrocaDesfazer(exId); return; }
+  const isoNovo = !!nx.iso, isoVelho = cur.unit === 'tempo';
+  const reps = isoNovo && !isoVelho ? '20-30s' : (!isoNovo && isoVelho ? '10-12' : cur.reps);
+  const novo = { id:newId, name:nx.name, sub:nx.sub, sets:cur.sets, reps, rest:cur.rest, part:cur.part, equip:nx.equip, unit: isoNovo ? 'tempo' : 'reps' };
+  const carga = mtCargaSugerida(orig, novo);
+  if(_mtTroca.salvar){
+    // troca permanente, só com o aluno marcando: reaproveita o "fixar" que já existia (pins)
+    const existingPin = (w.pins||[]).find(p=>p.id===exId);
+    const origId = existingPin ? existingPin.origId : orig.id;
+    Object.assign(novo, { pinned:true });
+    w.exercises[idx] = novo;
+    w.pins = (w.pins||[]).filter(p=>p.id!==exId); w.pins.push({ part:cur.part, id:newId, origId });
+    saveData(); closeModal();
+    toast('Troca salva no plano: ' + nx.name);
+  } else {
+    novo.troca = { orig: JSON.parse(JSON.stringify(orig)), dia: mtProximaData(w.dayIdx), motivo:_mtTroca.motivo, carga: carga.txt || '', em: Date.now() };
+    w.exercises[idx] = novo;
+    saveData(); closeModal();
+    toast('Trocado só neste treino: ' + nx.name);
+  }
+  if(state.ui.tab==='sessions') renderSessions();
+  requestAnimationFrame(()=>{ const el = document.querySelector('.ex[data-ex="' + CSS.escape(newId) + '"]'); if(el){ el.classList.add('ex-trocado'); } });
+}
+function _mtSeriesHoje(id){
+  const h = new Date(); h.setHours(0,0,0,0);
+  return ((state.progress||{})[id]||[]).some(p=>{ const d = new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===h.getTime() && p.sets && p.sets.length; });
+}
+function mtTrocaDesfazer(exId){
+  const w = mtTreinoDoEx(exId); if(!w) return;
+  const idx = w.exercises.findIndex(e=>e.id===exId); const cur = w.exercises[idx];
+  if(!cur || !cur.troca) return;
+  const faz = ()=>{ w.exercises[idx] = cur.troca.orig; saveData(); closeModal(); toast('Voltou ao exercício original: ' + cur.troca.orig.name); if(state.ui.tab==='sessions') renderSessions(); };
+  if(_mtSeriesHoje(exId)) appConfirm('Você já registrou séries no ' + cur.name + ' hoje. Elas continuam salvas na evolução desse exercício, mas não entram neste treino se você voltar ao original.', faz, { title:'Desfazer a troca?', okLabel:'Desfazer' });
+  else faz();
+}
+function mtTrocaSalvarNoPlano(exId){
+  const w = mtTreinoDoEx(exId); if(!w) return;
+  const idx = w.exercises.findIndex(e=>e.id===exId); const cur = w.exercises[idx];
+  if(!cur || !cur.troca) return;
+  appConfirm('A partir de agora o treino ' + w.k + ' passa a ter ' + cur.name + ' no lugar de ' + cur.troca.orig.name + '. Você pode voltar à sugestão original quando quiser.', ()=>{
+    const origId = cur.troca.orig.id;
+    delete cur.troca; cur.pinned = true;
+    w.pins = (w.pins||[]).filter(p=>p.id!==exId); w.pins.push({ part:cur.part, id:exId, origId });
+    saveData(); toast('Troca salva no plano'); if(state.ui.tab==='sessions') renderSessions();
+  }, { title:'Salvar no plano?', okLabel:'Salvar no plano' });
+}
+
+// "Trocar": calistenia segue com a troca própria; o resto usa a substituição inteligente
+const _openSwapB41 = window.openSwapExercise;
+window.openSwapExercise = function(exId){
+  const mod = state.modules.lift; const w = mod && mod.plan && mtTreinoDoEx(exId);
+  const e = w && w.exercises.find(x=>x.id===exId);
+  if(w && w.cali && e && e.cadeia) return _openSwapB41.apply(this, arguments);
+  mtTrocaAbrir(exId);
+};
+
+// cartão do exercício: estrela discreta, selo da troca, carga sugerida, desfazer/salvar
+const _cardB41 = window.renderExerciseCard;
+window.renderExerciseCard = function(ex, idx){
+  let h = _cardB41.apply(this, arguments);
+  try{
+    if(!ex || !ex.id) return h;
+    h = h.replace('<div class="ex"', `<div class="ex${ex.troca?' ex-tem-troca':''}" data-ex="${mtEsc(ex.id)}"`);
+    h = h.replace(/(<div class="ex-name">)/, '$1' + mtFavBtn(ex.id, 'fav-ex'));
+    if(ex.troca && ex.troca.orig){
+      const mot = mtMotivoNome(ex.troca.motivo);
+      const bloco = `<div class="ex-troca"><span class="ex-troca-t">Só neste treino · ${mot}</span> no lugar de <b>${mtEsc(ex.troca.orig.name)}</b>${ex.troca.carga?`<div class="ex-troca-c">${mtEsc(ex.troca.carga)}</div>`:''}
+        <div class="ex-troca-b"><button class="btn btn-ghost" onclick="mtTrocaDesfazer('${mtJsStr(ex.id)}')">Desfazer</button><button class="btn btn-ghost" onclick="mtTrocaSalvarNoPlano('${mtJsStr(ex.id)}')">Salvar no plano</button></div></div>`;
+      h = h.replace(/(<div class="ex-desc")/, bloco + '$1');
+    }
+  }catch(e){}
+  return h;
+};
+
+// telas: antes de desenhar, devolve ao plano o que era troca de um dia que já passou
+mtGancho('renderSessions', { antes(){ mtTrocasExpirar(); } });
+mtGancho('goTab', { antes(){ mtTrocasExpirar(); } });
+
+// histórico: o treino salvo registra o exercício usado E o original que ele substituiu
+mtGancho('confirmLiftWorkout', { depois(k){
+  try{
+    const mod = state.modules.lift; const w = (mod.plan.workouts||[]).find(x=>x.k===k); if(!w) return;
+    const x = (mod.history||[]).slice().reverse().find(h=>h.module==='lift' && h.id===k && Date.now()-h.at < 60000);
+    if(!x || x.trocas) return;
+    const tr = (w.exercises||[]).filter(e=>e.troca && e.troca.orig);
+    if(!tr.length) return;
+    x.trocas = tr.map(e=>({ de:e.troca.orig.id, deNome:e.troca.orig.name, para:e.id, paraNome:e.name, motivo:e.troca.motivo }));
+    (x.exercisesDone||[]).forEach(d=>{ const t = tr.find(e=>e.id===d.id); if(t){ d.noLugarDe = t.troca.orig.name; d.noLugarDeId = t.troca.orig.id; } });
+    saveData();
+  }catch(e){}
+}});
+mtGancho('openHistoryEntry', { depois(idx){
+  try{
+    const mod = state.modules[state.active]; const x = (mod.history||[])[idx];
+    if(!x || !x.trocas || !x.trocas.length) return;
+    const box = $('modal-inner'); if(!box || box.querySelector('.hx-trocas')) return;
+    const d = document.createElement('div'); d.className = 'card hx-trocas';
+    d.innerHTML = `<div class="section-lbl" style="margin:0 0 6px">Substituições neste treino</div>` + x.trocas.map(t=>
+      `<div class="hx-troca"><span>${mtEsc(t.paraNome)}</span><small>no lugar de ${mtEsc(t.deNome)} · ${mtMotivoNome(t.motivo)}</small></div>`).join('');
+    const ref = box.querySelector('.btn'); if(ref) ref.before(d); else box.appendChild(d);
+  }catch(e){}
+}});
+
+// ---------- favoritos na Biblioteca e na ficha do exercício ----------
+const _renderLibB41 = window.renderLibrary;
+window.renderLibrary = function(){
+  const emCali = typeof libFilter === 'string' && /^Calistenia/.test(libFilter);
+  if(libFilter === 'Favoritos'){ _renderLibB41.apply(this, arguments); if(!document.querySelector('#lib-list .pl-bloqueio')) mtLibFavoritos(); return; }
+  const r = _renderLibB41.apply(this, arguments);
+  if(!emCali) mtLibDecorar();
+  return r;
+};
+function mtLibChipFav(){
+  const chips = $('lib-chips'); if(!chips || chips.querySelector('.chip-fav')) return;
+  const n = (state && Array.isArray(state.favoritos)) ? state.favoritos.length : 0;
+  chips.insertAdjacentHTML('afterbegin', `<div class="filter-chip chip-fav ${libFilter==='Favoritos'?'on':''}" onclick="setLibFilter('Favoritos')">${MT_ESTRELA}Favoritos${n?` <small>${n}</small>`:''}</div>`);
+  if(libFilter === 'Favoritos') chips.querySelectorAll('.filter-chip:not(.chip-fav)').forEach(c=>c.classList.remove('on'));
+}
+function mtLibDecorar(){
+  mtLibChipFav();
+  document.querySelectorAll('#lib-list .lx-item').forEach(it=>{
+    if(it.querySelector('.fav-btn')) return;
+    const nm = it.querySelector('.lx-name'); if(!nm) return;
+    const id = slug(nm.textContent.trim());
+    if(!mtExPorId(id)) return;
+    const go = it.querySelector('.lx-go'); const tmp = document.createElement('span'); tmp.innerHTML = mtFavBtn(id, 'fav-lib');
+    (go || it).before(tmp.firstChild);
+  });
+}
+function mtLibFavoritos(){
+  mtLibChipFav();
+  const lista = $('lib-list'); if(!lista) return;
+  const itens = ((state && state.favoritos) || []).map(mtExPorId).filter(Boolean);
+  const cnt = $('lib-count'); if(cnt) cnt.textContent = itens.length ? `${itens.length} favorito${itens.length>1?'s':''}` : 'Nenhum favorito ainda';
+  if(!itens.length){ lista.innerHTML = `<div class="lx-empty">Você ainda não favoritou nenhum exercício.<br><span style="font-size:12px;color:var(--text-mute)">Toque na estrela de um exercício para guardá-lo aqui. Favoritos têm prioridade quando você precisar trocar um exercício no treino — se forem compatíveis.</span></div>`; return; }
+  const porGrupo = {}; itens.forEach(a=>{ (porGrupo[a.grupo] = porGrupo[a.grupo] || []).push(a.ex); });
+  lista.innerHTML = `<div class="lx-fav-nota">Favoritos não entram no treino sozinhos: eles têm prioridade na hora de trocar um exercício, quando forem compatíveis.</div>` +
+    Object.keys(porGrupo).map(g=>`<div class="lx-cat">${muscleIco(GRUPO_MUSCULO[g]||'abdomen')}<div><b>${mtEsc(g)}</b><small>${porGrupo[g].length}</small></div></div>` +
+      porGrupo[g].map(ex=>`<div class="lx-item" onclick="openExercise('${mtJsStr(ex.name)}')">${muscleIco(musculoDoExercicio(ex, g))}<div class="lx-info"><div class="lx-name">${mtEsc(ex.name)}</div><div class="lx-sub">${mtEsc(ex.sub||'')}</div></div>${mtFavBtn(slug(ex.name),'fav-lib')}<span class="lx-go">›</span></div>`).join('')).join('');
+}
+mtGancho('openExerciseSheet', { depois(name){
+  try{
+    const id = slug(name); if(!mtExPorId(id)) return;
+    const x = document.querySelector('#modal-inner .ex-head .ex-x'); if(!x || x.parentNode.querySelector('.fav-btn')) return;
+    const t = document.createElement('span'); t.innerHTML = mtFavBtn(id, 'fav-ficha'); x.before(t.firstChild);
+  }catch(e){}
+}});
+
+Object.assign(window, { mtPadrao, mtEquipClasse, mtCandidatosTroca, mtCargaSugerida, mtTrocaAbrir, mtTrocaAplicar, mtTrocaDesfazer,
+  mtTrocaSalvarNoPlano, mtTrocasExpirar, mtSemEquipamento, mtMotivoNome, mtFavAlternar, mtEhFav, mtFavs, mtExPorId, mtLibFavoritos });
+
+// =====================================================================
+// 42. Beta 41 — Conquistas remodeladas e encerramento do desafio mensal (só na aba Conquistas)
+// =====================================================================
+// O QUE MUDA
+//  • Desbloquear algo NÃO abre mais janela por cima de nada (nem no início, nem no fim do treino, nem
+//    em outra aba). O que foi conquistado entra numa fila salva na conta (state.conqPend, sincronizada)
+//    e é apresentado — com animação — quando o aluno abre a aba Conquistas. Depois de apresentado, sai da
+//    fila e entra em state.conqVistas: não se repete, nem em outro aparelho.
+//  • O fim do mês grava um resumo do desafio mensal (tema, meta, progresso, resultado) em
+//    state.desafiosEncerrados (histórico permanente). O aviso "Desafio mensal encerrado!" fica pendente
+//    até o aluno entrar em Conquistas; aí aparece lá dentro, uma vez, e fica registrado como visto.
+//  • Critérios, ids, datas, contagens e medalhas: tudo igual. Nenhuma conquista é apagada.
+//  • A Conquista Especial (configurada pelo administrador, com momento próprio de revelação) mantém o
+//    comportamento dela.
+// Os pontos de entrada (cartão do início, bloco "Sua coleção" em Desafios) mostram só um selo PARADO
+// "Novidade" quando há algo pendente — nada animado fora da aba.
+
+const CQ_MAX_VISTAS = 400, CQ_MAX_NOVOS = 5;
+function cqEstado(){
+  if(!state) return null;
+  if(!Array.isArray(state.conqPend)) state.conqPend = [];
+  if(!Array.isArray(state.conqVistas)) state.conqVistas = [];
+  if(!Array.isArray(state.desafiosEncerrados)) state.desafiosEncerrados = [];
+  return state;
+}
+// leitura sem tocar no estado (criar campos vazios aqui faria o app regravar a conta na nuvem sem motivo)
+function cqPendentes(){ if(!state) return { itens:[], meses:[] };
+  return { itens: (state.conqPend||[]).slice(), meses: (state.desafiosEncerrados||[]).filter(d=>!d.visto) }; }
+function cqTemNovidade(){ const p = cqPendentes(); return p.itens.length + p.meses.length; }
+
+// ---------- a fila de celebrações vira a fila de "a apresentar" ----------
+window.showAwards = function(){
+  try{
+    const s = cqEstado(); if(!s || !awardQueue.length){ awardQueue = []; return; }
+    const mes = monthKey();
+    awardQueue.forEach(a=>{
+      const k = String(a.id) + (a.medalha ? '@' + mes : '');
+      if(s.conqVistas.includes(k) || s.conqPend.some(p=>p.k===k)) return;
+      const tid = /^t_/.test(a.id) ? a.id.slice(2) : null;
+      const kind = a.secreto ? 'secreto' : a.medalha ? 'medalha' : a.marco ? 'marco' : tid ? 'trofeu' : 'evento';
+      const emo = (!tid && typeof a.emo === 'string' && a.emo.length < 1200) ? a.emo : '';
+      s.conqPend.push({ k, tid, kind, emo, tipo:a.tipo||'', nome:a.nome||'', desc:a.desc||'', at:Date.now() });
+    });
+    if(s.conqPend.length > 60) s.conqPend = s.conqPend.slice(-60);
+    awardQueue = []; awardIdx = 0;
+    // guarda no aparelho agora; a nuvem recebe junto com a próxima gravação normal (o desbloqueio em si já
+    // gravou). Uma gravação extra aqui, 1 s depois, competia com a mudança vinda do outro aparelho.
+    try{ salvarLocal(); }catch(e){}
+    cqIndicadores();
+  }catch(e){ awardQueue = []; }
+};
+// a janela de "o mês fechou" ao abrir o app sai: o resumo agora aparece dentro de Conquistas
+window.showMesFechado = function(){ try{ if(state.ui && state.ui.mesFechado) state.ui.mesFechado.visto = true; }catch(e){} return false; };
+
+// ---------- resumo do desafio mensal ----------
+// durante o mês, guarda o progresso de cada desafio (o cálculo depois que o mês vira já é do mês novo)
+function cqFotoDoMes(){
+  try{
+    if(!state || !state.monthly) return;
+    const grupos = desafiosDoMes();
+    const snap = {
+      total: grupos.length * NIVEIS_DESAFIO.length,
+      grupos: grupos.map(g=>{ let v = 0; try{ v = +g.info.val() || 0; }catch(e){}
+        return { nome:g.info.nome, emo:g.info.emo||'', val:Math.round(v*10)/10, feitos:g.niveis.filter(c=>state.monthly.done.includes(c.id)).length, alvoMax:(g.niveis[g.niveis.length-1]||{}).alvo||0 }; })
+    };
+    // só grava quando o progresso mudou de verdade (senão cada tela redesenhada viraria uma gravação na nuvem)
+    if(JSON.stringify(state.monthly.snap||null) !== JSON.stringify(snap)) state.monthly.snap = snap;
+  }catch(e){}
+}
+mtGancho('checkMonthly', { depois(){ cqFotoDoMes(); } });
+mtGancho('renderMonthlyCard', { depois(){ cqFotoDoMes(); } });
+mtGancho('ensureMonthly', { antes(){
+  try{
+    if(!state || !state.monthly || !state.monthly.key) return;
+    const k = monthKey();
+    if(state.monthly.key === k) return;                       // o mês ainda não terminou (fuso do aparelho)
+    if(state.monthly.key > k) return;                         // relógio do aparelho voltou: não encerra nada
+    if((state.desafiosEncerrados||[]).some(d=>d.key===state.monthly.key)) return;   // já registrado (outro aparelho)
+    const s = cqEstado();
+    const m = state.monthly, done = m.done || [];
+    const niveis = done.filter(id=>!String(id).startsWith('selo:')).length;
+    let tema = {}; try{ tema = mesTema(m.key) || {}; }catch(e){}
+    s.desafiosEncerrados.push({ key:m.key, tema:{ nome:tema.nome||'Desafio do mês', emo:tema.emo||'', foco:tema.foco||'' },
+      meta: SELO_MIN_NIVEIS, niveis, total:(m.snap && m.snap.total) || null, selo: done.includes('selo:'+m.key),
+      grupos:(m.snap && m.snap.grupos) || [], encerradoEm: Date.now(), visto:false });
+    if(s.desafiosEncerrados.length > 36) s.desafiosEncerrados = s.desafiosEncerrados.slice(-36);
+    setTimeout(()=>{ try{ salvarLocal(); cqIndicadores(); }catch(e){} }, 0);
+  }catch(e){}
+}});
+// antes de qualquer desbloqueio, garante a estrutura (contas antigas não "re-celebram" nada: a fila começa vazia)
+mtGancho('unlockTrophy', { antes(){ cqEstado(); } });
+
+// ---------- indicadores parados nos pontos de entrada ----------
+function cqIndicadores(){
+  try{
+    const n = cqTemNovidade();
+    const pinta = el=>{ if(!el) return; let b = el.querySelector('.cq-badge');
+      if(n && !b){ b = document.createElement('span'); b.className = 'cq-badge'; el.appendChild(b); }
+      if(b){ if(n) b.textContent = n === 1 ? 'Novidade' : n + ' novidades'; else b.remove(); } };
+    pinta(document.getElementById('home-trofeus'));
+    document.querySelectorAll('.chal-tile[onclick^="openTrophies"]').forEach(pinta);
+  }catch(e){}
+}
+mtGancho('goTab', { depois(){ cqIndicadores(); } });
+mtGancho('renderChallenges', { depois(){ cqIndicadores(); } });
+
+// ---------- a aba Conquistas ----------
+const CQ_CAT = { geral:'Gerais', streak:'Consistência', lift:'Musculação', run:'Corrida', walk:'Caminhada', bike:'Bike', body:'Corpo' };
+const CQ_NV = { comum:'Comum', rara:'Rara', especial:'Especial' };
+const CQ_CADEADO = '<svg class="cq-cad" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>';
+let _cqFiltro = 'todas', _cqRecentes = new Set();
+function cqStatus(t){
+  if(state.trophies.includes(t.id)) return 'ok';
+  const pr = trophyProgress(t.id);
+  return (pr && pr[0] > 0) ? 'and' : 'blq';
+}
+function cqTile(t, i){
+  const st = cqStatus(t), nv = medalNivel(t);
+  if(st !== 'ok' && t.secret){
+    return `<div class="cq-tile st-blq nv-especial cq-oculta" style="--i:${i}"><div class="cq-med">${trophyIcoLocked()}</div><div class="cq-nome">Conquista secreta</div><div class="cq-desc">Descubra treinando</div></div>`;
+  }
+  let extra = '';
+  if(st === 'ok'){
+    const q = (state.trophyDates||{})[t.id];
+    extra = `<div class="cq-data">${q ? new Date(q).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}).replace(/\./g,'') : 'Desbloqueada'}</div>`;
+  } else {
+    const pr = trophyProgress(t.id);
+    if(pr && pr[1]){
+      const pct = Math.min(99, Math.round(pr[0]/pr[1]*100));
+      extra = `<div class="cq-barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div><div class="cq-prog">${Math.floor(pr[0])}/${pr[1]}</div>`;
+    }
+  }
+  const rec = _cqRecentes.has(t.id) ? ' cq-recente' : '';
+  const clique = st === 'ok' ? ` role="button" tabindex="0" onclick="openTrophyDetail('${t.id}')" onkeydown="if(event.key==='Enter')openTrophyDetail('${t.id}')"` : '';
+  return `<div class="cq-tile st-${st} nv-${nv}${rec}" style="--i:${i}"${clique}>
+    ${nv!=='comum'?`<span class="cq-rar">${CQ_NV[nv]}</span>`:''}${rec?'<span class="cq-novo-tag">Nova</span>':''}
+    <div class="cq-med">${trophyIco(t, st!=='ok')}${st==='blq'?CQ_CADEADO:''}</div>
+    <div class="cq-nome">${mtEsc(t.name)}</div><div class="cq-desc">${mtEsc(t.desc)}</div>${extra}</div>`;
+}
+function cqResumoMes(d, animar){
+  const ok = !!d.selo;
+  const pct = Math.min(100, Math.round(Math.min(d.niveis, d.meta) / d.meta * 100));
+  const mes = (typeof monthName==='function' ? monthName(d.key) : d.key);
+  const mesAtual = (typeof monthName==='function' ? monthName(monthKey()).split('/')[0] : '');
+  const msg = ok
+    ? `Você fechou o desafio de ${mtEsc(mes.split('/')[0])}. O selo ${mtEsc(d.tema.nome)} fica na sua coleção para sempre.`
+    : (d.niveis > 0 ? `Você fechou ${d.niveis} ${d.niveis===1?'nível':'níveis'} — cada treino contou e ficou registrado.` : 'Este mês não deu, e tudo bem: o que importa é seguir.')
+      + ` Os desafios de ${mtEsc(mesAtual)} já começaram — é uma nova chance.`;
+  const grupos = (d.grupos||[]).filter(g=>g.feitos>0).slice(0,4);
+  return `<section class="cq-mes ${ok?'ok':'nao'}${animar?' cq-anim':''}" aria-label="Desafio mensal encerrado">
+    ${ok && animar ? '<span class="cq-festa" aria-hidden="true">' + Array.from({length:10},(_,i)=>`<i style="--a:${i*36}deg;--d:${(i%4)*50}ms"></i>`).join('') + '</span>' : ''}
+    <div class="cq-mes-tag">Desafio mensal encerrado!</div>
+    <div class="cq-mes-top"><div class="cq-mes-emb">${typeof medalSvg==='function' ? `<span class="tbadge ${ok?'':'dim'} nv-${ok?'especial':'comum'}">${medalSvg(ok?'crown':'medal','', '', ok?'especial':'comum')}</span>` : ''}</div>
+      <div style="min-width:0"><h4>${mtEsc(d.tema.emo||'')} ${mtEsc(d.tema.nome)}</h4><div class="cq-mes-sub">${mtEsc(mes)}</div></div></div>
+    <dl class="cq-mes-dl">
+      <div><dt>Meta</dt><dd>Fechar ${d.meta} níveis dos desafios do mês e ganhar o selo</dd></div>
+      <div><dt>Progresso</dt><dd>${Math.min(d.niveis,d.meta)} de ${d.meta} níveis${d.total?` <small>(${d.niveis} de ${d.total} no total)</small>`:''}<div class="cq-barra lg"><i style="width:${pct}%"></i></div></dd></div>
+      <div><dt>Resultado</dt><dd class="cq-res">${ok?'Concluído — selo conquistado':'Não concluído'}</dd></div>
+    </dl>
+    ${grupos.length?`<div class="cq-mes-g">${grupos.map(g=>`<span>${mtEsc(g.emo)} ${mtEsc(g.nome)} · ${g.feitos}/3</span>`).join('')}</div>`:''}
+    <p class="cq-mes-msg">${msg}</p>
+    <button class="btn btn-ghost btn-block" onclick="closeModal();openMedals()">Ver medalhas e selos</button>
+  </section>`;
+}
+function cqNovoItem(p, i){
+  const t = p.tid ? TROPHIES.find(x=>x.id===p.tid) : null;
+  const nv = t ? medalNivel(t) : (p.kind==='medalha' || p.kind==='marco' ? 'rara' : p.kind==='secreto' ? 'especial' : 'comum');
+  const ico = t ? trophyIco(t) : (p.emo && /<svg|<span/.test(p.emo) ? p.emo : `<span class="cq-emo">${mtEsc(p.emo||'')}</span>`);
+  const tipo = { trofeu:'Conquista desbloqueada', secreto:'Segredo revelado', medalha:'Medalha do mês', marco:'Marco alcançado', evento:'Desafio concluído' }[p.kind] || p.tipo;
+  return `<div class="cq-novo nv-${nv}" style="--i:${i}"${t?` role="button" tabindex="0" onclick="openTrophyDetail('${t.id}')"`:''}>
+    <span class="cq-novo-luz" aria-hidden="true"></span>
+    <div class="cq-med">${ico}</div>
+    <div class="cq-novo-txt"><small>${mtEsc(tipo)}${nv!=='comum'?' · '+CQ_NV[nv]:''}</small><b>${mtEsc(t ? t.name : p.nome)}</b><span>${mtEsc(t ? t.desc : p.desc)}</span></div></div>`;
+}
+function cqGrade(){
+  const cats = ['streak','lift','run','walk','bike','body','geral'];
+  const filtro = t=>{ const st = cqStatus(t); return _cqFiltro==='todas' || (_cqFiltro==='ok'&&st==='ok') || (_cqFiltro==='and'&&st==='and') || (_cqFiltro==='blq'&&st==='blq'); };
+  let i = 0, h = '';
+  cats.forEach(c=>{
+    const itens = ordenarTrofeus(TROPHIES.filter(t=>t.cat===c && !t.secret)).filter(filtro);
+    if(!itens.length) return;
+    const tot = TROPHIES.filter(t=>t.cat===c && !t.secret), u = tot.filter(t=>state.trophies.includes(t.id)).length;
+    h += `<div class="cq-grupo"><div class="cq-grupo-t">${CQ_CAT[c]}<span>${u}/${tot.length}</span></div><div class="cq-grade">${itens.map(t=>cqTile(t, Math.min(i++, 14))).join('')}</div></div>`;
+  });
+  const sec = TROPHIES.filter(t=>t.secret), rev = ordenarTrofeus(sec.filter(t=>state.trophies.includes(t.id)));
+  if(_cqFiltro==='todas' || _cqFiltro==='ok' || _cqFiltro==='blq'){
+    const mostrar = _cqFiltro==='blq' ? [] : rev;
+    const falta = sec.length - rev.length;
+    h += `<div class="cq-grupo"><div class="cq-grupo-t">Secretas<span>${rev.length}/${sec.length}</span></div>
+      ${mostrar.length?`<div class="cq-grade">${mostrar.map(t=>cqTile(t, Math.min(i++,14))).join('')}</div>`:''}
+      ${falta && _cqFiltro!=='ok'?`<div class="cq-segredo">${CQ_CADEADO}<span>Ainda há <b>${falta}</b> ${falta===1?'segredo':'segredos'} por descobrir — eles aparecem sozinhos quando você os merece.</span></div>`:''}</div>`;
+  }
+  return h || `<div class="cq-vazio">Nada por aqui neste filtro.</div>`;
+}
+function cqFiltrar(f){
+  _cqFiltro = f;
+  const g = document.getElementById('cq-grade-box'); if(!g) return;
+  document.querySelectorAll('#cq-filtros button').forEach(b=>{ const on = b.dataset.f===f; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  g.classList.remove('cq-entra'); g.innerHTML = cqGrade(); void g.offsetWidth; g.classList.add('cq-entra');
+}
+window.openTrophies = function(){
+  const back = document.getElementById('modal-back'); back.classList.remove('award-dark');
+  const s = { desafiosEncerrados: (state.desafiosEncerrados||[]) };   // leitura; a gravação abaixo usa cqEstado()
+  const semAnim = !!window.__cqSemAnim; window.__cqSemAnim = false;
+  const pend = cqPendentes();
+  // o que vai ser apresentado agora: destacado nesta abertura, depois registrado como visto
+  if(pend.itens.length) _cqRecentes = new Set(pend.itens.map(p=>p.tid).filter(Boolean));
+  else if(!semAnim) _cqRecentes = new Set();
+  const tot = TROPHIES.length, tenho = state.trophies.length;
+  const porNv = { comum:[0,0], rara:[0,0], especial:[0,0] };
+  TROPHIES.forEach(t=>{ const n = medalNivel(t); porNv[n][1]++; if(state.trophies.includes(t.id)) porNv[n][0]++; });
+  const pctAll = Math.round(tenho/tot*100);
+  const encerrados = s.desafiosEncerrados.slice().sort((a,b)=>b.key.localeCompare(a.key));
+  const antigos = encerrados.filter(d=>d.visto);
+  const meses = pend.meses.slice().sort((a,b)=>b.key.localeCompare(a.key));
+  const contagem = (n,l)=>`<div class="cq-cont nv-${n}"><b>${porNv[n][0]}<small>/${porNv[n][1]}</small></b><span>${l}</span></div>`;
+  const filtros = [['todas','Todas'],['ok','Desbloqueadas'],['and','Em andamento'],['blq','Bloqueadas']];
+  $('modal-inner').innerHTML = `<div class="cq${semAnim?'':' cq-anim'}">
+    <div class="cq-topo"><h3>Conquistas</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
+    <div class="cq-resumo"><div class="cq-anel" style="--p:${pctAll}"><b>${tenho}</b><small>de ${tot}</small></div>
+      <div class="cq-conts">${contagem('comum','Comuns')}${contagem('rara','Raras')}${contagem('especial','Especiais')}</div></div>
+    ${meses.map(d=>cqResumoMes(d, !semAnim)).join('')}
+    ${pend.itens.length?`<section class="cq-novos"><div class="cq-sec-t">${pend.itens.length===1?'Nova conquista':'Novas conquistas · '+pend.itens.length}</div>${pend.itens.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${pend.itens.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${pend.itens.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}</section>`:''}
+    <div class="cq-filtros" id="cq-filtros" role="group" aria-label="Filtrar conquistas">${filtros.map(([f,l])=>`<button type="button" data-f="${f}" class="filter-chip ${_cqFiltro===f?'on':''}" aria-pressed="${_cqFiltro===f}" onclick="cqFiltrar('${f}')">${l}</button>`).join('')}</div>
+    <div id="cq-grade-box" class="${semAnim?'':'cq-entra'}">${cqGrade()}</div>
+    ${state.specialTrophy ? `<div class="sa-card cq-eterna" role="button" tabindex="0" onclick="openSpecialTrophy()" onkeydown="if(event.key==='Enter')openSpecialTrophy()">
+      <div class="cq-eterna-emo">${mtEsc(state.specialTrophy.emo||'💍')}</div><small>Conquista eterna</small><b>${mtEsc(state.specialTrophy.titulo||'')}</b>
+      <span>${mtEsc(state.specialTrophy.descricao||'')}</span><em>Toque para ver sua conquista · a história completa é opcional</em></div>` : ''}
+    <div class="cq-links"><button class="btn btn-ghost" onclick="closeModal();openMonthly()">Desafios do mês</button><button class="btn btn-ghost" onclick="closeModal();openMedals()">Medalhas e selos</button></div>
+    ${antigos.length?`<details class="cq-hist"><summary>Desafios mensais anteriores (${antigos.length})</summary>${antigos.map(d=>`<div class="cq-hist-l ${d.selo?'ok':''}"><span>${mtEsc(d.tema.emo||'')} ${mtEsc(d.tema.nome)} · ${mtEsc(typeof monthName==='function'?monthName(d.key):d.key)}</span><b>${d.selo?'Concluído':'Não concluído'} · ${Math.min(d.niveis,d.meta)}/${d.meta}</b></div>`).join('')}</details>`:''}
+    <button class="btn btn-outline btn-block hl-primary" style="margin-top:14px" onclick="shareTrophiesImage()">Compartilhar minhas conquistas</button>
+    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
+  back.classList.add('on');
+  // registra a apresentação (uma vez só, sincronizado com a conta)
+  if(pend.itens.length || meses.length){
+    const s = cqEstado();
+    const ks = pend.itens.map(p=>p.k);
+    s.conqVistas = s.conqVistas.concat(ks).slice(-CQ_MAX_VISTAS);
+    s.conqPend = s.conqPend.filter(p=>!ks.includes(p.k));
+    const agora = Date.now();
+    s.desafiosEncerrados.forEach(d=>{ if(!d.visto && meses.some(m=>m.key===d.key)){ d.visto = true; d.vistoEm = agora; } });
+    saveData();
+    cqIndicadores();
+  }
+};
+window.openTrophiesKeepScroll = function(){
+  const sc = window._trophyScroll || 0; window.__cqSemAnim = true; openTrophies();
+  try{ document.getElementById('modal-inner').scrollTop = sc; }catch(e){}
+};
+// o cartão do início mostra as três medalhas mais recentes (sem animação)
+function cqCartaoInicio(){
+  try{
+    const card = document.getElementById('home-trofeus'); if(!card) return;
+    const datas = state.trophyDates || {};
+    const rec = TROPHIES.filter(t=>state.trophies.includes(t.id)).sort((a,b)=>(datas[b.id]||0)-(datas[a.id]||0)).slice(0,3);
+    let m = card.querySelector('.cq-mini');
+    if(!rec.length){ if(m) m.remove(); return; }
+    const html = rec.map(t=>trophyIco(t)).join('');
+    if(!m){ m = document.createElement('div'); m.className = 'cq-mini'; m.setAttribute('aria-hidden','true'); const ch = card.querySelector('.card-chev'); (ch||card).before(m); }
+    if(m.dataset.k !== rec.map(t=>t.id).join()){ m.innerHTML = html; m.dataset.k = rec.map(t=>t.id).join(); }
+  }catch(e){}
+}
+mtGancho('goTab', { depois(t){ if((t||'home')==='home') cqCartaoInicio(); } });
+
+Object.assign(window, { cqFiltrar, cqTemNovidade, cqPendentes, cqIndicadores, cqFotoDoMes });
+
+// =====================================================================
+// 43. Beta 41 — Transições, montagem do plano, fundos decorativos novos e desempenho
+// =====================================================================
+// Um sistema só de movimento (tokens --mt-* no CSS "Beta 41"): entradas curtas, a mesma curva em tudo e
+// nada quando o aparelho pede menos movimento (prefers-reduced-motion). Nenhuma espera inventada: a tela de
+// montagem acompanha as etapas reais e ficou mais curta.
+
+const MT_POUCO_MOV = (()=>{ try{ return matchMedia('(prefers-reduced-motion: reduce)'); }catch(e){ return { matches:false }; } })();
+function mtMovimentoOk(){ return !MT_POUCO_MOV.matches; }
+// celulares/tablets (toque): sem desfoque de fundo atrás da barra e das janelas — é o efeito que mais
+// pesa na GPU de Androids simples, e a barra já é quase opaca
+try{ if(matchMedia('(pointer:coarse)').matches) document.documentElement.classList.add('mt-toque'); }catch(e){}
+
+// ---------- desempenho: funções chamadas centenas de vezes por tela ----------
+// slug(): o mesmo nome era normalizado repetidas vezes (≈20% do tempo de troca de aba no perfil medido)
+const _slugCache = new Map(); const _slugOrig = window.slug;
+window.slug = function(s){
+  const k = String(s == null ? '' : s);
+  let v = _slugCache.get(k);
+  if(v === undefined){ v = _slugOrig(k); if(_slugCache.size > 6000) _slugCache.clear(); _slugCache.set(k, v); }
+  return v;
+};
+// datas e números: um formatador por formato, em vez de criar um novo a cada chamada
+const _fmtData = new Map();
+window.mtFmtData = function(t, opt){
+  const k = opt ? JSON.stringify(opt) : '';
+  let f = _fmtData.get(k);
+  if(!f){ try{ f = new Intl.DateTimeFormat('pt-BR', opt || { day:'2-digit', month:'2-digit' }); }catch(e){ f = null; } _fmtData.set(k, f); }
+  return f ? f.format(new Date(t)) : new Date(t).toLocaleDateString('pt-BR', opt||{day:'2-digit', month:'2-digit'});
+};
+const _fmtKm = [new Intl.NumberFormat('pt-BR',{minimumFractionDigits:0, maximumFractionDigits:1}), new Intl.NumberFormat('pt-BR',{minimumFractionDigits:1, maximumFractionDigits:1})];
+window.mtFmtKm = function(v){ const r = Math.round((+v||0)*10)/10; return _fmtKm[(Math.round(v*10)%10) ? 1 : 0].format(r); };
+// tamanho em bytes sem criar um Blob do estado inteiro a cada vez
+function _utf8Len(s){ let n = s.length; for(let i=0;i<s.length;i++){ const c = s.charCodeAt(i); if(c > 0x7f){ if(c <= 0x7ff) n += 1; else if(c >= 0xd800 && c <= 0xdbff) n += 2; else if(c >= 0xdc00 && c <= 0xdfff) n += 0; else n += 2; } } return n; }
+if(typeof window._bytesDe === 'function') window._bytesDe = function(obj){ try{ return _utf8Len(JSON.stringify(obj)); }catch(e){ return 0; } };
+if(typeof window.arqTamanhoDoc === 'function'){
+  const _tamOrig = window.arqTamanhoDoc; let _tamK = null, _tamV = 0;
+  window.arqTamanhoDoc = function(){ const k = state && state._savedAt; if(k && k === _tamK) return _tamV; _tamV = _tamOrig(); _tamK = k; return _tamV; };
+}
+// fundo decorativo: uma medição por quadro (antes eram três seguidas, cada uma forçando o layout)
+window._decoAgenda = function(){
+  cancelAnimationFrame(window.__decoRaf); clearTimeout(window.__decoTo);
+  window.__decoRaf = requestAnimationFrame(()=>{ decoPosiciona(); window.__decoTo = setTimeout(decoPosiciona, 220); });
+};
+
+// ---------- transições ----------
+// troca de conteúdo dentro da mesma janela (ex.: lista de conquistas → detalhe): entrada curta, sem piscar
+(function(){
+  const mi = document.getElementById('modal-inner'); if(!mi || !window.MutationObserver) return;
+  let ult = 0;
+  new MutationObserver(()=>{
+    if(!mtMovimentoOk() || !mi.animate) return;
+    const back = document.getElementById('modal-back'); if(!back || !back.classList.contains('on')) return;
+    const t = performance.now(); if(t - ult < 120) return; ult = t;
+    try{ mi.animate([{ opacity:.55, transform:'translateY(6px)' }, { opacity:1, transform:'none' }], { duration:180, easing:'cubic-bezier(.2,.8,.2,1)' }); }catch(e){}
+  }).observe(mi, { childList:true });
+})();
+// mudança de tema: cores passam suavemente (só nas superfícies principais, por 350 ms)
+const _setThemeB41 = window.setTheme;
+window.setTheme = function(){
+  const h = document.documentElement;
+  if(mtMovimentoOk()){ h.classList.add('tema-transicao'); clearTimeout(window.__temaTo); window.__temaTo = setTimeout(()=>h.classList.remove('tema-transicao'), 380); }
+  return _setThemeB41.apply(this, arguments);
+};
+
+// ---------- montagem do plano ----------
+// As etapas são as mesmas (reais). Antes eram até 6 × 0,9–1,1 s (~6 s de espera); agora cada etapa
+// marca em 0,36 s — tempo de ler o que foi considerado, sem fingir processamento. No fim, o título vira
+// "Plano pronto" e a tela de treinos entra com os dias e exercícios em sequência.
+const _buildB41 = window.runBuildingScreen;
+window.runBuildingScreen = function(m, steps, done, opts){
+  opts = Object.assign({}, opts || {});
+  if(!opts.passo || opts.passo > 360) opts.passo = mtMovimentoOk() ? 360 : 160;
+  const fim = function(){
+    window.__mtPlanoNovo = Date.now();
+    if(typeof done === 'function') return done.apply(this, arguments);
+  };
+  const r = _buildB41.call(this, m, steps, fim, opts);
+  try{
+    const ov = document.getElementById('building-ov'); const bar = document.getElementById('mb-bar');
+    if(ov && bar && window.MutationObserver){
+      const t = ov.querySelector('.mb-t');
+      const obs = new MutationObserver(()=>{ if(parseFloat(bar.style.width) >= 100){ ov.classList.add('mb-pronto'); if(t) t.textContent = m === 'run' ? 'Plano de corrida pronto' : 'Plano pronto'; obs.disconnect(); } });
+      obs.observe(bar, { attributes:true, attributeFilter:['style'] });
+    }
+  }catch(e){}
+  return r;
+};
+mtGancho('renderSessions', { depois(){
+  const novo = window.__mtPlanoNovo && Date.now() - window.__mtPlanoNovo < 4000;
+  if(!novo || !mtMovimentoOk()) return;
+  window.__mtPlanoNovo = 0;
+  ['sessions-chips', 'session-detail-slot'].forEach(id=>{ const el = document.getElementById(id); if(!el) return; el.classList.remove('mt-entra'); void el.offsetWidth; el.classList.add('mt-entra'); });
+}});
+// trocar de dia na tela de treinos: os exercícios entram em sequência curta (não ao reabrir a mesma)
+mtGancho('selectSession', { depois(){
+  if(!mtMovimentoOk()) return;
+  const el = document.getElementById('session-detail-slot'); if(!el) return;
+  el.classList.remove('mt-entra'); void el.offsetWidth; el.classList.add('mt-entra');
+}});
+
+// ---------- fundos decorativos (Beta 41) ----------
+// Linguagem nova, abstrata e esportiva: um brilho suave na cor do tema, linhas de movimento (raias, curvas
+// de nível, traços de velocidade), uma trama de pontos e UM elemento de destaque ligado à aba. Tudo vetorial,
+// parado (sem gasto de bateria), translúcido e preso à faixa do topo — nunca atrás de cartões.
+const _dpt = (x0,y0,cols,rows,step)=>{ let s=''; for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) s += `<circle cx="${x0+c*step}" cy="${y0+r*step}" r="1.15"/>`; return `<g class="d-pt">${s}</g>`; };
+const _arcos = (cx,cy,r0,n,gap,a0,a1)=>{ let s=''; for(let i=0;i<n;i++){ const r=r0+i*gap; const p=(a)=>[cx+r*Math.cos(a*Math.PI/180), cy+r*Math.sin(a*Math.PI/180)].map(v=>v.toFixed(1)).join(' ');
+  s += `<path class="d-linha" stroke-opacity="${(0.55-i*0.1).toFixed(2)}" d="M${p(a0)}A${r} ${r} 0 0 1 ${p(a1)}"/>`; } return s; };
+const _vel = (x,y,n,len,dx)=>{ let s=''; for(let i=0;i<n;i++){ s += `<path class="d-linha" stroke-opacity="${(0.5-i*0.1).toFixed(2)}" d="M${x+i*dx} ${y+i*9}h${len-i*8}"/>`; } return s; };
+const _B41 = (corpo)=>DECO3(corpo);
+Object.assign(DECO2_SVG, {
+  musculacao: _B41(`<circle class="d-fundo" cx="176" cy="58" r="54"/>${_dpt(130,14,6,3,9)}${_arcos(188,70,30,3,12,190,330)}
+    ${_vel(92,58,3,46,6)}
+    <g transform="rotate(-18 172 66)"><path class="d-linha" d="M140 66h64" stroke-width="3"/><rect class="d-acf" x="146" y="50" width="8" height="32" rx="3" stroke="none"/><rect class="d-acf" x="190" y="50" width="8" height="32" rx="3" stroke="none"/><rect class="d-fill" x="138" y="56" width="6" height="20" rx="2.5"/><rect class="d-fill" x="200" y="56" width="6" height="20" rx="2.5"/></g>`),
+  corrida: _B41(`<circle class="d-fundo" cx="176" cy="66" r="52"/>${_arcos(220,128,46,4,13,200,272)}${_dpt(118,16,5,3,9)}
+    <path class="d-ac" d="M150 54l9 9-9 9M164 54l9 9-9 9M178 54l9 9-9 9" stroke-width="2.4" stroke-opacity=".9"/>
+    ${_vel(96,40,3,40,5)}`),
+  biblioteca: _B41(`<circle class="d-fundo" cx="168" cy="58" r="52"/>${_dpt(126,12,7,2,9)}
+    <rect class="d-fill" x="140" y="30" width="46" height="34" rx="8" transform="rotate(-8 163 47)"/><rect class="d-fill" x="160" y="40" width="48" height="36" rx="8"/>
+    <circle class="d-ac" cx="184" cy="58" r="10" stroke-width="2"/><path class="d-acf" stroke="none" d="M181 53.5l8 4.5-8 4.5z"/>${_vel(100,86,3,44,5)}`),
+  plano: _B41(`<circle class="d-fundo" cx="170" cy="60" r="52"/>
+    ${[0,1,2,3].map(c=>[0,1,2].map(r=>{ const on = (c+r)%3===0; return `<rect class="${on?'d-acf':'d-fill'}" ${on?'stroke="none"':''} x="${134+c*18}" y="${30+r*18}" width="12" height="12" rx="3.5"/>`; }).join('')).join('')}
+    ${_arcos(170,60,46,2,10,200,330)}${_dpt(110,22,3,4,9)}`),
+  desafios: _B41(`<circle class="d-fundo" cx="172" cy="60" r="54"/>${_arcos(172,60,24,3,11,0,359)}
+    <path class="d-acf" stroke="none" d="M172 44.5l4.6 9.4 10.4 1.5-7.5 7.3 1.8 10.3-9.3-4.9-9.3 4.9 1.8-10.3-7.5-7.3 10.4-1.5z"/>
+    ${[20,70,110,160,250,300].map(a=>{ const r1=60,r2=66; const x1=172+r1*Math.cos(a*Math.PI/180), y1=60+r1*Math.sin(a*Math.PI/180), x2=172+r2*Math.cos(a*Math.PI/180), y2=60+r2*Math.sin(a*Math.PI/180); return `<path class="d-ac" stroke-opacity=".55" d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`; }).join('')}${_dpt(106,18,3,3,9)}`),
+  perfil: _B41(`<circle class="d-fundo" cx="170" cy="60" r="52"/>${_arcos(170,60,26,3,12,150,390)}
+    <path class="d-ac" d="M100 66h34l7-16 9 30 8-22 6 8h40" stroke-width="2.3"/>${_dpt(186,14,3,3,9)}`),
+  progresso: _B41(`<circle class="d-fundo" cx="172" cy="58" r="50"/>${_dpt(124,14,7,2,9)}
+    <path class="d-fill" stroke="none" d="M112 98L138 80l20 8 24-22 26-24V98z"/><path class="d-ac" d="M112 98L138 80l20 8 24-22 26-24" stroke-width="2.4"/>
+    <circle class="d-acf" cx="208" cy="42" r="3.5" stroke="none"/><path class="d-linha" d="M112 98h96" stroke-opacity=".5"/>`),
+  historico: _B41(`<circle class="d-fundo" cx="170" cy="60" r="50"/>${_arcos(170,60,22,3,11,-90,200)}
+    <path class="d-ac" d="M170 44v17l10 7" stroke-width="2.4"/><circle class="d-acf" cx="170" cy="61" r="2.6" stroke="none"/>${_dpt(108,20,3,4,9)}`),
+  admin: _B41(`<circle class="d-fundo" cx="170" cy="58" r="50"/>${_dpt(118,14,4,3,9)}
+    <rect class="d-fill" x="146" y="22" width="52" height="70" rx="9"/><path class="d-ac" d="M155 42l4 4 8-9M155 60l4 4 8-9" stroke-width="2.2"/><path class="d-linha" d="M172 43h18M172 61h18M155 78h34" stroke-opacity=".7"/>`),
+  montarMusculacao: _B41(`<circle class="d-fundo" cx="170" cy="60" r="50"/>${_dpt(116,16,4,4,9)}
+    <rect class="d-fill" x="138" y="24" width="64" height="74" rx="10"/><path class="d-linha" d="M150 42h28M150 54h40" stroke-opacity=".7"/>
+    <path class="d-ac" d="M152 78h28M148 72v12M184 72v12" stroke-width="2.4"/>`),
+  montarCorrida: _B41(`<circle class="d-fundo" cx="170" cy="60" r="50"/>${_dpt(112,16,3,4,9)}
+    <path class="d-ac" d="M128 96c18-6 24-26 42-28s26-16 28-38" stroke-width="2.2" stroke-dasharray="2 7"/>
+    <circle class="d-acf" cx="128" cy="96" r="4.5" stroke="none"/><path class="d-ac" d="M198 30V12" stroke-width="2.2"/><path class="d-acf" stroke="none" d="M198 12h15l-4 5 4 5h-15z"/>`)
+});
+// desenhos já montados na tela trocam na próxima atualização
+try{ const el = document.getElementById('app-deco'); if(el) delete el.dataset.k; }catch(e){}
+
+Object.assign(window, { mtMovimentoOk });

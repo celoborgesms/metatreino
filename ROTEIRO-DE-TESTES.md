@@ -1,8 +1,72 @@
-# Roteiro de testes em aparelho real — MetaTreino Beta 39
+# Roteiro de testes em aparelho real — MetaTreino Beta 42
 
-Leva uns 35 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
+Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
-## 00. Beta 39 — réguas, evolução e provas (o mais importante desta versão)
+## 00. Beta 42 — motivo da troca
+- [ ] Trocar um exercício com equipamento (ex.: supino na máquina): aparece "Equipamento ocupado"?
+- [ ] Trocar um exercício de peso do corpo (ex.: flexão, prancha): aparece só "Alternativa para este grupo muscular", sem a palavra "ocupado"? As opções são do mesmo grupo e os favoritos compatíveis vêm primeiro?
+- [ ] Depois de salvar o treino, o Histórico mostra "alternativa para o grupo muscular"?
+
+## 00a. Beta 41 — troca de exercício, favoritos, conquistas e visual (o mais importante desta versão)
+
+**Troca de exercício**
+- [ ] Treinos › um exercício › **Trocar**. Aparecem "Mais compatíveis", "Compatíveis" e "Alternativas secundárias"? As primeiras fazem sentido para a academia onde você treina?
+- [ ] Alterne "Equipamento ocupado" / "Prefiro outro": a ordem muda para exercícios no mesmo tipo de equipamento?
+- [ ] Escolha uma opção: o cartão mostra "Só neste treino", a carga sugerida, **Desfazer** e **Salvar no plano**? Séries e repetições continuam as mesmas?
+- [ ] Registre séries no substituto e salve o treino. No Histórico, o detalhe mostra "no lugar de …"?
+- [ ] No dia seguinte, o exercício original voltou sozinho ao plano?
+- [ ] "Salvar no plano" pede confirmação e a troca passa a valer nos próximos treinos?
+- [ ] Calistenia: "Trocar" continua mostrando a progressão da cadeia?
+
+**Favoritos**
+- [ ] Biblioteca: a estrela favorita sem abrir a ficha? O filtro **Favoritos** lista só eles?
+- [ ] Ficha do exercício e cartão do treino têm a estrela? Abra em outro aparelho: os favoritos aparecem lá?
+- [ ] Favorite um exercício compatível: ele aparece primeiro na troca?
+
+**Conquistas e desafio mensal**
+- [ ] Ao bater uma conquista no fim do treino, **nenhuma janela abre**? O cartão do Início mostra "Novidade" (parado)?
+- [ ] Desafios › Conquistas: as novas entram com animação? Raras/especiais têm brilho discreto? Ao reabrir, não repetem?
+- [ ] Abra Conquistas no outro aparelho: as já vistas não aparecem de novo?
+- [ ] Na virada do mês (ou depois de dias sem abrir): nada aparece sozinho no Início; ao abrir Conquistas aparece "Desafio mensal encerrado!" uma vez?
+
+**Visual e fluidez**
+- [ ] Troque entre os 10 temas: cada um tem cara própria (botões, cartões, barras), sem texto apagado?
+- [ ] Fundos decorativos de cada aba: bonitos, discretos, sem cobrir cartões?
+- [ ] Janelas, abas e botões: transições suaves? Com "Remover animações" ligado no aparelho, nada anima?
+- [ ] Montar um plano novo: a tela de montagem dura uns 2–3 s e termina em "Plano pronto"?
+- [ ] Rolagem da Biblioteca, Histórico e Conquistas no Android: fluida?
+
+
+## 00b. Beta 40 — planos, PDFs e cadastro
+
+**Planos**
+- [ ] Conta nova com **Google**: entra direto no cadastro? Perfil mostra "Teste Premium: 30 dias"?
+- [ ] Conta nova com **e-mail**: pede para confirmar o e-mail? Depois de confirmar, entra com o teste?
+- [ ] Criar conta só com usuário (sem @): o app pede e-mail real ou Google?
+- [ ] Painel › conta de teste › **Passar para Gratuito**. No celular dela (reabrindo): aparece o aviso, o tema Premium vira Brasa/Areia e nada some do histórico?
+- [ ] Gratuito: musculação e corrida funcionam? Vídeo do exercício abre durante o treino? Biblioteca, plano alimentar e PDFs mostram o aviso Premium com o contato?
+- [ ] Gratuito: o Início não pede localização?
+- [ ] Painel › **+30 dias**: no celular da pessoa, Premium volta e o tema escolhido também?
+- [ ] **Suspender conta** com motivo: a pessoa vê "Conta suspensa" e o motivo? **Desbloquear** devolve o acesso?
+- [ ] **Remover administrador**: no celular do administrador secundário, o painel some na hora? A conta continua como aluno?
+- [ ] **Excluir conta**: sem a função publicada, o painel diz que nada foi excluído? Com a função (plano Blaze), a conta some também do Authentication?
+
+**PDFs (Premium)**
+- [ ] Plano › "Baixar o plano em PDF" (musculação e corrida), Plano alimentar › PDF, Perfil › Relatório: abrem, imprimem legíveis e com as cores do tema?
+
+**Cadastro e treino**
+- [ ] Registrar peso: Cancelar fecha sem salvar? Mudar o valor e tocar fora pergunta se quer descartar?
+- [ ] Etapa 1: tema e estilo dos ícones juntos? Escolher emojis e terminar o cadastro: os emojis aparecem?
+- [ ] Data de nascimento: dia 31, passe por fevereiro e volte para março — o dia continua 31?
+- [ ] Altura e peso: aparece o "IMC estimado" discreto?
+- [ ] Nível de atividade e objetivo: só a explicação da opção escolhida?
+- [ ] Calistenia e Híbrido: o objetivo mostrado bate com a opção marcada? A explicação muda ao trocar?
+- [ ] Data de início em branco: a mensagem diz o dia certo do primeiro treino?
+- [ ] Corrida › tempo recente: abre o seletor do app (não o do Android)? Confirmar e Cancelar funcionam?
+- [ ] Marque "Joelho" nas limitações: o treino de pernas mostra o aviso de adaptação e não tem agachamento livre, afundo nem salto?
+- [ ] Corrida com terreno Trilha: as metas aparecem por esforço (sem ritmo por km)? Esteira: aparece a velocidade em km/h?
+
+## 00b. Beta 39 — réguas, evolução e provas
 
 **Réguas por gesto** (celular de verdade: é aqui que a fluidez aparece)
 - [ ] Toque na carga de uma série: abre a régua e o teclado **não** abre? Arraste para o lado devagar: o número acompanha o dedo sem travar?

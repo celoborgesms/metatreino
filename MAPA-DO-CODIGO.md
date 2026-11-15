@@ -14,6 +14,7 @@ Guia para quem for mexer no app (você, outra IA ou outro desenvolvedor). Vale a
 | `firestore.rules` | Regras de segurança do Firestore. Publicar no Console do Firebase quando mudar. |
 | `manifest.json`, `icon*.png/svg` | Instalação como app. |
 | `fonte/` | Código-fonte do `app-plus.js` em partes + o script `montar.py`. Pode ficar no GitHub (não pesa para quem usa o app). |
+| `functions/`, `firebase.json` | Beta 40: Cloud Function de exclusão de contas pelo painel (opcional; exige plano Blaze): `firebase deploy --only functions`. Não precisam ir para a hospedagem do site. |
 | `testes/` | Testes automáticos (Beta 33). Não precisam ser publicados. Veja "Testes" abaixo. |
 
 ## Montar e trocar a versão
@@ -71,7 +72,23 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `34-controles-por-gesto.js` | Beta 39: réguas por gesto para todo campo numérico, data e horário (`nrConfig` decide o tipo de cada campo; `nrRegua` é a régua; `nrAbrir` a folha). Campo vira `readonly` + `inputmode="none"`; o valor volta para o mesmo `<input>` com eventos `input`/`change`. Campo novo de número: entra sozinho (MutationObserver); limites próprios em `NR_CAMPOS`; `data-teclado` deixa um campo de fora |
 | `35-evolucao-provas-assistente.js` | Beta 39: oferta de subir de nível (`evoLiftAvaliar`, `evoAtualizar`, `evoResponder`, `evoComando`; estado em `state.evolucao`), orientação de provas por marcos (`provaOrientacao`, `provaAviso`, `provaPosAviso`; vistos em `state.provaAvisos`), boas-vindas da jornada nova (`maBoasVindasTexto`, `state.maBoasVindas`) |
 
-Parte nova: próximo número livre (ex.: `20-nome-da-funcao.js`).
+| `36-planos-gratuito-premium.js` | Beta 40: recursos por plano (`MT_RECURSOS`, `mtTem`, `mtPremium`, `mtPremiumAviso`, `openPlanos`), troca de plano (`mtPlanoVerifica`, `mtPlanoMudou`, `state.planoVisto`), temas (`TEMAS_GRATIS`, `temaLiberado`, Ametista e Coral, `state.prefs.temaPremium`), Início básico (`state.inicioBasico`), clima só no Premium, Meta Assistente por plano (`MA_KEYS_PREMIUM`), estilo dos ícones na conta (`state.prefs.icones`), Aparência com prévia real |
+| `37-admin-planos-contas.js` | Beta 40: lista com todas as contas e o plano de cada uma, `admPremium`, `admEncerrar`, `admBloquear`, remover administrador (apaga o documento; o app da pessoa escuta e sai do painel), `admExcluirConta` (Cloud Function `adminExcluirConta` via `fnChamar`), `admExcluirSoDados`, registro (`admRegistrar`, `openAdminLog`) |
+| `38-cadastro-correcoes.js` | Beta 40: peso com Cancelar, ícones no cadastro, IMC estimado, explicação só da opção escolhida (`WZ_EXPL`, `wzExplica`), objetivos da calistenia/híbrido, mensagem da data de início (`wzInicioMsg`), seletor próprio do tempo recente (`mcAbrir`, `mcConfirmar`) |
+| `39-limitacoes-terreno.js` | Beta 40: limitações no gerador (`LIM_REGRAS`, `limAdapta`, `setup.lim`), aviso no treino, cardio sem impacto; terreno da corrida (embrulha `rComposicao` e `rSessao`) |
+| `40-pdf-identidade.js` | Beta 40: PDFs com arte vetorial e cores do tema (`pdfCores`, `pdfArteCab`, `pdfArteMarca`, `pdfPrepArte`, `pdfDoc`), `pdfTreino`, `pdfAlimentacao`; o relatório (parte 15) usa a mesma arte |
+| `41-substituicao-favoritos.js` | Beta 41: troca inteligente (`MT_PADROES`, `mtPadrao`, `mtEquipClasse`, `mtCandidatosTroca`, `mtCargaSugerida`), troca só da execução (`ex.troca`, `mtTrocasExpirar`, desfazer, salvar no plano via `pins`), histórico (`x.trocas`, `noLugarDe`), favoritos (`state.favoritos`, `mtFavAlternar`, filtro na Biblioteca, estrela na ficha e no cartão) |
+| `42-conquistas-desafio-mensal.js` | Beta 41: fila de apresentação (`state.conqPend`/`conqVistas`, `showAwards` não abre janela), aba Conquistas nova (`openTrophies`, `cqTile`, `cqFiltrar`), resumo do mês (`state.monthly.snap`, `state.desafiosEncerrados`, `cqResumoMes`), selos parados nos pontos de entrada |
+| `43-visual-transicoes-desempenho.js` | Beta 41: caches (`slug`, `mtFmtData`, `mtFmtKm`, `_bytesDe`), `_decoAgenda` em um quadro, transição de conteúdo das janelas e do tema, montagem do plano mais curta (`mb-pronto`, `mt-entra`), fundos decorativos novos (`DECO2_SVG`), classe `mt-toque` |
+
+Parte nova: próximo número livre (ex.: `41-nome-da-funcao.js`).
+
+## Planos (Beta 40)
+
+- **Fonte do plano:** o documento de plano da pessoa (coleção `usuariosAutorizados`) → `planoDe(isAdmin, doc)` / `planoAtual()` (app.js). Sem documento = Gratuito.
+- **Recurso Premium novo:** acrescente em `MT_RECURSOS` (parte 36) e confira com `if(!mtTem('chave')) return mtPremiumAviso('chave');` **dentro da função que faz o trabalho**, não só escondendo o botão.
+- **Nunca bloquear:** execução de treinos, registro de séries e corridas, vídeos dos exercícios do próprio plano, histórico, evolução básica, desafios, conquistas e provas.
+- **Mudar de plano não apaga dados:** o que é Premium fica no `state` e volta com o Premium.
 
 ## Primeiro acesso (Beta 38)
 
@@ -119,8 +136,9 @@ Embrulhar a função inteira (`window.f = function(){...}`) só quando for preci
 | `contas/{email}` | Beta 34: `{ uid, uids }` — qual documento de `usuarios` é o da pessoa | a própria pessoa (e-mail verificado) |
 | `parceiros/{id}` | Beta 34: cadastro completo dos criadores dos vídeos (inclui contato privado) | só admins |
 | `usuarios/{uid}/arquivo/{ano-semestre}` | Histórico com mais de 90 dias (cada registro como texto JSON) | o próprio aluno e admins |
-| `usuariosAutorizados/{email}` | Acesso liberado pelo treinador (ativo, validade) | admins (o aluno lê o próprio) |
-| `admins/{email}` | Administradores secundários | administrador principal |
+| `usuariosAutorizados/{email}` | Beta 40: **plano** da pessoa (`plano`, `testeInicio`, `premiumAte`, `bloqueado`; os antigos `active`/`expiresAt` continuam valendo) | admins gravam; a pessoa lê o próprio e cria uma única vez o próprio Teste Premium |
+| `admins/{email}` | Administradores secundários (remover = apagar o documento) | administrador principal |
+| `adminLog/{id}` | Beta 40: ações do painel (quem, o quê, em quem, quando) | admins criam; só o principal lê; ninguém altera |
 | `config/mural`, `config/contato`, `config/calistenia`, `config/specialAward` | Mural/logo, contato, ajustes da calistenia, Conquista Especial | todos leem; admins gravam |
 | `desafiosTematicos/{id}` e `.../participantes/{uid}` | Desafios criados e quem participa | ver regras |
 | `videosExercicios`, `exerciciosCustom`, `caliExercicios`, `caliModelos` | Vídeos e exercícios cadastrados pelos admins. `videosExercicios.creditos` = só o que o admin liberou do parceiro (ficha/Biblioteca) | todos leem; admins gravam |
@@ -192,6 +210,7 @@ python3 testes/acessibilidade.py URL  # nomes de botões, teclado, aviso acima d
 python3 testes/acabamento.py URL      # 8 temas × 360/390/430 px: fundos, cena do Início, paletas, botão do assistente, seleção, rolagem
 python3 testes/serie-descanso.py URL  # concluir série, descanso automático/manual, última série
 python3 testes/compartilhar.py URL    # central de compartilhamento em sequência, estado limpo, nome na faixa
+python3 testes/beta40.py URL [PASTA]  # planos, teste de 30 dias, temas, assistente, PDFs, cadastro, limitações, terreno, RPE, painel
 ```
 Os testes de navegador usam `testes/mock-firebase.js` (Firebase simulado, sem conta real) e `testes/semente.js` (aluno de exemplo). Para servir o site de teste: copie o projeto, troque os `<script>` do Firebase do `index.html` por `mock-firebase.js` e rode `python3 -m http.server`.
 

@@ -1,7 +1,12 @@
 rules_version = '2';
 
 // =============================================================
-// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 35)
+// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 40)
+// Beta 40: planos Gratuito/Premium. Conta nova cria o próprio Teste Premium
+// (uma vez só, data do servidor); só administradores mudam plano ou suspendem.
+// Novo: adminLog (registro das ações do painel). Os administradores continuam
+// sendo conferidos pela coleção "admins" em cada pedido (sem custom claims):
+// remover o documento tira o acesso na mesma hora, no servidor.
 // Beta 35: ao excluir a conta, a pessoa apaga também os documentos dos
 // outros logins dela (mesmo e-mail verificado); a participação nos
 // desafios fica no documento de dados unificado.
@@ -152,6 +157,11 @@ service cloud.firestore {
     // USUARIOS AUTORIZADOS (liberacao de acesso dos alunos)
     // =========================================================
 
+    // Beta 40: este documento é o PLANO da pessoa (Gratuito, Teste Premium, Premium ou conta
+    // suspensa). Sem documento = Gratuito. O aluno só lê o próprio e só pode CRIAR uma única vez
+    // o próprio Teste Premium: plano 'teste', data do servidor (não dá para "voltar no tempo"),
+    // e-mail verificado (contas de usuário sem e-mail não ganham teste). Não pode alterar nem apagar.
+    // Administrador não altera o próprio documento (só o principal), para ninguém se dar Premium.
     match /usuariosAutorizados/{emailDoc} {
 
       allow read: if isAdmin() || (
@@ -164,7 +174,26 @@ service cloud.firestore {
         )
       );
 
-      allow create, update, delete: if isAdmin();
+      allow create: if (isAdmin() && (isOwner() || emailDoc != userEmail())) || (
+        signedIn()
+        && request.auth.token.email_verified == true
+        && userEmail() == emailDoc
+        && request.resource.data.keys().hasOnly(['plano', 'testeInicio', 'origem', 'name'])
+        && request.resource.data.plano == 'teste'
+        && request.resource.data.testeInicio == request.time
+      );
+
+      allow update, delete: if isAdmin() && (isOwner() || emailDoc != userEmail());
+    }
+
+    // Beta 40: registro das ações administrativas (quem fez, o quê, em quem, quando).
+    // Administradores criam; só o principal lê. Ninguém altera nem apaga um registro.
+    match /adminLog/{logDoc} {
+      allow create: if isAdmin()
+        && request.resource.data.por == userEmail()
+        && request.resource.data.em == request.time;
+      allow read: if isOwner();
+      allow update, delete: if false;
     }
 
 

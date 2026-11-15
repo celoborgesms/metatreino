@@ -1,3 +1,48 @@
+# MetaTreino 2027.1 Beta 42 — Motivo da troca de exercício diferenciado
+
+1. **Exercício com equipamento:** a troca mostra **"Equipamento ocupado"** (e "Prefiro outro"), como antes.
+2. **Exercício sem equipamento / peso do corpo:** em vez de "ocupado", aparece **"Alternativa para este grupo muscular"**, com outros exercícios do mesmo grupo. Mesmos critérios de compatibilidade e mesma prioridade para favoritos compatíveis.
+3. Cartão do treino e histórico mostram o motivo certo ("equipamento ocupado", "por preferência" ou "alternativa para o grupo muscular"). Sem alternativa compatível, o aviso fala do grupo muscular (sem falar de equipamento).
+4. Nada mais mudou: lógica de compatibilidade, favoritos, troca só daquele treino, desfazer, salvar no plano e histórico continuam iguais à Beta 41. Regras do Firestore sem mudança.
+
+# MetaTreino 2027.1 Beta 41 — Troca inteligente de exercícios, favoritos, conquistas na aba Conquistas e visual renovado
+
+Detalhes técnicos em `RELATORIO-BETA41.md`. As regras do Firestore **não mudaram** nesta versão (os dados novos ficam no mesmo documento da conta).
+
+1. **Trocar exercício (equipamento ocupado ou preferência).** O app analisa grupo muscular, ênfase, padrão de movimento, tipo (multiarticular/isolador), equipamento, aparelho ocupado, objetivo, nível, limitações e os outros exercícios do dia. As opções vêm em **Mais compatíveis**, **Compatíveis** e **Alternativas secundárias** (avisadas como não equivalentes). Sem opção adequada, o app diz que não encontrou alternativa compatível.
+2. **A troca vale só para aquele treino.** O plano não muda; o original volta sozinho no dia seguinte. Séries, repetições e descanso são mantidos, a carga é sugerida com base no que você já fez. Dá para **desfazer** durante o treino ou **salvar no plano** (com confirmação). O histórico registra o exercício feito e o que ele substituiu.
+3. **Favoritos.** Estrela na Biblioteca, na ficha do exercício e no cartão do treino. Filtro **Favoritos** na Biblioteca. Favoritos compatíveis aparecem primeiro na troca; favorito que não serve não é sugerido como equivalente. Salvos na conta e mantidos ao gerar um plano novo.
+4. **Conquistas remodeladas.** Medalhas por raridade (comum, rara, especial), progresso das que estão em andamento, filtros (todas, desbloqueadas, em andamento, bloqueadas), resumo por raridade e as três mais recentes no cartão do Início.
+5. **Conquistas só na aba Conquistas.** Nada abre sozinho no Início, no fim do treino ou em outra aba: aparece só um selo parado "Novidade". Ao abrir Conquistas, as novas entram com animação (brilho discreto nas raras e especiais) e ficam registradas como vistas, inclusive nos outros aparelhos.
+6. **Desafio mensal encerrado.** No mês seguinte, ao abrir Conquistas: nome, meta, progresso, resultado e mensagem (celebração se concluiu, mensagem positiva se não). Aparece uma vez e fica no histórico de desafios mensais. Respeita o fuso do aparelho e funciona mesmo se você ficar dias sem abrir o app.
+7. **Temas com identidade própria.** Cada um dos 10 temas tem cantos, botões, campos, barras de progresso, janelas e cartões próprios, além da cor. Brasa e Areia continuam gratuitos.
+8. **Fundos decorativos novos**, vetoriais e abstratos (raias, linhas de movimento, trama de pontos), um por aba, nas cores do tema.
+9. **Transições** suaves e iguais em todo o app (janelas, abas, seleção, botões, expandir, mudança de tema). Com "reduzir movimento" ligado no aparelho, nada anima.
+10. **Montagem do plano** mais curta (cerca de 2,5 s em vez de 5–6 s), com as mesmas etapas reais; termina em "Plano pronto" e os dias e exercícios entram em sequência.
+11. **Mais leve no Android:** sem desfoque de fundo atrás da barra e das janelas em telas de toque, listas longas desenham só o que está na tela e funções repetidas foram aceleradas.
+
+# MetaTreino 2027.1 Beta 40 — Planos Gratuito e Premium, PDFs com a cara do app e cadastro mais claro
+
+Detalhes técnicos em `RELATORIO-BETA40.md`. **As regras do Firestore mudaram: publique o `firestore.rules` desta versão.**
+
+1. **Qualquer pessoa entra.** Conta nova (Google ou e-mail confirmado) já começa com **30 dias de Premium** e depois segue no **Gratuito**, sem perder nada. Ninguém mais fica preso em "Sem acesso liberado". Só a conta **suspensa** pela administração não entra.
+2. **Login.** "Continuar com Google" vem primeiro (um toque). E-mail e senha continuam; conta nova só com e-mail real. Contas antigas de usuário (sem e-mail) continuam entrando.
+3. **Gratuito:** musculação, corrida, criar e executar treinos, registrar cargas/séries/repetições, vídeos dos exercícios do seu treino, histórico, evolução e gráficos, desafios, conquistas, metas, provas, Meta Assistente básico, 2 temas (Brasa e Areia), Início "Completo" ou "Só o essencial", cenário do Início pelo horário e datas especiais (sem localização).
+4. **Premium:** biblioteca completa e consulta livre de exercícios, plano alimentar (com PDF), PDFs dos planos de treino e relatório de evolução, os 10 temas (dois novos exclusivos: **Ametista**, escuro, e **Coral**, claro), personalização completa do Início, cenário pelo clima, Meta Assistente completo (análises, aviso de subir de nível, dicas no dia a dia, orientação das provas, comandos que mudam o plano).
+5. **Fim do Premium:** aviso claro, contato para contratar, nada apagado. O tema Premium vira o gratuito equivalente e volta sozinho quando o Premium voltar. Plano alimentar e personalização do Início ficam guardados.
+6. **PDFs novos** (plano de musculação, de corrida e alimentar) e relatório de evolução refeito: ilustrações vetoriais próprias, cores do seu tema, cabeçalho, divisórias e rodapé com a identidade do MetaTreino, legíveis impressos.
+7. **Registrar peso:** botão Cancelar; ao sair com um valor alterado, o app pergunta se quer descartar. Vale para todas as janelas.
+8. **Estilo dos ícones** (minimalistas ou emojis coloridos) escolhido no cadastro, salvo na conta e trocável em Perfil › Estilo dos ícones.
+9. **Data de nascimento:** trocar mês ou ano não muda mais o dia escolhido.
+10. **IMC estimado** discreto abaixo de altura e peso, como referência (sem rótulos).
+11. **Nível de atividade e objetivos:** só a explicação da opção escolhida aparece. Calistenia e Híbrido têm objetivos próprios, explicados, e o que aparece é exatamente o que monta o plano.
+12. **Data de início:** a mensagem diz quando é o seu primeiro treino de verdade (hoje, amanhã ou o próximo dia escolhido).
+13. **Tempo recente na corrida:** seletor próprio do app (distância + horas/minutos/segundos por gesto ou digitando), com validação.
+14. **Dores e limitações:** o plano de musculação troca os exercícios que forçam a região e contém o volume; o treino mostra o que foi adaptado.
+15. **Terreno da corrida:** trilha (por esforço, sem tiros de velocidade), esteira (velocidade em km/h) e pista (voltas de 400 m) mudam o plano de verdade.
+16. **Escala de esforço 1–10:** a sugestão de carga passa a usar o esforço do treino em que o exercício foi feito (sobe mais cedo quando sobrou margem; reduz 10% depois de duas sessões no limite).
+17. **Painel:** plano de cada aluno (Premium, Teste, Gratuito, Bloqueado), renovar/encerrar/suspender, **remover administrador** funcionando (o acesso cai na hora), **excluir conta** com confirmação (com a função do servidor) e registro de todas as ações.
+
 # MetaTreino 2027.1 Beta 39 — Réguas por gesto, evolução de nível e provas
 
 Detalhes técnicos em `RELATORIO-BETA39.md`. As regras do Firestore não mudaram nesta versão.
