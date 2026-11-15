@@ -358,7 +358,7 @@ function wzIr(id, i, op){
   const ult = i === W.passos.length-1;
   const bIr = tela.querySelector('.wz-ir'), bV = tela.querySelector('.wz-voltar');
   if(bIr) bIr.textContent = ult ? W.rotuloFim : 'Continuar';
-  if(bV) bV.style.visibility = (i === 0 && id === 'scr-quiz') ? 'hidden' : '';
+  if(bV){ bV.style.visibility = ''; bV.classList.toggle('wz-sem', i === 0 && id === 'scr-quiz'); }   // Beta 44: some de verdade → Continuar centralizado
   const err = tela.querySelector('.wz-err'); if(err) err.innerHTML = '';
   tela.querySelectorAll('.wz-invalido').forEach(f=>f.classList.remove('wz-invalido'));
   if(id === 'scr-quiz' && i === 0) wzRenderTemas();

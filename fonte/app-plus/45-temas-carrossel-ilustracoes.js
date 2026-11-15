@@ -28,24 +28,27 @@ function mtTemaCarrossel(host, ctx){
   const premiumOk = k=>(typeof temaLiberado === 'function') ? temaLiberado(k) : true;
   const ehPrem = k=>(typeof temaPremium === 'function') ? temaPremium(k) : !!THEMES[k].premium;
   host.classList.add('tc-host');
+  // Beta 44: só deslizar. O tema do centro é aplicado sozinho quando o carrossel para (sem setas, sem botão
+  // "Usar este tema" e sem redesenhar o carrossel a cada troca — era isso que travava).
   host.innerHTML = `<div class="tc" data-ctx="${ctx}">
     <div class="tc-trilho" role="listbox" aria-label="Temas do app — deslize para os lados" tabindex="0">
       ${ordem.map((k,i)=>`<div class="tc-slide${k===cur?' on':''}${premiumOk(k)?'':' trava'}" role="option" aria-selected="${k===cur}" aria-label="Tema ${mtEsc(THEMES[k].nome)}${ehPrem(k)?' (Premium)':''}" data-k="${k}" data-i="${i}" onclick="mtTcToque(this)">
-        ${_tcPrevia(k)}${k===cur?'<span class="tc-sel" aria-hidden="true">✓</span>':''}${ctx==='cadastro' && k==='areia'?'<span class="tc-sug">Sugerido</span>':''}</div>`).join('')}
+        ${_tcPrevia(k)}<span class="tc-sel" aria-hidden="true">✓</span>${ctx==='cadastro' && k==='areia'?'<span class="tc-sug">Sugerido</span>':''}</div>`).join('')}
     </div>
-    <div class="tc-info">
-      <button type="button" class="tc-seta" aria-label="Tema anterior" onclick="mtTcPasso(this,-1)">‹</button>
-      <div class="tc-nome" aria-live="polite"></div>
-      <button type="button" class="tc-seta" aria-label="Próximo tema" onclick="mtTcPasso(this,1)">›</button>
-    </div>
+    <div class="tc-nome" aria-live="polite"></div>
     <div class="tc-pontos">${ordem.map((k,i)=>`<button type="button" class="tc-ponto" aria-label="${mtEsc(THEMES[k].nome)}" onclick="mtTcIr(this,${i})"></button>`).join('')}</div>
-    <button type="button" class="btn btn-primary btn-block tc-usar" onclick="mtTcUsar(this)"></button>
   </div>`;
   const tc = host.querySelector('.tc'), tr = tc.querySelector('.tc-trilho');
   tc._ordem = ordem; tc._idx = Math.max(0, ordem.indexOf(cur));
-  let raf = 0;
-  tr.addEventListener('scroll', ()=>{ cancelAnimationFrame(raf); raf = requestAnimationFrame(()=>_tcAtualiza(tc)); }, { passive:true });
-  tr.addEventListener('keydown', e=>{ if(e.key === 'ArrowRight'){ e.preventDefault(); _tcVai(tc, tc._idx+1); } else if(e.key === 'ArrowLeft'){ e.preventDefault(); _tcVai(tc, tc._idx-1); } else if(e.key === 'Enter'){ e.preventDefault(); mtTcUsar(tc); } });
+  let raf = 0, parou = 0;
+  const fim = ()=>{ clearTimeout(parou); _tcAtualiza(tc); _tcAplica(tc); };
+  tr.addEventListener('scroll', ()=>{
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(()=>_tcAtualiza(tc));
+    clearTimeout(parou); parou = setTimeout(fim, 'onscrollend' in window ? 450 : 170);   // reserva p/ quem não tem scrollend
+  }, { passive:true });
+  tr.addEventListener('scrollend', fim, { passive:true });
+  tr.addEventListener('keydown', e=>{ if(e.key === 'ArrowRight'){ e.preventDefault(); _tcVai(tc, tc._idx+1); } else if(e.key === 'ArrowLeft'){ e.preventDefault(); _tcVai(tc, tc._idx-1); } });
+  _tcInfo(tc);
   requestAnimationFrame(()=>{ _tcVai(tc, tc._idx, true); _tcInfo(tc); });
 }
 function _tcDe(el){ return el && el.closest ? el.closest('.tc') : el; }
@@ -54,7 +57,7 @@ function _tcVai(tc, i, instant){
   const tr = tc.querySelector('.tc-trilho'), s = tr.children[i]; if(!s) return;
   const alvo = s.offsetLeft - (tr.clientWidth - s.clientWidth)/2;
   try{ tr.scrollTo({ left:alvo, behavior: instant || !(typeof mtMovimentoOk!=='function' || mtMovimentoOk()) ? 'auto' : 'smooth' }); }catch(e){ tr.scrollLeft = alvo; }
-  tc._idx = i; _tcInfo(tc);
+  if(tc._idx !== i){ tc._idx = i; _tcInfo(tc); }
 }
 function _tcAtualiza(tc){
   const tr = tc.querySelector('.tc-trilho'); const meio = tr.scrollLeft + tr.clientWidth/2;
@@ -62,33 +65,40 @@ function _tcAtualiza(tc){
   [...tr.children].forEach((s,i)=>{ const d = Math.abs(s.offsetLeft + s.clientWidth/2 - meio); if(d < dist){ dist = d; melhor = i; } });
   if(melhor !== tc._idx){ tc._idx = melhor; _tcInfo(tc); }
 }
+function _tcLivre(k){ return (typeof temaLiberado === 'function') ? temaLiberado(k) : true; }
 function _tcInfo(tc){
   const k = tc._ordem[tc._idx]; const t = THEMES[k]; if(!t) return;
-  const cur = currentTheme(); const livre = (typeof temaLiberado === 'function') ? temaLiberado(k) : true;
+  const livre = _tcLivre(k);
   const prem = (typeof temaPremium === 'function') ? temaPremium(k) : !!t.premium;
-  tc.querySelector('.tc-nome').innerHTML = `<b>${mtEsc(t.nome)}</b>${tc.dataset.ctx==='cadastro' && k==='areia'?'<span class="tc-atual">Sugerido</span>':''}${prem?`<span class="pl-mini tc-prem">${typeof PL_EST!=='undefined'?PL_EST:''}Premium</span>`:''}${k===cur?'<span class="tc-atual">Selecionado</span>':''}<small>${mtEsc(t.sub||'')}</small>`;
+  tc.querySelector('.tc-nome').innerHTML = `<b>${mtEsc(t.nome)}</b>${tc.dataset.ctx==='cadastro' && k==='areia'?'<span class="tc-atual">Sugerido</span>':''}${prem?`<span class="pl-mini tc-prem">${typeof PL_EST!=='undefined'?PL_EST:''}Premium</span>`:''}<small>${mtEsc(t.sub||'')}</small>${livre ? '' : `<button type="button" class="tc-premium" onclick="mtPremiumAviso('temas')">Disponível no Premium · conhecer</button>`}`;
   tc.querySelectorAll('.tc-ponto').forEach((p,i)=>{ p.classList.toggle('on', i===tc._idx); p.setAttribute('aria-current', i===tc._idx ? 'true' : 'false'); });
   [...tc.querySelectorAll('.tc-slide')].forEach((s,i)=>s.classList.toggle('foco', i===tc._idx));
-  const b = tc.querySelector('.tc-usar');
-  b.disabled = false; b.classList.toggle('btn-ghost', k===cur || !livre); b.classList.toggle('btn-primary', !(k===cur || !livre));
-  b.textContent = k===cur ? '✓ Tema em uso' : (!livre ? 'Disponível no Premium' : 'Usar este tema');
-  const setas = tc.querySelectorAll('.tc-seta'); setas[0].disabled = tc._idx === 0; setas[1].disabled = tc._idx === tc._ordem.length-1;
+}
+// marca, sem redesenhar, qual tema está em uso
+function _tcMarca(tc){
+  const cur = currentTheme();
+  tc.querySelectorAll('.tc-slide').forEach(s=>{ const on = s.dataset.k === cur; s.classList.toggle('on', on); s.setAttribute('aria-selected', on); });
+}
+let _tcAplicando = false;
+function _tcAplica(tc){
+  const k = tc._ordem[tc._idx]; if(!k || k === currentTheme() || !_tcLivre(k)) return;
+  _tcAplicando = true;
+  try{ setTheme(k); }catch(e){ console.log('tema:', e); }
+  finally{ _tcAplicando = false; }
+  _tcMarca(tc);
+  try{ const rv = $('theme-row-val'); if(rv) rv.textContent = (temaClaro(k)?'Tema Claro':'Tema Noturno')+' · '+THEMES[k].nome+' ›'; }catch(e){}
 }
 function mtTcPasso(el, d){ const tc = _tcDe(el); _tcVai(tc, tc._idx + d); }
 function mtTcIr(el, i){ _tcVai(_tcDe(el), i); }
-function mtTcToque(slide){ const tc = _tcDe(slide); const i = +slide.dataset.i; if(i !== tc._idx) return _tcVai(tc, i); mtTcUsar(tc); }
-function mtTcUsar(el){
-  const tc = _tcDe(el); const k = tc._ordem[tc._idx]; if(!k || k === currentTheme()) return;
-  const ctx = tc.dataset.ctx; const host = tc.parentNode; const idx = tc._idx;
-  if(ctx === 'cadastro' && typeof wzEscolheTema === 'function') wzEscolheTema(k);   // setTheme + guarda na conta
-  else setTheme(k);                                                                   // aviso Premium se travado
-  if(currentTheme() !== k) return;                                                    // não aplicou (Premium)
-  mtTemaCarrossel(host, ctx);
-  const novo = host.querySelector('.tc'); if(novo){ novo._idx = idx; requestAnimationFrame(()=>_tcVai(novo, idx, true)); }
-  try{ const rv = $('theme-row-val'); if(rv) rv.textContent = (temaClaro(k)?'Tema Claro':'Tema Noturno')+' · '+THEMES[k].nome+' ›'; }catch(e){}
+function mtTcToque(slide){
+  const tc = _tcDe(slide); const i = +slide.dataset.i;
+  if(i !== tc._idx) return _tcVai(tc, i);
+  if(!_tcLivre(tc._ordem[i])) return mtPremiumAviso('temas');
+  _tcAplica(tc);
 }
+function mtTcUsar(el){ _tcAplica(_tcDe(el)); }   // compatibilidade (o botão saiu na Beta 44)
 // cadastro: o carrossel no lugar da grade de 10
-window.wzRenderTemas = function(){ const box = $('wz-temas'); if(box) mtTemaCarrossel(box, 'cadastro'); try{ if(typeof wzRenderIcones === 'function') wzRenderIcones(); }catch(e){} };   // o estilo dos ícones continua junto
+window.wzRenderTemas = function(){ const box = $('wz-temas'); if(_tcAplicando && box && box.querySelector('.tc')){ try{ wzRenderIcones(); }catch(e){} return; } if(box) mtTemaCarrossel(box, 'cadastro'); try{ if(typeof wzRenderIcones === 'function') wzRenderIcones(); }catch(e){} };   // o estilo dos ícones continua junto
 window.wzEscolheTema = function(k){ setTheme(k); };
 // Perfil › Aparência: o carrossel no lugar das duas grades (Noturno/Claro)
 const _openAparenciaB42 = window.openAparencia;
@@ -122,3 +132,28 @@ Object.assign(DECO2_SVG, {
 try{ const el = document.getElementById('app-deco'); if(el) delete el.dataset.k; }catch(e){}
 
 Object.assign(window, { mtTemaCarrossel, mtTcPasso, mtTcIr, mtTcToque, mtTcUsar });
+
+// Beta 43: selo "Sugerido" legível sobre qualquer prévia de tema (contraste ≥ 4,5:1)
+(function(){ if(document.getElementById('tc-sug-css')) return; const s = document.createElement('style'); s.id = 'tc-sug-css';
+  s.textContent = '.tc-sug{background:rgba(20,20,20,.82)!important;color:#fff!important}'; document.head.appendChild(s); })();
+
+// Beta 44: carrossel só de deslizar, cadastro mais compacto (o estilo dos ícones aparece sem rolar) e
+// "Continuar" centralizado na 1ª etapa.
+(function(){ if(document.getElementById('tc-b44-css')) return; const s = document.createElement('style'); s.id = 'tc-b44-css';
+  s.textContent = `
+.tc-slide .tc-sel{display:none}.tc-slide.on .tc-sel{display:flex}
+#wz-temas .tc{padding-bottom:0}
+.tc-trilho{touch-action:pan-x pan-y}
+.tc-nome{min-height:38px;margin-top:2px}
+.tc-premium{flex-basis:100%;background:none;border:0;color:var(--primary-2);font:inherit;font-size:12.5px;font-weight:700;padding:6px;cursor:pointer;text-decoration:underline}
+.tc-pontos{margin:6px 0 4px}
+.tc-ponto{position:relative}.tc-ponto::after{content:'';position:absolute;inset:-10px -4px}
+#scr-quiz .tc-prev{height:150px;gap:7px;padding:10px}
+#scr-quiz .tc-prev .tcp-tab{display:none}
+#scr-quiz .wz-passos-lista li{padding:8px 10px;gap:10px}
+#scr-quiz .wz-passos-lista li span:last-child{font-size:13px}
+#scr-quiz .wz-passos-lista li span:last-child b{margin:0}
+#scr-quiz .wz-boas .wz-passos-lista li span:last-child{display:flex;flex-direction:column}
+#scr-quiz .wz-passos-lista li span:last-child{font-size:0}#scr-quiz .wz-passos-lista li span:last-child b{font-size:13.5px}
+.wz-nav .wz-voltar.wz-sem{display:none}
+`; document.head.appendChild(s); })();

@@ -71,15 +71,24 @@ const MT_PADRAO_NOME = {
   'panturrilha-em-pe':'panturrilha em pé', 'panturrilha-sentada':'panturrilha sentado', 'encolhimento':'encolher os ombros',
   'core-estabilizacao':'estabilizar o tronco', 'core-flexao':'flexionar o tronco', 'carregamento':'carregar peso', 'core-dinamico':'core dinâmico'
 };
+// Beta 44: panturrilha no Leg Press é panturrilha (antes caía em "agachamento" por causa do "leg press")
 function mtPadrao(ex){
+  if(/panturrilha/.test(mtNorm(ex && ex.name)) && !/sentad/.test(mtNorm(ex && ex.name))) return { pad:'panturrilha-em-pe', tipo:'iso' };
   const n = mtNorm(ex && ex.name);
   for(const [re, p, t] of MT_PADROES) if(re.test(n)) return { pad:p, tipo:t };
   return { pad:'outro:' + n, tipo:'comp' };
 }
 // classe do equipamento (para o "aparelho ocupado" e para estimar a carga)
+// Beta 44: exercícios cujo nome não diz o equipamento (antes caíam em "peso do corpo" por engano)
+const MT_EQUIP_FIXO = [
+  [/^puxada com triangulo/, 'cabo'], [/^desenvolvimento arnold/, 'halter'], [/^elevacao posterior curvado/, 'halter'],
+  [/^rosca scott no banco/, 'barra'], [/^rosca spider/, 'halter'], [/^rosca concentrada/, 'halter'],
+  [/^cadeira contra parede/, 'corpo'], [/^elevacao pelvica/, 'barra'], [/^panturrilha sentada/, 'maquina'], [/^panturrilha donkey/, 'maquina']
+];
 function mtEquipClasse(ex){
   const n = mtNorm(ex && ex.name);
   if(ex && ex.improv) return 'improvisado';
+  for(const [re, eq] of MT_EQUIP_FIXO) if(re.test(n)) return eq;
   if(/smith/.test(n)) return 'smith';
   if(/cabo|polia|pulley|pulldown|crossover|corda|pallof|face pull/.test(n)) return 'cabo';
   if(/maquina|hammer|leg press|hack|cadeira|mesa flexora|voador|peck deck|articulada|kickback/.test(n)) return 'maquina';
@@ -138,7 +147,7 @@ function mtCandidatosTroca(w, cur, motivo, setup){
   const outrosStims = new Set((w.exercises||[]).filter(e=>e.id!==cur.id).map(e=>stim(e.sub)));
   const base = mtPadrao(cur), baseEq = mtEquipClasse(cur), baseEnf = mtEnfase(cur);
   const viz = MT_VIZINHOS[base.pad] || [];
-  const out = { mais:[], compat:[], secund:[], favs:[], cat:cat.name };
+  const out = { mais:[], compat:[], secund:[], favs:[], mesmoEq:[], cat:cat.name };
   cat.items.forEach(ex=>{
     const id = slug(ex.name);
     if(id === cur.id || usados.has(id)) return;
@@ -155,10 +164,32 @@ function mtCandidatosTroca(w, cur, motivo, setup){
     if(stim(ex.sub) === stim(cur.sub)){ score += 18; motivos.push('mesma ênfase'); }
     else if(inter){ score += 8 * Math.min(2, inter); motivos.push('mesmos músculos'); }
     if(id === origId){ score += 10; motivos.unshift('exercício original do plano'); }
-    // aparelho ocupado: o mesmo tipo de aparelho costuma estar no mesmo lugar (cabo/máquina/Smith) → cai na fila
-    if(motivo === 'ocupado' && eq === baseEq && ['cabo','maquina','smith'].includes(eq) && id !== origId){
-      score -= 22; aviso = 'usa o mesmo tipo de equipamento (' + MT_EQUIP_NOME[eq] + ') — pode estar ocupado também';
-    } else if(eq !== baseEq) motivos.push(MT_EQUIP_NOME[eq] || eq);
+    // Beta 44: os dois motivos dão listas diferentes de verdade.
+    //  • ocupado → o que interessa é OUTRO equipamento: ele sobe; o mesmo tipo de aparelho/estação
+    //    (cabo, máquina, Smith, barra) vai para uma faixa própria no fim ("pode estar ocupado também").
+    //  • preferência → o aparelho está livre, a pessoa só quer variar: opções no MESMO tipo de equipamento
+    //    sobem (mantém o ajuste e a carga parecidos) e variações de ênfase ganham espaço.
+    const mesmoEq = eq === baseEq;
+    if(motivo === 'ocupado'){
+      if(mesmoEq && ['cabo','maquina','smith','barra'].includes(eq) && id !== origId){
+        aviso = 'usa o mesmo tipo de equipamento (' + MT_EQUIP_NOME[eq] + ') — pode estar ocupado também';
+        motivos.push(MT_EQUIP_NOME[eq] || eq);
+        const it = { ex, id, score, motivos, aviso, pad:p.pad, fav:mtEhFav(id) };
+        if(mesmoPad || vizinho) out.mesmoEq.push(it); else out.secund.push(it);
+        return;
+      }
+      if(!mesmoEq){ score += 10; motivos.push(MT_EQUIP_NOME[eq] || eq); }
+    } else if(motivo === 'preferencia'){
+      if(mesmoEq && (mesmoPad || vizinho) && id !== origId && eq !== 'corpo'){
+        motivos.push('mesmo equipamento');
+        out.mesmoEq.push({ ex, id, score: score + 12, motivos, aviso, pad:p.pad, fav:mtEhFav(id) });
+        return;
+      }
+      if(mesmoEq){ score += 12; motivos.push('mesmo equipamento'); }
+      else motivos.push(MT_EQUIP_NOME[eq] || eq);
+      if(!mesmoPad && vizinho) score += 10;                     // variar a ênfase também é uma boa troca
+      if(id === origId) score -= 10;                            // aqui a ideia é variar
+    } else if(!mesmoEq) motivos.push(MT_EQUIP_NOME[eq] || eq);
     if(outrosStims.has(stim(ex.sub))){ score -= 14; aviso = aviso || 'repete o estímulo de outro exercício de hoje'; }
     if(objetivo === 'forca' && p.tipo === 'comp' && ['barra','halter','smith'].includes(eq)) score += 6;
     if((objetivo === 'emagrecimento' || objetivo === 'resistencia') && p.tipo === 'comp') score += 3;
@@ -178,13 +209,15 @@ function mtCandidatosTroca(w, cur, motivo, setup){
       if(iniciante && MT_AVANCADOS.test(mtNorm(ex.name))) return;
       if(mtPadrao(ex).pad !== base.pad) return;
       const eq = mtEquipClasse(ex);
-      out.compat.push({ ex, id, score: 40 - (eq==='corpo' && baseEq!=='corpo' ? 10 : 0), motivos:['mesmo movimento', 'catalogado em ' + c.name], aviso:'', pad:base.pad, fav:mtEhFav(id) });
+      const it = { ex, id, score: 40 - (eq==='corpo' && baseEq!=='corpo' ? 10 : 0), motivos:['mesmo movimento', 'catalogado em ' + c.name], aviso:'', pad:base.pad, fav:mtEhFav(id) };
+      if(motivo === 'ocupado' && eq === baseEq && ['cabo','maquina','smith','barra'].includes(eq)){ it.aviso = 'usa o mesmo tipo de equipamento (' + MT_EQUIP_NOME[eq] + ') — pode estar ocupado também'; out.mesmoEq.push(it); }
+      else out.compat.push(it);
     }); });
   }
   const ord = (a,b)=> (b.fav?1:0)-(a.fav?1:0) || b.score-a.score || a.ex.name.localeCompare(b.ex.name);
-  out.mais.sort(ord); out.compat.sort(ord); out.secund.sort((a,b)=>b.score-a.score);
+  out.mais.sort(ord); out.compat.sort(ord); out.mesmoEq.sort(ord); out.secund.sort((a,b)=>b.score-a.score);
   // favoritos compatíveis no topo; favoritos que só servem como "secundária" ficam fora deste destaque
-  out.favs = [...out.mais, ...out.compat].filter(x=>x.fav);
+  out.favs = [...(motivo === 'preferencia' ? out.mesmoEq : []), ...out.mais, ...out.compat].filter(x=>x.fav);
   out.secund = out.secund.slice(0, 6);
   return out;
 }
@@ -261,7 +294,7 @@ function mtTrocaAbrir(exId, motivo){
   };
   const sec = (titulo, desc, itens, faixa)=> itens.length ? `<div class="tx-sec tx-sec-${faixa}"><div class="tx-sec-t">${titulo}</div>${desc?`<div class="tx-sec-d">${desc}</div>`:''}${itens.map(it=>linha(it, faixa)).join('')}</div>` : '';
   const favIds = new Set(r.favs.map(x=>x.id));
-  const nada = !r.mais.length && !r.compat.length;
+  const nada = !r.mais.length && !r.compat.length && !r.mesmoEq.length;
   const p = mtPadrao(cur);
   $('modal-inner').innerHTML = `
     <h3>Trocar exercício</h3>
@@ -271,15 +304,17 @@ function mtTrocaAbrir(exId, motivo){
     </div><p class="tx-motivo-d">Outros exercícios que trabalham ${mtEsc(cur.part ? 'o mesmo grupo (' + cur.part + ')' : 'a mesma região')}, pelos mesmos critérios de compatibilidade.</p>` : `<div class="seg-mini" role="group" aria-label="Motivo da troca">
       <button type="button" class="${_mtTroca.motivo==='ocupado'?'on':''}" aria-pressed="${_mtTroca.motivo==='ocupado'}" onclick="mtTrocaAbrir('${mtJsStr(exId)}','ocupado')">Equipamento ocupado</button>
       <button type="button" class="${_mtTroca.motivo==='preferencia'?'on':''}" aria-pressed="${_mtTroca.motivo==='preferencia'}" onclick="mtTrocaAbrir('${mtJsStr(exId)}','preferencia')">Prefiro outro</button>
-    </div>`}
+    </div><p class="tx-motivo-d">${_mtTroca.motivo==='ocupado' ? 'Primeiro, opções em <b>outro equipamento</b>, para você não esperar. O mesmo tipo de aparelho fica no fim.' : 'O aparelho está livre e você quer variar: primeiro, opções no <b>mesmo tipo de equipamento</b> e variações de ênfase.'}</p>`}
     <div class="tx-lista">
       ${orig ? `<div class="tx-sec"><div class="tx-item tx-volta" role="button" tabindex="0" onclick="mtTrocaDesfazer('${mtJsStr(exId)}')"><div class="tx-info"><div class="tx-nome">Voltar ao original: ${mtEsc(orig.name)}</div><div class="tx-sub">Desfaz a troca deste treino</div></div><span class="tx-go">↩</span></div></div>` : ''}
       ${sec('Seus favoritos compatíveis', '', r.favs, 'fav')}
+      ${_mtTroca.motivo==='preferencia' ? sec('No mesmo tipo de equipamento', 'O aparelho está livre: ajuste e carga parecidos', r.mesmoEq.filter(x=>!favIds.has(x.id)), 'mais') : ''}
       ${sec('Mais compatíveis', 'Mesmo movimento e mesma função no treino', r.mais.filter(x=>!favIds.has(x.id)), 'mais')}
       ${sec('Compatíveis', 'Mesmo grupo, variação do movimento ou da ênfase', r.compat.filter(x=>!favIds.has(x.id)), 'compat')}
       ${nada ? (semEq
         ? `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} neste grupo muscular${(mod.setup.lim||[]).length?' com as limitações informadas':''}. Se usar uma das opções abaixo, saiba que <b>não equivalem</b> ao exercício original.</div>`
         : `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} com o seu equipamento${(mod.setup.lim||[]).length?' e as limitações informadas':''}. Se preferir, espere o equipamento liberar ou use uma das opções abaixo, sabendo que <b>não equivalem</b> ao exercício original.</div>`) : ''}
+      ${_mtTroca.motivo==='ocupado' ? sec('No mesmo tipo de equipamento', 'Também servem, mas podem estar ocupados', r.mesmoEq.filter(x=>!favIds.has(x.id)), 'compat') : ''}
       ${sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')}
     </div>
     <label class="tx-salvar"><input type="checkbox" id="tx-salvar" ${_mtTroca.salvar?'checked':''} onchange="_mtTroca.salvar=this.checked"> Manter esta troca nos próximos treinos (altera o plano)</label>

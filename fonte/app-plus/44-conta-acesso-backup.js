@@ -48,7 +48,8 @@ window.retryAccessCheck = async function(){
     window.__acessoErro = '';
     await window.afterGoogleSignIn(u);            // segue direto para o app, sem novo login
   }catch(e){
-    if(st) st.textContent = 'Não consegui confirmar agora (' + ((e && e.code) || 'erro') + '). Confira a internet e tente de novo.';
+    console.log('conferir acesso:', e); try{ if(window.mtLogAcesso) mtLogAcesso((e && (e.code||e.message)) || 'erro', 'tentar-novamente', u); }catch(x){}
+    if(st) st.textContent = 'Não conseguimos verificar seu acesso agora. Confira sua internet e tente novamente em alguns instantes.';
   }finally{
     _mtConferindo = false;
     if(b){ b.disabled = false; b.textContent = b.dataset.txt || 'Tentar de novo'; }
@@ -156,7 +157,7 @@ async function mtVincularGoogle(){
     if(e && (e.code === 'auth/credential-already-in-use' || e.code === 'auth/email-already-in-use'))
       _feFala('Esse Google já tem um login próprio no MetaTreino. Entre com ele uma vez: com o mesmo e-mail confirmado, o app usa os <b>mesmos dados</b> desta conta.');
     else if(e && e.code === 'auth/requires-recent-login') _feFala('Por segurança, saia e entre de novo e tente outra vez.');
-    else if(e && e.code !== 'auth/popup-closed-by-user') _feFala('Não foi possível vincular agora (' + mtEsc(e.code || 'erro') + ').');
+    else if(e && e.code !== 'auth/popup-closed-by-user') _feFala('Não foi possível vincular agora. Tente novamente em alguns instantes.');
   }
 }
 function mtCriarSenha(){
@@ -368,7 +369,7 @@ window.importMyData = function(ev){
       if(emArq && emArq === meu) return _mtRestaura(est, data, false);
       if(await mtBackupLiberado()) return _mtRestaura(est, data, true);
       return mtBackupRecusado(emArq ? 'Este backup antigo pertence a <b>outra conta</b> do MetaTreino.' : 'Não foi possível confirmar a conta dona deste backup antigo.');
-    }catch(e){ console.log('importar backup:', e); toast('⚠️ Não consegui conferir o backup agora (' + ((e && e.code) || 'erro') + '). Nada foi alterado.'); }
+    }catch(e){ console.log('importar backup:', e); toast('⚠️ Não consegui conferir o backup agora. Confira a internet e tente de novo — nada foi alterado.'); }
   };
   reader.readAsText(file);
   ev.target.value = '';
@@ -385,7 +386,6 @@ window.finishSetup = function(m){
     try{ const ov = $('building-ov'); if(ov){ ov.className = ''; ov.innerHTML = ''; ov.setAttribute('style','display:none'); } }catch(x){}
     $('modal-inner').innerHTML = `<h3>Não consegui montar seu plano</h3>
       <p class="mt-muted" style="font-size:13.5px;line-height:1.55">Algo deu errado ao preparar o planejamento. Suas respostas continuam aqui — nada foi perdido.</p>
-      <p class="mt-muted" style="font-size:11.5px">Detalhe técnico: ${mtEsc((e && e.message) || 'erro')}</p>
       <button class="btn btn-primary btn-block" onclick="closeModal();setTimeout(()=>finishSetup('${m==='run'?'run':'lift'}'),80)">Tentar de novo</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Voltar e revisar</button>`;
     $('modal-back').classList.add('on');

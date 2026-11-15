@@ -25,9 +25,23 @@ function cqEstado(){
   return state;
 }
 // leitura sem tocar no estado (criar campos vazios aqui faria o app regravar a conta na nuvem sem motivo)
+// Beta 44: as "novas" ficam destacadas até o aluno abrir cada uma (ou por 7 dias). Abrir a aba Conquistas
+// só marca como "apresentada" (a animação não se repete e os avisos somem), sem apagar o destaque.
+const CQ_NOVA_DIAS = 7;
 function cqPendentes(){ if(!state) return { itens:[], meses:[] };
-  return { itens: (state.conqPend||[]).slice(), meses: (state.desafiosEncerrados||[]).filter(d=>!d.visto) }; }
-function cqTemNovidade(){ const p = cqPendentes(); return p.itens.length + p.meses.length; }
+  const lim = Date.now() - CQ_NOVA_DIAS*864e5;
+  return { itens: (state.conqPend||[]).filter(p=>(p.at||0) >= lim), meses: (state.desafiosEncerrados||[]).filter(d=>!d.visto) }; }
+function cqTemNovidade(){ const p = cqPendentes(); return p.itens.filter(x=>!x.anim).length + p.meses.length; }
+// tira da lista de novas (abriu o detalhe, ou "marcar como vistas")
+function cqMarcaVista(pred){
+  const s = cqEstado(); if(!s) return false;
+  const sai = s.conqPend.filter(pred); if(!sai.length) return false;
+  s.conqVistas = s.conqVistas.concat(sai.map(p=>p.k)).slice(-CQ_MAX_VISTAS);
+  s.conqPend = s.conqPend.filter(p=>!sai.includes(p));
+  try{ saveData(); }catch(e){} cqIndicadores(); return true;
+}
+function cqVerTodasNovas(){ cqMarcaVista(()=>true); _cqRecentes = new Set(); window.__cqSemAnim = true; openTrophies(); }
+mtGancho('openTrophyDetail', { antes(id){ try{ cqMarcaVista(p=>p.tid===id); _cqRecentes.delete(id); }catch(e){} } });
 
 // ---------- a fila de celebrações vira a fila de "a apresentar" ----------
 window.showAwards = function(){
@@ -205,8 +219,8 @@ window.openTrophies = function(){
   const semAnim = !!window.__cqSemAnim; window.__cqSemAnim = false;
   const pend = cqPendentes();
   // o que vai ser apresentado agora: destacado nesta abertura, depois registrado como visto
-  if(pend.itens.length) _cqRecentes = new Set(pend.itens.map(p=>p.tid).filter(Boolean));
-  else if(!semAnim) _cqRecentes = new Set();
+  _cqRecentes = new Set(pend.itens.map(p=>p.tid).filter(Boolean));
+  const animar = !semAnim && (pend.itens.some(p=>!p.anim) || pend.meses.length > 0);
   const tot = TROPHIES.length, tenho = state.trophies.length;
   const porNv = { comum:[0,0], rara:[0,0], especial:[0,0] };
   TROPHIES.forEach(t=>{ const n = medalNivel(t); porNv[n][1]++; if(state.trophies.includes(t.id)) porNv[n][0]++; });
@@ -216,14 +230,14 @@ window.openTrophies = function(){
   const meses = pend.meses.slice().sort((a,b)=>b.key.localeCompare(a.key));
   const contagem = (n,l)=>`<div class="cq-cont nv-${n}"><b>${porNv[n][0]}<small>/${porNv[n][1]}</small></b><span>${l}</span></div>`;
   const filtros = [['todas','Todas'],['ok','Desbloqueadas'],['and','Em andamento'],['blq','Bloqueadas']];
-  $('modal-inner').innerHTML = `<div class="cq${semAnim?'':' cq-anim'}">
+  $('modal-inner').innerHTML = `<div class="cq${animar?' cq-anim':''}">
     <div class="cq-topo"><h3>Conquistas</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
     <div class="cq-resumo"><div class="cq-anel" style="--p:${pctAll}"><b>${tenho}</b><small>de ${tot}</small></div>
       <div class="cq-conts">${contagem('comum','Comuns')}${contagem('rara','Raras')}${contagem('especial','Especiais')}</div></div>
-    ${meses.map(d=>cqResumoMes(d, !semAnim)).join('')}
-    ${pend.itens.length?`<section class="cq-novos"><div class="cq-sec-t">${pend.itens.length===1?'Nova conquista':'Novas conquistas · '+pend.itens.length}</div>${pend.itens.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${pend.itens.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${pend.itens.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}</section>`:''}
+    ${meses.map(d=>cqResumoMes(d, animar)).join('')}
+    ${pend.itens.length?`<section class="cq-novos"><div class="cq-sec-t">${pend.itens.length===1?'Nova conquista':'Novas conquistas · '+pend.itens.length}</div>${pend.itens.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${pend.itens.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${pend.itens.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}<button type="button" class="cq-vistas" onclick="cqVerTodasNovas()">Marcar todas como vistas</button></section>`:''}
     <div class="cq-filtros" id="cq-filtros" role="group" aria-label="Filtrar conquistas">${filtros.map(([f,l])=>`<button type="button" data-f="${f}" class="filter-chip ${_cqFiltro===f?'on':''}" aria-pressed="${_cqFiltro===f}" onclick="cqFiltrar('${f}')">${l}</button>`).join('')}</div>
-    <div id="cq-grade-box" class="${semAnim?'':'cq-entra'}">${cqGrade()}</div>
+    <div id="cq-grade-box" class="${animar?'cq-entra':''}">${cqGrade()}</div>
     ${state.specialTrophy ? `<div class="sa-card cq-eterna" role="button" tabindex="0" onclick="openSpecialTrophy()" onkeydown="if(event.key==='Enter')openSpecialTrophy()">
       <div class="cq-eterna-emo">${mtEsc(state.specialTrophy.emo||'💍')}</div><small>Conquista eterna</small><b>${mtEsc(state.specialTrophy.titulo||'')}</b>
       <span>${mtEsc(state.specialTrophy.descricao||'')}</span><em>Toque para ver sua conquista · a história completa é opcional</em></div>` : ''}
@@ -233,11 +247,14 @@ window.openTrophies = function(){
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
   back.classList.add('on');
   // registra a apresentação (uma vez só, sincronizado com a conta)
-  if(pend.itens.length || meses.length){
+  const lim = Date.now() - CQ_NOVA_DIAS*864e5;
+  const vencidas = (state.conqPend||[]).some(p=>(p.at||0) < lim);
+  if(pend.itens.some(p=>!p.anim) || meses.length || vencidas){
     const s = cqEstado();
-    const ks = pend.itens.map(p=>p.k);
-    s.conqVistas = s.conqVistas.concat(ks).slice(-CQ_MAX_VISTAS);
-    s.conqPend = s.conqPend.filter(p=>!ks.includes(p.k));
+    // apresentadas: não animam de novo, mas continuam como "novas" até abrir cada uma (ou 7 dias)
+    s.conqPend.forEach(p=>{ if(!p.anim) p.anim = true; });
+    const velhas = s.conqPend.filter(p=>(p.at||0) < lim).map(p=>p.k);
+    if(velhas.length){ s.conqVistas = s.conqVistas.concat(velhas).slice(-CQ_MAX_VISTAS); s.conqPend = s.conqPend.filter(p=>!velhas.includes(p.k)); }
     const agora = Date.now();
     s.desafiosEncerrados.forEach(d=>{ if(!d.visto && meses.some(m=>m.key===d.key)){ d.visto = true; d.vistoEm = agora; } });
     saveData();
