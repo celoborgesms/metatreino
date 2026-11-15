@@ -94,7 +94,8 @@ function nrRegua(o){
   let kAtual = clampK(Math.round(((o.valor != null ? o.valor : o.min) - o.min)/o.step));
   let raf = 0, toque = false, mouse = false, fimT = 0, ultVib = 0, inercia = 0;
   // a folha pode ter fechado enquanto a régua ainda terminava o encaixe: aí não avisa mais ninguém
-  const muda = v=>{ if(NR && o.onChange) o.onChange(v); };
+  // Beta 40: régua que já saiu da folha (ex.: a do dia, refeita ao trocar o mês) não muda mais nada
+  const muda = v=>{ if(NR && o.onChange && el.isConnected) o.onChange(v); };
   const aria = ()=>{ el.setAttribute('aria-valuenow', valDe(kAtual)); el.setAttribute('aria-valuetext', o.fmt(valDe(kAtual)) + (o.un ? ' '+o.un : '')); };
   const vibra = ()=>{ const t = Date.now(); if(t - ultVib > 35 && navigator.vibrate && matchMedia('(pointer:coarse)').matches){ ultVib = t; try{ navigator.vibrate(3); }catch(e){} } };
   const ler = ()=>{
@@ -238,24 +239,30 @@ function nrAbrir(el){
     const [mnA] = c.min.split('-').map(Number), [mxA] = c.max.split('-').map(Number);
     let base = el.value || (c.nasc ? `${new Date().getFullYear()-30}-01-01` : (c.min > _nrIsoHoje() ? c.min : _nrIsoHoje()));
     if(base < c.min) base = c.min; if(base > c.max) base = c.max;
-    let [a, m, d] = base.split('-').map(Number);
+    let [a, m, dEsc] = base.split('-').map(Number);
+    // Beta 40: "dEsc" é o dia que a PESSOA escolheu; o dia mostrado é ele, limitado ao último dia do mês.
+    // Antes o dia era cortado de vez: rolando o mês por fevereiro, o dia 31 virava 28 e não voltava;
+    // trocando o ano (29/02 → ano comum) acontecia o mesmo. Agora só o dia mostrado se ajusta.
     let rDia, dmAtual = 0;
-    const iso =()=>`${a}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dEf = ()=>Math.min(dEsc, _nrDiasMes(a, m));
+    const iso = (d)=>`${a}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const up = ()=>{
-      const dm = _nrDiasMes(a, m); if(d > dm) d = dm;
-      let v = iso(); if(v < c.min){ [a,m,d] = c.min.split('-').map(Number); v = iso(); } if(v > c.max){ [a,m,d] = c.max.split('-').map(Number); v = iso(); }
-      NR.val = v; const t = _nrDataTxt(a, m, d); nrMostra(t.num, '', t.sub);
+      let d = dEf(), v = iso(d);
+      // fora da faixa permitida: mostra o limite, sem mexer no que a pessoa escolheu nas réguas
+      if(v < c.min) v = c.min; else if(v > c.max) v = c.max;
+      NR.val = v; const [aa, mm, dd] = v.split('-').map(Number); const t = _nrDataTxt(aa, mm, dd); nrMostra(t.num, '', t.sub);
     };
-    // o dia acompanha o mês: fevereiro tem 28/29, abril 30…
+    // o dia acompanha o mês: fevereiro tem 28/29, abril 30… (a régua do dia é refeita só quando o total muda)
     const novoDia = ()=>{
-      const dm = _nrDiasMes(a, m); if(d > dm) d = dm; dmAtual = dm;
-      const r = nrRegua({ min:1, max:dm, step:1, valor:d, fmt:v=>String(v), rotulo:'dia', nome:'Dia', compacta:true, maior:1, tk:40, onChange:v=>{ d = v; up(); } });
+      const dm = _nrDiasMes(a, m); if(rDia && dm === dmAtual) return; dmAtual = dm;
+      const r = nrRegua({ min:1, max:dm, step:1, valor:dEf(), fmt:v=>String(v), rotulo:'dia', nome:'Dia', compacta:true, maior:1, tk:40, onChange:v=>{ dEsc = v; up(); } });
       if(rDia){ box.replaceChild(r.el, rDia.el); NR.reguas[0] = r; requestAnimationFrame(()=>r.montar()); } else add(r);
       rDia = r;
     };
     novoDia();
-    add(nrRegua({ min:1, max:12, step:1, valor:m, fmt:v=>NR_MESES[v-1], rotulo:'mês', nome:'Mês', compacta:true, maior:1, tk:64, onChange:v=>{ m = v; if(_nrDiasMes(a, m) !== dmAtual) novoDia(); up(); } }));
-    add(nrRegua({ min:mnA, max:mxA, step:1, valor:a, fmt:v=>String(v), rotulo:'ano', nome:'Ano', compacta:true, maior:1, tk:64, onChange:v=>{ a = v; if(_nrDiasMes(a, m) !== dmAtual) novoDia(); up(); } }));
+    add(nrRegua({ min:1, max:12, step:1, valor:m, fmt:v=>NR_MESES[v-1], rotulo:'mês', nome:'Mês', compacta:true, maior:1, tk:64, onChange:v=>{ m = v; novoDia(); up(); } }));
+    add(nrRegua({ min:mnA, max:mxA, step:1, valor:a, fmt:v=>String(v), rotulo:'ano', nome:'Ano', compacta:true, maior:1, tk:64, onChange:v=>{ a = v; novoDia(); up(); } }));
+    NR.dataTeste = ()=>({ a, m, dEsc, d:dEf() });   // usado pelos testes automáticos
     up();
     lim.textContent = 'Sem data'; lim.hidden = !c.opcional;
   } else if(c.tipo === 'hora'){

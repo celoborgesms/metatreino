@@ -22,7 +22,7 @@ let _janFechandoPorVoltar = false;
   back.removeAttribute('onclick');
   back.addEventListener('click', e=>{
     if(e.target !== back) return;
-    if(_janSuja){ mi.classList.remove('jan-avisa'); void mi.offsetWidth; mi.classList.add('jan-avisa'); toast('Você digitou algo que ainda não foi salvo. Use Salvar ou Cancelar.'); return; }
+    if(_janSuja){ janPerguntaDescartar(); return; }
     closeModal();
   });
   // Voltar do Android: um registro no histórico enquanto a janela está aberta
@@ -33,7 +33,7 @@ let _janFechandoPorVoltar = false;
   }).observe(back, { attributes:true, attributeFilter:['class'] });
   window.addEventListener('popstate', ()=>{
     if(!back.classList.contains('on')) return;
-    if(_janSuja){ try{ history.pushState({ mtJanela:1 }, ''); }catch(err){} toast('Você digitou algo que ainda não foi salvo. Use Salvar ou Cancelar.'); return; }
+    if(_janSuja){ try{ history.pushState({ mtJanela:1 }, ''); }catch(err){} janPerguntaDescartar(); return; }
     _janHist = false; _janFechandoPorVoltar = true; closeModal();
   });
 })();
@@ -49,6 +49,23 @@ mtGancho('closeModal', { depois(){
   // fica curta por um instante e o navegador puxava a tela para cima)
   if(ao === 'perfil'){ const y = window.scrollY; try{ renderProfile(); }catch(e){} if(Math.abs(window.scrollY - y) > 1) window.scrollTo({ top:y, behavior:'instant' }); requestAnimationFrame(()=>{ if(Math.abs(window.scrollY - y) > 1) window.scrollTo({ top:y, behavior:'instant' }); }); }
 }});
+// Beta 40: sair com algo digitado e não salvo → pergunta, dentro da própria janela, se quer descartar
+// (antes só aparecia um aviso pedindo "Salvar ou Cancelar", e algumas janelas nem tinham Cancelar)
+function janPerguntaDescartar(){
+  const mi = document.getElementById('modal-inner'); if(!mi) return;
+  let bar = mi.querySelector('.jan-descarta');
+  if(!bar){
+    bar = document.createElement('div'); bar.className = 'jan-descarta'; bar.setAttribute('role','alertdialog'); bar.setAttribute('aria-label','Descartar alteração?');
+    bar.innerHTML = `<b>Descartar a alteração?</b><span>O que você mudou ainda não foi salvo.</span><div class="jan-descarta-a"><button type="button" class="btn btn-ghost" data-k="fica">Continuar editando</button><button type="button" class="btn btn-perigo" data-k="sai">Descartar</button></div>`;
+    bar.addEventListener('click', e=>{ const k = e.target.closest('button') && e.target.closest('button').dataset.k; if(!k) return;
+      if(k === 'sai'){ _janSuja = false; closeModal(); } else bar.remove(); });
+    mi.appendChild(bar);
+  }
+  mi.classList.remove('jan-avisa'); void mi.offsetWidth; mi.classList.add('jan-avisa');
+  try{ bar.scrollIntoView({ block:'nearest', behavior:'smooth' }); bar.querySelector('[data-k="fica"]').focus({ preventScroll:true }); }catch(e){}
+}
+// janela com "Cancelar": cancelar nunca dispara o aviso de alteração não salva
+function janCancelar(){ _janSuja = false; closeModal(); }
 // janelas que salvam na hora: troca o "Pronto" por um ✕ discreto
 function janelaInstantanea(aoFechar){
   const mi = document.getElementById('modal-inner'); if(!mi) return;

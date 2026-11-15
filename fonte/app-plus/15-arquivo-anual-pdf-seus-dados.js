@@ -476,7 +476,9 @@ async function arqGerarPDF(){
     }
     fala('Montando gráficos...');
     const jsPDF = await _carregaJsPDF();
-    const { doc, nome } = arqMontarPDF(jsPDF, _pdfOpt, aviso);
+    // Beta 40: a mesma identidade dos outros PDFs (desenhos vetoriais e cores do tema). Sem o desenho, sai como antes.
+    let arte = null; try{ if(typeof pdfPrepArte === 'function') arte = await pdfPrepArte('evolucao'); }catch(e){ console.log('arte do PDF:', e); }
+    const { doc, nome } = arqMontarPDF(jsPDF, _pdfOpt, aviso, arte);
     const blob = doc.output('blob');
     _pdfMostrar(blob, nome);
   }catch(e){
@@ -516,14 +518,17 @@ function _T(s){
 function _dataBR(t, ano){ return new Date(t).toLocaleDateString('pt-BR', ano ? {day:'2-digit', month:'2-digit', year:'2-digit'} : {day:'2-digit', month:'2-digit'}); }
 const _MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
-function arqMontarPDF(jsPDF, opt, aviso){
+function arqMontarPDF(jsPDF, opt, aviso, arte){
   const doc = new jsPDF({ unit:'mm', format:'a4', compress:true });
   const PW = 210, PH = 297, M = 14, W = PW - 2*M;
   const C = { ink:[22,27,34], dim:[96,106,118], linha:[222,226,232], fundo:[245,247,249], lift:[86,130,20], run:[14,116,144], acc:[217,95,24], band:[11,15,20], lime:[182,242,58], peso:[124,58,237] };
+  // Beta 40: cores do tema do aluno (já ajustadas para papel branco); os números e gráficos não mudam
+  if(arte && arte.C){ C.lift = arte.C.p; C.run = arte.C.a; C.acc = arte.C.p; C.fundo = arte.C.zebra; }
+  const marcaDagua = ()=>{ if(arte) try{ doc.addImage(arte.marca, 'PNG', PW - 92, PH - 112, 86, 90, 'mt-marca', 'FAST'); }catch(e){} };
   let y = 0;
   const cor = c=>doc.setTextColor(c[0], c[1], c[2]);
   const fonte = (tam, est)=>{ doc.setFont('helvetica', est||'normal'); doc.setFontSize(tam); };
-  const nova = ()=>{ doc.addPage(); y = M + 2; };
+  const nova = ()=>{ doc.addPage(); marcaDagua(); if(arte){ doc.setFillColor(...arte.C.p); doc.rect(0, 0, PW, 2.2, 'F'); } y = M + 2; };
   const precisa = h=>{ if(y + h > PH - 16) nova(); };
   const txt = (s, x, yy, o)=>doc.text(_T(s), x, yy, o);
 
@@ -631,13 +636,26 @@ function arqMontarPDF(jsPDF, opt, aviso){
   function nota(s){ precisa(8); fonte(7.5, 'italic'); cor(C.dim); const ls = doc.splitTextToSize(_T(s), W); doc.text(ls, M, y + 3); y += ls.length*3.6 + 3; }
 
   // ----- capa -----
-  doc.setFillColor(...C.band); doc.rect(0, 0, PW, 42, 'F');
-  fonte(9, 'bold'); doc.setTextColor(...C.lime); txt('METATREINO', M, 13);
-  fonte(21, 'bold'); doc.setTextColor(255, 255, 255); txt('Relatório de treinos', M, 25);
-  fonte(9.5); doc.setTextColor(200, 206, 214);
-  txt(`${nomeAluno} · ${perTxt} (${_dataBR(ini, true)} a ${_dataBR(agora, true)})`, M, 33);
-  txt(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, PW - M, 13, {align:'right'});
-  y = 50;
+  if(arte){
+    marcaDagua();
+    doc.setFillColor(...arte.C.pClaro); doc.rect(0, 0, PW, 46, 'F');
+    try{ doc.addImage(arte.cab, 'PNG', 0, 0, PW, 45.5, 'mt-cab', 'FAST'); }catch(e){}
+    doc.setFillColor(...arte.C.p); doc.rect(0, 46, PW, 1.2, 'F');
+    doc.setFillColor(...arte.C.p); doc.roundedRect(M, 9, 7.5, 7.5, 1.8, 1.8, 'F'); fonte(9, 'bold'); doc.setTextColor(255,255,255); txt('M', M + 3.75, 14.3, {align:'center'});
+    fonte(9, 'bold'); cor(arte.C.p); txt('METATREINO', M + 10, 14.4);
+    fonte(19, 'bold'); cor(C.ink); txt('Relatório de evolução', M, 27.5);
+    fonte(9.5); cor(C.dim); txt(`${nomeAluno} · ${perTxt} (${_dataBR(ini, true)} a ${_dataBR(agora, true)})`, M, 34.5);
+    fonte(8.5); txt(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, M, 40);
+    y = 55;
+  } else {
+    doc.setFillColor(...C.band); doc.rect(0, 0, PW, 42, 'F');
+    fonte(9, 'bold'); doc.setTextColor(...C.lime); txt('METATREINO', M, 13);
+    fonte(21, 'bold'); doc.setTextColor(255, 255, 255); txt('Relatório de treinos', M, 25);
+    fonte(9.5); doc.setTextColor(200, 206, 214);
+    txt(`${nomeAluno} · ${perTxt} (${_dataBR(ini, true)} a ${_dataBR(agora, true)})`, M, 33);
+    txt(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, PW - M, 13, {align:'right'});
+    y = 50;
+  }
   if(aviso) nota(aviso);
 
   const diasAtivos = new Set([...(opt.lift ? L : []), ...(opt.run ? R : [])].map(x=>mtDia0(x.at))).size;
@@ -757,7 +775,8 @@ function arqMontarPDF(jsPDF, opt, aviso){
   const n = doc.getNumberOfPages();
   for(let i = 1; i <= n; i++){
     doc.setPage(i); fonte(7); cor(C.dim);
-    doc.setDrawColor(...C.linha); doc.setLineWidth(0.2); doc.line(M, PH - 11, PW - M, PH - 11);
+    if(arte){ doc.setDrawColor(...arte.C.p); doc.setLineWidth(0.5); doc.line(M, PH - 11, M + 18, PH - 11); }
+    doc.setDrawColor(...C.linha); doc.setLineWidth(0.2); doc.line(arte ? M + 19 : M, PH - 11, PW - M, PH - 11);
     txt(`MetaTreino · ${nomeAluno}`, M, PH - 7); txt(`Página ${i} de ${n}`, PW - M, PH - 7, {align:'right'});
   }
   const nome = `metatreino-relatorio-${chaveDia(new Date())}.pdf`;
