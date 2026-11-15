@@ -1,7 +1,10 @@
 rules_version = '2';
 
 // =============================================================
-// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 40)
+// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 43)
+// Beta 43: coleção "diagnosticoAcesso" (falhas técnicas de acesso, sem
+// e-mail nem UID; só o principal lê). Nenhuma outra permissão mudou —
+// a leitura de usuariosAutorizados continua exigindo e-mail verificado.
 // Beta 40: planos Gratuito/Premium. Conta nova cria o próprio Teste Premium
 // (uma vez só, data do servidor); só administradores mudam plano ou suspendem.
 // Novo: adminLog (registro das ações do painel). Os administradores continuam
@@ -216,6 +219,25 @@ service cloud.firestore {
         && request.resource.data.em == request.time;
       allow read: if isOwner();
       allow update, delete: if false;
+    }
+
+    // Beta 43: diagnóstico de falhas ao verificar o acesso. Qualquer conta
+    // logada registra a PRÓPRIA falha, só com campos técnicos curtos (sem
+    // e-mail, sem UID, sem dados de treino). "conta" é um resumo (hash) do
+    // e-mail, que o principal compara com a lista de alunos no próprio
+    // aparelho. Só o principal lê e apaga; ninguém altera.
+    match /diagnosticoAcesso/{diagDoc} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['codigo','etapa','versao','em','plataforma','emailVerificado','tokenVerificado','provedor','conta','online'])
+        && request.resource.data.em == request.time
+        && request.resource.data.codigo is string && request.resource.data.codigo.size() <= 80
+        && request.resource.data.etapa is string && request.resource.data.etapa.size() <= 40
+        && (!('versao' in request.resource.data) || (request.resource.data.versao is string && request.resource.data.versao.size() <= 30))
+        && (!('plataforma' in request.resource.data) || (request.resource.data.plataforma is string && request.resource.data.plataforma.size() <= 40))
+        && (!('provedor' in request.resource.data) || (request.resource.data.provedor is string && request.resource.data.provedor.size() <= 30))
+        && (!('conta' in request.resource.data) || (request.resource.data.conta is string && request.resource.data.conta.size() <= 16));
+      allow read, delete: if isOwner();
+      allow update: if false;
     }
 
 

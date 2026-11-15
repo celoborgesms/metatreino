@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 42 =====
-const APP_VERSION = '2027.1-beta.42';
+// ===== MetaTreino 2027.1 Beta 44 =====
+const APP_VERSION = '2027.1-beta.44';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -675,7 +675,7 @@ function authMsgErro(code){
     'auth/weak-password':'A senha precisa ter pelo menos 6 caracteres.',
     'auth/too-many-requests':'Muitas tentativas. Aguarde alguns minutos e tente de novo.',
     'auth/network-request-failed':'Sem conexão. Confira sua internet.',
-    'auth/operation-not-allowed':'Login por e-mail não está habilitado no Firebase (Authentication › Sign-in method).'
+    'auth/operation-not-allowed':'Esta forma de entrar está indisponível no momento. Use outra opção ou fale com o suporte.'
   })[code] || 'Não foi possível continuar. Tente novamente.';
 }
 // Devolve a tela de entrada ao estado inicial. Sem isso, o botão ficava
@@ -1037,11 +1037,21 @@ async function afterGoogleSignIn(user){
   } else {
     try{
       try{ await tentar(); }
-      catch(e1){ console.log('1ª tentativa falhou, tentando de novo:', e1); await new Promise(r=>setTimeout(r,1200)); await tentar(); }
+      catch(e1){
+        console.log('1ª tentativa falhou, tentando de novo:', e1);
+        // Beta 43: leitura recusada quase sempre é credencial antiga (e-mail confirmado depois do login,
+        // ou token vencido em segundo plano). Renova a credencial antes de tentar de novo.
+        if(/permission|insufficient/i.test(String((e1 && (e1.code || e1.message)) || ''))){
+          try{ if(user.reload) await fbTimeout(user.reload(), 8000); }catch(x){}
+          try{ if(user.getIdToken) await fbTimeout(user.getIdToken(true), 8000); }catch(x){}
+        } else await new Promise(r=>setTimeout(r,1200));
+        await tentar();
+      }
       try{ localStorage.setItem(accessCacheKey, JSON.stringify({v:40, isAdmin, allowData, at:Date.now()})); }catch(e){}
     }catch(e){
       window.__acessoErro = (e && (e.code || e.message)) || 'erro desconhecido';
       console.log('Sem conexão/timeout para verificar acesso — usando cache offline:', e);
+      try{ if(!cacheValid && window.mtLogAcesso) mtLogAcesso(window.__acessoErro, 'verificar-acesso', user); }catch(x){}
       if(cacheValid){
         isAdmin = cached.isAdmin; allowData = cached.allowData;
         toast('📴 Modo offline — seus treinos funcionam normal e sincronizam depois. Só os vídeos precisam de internet.');
@@ -1074,16 +1084,14 @@ async function afterGoogleSignIn(user){
       showScreen('scr-noaccess');
       return;
     }
+    // Beta 43: o aluno vê só uma mensagem simples. O detalhe técnico vai para o console e para o
+    // diagnóstico do administrador (diagnosticoAcesso, sem e-mail nem UID).
+    { const tt = $('noaccess-tit'); if(tt) tt.textContent = 'Não foi possível acessar sua conta.'; }
     if(el){
-      el.innerHTML = checkedOnline
-        ? `Sua conta ainda não foi autorizada pelo treinador.<br><br><span style="font-size:12px;color:var(--text-mute)">Conta verificada: <b>${ehLoginInterno(email)?email.split('@')[0]:email}</b></span>`
-        : `⚠️ <b>Não consegui verificar seu acesso</b>.<br><br>${(function(){
-              const m = window.__acessoErro || '';
-              if(/permission|insufficient/i.test(m)) return 'O banco de dados <b>recusou a leitura</b>. As regras do Firestore precisam liberar a coleção <b>usuariosAutorizados</b> para usuários autenticados.';
-              if(/timeout/i.test(m)) return 'A resposta demorou demais. Pode ser conexão lenta — toque em <b>Tentar de novo</b>.';
-              if(/network|unavailable|offline/i.test(m)) return 'Sem conexão com o servidor. Confira sua internet e toque em <b>Tentar de novo</b>.';
-              return 'Falha ao consultar o servidor. Toque em <b>Tentar de novo</b>.';
-            })()}<br><br><span style="font-size:12px;color:var(--text-mute)">Conta: <b>${ehLoginInterno(email)?email.split('@')[0]:email}</b><br>Detalhe técnico: <b>${window.__acessoErro||'—'}</b></span>`;
+      const semRede = /network|unavailable|offline/i.test(window.__acessoErro || '') || navigator.onLine === false;
+      el.innerHTML = semRede
+        ? 'Parece que você está sem conexão com a internet. Confira sua conexão e toque em <b>Tentar novamente</b>.'
+        : 'Não conseguimos verificar seu acesso neste momento. Tente novamente em alguns instantes. Se o problema continuar, entre em contato com nosso suporte.';
     }
     const rt = $('noaccess-retry'); if(rt) rt.classList.remove('hidden');
     showScreen('scr-noaccess');
@@ -2580,7 +2588,7 @@ const EX_BANK = [
     {name:'Pullover na Polia',sub:'Dorsais (isolador)',equip:['academia']},
     {name:'Levantamento Terra',sub:'Cadeia posterior (força)',equip:['academia']},
     // HALTERES
-    {name:'Remada Curvada com Barra',sub:'Costas Média',equip:['academia','halteres']},
+    {name:'Remada Curvada com Barra',sub:'Costas Média',equip:['academia']},   // Beta 44: pede barra — não entra mais no plano de quem só tem halteres
     {name:'Remada Unilateral com Haltere',sub:'Dorsais (unilateral)',equip:['academia','halteres']},
     // CASA
     {name:'Barra Fixa',sub:'Dorsais / Bíceps',equip:['academia','casa']},

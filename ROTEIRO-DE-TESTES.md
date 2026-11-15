@@ -2,6 +2,26 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 0000. Beta 44 — uso do dia a dia
+- [ ] Cadastro: deslize os temas e solte — o visual muda sozinho; "Continuar" no centro; "Estilo dos ícones" visível sem rolar.
+- [ ] Perfil › Aparência: mesmo carrossel, sem setas, sem travar.
+- [ ] Registre uma corrida/treino que desbloqueie conquista: ao tocar em Continuar no resumo, aparece a janela das conquistas.
+- [ ] Ponto vermelho na aba Desafios até abrir a aba Conquistas.
+- [ ] Em Conquistas, abra uma nova e volte: as outras continuam como "novas".
+- [ ] Trocar exercício de máquina: "Equipamento ocupado" e "Prefiro outro" mostram ordens diferentes.
+- [ ] "Como executar" de Remada na Máquina, Tríceps Coice e Panturrilha no Leg Press.
+- [ ] Marque "Não vou treinar hoje" e toque em Registrar: aparece a pergunta para voltar a treinar.
+
+## 000. Beta 43 — acesso e receitas
+- [ ] Publique o `firestore.rules` da Beta 43.
+- [ ] Conta com e-mail recém-confirmado entra direto (sem "Não foi possível acessar sua conta").
+- [ ] Forçando falha (ex.: modo avião depois do login, cache limpo): a tela mostra só a mensagem amigável, "Tentar novamente" e o suporte — nenhum termo técnico nem e-mail.
+- [ ] Painel › Diagnóstico de acesso lista a falha (sem e-mail) e o principal consegue apagar.
+- [ ] Plano alimentar › "Lanches para sair da rotina": categorias, favoritas, abrir receita, trocar versão, trocar a refeição (Jantar/Almoço/Lanche), "Receita toda".
+- [ ] Ative "Sem glúten", "Sem lactose" e "Vegetariano": as receitas que não combinam vão para a lista à parte, com o motivo.
+- [ ] "Usar no lugar do jantar" registra; "Voltar ao recomendado" desfaz.
+- [ ] Celular pequeno (320–360 px): sem rolagem lateral.
+
 ## 00. Beta 42 (parte 2) — cadastro, entrada, exclusão, backup, temas
 - [ ] Criar conta com e-mail e senha → confirmar → "Já confirmei": entra sem novo login?
 - [ ] Cadastro mostra o aviso dos 30 dias e "Como funciona"? Ao concluir o perfil aparece a data de término?

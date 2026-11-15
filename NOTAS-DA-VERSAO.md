@@ -1,3 +1,25 @@
+# MetaTreino 2027.1 Beta 44 — Correções de uso (temas, conquistas, troca de exercício, descanso)
+
+Sem mudança nas regras do Firestore (use o `firestore.rules` da Beta 43).
+
+1. **Escolha do visual (cadastro e Perfil › Aparência):** só deslizar. O tema do centro é aplicado sozinho quando o carrossel para; tocar num tema ao lado também troca. Saíram as setas e o botão "Usar este tema" (eram eles que redesenhavam o carrossel e travavam). "Continuar" centralizado e o "Estilo dos ícones" aparece sem rolar.
+2. **Conquistas no fim do registro:** ao concluir treino, corrida ou atividade, aparece uma janela com o que foi desbloqueado (depois que a tela de resumo do registro fecha). Ponto vermelho na aba Desafios enquanto houver novidade não vista.
+3. **"Novas conquistas" não somem mais ao abrir uma:** cada uma fica destacada até você abrir o detalhe dela, tocar em "Marcar todas como vistas" ou passar 7 dias.
+4. **Trocar exercício:** "Equipamento ocupado" põe primeiro opções em OUTRO equipamento (o mesmo tipo de aparelho vai para o fim); "Prefiro outro" põe primeiro opções no MESMO tipo de equipamento. Corrigido o equipamento de 10 exercícios (ex.: Puxada com Triângulo é polia, Rosca Concentrada é halter).
+5. **Fichas "Como executar" corrigidas:** Remada na Máquina (mostrava a do supino), Tríceps Coice (mostrava glúteo), Panturrilha no Leg Press (mostrava agachamento), Farmer Walk, Pallof Press, Mountain Climber, Superman, Elevação Y, Elevação Posterior, Flexão Pike Elevada, Flexão Fechada e Cadeira contra a parede.
+6. **Remada Curvada com Barra** não entra mais no plano de quem treina só com halteres.
+7. **Primeiros passos (início):** sem os botões "Ver treino" e "Como executar".
+8. **"Não vou treinar hoje":** o aviso sobe para o topo da sessão e "Registrar" pergunta antes se você quer voltar a treinar.
+
+# MetaTreino 2027.1 Beta 43 — Mensagem de acesso amigável e "Lanches para sair da rotina"
+
+**Publique o `firestore.rules` desta versão** (só acrescenta a coleção `diagnosticoAcesso`; nenhuma outra permissão mudou).
+
+1. **Falha ao verificar o acesso:** o aluno vê apenas "Não foi possível acessar sua conta." + "Não conseguimos verificar seu acesso neste momento…", o botão **Tentar novamente** e o contato do suporte. Nada de Firestore, regras, coleções, permission-denied, UID ou e-mails. Sem internet, a mensagem pede para conferir a conexão.
+2. **Causa do permission-denied corrigida:** era a credencial de login desatualizada (o e-mail já confirmado, mas o token ainda "não verificado", ou token vencido). O app agora renova a credencial e tenta de novo sozinho antes de mostrar qualquer erro. As regras continuam exigindo e-mail verificado.
+3. **Diagnóstico de acesso** (Painel › só o administrador principal): código do erro, etapa, versão, aparelho e explicação da causa provável, sem e-mail nem UID. O aluno é identificado só no seu aparelho, comparando um resumo (hash) com a sua lista.
+4. **Lanches para sair da rotina** (Plano alimentar › depois das dicas): 16 receitas práticas e econômicas em 6 categorias, com favoritas, versões (patinho / coxão mole / coxão duro / econômica…), porção ajustada à refeição do seu plano, aviso quando a receita não cabe (com alternativas), restrições respeitadas, custo por porção calculado com o valor que você pagou e opção de registrar a receita no lugar de uma refeição (desfaz com "Voltar ao recomendado").
+
 # MetaTreino 2027.1 Beta 42 (parte 2) — Cadastro, entrada, exclusão de alunos, backup e temas
 
 **Publique o `firestore.rules` desta versão.**

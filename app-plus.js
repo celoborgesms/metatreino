@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 42 — app-plus.js
+// MetaTreino 2027.1 Beta 44 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.42' };
+const MTP = { versao: '2027.1-beta.44' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -949,7 +949,7 @@ function renderHomeSmart(){
   if(c.total === 0){
     k = 'Primeiros passos'; t = 'Seu primeiro treino é o mais importante';
     p = 'Comece com cargas leves e foque na técnica. Registre as séries: é com elas que o MetaTreino aprende o seu ritmo e ajusta as próximas sugestões.';
-    a = `<button class="btn btn-primary" onclick="goTab('sessions')">Ver treino</button><button class="btn btn-ghost" onclick="goTab('library')">Como executar</button>`;
+    a = '';   // Beta 44: sem "Ver treino"/"Como executar" — o treino de hoje e o "Ver como fazer" de cada exercício já estão logo abaixo
   } else if(c.hojeFeito){
     k = 'Treino concluído'; t = c.streak>=3 ? `Feito! São ${c.streak} dias seguidos.` : 'Feito por hoje. Agora é recuperação.';
     p = `Hidratação, uma refeição com proteína e uma boa noite de sono completam o treino.${prox?` Próxima sessão ${prox}.`:''}`;
@@ -983,7 +983,7 @@ function renderHomeSmart(){
     p = prox==='hoje' ? 'Seu treino de hoje ainda está em aberto. Mesmo uma sessão mais curta mantém o hábito.' : prox ? `Seu próximo treino é ${prox}. Se der para encaixar algo hoje, uma caminhada leve já ajuda na recuperação.` : 'Que tal começar hoje?';
     a = `<button class="btn btn-ghost" onclick="mtPergunta('analise_semana')">Análise da semana</button>`;
   }
-  el.innerHTML = `<div class="smart ${cls}"><div style="display:flex;align-items:flex-start;gap:8px"><div class="smart-k" style="flex:1">${k}</div><button onclick="mtLS('mt_smart_fechado', String(mtDia0()));renderHomeSmart()" aria-label="Ocultar hoje" style="background:none;border:0;color:var(--text-mute);font-size:15px;padding:0 2px;cursor:pointer">✕</button></div><div class="smart-t">${t}</div><div class="smart-p">${p}</div><div class="smart-a">${a}</div></div>`;
+  el.innerHTML = `<div class="smart ${cls}"><div style="display:flex;align-items:flex-start;gap:8px"><div class="smart-k" style="flex:1">${k}</div><button onclick="mtLS('mt_smart_fechado', String(mtDia0()));renderHomeSmart()" aria-label="Ocultar hoje" style="background:none;border:0;color:var(--text-mute);font-size:15px;padding:0 2px;cursor:pointer">✕</button></div><div class="smart-t">${t}</div><div class="smart-p">${p}</div>${a?`<div class="smart-a">${a}</div>`:''}</div>`;
 }
 function mtPergunta(key){
   try{ openAssistant(); }catch(e){}
@@ -9650,7 +9650,7 @@ function wzIr(id, i, op){
   const ult = i === W.passos.length-1;
   const bIr = tela.querySelector('.wz-ir'), bV = tela.querySelector('.wz-voltar');
   if(bIr) bIr.textContent = ult ? W.rotuloFim : 'Continuar';
-  if(bV) bV.style.visibility = (i === 0 && id === 'scr-quiz') ? 'hidden' : '';
+  if(bV){ bV.style.visibility = ''; bV.classList.toggle('wz-sem', i === 0 && id === 'scr-quiz'); }   // Beta 44: some de verdade → Continuar centralizado
   const err = tela.querySelector('.wz-err'); if(err) err.innerHTML = '';
   tela.querySelectorAll('.wz-invalido').forEach(f=>f.classList.remove('wz-invalido'));
   if(id === 'scr-quiz' && i === 0) wzRenderTemas();
@@ -12478,15 +12478,24 @@ const MT_PADRAO_NOME = {
   'panturrilha-em-pe':'panturrilha em pé', 'panturrilha-sentada':'panturrilha sentado', 'encolhimento':'encolher os ombros',
   'core-estabilizacao':'estabilizar o tronco', 'core-flexao':'flexionar o tronco', 'carregamento':'carregar peso', 'core-dinamico':'core dinâmico'
 };
+// Beta 44: panturrilha no Leg Press é panturrilha (antes caía em "agachamento" por causa do "leg press")
 function mtPadrao(ex){
+  if(/panturrilha/.test(mtNorm(ex && ex.name)) && !/sentad/.test(mtNorm(ex && ex.name))) return { pad:'panturrilha-em-pe', tipo:'iso' };
   const n = mtNorm(ex && ex.name);
   for(const [re, p, t] of MT_PADROES) if(re.test(n)) return { pad:p, tipo:t };
   return { pad:'outro:' + n, tipo:'comp' };
 }
 // classe do equipamento (para o "aparelho ocupado" e para estimar a carga)
+// Beta 44: exercícios cujo nome não diz o equipamento (antes caíam em "peso do corpo" por engano)
+const MT_EQUIP_FIXO = [
+  [/^puxada com triangulo/, 'cabo'], [/^desenvolvimento arnold/, 'halter'], [/^elevacao posterior curvado/, 'halter'],
+  [/^rosca scott no banco/, 'barra'], [/^rosca spider/, 'halter'], [/^rosca concentrada/, 'halter'],
+  [/^cadeira contra parede/, 'corpo'], [/^elevacao pelvica/, 'barra'], [/^panturrilha sentada/, 'maquina'], [/^panturrilha donkey/, 'maquina']
+];
 function mtEquipClasse(ex){
   const n = mtNorm(ex && ex.name);
   if(ex && ex.improv) return 'improvisado';
+  for(const [re, eq] of MT_EQUIP_FIXO) if(re.test(n)) return eq;
   if(/smith/.test(n)) return 'smith';
   if(/cabo|polia|pulley|pulldown|crossover|corda|pallof|face pull/.test(n)) return 'cabo';
   if(/maquina|hammer|leg press|hack|cadeira|mesa flexora|voador|peck deck|articulada|kickback/.test(n)) return 'maquina';
@@ -12545,7 +12554,7 @@ function mtCandidatosTroca(w, cur, motivo, setup){
   const outrosStims = new Set((w.exercises||[]).filter(e=>e.id!==cur.id).map(e=>stim(e.sub)));
   const base = mtPadrao(cur), baseEq = mtEquipClasse(cur), baseEnf = mtEnfase(cur);
   const viz = MT_VIZINHOS[base.pad] || [];
-  const out = { mais:[], compat:[], secund:[], favs:[], cat:cat.name };
+  const out = { mais:[], compat:[], secund:[], favs:[], mesmoEq:[], cat:cat.name };
   cat.items.forEach(ex=>{
     const id = slug(ex.name);
     if(id === cur.id || usados.has(id)) return;
@@ -12562,10 +12571,32 @@ function mtCandidatosTroca(w, cur, motivo, setup){
     if(stim(ex.sub) === stim(cur.sub)){ score += 18; motivos.push('mesma ênfase'); }
     else if(inter){ score += 8 * Math.min(2, inter); motivos.push('mesmos músculos'); }
     if(id === origId){ score += 10; motivos.unshift('exercício original do plano'); }
-    // aparelho ocupado: o mesmo tipo de aparelho costuma estar no mesmo lugar (cabo/máquina/Smith) → cai na fila
-    if(motivo === 'ocupado' && eq === baseEq && ['cabo','maquina','smith'].includes(eq) && id !== origId){
-      score -= 22; aviso = 'usa o mesmo tipo de equipamento (' + MT_EQUIP_NOME[eq] + ') — pode estar ocupado também';
-    } else if(eq !== baseEq) motivos.push(MT_EQUIP_NOME[eq] || eq);
+    // Beta 44: os dois motivos dão listas diferentes de verdade.
+    //  • ocupado → o que interessa é OUTRO equipamento: ele sobe; o mesmo tipo de aparelho/estação
+    //    (cabo, máquina, Smith, barra) vai para uma faixa própria no fim ("pode estar ocupado também").
+    //  • preferência → o aparelho está livre, a pessoa só quer variar: opções no MESMO tipo de equipamento
+    //    sobem (mantém o ajuste e a carga parecidos) e variações de ênfase ganham espaço.
+    const mesmoEq = eq === baseEq;
+    if(motivo === 'ocupado'){
+      if(mesmoEq && ['cabo','maquina','smith','barra'].includes(eq) && id !== origId){
+        aviso = 'usa o mesmo tipo de equipamento (' + MT_EQUIP_NOME[eq] + ') — pode estar ocupado também';
+        motivos.push(MT_EQUIP_NOME[eq] || eq);
+        const it = { ex, id, score, motivos, aviso, pad:p.pad, fav:mtEhFav(id) };
+        if(mesmoPad || vizinho) out.mesmoEq.push(it); else out.secund.push(it);
+        return;
+      }
+      if(!mesmoEq){ score += 10; motivos.push(MT_EQUIP_NOME[eq] || eq); }
+    } else if(motivo === 'preferencia'){
+      if(mesmoEq && (mesmoPad || vizinho) && id !== origId && eq !== 'corpo'){
+        motivos.push('mesmo equipamento');
+        out.mesmoEq.push({ ex, id, score: score + 12, motivos, aviso, pad:p.pad, fav:mtEhFav(id) });
+        return;
+      }
+      if(mesmoEq){ score += 12; motivos.push('mesmo equipamento'); }
+      else motivos.push(MT_EQUIP_NOME[eq] || eq);
+      if(!mesmoPad && vizinho) score += 10;                     // variar a ênfase também é uma boa troca
+      if(id === origId) score -= 10;                            // aqui a ideia é variar
+    } else if(!mesmoEq) motivos.push(MT_EQUIP_NOME[eq] || eq);
     if(outrosStims.has(stim(ex.sub))){ score -= 14; aviso = aviso || 'repete o estímulo de outro exercício de hoje'; }
     if(objetivo === 'forca' && p.tipo === 'comp' && ['barra','halter','smith'].includes(eq)) score += 6;
     if((objetivo === 'emagrecimento' || objetivo === 'resistencia') && p.tipo === 'comp') score += 3;
@@ -12585,13 +12616,15 @@ function mtCandidatosTroca(w, cur, motivo, setup){
       if(iniciante && MT_AVANCADOS.test(mtNorm(ex.name))) return;
       if(mtPadrao(ex).pad !== base.pad) return;
       const eq = mtEquipClasse(ex);
-      out.compat.push({ ex, id, score: 40 - (eq==='corpo' && baseEq!=='corpo' ? 10 : 0), motivos:['mesmo movimento', 'catalogado em ' + c.name], aviso:'', pad:base.pad, fav:mtEhFav(id) });
+      const it = { ex, id, score: 40 - (eq==='corpo' && baseEq!=='corpo' ? 10 : 0), motivos:['mesmo movimento', 'catalogado em ' + c.name], aviso:'', pad:base.pad, fav:mtEhFav(id) };
+      if(motivo === 'ocupado' && eq === baseEq && ['cabo','maquina','smith','barra'].includes(eq)){ it.aviso = 'usa o mesmo tipo de equipamento (' + MT_EQUIP_NOME[eq] + ') — pode estar ocupado também'; out.mesmoEq.push(it); }
+      else out.compat.push(it);
     }); });
   }
   const ord = (a,b)=> (b.fav?1:0)-(a.fav?1:0) || b.score-a.score || a.ex.name.localeCompare(b.ex.name);
-  out.mais.sort(ord); out.compat.sort(ord); out.secund.sort((a,b)=>b.score-a.score);
+  out.mais.sort(ord); out.compat.sort(ord); out.mesmoEq.sort(ord); out.secund.sort((a,b)=>b.score-a.score);
   // favoritos compatíveis no topo; favoritos que só servem como "secundária" ficam fora deste destaque
-  out.favs = [...out.mais, ...out.compat].filter(x=>x.fav);
+  out.favs = [...(motivo === 'preferencia' ? out.mesmoEq : []), ...out.mais, ...out.compat].filter(x=>x.fav);
   out.secund = out.secund.slice(0, 6);
   return out;
 }
@@ -12668,7 +12701,7 @@ function mtTrocaAbrir(exId, motivo){
   };
   const sec = (titulo, desc, itens, faixa)=> itens.length ? `<div class="tx-sec tx-sec-${faixa}"><div class="tx-sec-t">${titulo}</div>${desc?`<div class="tx-sec-d">${desc}</div>`:''}${itens.map(it=>linha(it, faixa)).join('')}</div>` : '';
   const favIds = new Set(r.favs.map(x=>x.id));
-  const nada = !r.mais.length && !r.compat.length;
+  const nada = !r.mais.length && !r.compat.length && !r.mesmoEq.length;
   const p = mtPadrao(cur);
   $('modal-inner').innerHTML = `
     <h3>Trocar exercício</h3>
@@ -12678,15 +12711,17 @@ function mtTrocaAbrir(exId, motivo){
     </div><p class="tx-motivo-d">Outros exercícios que trabalham ${mtEsc(cur.part ? 'o mesmo grupo (' + cur.part + ')' : 'a mesma região')}, pelos mesmos critérios de compatibilidade.</p>` : `<div class="seg-mini" role="group" aria-label="Motivo da troca">
       <button type="button" class="${_mtTroca.motivo==='ocupado'?'on':''}" aria-pressed="${_mtTroca.motivo==='ocupado'}" onclick="mtTrocaAbrir('${mtJsStr(exId)}','ocupado')">Equipamento ocupado</button>
       <button type="button" class="${_mtTroca.motivo==='preferencia'?'on':''}" aria-pressed="${_mtTroca.motivo==='preferencia'}" onclick="mtTrocaAbrir('${mtJsStr(exId)}','preferencia')">Prefiro outro</button>
-    </div>`}
+    </div><p class="tx-motivo-d">${_mtTroca.motivo==='ocupado' ? 'Primeiro, opções em <b>outro equipamento</b>, para você não esperar. O mesmo tipo de aparelho fica no fim.' : 'O aparelho está livre e você quer variar: primeiro, opções no <b>mesmo tipo de equipamento</b> e variações de ênfase.'}</p>`}
     <div class="tx-lista">
       ${orig ? `<div class="tx-sec"><div class="tx-item tx-volta" role="button" tabindex="0" onclick="mtTrocaDesfazer('${mtJsStr(exId)}')"><div class="tx-info"><div class="tx-nome">Voltar ao original: ${mtEsc(orig.name)}</div><div class="tx-sub">Desfaz a troca deste treino</div></div><span class="tx-go">↩</span></div></div>` : ''}
       ${sec('Seus favoritos compatíveis', '', r.favs, 'fav')}
+      ${_mtTroca.motivo==='preferencia' ? sec('No mesmo tipo de equipamento', 'O aparelho está livre: ajuste e carga parecidos', r.mesmoEq.filter(x=>!favIds.has(x.id)), 'mais') : ''}
       ${sec('Mais compatíveis', 'Mesmo movimento e mesma função no treino', r.mais.filter(x=>!favIds.has(x.id)), 'mais')}
       ${sec('Compatíveis', 'Mesmo grupo, variação do movimento ou da ênfase', r.compat.filter(x=>!favIds.has(x.id)), 'compat')}
       ${nada ? (semEq
         ? `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} neste grupo muscular${(mod.setup.lim||[]).length?' com as limitações informadas':''}. Se usar uma das opções abaixo, saiba que <b>não equivalem</b> ao exercício original.</div>`
         : `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} com o seu equipamento${(mod.setup.lim||[]).length?' e as limitações informadas':''}. Se preferir, espere o equipamento liberar ou use uma das opções abaixo, sabendo que <b>não equivalem</b> ao exercício original.</div>`) : ''}
+      ${_mtTroca.motivo==='ocupado' ? sec('No mesmo tipo de equipamento', 'Também servem, mas podem estar ocupados', r.mesmoEq.filter(x=>!favIds.has(x.id)), 'compat') : ''}
       ${sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')}
     </div>
     <label class="tx-salvar"><input type="checkbox" id="tx-salvar" ${_mtTroca.salvar?'checked':''} onchange="_mtTroca.salvar=this.checked"> Manter esta troca nos próximos treinos (altera o plano)</label>
@@ -12879,9 +12914,23 @@ function cqEstado(){
   return state;
 }
 // leitura sem tocar no estado (criar campos vazios aqui faria o app regravar a conta na nuvem sem motivo)
+// Beta 44: as "novas" ficam destacadas até o aluno abrir cada uma (ou por 7 dias). Abrir a aba Conquistas
+// só marca como "apresentada" (a animação não se repete e os avisos somem), sem apagar o destaque.
+const CQ_NOVA_DIAS = 7;
 function cqPendentes(){ if(!state) return { itens:[], meses:[] };
-  return { itens: (state.conqPend||[]).slice(), meses: (state.desafiosEncerrados||[]).filter(d=>!d.visto) }; }
-function cqTemNovidade(){ const p = cqPendentes(); return p.itens.length + p.meses.length; }
+  const lim = Date.now() - CQ_NOVA_DIAS*864e5;
+  return { itens: (state.conqPend||[]).filter(p=>(p.at||0) >= lim), meses: (state.desafiosEncerrados||[]).filter(d=>!d.visto) }; }
+function cqTemNovidade(){ const p = cqPendentes(); return p.itens.filter(x=>!x.anim).length + p.meses.length; }
+// tira da lista de novas (abriu o detalhe, ou "marcar como vistas")
+function cqMarcaVista(pred){
+  const s = cqEstado(); if(!s) return false;
+  const sai = s.conqPend.filter(pred); if(!sai.length) return false;
+  s.conqVistas = s.conqVistas.concat(sai.map(p=>p.k)).slice(-CQ_MAX_VISTAS);
+  s.conqPend = s.conqPend.filter(p=>!sai.includes(p));
+  try{ saveData(); }catch(e){} cqIndicadores(); return true;
+}
+function cqVerTodasNovas(){ cqMarcaVista(()=>true); _cqRecentes = new Set(); window.__cqSemAnim = true; openTrophies(); }
+mtGancho('openTrophyDetail', { antes(id){ try{ cqMarcaVista(p=>p.tid===id); _cqRecentes.delete(id); }catch(e){} } });
 
 // ---------- a fila de celebrações vira a fila de "a apresentar" ----------
 window.showAwards = function(){
@@ -13059,8 +13108,8 @@ window.openTrophies = function(){
   const semAnim = !!window.__cqSemAnim; window.__cqSemAnim = false;
   const pend = cqPendentes();
   // o que vai ser apresentado agora: destacado nesta abertura, depois registrado como visto
-  if(pend.itens.length) _cqRecentes = new Set(pend.itens.map(p=>p.tid).filter(Boolean));
-  else if(!semAnim) _cqRecentes = new Set();
+  _cqRecentes = new Set(pend.itens.map(p=>p.tid).filter(Boolean));
+  const animar = !semAnim && (pend.itens.some(p=>!p.anim) || pend.meses.length > 0);
   const tot = TROPHIES.length, tenho = state.trophies.length;
   const porNv = { comum:[0,0], rara:[0,0], especial:[0,0] };
   TROPHIES.forEach(t=>{ const n = medalNivel(t); porNv[n][1]++; if(state.trophies.includes(t.id)) porNv[n][0]++; });
@@ -13070,14 +13119,14 @@ window.openTrophies = function(){
   const meses = pend.meses.slice().sort((a,b)=>b.key.localeCompare(a.key));
   const contagem = (n,l)=>`<div class="cq-cont nv-${n}"><b>${porNv[n][0]}<small>/${porNv[n][1]}</small></b><span>${l}</span></div>`;
   const filtros = [['todas','Todas'],['ok','Desbloqueadas'],['and','Em andamento'],['blq','Bloqueadas']];
-  $('modal-inner').innerHTML = `<div class="cq${semAnim?'':' cq-anim'}">
+  $('modal-inner').innerHTML = `<div class="cq${animar?' cq-anim':''}">
     <div class="cq-topo"><h3>Conquistas</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
     <div class="cq-resumo"><div class="cq-anel" style="--p:${pctAll}"><b>${tenho}</b><small>de ${tot}</small></div>
       <div class="cq-conts">${contagem('comum','Comuns')}${contagem('rara','Raras')}${contagem('especial','Especiais')}</div></div>
-    ${meses.map(d=>cqResumoMes(d, !semAnim)).join('')}
-    ${pend.itens.length?`<section class="cq-novos"><div class="cq-sec-t">${pend.itens.length===1?'Nova conquista':'Novas conquistas · '+pend.itens.length}</div>${pend.itens.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${pend.itens.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${pend.itens.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}</section>`:''}
+    ${meses.map(d=>cqResumoMes(d, animar)).join('')}
+    ${pend.itens.length?`<section class="cq-novos"><div class="cq-sec-t">${pend.itens.length===1?'Nova conquista':'Novas conquistas · '+pend.itens.length}</div>${pend.itens.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${pend.itens.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${pend.itens.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}<button type="button" class="cq-vistas" onclick="cqVerTodasNovas()">Marcar todas como vistas</button></section>`:''}
     <div class="cq-filtros" id="cq-filtros" role="group" aria-label="Filtrar conquistas">${filtros.map(([f,l])=>`<button type="button" data-f="${f}" class="filter-chip ${_cqFiltro===f?'on':''}" aria-pressed="${_cqFiltro===f}" onclick="cqFiltrar('${f}')">${l}</button>`).join('')}</div>
-    <div id="cq-grade-box" class="${semAnim?'':'cq-entra'}">${cqGrade()}</div>
+    <div id="cq-grade-box" class="${animar?'cq-entra':''}">${cqGrade()}</div>
     ${state.specialTrophy ? `<div class="sa-card cq-eterna" role="button" tabindex="0" onclick="openSpecialTrophy()" onkeydown="if(event.key==='Enter')openSpecialTrophy()">
       <div class="cq-eterna-emo">${mtEsc(state.specialTrophy.emo||'💍')}</div><small>Conquista eterna</small><b>${mtEsc(state.specialTrophy.titulo||'')}</b>
       <span>${mtEsc(state.specialTrophy.descricao||'')}</span><em>Toque para ver sua conquista · a história completa é opcional</em></div>` : ''}
@@ -13087,11 +13136,14 @@ window.openTrophies = function(){
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
   back.classList.add('on');
   // registra a apresentação (uma vez só, sincronizado com a conta)
-  if(pend.itens.length || meses.length){
+  const lim = Date.now() - CQ_NOVA_DIAS*864e5;
+  const vencidas = (state.conqPend||[]).some(p=>(p.at||0) < lim);
+  if(pend.itens.some(p=>!p.anim) || meses.length || vencidas){
     const s = cqEstado();
-    const ks = pend.itens.map(p=>p.k);
-    s.conqVistas = s.conqVistas.concat(ks).slice(-CQ_MAX_VISTAS);
-    s.conqPend = s.conqPend.filter(p=>!ks.includes(p.k));
+    // apresentadas: não animam de novo, mas continuam como "novas" até abrir cada uma (ou 7 dias)
+    s.conqPend.forEach(p=>{ if(!p.anim) p.anim = true; });
+    const velhas = s.conqPend.filter(p=>(p.at||0) < lim).map(p=>p.k);
+    if(velhas.length){ s.conqVistas = s.conqVistas.concat(velhas).slice(-CQ_MAX_VISTAS); s.conqPend = s.conqPend.filter(p=>!velhas.includes(p.k)); }
     const agora = Date.now();
     s.desafiosEncerrados.forEach(d=>{ if(!d.visto && meses.some(m=>m.key===d.key)){ d.visto = true; d.vistoEm = agora; } });
     saveData();
@@ -13310,7 +13362,8 @@ window.retryAccessCheck = async function(){
     window.__acessoErro = '';
     await window.afterGoogleSignIn(u);            // segue direto para o app, sem novo login
   }catch(e){
-    if(st) st.textContent = 'Não consegui confirmar agora (' + ((e && e.code) || 'erro') + '). Confira a internet e tente de novo.';
+    console.log('conferir acesso:', e); try{ if(window.mtLogAcesso) mtLogAcesso((e && (e.code||e.message)) || 'erro', 'tentar-novamente', u); }catch(x){}
+    if(st) st.textContent = 'Não conseguimos verificar seu acesso agora. Confira sua internet e tente novamente em alguns instantes.';
   }finally{
     _mtConferindo = false;
     if(b){ b.disabled = false; b.textContent = b.dataset.txt || 'Tentar de novo'; }
@@ -13418,7 +13471,7 @@ async function mtVincularGoogle(){
     if(e && (e.code === 'auth/credential-already-in-use' || e.code === 'auth/email-already-in-use'))
       _feFala('Esse Google já tem um login próprio no MetaTreino. Entre com ele uma vez: com o mesmo e-mail confirmado, o app usa os <b>mesmos dados</b> desta conta.');
     else if(e && e.code === 'auth/requires-recent-login') _feFala('Por segurança, saia e entre de novo e tente outra vez.');
-    else if(e && e.code !== 'auth/popup-closed-by-user') _feFala('Não foi possível vincular agora (' + mtEsc(e.code || 'erro') + ').');
+    else if(e && e.code !== 'auth/popup-closed-by-user') _feFala('Não foi possível vincular agora. Tente novamente em alguns instantes.');
   }
 }
 function mtCriarSenha(){
@@ -13630,7 +13683,7 @@ window.importMyData = function(ev){
       if(emArq && emArq === meu) return _mtRestaura(est, data, false);
       if(await mtBackupLiberado()) return _mtRestaura(est, data, true);
       return mtBackupRecusado(emArq ? 'Este backup antigo pertence a <b>outra conta</b> do MetaTreino.' : 'Não foi possível confirmar a conta dona deste backup antigo.');
-    }catch(e){ console.log('importar backup:', e); toast('⚠️ Não consegui conferir o backup agora (' + ((e && e.code) || 'erro') + '). Nada foi alterado.'); }
+    }catch(e){ console.log('importar backup:', e); toast('⚠️ Não consegui conferir o backup agora. Confira a internet e tente de novo — nada foi alterado.'); }
   };
   reader.readAsText(file);
   ev.target.value = '';
@@ -13647,7 +13700,6 @@ window.finishSetup = function(m){
     try{ const ov = $('building-ov'); if(ov){ ov.className = ''; ov.innerHTML = ''; ov.setAttribute('style','display:none'); } }catch(x){}
     $('modal-inner').innerHTML = `<h3>Não consegui montar seu plano</h3>
       <p class="mt-muted" style="font-size:13.5px;line-height:1.55">Algo deu errado ao preparar o planejamento. Suas respostas continuam aqui — nada foi perdido.</p>
-      <p class="mt-muted" style="font-size:11.5px">Detalhe técnico: ${mtEsc((e && e.message) || 'erro')}</p>
       <button class="btn btn-primary btn-block" onclick="closeModal();setTimeout(()=>finishSetup('${m==='run'?'run':'lift'}'),80)">Tentar de novo</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Voltar e revisar</button>`;
     $('modal-back').classList.add('on');
@@ -13695,24 +13747,27 @@ function mtTemaCarrossel(host, ctx){
   const premiumOk = k=>(typeof temaLiberado === 'function') ? temaLiberado(k) : true;
   const ehPrem = k=>(typeof temaPremium === 'function') ? temaPremium(k) : !!THEMES[k].premium;
   host.classList.add('tc-host');
+  // Beta 44: só deslizar. O tema do centro é aplicado sozinho quando o carrossel para (sem setas, sem botão
+  // "Usar este tema" e sem redesenhar o carrossel a cada troca — era isso que travava).
   host.innerHTML = `<div class="tc" data-ctx="${ctx}">
     <div class="tc-trilho" role="listbox" aria-label="Temas do app — deslize para os lados" tabindex="0">
       ${ordem.map((k,i)=>`<div class="tc-slide${k===cur?' on':''}${premiumOk(k)?'':' trava'}" role="option" aria-selected="${k===cur}" aria-label="Tema ${mtEsc(THEMES[k].nome)}${ehPrem(k)?' (Premium)':''}" data-k="${k}" data-i="${i}" onclick="mtTcToque(this)">
-        ${_tcPrevia(k)}${k===cur?'<span class="tc-sel" aria-hidden="true">✓</span>':''}${ctx==='cadastro' && k==='areia'?'<span class="tc-sug">Sugerido</span>':''}</div>`).join('')}
+        ${_tcPrevia(k)}<span class="tc-sel" aria-hidden="true">✓</span>${ctx==='cadastro' && k==='areia'?'<span class="tc-sug">Sugerido</span>':''}</div>`).join('')}
     </div>
-    <div class="tc-info">
-      <button type="button" class="tc-seta" aria-label="Tema anterior" onclick="mtTcPasso(this,-1)">‹</button>
-      <div class="tc-nome" aria-live="polite"></div>
-      <button type="button" class="tc-seta" aria-label="Próximo tema" onclick="mtTcPasso(this,1)">›</button>
-    </div>
+    <div class="tc-nome" aria-live="polite"></div>
     <div class="tc-pontos">${ordem.map((k,i)=>`<button type="button" class="tc-ponto" aria-label="${mtEsc(THEMES[k].nome)}" onclick="mtTcIr(this,${i})"></button>`).join('')}</div>
-    <button type="button" class="btn btn-primary btn-block tc-usar" onclick="mtTcUsar(this)"></button>
   </div>`;
   const tc = host.querySelector('.tc'), tr = tc.querySelector('.tc-trilho');
   tc._ordem = ordem; tc._idx = Math.max(0, ordem.indexOf(cur));
-  let raf = 0;
-  tr.addEventListener('scroll', ()=>{ cancelAnimationFrame(raf); raf = requestAnimationFrame(()=>_tcAtualiza(tc)); }, { passive:true });
-  tr.addEventListener('keydown', e=>{ if(e.key === 'ArrowRight'){ e.preventDefault(); _tcVai(tc, tc._idx+1); } else if(e.key === 'ArrowLeft'){ e.preventDefault(); _tcVai(tc, tc._idx-1); } else if(e.key === 'Enter'){ e.preventDefault(); mtTcUsar(tc); } });
+  let raf = 0, parou = 0;
+  const fim = ()=>{ clearTimeout(parou); _tcAtualiza(tc); _tcAplica(tc); };
+  tr.addEventListener('scroll', ()=>{
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(()=>_tcAtualiza(tc));
+    clearTimeout(parou); parou = setTimeout(fim, 'onscrollend' in window ? 450 : 170);   // reserva p/ quem não tem scrollend
+  }, { passive:true });
+  tr.addEventListener('scrollend', fim, { passive:true });
+  tr.addEventListener('keydown', e=>{ if(e.key === 'ArrowRight'){ e.preventDefault(); _tcVai(tc, tc._idx+1); } else if(e.key === 'ArrowLeft'){ e.preventDefault(); _tcVai(tc, tc._idx-1); } });
+  _tcInfo(tc);
   requestAnimationFrame(()=>{ _tcVai(tc, tc._idx, true); _tcInfo(tc); });
 }
 function _tcDe(el){ return el && el.closest ? el.closest('.tc') : el; }
@@ -13721,7 +13776,7 @@ function _tcVai(tc, i, instant){
   const tr = tc.querySelector('.tc-trilho'), s = tr.children[i]; if(!s) return;
   const alvo = s.offsetLeft - (tr.clientWidth - s.clientWidth)/2;
   try{ tr.scrollTo({ left:alvo, behavior: instant || !(typeof mtMovimentoOk!=='function' || mtMovimentoOk()) ? 'auto' : 'smooth' }); }catch(e){ tr.scrollLeft = alvo; }
-  tc._idx = i; _tcInfo(tc);
+  if(tc._idx !== i){ tc._idx = i; _tcInfo(tc); }
 }
 function _tcAtualiza(tc){
   const tr = tc.querySelector('.tc-trilho'); const meio = tr.scrollLeft + tr.clientWidth/2;
@@ -13729,33 +13784,40 @@ function _tcAtualiza(tc){
   [...tr.children].forEach((s,i)=>{ const d = Math.abs(s.offsetLeft + s.clientWidth/2 - meio); if(d < dist){ dist = d; melhor = i; } });
   if(melhor !== tc._idx){ tc._idx = melhor; _tcInfo(tc); }
 }
+function _tcLivre(k){ return (typeof temaLiberado === 'function') ? temaLiberado(k) : true; }
 function _tcInfo(tc){
   const k = tc._ordem[tc._idx]; const t = THEMES[k]; if(!t) return;
-  const cur = currentTheme(); const livre = (typeof temaLiberado === 'function') ? temaLiberado(k) : true;
+  const livre = _tcLivre(k);
   const prem = (typeof temaPremium === 'function') ? temaPremium(k) : !!t.premium;
-  tc.querySelector('.tc-nome').innerHTML = `<b>${mtEsc(t.nome)}</b>${tc.dataset.ctx==='cadastro' && k==='areia'?'<span class="tc-atual">Sugerido</span>':''}${prem?`<span class="pl-mini tc-prem">${typeof PL_EST!=='undefined'?PL_EST:''}Premium</span>`:''}${k===cur?'<span class="tc-atual">Selecionado</span>':''}<small>${mtEsc(t.sub||'')}</small>`;
+  tc.querySelector('.tc-nome').innerHTML = `<b>${mtEsc(t.nome)}</b>${tc.dataset.ctx==='cadastro' && k==='areia'?'<span class="tc-atual">Sugerido</span>':''}${prem?`<span class="pl-mini tc-prem">${typeof PL_EST!=='undefined'?PL_EST:''}Premium</span>`:''}<small>${mtEsc(t.sub||'')}</small>${livre ? '' : `<button type="button" class="tc-premium" onclick="mtPremiumAviso('temas')">Disponível no Premium · conhecer</button>`}`;
   tc.querySelectorAll('.tc-ponto').forEach((p,i)=>{ p.classList.toggle('on', i===tc._idx); p.setAttribute('aria-current', i===tc._idx ? 'true' : 'false'); });
   [...tc.querySelectorAll('.tc-slide')].forEach((s,i)=>s.classList.toggle('foco', i===tc._idx));
-  const b = tc.querySelector('.tc-usar');
-  b.disabled = false; b.classList.toggle('btn-ghost', k===cur || !livre); b.classList.toggle('btn-primary', !(k===cur || !livre));
-  b.textContent = k===cur ? '✓ Tema em uso' : (!livre ? 'Disponível no Premium' : 'Usar este tema');
-  const setas = tc.querySelectorAll('.tc-seta'); setas[0].disabled = tc._idx === 0; setas[1].disabled = tc._idx === tc._ordem.length-1;
+}
+// marca, sem redesenhar, qual tema está em uso
+function _tcMarca(tc){
+  const cur = currentTheme();
+  tc.querySelectorAll('.tc-slide').forEach(s=>{ const on = s.dataset.k === cur; s.classList.toggle('on', on); s.setAttribute('aria-selected', on); });
+}
+let _tcAplicando = false;
+function _tcAplica(tc){
+  const k = tc._ordem[tc._idx]; if(!k || k === currentTheme() || !_tcLivre(k)) return;
+  _tcAplicando = true;
+  try{ setTheme(k); }catch(e){ console.log('tema:', e); }
+  finally{ _tcAplicando = false; }
+  _tcMarca(tc);
+  try{ const rv = $('theme-row-val'); if(rv) rv.textContent = (temaClaro(k)?'Tema Claro':'Tema Noturno')+' · '+THEMES[k].nome+' ›'; }catch(e){}
 }
 function mtTcPasso(el, d){ const tc = _tcDe(el); _tcVai(tc, tc._idx + d); }
 function mtTcIr(el, i){ _tcVai(_tcDe(el), i); }
-function mtTcToque(slide){ const tc = _tcDe(slide); const i = +slide.dataset.i; if(i !== tc._idx) return _tcVai(tc, i); mtTcUsar(tc); }
-function mtTcUsar(el){
-  const tc = _tcDe(el); const k = tc._ordem[tc._idx]; if(!k || k === currentTheme()) return;
-  const ctx = tc.dataset.ctx; const host = tc.parentNode; const idx = tc._idx;
-  if(ctx === 'cadastro' && typeof wzEscolheTema === 'function') wzEscolheTema(k);   // setTheme + guarda na conta
-  else setTheme(k);                                                                   // aviso Premium se travado
-  if(currentTheme() !== k) return;                                                    // não aplicou (Premium)
-  mtTemaCarrossel(host, ctx);
-  const novo = host.querySelector('.tc'); if(novo){ novo._idx = idx; requestAnimationFrame(()=>_tcVai(novo, idx, true)); }
-  try{ const rv = $('theme-row-val'); if(rv) rv.textContent = (temaClaro(k)?'Tema Claro':'Tema Noturno')+' · '+THEMES[k].nome+' ›'; }catch(e){}
+function mtTcToque(slide){
+  const tc = _tcDe(slide); const i = +slide.dataset.i;
+  if(i !== tc._idx) return _tcVai(tc, i);
+  if(!_tcLivre(tc._ordem[i])) return mtPremiumAviso('temas');
+  _tcAplica(tc);
 }
+function mtTcUsar(el){ _tcAplica(_tcDe(el)); }   // compatibilidade (o botão saiu na Beta 44)
 // cadastro: o carrossel no lugar da grade de 10
-window.wzRenderTemas = function(){ const box = $('wz-temas'); if(box) mtTemaCarrossel(box, 'cadastro'); try{ if(typeof wzRenderIcones === 'function') wzRenderIcones(); }catch(e){} };   // o estilo dos ícones continua junto
+window.wzRenderTemas = function(){ const box = $('wz-temas'); if(_tcAplicando && box && box.querySelector('.tc')){ try{ wzRenderIcones(); }catch(e){} return; } if(box) mtTemaCarrossel(box, 'cadastro'); try{ if(typeof wzRenderIcones === 'function') wzRenderIcones(); }catch(e){} };   // o estilo dos ícones continua junto
 window.wzEscolheTema = function(k){ setTheme(k); };
 // Perfil › Aparência: o carrossel no lugar das duas grades (Noturno/Claro)
 const _openAparenciaB42 = window.openAparencia;
@@ -13789,3 +13851,941 @@ Object.assign(DECO2_SVG, {
 try{ const el = document.getElementById('app-deco'); if(el) delete el.dataset.k; }catch(e){}
 
 Object.assign(window, { mtTemaCarrossel, mtTcPasso, mtTcIr, mtTcToque, mtTcUsar });
+
+// Beta 43: selo "Sugerido" legível sobre qualquer prévia de tema (contraste ≥ 4,5:1)
+(function(){ if(document.getElementById('tc-sug-css')) return; const s = document.createElement('style'); s.id = 'tc-sug-css';
+  s.textContent = '.tc-sug{background:rgba(20,20,20,.82)!important;color:#fff!important}'; document.head.appendChild(s); })();
+
+// Beta 44: carrossel só de deslizar, cadastro mais compacto (o estilo dos ícones aparece sem rolar) e
+// "Continuar" centralizado na 1ª etapa.
+(function(){ if(document.getElementById('tc-b44-css')) return; const s = document.createElement('style'); s.id = 'tc-b44-css';
+  s.textContent = `
+.tc-slide .tc-sel{display:none}.tc-slide.on .tc-sel{display:flex}
+#wz-temas .tc{padding-bottom:0}
+.tc-trilho{touch-action:pan-x pan-y}
+.tc-nome{min-height:38px;margin-top:2px}
+.tc-premium{flex-basis:100%;background:none;border:0;color:var(--primary-2);font:inherit;font-size:12.5px;font-weight:700;padding:6px;cursor:pointer;text-decoration:underline}
+.tc-pontos{margin:6px 0 4px}
+.tc-ponto{position:relative}.tc-ponto::after{content:'';position:absolute;inset:-10px -4px}
+#scr-quiz .tc-prev{height:150px;gap:7px;padding:10px}
+#scr-quiz .tc-prev .tcp-tab{display:none}
+#scr-quiz .wz-passos-lista li{padding:8px 10px;gap:10px}
+#scr-quiz .wz-passos-lista li span:last-child{font-size:13px}
+#scr-quiz .wz-passos-lista li span:last-child b{margin:0}
+#scr-quiz .wz-boas .wz-passos-lista li span:last-child{display:flex;flex-direction:column}
+#scr-quiz .wz-passos-lista li span:last-child{font-size:0}#scr-quiz .wz-passos-lista li span:last-child b{font-size:13.5px}
+.wz-nav .wz-voltar.wz-sem{display:none}
+`; document.head.appendChild(s); })();
+
+// =====================================================================
+// Beta 43 — Diagnóstico seguro das falhas de acesso
+// =====================================================================
+// O aluno vê só uma mensagem simples ("Não foi possível acessar sua conta").
+// O detalhe técnico vai para a coleção diagnosticoAcesso, que só o
+// administrador principal lê. Nada de e-mail, UID, nome ou dados de treino:
+//   codigo   → código do erro (ex.: permission-denied), cortado em 80 letras
+//   etapa    → em que momento falhou (verificar-acesso, tentar-novamente…)
+//   versao, plataforma, provedor (google.com / password), online
+//   emailVerificado / tokenVerificado → as duas visões do "e-mail confirmado"
+//     (quando divergem, a credencial estava desatualizada: causa do permission-denied)
+//   conta    → 12 primeiros caracteres do SHA-256 do e-mail em minúsculas.
+//              O principal compara esse resumo com a lista de alunos no próprio
+//              aparelho; o e-mail em si nunca sai do celular do aluno.
+// A mesma falha (código + etapa) é registrada no máximo uma vez a cada 10 min.
+
+async function _diagHash(txt){
+  try{
+    if(!(window.crypto && crypto.subtle && window.TextEncoder)) return null;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(txt||'').trim().toLowerCase()));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,12);
+  }catch(e){ return null; }
+}
+function _diagPlataforma(){
+  const ua = navigator.userAgent || '';
+  const so = /android/i.test(ua) ? 'android' : /iphone|ipad|ipod/i.test(ua) ? 'ios' : /windows/i.test(ua) ? 'windows' : /mac os/i.test(ua) ? 'mac' : /linux/i.test(ua) ? 'linux' : 'outro';
+  let pwa = false; try{ pwa = !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }catch(e){}
+  return so + (pwa ? '-app' : '-navegador');
+}
+function _diagCodigo(c){
+  // tira qualquer coisa que pareça e-mail ou identificador longo, por garantia
+  return String(c||'erro').replace(/[^\s@]+@[^\s@]+/g,'[email]').replace(/[A-Za-z0-9_-]{24,}/g,'[id]').slice(0,80);
+}
+async function mtLogAcesso(codigo, etapa, user){
+  try{
+    if(typeof db === 'undefined' || !db || !db.collection) return false;
+    const u = user || (typeof fbUser !== 'undefined' ? fbUser : null);
+    if(!u) return false;                      // sem login as regras recusam; não insiste
+    const cod = _diagCodigo(codigo), et = String(etapa||'acesso').slice(0,40);
+    const chave = 'mtDiag:' + cod + ':' + et;
+    try{ const ult = +localStorage.getItem(chave) || 0; if(Date.now() - ult < 10*60*1000) return false; localStorage.setItem(chave, String(Date.now())); }catch(e){}
+    let tokenVerificado = null;
+    try{ if(u.getIdTokenResult){ const t = await u.getIdTokenResult(); tokenVerificado = !!(t && t.claims && t.claims.email_verified); } }catch(e){}
+    const doc = {
+      codigo: cod, etapa: et,
+      versao: String((typeof APP_VERSION !== 'undefined' && APP_VERSION) || (window.MTP && MTP.versao) || '').slice(0,30),
+      plataforma: _diagPlataforma().slice(0,40),
+      provedor: String((u.providerData && u.providerData[0] && u.providerData[0].providerId) || (u.isAnonymous ? 'anonimo' : 'desconhecido')).slice(0,30),
+      emailVerificado: !!u.emailVerified,
+      tokenVerificado,
+      online: navigator.onLine !== false,
+      em: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    const h = u.email ? await _diagHash(u.email) : null; if(h) doc.conta = h;
+    if(tokenVerificado === null) delete doc.tokenVerificado;
+    await db.collection('diagnosticoAcesso').add(doc);
+    return true;
+  }catch(e){ console.log('diagnóstico de acesso não registrado:', e && (e.code || e.message)); return false; }
+}
+
+// o botão da tela de acesso usa o mesmo texto da mensagem ("Tentar novamente")
+function _diagRotuloRetry(){
+  try{ const b = $('noaccess-retry'); if(b && /^\s*(🔄\s*)?Tentar de novo\s*$/.test(b.textContent)){ b.textContent = '🔄 Tentar novamente'; if(b.dataset.txt) b.dataset.txt = b.textContent; } }catch(e){}
+}
+const _afterSignInB43 = window.afterGoogleSignIn;
+if(typeof _afterSignInB43 === 'function'){
+  window.afterGoogleSignIn = async function(){
+    try{ return await _afterSignInB43.apply(this, arguments); }
+    finally{ _diagRotuloRetry(); }
+  };
+}
+
+// ---------- painel do administrador principal ----------
+const DIAG_ETAPA = { 'verificar-acesso':'Ao entrar no app', 'tentar-novamente':'Ao tocar em Tentar novamente' };
+function _diagExplica(x){
+  const c = String(x.codigo||'');
+  if(/permission|insufficient/i.test(c)){
+    if(x.emailVerificado && x.tokenVerificado === false) return 'Credencial desatualizada: o e-mail já foi confirmado, mas o login ainda carregava o estado antigo. A Beta 43 renova a credencial e tenta de novo sozinha.';
+    if(!x.emailVerificado) return 'E-mail ainda não confirmado: as regras só liberam a leitura da autorização para e-mail verificado (correto).';
+    return 'O Firestore recusou a leitura. Confira se as regras publicadas são as da Beta 43 e se a conta não está excluída.';
+  }
+  if(/unavailable|network|offline|timeout|deadline/i.test(c) || x.online === false) return 'Falha de conexão no aparelho do aluno (internet fraca ou sem sinal).';
+  return 'Erro não classificado: anote o código e a versão.';
+}
+async function openDiagnosticoAcesso(){
+  if(!mtPrincipal()) return;
+  $('modal-inner').innerHTML = `<h3>🩺 Diagnóstico de acesso</h3><div class="mt-muted">Carregando…</div>`; $('modal-back').classList.add('on');
+  try{
+    const s = await db.collection('diagnosticoAcesso').orderBy('em','desc').limit(60).get();
+    const L = []; s.forEach(d=>L.push({ id:d.id, ...d.data() }));
+    L.sort((a,b)=>msDe(b.em)-msDe(a.em));
+    // liga o resumo ao aluno, só neste aparelho (o resumo é calculado aqui a partir da lista que o admin já vê)
+    const mapa = {};
+    try{ const emails = Object.keys((typeof allowCache !== 'undefined' && allowCache) || {}); for(const em of emails){ const h = await _diagHash(em); if(h) mapa[h] = em; } }catch(e){}
+    window.__diagIds = L.map(x=>x.id);
+    $('modal-inner').innerHTML = `<h3>🩺 Diagnóstico de acesso</h3>
+      <p class="mt-muted" style="font-size:12px;line-height:1.5">Falhas técnicas que o aluno não vê na tela. Não guardam e-mail nem UID; o nome do aluno aparece só quando o resumo da conta bate com alguém da sua lista.</p>
+      <div style="max-height:55vh;overflow:auto">${L.map(x=>`<div class="adm-log"><b>${mtEsc(x.codigo||'erro')}</b> · ${mtEsc(DIAG_ETAPA[x.etapa]||x.etapa||'')}<br>
+        <small>${mtEsc(msDe(x.em)?new Date(msDe(x.em)).toLocaleString('pt-BR'):'')} · ${mtEsc(x.versao||'')} · ${mtEsc(x.plataforma||'')} · ${mtEsc(x.provedor||'')}</small><br>
+        <small>Conta: ${x.conta ? (mapa[x.conta] ? mtEsc(mapa[x.conta]) : 'não está na sua lista (' + mtEsc(x.conta) + ')') : '—'} · e-mail confirmado: ${x.emailVerificado?'sim':'não'}${x.tokenVerificado===undefined?'':' (credencial: '+(x.tokenVerificado?'sim':'não')+')'}</small>
+        <div style="font-size:12px;margin-top:4px;line-height:1.45">${mtEsc(_diagExplica(x))}</div></div>`).join('') || '<div class="mt-muted">Nenhuma falha registrada.</div>'}</div>
+      ${L.length?`<button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="diagLimpar()">🧹 Apagar estes registros</button>`:''}
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
+  }catch(e){
+    $('modal-inner').innerHTML = `<h3>🩺 Diagnóstico de acesso</h3><p class="mt-muted">Não consegui ler os registros (${mtEsc((e&&e.code)||'erro')}). Publique as regras da Beta 43 (coleção diagnosticoAcesso).</p><button class="btn btn-ghost btn-block" onclick="closeModal()">Fechar</button>`;
+  }
+}
+function diagLimpar(){
+  const ids = (window.__diagIds||[]).slice(); if(!ids.length) return;
+  appConfirm(`Apagar ${ids.length} registro(s) de diagnóstico?`, async ()=>{
+    let ok = 0; for(const id of ids){ try{ await db.collection('diagnosticoAcesso').doc(id).delete(); ok++; }catch(e){} }
+    toast(ok === ids.length ? 'Registros apagados' : `Apaguei ${ok} de ${ids.length}`); openDiagnosticoAcesso();
+  }, { title:'Apagar diagnóstico?', okLabel:'Apagar' });
+}
+mtGancho('goAdmin', { depois(){
+  try{
+    if(!mtPrincipal() || $('adm-diag-row')) return;
+    const ref = $('adm-excl-row') || $('adm-tam-row') || $('adm-log-row'); if(!ref) return;
+    const d = document.createElement('div'); d.className = 'list-row'; d.id = 'adm-diag-row'; d.onclick = openDiagnosticoAcesso;
+    d.innerHTML = '🩺 <span>Diagnóstico de acesso</span><span style="margin-left:auto;font-size:11px;color:var(--text-dim)">falhas técnicas</span>'; ref.after(d);
+  }catch(e){}
+}});
+Object.assign(window, { mtLogAcesso, openDiagnosticoAcesso, diagLimpar });
+
+// =====================================================================
+// Beta 43 — "Lanches para sair da rotina" (dentro do plano alimentar)
+// =====================================================================
+// Seção complementar do plano alimentar, não um catálogo: poucas receitas
+// práticas e baratas, cada uma com a porção AJUSTADA à refeição do plano
+// do aluno (objetivo, calorias do dia, nº de refeições, restrições).
+//
+// Regras desta seção:
+//  • valores nutricionais calculados a partir dos ingredientes, com a Tabela
+//    Brasileira de Composição de Alimentos (TACO/UNICAMP) e, para produtos
+//    industrializados (pão de hambúrguer, massa de pastel, pão sírio, tortilha,
+//    molho pronto), a média de rótulos de marcas comuns. São ESTIMATIVAS e a
+//    tela diz isso;
+//  • nenhum preço em reais é inventado: não há tabela de preços confiável
+//    por cidade. O app mostra o que deixa a receita barata e oferece uma
+//    conta simples com o valor que o próprio aluno pagou;
+//  • a porção não é encolhida até virar "nada": se a receita não cabe na
+//    refeição sem ficar pequena demais, a tela explica e sugere outra opção;
+//  • nada de "saudável", "fit" ou "zero culpa" como promessa; não substitui
+//    nutricionista; restrições (lactose, glúten, vegetariano) são respeitadas.
+
+// [nome, kcal/100 g, proteína, carboidrato, gordura, peso da unidade (g) | null, fonte, livre]
+// fonte: 'T' = TACO/UNICAMP · 'R' = média de rótulos · 'A' = tabela do plano do app
+const RC_ING = {
+  mucarela:      ['Queijo muçarela', 330, 22.6, 3, 25.2, null, 'T'],   // aqui em gramas (no plano é por fatia)
+  patinho_cru:   ['Patinho moído sem gordura (cru)', 133, 21.7, 0, 4.5, null, 'T'],
+  coxaomole_cru: ['Coxão mole moído sem gordura (cru)', 169, 21.2, 0, 8.7, null, 'T'],
+  coxaoduro_cru: ['Coxão duro moído sem gordura (cru)', 148, 21.5, 0, 6.2, null, 'T'],
+  acem_cru:      ['Acém moído (cru)', 137, 19.4, 0, 5.9, null, 'T'],
+  frango_cru:    ['Peito de frango moído, sem pele (cru)', 119, 21.5, 0, 3.0, null, 'T'],
+  paohb:         ['Pão de hambúrguer', 272, 7.6, 54, 3.0, 50, 'R'],
+  massapastel:   ['Massa de pastel', 290, 8, 52.5, 5, null, 'R'],
+  paosirio:      ['Pão sírio pequeno', 262, 8.2, 54, 1.2, 50, 'R'],
+  rap10:         ['Tortilha de trigo (tipo Rap10)', 300, 8, 50, 7.5, 40, 'R'],
+  molho:         ['Molho de tomate pronto', 38, 1.4, 7.7, 0.2, null, 'R'],
+  cebola:        ['Cebola', 39, 1.7, 8.9, 0.1, null, 'T'],
+  alface:        ['Alface', 11, 1.3, 1.7, 0.2, null, 'T', true],
+  cenoura:       ['Cenoura ralada', 34, 1.3, 7.7, 0.2, null, 'T'],
+  mostarda:      ['Mostarda', 80, 4, 6, 4, null, 'R'],
+  farinha:       ['Farinha de trigo', 360, 9.8, 75.1, 1.4, null, 'T'],
+  choc_leite:    ['Chocolate ao leite', 540, 7.2, 59.6, 30.3, null, 'T'],
+  choc_meio:     ['Chocolate meio amargo', 475, 4.9, 62.4, 29.9, null, 'T'],
+  leitecond:     ['Leite condensado', 313, 7.7, 57, 6.7, null, 'T'],
+  achocolatado:  ['Achocolatado em pó', 401, 4.2, 91.2, 2.2, null, 'T'],
+  fermento:      ['Fermento', 0, 0, 0, 0, null, '-', true],
+  temperos:      ['Sal, pimenta e orégano a gosto', 0, 0, 0, 0, null, '-', true],
+  canela:        ['Canela em pó a gosto', 0, 0, 0, 0, null, '-', true]
+};
+function rcAli(id){
+  const r = RC_ING[id]; if(r) return r;
+  const a = (typeof NUTRI_ALIMENTOS !== 'undefined') && NUTRI_ALIMENTOS[id]; if(!a) return null;
+  return [a[0], a[1], a[2], a[3], a[4], a[5], 'A', a[7]];
+}
+const RC_CARNE   = ['patinho_cru','coxaomole_cru','coxaoduro_cru','acem_cru','frango_cru','frango','acem','patinho','sobrecoxa','presunto','peru','atum','sardinha','peixe','figado'];
+const RC_LACTOSE = [...(typeof NUTRI_LACTOSE!=='undefined'?NUTRI_LACTOSE:[]), 'leitecond','choc_leite','choc_meio'];
+const RC_GLUTEN  = [...(typeof NUTRI_GLUTEN!=='undefined'?NUTRI_GLUTEN:[]), 'paohb','massapastel','paosirio','rap10','farinha'];
+
+const RC_CATS = [
+  ['hamb',     '🍔', 'Hambúrgueres e sanduíches'],
+  ['pizza',    '🍕', 'Pizzas e massas'],
+  ['airfryer', '🥟', 'Salgados e AirFryer'],
+  ['rapidas',  '⏱️', 'Refeições rápidas'],
+  ['doces',    '🍫', 'Doces e sobremesas'],
+  ['econ',     '💰', 'Opções econômicas']
+];
+
+// Receita:
+//  modo 'montado' → i = ingredientes de UMA porção; rende = quantas porções a compra típica faz
+//  modo 'pecas'   → i = ingredientes da RECEITA INTEIRA; pecas = quantas unidades rende; porcao = unidades sugeridas
+//  marcas do ingrediente: 'f' = ajusta com a porção (recheio, carne, queijo) · 'o' = opcional (sai na versão sem lactose)
+//                         'g' = opcional (sai na versão sem glúten) · variação: t = troca, q = quantidade, x = tira
+//  tipo: 'refeicao' (no lugar do almoço/jantar) · 'lanche' (no lugar de um lanche) · 'doce'
+const RC_RECEITAS = [
+  { id:'hamb_caseiro', nome:'Hambúrguer caseiro', cat:'hamb', tipo:'refeicao', modo:'montado', emoji:'🍔', tempo:'25 min', dif:'Fácil', rende:4, econ:false,
+    i:[['paohb',1],['patinho_cru',120,'f'],['mucarela',20,'fo'],['alface',15],['tomate',40],['cebola',15],['iogurte',20,'fo'],['mostarda',5],['temperos',0]],
+    vars:[ {n:'Patinho'}, {n:'Coxão mole', t:{patinho_cru:'coxaomole_cru'}}, {n:'Coxão duro', t:{patinho_cru:'coxaoduro_cru'}}, {n:'Econômica (acém)', t:{patinho_cru:'acem_cru'}, econ:true} ],
+    passos:[
+      'Tempere a carne só com sal e pimenta (e cebola bem picada, se quiser). Não precisa de ovo nem farinha.',
+      'Divida em bolas e achate em discos de cerca de 1 cm, um pouco maiores que o pão: eles encolhem na chapa.',
+      'Frigideira antiaderente bem quente, sem óleo: 3 a 4 minutos de cada lado. Carne moída deve ficar bem passada por dentro, sem parte rosada.',
+      'No último minuto, coloque o queijo por cima e tampe a frigideira para derreter.',
+      'Molho: misture o iogurte natural com a mostarda e uma pitada de sal.',
+      'Aqueça o pão na própria frigideira e monte com alface, tomate e cebola.'
+    ],
+    nota:'Corte magro não é automático: peça ao açougue para moer o patinho, o coxão mole ou o coxão duro na hora, depois de tirar a capa de gordura. Carne moída pronta de bandeja costuma ter mais gordura que a do rótulo do corte.',
+    subs:['Pão integral no lugar do tradicional (calorias parecidas, mais fibra).','Peito de frango moído no lugar da carne (fica um pouco mais leve).','Molho de tomate ou só mostarda no lugar do molho de iogurte.','Sem o queijo, ou queijo sem lactose.'],
+    congela:'Os discos crus, separados por papel-manteiga, ficam bons no congelador por até 3 meses. Descongele na geladeira antes de grelhar.' },
+
+  { id:'hamb_pastel', nome:'Hambúrguer na massa de pastel (AirFryer)', cat:'airfryer', tipo:'refeicao', modo:'montado', emoji:'🥟', tempo:'30 min', dif:'Média', rende:4, econ:true, af:true,
+    i:[['massapastel',50],['acem_cru',90,'f'],['mucarela',15,'fo'],['cebola',10],['oleo',2],['temperos',0]],
+    vars:[ {n:'Econômica', econ:true}, {n:'Mais completa', t:{acem_cru:'patinho_cru'}, q:{massapastel:60, patinho_cru:120, mucarela:30}} ],
+    passos:[
+      'Modele o hambúrguer fino e grelhe ANTES de embrulhar, até ficar bem passado por dentro: a massa doura em poucos minutos e não dá tempo de cozinhar a carne crua com segurança.',
+      'Espere amornar uns 5 minutos (carne quente rasga a massa).',
+      'Coloque o hambúrguer e o queijo no centro da massa, feche e aperte as bordas com um garfo.',
+      'Pincele bem pouco óleo (ou só água) por fora.',
+      'AirFryer preaquecida a 200 °C por 8 a 12 minutos, virando na metade, até dourar.'
+    ],
+    nota:'A AirFryer tira o óleo da fritura, mas a massa de pastel continua sendo massa de trigo com gordura. A receita não vira "baixa caloria" por ser feita na AirFryer: a porção abaixo já considera a massa.',
+    subs:['Peito de frango moído no lugar do acém.','Massa de pastel integral, se encontrar (confira o rótulo: as calorias costumam ser parecidas).','Sem queijo, ou com queijo sem lactose.'],
+    congela:'Monte com o hambúrguer já grelhado e frio e congele cru, sem pincelar. Vai direto do congelador para a AirFryer (uns 3 a 5 minutos a mais). Até 2 meses.' },
+
+  { id:'mini_pizza', nome:'Mini pizza de pão sírio', cat:'pizza', tipo:'refeicao', modo:'montado', emoji:'🍕', tempo:'15 min', dif:'Fácil', rende:4, econ:true,
+    i:[['paosirio',2],['molho',40],['frango',60,'f'],['mucarela',25,'fo'],['tomate',40],['temperos',0]],
+    vars:[ {n:'Econômica', econ:true}, {n:'Mais proteína', q:{frango:100}}, {n:'Na tortilha', t:{paosirio:'rap10'}} ],
+    passos:[
+      'Use frango já cozido e desfiado (dá para cozinhar mais de uma vez e guardar para a semana).',
+      'Espalhe o molho no pão sírio deixando 1 cm de borda.',
+      'Distribua o frango, o queijo e o tomate em rodelas; finalize com orégano.',
+      'Forno a 200 °C por 8 a 10 minutos ou AirFryer a 180 °C por 5 a 7 minutos, até o queijo derreter.'
+    ],
+    subs:['Pão sírio integral ou tortilha integral.','Atum ou ovo cozido no lugar do frango.','Menos queijo e mais tomate, se a porção ficar acima do seu plano.'],
+    congela:'Frango cozido e desfiado: até 3 meses no congelador, em porções. A pizza é melhor montar na hora.' },
+
+  { id:'batata_rech', nome:'Batata recheada', cat:'rapidas', tipo:'refeicao', modo:'montado', emoji:'🥔', tempo:'40 min (forno) · 25 min (AirFryer)', dif:'Fácil', rende:2, econ:true, af:true,
+    i:[['batataing',250,'f'],['frango',80,'f'],['requeijao',20,'fo'],['mucarela',20,'fo'],['milho',20],['cenoura',20],['cebola',10],['temperos',0]],
+    vars:[ {n:'Frango', econ:true}, {n:'Carne moída', t:{frango:'acem'}} ],
+    passos:[
+      'Cozinhe a batata com casca até ficar quase macia (15 a 20 minutos na panela ou 6 a 8 no micro-ondas, furada com garfo).',
+      'Corte ao meio e tire parte do miolo com uma colher, deixando uma "casquinha".',
+      'Misture o miolo com o frango desfiado (ou a carne), o requeijão, o milho, a cenoura e a cebola refogada.',
+      'Recheie, cubra com o queijo.',
+      'Forno a 200 °C por 15 minutos ou AirFryer a 180 °C por 8 a 10 minutos, até gratinar.'
+    ],
+    subs:['Batata-doce no lugar da inglesa.','Ricota amassada no lugar do requeijão.','Sem lactose: tire o requeijão e o queijo e use um fio de azeite com ervas.'],
+    congela:'O recheio pronto congela bem (até 3 meses). A batata cozida fica melhor feita na hora.' },
+
+  { id:'sand_natural', nome:'Sanduíche natural de frango', cat:'hamb', tipo:'lanche', modo:'montado', emoji:'🥪', tempo:'10 min', dif:'Fácil', rende:4, econ:true,
+    i:[['paoforma',2],['frango',60,'f'],['requeijao',15,'fo'],['cenoura',20],['milho',15],['alface',10],['tomate',30]],
+    passos:['Misture o frango desfiado com o requeijão, a cenoura ralada e o milho.','Monte no pão com alface e tomate.','Para levar, embrulhe em papel-filme e mantenha na geladeira até a hora de comer.'],
+    subs:['Pão integral.','Iogurte natural no lugar do requeijão.','Atum no lugar do frango.'],
+    congela:'Não congele montado (o pão e a salada ficam moles). O recheio dura até 3 dias na geladeira.' },
+
+  { id:'hamb_frango', nome:'Hambúrguer de frango', cat:'hamb', tipo:'refeicao', modo:'montado', emoji:'🍔', tempo:'25 min', dif:'Fácil', rende:4, econ:true,
+    i:[['paohb',1],['frango_cru',120,'f'],['cebola',10],['mucarela',20,'fo'],['alface',15],['tomate',40],['iogurte',20,'fo'],['mostarda',5],['temperos',0]],
+    passos:['Tempere o frango moído com sal, alho, cebola picada e páprica.','Modele discos de cerca de 1 cm (mãos molhadas ajudam).','Frigideira antiaderente com um fio de óleo: 4 a 5 minutos de cada lado, até ficar branco por dentro.','Derreta o queijo por cima no final e monte com salada e o molho de iogurte com mostarda.'],
+    subs:['Pão integral.','Sem queijo ou com queijo sem lactose.','Sobrecoxa sem pele moída (mais suculenta, um pouco mais calórica).'],
+    congela:'Discos crus: até 3 meses no congelador, separados por papel-manteiga.' },
+
+  { id:'wrap_frango', nome:'Wrap de frango', cat:'hamb', tipo:'refeicao', modo:'montado', emoji:'🌯', tempo:'10 min', dif:'Fácil', rende:4, econ:true,
+    i:[['rap10',1],['frango',80,'f'],['requeijao',15,'fo'],['alface',15],['tomate',30],['cenoura',20],['milho',15]],
+    passos:['Aqueça a tortilha por alguns segundos na frigideira (fica mais fácil de enrolar).','Espalhe o requeijão, coloque o frango e a salada no centro.','Dobre as laterais para dentro e enrole bem apertado.','Se quiser, doure 1 minuto de cada lado na frigideira.'],
+    subs:['Tortilha integral.','Ovo mexido ou atum no lugar do frango.','Iogurte com mostarda no lugar do requeijão.'],
+    congela:'O frango desfiado congela (até 3 meses). Monte o wrap na hora.' },
+
+  { id:'pastel_af', nome:'Pastel de AirFryer', cat:'airfryer', tipo:'lanche', modo:'pecas', emoji:'🥟', tempo:'25 min', dif:'Fácil', pecas:6, peca:['pastel','pastéis'], porcao:2, econ:true, af:true,
+    i:[['massapastel',180],['frango',150,'f'],['requeijao',45,'fo'],['cebola',20],['oleo',6],['temperos',0]],
+    vars:[ {n:'Frango', econ:true}, {n:'Carne moída', t:{frango:'acem'}}, {n:'Queijo e tomate', t:{frango:'mucarela'}, q:{mucarela:90, requeijao:0, tomate:90}, veg:true} ],
+    passos:['Misture o recheio frio (frango desfiado, requeijão e cebola refogada).','Coloque uma colher de recheio em cada massa, sem exagerar, feche e aperte as bordas com garfo.','Pincele bem pouco óleo por fora.','AirFryer preaquecida a 200 °C por 8 a 10 minutos, virando na metade.'],
+    nota:'Na AirFryer o pastel absorve bem menos óleo que frito, mas a massa continua contando: as calorias abaixo já incluem a massa.',
+    subs:['Massa de pastel integral.','Ricota temperada no lugar do requeijão.','Palmito ou legumes refogados no recheio (versão vegetariana).'],
+    congela:'Monte e congele crus, sem pincelar, em camadas separadas. Vão direto à AirFryer (alguns minutos a mais). Até 2 meses.' },
+
+  { id:'esfiha', nome:'Esfiha caseira de carne', cat:'airfryer', tipo:'lanche', modo:'pecas', emoji:'🫓', tempo:'1h30 (com a massa descansando)', dif:'Média', pecas:12, peca:['esfiha','esfihas'], porcao:2, econ:true, af:true,
+    i:[['farinha',300],['leite',150],['oleo',30],['fermento',10],['acem_cru',240,'f'],['tomate',120],['cebola',60],['temperos',0]],
+    vars:[ {n:'Carne', econ:true}, {n:'Frango', t:{acem_cru:'frango'}, q:{frango:200}} ],
+    passos:['Massa: dissolva o fermento no leite morno com uma pitada de açúcar; junte o óleo, o sal e a farinha aos poucos até soltar das mãos.','Cubra e deixe crescer por 40 minutos a 1 hora, até dobrar.','Recheio: misture a carne crua com tomate e cebola bem picados, sal, pimenta e limão. Escorra o líquido.','Divida a massa em 12 bolinhas, abra cada uma, coloque o recheio e feche em triângulo (ou deixe aberta).','Forno a 200 °C por 15 a 20 minutos ou AirFryer a 180 °C por 10 a 12 minutos, até a carne cozinhar e a massa dourar.'],
+    subs:['Metade da farinha integral.','Frango desfiado no lugar da carne.','Recheio de ricota com espinafre (vegetariano).'],
+    congela:'Depois de assadas e frias, congelam por até 3 meses. Esquente na AirFryer ou no forno.' },
+
+  { id:'bolinho', nome:'Bolinho assado de frango', cat:'airfryer', tipo:'lanche', modo:'pecas', emoji:'🧆', tempo:'40 min', dif:'Média', pecas:12, peca:['bolinho','bolinhos'], porcao:4, econ:true, af:true,
+    i:[['batataing',400,'f'],['frango',240,'f'],['ovo',1],['tapioca',30],['cebola',40],['temperos',0]],
+    vars:[ {n:'Frango', econ:true}, {n:'Carne', t:{frango:'acem'}} ],
+    passos:['Cozinhe a batata e amasse ainda quente.','Misture com o frango desfiado, o ovo, a goma de tapioca, a cebola e os temperos até dar liga.','Modele 12 bolinhos.','AirFryer a 200 °C por 15 a 18 minutos (ou forno a 200 °C por 25 minutos), virando na metade.'],
+    subs:['Batata-doce ou mandioca no lugar da batata.','Farinha de rosca na casquinha, se quiser crocância (tem glúten).'],
+    congela:'Crus ou assados, até 3 meses. Asse direto do congelador, com alguns minutos a mais.' },
+
+  { id:'crepioca', nome:'Crepioca recheada', cat:'rapidas', tipo:'lanche', modo:'montado', emoji:'🥞', tempo:'10 min', dif:'Fácil', rende:1, econ:true,
+    i:[['ovo',1],['tapioca',20],['frango',50,'f'],['requeijao',15,'fo'],['tomate',20],['temperos',0]],
+    vars:[ {n:'Frango', econ:true}, {n:'Queijo e tomate', t:{frango:'mucarela'}, q:{mucarela:25, requeijao:0, tomate:40}, veg:true} ],
+    passos:['Bata o ovo com a goma de tapioca e uma pitada de sal.','Despeje na frigideira antiaderente aquecida e espalhe como uma panqueca.','Quando firmar, vire, coloque o recheio em metade e dobre.','Mais 1 minuto em fogo baixo para aquecer o recheio.'],
+    subs:['2 ovos para mais proteína.','Ricota ou cottage no lugar do requeijão.'],
+    congela:'Faça na hora; o recheio pode ficar pronto na geladeira por até 3 dias.' },
+
+  { id:'panqueca', nome:'Panqueca salgada de carne', cat:'pizza', tipo:'refeicao', modo:'pecas', emoji:'🥞', tempo:'35 min', dif:'Média', pecas:8, peca:['panqueca','panquecas'], porcao:2, econ:true,
+    i:[['farinha',120],['leite',240],['ovo',2],['oleo',8],['acem_cru',320,'f'],['molho',240],['cebola',40],['mucarela',60,'fo'],['temperos',0]],
+    vars:[ {n:'Carne', econ:true}, {n:'Frango', t:{acem_cru:'frango'}, q:{frango:280}} ],
+    passos:['Massa: bata no liquidificador a farinha, o leite, os ovos e uma pitada de sal.','Unte a frigideira com um fio de óleo só na primeira e faça 8 discos finos.','Recheio: refogue a carne com a cebola até secar e junte metade do molho.','Recheie, enrole, cubra com o restante do molho e o queijo.','Forno a 200 °C por 10 minutos, só para gratinar.'],
+    subs:['Metade da farinha integral.','Frango desfiado no lugar da carne.','Sem queijo por cima, se precisar de uma porção mais leve.'],
+    congela:'Panquecas recheadas e cobertas com molho congelam por até 3 meses (sem o queijo; ponha na hora de esquentar).' },
+
+  { id:'pizza_frig', nome:'Pizza de frigideira', cat:'pizza', tipo:'refeicao', modo:'montado', emoji:'🍕', tempo:'20 min', dif:'Fácil', rende:1, econ:true,
+    i:[['farinha',40],['leite',50],['ovo',1],['fermento',3],['molho',40],['mucarela',30,'fo'],['tomate',30],['frango',40,'f'],['temperos',0]],
+    vars:[ {n:'Frango', econ:true}, {n:'Marguerita', x:['frango'], q:{mucarela:40, tomate:60}, veg:true} ],
+    passos:['Misture a farinha, o leite, o ovo, o sal e o fermento químico até virar uma massa mole.','Despeje na frigideira antiaderente untada e cozinhe tampado em fogo baixo por 4 a 5 minutos.','Vire, espalhe o molho e a cobertura.','Tampe de novo por mais 4 a 5 minutos, até o queijo derreter.'],
+    subs:['Metade da farinha integral ou de aveia.','Atum, ovo cozido ou legumes na cobertura.'],
+    congela:'Melhor fazer na hora. Dá para deixar o frango desfiado pronto.' },
+
+  { id:'brigadeiro', nome:'Brigadeiro de panela porcionado', cat:'doces', tipo:'doce', modo:'pecas', emoji:'🍫', tempo:'20 min', dif:'Fácil', pecas:20, peca:['brigadeiro pequeno','brigadeiros pequenos'], porcao:2, econ:true,
+    i:[['leitecond',395],['achocolatado',25],['manteiga',10]],
+    passos:['Leve tudo ao fogo baixo, mexendo sem parar, até desgrudar do fundo da panela (10 a 12 minutos).','Espalhe num prato untado e deixe esfriar.','Divida em 20 porções iguais (cerca de 1 colher de chá cheia cada). Pode enrolar ou guardar em potinhos.'],
+    nota:'Porcionar antes de guardar ajuda a aproveitar sem exagerar: você decide quantos vai comer, não a panela.',
+    subs:['Cacau em pó 100% no lugar do achocolatado (menos açúcar, sabor mais intenso).'],
+    congela:'Porcionados, congelam por até 3 meses. Tire um ou dois de cada vez.' },
+
+  { id:'morango_choc', nome:'Fruta com chocolate', cat:'doces', tipo:'doce', modo:'montado', emoji:'🍓', tempo:'10 min + geladeira', dif:'Fácil', rende:1, econ:true,
+    i:[['morango',100],['choc_meio',15,'f']],
+    vars:[ {n:'Morango'}, {n:'Banana', t:{morango:'banana'}, q:{banana:1}, econ:true} ],
+    passos:['Derreta o chocolate no micro-ondas em intervalos de 20 segundos, mexendo entre eles.','Mergulhe metade de cada fruta (ou rodelas de banana) no chocolate.','Leve à geladeira por 10 minutos, até firmar.'],
+    subs:['Chocolate ao leite, se preferir (um pouco mais calórico).','Qualquer fruta firme da estação.'],
+    congela:'Rodelas de banana com chocolate congeladas viram um "picolé" de colher. Até 1 mês.' },
+
+  { id:'banana_assada', nome:'Banana assada com canela', cat:'doces', tipo:'doce', modo:'montado', emoji:'🍌', tempo:'15 min', dif:'Fácil', rende:1, econ:true, af:true,
+    i:[['banana',1],['aveia',10,'fg'],['canela',0]],
+    passos:['Corte a banana ao meio no sentido do comprimento.','Polvilhe canela e a aveia por cima.','AirFryer a 180 °C por 8 minutos (ou forno a 200 °C por 12 a 15 minutos), até caramelizar.'],
+    subs:['Sem a aveia, se precisar evitar glúten (a aveia comum pode ter traços).','Uma colher de chá de mel por cima, se couber no seu lanche.'],
+    congela:'Faça na hora.' }
+];
+
+// ---------- estado ----------
+function rcCfg(){ const n = nutriConfig(); if(!Array.isArray(n.receitasFav)) n.receitasFav = []; return n; }
+function rcEhFav(id){ return rcCfg().receitasFav.includes(id); }
+function rcFav(id){
+  if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao');
+  const n = rcCfg(); const i = n.receitasFav.indexOf(id);
+  if(i >= 0) n.receitasFav.splice(i,1); else n.receitasFav.push(id);
+  saveData(); toast(i >= 0 ? 'Tirada das favoritas' : '⭐ Receita salva nas favoritas');
+  if(window.__rc && window.__rc.tela === 'receita') rcRenderReceita(); else rcRenderLista();
+}
+
+// ---------- cálculo ----------
+function rcItensDe(r, vi){
+  const v = (r.vars && r.vars[vi]) || {};
+  const t = v.t || {}, q = v.q || {}, fora = v.x || [];
+  const out = []; const vistos = new Set();
+  r.i.forEach(([id, qtd, fl])=>{
+    if(fora.includes(id)) return;
+    const nid = t[id] || id;
+    const qq = (q[nid] !== undefined) ? q[nid] : qtd;
+    vistos.add(nid);
+    if(qq === 0 && !(rcAli(nid)||[])[7]) return;       // a variação tirou o item
+    out.push({ id:nid, q:qq, fl:fl||'' });
+  });
+  Object.keys(q).forEach(id=>{ if(!vistos.has(id) && q[id] > 0) out.push({ id, q:q[id], fl:'' }); });
+  return out;
+}
+function rcGramas(id, q){ const a = rcAli(id); return a && a[5] ? q*a[5] : q; }
+function rcNutri(itens){
+  return itens.reduce((t,it)=>{ const a = rcAli(it.id); if(!a) return t; const k = rcGramas(it.id, it.q)/100;
+    return { kcal:t.kcal+a[1]*k, p:t.p+a[2]*k, c:t.c+a[3]*k, g:t.g+a[4]*k }; }, {kcal:0,p:0,c:0,g:0});
+}
+function rcArred(id, q){
+  const a = rcAli(id); if(!a) return q;
+  if(a[5]){ return Math.max(0.25, Math.round(q*4)/4); }          // unidades: até ¼
+  const passo = q >= 100 ? 10 : 5; return Math.max(passo, Math.round(q/passo)*passo);
+}
+// restrições do plano: o que dá para adaptar e o que não combina
+function rcRestricao(r, vi){
+  const n = rcCfg(); let itens = rcItensDe(r, vi); const notas = []; let bloqueio = null;
+  if(n.vegetariano && itens.some(it=>RC_CARNE.includes(it.id))) bloqueio = 'leva carne e seu plano está como vegetariano';
+  if(n.semGluten){ const opc = itens.filter(it=>RC_GLUTEN.includes(it.id) && it.fl.includes('g')); if(opc.length){ itens = itens.filter(it=>!opc.includes(it)); notas.push('Sem glúten: tiramos ' + opc.map(it=>rcAli(it.id)[0].toLowerCase()).join(' e ') + '.'); } }
+  if(!bloqueio && n.semGluten && itens.some(it=>RC_GLUTEN.includes(it.id))) bloqueio = 'leva ingrediente com glúten e seu plano está sem glúten';
+  if(!bloqueio && n.semLactose){
+    const lac = itens.filter(it=>RC_LACTOSE.includes(it.id));
+    if(lac.some(it=>!it.fl.includes('o'))) bloqueio = 'a lactose faz parte da base da receita e seu plano está sem lactose';
+    else if(lac.length){ itens = itens.filter(it=>!RC_LACTOSE.includes(it.id)); notas.push('Sem lactose: tiramos ' + lac.map(it=>rcAli(it.id)[0].toLowerCase()).join(' e ') + '. Se usar versão sem lactose, confira o rótulo.'); }
+  }
+  return { itens, notas, bloqueio };
+}
+// variação que a pessoa vê primeiro: respeita o vegetariano e o modo econômico
+function rcVarInicial(r){
+  if(!r.vars) return 0; const n = rcCfg();
+  const ok = i => !rcRestricao(r, i).bloqueio;
+  if(n.vegetariano){ const v = r.vars.findIndex((x,i)=>x.veg && ok(i)); if(v >= 0) return v; }
+  if(n.economico){ const v = r.vars.findIndex((x,i)=>x.econ && ok(i)); if(v >= 0) return v; }
+  const v = r.vars.findIndex((x,i)=>ok(i)); return v >= 0 ? v : 0;
+}
+function rcCompativel(r){
+  if(!r.vars) return !rcRestricao(r, 0).bloqueio;
+  return r.vars.some((v,i)=>!rcRestricao(r, i).bloqueio);
+}
+// refeição do plano que a receita substitui
+function rcPlano(){ try{ const p = nutriMontarPlano(nutriDiaSel()); return (p && !p.erro) ? p : null; }catch(e){ return null; } }
+function rcRefPadrao(r, plano){
+  if(!plano) return null; const ids = plano.refeicoes.map(m=>m.id);
+  const pref = r.tipo === 'refeicao' ? ['jantar','almoco'] : ['lanche2','lanche1','cafe','ceia'];
+  return pref.find(x=>ids.includes(x)) || ids[0];
+}
+// ajusta a porção à refeição escolhida, sem encolher a receita até descaracterizar
+const RC_MIN = 0.6, RC_MAX = 1.6;
+function rcEncaixe(r, itens, alvo){
+  const res = { alvo };
+  if(r.modo === 'pecas'){
+    const tot = rcNutri(itens), porPeca = { kcal:tot.kcal/r.pecas, p:tot.p/r.pecas, c:tot.c/r.pecas, g:tot.g/r.pecas };
+    res.porPeca = porPeca;
+    if(!alvo){ res.n = r.porcao; }
+    else {
+      let n = Math.round(alvo / porPeca.kcal);
+      n = Math.max(1, Math.min(r.pecas, n));
+      if(porPeca.kcal > alvo*1.25){ res.naoCabe = true; n = 1; }
+      res.n = n;
+      if(!res.naoCabe && n*porPeca.kcal < alvo*0.8) res.falta = Math.round(alvo - n*porPeca.kcal);
+    }
+    res.tot = { kcal:porPeca.kcal*res.n, p:porPeca.p*res.n, c:porPeca.c*res.n, g:porPeca.g*res.n };
+    return res;
+  }
+  const fixo = rcNutri(itens.filter(it=>!it.fl.includes('f'))), flex = rcNutri(itens.filter(it=>it.fl.includes('f')));
+  let s = 1;
+  if(alvo && flex.kcal > 0){
+    const ideal = (alvo - fixo.kcal) / flex.kcal;
+    if(ideal < RC_MIN){ res.naoCabe = true; s = RC_MIN; }
+    else s = Math.min(RC_MAX, ideal);
+    res.escala = s;
+  }
+  res.itens = itens.map(it=> it.fl.includes('f') ? { ...it, q: rcArred(it.id, it.q*s) } : it);
+  res.tot = rcNutri(res.itens);
+  if(alvo && !res.naoCabe && res.tot.kcal < alvo*0.85) res.falta = Math.round(alvo - res.tot.kcal);
+  if(alvo && res.tot.kcal > alvo*1.15) res.naoCabe = true;
+  return res;
+}
+function rcPorcaoKcal(r, plano){
+  const vi = rcVarInicial(r); const rs = rcRestricao(r, vi);
+  const ref = rcRefPadrao(r, plano); const meal = plano && plano.refeicoes.find(m=>m.id===ref);
+  const alvo = (r.tipo === 'doce' || !meal) ? 0 : meal.tot.kcal;
+  return { e: rcEncaixe(r, rs.itens, alvo), meal };
+}
+
+// ---------- textos ----------
+function rcFmtQtd(id, q){
+  const a = rcAli(id); if(!a) return '';
+  if(a[7] && !q) return '';
+  if(a[5]){
+    const fr = { 0.25:'¼', 0.5:'½', 0.75:'¾' }; const int = Math.floor(q), resto = Math.round((q-int)*4)/4;
+    const txt = (int ? String(int) : '') + (resto ? (int ? ' ' : '') + fr[resto] : '');
+    const nomeU = { ovo:['ovo','ovos'], paohb:['pão','pães'], paosirio:['pão','pães'], rap10:['tortilha','tortilhas'], banana:['banana','bananas'], paoforma:['fatia','fatias'], paoint:['fatia','fatias'], pao:['pão','pães'], mucarela:['fatia','fatias'], queijoprato:['fatia','fatias'], presunto:['fatia','fatias'] }[id];
+    return `${txt || '0'} ${nomeU ? (q > 1 ? nomeU[1] : nomeU[0]) : 'unid.'}`;
+  }
+  const liq = ['leite','leiteint'].includes(id);
+  return `${Math.round(q)} ${liq ? 'ml' : 'g'}`;
+}
+function rcMacro(t){ return `${Math.round(t.kcal)} kcal · P ${Math.round(t.p)} g · C ${Math.round(t.c)} g · G ${Math.round(t.g)} g`; }
+function rcTags(r){
+  const t = [];
+  if(r.af) t.push('AirFryer');
+  if(r.econ) t.push('Econômica');
+  const it = rcItensDe(r, 0);
+  if(!it.some(x=>RC_GLUTEN.includes(x.id))) t.push('Sem glúten*');
+  return t;
+}
+function rcPeca(r, n){ return `${n} ${n === 1 ? r.peca[0] : r.peca[1]}`; }
+
+
+// ---------- ilustrações (SVG próprio: não depende de fonte de emoji nem de fotos) ----------
+const RC_SVG = {
+  burger:'<ellipse cx="32" cy="22" rx="22" ry="12" fill="#E8A54B"/><rect x="10" y="22" width="44" height="6" fill="#E8A54B"/><circle cx="24" cy="17" r="1.4" fill="#FFF3D6"/><circle cx="32" cy="14" r="1.4" fill="#FFF3D6"/><circle cx="40" cy="17" r="1.4" fill="#FFF3D6"/><path d="M8 30h48l-4 4H12z" fill="#6FBF4A"/><rect x="9" y="33" width="46" height="5" rx="2" fill="#F4C430"/><rect x="9" y="37" width="46" height="8" rx="4" fill="#7A3E1D"/><rect x="10" y="45" width="44" height="9" rx="4" fill="#E8A54B"/>',
+  pizza:'<path d="M32 8 L56 52 Q32 60 8 52 Z" fill="#F4C430"/><path d="M8 52 Q32 60 56 52 L54 48 Q32 56 10 48 Z" fill="#D98B3A"/><circle cx="30" cy="30" r="4" fill="#D64541"/><circle cx="38" cy="42" r="4" fill="#D64541"/><circle cx="24" cy="44" r="4" fill="#D64541"/><circle cx="34" cy="20" r="2" fill="#6FBF4A"/>',
+  pastel:'<path d="M8 40 A24 24 0 0 1 56 40 Z" fill="#F0B95A"/><path d="M8 40h48" stroke="#C98A2E" stroke-width="3" stroke-dasharray="3 3"/><path d="M16 32 Q32 18 48 32" stroke="#FFE3A6" stroke-width="2" fill="none"/>',
+  batata:'<ellipse cx="32" cy="36" rx="24" ry="15" fill="#B9853F"/><ellipse cx="32" cy="32" rx="18" ry="9" fill="#F7E1A0"/><circle cx="26" cy="31" r="3" fill="#F4C430"/><circle cx="36" cy="30" r="3" fill="#E57E2F"/><circle cx="31" cy="34" r="2.5" fill="#6FBF4A"/>',
+  sanduiche:'<path d="M8 48 L32 14 L56 48 Z" fill="#F3D9A4"/><path d="M12 46 L32 18 L52 46" fill="none" stroke="#6FBF4A" stroke-width="4"/><path d="M14 46 L32 22 L50 46" fill="none" stroke="#F4C430" stroke-width="3"/><path d="M8 48h48" stroke="#C99B57" stroke-width="3"/>',
+  wrap:'<rect x="14" y="14" width="26" height="40" rx="12" transform="rotate(-25 27 34)" fill="#F1D19A"/><path d="M38 16 l10 6 -6 10z" fill="#6FBF4A"/><path d="M40 22 l6 4 -4 6z" fill="#D64541"/>',
+  triangulo:'<path d="M10 46 L32 12 L54 46 Q32 52 10 46Z" fill="#E9B866"/><path d="M20 40 L32 22 L44 40Z" fill="#9C4A2A"/><circle cx="32" cy="34" r="2" fill="#6FBF4A"/>',
+  bolinhos:'<circle cx="22" cy="40" r="11" fill="#D9963F"/><circle cx="42" cy="40" r="11" fill="#C98A2E"/><circle cx="32" cy="24" r="11" fill="#E8A54B"/><circle cx="29" cy="21" r="2" fill="#FFE3A6"/>',
+  panqueca:'<ellipse cx="32" cy="40" rx="24" ry="10" fill="#F6E7C8"/><rect x="12" y="26" width="40" height="14" rx="7" fill="#F2C879"/><path d="M14 32h36" stroke="#C0392B" stroke-width="4"/><ellipse cx="32" cy="27" rx="18" ry="3" fill="#FFF6DC"/>',
+  doce:'<circle cx="24" cy="36" r="12" fill="#5B3420"/><circle cx="42" cy="34" r="10" fill="#6E4129"/><g fill="#F4E1C1"><circle cx="20" cy="32" r="1.3"/><circle cx="26" cy="30" r="1.3"/><circle cx="28" cy="38" r="1.3"/><circle cx="40" cy="30" r="1.3"/><circle cx="45" cy="36" r="1.3"/></g>',
+  morango:'<path d="M32 54 C14 42 14 24 32 22 C50 24 50 42 32 54Z" fill="#D64541"/><path d="M32 54 C24 46 22 36 24 30 L40 30 C42 36 40 46 32 54Z" fill="#5B3420"/><path d="M24 22 l8 -8 8 8 -8 3z" fill="#6FBF4A"/>',
+  banana:'<path d="M12 22 Q20 52 54 44 Q30 44 20 20 Z" fill="#F4D03F"/><path d="M12 22 l-2 -5 5 2z" fill="#7A5A2A"/>'
+};
+const RC_FORMA = { hamb_caseiro:'burger', hamb_frango:'burger', hamb_pastel:'pastel', pastel_af:'pastel', mini_pizza:'pizza', pizza_frig:'pizza', batata_rech:'batata', sand_natural:'sanduiche', wrap_frango:'wrap', esfiha:'triangulo', bolinho:'bolinhos', crepioca:'panqueca', panqueca:'panqueca', brigadeiro:'doce', morango_choc:'morango', banana_assada:'banana' };
+function rcIlu(r){ const f = RC_SVG[RC_FORMA[r.id]] || RC_SVG.burger; return `<svg viewBox="0 0 64 64" width="100%" height="100%" role="img" aria-label="${mtEsc(r.nome)}" focusable="false">${f}</svg>`; }
+// artigo certo para a refeição ("o jantar", "a ceia")
+function rcArt(meal){ return meal && /^(ceia)$/i.test(meal.id) ? 'a' : 'o'; }
+function rcSeu(meal){ return (rcArt(meal) === 'a' ? 'sua ' : 'seu ') + meal.nome.toLowerCase(); }
+function rcDo(meal){ return (rcArt(meal) === 'a' ? 'da ' : 'do ') + meal.nome.toLowerCase(); }
+
+// ---------- telas ----------
+function _rcMi(){ const mi = $('modal-inner'); if(mi && mi.dataset.tela === 'nutri') mi.dataset.tela = 'nutri-sub'; return mi; }
+function openReceitas(cat){
+  if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao');
+  window.__rc = { tela:'lista', cat: cat || (window.__rc && window.__rc.cat) || 'todas' };
+  rcRenderLista();
+}
+function rcCat(cat){ window.__rc = { ...(window.__rc||{}), tela:'lista', cat }; rcRenderLista(); }
+function rcRenderLista(){
+  const mi = _rcMi(); if(!mi) return;
+  const st = window.__rc || { cat:'todas' }; const cat = st.cat;
+  const plano = rcPlano(); const n = rcCfg();
+  const filtro = r => cat === 'todas' ? true : cat === 'fav' ? n.receitasFav.includes(r.id) : cat === 'econ' ? r.econ : r.cat === cat;
+  const lista = RC_RECEITAS.filter(filtro);
+  const ok = lista.filter(rcCompativel), fora = lista.filter(r=>!rcCompativel(r));
+  const chip = (k, ic, nome) => `<button class="rc-chip ${cat===k?'on':''}" onclick="rcCat('${k}')" aria-pressed="${cat===k}">${ic} ${nome}</button>`;
+  const card = r => {
+    const { e, meal } = rcPorcaoKcal(r, plano);
+    const porcao = r.modo === 'pecas' ? rcPeca(r, e.n) : '1 porção';
+    const linha = r.tipo === 'doce' ? `${porcao} ≈ ${Math.round(e.tot.kcal)} kcal`
+      : e.naoCabe ? `Passa ${meal ? rcDo(meal) : 'do plano'}: veja opções`
+      : `${porcao} ≈ ${Math.round(e.tot.kcal)} kcal${meal ? ` · no lugar ${rcDo(meal)}` : ''}`;
+    return `<button class="rc-card" onclick="openReceita('${r.id}')">
+      <span class="rc-ilu rc-${r.cat}">${rcIlu(r)}</span>
+      <span class="rc-ct"><b>${mtEsc(r.nome)}${rcEhFav(r.id) ? ' <span class="rc-favi" aria-label="favorita">★</span>' : ''}</b>
+        <small>⏱ ${mtEsc(r.tempo)} · ${mtEsc(r.dif)}</small>
+        <small class="${e.naoCabe ? 'rc-alerta' : ''}">${linha}</small>
+        <span class="rc-tags">${rcTags(r).map(t=>`<i>${t}</i>`).join('')}</span></span></button>`;
+  };
+  const doceNota = (cat === 'doces' || cat === 'todas') ? `<div class="rc-doce"><b>🍫 Doce também tem lugar no plano</b><span>Um bombom, um quadradinho de chocolate, um brigadeiro pequeno ou uma sobremesa caseira porcionada podem entrar sem culpa. O que conta é a semana, não um doce. Veja as calorias no rótulo, escolha um momento (depois do almoço ou no lanche) e, se quiser, tire um pouco de outro item desse lanche. Não existe uma quantidade certa para todo mundo: depende do seu plano e de como você se sente.</span></div>` : '';
+  mi.innerHTML = `<div class="rc">
+    <h3 style="margin-bottom:2px">🍔 Lanches para sair da rotina</h3>
+    <p class="rc-sub">Receitas gostosas, práticas e econômicas para aproveitar o fim de semana sem deixar seu planejamento de lado.</p>
+    ${plano ? `<p class="rc-mini">As porções já vêm ajustadas à refeição do seu plano de ${NUTRI_DIAS[(plano.diaIdx||1)-1].toLowerCase()} (${Math.round(plano.dia.kcal)} kcal no dia).</p>` : `<p class="rc-mini rc-alerta">Complete peso, altura, idade e sexo no perfil para a porção ser ajustada ao seu plano. Por enquanto aparecem as porções-padrão.</p>`}
+    <div class="rc-chips" role="toolbar" aria-label="Categorias">${chip('todas','📋','Todas')}${chip('fav','⭐','Favoritas')}${RC_CATS.map(c=>chip(c[0],c[1],c[2])).join('')}</div>
+    ${cat === 'doces' ? doceNota : ''}
+    <div class="rc-lista">${ok.map(card).join('') || `<div class="mt-muted" style="padding:14px 4px;font-size:13px">${cat === 'fav' ? 'Nenhuma favorita ainda. Abra uma receita e toque em ☆ Salvar.' : 'Nenhuma receita desta categoria combina com as restrições do seu plano.'}</div>`}</div>
+    ${fora.length ? `<details class="mealc"><summary><span class="mi">🚫</span><span class="mt"><b>Não combinam com suas restrições</b><small>${fora.length} receita${fora.length>1?'s':''}</small></span></summary><div class="mb" style="font-size:12.5px;line-height:1.55;color:var(--text-dim)">${fora.map(r=>`• <b>${mtEsc(r.nome)}</b>: ${rcRestricao(r, rcVarInicial(r)).bloqueio}.`).join('<br>')}</div></details>` : ''}
+    ${cat === 'todas' ? doceNota : ''}
+    <p class="rc-aviso">Valores estimados a partir da Tabela Brasileira de Composição de Alimentos (TACO/UNICAMP) e da média de rótulos de produtos comuns; mudam conforme a marca e o preparo. *Sem glúten na receita, mas confira os rótulos (pode haver traços). Conteúdo educativo: não substitui o nutricionista. Se tiver alergia, intolerância, diabetes ou outra condição de saúde, siga a orientação do seu profissional.</p>
+    <button class="btn btn-ghost btn-block" onclick="openNutri()">← Voltar ao plano alimentar</button>
+  </div>`;
+  mi.scrollTop = 0; $('modal-back').classList.add('on');
+}
+function openReceita(id, ref){
+  if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao');
+  const r = RC_RECEITAS.find(x=>x.id===id); if(!r) return;
+  const ant = window.__rc || {};
+  window.__rc = { tela:'receita', cat: ant.cat || 'todas', id, vi: rcVarInicial(r), ref: ref || null, ver:'porcao' };
+  rcRenderReceita(true);
+}
+function rcVar(i){ if(window.__rc){ window.__rc.vi = i; rcRenderReceita(); } }
+function rcRef(id){ if(window.__rc){ window.__rc.ref = id; rcRenderReceita(); } }
+function rcVer(m){ if(window.__rc){ window.__rc.ver = m; rcRenderReceita(); } }
+function rcSugestoes(r, plano, alvo){
+  // receitas que cabem nesta refeição, da mais parecida (mesma categoria) para as outras
+  return RC_RECEITAS.filter(x=>x.id !== r.id && x.tipo === r.tipo && rcCompativel(x)).map(x=>{
+    const rs = rcRestricao(x, rcVarInicial(x)); const e = rcEncaixe(x, rs.itens, alvo); return { x, e };
+  }).filter(o=>!o.e.naoCabe).sort((a,b)=>(a.x.cat===r.cat?0:1)-(b.x.cat===r.cat?0:1)).slice(0,3);
+}
+function rcRenderReceita(topo){
+  const mi = _rcMi(); const st = window.__rc; if(!mi || !st) return;
+  const r = RC_RECEITAS.find(x=>x.id===st.id); if(!r) return rcRenderLista();
+  const plano = rcPlano();
+  const rs = rcRestricao(r, st.vi);
+  if(!st.ref) st.ref = rcRefPadrao(r, plano);
+  const meal = plano && plano.refeicoes.find(m=>m.id===st.ref);
+  const alvo = (r.tipo === 'doce' || !meal) ? 0 : meal.tot.kcal;
+  const e = rcEncaixe(r, rs.itens, alvo);
+  const fav = rcEhFav(r.id);
+  const nomeRef = meal ? meal.nome.toLowerCase() : '';
+  // porção
+  let porcaoTxt, itensPorcao, mult = 1;
+  if(r.modo === 'pecas'){ porcaoTxt = rcPeca(r, e.n); }
+  else porcaoTxt = '1 porção';
+  // ingredientes exibidos
+  let lista, tituloIng;
+  if(r.modo === 'pecas'){
+    if(st.ver === 'porcao'){ mult = e.n / r.pecas; tituloIng = `Para a sua porção (${rcPeca(r, e.n)} de ${r.pecas})`; lista = rs.itens; }
+    else { tituloIng = `Receita inteira (rende ${rcPeca(r, r.pecas)})`; lista = rs.itens; }
+  } else {
+    itensPorcao = e.itens;
+    if(st.ver === 'porcao'){ tituloIng = 'Para a sua porção'; lista = itensPorcao; }
+    else { tituloIng = `Para ${r.rende} porç${r.rende>1?'ões':'ão'}`; lista = itensPorcao; mult = r.rende; }
+  }
+  const ingHtml = lista.map(it=>{
+    const a = rcAli(it.id); if(!a) return '';
+    let q = it.q * mult;
+    if(a[5]) q = Math.round(q*4)/4; else if(q) q = Math.max(5, Math.round(q/5)*5);
+    const qt = rcFmtQtd(it.id, q);
+    return `<li><span>${mtEsc(a[0])}${/[og]/.test(it.fl) ? ' <em>(opcional)</em>' : ''}</span>${qt ? `<b>${mtEsc(qt)}</b>` : ''}</li>`;
+  }).join('');
+  // encaixe no plano
+  let encaixe = '';
+  if(r.tipo === 'doce'){
+    const lanche = plano && plano.refeicoes.find(m=>/lanche/.test(m.id));
+    const pctDia = plano ? Math.round(e.tot.kcal / plano.dia.kcal * 100) : null;
+    encaixe = `<div class="rc-box"><b>${porcaoTxt} ≈ ${Math.round(e.tot.kcal)} kcal</b>${pctDia !== null ? ` <span class="rc-mini">(${pctDia}% do seu dia)</span>` : ''}
+      <span>${lanche ? (e.tot.kcal <= lanche.tot.kcal ? `Cabe no lugar ${rcDo(lanche)} (~${Math.round(lanche.tot.kcal)} kcal) ou junto dele, tirando um pouco de outro item.` : `Fica acima ${rcDo(lanche)} (~${Math.round(lanche.tot.kcal)} kcal): coma uma unidade a menos ou divida com alguém.`) : 'Encaixe num lanche, tirando um pouco de outro item.'} Sem culpa: um doce planejado não estraga a semana.</span></div>`;
+  } else if(!plano){
+    encaixe = `<div class="rc-box"><b>${porcaoTxt} ≈ ${Math.round(e.tot.kcal)} kcal</b><span>Porção-padrão. Complete o perfil para ajustar ao seu plano.</span></div>`;
+  } else {
+    const refs = plano.refeicoes.map(m=>`<button class="rc-chip ${m.id===st.ref?'on':''}" onclick="rcRef('${m.id}')" aria-pressed="${m.id===st.ref}">${m.icone} ${mtEsc(m.nome)}</button>`).join('');
+    let msg;
+    if(e.naoCabe){
+      const sug = rcSugestoes(r, plano, alvo);
+      const maior = plano.refeicoes.filter(m=>m.id!==st.ref && m.tot.kcal > alvo).sort((a,b)=>b.tot.kcal-a.tot.kcal)[0];
+      msg = `<div class="rc-box rc-box-alerta"><b>Esta receita não cabe bem n${rcArt(meal)} ${nomeRef}</b>
+        <span>${rcSeu(meal).replace(/^./,c=>c.toUpperCase())} tem ~${Math.round(alvo)} kcal. ${r.modo==='pecas' ? `Uma ${r.peca[0]} já tem ~${Math.round(e.porPeca.kcal)} kcal.` : `Mesmo com o recheio reduzido ao mínimo que ainda vale a pena, a porção fica em ~${Math.round(e.tot.kcal)} kcal.`} Em vez de encolher até virar "nada", prefira:</span>
+        <ul class="rc-ul">${maior ? `<li>fazer no lugar ${rcDo(maior).split(' ')[0]} <a href="#" onclick="event.preventDefault();rcRef('${maior.id}')">${mtEsc(maior.nome.toLowerCase())}</a> (~${Math.round(maior.tot.kcal)} kcal);</li>` : ''}
+        ${sug.map(o=>`<li><a href="#" onclick="event.preventDefault();openReceita('${o.x.id}','${st.ref}')">${mtEsc(o.x.nome)}</a> (~${Math.round(o.e.tot.kcal)} kcal);</li>`).join('')}
+        <li>ou as trocas abaixo (sem queijo, pão integral, mais salada).</li></ul></div>`;
+    } else {
+      msg = `<div class="rc-box"><b>Sua porção: ${porcaoTxt} ≈ ${Math.round(e.tot.kcal)} kcal</b>
+        <span>No lugar ${rcDo(meal)}, que no plano tem ~${Math.round(alvo)} kcal e ${Math.round(meal.tot.p)} g de proteína.${r.modo==='montado' && e.escala && Math.abs(e.escala-1) > 0.08 ? ` Ajustamos o recheio (${e.escala > 1 ? 'mais' : 'menos'} carne/queijo) para fechar com seu plano.` : ''}</span>
+        <span class="rc-mini">${rcMacro(e.tot)}</span>
+        ${e.falta ? `<span>Ainda sobram ~${e.falta} kcal nessa refeição: acompanhe com salada à vontade e uma fruta${r.modo==='pecas' ? '' : ', ou faça uma porção e meia'}.</span>` : ''}
+        ${meal.tot.p - e.tot.p > 10 ? `<span>Tem ~${Math.round(meal.tot.p - e.tot.p)} g de proteína a menos que ${rcArt(meal)} ${nomeRef} do plano: um ovo ou um copo de leite completam.</span>` : ''}</div>`;
+    }
+    encaixe = `<div class="rc-lbl">Encaixar no lugar de:</div><div class="rc-chips">${refs}</div>${msg}`;
+  }
+  const podeRegistrar = plano && meal && r.tipo !== 'doce' && !e.naoCabe && nutriDiaSel() >= ((typeof getDayIdx==='function') ? getDayIdx() : 1);
+  const vars = r.vars ? `<div class="rc-lbl">Versão:</div><div class="rc-chips">${r.vars.map((v,i)=>{ const bl = rcRestricao(r, i).bloqueio; return `<button class="rc-chip ${i===st.vi?'on':''}" ${bl?'disabled title="Não combina com suas restrições"':''} onclick="rcVar(${i})" aria-pressed="${i===st.vi}">${mtEsc(v.n)}</button>`; }).join('')}</div>` : '';
+  mi.innerHTML = `<div class="rc">
+    <button class="rc-voltar" onclick="openReceitas()">← Receitas</button>
+    <div class="rc-topo"><span class="rc-ilu rc-ilu-g rc-${r.cat}">${rcIlu(r)}</span>
+      <div style="min-width:0"><h3 style="margin:0">${mtEsc(r.nome)}</h3>
+        <div class="rc-mini">⏱ ${mtEsc(r.tempo)} · ${mtEsc(r.dif)} · rende ${r.modo==='pecas' ? rcPeca(r, r.pecas) : r.rende + ' porç' + (r.rende>1?'ões':'ão')}</div>
+        <span class="rc-tags">${rcTags(r).map(t=>`<i>${t}</i>`).join('')}</span></div></div>
+    <button class="btn btn-ghost btn-block rc-favbtn" onclick="rcFav('${r.id}')" aria-pressed="${fav}">${fav ? '★ Salva nas favoritas' : '☆ Salvar nas favoritas'}</button>
+    ${rs.bloqueio ? `<div class="rc-box rc-box-alerta"><b>Esta versão não combina com seu plano</b><span>Ela ${rs.bloqueio}.</span></div>` : ''}
+    ${vars}
+    ${rs.bloqueio ? '' : encaixe}
+    ${rs.notas.map(t=>`<div class="rc-mini" style="margin:6px 0">${mtEsc(t)}</div>`).join('')}
+    ${r.nota ? `<div class="rc-nota">💡 ${mtEsc(r.nota)}</div>` : ''}
+    <div class="rc-sec"><div class="rc-sec-h"><b>🛒 Ingredientes</b><span class="rc-ver"><button class="${st.ver==='porcao'?'on':''}" onclick="rcVer('porcao')">Minha porção</button><button class="${st.ver==='receita'?'on':''}" onclick="rcVer('receita')">Receita toda</button></span></div>
+      <div class="rc-mini">${tituloIng}</div><ul class="rc-ing">${ingHtml}</ul></div>
+    <div class="rc-sec"><b>👩‍🍳 Modo de preparo</b><ol class="rc-passos">${r.passos.map(p=>`<li>${mtEsc(p)}</li>`).join('')}</ol></div>
+    ${r.subs && r.subs.length ? `<div class="rc-sec"><b>🔁 Substituições</b><ul class="rc-ul">${r.subs.map(s=>`<li>${mtEsc(s)}</li>`).join('')}</ul></div>` : ''}
+    <div class="rc-sec"><b>💰 Para economizar</b><ul class="rc-ul">
+      <li>${mtEsc(r.congela || 'Faça na hora.')}</li>
+      <li>Os ingredientes se repetem entre as receitas (frango desfiado, carne moída, pão, queijo, tomate): uma compra serve para várias.</li></ul>
+      <details class="rc-custo"><summary>Calcular o custo por porção</summary>
+        <p class="rc-mini">O app não inventa preço: cada cidade e mercado é diferente. Digite quanto você gastou nos ingredientes desta receita.</p>
+        <div class="rc-custo-g"><label>Gastei (R$)<input class="input" id="rc-gasto" type="number" inputmode="decimal" min="0" step="0.01" oninput="rcCusto()"></label>
+        <label>Delivery parecido (R$, opcional)<input class="input" id="rc-deliv" type="number" inputmode="decimal" min="0" step="0.01" oninput="rcCusto()"></label></div>
+        <div id="rc-custo-res" class="rc-mini" aria-live="polite"></div></details></div>
+    ${podeRegistrar ? `<button class="btn btn-primary btn-block" style="margin-top:6px" onclick="rcRegistrar()">✅ Usar no lugar ${mtEsc(meal ? rcDo(meal) : '')} ${nutriDiaSel() === ((typeof getDayIdx==='function') ? getDayIdx() : 1) ? 'de hoje' : 'de ' + NUTRI_DIAS[nutriDiaSel()-1].toLowerCase()}</button>` : ''}
+    <p class="rc-aviso">Valores nutricionais estimados (TACO/UNICAMP e média de rótulos); mudam com a marca e o preparo. Não substitui o nutricionista. Alergias e intolerâncias: confira sempre os rótulos.</p>
+    <button class="btn btn-ghost btn-block" onclick="openNutri()">← Voltar ao plano alimentar</button>
+  </div>`;
+  if(topo) mi.scrollTop = 0;
+  $('modal-back').classList.add('on');
+  window.__rcPorcao = { r, e };
+  const sv = (state.nutri && state.nutri.receitasCusto && state.nutri.receitasCusto[r.id]) || null;
+  if(sv){ const g = $('rc-gasto'), d = $('rc-deliv'); if(g && sv.g) g.value = sv.g; if(d && sv.d) d.value = sv.d; rcCusto(true); }
+}
+function rcCusto(soMostrar){
+  const o = window.__rcPorcao; const out = $('rc-custo-res'); if(!o || !out) return;
+  const g = parseFloat(($('rc-gasto')||{}).value), d = parseFloat(($('rc-deliv')||{}).value);
+  const r = o.r;
+  if(!(g > 0)){ out.textContent = ''; return; }
+  // quantas porções da SUA porção a compra rende
+  const porcoes = r.modo === 'pecas' ? r.pecas / Math.max(1, o.e.n) : r.rende;
+  const porPorcao = g / porcoes;
+  const brl = v => v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+  let txt = `≈ ${brl(porPorcao)} por porção (${Math.round(porcoes*10)/10} porç${porcoes>1?'ões':'ão'} com o que você comprou).`;
+  if(d > 0){ const dif = d - porPorcao; txt += dif > 0 ? ` Economia de ≈ ${brl(dif)} em relação ao delivery que você informou.` : ` Neste caso o delivery saiu mais barato por porção.`; }
+  out.textContent = txt;
+  if(!soMostrar){ const n = rcCfg(); n.receitasCusto = n.receitasCusto || {}; n.receitasCusto[r.id] = { g, d: d > 0 ? d : null }; clearTimeout(window.__rcCustoT); window.__rcCustoT = setTimeout(()=>{ try{ saveData(); }catch(e){} }, 800); }
+}
+// registra a receita no lugar da refeição do dia (dá para desfazer com "Voltar ao recomendado")
+function rcRegistrar(){
+  const o = window.__rcPorcao, st = window.__rc; if(!o || !st) return;
+  if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao');
+  const plano = rcPlano(); const meal = plano && plano.refeicoes.find(m=>m.id===st.ref); if(!meal) return;
+  const r = o.r, t = o.e.tot;
+  const m = nutriMealLog(meal.id, true);
+  meal.itens.forEach(it=>{ m.adj[it.id] = { x:1 }; });
+  const nome = (r.modo === 'pecas' ? `${r.nome.split(' ')[0]} (${rcPeca(r, o.e.n)})` : r.nome).slice(0,40);
+  m.add = (m.add||[]).filter(a=>!(a.custom && a.receita));
+  m.add.push({ custom:true, receita:r.id, nome, kcal:Math.round(t.kcal), p:Math.round(t.p), c:Math.round(t.c), g:Math.round(t.g) });
+  nutriAbrirRef(meal.id); saveData();
+  toast(`Registrado no lugar ${rcDo(meal)}. Para desfazer: "Voltar ao recomendado" na refeição.`);
+  openNutri();
+}
+
+// ---------- entrada no plano alimentar (discreta, depois das dicas) ----------
+mtGancho('openNutri', { depois(){
+  try{
+    if(!mtTem('alimentacao')) return;
+    const mi = $('modal-inner'); if(!mi || mi.querySelector('#rc-entrada')) return;
+    if(!mi.querySelector('[onclick="nutriListaCompras()"]')) return;      // só na tela do plano
+    const ds = mi.querySelectorAll('details.mealc'); const ult = ds[ds.length-1]; if(!ult) return;
+    const nFav = rcCfg().receitasFav.length;
+    ult.insertAdjacentHTML('afterend', `<button class="mealc rc-entrada" id="rc-entrada" onclick="openReceitas()">
+      <span class="mi">🍔</span><span class="mt"><b>Lanches para sair da rotina</b><small>receitas práticas com a porção do seu plano${nFav ? ` · ${nFav} favorita${nFav>1?'s':''}` : ''}</small></span><span class="rc-seta">›</span></button>`);
+  }catch(e){ console.log('receitas', e); }
+}});
+
+// ---------- estilos ----------
+(function(){
+  if(document.getElementById('rc-css')) return;
+  const s = document.createElement('style'); s.id = 'rc-css';
+  s.textContent = `
+.rc-entrada{display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;border:1px solid var(--border,rgba(127,127,127,.2));background:var(--card,transparent);padding:12px 14px;border-radius:14px;margin:0 0 8px}
+.rc-entrada .rc-seta{margin-left:auto;color:var(--text-mute);font-size:18px}
+.rc-sub{color:var(--text-dim);font-size:13px;line-height:1.5;margin:4px 0 6px}
+.rc-mini{font-size:11.5px;color:var(--text-dim);line-height:1.5}
+.rc-alerta{color:var(--primary-2,#c0392b)}
+.rc-chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.rc-chips::-webkit-scrollbar{display:none}
+.rc-chip{flex:0 0 auto;border:1px solid var(--border,rgba(127,127,127,.25));background:transparent;color:inherit;border-radius:999px;padding:7px 12px;font:inherit;font-size:12.5px;white-space:nowrap;cursor:pointer;min-height:36px}
+.rc-chip.on{background:var(--primary);border-color:var(--primary);color:var(--on-primary,#fff)}
+.rc-chip[disabled]{opacity:.4;cursor:not-allowed}
+.rc-lista{display:flex;flex-direction:column;gap:8px;margin:4px 0 10px}
+.rc-card{display:flex;gap:12px;align-items:center;text-align:left;width:100%;font:inherit;color:inherit;cursor:pointer;border:1px solid var(--border,rgba(127,127,127,.2));background:var(--card,transparent);border-radius:16px;padding:10px}
+.rc-ct{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.rc-ct b{font-size:14px;line-height:1.3}
+.rc-ct small{font-size:11.5px;color:var(--text-dim);line-height:1.4}
+.rc-ct small.rc-alerta{color:var(--primary-2,#c0392b)}
+.rc-favi{color:#e6a700}
+.rc-ilu{flex:0 0 auto;width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:6px;box-sizing:border-box;background:linear-gradient(135deg,#f7d9a8,#f0a868)}
+.rc-ilu-g{width:76px;height:76px;font-size:40px;border-radius:18px}
+.rc-ilu.rc-pizza{background:linear-gradient(135deg,#ffd3b0,#ef7f5a)}
+.rc-ilu.rc-airfryer{background:linear-gradient(135deg,#ffe6a6,#e9b949)}
+.rc-ilu.rc-rapidas{background:linear-gradient(135deg,#d5efc4,#8cc56b)}
+.rc-ilu.rc-doces{background:linear-gradient(135deg,#ecd3c0,#a8714e)}
+.rc-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.rc-tags i{font-style:normal;font-size:10.5px;padding:2px 7px;border-radius:999px;background:rgba(127,127,127,.14);color:var(--text-dim)}
+.rc-topo{display:flex;gap:12px;align-items:center;margin:6px 0 10px}
+.rc-voltar{background:none;border:0;color:var(--primary);font:inherit;font-size:13px;padding:4px 0;cursor:pointer}
+.rc-favbtn{margin:0 0 8px}
+.rc-lbl{font-size:12px;color:var(--text-dim);margin-top:6px}
+.rc-box{display:flex;flex-direction:column;gap:4px;border-radius:14px;padding:12px 14px;margin:4px 0 8px;background:rgba(127,127,127,.08);font-size:13px;line-height:1.5}
+.rc-box-alerta{background:rgba(230,126,34,.12)}
+.rc-box a{color:var(--primary)}
+.rc-nota{font-size:12.5px;line-height:1.55;border-left:3px solid var(--primary);padding:6px 10px;margin:8px 0;color:var(--text-dim)}
+.rc-sec{margin:12px 0;font-size:13.5px}
+.rc-sec-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rc-ver{margin-left:auto;display:inline-flex;border:1px solid var(--border,rgba(127,127,127,.25));border-radius:999px;overflow:hidden}
+.rc-ver button{background:none;border:0;color:inherit;font:inherit;font-size:11.5px;padding:6px 10px;cursor:pointer}
+.rc-ver button.on{background:var(--primary);color:var(--on-primary,#fff)}
+.rc-ing{list-style:none;padding:0;margin:6px 0 0}
+.rc-ing li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed rgba(127,127,127,.2);font-size:13px}
+.rc-ing li b{white-space:nowrap}
+.rc-ing em{font-size:11px;color:var(--text-mute)}
+.rc-passos{padding-left:20px;margin:6px 0 0;line-height:1.55;font-size:13px}
+.rc-passos li{margin-bottom:6px}
+.rc-ul{padding-left:18px;margin:6px 0 0;line-height:1.55;font-size:12.5px}
+.rc-doce{display:flex;flex-direction:column;gap:4px;border-radius:14px;padding:12px 14px;margin:6px 0 10px;background:rgba(168,113,78,.12);font-size:12.5px;line-height:1.55}
+.rc-custo{margin-top:8px;font-size:12.5px}
+.rc-custo summary{cursor:pointer;color:var(--primary)}
+.rc-custo-g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0}
+.rc-custo-g label{font-size:11.5px;color:var(--text-dim);display:flex;flex-direction:column;gap:4px}
+.rc-aviso{font-size:11px;color:var(--text-mute);line-height:1.5;padding:8px 2px}
+@media (max-width:360px){.rc-ilu{width:48px;height:48px;font-size:25px}.rc-ilu-g{width:60px;height:60px;font-size:32px}.rc-custo-g{grid-template-columns:1fr}.rc-ct b{font-size:13.5px}}
+`;
+  document.head.appendChild(s);
+})();
+
+Object.assign(window, { openReceitas, openReceita, rcCat, rcVar, rcRef, rcVer, rcFav, rcCusto, rcRegistrar, RC_RECEITAS, rcEncaixe, rcRestricao, rcItensDe, rcNutri });
+
+// =====================================================================
+// 48. Beta 44 — Conquistas no fim do registro, aviso na aba Desafios e "não vou treinar hoje" coerente
+// =====================================================================
+// 1) Conquistas ao concluir um registro (treino, corrida ou atividade): depois que a tela de resumo do
+//    registro fecha, aparece UMA janela com o que foi desbloqueado agora ("Ver todas" / "Continuar").
+//    Fora do fim de um registro (abrir o app, sincronizar de outro aparelho) nada pula na tela — continua
+//    só o selo "Novidade" e o ponto na aba Desafios, como na Beta 41.
+// 2) Ponto de notificação na aba Desafios enquanto houver conquista ainda não apresentada na aba Conquistas.
+// 3) Treino marcado como "não vou treinar hoje": o aviso sobe para o topo da sessão e "Registrar" pergunta
+//    antes se a pessoa quer voltar a treinar (antes dava para registrar tudo e só o "Salvar" ficava preso
+//    até achar o "Voltar atrás" lá embaixo).
+
+// ---------- 1. conquistas no fim do registro ----------
+const MT_REG_JANELA = 120000;          // conquistas desbloqueadas até 2 min depois de salvar um registro
+['finishLiftWorkout','saveRunLog','saveActivityLog'].forEach(n=>mtGancho(n, { antes(){ window.__mtRegEm = Date.now(); } }));
+
+const _showAwardsB44 = window.showAwards;
+window.showAwards = function(){
+  const antes = new Set(((state && state.conqPend) || []).map(p=>p.k));
+  const r = _showAwardsB44.apply(this, arguments);
+  try{
+    const novos = ((state && state.conqPend) || []).filter(p=>!antes.has(p.k) && !p.cel);
+    if(novos.length && window.__mtRegEm && Date.now() - window.__mtRegEm < MT_REG_JANELA) cqCelebrar(novos.map(p=>p.k));
+  }catch(e){ console.log('celebração:', e); }
+  return r;
+};
+let _cqCelFila = [], _cqCelT = 0, _cqCelDesde = 0;
+function _cqTelaApp(){
+  const a = document.querySelector('.screen.active'); if(!a) return false;
+  return !/^scr-(quiz|auth|noaccess|loading|pick|setup|building)/.test(a.id);
+}
+function cqCelebrar(ks){
+  ks.forEach(k=>{ if(!_cqCelFila.includes(k)) _cqCelFila.push(k); });
+  if(!_cqCelDesde) _cqCelDesde = Date.now();
+  clearTimeout(_cqCelT);
+  _cqCelT = setTimeout(_cqCelTenta, 700);
+}
+function _cqCelTenta(){
+  const back = document.getElementById('modal-back');
+  const ocupado = back && back.classList.contains('on');
+  if(ocupado || !_cqTelaApp()){
+    if(Date.now() - _cqCelDesde > 4*60000){ _cqCelFila = []; _cqCelDesde = 0; return; }   // desistiu: fica para a aba
+    _cqCelT = setTimeout(_cqCelTenta, 700); return;
+  }
+  const pend = (state.conqPend||[]).filter(p=>_cqCelFila.includes(p.k) && !p.cel);
+  _cqCelFila = []; _cqCelDesde = 0;
+  if(!pend.length) return;
+  pend.forEach(p=>{ p.cel = true; });
+  try{ salvarLocal(); }catch(e){}
+  const lista = pend.slice().reverse();
+  const tit = lista.length === 1 ? 'Nova conquista!' : `${lista.length} novas conquistas!`;
+  $('modal-inner').innerHTML = `<div class="cq cq-anim cq-cel">
+    <div class="cq-topo"><h3>🏆 ${tit}</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
+    <p class="cq-cel-p">Desbloqueada${lista.length>1?'s':''} com o registro de agora. Toque em uma para ver os detalhes.</p>
+    <section class="cq-novos">${lista.slice(0, CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${lista.length > CQ_MAX_NOVOS ? `<div class="cq-mais-novos">E mais ${lista.length - CQ_MAX_NOVOS} na aba Conquistas.</div>` : ''}</section>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();openTrophies()">Ver todas as conquistas</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Continuar</button></div>`;
+  $('modal-back').classList.add('on');
+  try{ if(typeof mtVibrar === 'function') mtVibrar([20,40,20]); }catch(e){}
+}
+
+// ---------- 2. ponto na aba Desafios ----------
+const _cqIndicadoresB44 = window.cqIndicadores;
+window.cqIndicadores = function(){
+  const r = _cqIndicadoresB44 ? _cqIndicadoresB44.apply(this, arguments) : undefined;
+  try{
+    const n = cqTemNovidade();
+    document.querySelectorAll('.tab[data-tab="challenges"]').forEach(t=>{
+      let d = t.querySelector('.cq-dot');
+      if(n && !d){ d = document.createElement('span'); d.className = 'cq-dot'; d.setAttribute('aria-hidden','true'); t.appendChild(d); }
+      if(!n && d) d.remove();
+      t.setAttribute('aria-label', n ? `Desafios — ${n} ${n===1?'novidade':'novidades'}` : 'Desafios');
+    });
+  }catch(e){}
+  return r;
+};
+mtGancho('renderHome', { depois(){ try{ cqIndicadores(); }catch(e){} } });
+mtGancho('openTrophies', { depois(){ try{ cqIndicadores(); }catch(e){} } });
+setTimeout(()=>{ try{ cqIndicadores(); }catch(e){} }, 1500);
+
+// ---------- 3. "não vou treinar hoje" ----------
+function _mtTreinoPulado(w){ try{ return !!(w && isSkippedToday(w)); }catch(e){ return false; } }
+function _mtPerguntaVoltar(w, depois){
+  appConfirm('Você marcou que não vai treinar hoje. Quer voltar a treinar e registrar?', ()=>{
+    try{ unskipWorkout(String(w.k != null ? w.k : w.dayIdx)); }catch(e){}
+    if(typeof depois === 'function') setTimeout(depois, 250);
+  }, { title:'Voltar a treinar hoje?', emo:'😴', okLabel:'Sim, vou treinar', cancelLabel:'Continuar descansando' });
+}
+// o aviso de "treino pulado" vai para o topo da sessão e os exercícios ficam esmaecidos
+mtGancho('renderSessionDetail', { depois(w){
+  try{
+    const slot = document.getElementById('session-detail-slot'); if(!slot) return;
+    const pulado = _mtTreinoPulado(w);
+    slot.classList.toggle('mt-pulado', pulado);
+    if(!pulado) return;
+    const btn = slot.querySelector('button[onclick^="unskipWorkout"]'); const card = btn && btn.closest('.card');
+    if(card && slot.firstElementChild !== card){ card.classList.add('mt-pulado-card'); card.style.marginTop = '0'; card.style.marginBottom = '12px'; slot.prepend(card); }
+  }catch(e){ console.log('treino pulado:', e); }
+}});
+const _openSetLogB44 = window.openSetLog;
+window.openSetLog = function(exId, exName){
+  try{
+    const w = (typeof mtTreinoDoEx === 'function') ? mtTreinoDoEx(exId) : null;
+    if(state.active === 'lift' && _mtTreinoPulado(w)) return _mtPerguntaVoltar(w, ()=>window.openSetLog(exId, exName));
+  }catch(e){}
+  return _openSetLogB44.apply(this, arguments);
+};
+const _openRunLogB44 = window.openRunLog;
+if(typeof _openRunLogB44 === 'function') window.openRunLog = function(dayIdx){
+  try{
+    const mod = state.modules.run; const w = mod && mod.plan && (mod.plan.workouts||[]).find(x=>String(x.dayIdx)===String(dayIdx));
+    if(state.active === 'run' && _mtTreinoPulado(w)) return _mtPerguntaVoltar(w, ()=>window.openRunLog(dayIdx));
+  }catch(e){}
+  return _openRunLogB44.apply(this, arguments);
+};
+mtGancho('finishLiftWorkout', { antes(k){
+  try{ const mod = state.modules.lift; const w = mod && mod.plan && (mod.plan.workouts||[]).find(x=>String(x.k)===String(k));
+    if(_mtTreinoPulado(w)){ const d = new Date(); d.setHours(0,0,0,0);
+      // salvou mesmo assim (ex.: série registrada antes de pular): o registro vale, então o "pulado" sai
+      state.skips = (state.skips||[]).filter(s=>!(s.at===d.getTime() && s.module==='lift' && (s.k===w.k || s.dayIdx===w.dayIdx))); } }catch(e){}
+}});
+
+(function(){ if(document.getElementById('b44-css')) return; const s = document.createElement('style'); s.id = 'b44-css';
+  s.textContent = `
+.tab[data-tab="challenges"]{position:relative}
+.tab .cq-dot{position:absolute;top:4px;left:calc(50% + 7px);width:9px;height:9px;border-radius:50%;background:var(--danger,#e5484d);box-shadow:0 0 0 2px var(--bar-bg,var(--bg));pointer-events:none}
+.cq-cel .cq-cel-p{font-size:13px;color:var(--text-dim);line-height:1.5;margin:-4px 0 10px}
+.cq-novo-tag{background:rgba(20,20,20,.86)!important;color:#fff!important}
+.cq-vistas{display:block;margin:4px auto 0;background:none;border:0;color:var(--primary-2);font:inherit;font-size:12.5px;font-weight:700;padding:8px;cursor:pointer}
+#session-detail-slot.mt-pulado .ex,#session-detail-slot.mt-pulado .blk,#session-detail-slot.mt-pulado .block{opacity:.55}
+`; document.head.appendChild(s); })();
+
+Object.assign(window, { cqCelebrar });
+
+// ---------- 4. fichas técnicas que estavam erradas ----------
+// A ficha era escolhida pela primeira palavra que casava no nome: "Remada na Máquina (Hammer)" caía no supino,
+// "Tríceps Coice" no glúteo, "Panturrilha no Leg Press" no agachamento, Farmer Walk/Pallof/Mountain Climber
+// no abdominal. Aqui esses exercícios têm a ficha certa (os demais seguem como estavam).
+const _fichaB44 = window.fichaExercicio;
+const _fichaPor = re => (typeof EX_FICHAS !== 'undefined' ? EX_FICHAS.find(f=>f.re.source === re) : null);
+const MT_FICHA_FIXA = [
+  [/^remada na maquina/, ()=>EX_FICHAS.find(f=>f.re.test('remada'))],
+  [/^elevacao posterior curvado/, ()=>EX_FICHAS.find(f=>f.re.test('face pull'))],
+  [/^flexao pike elevada/, ()=>_fichaB44({ name:'Pike Push-up', sub:'Ombro' }, 'Ombro')],
+  [/^flexao fechada/, ()=>_fichaB44({ name:'Flexão Diamante', sub:'Peito Central / Tríceps' }, 'Peito')],
+  [/^panturrilha no leg press/, ()=>{ const f = EX_FICHAS.find(x=>x.re.test('panturrilha')); return f ? { ...f, d:['Só a ponta dos pés na plataforma, calcanhares para fora.','Joelhos estendidos, mas sem travar; deixe as travas de segurança prontas para usar.'] } : null; }],
+  [/^triceps coice/, ()=>({ m:'Tríceps braquial', ex:['Apoie uma mão e um joelho no banco, tronco quase paralelo ao chão e coluna neutra.','Cotovelo colado ao corpo na altura do tronco; estenda o braço para trás até ficar reto.','Volte devagar até cerca de 90°, sem mexer o cotovelo.'], d:['Use carga leve: nessa posição o tríceps trabalha sem ajuda do ombro.'], e:'Balançar o braço e deixar o cotovelo cair.' })],
+  [/^farmer walk/, ()=>({ m:'Pegada (antebraços), trapézio e core como estabilizador', ex:['Segure um halter pesado em cada mão, braços estendidos ao lado do corpo.','Fique alto: ombros para trás e para baixo, abdômen firme.','Caminhe com passos curtos e controlados pelo tempo ou distância combinados.'], d:['Pare antes de a pegada falhar — não deixe o peso escorregar.'], e:'Inclinar o tronco para um lado ou encolher os ombros.' })],
+  [/^pallof press/, ()=>({ m:'Oblíquos e transverso do abdômen (anti-rotação)', ex:['De lado para a polia, cabo na altura do peito, pés na largura do quadril.','Com o abdômen firme, empurre o pegador à frente até estender os braços sem deixar o tronco girar.','Segure 1–2 segundos e volte ao peito controlando.'], d:['Quanto mais longe da polia, mais difícil.'], e:'Deixar o tronco girar em direção ao cabo.' })],
+  [/^mountain climber/, ()=>({ m:'Core, flexores do quadril e ombros (com efeito de condicionamento)', ex:['Posição de prancha alta, mãos abaixo dos ombros.','Leve um joelho em direção ao peito e alterne as pernas em ritmo constante.','Mantenha o quadril baixo e o abdômen firme o tempo todo.'], d:['Comece devagar e acelere só se a postura se mantiver.'], e:'Quadril subindo e ombros passando à frente das mãos.' })],
+  [/^superman/, ()=>({ m:'Eretores da coluna, glúteos e parte posterior dos ombros', ex:['Deite de bruços com os braços estendidos à frente.','Eleve braços, peito e pernas ao mesmo tempo, poucos centímetros, olhando para o chão.','Segure 1–2 segundos e desça controlando.'], d:['Amplitude pequena basta: o objetivo é ativar a lombar sem comprimir.'], e:'Jogar a cabeça para trás e forçar a lombar.' })],
+  [/^elevacao y/, ()=>({ m:'Trapézio inferior, deltoides e manguito rotador', ex:['Tronco inclinado à frente (ou de bruços num banco inclinado), um halter leve em cada mão.','Eleve os braços estendidos à frente formando um "Y", polegares para cima.','Desça devagar, sem relaxar no fim.'], d:['Carga bem leve: é um exercício de saúde do ombro.'], e:'Encolher os ombros e subir com impulso.' })],
+  [/^cadeira contra parede/, ()=>({ m:'Quadríceps (isometria) e glúteos', ex:['Encoste as costas na parede e desça até os joelhos formarem cerca de 90°.','Joelhos alinhados com os pés, peso nos calcanhares.','Segure o tempo combinado respirando normalmente.'], d:['Se o joelho incomodar, fique um pouco mais alto.'], e:'Joelhos indo para dentro ou costas desencostando da parede.' })]
+];
+window.fichaExercicio = function(ex, grupo){
+  try{
+    const n = mtNorm(ex && ex.name);
+    for(const [re, f] of MT_FICHA_FIXA){ if(re.test(n)){ const r = f(); if(r) return r; } }
+  }catch(e){}
+  return _fichaB44.apply(this, arguments);
+};

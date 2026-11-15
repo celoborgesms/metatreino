@@ -82,6 +82,9 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `43-visual-transicoes-desempenho.js` | Beta 41: caches (`slug`, `mtFmtData`, `mtFmtKm`, `_bytesDe`), `_decoAgenda` em um quadro, transição de conteúdo das janelas e do tema, montagem do plano mais curta (`mb-pronto`, `mt-entra`), fundos decorativos novos (`DECO2_SVG`), classe `mt-toque` |
 | `44-conta-acesso-backup.js` | Beta 42: verificação de e-mail (reload + token novo), vínculo Google × senha, teste Premium ao concluir o perfil, backup com dono + SHA-256, erros da montagem |
 | `45-temas-carrossel-ilustracoes.js` | Beta 42: carrossel de temas, ilustrações de Histórico e Corrida |
+| `46-diagnostico-acesso.js` | Beta 43: `mtLogAcesso` (falhas de acesso → `diagnosticoAcesso`, sem e-mail/UID, hash da conta, 1 registro a cada 10 min), painel "Diagnóstico de acesso" do principal, rótulo "Tentar novamente" |
+| `47-lanches-fora-da-rotina.js` | Beta 43: receitas "Lanches para sair da rotina" — tabela `RC_ING` (TACO/rótulos), `RC_RECEITAS`, ajuste da porção à refeição (`rcEncaixe`), restrições (`rcRestricao`), favoritas (`state.nutri.receitasFav`), custo informado pelo aluno, registro no plano, ilustrações SVG |
+| `48-fim-registro-descanso.js` | Beta 44: conquistas no fim do registro (`cqCelebrar`, janela de 2 min após salvar), ponto na aba Desafios, "não vou treinar hoje" no topo e pergunta antes de registrar, fichas técnicas corrigidas (`MT_FICHA_FIXA`) |
 
 Parte nova: próximo número livre (ex.: `41-nome-da-funcao.js`).
 
