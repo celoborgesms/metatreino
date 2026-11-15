@@ -1,0 +1,11 @@
+{
+  "name": "metatreino-functions",
+  "description": "MetaTreino — exclusão segura de contas pelo painel do administrador (Beta 40)",
+  "main": "index.js",
+  "private": true,
+  "engines": { "node": "20" },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.0.1"
+  }
+}
