@@ -72,8 +72,7 @@ async def cenario_a(b):
     await pg.evaluate("try{ updateFabNudge(); }catch(e){}")
     confere('aviso do assistente (balão) não aparece no cadastro', await pg.evaluate("(()=>{ const b=document.getElementById('fab-bubble'); return !b || b.style.display==='none' || !b.offsetParent; })()"))
     print(' Tema')
-    await pg.evaluate("mtTcIr(document.querySelector('#wz-temas .tc'), _tcOrdem().indexOf('areia'))"); await pg.wait_for_timeout(500)
-    await pg.click('#wz-temas .tc-usar'); await pg.wait_for_timeout(200)
+    await pg.evaluate("mtTcIr(document.querySelector('#wz-temas .tc'), _tcOrdem().indexOf('areia'))"); await pg.wait_for_timeout(1300)   # Beta 44: aplica ao parar
     confere('escolher o tema aplica na hora', await pg.evaluate("document.documentElement.getAttribute('data-theme')") == 'areia')
     confere('tema fica salvo no aparelho e na conta', await pg.evaluate("localStorage.getItem('metatreino_theme')==='areia' && state.prefs && state.prefs.tema==='areia'"))
     await foto(pg, 'b38-02-tema-areia')

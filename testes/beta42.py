@@ -47,8 +47,8 @@ async def main():
           const ids = c=>JSON.stringify([c.mais,c.compat,c.secund].map(l=>l.map(x=>x.id)));
           const grupo = mtExPorId('{fid}').grupo; const pad = mtPadrao(e).pad;
           const fora = [...g.mais,...g.compat,...g.secund].filter(x=>mtExPorId(x.id).grupo!==grupo && mtPadrao(x.ex).pad!==pad).map(x=>x.ex.name);
-          return {{ igual: ids(g)===ids(o), fora, n: g.mais.length+g.compat.length }}; }})()""")
-        confere('mesma lógica de compatibilidade da Beta 41 (mesmas opções e faixas)', c['igual'])
+          return {{ igual: ids(g)===ids(o), semFaixaEq: g.mesmoEq.length===0, fora, n: g.mais.length+g.compat.length }}; }})()""")
+        confere('sem equipamento: não aplica a regra de aparelho ocupado (Beta 44: "ocupado" e "grupo" têm critérios próprios)', c['semFaixaEq'], c)
         confere('nenhuma opção de outro grupo muscular (fora do mesmo movimento)', not c['fora'], c['fora'])
         confere('favorito compatível priorizado; favorito de outro movimento não', r['favs'] == ['flexao-com-maos-elevadas'], r['favs'])
         await pg.evaluate("document.querySelector('.tx-item.tx-fav, .tx-item.tx-mais, .tx-item.tx-compat').click()"); await pg.wait_for_timeout(300)

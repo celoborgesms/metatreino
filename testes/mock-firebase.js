@@ -28,7 +28,8 @@
   if(window.__MOCK_DOCS) Object.keys(window.__MOCK_DOCS).forEach(k=>{ if(!(k in store)) store[k] = window.__MOCK_DOCS[k]; });
   if(!window.__MOCK_SEM_DOC && !store['usuariosAutorizados/'+MOCK_USER.email]) store['usuariosAutorizados/'+MOCK_USER.email] = { active:true, expiresAt:null, name:'Aluno Teste' };
   // regra de leitura do plano: e-mail não verificado não lê (como no firestore.rules)
-  const negado = path => /^usuariosAutorizados\//.test(path) && !MOCK_USER.__tokenVerified && !/@aluno\.metatreino\.app$/.test(MOCK_USER.email);
+  // Beta 43: __MOCK_NEGA_AUTORIZACAO = a leitura da autorização é recusada mesmo com credencial nova (ex.: regras antigas publicadas)
+  const negado = path => /^usuariosAutorizados\//.test(path) && (window.__MOCK_NEGA_AUTORIZACAO || (!MOCK_USER.__tokenVerified && !/@aluno\.metatreino\.app$/.test(MOCK_USER.email)));
   // regra da Beta 42: conta marcada como excluída não grava os próprios dados (o administrador sim)
   const gravacaoNegada = path => /^usuarios\//.test(path) && !!store['contasExcluidas/' + String(MOCK_USER.email).toLowerCase()] && !window.__MOCK_ADMIN_GRAVA;
   function snap(path){ const d = store[path]; return { exists: d !== undefined, id: path.split('/').pop(), data: ()=> d === undefined ? undefined : JSON.parse(JSON.stringify(d)), ref:{ path } }; }

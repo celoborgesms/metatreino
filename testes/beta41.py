@@ -55,8 +55,8 @@ async def substituicao(b):
     r = await pg.evaluate("""(()=>{ const e = {id:'crossover-no-cabo-alto', name:'Crossover no Cabo (alto)', sub:'Peito Inferior', part:'Peito', sets:3, reps:'12', rest:'60s'}; const w = {exercises:[e]};
       const o = mtCandidatosTroca(w, e, 'ocupado', {equip:'academia'}), p = mtCandidatosTroca(w, e, 'preferencia', {equip:'academia'});
       const pos = (c,n)=>[...c.mais, ...c.compat].findIndex(x=>x.ex.name===n);
-      return { ocup:pos(o,'Crossover no Cabo (baixo)'), pref:pos(p,'Crossover no Cabo (baixo)'), aviso:([...o.mais,...o.compat].find(x=>x.ex.name==='Crossover no Cabo (baixo)')||{}).aviso }; })()""")
-    confere('aparelho ocupado: outro exercício no mesmo tipo de aparelho vem depois, com aviso', r['ocup'] > r['pref'] and 'mesmo tipo de equipamento' in (r['aviso'] or ''), r)
+      return { ocupFim: pos(o,'Crossover no Cabo (baixo)') === -1 && o.mesmoEq.some(x=>x.ex.name==='Crossover no Cabo (baixo)'), prefPrimeiro: (p.mesmoEq[0]||{ex:{}}).ex.name === 'Crossover no Cabo (baixo)', aviso:(o.mesmoEq.find(x=>x.ex.name==='Crossover no Cabo (baixo)')||{}).aviso }; })()""")
+    confere('aparelho ocupado: o mesmo tipo de aparelho vai para o fim, com aviso; por preferência vem primeiro (Beta 44)', r['ocupFim'] and r['prefPrimeiro'] and 'mesmo tipo de equipamento' in (r['aviso'] or ''), r)
     # equipamento, limitações e nível
     r = await pg.evaluate("""(()=>{ const e = {id:'supino-reto-com-halteres', name:'Supino Reto com Halteres', sub:'Peito', part:'Peito'}; const w={exercises:[e]};
       const h = mtCandidatosTroca(w, e, 'ocupado', {equip:'halteres'}); const todos = [...h.mais,...h.compat,...h.secund];
@@ -180,10 +180,10 @@ async def conquistas(b):
     confere('rara e especial têm destaque próprio (brilho único / moldura)', r['rara'] and r['especial'], r)
     confere('recém-desbloqueadas destacadas como "Nova" na coleção', r['recente'] >= 2, r)
     confere('desbloqueadas / em andamento / bloqueadas diferenciadas', all(n > 0 for n in r['estados']), r)
-    confere('apresentação registrada (sai da fila)', r['pend'] == 0)
+    confere('apresentação registrada (Beta 44: continuam "novas" até abrir cada uma, mas marcadas como apresentadas)', r['pend'] == 3 and await pg.evaluate("state.conqPend.every(p=>p.anim)"))
     await foto(pg, 'b41-04-conquistas-novas')
     await pg.evaluate("closeModal(); openTrophies()"); await pg.wait_for_timeout(500)
-    confere('reabrir: conquistas já vistas não reaparecem nem reanimam', await pg.evaluate("document.querySelectorAll('.cq-novo').length===0 && document.querySelectorAll('.cq-tile.cq-recente').length===0"))
+    confere('reabrir: as novas continuam destacadas, sem reanimar (Beta 44)', await pg.evaluate("document.querySelectorAll('.cq-novo').length===3 && !document.querySelector('.cq.cq-anim')"))
     await pg.evaluate("cqFiltrar('and')"); await pg.wait_for_timeout(200)
     confere('filtro "Em andamento" mostra só as com progresso', await pg.evaluate("[...document.querySelectorAll('#cq-grade-box .cq-tile')].every(t=>t.classList.contains('st-and'))"))
     await pg.evaluate("cqFiltrar('todas'); closeModal()")
@@ -195,13 +195,13 @@ async def conquistas(b):
     # sincronização: o outro aparelho recebe a conta já com as conquistas vistas
     await pg.wait_for_timeout(1200)
     doc = await pg.evaluate("(()=>{ for(const k in window.__mockFS){ const v = window.__mockFS[k]; if(v && v.estadoApp) return [k, v]; } return null; })()")
-    confere('controle de visualização salvo na nuvem', doc and doc[1]['estadoApp'].get('conqPend') == [] and len(doc[1]['estadoApp'].get('conqVistas', [])) >= 3)
+    confere('controle de visualização salvo na nuvem (abrir o detalhe tira da lista de novas)', doc and len(doc[1]['estadoApp'].get('conqPend')) == 2 and all(p.get('anim') for p in doc[1]['estadoApp'].get('conqPend')) and len(doc[1]['estadoApp'].get('conqVistas', [])) >= 1, doc and doc[1]['estadoApp'].get('conqPend'))
     confere('sem erros de JavaScript', not erros, erros[:3])
     await ctx.close()
     if doc:
         ctx, pg, erros = await nova(b, docs={doc[0]: doc[1]})
         await pg.evaluate("openTrophies()"); await pg.wait_for_timeout(500)
-        confere('segundo aparelho: nada é reapresentado', await pg.evaluate("document.querySelectorAll('.cq-novo').length===0 && state.conqVistas.length>=3"))
+        confere('segundo aparelho: nada é reanimado', await pg.evaluate("!document.querySelector('.cq.cq-anim') && state.conqPend.every(p=>p.anim)"))
         await ctx.close()
 
 async def desafio_mensal(b):
