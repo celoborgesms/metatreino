@@ -7,10 +7,17 @@
   const persist = ()=>{ try{ localStorage.setItem(LS, JSON.stringify(store)); }catch(e){} };
   window.__mockFS = store;
   window.__mockWrites = [];
-  const MOCK_USER = window.__MOCK_USER || { uid:'aluno-teste', email:'aluno.teste@example.com', displayName:'Aluno Teste', emailVerified:true };
+  const MOCK_USER = Object.assign({ uid:'aluno-teste', email:'aluno.teste@example.com', displayName:'Aluno Teste', emailVerified:true }, window.__MOCK_USER || {});
+  // Beta 40: métodos do usuário do Firebase usados pelo app (cadastro por e-mail, função do servidor)
+  MOCK_USER.updateProfile = ()=>Promise.resolve(); MOCK_USER.sendEmailVerification = ()=>Promise.resolve(); MOCK_USER.getIdToken = ()=>Promise.resolve('token-de-teste');
+  MOCK_USER.providerData = MOCK_USER.providerData || [{ providerId:'password' }];
   const now = Date.now();
-  // aluno autorizado por padrão
-  if(!store['usuariosAutorizados/'+MOCK_USER.email]) store['usuariosAutorizados/'+MOCK_USER.email] = { active:true, expiresAt:null, name:'Aluno Teste' };
+  // aluno autorizado por padrão (Beta 40: window.__MOCK_SEM_DOC = conta nova, sem documento de plano)
+  // documentos iniciais do teste (ex.: plano do aluno, administradores)
+  if(window.__MOCK_DOCS) Object.keys(window.__MOCK_DOCS).forEach(k=>{ if(!(k in store)) store[k] = window.__MOCK_DOCS[k]; });
+  if(!window.__MOCK_SEM_DOC && !store['usuariosAutorizados/'+MOCK_USER.email]) store['usuariosAutorizados/'+MOCK_USER.email] = { active:true, expiresAt:null, name:'Aluno Teste' };
+  // regra de leitura do plano: e-mail não verificado não lê (como no firestore.rules)
+  const negado = path => /^usuariosAutorizados\//.test(path) && !MOCK_USER.emailVerified && !/@aluno\.metatreino\.app$/.test(MOCK_USER.email);
   function snap(path){ const d = store[path]; return { exists: d !== undefined, id: path.split('/').pop(), data: ()=> d === undefined ? undefined : JSON.parse(JSON.stringify(d)), ref:{ path } }; }
   function validaFirestore(v, p){
     if(v === undefined) throw new Error('Function setDoc() called with invalid data. Unsupported field value: undefined (' + p + ')');
@@ -21,7 +28,7 @@
   function docRef(path){
     return {
       id: path.split('/').pop(), path,
-      get: ()=>Promise.resolve(snap(path)),
+      get: ()=> negado(path) ? Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })) : Promise.resolve(snap(path)),
       set: (data, opt)=>{ try{ validaFirestore(data, path); }catch(e){ return Promise.reject(e); } window.__mockWrites.push({path, at:Date.now(), bytes: JSON.stringify(data).length}); store[path] = (opt && opt.merge) ? Object.assign({}, store[path]||{}, data) : JSON.parse(JSON.stringify(data)); persist(); return Promise.resolve(); },
       update: (data)=>{ store[path] = Object.assign({}, store[path]||{}, data); persist(); return Promise.resolve(); },
       delete: ()=>{ delete store[path]; persist(); return Promise.resolve(); },

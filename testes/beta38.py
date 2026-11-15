@@ -15,7 +15,7 @@ def confere(nome, cond, info=''):
 
 EMOJI_JS = r"""(() => { const tela = document.querySelector('.screen.active'); const achados = [];
   const re = /\p{Extended_Pictographic}/u; const w = document.createTreeWalker(tela, NodeFilter.SHOW_TEXT);
-  let n; while((n = w.nextNode())){ const p = n.parentElement; if(!p || !p.offsetParent) continue; if(re.test(n.nodeValue)) achados.push(n.nodeValue.trim().slice(0,30)); }
+  let n; while((n = w.nextNode())){ const p = n.parentElement; if(!p || !p.offsetParent || p.closest('[data-manter-emoji]')) continue; if(re.test(n.nodeValue)) achados.push(n.nodeValue.trim().slice(0,30)); }
   return achados; })()"""
 ATIVA = "document.querySelector('.screen.active').id"
 async def foto(pg, nome):
@@ -49,7 +49,8 @@ async def cenario_a(b):
     confere('barra de abas escondida no cadastro', await pg.evaluate("document.getElementById('tabbar').classList.contains('hidden')"))
     confere('botão do Meta Assistente escondido no cadastro', await pg.evaluate("document.getElementById('ma-fab').classList.contains('hidden')"))
     temas = await pg.evaluate("[...document.querySelectorAll('#wz-temas .wz-tema')].map(b=>({k:b.querySelector('.wz-tema-prev').dataset.theme, on:b.classList.contains('on'), sug:!!b.querySelector('.wz-tema-sug')}))")
-    confere('os 8 temas existentes aparecem com prévia', len(temas) == 8, temas)
+    # Beta 40: os 8 temas de antes + os 2 exclusivos Premium (Ametista e Coral)
+    confere('os 8 temas existentes + 2 Premium aparecem com prévia', len(temas) == 10 and {'zepp','areia','claro','amoled','aurora','classico','oceano','rubi'} <= {t['k'] for t in temas}, temas)
     confere('Areia aparece como sugestão, sem estar marcado à força', any(t['k']=='areia' and t['sug'] and not t['on'] for t in temas), temas)
     confere('o tema atual do aparelho é o marcado', [t['k'] for t in temas if t['on']] == [await pg.evaluate("currentTheme()")])
     cores = await pg.evaluate("[...document.querySelectorAll('.wz-tema-prev')].map(p=>getComputedStyle(p).backgroundColor)")

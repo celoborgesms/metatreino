@@ -56,7 +56,16 @@ def permite(op, caminho, t, dados=None):
     if p[0] == 'parceiros': return admin(t)
     if p[0] in ('videosExercicios', 'exerciciosCustom', 'caliExercicios', 'caliModelos', 'desafiosTematicos', 'config'):
         return op in ('get', 'list') or admin(t)
-    if p[0] == 'usuariosAutorizados': return op in ('get',) and (admin(t) or em == (p[1] if len(p) > 1 else '')) or admin(t)
+    if p[0] == 'usuariosAutorizados':
+        alvo = p[1] if len(p) > 1 else ''
+        if op == 'get': return admin(t) or (em == alvo and confiavel(t))
+        if op == 'set':
+            # Beta 40: o aluno CRIA uma vez o próprio Teste Premium (e-mail verificado, só os campos permitidos)
+            if caminho not in LOJA and t.get('verified') and em == alvo and set((dados or {}).keys()) <= {'plano','testeInicio','origem','name'} and (dados or {}).get('plano') == 'teste' and (dados or {}).get('testeInicio'): return True
+            return admin(t) and (em == DONO or em != alvo)
+        if op == 'delete': return admin(t) and (em == DONO or em != alvo)
+        return admin(t)
+    if p[0] == 'adminLog': return (op == 'set' and admin(t) and (dados or {}).get('por') == em) or (op in ('get','list') and em == DONO and bool(t.get('verified')))
     if p[0] == 'admins': return op == 'get' and em == (p[1] if len(p) > 1 else '') or admin(t)
     return True   # demais coleções (mensagens etc.): fora do escopo deste teste
 
