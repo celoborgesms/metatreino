@@ -90,7 +90,7 @@ async def main():
             cores = {}
             for t in TEMAS:
                 await pg.evaluate(f"applyTheme('{t}'); goTab('profile'); openAparencia()"); await pg.wait_for_timeout(350)
-                cores[t] = await pg.evaluate("[...document.querySelectorAll('.ap-prev, .ap-prev-real')].map(p=>[getComputedStyle(p).backgroundColor, ...[...p.querySelectorAll('i,b')].map(i=>getComputedStyle(i).backgroundColor), getComputedStyle(p).opacity, getComputedStyle(p).filter].join('|'))")
+                cores[t] = await pg.evaluate("[...document.querySelectorAll('#modal-inner .tc-prev')].map(p=>[getComputedStyle(p).backgroundColor, ...[...p.querySelectorAll('i,b')].map(i=>getComputedStyle(i).backgroundColor), getComputedStyle(p).opacity, getComputedStyle(p).filter].join('|'))")
                 await pg.evaluate("closeModal()")
             iguais = all(cores[t] == cores['zepp'] for t in TEMAS)
             confere('paletas com as mesmas cores em qualquer tema e sem filtro/opacidade', iguais and all('|1|none' in x for x in cores['zepp']), [t for t in TEMAS if cores[t] != cores['zepp']])
@@ -99,8 +99,8 @@ async def main():
             # pixel da amostra = cor do tema, com o tema atual escuro e claro
             pix = {}
             for t in ['zepp','claro']:
-                await pg.evaluate(f"applyTheme('{t}'); openAparencia()"); await pg.wait_for_timeout(500)
-                el = await pg.query_selector('.ap-prev i, .ap-prev-real .tp-top i')
+                await pg.evaluate(f"applyTheme('{t}'); openAparencia(); mtTcIr(document.querySelector('#modal-inner .tc'), _tcOrdem().indexOf('oceano'))"); await pg.wait_for_timeout(900)
+                el = await pg.query_selector('#modal-inner .tc-slide[data-k="oceano"] .tcp-logo')
                 bb = await el.bounding_box(); shot = await pg.screenshot(clip={'x':bb['x']+bb['width']/2-1,'y':bb['y']+bb['height']/2-1,'width':2,'height':2})
                 from PIL import Image; import io
                 pix[t] = Image.open(io.BytesIO(shot)).convert('RGB').getpixel((1,1))

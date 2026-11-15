@@ -275,9 +275,9 @@ async def visual_desempenho(b):
     # montagem do plano: passos reais, curta, termina em "pronto" e a tela de treinos entra em sequência
     t0 = await pg.evaluate("Date.now()")
     await pg.evaluate("""(()=>{ window.__fimMontagem = 0; runBuildingScreen('lift', [{txt:'Objetivo'},{txt:'Equipamento'},{txt:'Dias'},{txt:'Limitações'},{txt:'Histórico'}], ()=>{ window.__fimMontagem = Date.now(); goTab('sessions'); }); })()""")
-    await pg.wait_for_function("window.__fimMontagem > 0", timeout=8000)
+    await pg.wait_for_function("window.__fimMontagem > 0", timeout=12000)
     dur = (await pg.evaluate("window.__fimMontagem")) - t0
-    confere(f'montagem acompanha as 5 etapas sem espera inventada ({dur} ms; antes ~5–6 s)', dur < 3600, dur)
+    confere(f'montagem acompanha as 5 etapas reais, ~1,1 s cada (Beta 42) ({dur} ms)', 5000 < dur < 9000, dur)
     await pg.wait_for_timeout(100)
     confere('plano montado: dias e exercícios entram em sequência', await pg.evaluate("document.getElementById('session-detail-slot').classList.contains('mt-entra')"))
     # desempenho: caches equivalentes às funções originais
