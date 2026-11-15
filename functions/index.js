@@ -77,13 +77,23 @@ exports.adminExcluirConta = onCall(OPCOES, async (req) => {
   const email = String((req.data && req.data.email) || '').trim().toLowerCase();
   const confirmacao = String((req.data && req.data.confirmacao) || '').trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new HttpsError('invalid-argument', 'E-mail inválido.');
-  // a confirmação digitada precisa ser o próprio e-mail: evita excluir a conta errada
-  if (confirmacao !== email) throw new HttpsError('failed-precondition', 'A confirmação não confere com o e-mail da conta.');
+  // Beta 42: a confirmação é a janela do painel (nome + e-mail + "Excluir aluno"); o pedido precisa vir
+  // marcado como confirmado e com o mesmo e-mail (versões antigas do painel mandam o e-mail digitado)
+  if (!(req.data && req.data.confirmado === true) && confirmacao !== email) throw new HttpsError('failed-precondition', 'Exclusão não confirmada.');
   const meu = String(req.auth.token.email || '').toLowerCase();
   if (email === meu || email === String(DONO_EMAIL.value() || '').toLowerCase()) throw new HttpsError('failed-precondition', 'A conta do administrador principal não pode ser excluída por aqui.');
 
-  const uids = await uidsDaPessoa(email);
-  if (uids.includes(DONO_UID.value())) throw new HttpsError('failed-precondition', 'Essa conta pertence ao administrador principal.');
+  let uids = await uidsDaPessoa(email);
+  if (uids.includes(DONO_UID.value()) || uids.includes(req.auth.uid)) throw new HttpsError('failed-precondition', 'Essa conta pertence ao administrador.');
+  // Beta 42: só entra login cujo e-mail é o da conta excluída (ou que não existe mais) — nunca o de outra pessoa
+  const confirmados = [];
+  for (const uid of uids) {
+    try { const u = await getAuth().getUser(uid); if (!u.email || u.email.toLowerCase() === email) confirmados.push(uid); }
+    catch (e) { confirmados.push(uid); }
+  }
+  uids = confirmados;
+  // marca permanente ANTES de apagar: o app da pessoa, se ainda aberto, não recria nada (firestore.rules)
+  await db.collection('contasExcluidas').doc(email).set({ em: Date.now(), por: meu, origem: 'servidor' });
   const feito = { logins: 0, documentos: 0, participacoes: 0 };
 
   // 1) dados no Firestore (documento do aluno + arquivo anual + participações em desafios)
