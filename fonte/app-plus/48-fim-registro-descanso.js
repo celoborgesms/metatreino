@@ -49,15 +49,55 @@ function _cqCelTenta(){
   pend.forEach(p=>{ p.cel = true; });
   try{ salvarLocal(); }catch(e){}
   const lista = pend.slice().reverse();
-  const tit = lista.length === 1 ? 'Nova conquista!' : `${lista.length} novas conquistas!`;
-  $('modal-inner').innerHTML = `<div class="cq cq-anim cq-cel">
-    <div class="cq-topo"><h3>🏆 ${tit}</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
-    <p class="cq-cel-p">Desbloqueada${lista.length>1?'s':''} com o registro de agora. Toque em uma para ver os detalhes.</p>
-    <section class="cq-novos">${lista.slice(0, CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${lista.length > CQ_MAX_NOVOS ? `<div class="cq-mais-novos">E mais ${lista.length - CQ_MAX_NOVOS} na aba Conquistas.</div>` : ''}</section>
+  _cqCelLista = lista;
+  const n = lista.length;
+  $('modal-inner').innerHTML = `<div class="cq cq-cel">
+    <div class="cq-topo"><h3>🏆 ${n === 1 ? 'Nova conquista!' : n + ' novas conquistas!'}</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
+    <div class="cel-trilho" id="cel-trilho" role="listbox" aria-label="Conquistas desbloqueadas — deslize para os lados">
+      ${lista.map((p,i)=>cqCelCartao(p, i)).join('')}
+    </div>
+    ${n > 1 ? `<div class="cel-nav"><button type="button" class="cel-seta" aria-label="Anterior" onclick="cqCelPasso(-1)">‹</button>
+      <span class="cel-pos" id="cel-pos" aria-live="polite">1 de ${n}</span>
+      <button type="button" class="cel-seta" aria-label="Próxima" onclick="cqCelPasso(1)">›</button></div>
+      <div class="cel-pontos">${lista.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>` : ''}
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();openTrophies()">Ver todas as conquistas</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Continuar</button></div>`;
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
   $('modal-back').classList.add('on');
+  const tr = document.getElementById('cel-trilho');
+  let parou = 0;
+  tr.addEventListener('scroll', ()=>{ clearTimeout(parou); parou = setTimeout(_cqCelAtual, 120); }, { passive:true });
+  _cqCelIdx = 0; _cqCelVer(0);
   try{ if(typeof mtVibrar === 'function') mtVibrar([20,40,20]); }catch(e){}
+}
+let _cqCelLista = [], _cqCelIdx = 0;
+function cqCelCartao(p, i){
+  const t = p.tid ? TROPHIES.find(x=>x.id===p.tid) : null;
+  const nv = t ? medalNivel(t) : (p.kind==='medalha' || p.kind==='marco' ? 'rara' : p.kind==='secreto' ? 'especial' : 'comum');
+  const ico = t ? trophyIco(t) : (p.emo && /<svg|<span/.test(p.emo) ? p.emo : `<span class="cq-emo">${mtEsc(p.emo||'🏅')}</span>`);
+  const tipo = { trofeu:'Conquista desbloqueada', secreto:'Segredo revelado', medalha:'Medalha do mês', marco:'Marco alcançado', evento:'Desafio concluído' }[p.kind] || p.tipo || 'Conquista';
+  return `<div class="cel-cartao nv-${nv}" role="option" aria-label="${mtEsc(t ? t.name : p.nome)}" data-i="${i}">
+    <div class="cel-med">${ico}</div>
+    <small class="cel-tipo">${mtEsc(tipo)}${nv!=='comum' && typeof CQ_NV!=='undefined' ? ' · ' + CQ_NV[nv] : ''}</small>
+    <b class="cel-nome">${mtEsc(t ? t.name : p.nome)}</b>
+    <span class="cel-desc">${mtEsc(t ? t.desc : p.desc)}</span></div>`;
+}
+function _cqCelAtual(){
+  const tr = document.getElementById('cel-trilho'); if(!tr) return;
+  const i = Math.max(0, Math.min(_cqCelLista.length - 1, Math.round(tr.scrollLeft / Math.max(1, tr.clientWidth))));
+  if(i !== _cqCelIdx){ _cqCelIdx = i; _cqCelVer(i); }
+}
+// o cartão que aparece conta como visto (sai das "novas"); nada fica preso esperando um toque
+function _cqCelVer(i){
+  const p = _cqCelLista[i]; if(p){ try{ cqMarcaVista(x=>x.k===p.k); }catch(e){} }
+  const pos = document.getElementById('cel-pos'); if(pos) pos.textContent = `${i+1} de ${_cqCelLista.length}`;
+  document.querySelectorAll('.cel-pontos i').forEach((d,k)=>d.classList.toggle('on', k===i));
+  document.querySelectorAll('.cel-seta').forEach((b,k)=>{ b.disabled = k===0 ? i===0 : i===_cqCelLista.length-1; });
+}
+function cqCelPasso(d){
+  const tr = document.getElementById('cel-trilho'); if(!tr) return;
+  const i = Math.max(0, Math.min(_cqCelLista.length - 1, _cqCelIdx + d));
+  try{ tr.scrollTo({ left: i * tr.clientWidth, behavior:'smooth' }); }catch(e){ tr.scrollLeft = i * tr.clientWidth; }
+  _cqCelIdx = i; _cqCelVer(i);
 }
 
 // ---------- 2. ponto na aba Desafios ----------
@@ -125,13 +165,26 @@ mtGancho('finishLiftWorkout', { antes(k){
   s.textContent = `
 .tab[data-tab="challenges"]{position:relative}
 .tab .cq-dot{position:absolute;top:4px;left:calc(50% + 7px);width:9px;height:9px;border-radius:50%;background:var(--danger,#e5484d);box-shadow:0 0 0 2px var(--bar-bg,var(--bg));pointer-events:none}
-.cq-cel .cq-cel-p{font-size:13px;color:var(--text-dim);line-height:1.5;margin:-4px 0 10px}
+.cel-trilho{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin:4px 0 0}
+.cel-trilho::-webkit-scrollbar{display:none}
+.cel-cartao{flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:14px 10px 10px;box-sizing:border-box}
+.cel-med{width:108px;height:108px;display:flex;align-items:center;justify-content:center;animation:cqMed .7s var(--mt-ease,ease) both}
+.cel-med .tbadge,.cel-med svg{width:108px;height:108px}.cel-med .cq-emo{font-size:64px}
+.cel-cartao.nv-rara .cel-med{filter:drop-shadow(0 0 16px rgba(var(--primary-rgb),.45))}.cel-cartao.nv-especial .cel-med{filter:drop-shadow(0 0 18px rgba(var(--accent-rgb),.55))}
+.cel-tipo{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--primary-2)}
+.cel-nome{font-size:19px;line-height:1.25}.cel-desc{font-size:13px;color:var(--text-dim);line-height:1.45;max-width:280px}
+.cel-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:6px}
+.cel-seta{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:22px;line-height:1;cursor:pointer}
+.cel-seta:disabled{opacity:.3;cursor:default}.cel-pos{font-size:12px;color:var(--text-mute);min-width:56px;text-align:center}
+.cel-pontos{display:flex;justify-content:center;gap:5px;margin-top:8px;flex-wrap:wrap}.cel-pontos i{width:6px;height:6px;border-radius:99px;background:var(--text-mute);opacity:.4;transition:width .2s}.cel-pontos i.on{width:16px;opacity:1;background:var(--primary)}
+.tx-mais-opc{margin:6px 0 2px}.tx-mais-opc>summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--text-dim);padding:10px 2px;list-style:none}.tx-mais-opc>summary::before{content:'▸ ';}.tx-mais-opc[open]>summary::before{content:'▾ ';}
+.cq-novas-txt{display:block;font-size:11.5px;font-weight:800;color:var(--primary-2);margin-top:4px}
+@media (prefers-reduced-motion:reduce){.cel-med{animation:none}}
 .cq-novo-tag{background:rgba(20,20,20,.86)!important;color:#fff!important}
-.cq-vistas{display:block;margin:4px auto 0;background:none;border:0;color:var(--primary-2);font:inherit;font-size:12.5px;font-weight:700;padding:8px;cursor:pointer}
 #session-detail-slot.mt-pulado .ex,#session-detail-slot.mt-pulado .blk,#session-detail-slot.mt-pulado .block{opacity:.55}
 `; document.head.appendChild(s); })();
 
-Object.assign(window, { cqCelebrar });
+Object.assign(window, { cqCelebrar, cqCelPasso });
 
 // ---------- 4. fichas técnicas que estavam erradas ----------
 // A ficha era escolhida pela primeira palavra que casava no nome: "Remada na Máquina (Hammer)" caía no supino,
@@ -160,3 +213,26 @@ window.fichaExercicio = function(ex, grupo){
   }catch(e){}
   return _fichaB44.apply(this, arguments);
 };
+
+// ---------- 5. Emojis coloridos escolhidos no cadastro: sem o "Início → carregando → Início" ----------
+// Os emojis originais só voltam recarregando a página (o modo minimalista troca os emojis por desenhos).
+// Antes o app abria o Início e, 1,8 s depois, recarregava. Agora a recarga acontece ainda na tela
+// "Plano pronto" e o app já volta direto no Início (com o aviso "Plano criado!").
+const _buildB44 = window.runBuildingScreen;
+window.runBuildingScreen = function(m, steps, done, opts){
+  if(!window.__icoPendente || !(state.prefs && state.prefs.icones === 'emoji')) return _buildB44.apply(this, arguments);
+  const fim = function(){
+    window.__icoPendente = false;
+    try{ state.ui = state.ui || {}; state.ui.tab = 'home'; saveData(); syncToCloud(); }catch(e){}
+    try{ sessionStorage.setItem('mt_ico_reload', '1'); sessionStorage.setItem('mt_pos_cadastro', '1'); }catch(e){}
+    setTimeout(()=>{ try{ location.reload(); }catch(e){ if(typeof done === 'function') done(); } }, 900);
+  };
+  return _buildB44.call(this, m, steps, fim, opts);
+};
+mtGancho('bootAfterAuth', { depois(){
+  try{
+    if(sessionStorage.getItem('mt_pos_cadastro') !== '1') return;
+    sessionStorage.removeItem('mt_pos_cadastro');
+    setTimeout(()=>{ try{ if(cadastroPronto()){ goTab('home'); toast('🎉 Plano criado!'); } }catch(e){} }, 300);
+  }catch(e){}
+}});

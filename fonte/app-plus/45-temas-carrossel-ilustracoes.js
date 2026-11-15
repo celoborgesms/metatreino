@@ -49,7 +49,12 @@ function mtTemaCarrossel(host, ctx){
   tr.addEventListener('scrollend', fim, { passive:true });
   tr.addEventListener('keydown', e=>{ if(e.key === 'ArrowRight'){ e.preventDefault(); _tcVai(tc, tc._idx+1); } else if(e.key === 'ArrowLeft'){ e.preventDefault(); _tcVai(tc, tc._idx-1); } });
   _tcInfo(tc);
-  requestAnimationFrame(()=>{ _tcVai(tc, tc._idx, true); _tcInfo(tc); });
+  // Beta 45: margem dos lados calculada em pixels, para o primeiro e o último tema chegarem ao centro em
+  // qualquer navegador (padding no fim do trilho é ignorado em alguns Android)
+  const lados = ()=>{ const s = tr.children[0]; if(!s || !tr.clientWidth) return; const gap = parseFloat(getComputedStyle(tr).columnGap) || 12;
+    tr.style.setProperty('--tc-lado', Math.max(0, (tr.clientWidth - s.clientWidth)/2 - gap) + 'px'); };
+  lados(); try{ new ResizeObserver(lados).observe(tr); }catch(e){}
+  requestAnimationFrame(()=>{ lados(); _tcVai(tc, tc._idx, true); _tcInfo(tc); });
 }
 function _tcDe(el){ return el && el.closest ? el.closest('.tc') : el; }
 function _tcVai(tc, i, instant){
@@ -63,6 +68,11 @@ function _tcAtualiza(tc){
   const tr = tc.querySelector('.tc-trilho'); const meio = tr.scrollLeft + tr.clientWidth/2;
   let melhor = 0, dist = 1e9;
   [...tr.children].forEach((s,i)=>{ const d = Math.abs(s.offsetLeft + s.clientWidth/2 - meio); if(d < dist){ dist = d; melhor = i; } });
+  // Beta 45: no fim (ou no começo) do trilho vale o último (ou o primeiro) tema — em alguns celulares o último
+  // cartão não chega ao centro e o "mais perto do meio" ficava sendo o penúltimo
+  const max = tr.scrollWidth - tr.clientWidth;
+  if(max > 0 && tr.scrollLeft >= max - 4) melhor = tr.children.length - 1;
+  else if(tr.scrollLeft <= 4) melhor = 0;
   if(melhor !== tc._idx){ tc._idx = melhor; _tcInfo(tc); }
 }
 function _tcLivre(k){ return (typeof temaLiberado === 'function') ? temaLiberado(k) : true; }
@@ -143,7 +153,8 @@ Object.assign(window, { mtTemaCarrossel, mtTcPasso, mtTcIr, mtTcToque, mtTcUsar 
   s.textContent = `
 .tc-slide .tc-sel{display:none}.tc-slide.on .tc-sel{display:flex}
 #wz-temas .tc{padding-bottom:0}
-.tc-trilho{touch-action:pan-x pan-y}
+.tc-trilho{touch-action:pan-x pan-y;padding-left:0!important;padding-right:0!important}
+.tc-trilho::before,.tc-trilho::after{content:'';flex:0 0 var(--tc-lado,0px)}
 .tc-nome{min-height:38px;margin-top:2px}
 .tc-premium{flex-basis:100%;background:none;border:0;color:var(--primary-2);font:inherit;font-size:12.5px;font-weight:700;padding:6px;cursor:pointer;text-decoration:underline}
 .tc-pontos{margin:6px 0 4px}

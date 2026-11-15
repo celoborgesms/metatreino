@@ -215,7 +215,12 @@ function mtCandidatosTroca(w, cur, motivo, setup){
     }); });
   }
   const ord = (a,b)=> (b.fav?1:0)-(a.fav?1:0) || b.score-a.score || a.ex.name.localeCompare(b.ex.name);
-  out.mais.sort(ord); out.compat.sort(ord); out.mesmoEq.sort(ord); out.secund.sort((a,b)=>b.score-a.score);
+  out.mais.sort(ord); out.compat.sort(ord); out.mesmoEq.sort(ord);
+  // Beta 45: as secundárias também seguem o motivo — ocupado: outro equipamento primeiro (o mesmo tipo de
+  // aparelho por último); preferência: o mesmo equipamento primeiro
+  const eqDe = x=>mtEquipClasse(x.ex) === baseEq ? 1 : 0;
+  out.secund.sort((a,b)=> motivo === 'ocupado' ? (eqDe(a) - eqDe(b)) || (b.score - a.score)
+                        : motivo === 'preferencia' ? (eqDe(b) - eqDe(a)) || (b.score - a.score) : b.score - a.score);
   // favoritos compatíveis no topo; favoritos que só servem como "secundária" ficam fora deste destaque
   out.favs = [...(motivo === 'preferencia' ? out.mesmoEq : []), ...out.mais, ...out.compat].filter(x=>x.fav);
   out.secund = out.secund.slice(0, 6);
@@ -315,7 +320,8 @@ function mtTrocaAbrir(exId, motivo){
         ? `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} neste grupo muscular${(mod.setup.lim||[]).length?' com as limitações informadas':''}. Se usar uma das opções abaixo, saiba que <b>não equivalem</b> ao exercício original.</div>`
         : `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} com o seu equipamento${(mod.setup.lim||[]).length?' e as limitações informadas':''}. Se preferir, espere o equipamento liberar ou use uma das opções abaixo, sabendo que <b>não equivalem</b> ao exercício original.</div>`) : ''}
       ${_mtTroca.motivo==='ocupado' ? sec('No mesmo tipo de equipamento', 'Também servem, mas podem estar ocupados', r.mesmoEq.filter(x=>!favIds.has(x.id)), 'compat') : ''}
-      ${sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')}
+      ${r.secund.length ? (nada ? sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')
+        : `<details class="tx-mais-opc"><summary>Outras opções do grupo (${r.secund.length}) — não equivalentes</summary>${sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')}</details>`) : ''}
     </div>
     <label class="tx-salvar"><input type="checkbox" id="tx-salvar" ${_mtTroca.salvar?'checked':''} onchange="_mtTroca.salvar=this.checked"> Manter esta troca nos próximos treinos (altera o plano)</label>
     <p class="tx-nota">Sem marcar, a troca vale só para esta execução do treino. Séries, repetições e descanso continuam os mesmos.</p>

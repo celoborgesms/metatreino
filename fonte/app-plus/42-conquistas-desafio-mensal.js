@@ -25,14 +25,15 @@ function cqEstado(){
   return state;
 }
 // leitura sem tocar no estado (criar campos vazios aqui faria o app regravar a conta na nuvem sem motivo)
-// Beta 44: as "novas" ficam destacadas até o aluno abrir cada uma (ou por 7 dias). Abrir a aba Conquistas
-// só marca como "apresentada" (a animação não se repete e os avisos somem), sem apagar o destaque.
-const CQ_NOVA_DIAS = 7;
+// Beta 45: modelo simples e sem item "preso".
+//  • "Nova" = ainda não vista. Vê-se de dois jeitos: no carrossel do fim do registro (cada cartão que aparece
+//    conta como visto) ou abrindo a aba Conquistas (todas as novas contam como vistas ao abrir).
+//  • Enquanto a aba fica aberta — inclusive indo ao detalhe e voltando — a seção "Novas conquistas" continua
+//    a mesma (guardada só na memória desta visita). Fechou a aba, ela some. Nada depende de tocar em cada uma.
 function cqPendentes(){ if(!state) return { itens:[], meses:[] };
-  const lim = Date.now() - CQ_NOVA_DIAS*864e5;
-  return { itens: (state.conqPend||[]).filter(p=>(p.at||0) >= lim), meses: (state.desafiosEncerrados||[]).filter(d=>!d.visto) }; }
-function cqTemNovidade(){ const p = cqPendentes(); return p.itens.filter(x=>!x.anim).length + p.meses.length; }
-// tira da lista de novas (abriu o detalhe, ou "marcar como vistas")
+  return { itens: (state.conqPend||[]).slice(), meses: (state.desafiosEncerrados||[]).filter(d=>!d.visto) }; }
+function cqTemNovidade(){ const p = cqPendentes(); return p.itens.length + p.meses.length; }
+// marca como vistas (sai da fila) — usado pelo carrossel do fim do registro
 function cqMarcaVista(pred){
   const s = cqEstado(); if(!s) return false;
   const sai = s.conqPend.filter(pred); if(!sai.length) return false;
@@ -40,8 +41,7 @@ function cqMarcaVista(pred){
   s.conqPend = s.conqPend.filter(p=>!sai.includes(p));
   try{ saveData(); }catch(e){} cqIndicadores(); return true;
 }
-function cqVerTodasNovas(){ cqMarcaVista(()=>true); _cqRecentes = new Set(); window.__cqSemAnim = true; openTrophies(); }
-mtGancho('openTrophyDetail', { antes(id){ try{ cqMarcaVista(p=>p.tid===id); _cqRecentes.delete(id); }catch(e){} } });
+let _cqSessao = null;   // novas mostradas nesta visita à aba (memória; recomeça a cada abertura nova)
 
 // ---------- a fila de celebrações vira a fila de "a apresentar" ----------
 window.showAwards = function(){
@@ -106,14 +106,18 @@ mtGancho('ensureMonthly', { antes(){
 mtGancho('unlockTrophy', { antes(){ cqEstado(); } });
 
 // ---------- indicadores parados nos pontos de entrada ----------
+// Beta 45: um aviso só. O ponto fica na aba Desafios (parte 48); aqui, dentro de Desafios, o cartão
+// "Conquistas" ganha só o texto "· N novas" — sem outro selo no Início nem em "Sua coleção".
 function cqIndicadores(){
   try{
     const n = cqTemNovidade();
-    const pinta = el=>{ if(!el) return; let b = el.querySelector('.cq-badge');
-      if(n && !b){ b = document.createElement('span'); b.className = 'cq-badge'; el.appendChild(b); }
-      if(b){ if(n) b.textContent = n === 1 ? 'Novidade' : n + ' novidades'; else b.remove(); } };
-    pinta(document.getElementById('home-trofeus'));
-    document.querySelectorAll('.chal-tile[onclick^="openTrophies"]').forEach(pinta);
+    document.querySelectorAll('#home-trofeus .cq-badge, .chal-tile .cq-badge').forEach(b=>b.remove());
+    document.querySelectorAll('.chal-tile[onclick^="openTrophies"]').forEach(el=>{
+      let t = el.querySelector('.cq-novas-txt');
+      if(!n){ if(t) t.remove(); return; }
+      if(!t){ t = document.createElement('span'); t.className = 'cq-novas-txt'; el.appendChild(t); }
+      t.textContent = n === 1 ? '1 nova' : n + ' novas';
+    });
   }catch(e){}
 }
 mtGancho('goTab', { depois(){ cqIndicadores(); } });
@@ -218,9 +222,12 @@ window.openTrophies = function(){
   const s = { desafiosEncerrados: (state.desafiosEncerrados||[]) };   // leitura; a gravação abaixo usa cqEstado()
   const semAnim = !!window.__cqSemAnim; window.__cqSemAnim = false;
   const pend = cqPendentes();
-  // o que vai ser apresentado agora: destacado nesta abertura, depois registrado como visto
-  _cqRecentes = new Set(pend.itens.map(p=>p.tid).filter(Boolean));
-  const animar = !semAnim && (pend.itens.some(p=>!p.anim) || pend.meses.length > 0);
+  // abertura nova: as que estão na fila passam a ser "desta visita"; voltando do detalhe, a lista se mantém
+  if(!semAnim || !_cqSessao) _cqSessao = pend.itens.slice();
+  else _cqSessao = _cqSessao.concat(pend.itens.filter(p=>!_cqSessao.some(x=>x.k===p.k)));
+  const novas = _cqSessao;
+  _cqRecentes = new Set(novas.map(p=>p.tid).filter(Boolean));
+  const animar = !semAnim && (pend.itens.length > 0 || pend.meses.length > 0);
   const tot = TROPHIES.length, tenho = state.trophies.length;
   const porNv = { comum:[0,0], rara:[0,0], especial:[0,0] };
   TROPHIES.forEach(t=>{ const n = medalNivel(t); porNv[n][1]++; if(state.trophies.includes(t.id)) porNv[n][0]++; });
@@ -235,7 +242,7 @@ window.openTrophies = function(){
     <div class="cq-resumo"><div class="cq-anel" style="--p:${pctAll}"><b>${tenho}</b><small>de ${tot}</small></div>
       <div class="cq-conts">${contagem('comum','Comuns')}${contagem('rara','Raras')}${contagem('especial','Especiais')}</div></div>
     ${meses.map(d=>cqResumoMes(d, animar)).join('')}
-    ${pend.itens.length?`<section class="cq-novos"><div class="cq-sec-t">${pend.itens.length===1?'Nova conquista':'Novas conquistas · '+pend.itens.length}</div>${pend.itens.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${pend.itens.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${pend.itens.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}<button type="button" class="cq-vistas" onclick="cqVerTodasNovas()">Marcar todas como vistas</button></section>`:''}
+    ${novas.length?`<section class="cq-novos"><div class="cq-sec-t">${novas.length===1?'Nova conquista':'Novas conquistas · '+novas.length}</div>${novas.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${novas.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${novas.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}</section>`:''}
     <div class="cq-filtros" id="cq-filtros" role="group" aria-label="Filtrar conquistas">${filtros.map(([f,l])=>`<button type="button" data-f="${f}" class="filter-chip ${_cqFiltro===f?'on':''}" aria-pressed="${_cqFiltro===f}" onclick="cqFiltrar('${f}')">${l}</button>`).join('')}</div>
     <div id="cq-grade-box" class="${animar?'cq-entra':''}">${cqGrade()}</div>
     ${state.specialTrophy ? `<div class="sa-card cq-eterna" role="button" tabindex="0" onclick="openSpecialTrophy()" onkeydown="if(event.key==='Enter')openSpecialTrophy()">
@@ -247,14 +254,11 @@ window.openTrophies = function(){
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
   back.classList.add('on');
   // registra a apresentação (uma vez só, sincronizado com a conta)
-  const lim = Date.now() - CQ_NOVA_DIAS*864e5;
-  const vencidas = (state.conqPend||[]).some(p=>(p.at||0) < lim);
-  if(pend.itens.some(p=>!p.anim) || meses.length || vencidas){
+  if(pend.itens.length || meses.length){
     const s = cqEstado();
-    // apresentadas: não animam de novo, mas continuam como "novas" até abrir cada uma (ou 7 dias)
-    s.conqPend.forEach(p=>{ if(!p.anim) p.anim = true; });
-    const velhas = s.conqPend.filter(p=>(p.at||0) < lim).map(p=>p.k);
-    if(velhas.length){ s.conqVistas = s.conqVistas.concat(velhas).slice(-CQ_MAX_VISTAS); s.conqPend = s.conqPend.filter(p=>!velhas.includes(p.k)); }
+    const ks = pend.itens.map(p=>p.k);
+    s.conqVistas = s.conqVistas.concat(ks).slice(-CQ_MAX_VISTAS);
+    s.conqPend = s.conqPend.filter(p=>!ks.includes(p.k));
     const agora = Date.now();
     s.desafiosEncerrados.forEach(d=>{ if(!d.visto && meses.some(m=>m.key===d.key)){ d.visto = true; d.vistoEm = agora; } });
     saveData();
