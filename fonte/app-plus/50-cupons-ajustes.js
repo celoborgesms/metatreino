@@ -18,9 +18,19 @@ function _cupomNovo(){ const r = crypto.getRandomValues(new Uint32Array(8)); let
 const _cupData = ms => new Date(ms).toLocaleDateString('pt-BR');
 
 const CUPOM_INTERVALO = 30*86400000;
-function _cupomLiberaEm(acc){ const em = acc && acc.cupomEm ? msDe(acc.cupomEm) : 0; return em ? em + CUPOM_INTERVALO : 0; }
+function _cupomLiberaEm(acc){ if(acc && acc.cupomSemLimite === true) return 0; const em = acc && acc.cupomEm ? msDe(acc.cupomEm) : 0; return em ? em + CUPOM_INTERVALO : 0; }
+// lê de novo o próprio acesso (o administrador pode ter liberado um cupom extra)
+async function _cupomAtualizaAcesso(){
+  try{
+    const u = (typeof fbUser !== 'undefined' && fbUser) || null; if(!u || !u.email) return false;
+    const d = await db.collection('usuariosAutorizados').doc(String(u.email).toLowerCase()).get();
+    if(!d.exists) return false;
+    const antes = _cupomLiberaEm(myAccess); myAccess = d.data(); return _cupomLiberaEm(myAccess) !== antes;
+  }catch(e){ return false; }
+}
 // ---------- aluno: resgatar ----------
-function openCupom(){
+function openCupom(fresco){
+  if(!fresco) _cupomAtualizaAcesso().then(mudou=>{ if(mudou && $('cupom-tela') && !(($('cupom-cod')||{}).value)) openCupom(true); });
   const p = planoAtual(); const libera = _cupomLiberaEm(myAccess), espera = libera > Date.now();
   $('modal-inner').innerHTML = `<div id="cupom-tela"><h3>🎟️ Tenho um cupom</h3>
     <p class="fam-p">Digite o código do cupom. Ele libera dias de Premium na sua conta. Cada pessoa usa um cupom a cada 30 dias.</p>
@@ -48,6 +58,7 @@ async function cupomResgatar(){
   const volta = ()=>{ if(bt){ bt.disabled = false; bt.textContent = 'Usar cupom'; } };
   try{
     // um cupom por pessoa a cada 30 dias (as regras do Firestore conferem o mesmo)
+    await _cupomAtualizaAcesso();
     const libera = _cupomLiberaEm(myAccess);
     if(libera > Date.now()){ if(bt) bt.textContent = 'Usar cupom'; return msg('Você já usou um cupom. O próximo pode ser usado a partir de ' + _cupData(libera) + '.'); }
     const cRef = db.collection('cupons').doc(cod);
@@ -96,7 +107,7 @@ async function openCupons(){
   try{ const s = await db.collection('cupons').get(); s.forEach(d=>L.push({ id:d.id, ...d.data() })); }
   catch(e){ $('modal-inner').innerHTML = `<h3>🎟️ Cupons de Premium</h3><p class="fam-p">Não consegui ler os cupons (${mtEsc((e&&e.code)||'erro')}). Publique as regras da Beta 48.</p><button class="btn btn-ghost btn-block" onclick="closeModal()">Fechar</button>`; return; }
   const camp = {};
-  L.forEach(c=>{ const k = c.campanha || 'Sem nome'; const g = camp[k] = camp[k] || { nome:k, total:0, usados:0, dias:c.dias, validoAte:c.validoAte, criadoEm:0, livres:[] }; g.total++; if(c.usadoPor) g.usados++; else g.livres.push(c.id); g.criadoEm = Math.max(g.criadoEm, msDe(c.criadoEm)); });
+  L.forEach(c=>{ const k = c.campanha || 'Sem nome'; const g = camp[k] = camp[k] || { nome:k, total:0, usados:0, dias:c.dias, validoAte:c.validoAte, criadoEm:0, livres:[], ids:[] }; g.total++; g.ids.push(c.id); if(c.usadoPor) g.usados++; else g.livres.push(c.id); g.criadoEm = Math.max(g.criadoEm, msDe(c.criadoEm)); });
   window.__cupomCamp = camp;
   const lista = Object.values(camp).sort((a,b)=>b.criadoEm-a.criadoEm);
   $('modal-inner').innerHTML = `<h3>🎟️ Cupons de Premium</h3>
@@ -112,8 +123,56 @@ async function openCupons(){
     <div class="fam-sec">Campanhas</div>
     ${lista.map(g=>`<div class="adm-log"><b>${mtEsc(g.nome)}</b> · ${g.dias} dias${g.validoAte?` · até ${_cupData(msDe(g.validoAte))}`:''}<br>
       <small>${g.usados} de ${g.total} usados · ${g.livres.length} livres</small>
-      <div class="cup-acoes">${g.livres.length?`<button class="btn btn-ghost" onclick="cuponsCopiar('${mtJsStr(g.nome)}')">📋 Copiar livres</button><button class="btn btn-ghost" onclick="cuponsApagarLivres('${mtJsStr(g.nome)}')">Apagar livres</button>`:''}</div></div>`).join('') || '<div class="mt-muted" style="font-size:13px">Nenhuma campanha ainda.</div>'}
+      <div class="cup-acoes">${g.livres.length?`<button class="btn btn-ghost" onclick="cuponsCopiar('${mtJsStr(g.nome)}')">📋 Copiar livres</button><button class="btn btn-ghost" onclick="cuponsApagarLivres('${mtJsStr(g.nome)}')">Apagar livres</button>`:''}<button class="btn btn-ghost" onclick="cuponsApagarHistorico('${mtJsStr(g.nome)}')">🗑️ Apagar histórico</button></div></div>`).join('') || '<div class="mt-muted" style="font-size:13px">Nenhuma campanha ainda.</div>'}
+    <div class="fam-sec">Quem usou cupom</div>
+    <p class="fam-mini" style="margin-top:-4px">Cada pessoa usa 1 cupom a cada 30 dias. Aqui você libera um cupom extra ou tira o limite de alguém.</p>
+    <div id="cup-pessoas"><div class="mt-muted" style="font-size:13px">Carregando…</div></div>
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+  cuponsPessoas();
+}
+async function cuponsPessoas(){
+  const box = $('cup-pessoas'); if(!box) return;
+  let P = [];
+  try{ const s = await db.collection('usuariosAutorizados').where('cupom', '>', '').get(); s.forEach(d=>{ const x = d.data(); if(x && x.cupom) P.push({ email:d.id, ...x }); }); }
+  catch(e){ box.innerHTML = `<div class="mt-muted" style="font-size:13px">Não consegui ler (${mtEsc((e&&e.code)||'erro')}).</div>`; return; }
+  P.sort((a,b)=>msDe(b.cupomEm)-msDe(a.cupomEm));
+  window.__cupomPessoas = P;
+  box.innerHTML = P.map((x,i)=>{
+    const em = msDe(x.cupomEm), libera = _cupomLiberaEm(x);
+    const st = x.cupomSemLimite ? '♾️ sem limite de 30 dias' : libera > Date.now() ? `próximo cupom a partir de ${_cupData(libera)}` : 'já pode usar outro cupom';
+    return `<div class="adm-log" id="cup-p-${i}"><b>${mtEsc(x.name || x.email)}</b>${x.name ? `<br><small>${mtEsc(x.email)}</small>` : ''}<br>
+      <small>último cupom: ${em ? _cupData(em) : '—'} · ${st}</small>
+      <div class="cup-acoes">${!x.cupomSemLimite && libera > Date.now() ? `<button class="btn btn-ghost" onclick="cupomLiberarPessoa(${i})">🔓 Liberar 1 cupom agora</button>` : ''}
+      <button class="btn btn-ghost" onclick="cupomSemLimitePessoa(${i})">${x.cupomSemLimite ? 'Voltar ao limite de 30 dias' : '♾️ Sem limite'}</button></div></div>`;
+  }).join('') || '<div class="mt-muted" style="font-size:13px">Ninguém usou cupom ainda.</div>';
+}
+async function cupomLiberarPessoa(i){
+  const x = (window.__cupomPessoas||[])[i]; if(!x || !mtAdmin()) return;
+  try{
+    await db.collection('usuariosAutorizados').doc(x.email).update({ cupomEm: firebase.firestore.FieldValue.delete(), cupomLiberadoEm: Date.now() });
+    try{ if(typeof admRegistrar === 'function') admRegistrar('cupons', x.email, 'cupom extra liberado'); }catch(e){}
+    toast('🔓 Liberado: a pessoa já pode usar outro cupom'); cuponsPessoas();
+  }catch(e){ toast('Não consegui liberar agora (' + ((e&&e.code)||'erro') + ').'); }
+}
+async function cupomSemLimitePessoa(i){
+  const x = (window.__cupomPessoas||[])[i]; if(!x || !mtAdmin()) return;
+  const liga = !x.cupomSemLimite;
+  try{
+    await db.collection('usuariosAutorizados').doc(x.email).update({ cupomSemLimite: liga ? true : firebase.firestore.FieldValue.delete(), cupomLiberadoEm: Date.now() });
+    try{ if(typeof admRegistrar === 'function') admRegistrar('cupons', x.email, liga ? 'cupons sem limite' : 'limite de 30 dias de volta'); }catch(e){}
+    toast(liga ? '♾️ Essa pessoa pode usar cupons sem esperar 30 dias' : 'Limite de 30 dias de volta'); cuponsPessoas();
+  }catch(e){ toast('Não consegui mudar agora (' + ((e&&e.code)||'erro') + ').'); }
+}
+function cuponsApagarHistorico(nome){
+  const g = (window.__cupomCamp||{})[nome]; if(!g || !g.ids.length) return;
+  appConfirm(`Apagar a campanha "${nome}" inteira (${g.total} cupons, ${g.usados} usados)? Quem já usou continua com o Premium e com o prazo que ganhou. Os códigos livres deixam de funcionar.`, async ()=>{
+    try{
+      for(let i=0; i<g.ids.length; i+=400){ const b = db.batch(); g.ids.slice(i, i+400).forEach(id=>b.delete(db.collection('cupons').doc(id))); await b.commit(); }
+      try{ if(typeof admRegistrar === 'function') admRegistrar('cupons', nome, 'histórico apagado'); }catch(e){}
+      toast('🗑️ Histórico da campanha apagado');
+    }catch(e){ toast('Não consegui apagar agora (' + ((e&&e.code)||'erro') + ').'); }
+    openCupons();
+  }, { title:'Apagar histórico?', emo:'🗑️', okLabel:'Apagar', danger:true });
 }
 async function cuponsCriar(){
   const msg = t=>{ const e = $('cup-msg'); if(e) e.textContent = t; };
@@ -190,4 +249,4 @@ window.maRefreshThread = function(){
 .cup-novos textarea{font-family:ui-monospace,monospace;letter-spacing:2px;resize:vertical}
 `; document.head.appendChild(s); })();
 
-Object.assign(window, { openCupom, cupomResgatar, openCupons, cuponsCriar, cuponsCopiar, cuponsCopiarTexto, cuponsApagarLivres });
+Object.assign(window, { cuponsPessoas, cupomLiberarPessoa, cupomSemLimitePessoa, cuponsApagarHistorico, openCupom, cupomResgatar, openCupons, cuponsCriar, cuponsCopiar, cuponsCopiarTexto, cuponsApagarLivres });
