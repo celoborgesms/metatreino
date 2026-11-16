@@ -4,7 +4,7 @@
 
 | Pedido (prints) | Causa | Correção |
 |---|---|---|
-| Básico mostrava `${PL_EST}Premium` | texto entre aspas simples (o `${}` não era trocado) na parte 36 | concatenação normal; teste procura qualquer `${` visível em abas e janelas |
+| Básico mostrava `${PL_EST}Premium` | texto entre aspas simples (o `${}` não era trocado) na parte 36 | só a estrela, no padrão das outras linhas (Perfil, PDFs e temas); teste procura qualquer `${` visível |
 | Início com Conquistas em 0 depois do registro | o cartão só era redesenhado ao trocar de aba | redesenha logo após `unlockTrophy` e ao voltar ao Início |
 | Conquistas no fim do registro "às vezes sim, às vezes não" | só 3 caminhos de registro abriam a janela; outros (corrida marcada como feita, corrida sem km, atividade avulsa, assistente) não. As conquistas adiadas até a tela de resumo fechar podiam cair fora do prazo | os 4 caminhos que faltavam e o fechamento da tela de resumo agora contam como fim do registro |
 | Sol às 18:17 com "Boa noite" | ilustração usava "tarde" até 19h; saudação muda às 18h | mesma regra: 17h–18h pôr do sol, 18h em diante noite |
@@ -25,14 +25,15 @@ Encontrado nos testes de regressão e corrigido:
   - o documento da pessoa aponta para este cupom;
   - `premiumAte` não passa do início + os dias do cupom (+5 min de folga para o relógio do celular). O início é o maior prazo que a pessoa já tinha, ou agora;
   - e-mail verificado; conta não suspensa nem excluída;
-  - não muda nenhum outro campo (`bloqueado`, `name`, etc.).
+  - não muda nenhum outro campo (`bloqueado`, `name`, etc.);
+  - **um cupom por pessoa a cada 30 dias**: se o documento já tem `cupomEm`, o próximo resgate só passa depois de `cupomEm + 30 dias`. O app avisa a data e deixa o botão desativado.
 - **Quem não consegue o quê:** sem um cupom livre ninguém se dá Premium, e o mesmo cupom não vale duas vezes. Só administradores criam, listam e apagam cupons. Cupom já usado só o dono apaga.
 - **Prazo:** os dias somam ao teste de 30 dias ou ao Premium com prazo. Quem tem Premium sem prazo não vê o botão.
 - **Contas sem e-mail próprio** (`@aluno.metatreino.app`) recebem a mensagem para falar com o treinador, porque não têm e-mail verificado.
 
 ## Testes
 
-- **`testes/beta48.py`: 23 ok.**
+- **`testes/beta48.py`: 27 ok** (inclui o limite de 30 dias e o selo só com a estrela).
   - Nenhum `${` visível nas telas.
   - Cartão Conquistas atualiza na hora.
   - Horário da ilustração.

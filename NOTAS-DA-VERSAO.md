@@ -2,13 +2,13 @@
 
 **Publique o `firestore.rules` desta versão** (coleção nova `cupons` e resgate de cupom).
 
-1. **Plano Básico:** as linhas Premium do Perfil mostram a estrela + "Premium" (antes aparecia o texto `${PL_EST}Premium`).
+1. **Plano Básico:** as linhas Premium do Perfil (e os temas Premium em Aparência) mostram só a estrela, no mesmo padrão. Antes aparecia o texto `${PL_EST}Premium`.
 2. **Conquistas no Início:** o cartão atualiza na hora em que uma conquista é desbloqueada.
 3. **Conquistas no fim do registro:** aparecem em todos os caminhos de registro (corrida marcada como feita, corrida sem km, atividade avulsa e registro pelo assistente), também quando chegam depois da tela de resumo do treino. O carrossel grava na nuvem só ao fechar, para não apagar uma mudança feita ao mesmo tempo em outro aparelho.
 4. **Ilustração do Início:** segue a saudação. A partir das 18h ("Boa noite") aparece a lua; das 17h às 18h, o pôr do sol.
 5. **Registrar atividade:** o campo Tempo abre o seletor numérico do app em vez do teclado de texto.
 6. **Meta Assistente:** uma resposta atrasada não passa mais por cima de outra janela (ex.: "Limpar a conversa?").
-7. **Cupons de Premium (novo, grátis no Firebase):** Painel admin › 🎟️ Cupons de Premium. Crie até 100 cupons por vez, com 1 a 365 dias de Premium e data-limite opcional; copie os códigos para divulgar; veja quantos já foram usados; apague os livres. O aluno usa em Planos › "Tenho um cupom" (também no aviso de recurso Premium). Cada cupom vale uma vez; os dias somam ao teste ou ao Premium com prazo.
+7. **Cupons de Premium (novo, grátis no Firebase):** Painel admin › 🎟️ Cupons de Premium. Crie até 100 cupons por vez, com 1 a 365 dias de Premium e data-limite opcional; copie os códigos para divulgar; veja quantos já foram usados; apague os livres. O aluno usa em Planos › "Tenho um cupom" (também no aviso de recurso Premium). Cada cupom vale uma vez, e cada pessoa só usa **um cupom a cada 30 dias** (a tela mostra a data em que o próximo é liberado; as regras do Firestore conferem o mesmo). Os dias somam ao teste ou ao Premium com prazo.
 
 ## Como testar os cupons
 - [ ] Publique o `firestore.rules`.

@@ -10894,7 +10894,7 @@ mtGancho('renderProfile', { depois(){
     // linhas Premium ganham o selo (o recurso continua conferido na função)
     if(!p.premium){
       [['inicio-row','Personalizar início'],['theme-row','Aparência']].forEach(([id])=>{ const r = $(id); if(r && !r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">'+PL_EST+'</span>'); });
-      document.querySelectorAll('#scr-profile .list-row[onclick*="arqRelatorio"], #scr-profile .list-row[onclick*="library"]').forEach(r=>{ if(!r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">' + PL_EST + 'Premium</span>'); });   // Beta 48: antes saía o texto "${PL_EST}" literal
+      document.querySelectorAll('#scr-profile .list-row[onclick*="arqRelatorio"], #scr-profile .list-row[onclick*="library"]').forEach(r=>{ if(!r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">' + PL_EST + '</span>'); });   // Beta 48: só a estrela, igual às outras linhas do Perfil
     } else document.querySelectorAll('#scr-profile .pl-mini').forEach(x=>x.remove());
   }catch(e){ console.log('perfil (plano):', e); }
 }});
@@ -11130,7 +11130,7 @@ openAparencia = function(){
   const opt = k=>{ const t = THEMES[k]; const trava = !prem && temaPremium(k); const exclusivo = !!t.premium;
     return `<button type="button" class="ap-opt ${k===cur?'on':''} ${trava?'pl-trava':''}" onclick="setTheme('${k}');setTimeout(openAparencia,30)" aria-label="Tema ${mtEsc(t.nome)}${trava?' (Premium)':''}">
       <span class="wz-tema-prev ap-prev-real" data-theme="${k}" aria-hidden="true"><span class="tp-top"><i></i><b></b></span><span class="tp-card"><b></b><i></i><em></em></span><span class="tp-btn"></span><span class="tp-tab"><i></i><i></i><i></i><i></i></span></span>
-      <div class="ap-name"><span>${mtEsc(t.nome)}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}${trava||exclusivo?`<span class="pl-mini">${PL_EST}Premium</span>`:''}</div><small style="color:var(--text-mute);font-size:11px;margin-top:-4px">${mtEsc(t.sub)}</small></button>`; };
+      <div class="ap-name"><span>${mtEsc(t.nome)}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}${trava||exclusivo?`<span class="pl-mini">${PL_EST}</span>`:''}</div><small style="color:var(--text-mute);font-size:11px;margin-top:-4px">${mtEsc(t.sub)}</small></button>`; };
   const deco = (typeof decoEnabled==='function') ? decoEnabled() : true;
   $('modal-inner').innerHTML = `<h3>Aparência</h3>
     ${!prem ? `<div class="pl-faixa">No plano Básico: <b>Brasa</b> (escuro) e <b>Areia</b> (claro). Os outros temas são Premium. <a href="#" onclick="openPlanos();return false">Ver planos ›</a></div>` : ''}
@@ -11155,7 +11155,7 @@ mtGancho('wzRenderTemas', { depois(){
       const k = (b.getAttribute('onclick')||'').match(/wzEscolheTema\('(\w+)'\)/); if(!k) return;
       const t = THEMES[k[1]]; if(!t) return;
       const nome = b.querySelector('.wz-tema-nome');
-      if(nome && temaPremium(k[1]) && !nome.querySelector('.pl-mini')) nome.insertAdjacentHTML('beforeend', `<small class="pl-mini">${PL_EST}Premium</small>`);
+      if(nome && temaPremium(k[1]) && !nome.querySelector('.pl-mini')) nome.insertAdjacentHTML('beforeend', `<small class="pl-mini">${PL_EST}</small>`);
       b.classList.toggle('pl-trava', !temaLiberado(k[1]));
     });
   }catch(e){}
@@ -12387,7 +12387,7 @@ mtGancho('renderPlan', { depois(){
   try{
     const box = $('plan-details'); if(!box) return;
     const ex = $('pl-pdf'); if(ex) ex.remove();
-    box.insertAdjacentHTML('afterend', `<button class="btn btn-outline btn-block" id="pl-pdf" style="margin-top:12px" onclick="pdfTreino()">📄 Baixar o plano em PDF${mtPremium()?'':' <span class="pl-mini">'+PL_EST+'Premium</span>'}</button>`);
+    box.insertAdjacentHTML('afterend', `<button class="btn btn-outline btn-block" id="pl-pdf" style="margin-top:12px" onclick="pdfTreino()">📄 Baixar o plano em PDF${mtPremium()?'':' <span class="pl-mini">'+PL_EST+'</span>'}</button>`);
   }catch(e){}
 }});
 mtGancho('openNutri', { depois(){
@@ -12401,7 +12401,7 @@ mtGancho('openNutri', { depois(){
 mtGancho('renderProfile', { depois(){
   try{
     const rel = document.querySelector('#scr-profile .list-row[onclick*="arqRelatorio"]'); if(!rel || $('pf-pdf-plano')) return;
-    rel.insertAdjacentHTML('afterend', `<div class="list-row" id="pf-pdf-plano" onclick="pdfTreino()">📋 <span>Plano de treino em PDF</span>${mtPremium()?'<span style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span>':'<span class="pl-mini" style="margin-left:auto">'+PL_EST+'Premium</span>'}</div>`);
+    rel.insertAdjacentHTML('afterend', `<div class="list-row" id="pf-pdf-plano" onclick="pdfTreino()">📋 <span>Plano de treino em PDF</span>${mtPremium()?'<span style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span>':'<span class="pl-mini" style="margin-left:auto">'+PL_EST+'</span>'}</div>`);
   }catch(e){}
 }});
 
@@ -13810,7 +13810,7 @@ function _tcInfo(tc){
   const k = tc._ordem[tc._idx]; const t = THEMES[k]; if(!t) return;
   const livre = _tcLivre(k);
   const prem = (typeof temaPremium === 'function') ? temaPremium(k) : !!t.premium;
-  tc.querySelector('.tc-nome').innerHTML = `<b>${mtEsc(t.nome)}</b>${tc.dataset.ctx==='cadastro' && k==='areia'?'<span class="tc-atual">Sugerido</span>':''}${prem?`<span class="pl-mini tc-prem">${typeof PL_EST!=='undefined'?PL_EST:''}Premium</span>`:''}<small>${mtEsc(t.sub||'')}</small>${livre ? '' : `<button type="button" class="tc-premium" onclick="mtPremiumAviso('temas')">Disponível no Premium · conhecer</button>`}`;
+  tc.querySelector('.tc-nome').innerHTML = `<b>${mtEsc(t.nome)}</b>${tc.dataset.ctx==='cadastro' && k==='areia'?'<span class="tc-atual">Sugerido</span>':''}${prem?`<span class="pl-mini tc-prem">${typeof PL_EST!=='undefined'?PL_EST:'⭐'}</span>`:''}<small>${mtEsc(t.sub||'')}</small>${livre ? '' : `<button type="button" class="tc-premium" onclick="mtPremiumAviso('temas')">Disponível no Premium · conhecer</button>`}`;
   tc.querySelectorAll('.tc-ponto').forEach((p,i)=>{ p.classList.toggle('on', i===tc._idx); p.setAttribute('aria-current', i===tc._idx ? 'true' : 'false'); });
   [...tc.querySelectorAll('.tc-slide')].forEach((s,i)=>s.classList.toggle('foco', i===tc._idx));
 }
@@ -15478,15 +15478,18 @@ function _cupomFmt(c){ c = _cupomNorm(c); return c.length === 8 ? c.slice(0,4) +
 function _cupomNovo(){ const r = crypto.getRandomValues(new Uint32Array(8)); let s = ''; for(let i=0;i<8;i++) s += CUPOM_LETRAS[r[i] % CUPOM_LETRAS.length]; return s; }
 const _cupData = ms => new Date(ms).toLocaleDateString('pt-BR');
 
+const CUPOM_INTERVALO = 30*86400000;
+function _cupomLiberaEm(acc){ const em = acc && acc.cupomEm ? msDe(acc.cupomEm) : 0; return em ? em + CUPOM_INTERVALO : 0; }
 // ---------- aluno: resgatar ----------
 function openCupom(){
-  const p = planoAtual();
+  const p = planoAtual(); const libera = _cupomLiberaEm(myAccess), espera = libera > Date.now();
   $('modal-inner').innerHTML = `<div id="cupom-tela"><h3>🎟️ Tenho um cupom</h3>
-    <p class="fam-p">Digite o código do cupom. Ele libera dias de Premium na sua conta e vale uma vez só.</p>
+    <p class="fam-p">Digite o código do cupom. Ele libera dias de Premium na sua conta. Cada pessoa usa um cupom a cada 30 dias.</p>
     ${p.premium && p.vitalicio ? '<p class="fam-p"><b>Você já tem Premium sem prazo</b>, então não precisa de cupom.</p>' : ''}
+    ${espera && !(p.premium && p.vitalicio) ? `<p class="fam-p"><b>Você já usou um cupom.</b> O próximo pode ser usado a partir de <b>${_cupData(libera)}</b>.</p>` : ''}
     <input id="cupom-cod" class="input" maxlength="10" autocomplete="off" autocapitalize="characters" placeholder="Ex.: K7M2-QX4P" style="text-align:center;letter-spacing:3px;font-weight:800;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" data-teclado>
     <div id="cupom-msg" class="fam-mini" aria-live="polite" style="min-height:18px"></div>
-    <button class="btn btn-primary btn-block" id="cupom-ok" onclick="cupomResgatar()" ${p.premium && p.vitalicio ? 'disabled' : ''}>Usar cupom</button>
+    <button class="btn btn-primary btn-block" id="cupom-ok" onclick="cupomResgatar()" ${(p.premium && p.vitalicio) || espera ? 'disabled' : ''}>Usar cupom</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Voltar</button></div>`;
   $('modal-back').classList.add('on');
 }
@@ -15505,6 +15508,9 @@ async function cupomResgatar(){
   if(bt){ bt.disabled = true; bt.textContent = 'Conferindo…'; }
   const volta = ()=>{ if(bt){ bt.disabled = false; bt.textContent = 'Usar cupom'; } };
   try{
+    // um cupom por pessoa a cada 30 dias (as regras do Firestore conferem o mesmo)
+    const libera = _cupomLiberaEm(myAccess);
+    if(libera > Date.now()){ if(bt) bt.textContent = 'Usar cupom'; return msg('Você já usou um cupom. O próximo pode ser usado a partir de ' + _cupData(libera) + '.'); }
     const cRef = db.collection('cupons').doc(cod);
     const cs = await cRef.get();
     if(!cs.exists){ volta(); return msg('Cupom não encontrado. Confira as letras e números.'); }

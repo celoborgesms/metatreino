@@ -225,6 +225,9 @@ service cloud.firestore {
         resgateBase()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['plano', 'premiumAte', 'cupom', 'cupomEm'])
         && resource.data.get('bloqueado', false) != true
+        // um cupom por pessoa a cada 30 dias (conta pelo último resgate)
+        && (resource.data.get('cupomEm', null) == null
+            || (resource.data.cupomEm is timestamp && request.time > resource.data.cupomEm + duration.value(30, 'd')))
         && (
           ateCabe(request.time.toMillis())
           || (resource.data.get('premiumAte', null) is number && ateCabe(resource.data.premiumAte))
