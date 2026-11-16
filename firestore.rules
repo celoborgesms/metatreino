@@ -1,7 +1,9 @@
 rules_version = '2';
 
 // =============================================================
-// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 43)
+// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 48)
+// Beta 48: coleção "cupons" e resgate de cupom em usuariosAutorizados (só junto com um cupom livre).
+// Beta 46: coleção "familias" (alimentação da casa). Nenhuma outra permissão mudou.
 // Beta 43: coleção "diagnosticoAcesso" (falhas técnicas de acesso, sem
 // e-mail nem UID; só o principal lê). Nenhuma outra permissão mudou —
 // a leitura de usuariosAutorizados continua exigindo e-mail verificado.
@@ -184,6 +186,27 @@ service cloud.firestore {
         )
       );
 
+      // Beta 48: resgate de cupom. O aluno só vira Premium se, NA MESMA gravação, marcar como usado por
+      // ele um cupom que estava livre e dentro do prazo, e com no máximo os dias daquele cupom (somados ao
+      // prazo que ele já tinha, se ainda não acabou). Conta suspensa não usa cupom.
+      function cupomRef(){ return /databases/$(database)/documents/cupons/$(request.resource.data.cupom); }
+      function resgateBase(){
+        return signedIn()
+          && request.auth.token.email_verified == true
+          && userEmail() == emailDoc
+          && !contaExcluida()
+          && request.resource.data.plano == 'premium'
+          && request.resource.data.cupom is string
+          && request.resource.data.cupom.size() >= 6 && request.resource.data.cupom.size() <= 12
+          && request.resource.data.cupomEm == request.time
+          && request.resource.data.premiumAte is number
+          && exists(cupomRef())
+          && get(cupomRef()).data.usadoPor == null
+          && getAfter(cupomRef()).data.usadoPor == request.auth.uid;
+      }
+      // prazo novo ≤ início + dias do cupom (+5 min de folga para o relógio do celular)
+      function ateCabe(inicio){ return request.resource.data.premiumAte <= inicio + get(cupomRef()).data.dias * 86400000 + 300000; }
+
       allow create: if (isAdmin() && (isOwner() || emailDoc != userEmail())) || (
         signedIn()
         && request.auth.token.email_verified == true
@@ -192,9 +215,49 @@ service cloud.firestore {
         && request.resource.data.plano == 'teste'
         && request.resource.data.testeInicio == request.time
         && !contaExcluida()
+      ) || (
+        resgateBase()
+        && request.resource.data.keys().hasOnly(['plano', 'premiumAte', 'cupom', 'cupomEm', 'name'])
+        && ateCabe(request.time.toMillis())
       );
 
-      allow update, delete: if isAdmin() && (isOwner() || emailDoc != userEmail());
+      allow update: if (isAdmin() && (isOwner() || emailDoc != userEmail())) || (
+        resgateBase()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['plano', 'premiumAte', 'cupom', 'cupomEm'])
+        && resource.data.get('bloqueado', false) != true
+        && (
+          ateCabe(request.time.toMillis())
+          || (resource.data.get('premiumAte', null) is number && ateCabe(resource.data.premiumAte))
+          || (resource.data.get('premiumAte', null) is timestamp && ateCabe(resource.data.premiumAte.toMillis()))
+          || (resource.data.get('plano', '') == 'teste' && resource.data.get('testeInicio', null) is timestamp
+              && ateCabe(resource.data.testeInicio.toMillis() + 30 * 86400000))
+          || (resource.data.get('expiresAt', null) is number && ateCabe(resource.data.expiresAt))
+          || (resource.data.get('expiresAt', null) is timestamp && ateCabe(resource.data.expiresAt.toMillis()))
+        )
+      );
+
+      allow delete: if isAdmin() && (isOwner() || emailDoc != userEmail());
+    }
+
+    // Beta 48: cupons de Premium para divulgação. Administradores criam, listam e apagam os livres.
+    // Quem tem o código (e-mail verificado) consulta só aquele cupom e o marca como usado por si mesmo,
+    // uma única vez, dentro do prazo — sempre junto com a liberação do próprio Premium (regra acima).
+    match /cupons/{cupomDoc} {
+      allow get: if isAdmin() || (signedIn() && request.auth.token.email_verified == true);
+      allow list: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.usadoPor == null
+        && request.resource.data.dias is int && request.resource.data.dias >= 1 && request.resource.data.dias <= 365
+        && cupomDoc.size() >= 6 && cupomDoc.size() <= 12;
+      allow delete: if isAdmin() && (resource.data.usadoPor == null || isOwner());
+      allow update: if signedIn()
+        && request.auth.token.email_verified == true
+        && resource.data.usadoPor == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usadoPor', 'usadoEm'])
+        && request.resource.data.usadoPor == request.auth.uid
+        && request.resource.data.usadoEm == request.time
+        && (resource.data.get('validoAte', null) == null || request.time.toMillis() <= resource.data.validoAte)
+        && getAfter(/databases/$(database)/documents/usuariosAutorizados/$(userEmail())).data.cupom == cupomDoc;
     }
 
     // Beta 42: contas excluídas (marca permanente). Só o administrador principal cria, libera (apaga)
@@ -219,6 +282,31 @@ service cloud.firestore {
         && request.resource.data.em == request.time;
       allow read: if isOwner();
       allow update, delete: if false;
+    }
+
+    // Beta 46: alimentação da casa (2 a 6 pessoas). Só os membros leem e alteram. Para entrar, a pessoa
+    // precisa do código (o id do documento) e só pode acrescentar a si mesma, com apelido e perfil próprios.
+    // Para sair, só tira a si mesma. O documento guarda apelidos, restrições, proporção da porção e o
+    // registro das refeições da casa — nada de peso, idade ou e-mail.
+    match /familias/{famId} {
+      function famMembro(){ return signedIn() && request.auth.uid in resource.data.membros; }
+      function famDepois(){ return request.resource.data; }
+      allow read: if famMembro() || isOwner();
+      allow create: if signedIn() && famId.size() == 6
+        && famDepois().membros == [request.auth.uid] && famDepois().dono == request.auth.uid;
+      allow update: if signedIn() && famDepois().membros.size() <= 6 && (
+        // membro: mexe no cardápio e no registro; a lista de membros fica igual (ou ele sai)
+        (famMembro() && (famDepois().membros.hasAll(resource.data.membros)
+                         ? famDepois().membros.size() == resource.data.membros.size()
+                         : resource.data.membros.removeAll(famDepois().membros).hasOnly([request.auth.uid])))
+        // quem entra: só se acrescenta e só escreve o próprio apelido/perfil
+        || (!(request.auth.uid in resource.data.membros)
+            && famDepois().membros.hasAll(resource.data.membros)
+            && famDepois().membros.removeAll(resource.data.membros).hasOnly([request.auth.uid])
+            && famDepois().diff(resource.data).affectedKeys().hasOnly(['membros','nomes','perfis'])
+            && famDepois().dono == resource.data.dono)
+      );
+      allow delete: if (famMembro() && resource.data.membros.size() == 1) || isOwner();
     }
 
     // Beta 43: diagnóstico de falhas ao verificar o acesso. Qualquer conta

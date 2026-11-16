@@ -1,3 +1,40 @@
+# MetaTreino 2027.1 Beta 48 — Cupons de Premium e correções dos prints
+
+**Publique o `firestore.rules` desta versão** (coleção nova `cupons` e resgate de cupom).
+
+1. **Plano Básico:** as linhas Premium do Perfil mostram a estrela + "Premium" (antes aparecia o texto `${PL_EST}Premium`).
+2. **Conquistas no Início:** o cartão atualiza na hora em que uma conquista é desbloqueada.
+3. **Conquistas no fim do registro:** aparecem em todos os caminhos de registro (corrida marcada como feita, corrida sem km, atividade avulsa e registro pelo assistente), também quando chegam depois da tela de resumo do treino. O carrossel grava na nuvem só ao fechar, para não apagar uma mudança feita ao mesmo tempo em outro aparelho.
+4. **Ilustração do Início:** segue a saudação. A partir das 18h ("Boa noite") aparece a lua; das 17h às 18h, o pôr do sol.
+5. **Registrar atividade:** o campo Tempo abre o seletor numérico do app em vez do teclado de texto.
+6. **Meta Assistente:** uma resposta atrasada não passa mais por cima de outra janela (ex.: "Limpar a conversa?").
+7. **Cupons de Premium (novo, grátis no Firebase):** Painel admin › 🎟️ Cupons de Premium. Crie até 100 cupons por vez, com 1 a 365 dias de Premium e data-limite opcional; copie os códigos para divulgar; veja quantos já foram usados; apague os livres. O aluno usa em Planos › "Tenho um cupom" (também no aviso de recurso Premium). Cada cupom vale uma vez; os dias somam ao teste ou ao Premium com prazo.
+
+## Como testar os cupons
+- [ ] Publique o `firestore.rules`.
+- [ ] Admin: Painel › Cupons de Premium › crie 2 cupons de 7 dias › Copiar.
+- [ ] Conta de teste com e-mail confirmado: Perfil › plano › Tenho um cupom › código › "Cupom aplicado!" com a data.
+- [ ] Mesmo código de novo (em qualquer conta): "Este cupom já foi usado".
+- [ ] Painel: a campanha mostra "1 de 2 usados".
+
+# MetaTreino 2027.1 Beta 47 — Alimentação da casa
+
+**Publique o `firestore.rules` desta versão** (coleção nova `familias`).
+
+1. **Alimentação da casa (2 a 6 pessoas):** em Plano alimentar › 🏠 Alimentação da casa. Um cria o grupo e manda o código; os outros entram com ele. Nas refeições da casa (almoço e jantar por padrão, configurável) o prato é o mesmo para todos e a porção é a de cada um. A lista de compras e o PDF somam todos. "Comi", "não vou comer", alimentos acrescentados e troca de prato aparecem iguais em todos os celulares. Sair mantém o cardápio atual.
+2. **Meta Assistente:** quem só faz musculação não vê mais as perguntas de corrida, e "Por que o treino de hoje?" / "Quando vou avançar?" respondem sobre a musculação.
+3. **Primeiro acesso:** o balão do assistente espera os avisos ("Plano criado!", teste Premium) sumirem, em vez de aparecer por cima.
+
+## Como testar a casa com dois celulares
+- [ ] Celular A: Plano alimentar › Alimentação da casa › Criar o grupo › Convidar.
+- [ ] Celular B: mesma tela › digite o código › Entrar.
+- [ ] Almoço e jantar mostram o selo "Casa" e o mesmo prato nos dois (porções diferentes).
+- [ ] No A, "Marcar como comido" no almoço: aparece no B em poucos segundos.
+- [ ] No B, "Outro prato" no jantar: muda no A também.
+- [ ] Lista de compras da casa: "2 pessoas".
+- [ ] PDF do plano alimentar: última parte com a lista de compras.
+- [ ] Sair do grupo no B: o cardápio do B não muda; o A continua com o grupo.
+
 # MetaTreino 2027.1 Beta 46 — Conquistas sem itens presos e troca de exercício mais limpa
 
 Sem mudança nas regras do Firestore.
