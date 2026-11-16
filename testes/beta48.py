@@ -39,7 +39,7 @@ async def basico(b):
         if '${' in t: achados.append(f + ': ' + t[t.index('${')-30:t.index('${')+30])
     confere('nenhum "${...}" aparece como texto (abas e telas de plano)', not achados, achados)
     await pg.evaluate("closeModal(); goTab('profile')"); await pg.wait_for_timeout(400)
-    confere('linhas Premium do Perfil mostram a estrela', await pg.evaluate("[...document.querySelectorAll('#scr-profile .pl-mini')].every(e=>!!e.querySelector('svg'))") and await pg.evaluate("document.querySelectorAll('#scr-profile .pl-mini').length") >= 2)
+    confere('linhas Premium do Perfil mostram só a estrela (sem a palavra)', await pg.evaluate("[...document.querySelectorAll('#scr-profile .pl-mini')].every(e=>!!e.querySelector('svg') && !e.textContent.trim())") and await pg.evaluate("document.querySelectorAll('#scr-profile .pl-mini').length") >= 2)
     await foto(pg, 'b48-01-perfil-basico')
     confere('sem erros', not erros, erros[:3]); await ctx.close()
 
@@ -112,7 +112,14 @@ async def cupons(b):
     await foto(pg, 'b48-03-cupom-ok')
     await pg.evaluate("openCupom()"); await pg.wait_for_timeout(200)
     await pg.fill('#cupom-cod', cod); await pg.evaluate("cupomResgatar()"); await pg.wait_for_timeout(500)
-    confere('o mesmo cupom não vale duas vezes', 'já usou' in await pg.evaluate("document.getElementById('cupom-msg').textContent"))
+    confere('o mesmo cupom não vale duas vezes', 'já usou' in await pg.evaluate("document.getElementById('cupom-tela').innerText"))
+    confere('segundo cupom antes de 30 dias: bloqueado com a data de liberação', await pg.evaluate("document.getElementById('cupom-ok').disabled") and 'a partir de' in await pg.evaluate("document.getElementById('cupom-tela').innerText"))
+    await pg.evaluate("$('cupom-ok').disabled=false; 0"); await pg.fill('#cupom-cod', cs[2]['id']); await pg.evaluate("cupomResgatar()"); await pg.wait_for_timeout(500)
+    confere('nem forçando o botão: segundo cupom recusado e continua livre', 'a partir de' in await pg.evaluate("document.getElementById('cupom-msg').textContent") and await pg.evaluate(f"window.__mockFS['cupons/{cs[2]['id']}'].usadoPor") is None)
+    await pg.evaluate(f"myAccess.cupomEm = Date.now() - 31*86400000; window.__mockFS['usuariosAutorizados/{email}'].cupomEm = myAccess.cupomEm; openCupom(); 0"); await pg.wait_for_timeout(200)
+    await pg.fill('#cupom-cod', cs[2]['id']); await pg.evaluate("cupomResgatar()"); await pg.wait_for_timeout(900)
+    a2 = await pg.evaluate(f"window.__mockFS['usuariosAutorizados/{email}']")
+    confere('depois de 30 dias: novo cupom aceito e soma ao prazo', a2['cupom'] == cs[2]['id'] and abs(a2['premiumAte'] - (esperado + 15*86400000)) < 120000, a2)
     confere('sem erros (aluno)', not erros, erros[:3]); await pg.close()
     # aluno sem documento (Básico) usa outro cupom → documento criado só com os campos do resgate
     email2 = 'semdoc@example.com'
@@ -121,6 +128,10 @@ async def cupons(b):
     await pg.fill('#cupom-cod', cs[1]['id']); await pg.evaluate("cupomResgatar()"); await pg.wait_for_timeout(900)
     a = await pg.evaluate(f"window.__mockFS['usuariosAutorizados/{email2}']")
     confere('Básico sem documento: cria o plano só com os campos do resgate', a and a['plano'] == 'premium' and set(a.keys()) <= {'plano','premiumAte','cupom','cupomEm','name'} and abs(a['premiumAte'] - (time.time()*1000 + 15*86400000)) < 300000, a)
+    await pg.evaluate("openCupom(); 0"); await pg.wait_for_timeout(200)
+    await pg.evaluate("$('cupom-ok').disabled=false; window.__mockFS['usuariosAutorizados/semdoc@example.com'].cupomEm = Date.now()-40*86400000; myAccess.cupomEm = Date.now()-40*86400000; 0")
+    await pg.fill('#cupom-cod', cs[0]['id']); await pg.evaluate("cupomResgatar()"); await pg.wait_for_timeout(500)
+    confere('cupom usado por outra pessoa: "já foi usado"', 'já foi usado' in await pg.evaluate("document.getElementById('cupom-msg').textContent"))
     confere('sem erros (Básico)', not erros, erros[:3])
     await ctx.close()
 
