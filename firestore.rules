@@ -225,8 +225,10 @@ service cloud.firestore {
         resgateBase()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['plano', 'premiumAte', 'cupom', 'cupomEm'])
         && resource.data.get('bloqueado', false) != true
-        // um cupom por pessoa a cada 30 dias (conta pelo último resgate)
-        && (resource.data.get('cupomEm', null) == null
+        // um cupom por pessoa a cada 30 dias (conta pelo último resgate). O administrador libera um cupom
+        // extra apagando "cupomEm" ou tira o limite com "cupomSemLimite" (o aluno não mexe nesses campos).
+        && (resource.data.get('cupomSemLimite', false) == true
+            || resource.data.get('cupomEm', null) == null
             || (resource.data.cupomEm is timestamp && request.time > resource.data.cupomEm + duration.value(30, 'd')))
         && (
           ateCabe(request.time.toMillis())
@@ -252,7 +254,8 @@ service cloud.firestore {
         && request.resource.data.usadoPor == null
         && request.resource.data.dias is int && request.resource.data.dias >= 1 && request.resource.data.dias <= 365
         && cupomDoc.size() >= 6 && cupomDoc.size() <= 12;
-      allow delete: if isAdmin() && (resource.data.usadoPor == null || isOwner());
+      // apagar livres ou o histórico inteiro de uma campanha (quem usou continua com o Premium que ganhou)
+      allow delete: if isAdmin();
       allow update: if signedIn()
         && request.auth.token.email_verified == true
         && resource.data.usadoPor == null

@@ -27,13 +27,19 @@ Encontrado nos testes de regressão e corrigido:
   - e-mail verificado; conta não suspensa nem excluída;
   - não muda nenhum outro campo (`bloqueado`, `name`, etc.);
   - **um cupom por pessoa a cada 30 dias**: se o documento já tem `cupomEm`, o próximo resgate só passa depois de `cupomEm + 30 dias`. O app avisa a data e deixa o botão desativado.
-- **Quem não consegue o quê:** sem um cupom livre ninguém se dá Premium, e o mesmo cupom não vale duas vezes. Só administradores criam, listam e apagam cupons. Cupom já usado só o dono apaga.
+- **Exceções pelo admin** (em "Quem usou cupom"):
+  - **"Liberar 1 cupom agora"** apaga `cupomEm` da pessoa. O próximo resgate passa e grava um `cupomEm` novo, então o limite volta sozinho.
+  - **"Sem limite"** grava `cupomSemLimite: true`.
+  - O aluno não consegue gravar esses dois campos (as regras só deixam ele mudar `plano`, `premiumAte`, `cupom` e `cupomEm`).
+  - O e-mail do administrador não fica no documento do aluno.
+- **Apagar histórico:** qualquer administrador apaga cupons, usados ou não. O Premium já ganho fica no `usuariosAutorizados` da pessoa e não depende do cupom.
+- **Quem não consegue o quê:** sem um cupom livre ninguém se dá Premium, e o mesmo cupom não vale duas vezes. Só administradores criam, listam e apagam cupons. Qualquer administrador apaga cupons (usados ou livres).
 - **Prazo:** os dias somam ao teste de 30 dias ou ao Premium com prazo. Quem tem Premium sem prazo não vê o botão.
 - **Contas sem e-mail próprio** (`@aluno.metatreino.app`) recebem a mensagem para falar com o treinador, porque não têm e-mail verificado.
 
 ## Testes
 
-- **`testes/beta48.py`: 27 ok** (inclui o limite de 30 dias e o selo só com a estrela).
+- **`testes/beta48.py`: 40 ok** (inclui o limite de 30 dias, o selo só com a estrela, liberar cupom extra, sem limite e apagar histórico).
   - Nenhum `${` visível nas telas.
   - Cartão Conquistas atualiza na hora.
   - Horário da ilustração.

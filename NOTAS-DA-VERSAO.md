@@ -9,6 +9,11 @@
 5. **Registrar atividade:** o campo Tempo abre o seletor numérico do app em vez do teclado de texto.
 6. **Meta Assistente:** uma resposta atrasada não passa mais por cima de outra janela (ex.: "Limpar a conversa?").
 7. **Cupons de Premium (novo, grátis no Firebase):** Painel admin › 🎟️ Cupons de Premium. Crie até 100 cupons por vez, com 1 a 365 dias de Premium e data-limite opcional; copie os códigos para divulgar; veja quantos já foram usados; apague os livres. O aluno usa em Planos › "Tenho um cupom" (também no aviso de recurso Premium). Cada cupom vale uma vez, e cada pessoa só usa **um cupom a cada 30 dias** (a tela mostra a data em que o próximo é liberado; as regras do Firestore conferem o mesmo). Os dias somam ao teste ou ao Premium com prazo.
+8. **Admin dos cupons:**
+   - **🗑️ Apagar histórico:** apaga a campanha inteira, com os cupons usados e os livres. Quem já usou continua com o Premium e o prazo que ganhou; os códigos livres deixam de funcionar.
+   - **Quem usou cupom:** lista as pessoas com a data do último cupom e quando o próximo fica liberado. Em cada uma:
+     - **🔓 Liberar 1 cupom agora:** libera um cupom extra; depois dele, volta o limite de 30 dias.
+     - **♾️ Sem limite:** a pessoa usa cupons sem esperar os 30 dias até você voltar o limite.
 
 ## Como testar os cupons
 - [ ] Publique o `firestore.rules`.
