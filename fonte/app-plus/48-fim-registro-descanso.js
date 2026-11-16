@@ -88,11 +88,32 @@ function _cqCelAtual(){
 }
 // o cartão que aparece conta como visto (sai das "novas"); nada fica preso esperando um toque
 function _cqCelVer(i){
-  const p = _cqCelLista[i]; if(p){ try{ cqMarcaVista(x=>x.k===p.k); }catch(e){} }
+  const p = _cqCelLista[i]; if(p){ try{ _cqCelMarca(p.k); }catch(e){} }
   const pos = document.getElementById('cel-pos'); if(pos) pos.textContent = `${i+1} de ${_cqCelLista.length}`;
   document.querySelectorAll('.cel-pontos i').forEach((d,k)=>d.classList.toggle('on', k===i));
   document.querySelectorAll('.cel-seta').forEach((b,k)=>{ b.disabled = k===0 ? i===0 : i===_cqCelLista.length-1; });
 }
+// Beta 48: o carrossel marca cada conquista como vista só neste aparelho e grava na nuvem ao fechar.
+//     Antes gravava no instante em que abria — logo depois do registro, bem quando o outro aparelho
+//     (aberto ao mesmo tempo) também podia estar gravando; a gravação mais nova apagava a mudança do outro.
+const _cqCelVistos = new Set();
+function _cqCelMarca(k){
+  _cqCelVistos.add(k);
+  try{
+    const s = cqEstado(); if(!s) return;
+    if(s.conqPend.some(x=>x.k === k)){
+      s.conqVistas = s.conqVistas.concat([k]).slice(-CQ_MAX_VISTAS);
+      s.conqPend = s.conqPend.filter(x=>x.k !== k);
+      try{ localStorage.setItem(localCacheKey(uidDados()), JSON.stringify(state)); }catch(e){}
+      cqIndicadores();
+    }
+  }catch(e){}
+}
+mtGancho('closeModal', { antes(){
+  if(!_cqCelVistos.size) return;
+  const ks = new Set(_cqCelVistos); _cqCelVistos.clear();
+  try{ cqMarcaVista(x=>ks.has(x.k)) || saveData(); }catch(e){}
+}});
 function cqCelPasso(d){
   const tr = document.getElementById('cel-trilho'); if(!tr) return;
   const i = Math.max(0, Math.min(_cqCelLista.length - 1, _cqCelIdx + d));

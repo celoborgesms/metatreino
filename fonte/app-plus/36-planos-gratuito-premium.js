@@ -201,7 +201,7 @@ mtGancho('renderProfile', { depois(){
     // linhas Premium ganham o selo (o recurso continua conferido na função)
     if(!p.premium){
       [['inicio-row','Personalizar início'],['theme-row','Aparência']].forEach(([id])=>{ const r = $(id); if(r && !r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">'+PL_EST+'</span>'); });
-      document.querySelectorAll('#scr-profile .list-row[onclick*="arqRelatorio"], #scr-profile .list-row[onclick*="library"]').forEach(r=>{ if(!r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">${PL_EST}Premium</span>'); });
+      document.querySelectorAll('#scr-profile .list-row[onclick*="arqRelatorio"], #scr-profile .list-row[onclick*="library"]').forEach(r=>{ if(!r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">' + PL_EST + 'Premium</span>'); });   // Beta 48: antes saía o texto "${PL_EST}" literal
     } else document.querySelectorAll('#scr-profile .pl-mini').forEach(x=>x.remove());
   }catch(e){ console.log('perfil (plano):', e); }
 }});
