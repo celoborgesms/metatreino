@@ -11,6 +11,10 @@
 | Tempo em "Registrar atividade" abria o teclado de texto | o campo `act-min` não estava no seletor numérico do app | incluído (seletor de duração, até 10 h) |
 | Cupons para divulgação | — | novo, detalhado abaixo |
 
+Tom de pele dos emojis: a escolha existia na Aparência antiga (link "Tom dos emojis") e sumiu quando a Beta 40 refez a Aparência e criou a tela "Estilo dos ícones". Voltou dentro dessa tela, como seção "Tom de pele" que só aparece com Emojis coloridos. As amostras ficam fora da troca automática de tom, para cada uma mostrar o próprio tom. A escolha continua no aparelho (`metatreino_emojitone`), como antes.
+
+Registro de ações do painel: o administrador principal pode apagar as ações com mais de 30 dias ou o registro inteiro. As regras passaram a permitir `delete` em `adminLog` só para o principal; ninguém altera um registro. Depois de limpar, o app grava "Registro de ações limpo" (quem, quando, quantas), para a limpeza também ficar registrada.
+
 Encontrado nos testes de regressão e corrigido:
 - **Meta Assistente:** uma resposta ainda "digitando" redesenhava o assistente por cima de outra janela, como a confirmação "Limpar a conversa?". Agora só atualiza se o assistente estiver aberto.
 - **Dois aparelhos abertos ao mesmo tempo:** o carrossel de conquistas gravava na nuvem no instante em que abria. Se o outro aparelho mudasse algo nesse mesmo segundo (no teste, o apelido), essa mudança era perdida. Agora o carrossel marca como visto no aparelho e grava ao fechar.
@@ -39,7 +43,7 @@ Encontrado nos testes de regressão e corrigido:
 
 ## Testes
 
-- **`testes/beta48.py`: 40 ok** (inclui o limite de 30 dias, o selo só com a estrela, liberar cupom extra, sem limite e apagar histórico).
+- **`testes/beta48.py`: 51 ok** (inclui o limite de 30 dias, o selo só com a estrela, liberar cupom extra, sem limite apagar histórico, o tom de pele e a limpeza do registro de ações).
   - Nenhum `${` visível nas telas.
   - Cartão Conquistas atualiza na hora.
   - Horário da ilustração.

@@ -11101,6 +11101,9 @@ function openEstiloIconesB40(){
     <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Vale para o app inteiro e fica salvo na sua conta (aparece igual nos outros aparelhos).</p>
     <div class="ic-opcoes">${iconeOpcoesHtml(cur, 'setEstiloIcones')}</div>
     ${cur==='linha' ? `<div class="mt-sec">Traço</div>${['fina','linha','duo'].map(k=>`<div class="ap-pack ${k===getPacote()?'on':''}" onclick="setPacote('${k}');setTimeout(openEstiloIconesB40,30)"><div><b style="font-size:14px">${ICO_PACOTES[k].nome}</b><div style="font-size:11.5px;color:var(--text-mute)">${ICO_PACOTES[k].sub}</div></div><div class="ap-sample ${k}">${amostraLinha}</div></div>`).join('')}` : ''}
+    ${cur==='emoji' && typeof EMOJI_TONES !== 'undefined' ? (()=>{ const tom = getEmojiTone(); return `<div class="mt-sec">Tom de pele</div>
+      <p class="mt-muted" style="margin:0 0 8px;font-size:12px">Para os emojis de pessoas e mãos (💪 🏃 👋). Vale neste aparelho.</p>
+      <div class="tom-grade" role="radiogroup" aria-label="Tom de pele dos emojis">${EMOJI_TONES.map(t=>`<button type="button" class="tom-op ${t.id===tom?'on':''}" role="radio" aria-checked="${t.id===tom}" aria-label="${t.nome}" onclick="${t.id===tom?'':`setEmojiTone('${t.id}')`}"><span class="tom-emo" data-tom-fixo>💪${t.mod}</span><small>${t.nome.replace(' (amarelo)','')}</small></button>`).join('')}</div>`; })() : ''}
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();renderProfile()">Pronto</button>`;
   $('modal-back').classList.add('on');
 }
@@ -11603,13 +11606,31 @@ async function openAdminLog(){
     const s = await db.collection('adminLog').orderBy('em','desc').limit(80).get();
     const L = []; s.forEach(d=>L.push(d.data()));
     L.sort((a,b)=>msDe(b.em)-msDe(a.em));
-    const nome = { premium:'Premium concedido/renovado', gratuito:'Passou para Básico', bloquear:'Conta suspensa', desbloquear:'Conta desbloqueada', 'admin-conceder':'Administrador autorizado', 'admin-remover':'Administrador removido', 'admin-apagar-registro':'Registro de admin apagado', 'excluir-conta':'Conta excluída', 'excluir-conta-parcial':'Exclusão parcial', 'excluir-dados':'Dados apagados e conta suspensa', 'excluir-dados-parcial':'Dados apagados (parcial)', 'liberar-email':'E-mail liberado após exclusão', 'liberar-backup':'Restauração de backup liberada' };
+    const nome = { premium:'Premium concedido/renovado', gratuito:'Passou para Básico', bloquear:'Conta suspensa', desbloquear:'Conta desbloqueada', 'admin-conceder':'Administrador autorizado', 'admin-remover':'Administrador removido', 'admin-apagar-registro':'Registro de admin apagado', 'excluir-conta':'Conta excluída', 'excluir-conta-parcial':'Exclusão parcial', 'excluir-dados':'Dados apagados e conta suspensa', 'excluir-dados-parcial':'Dados apagados (parcial)', 'liberar-email':'E-mail liberado após exclusão', 'liberar-backup':'Restauração de backup liberada', cupons:'Cupons', 'registro-limpo':'Registro de ações limpo' };
     $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><div style="max-height:60vh;overflow:auto">${L.map(x=>`<div class="adm-log"><b>${mtEsc(nome[x.acao]||x.acao)}</b> · ${mtEsc(x.alvo||'')}<br>${mtEsc(msDe(x.em)?new Date(msDe(x.em)).toLocaleString('pt-BR'):'')} · por ${mtEsc(x.por||'')}${x.origem==='servidor'?' (servidor)':''}</div>`).join('') || '<div class="mt-muted">Nenhuma ação registrada ainda.</div>'}</div>
+      ${L.length ? `<div class="mt-sec">Limpar registro</div><div class="cup-acoes"><button class="btn btn-ghost" onclick="admLimparLog(30)">Apagar mais antigos que 30 dias</button><button class="btn btn-ghost" onclick="admLimparLog(0)">🗑️ Apagar tudo</button></div>` : ''}
       <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
   }catch(e){ $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><p class="mt-muted">Não consegui ler o registro (${mtEsc((e&&e.code)||'erro')}). Publique as regras desta versão (coleção adminLog).</p><button class="btn btn-ghost btn-block" onclick="closeModal()">Fechar</button>`; }
 }
 
-Object.assign(window, { admPremium, admEncerrar, admBloquear, admBloquearConfirma, admExcluirConta, admExcluirContaGo, admExcluirSoDados, admApagarRegistroAdmin, openAdminLog, admRegistrar, fnChamar, openContasExcluidas, admLiberarEmail, admLiberarBackup, admVoltarLista });
+// Beta 48: limpar o registro (só o administrador principal). Fica uma linha dizendo quem limpou e quando.
+function admLimparLog(dias){
+  if(!mtPrincipal()) return;
+  const txt = dias ? `Apagar as ações com mais de ${dias} dias? As mais recentes continuam.` : 'Apagar todo o registro de ações do painel? Não dá para desfazer.';
+  appConfirm(txt, async ()=>{
+    const corte = dias ? Date.now() - dias*86400000 : Infinity; let n = 0;
+    try{
+      const s = await db.collection('adminLog').get();
+      const ids = []; s.forEach(d=>{ const em = msDe(d.data().em); if(!dias || (em && em < corte)) ids.push(d.id); });
+      for(let i=0; i<ids.length; i+=400){ const b = db.batch(); ids.slice(i, i+400).forEach(id=>b.delete(db.collection('adminLog').doc(id))); await b.commit(); n += Math.min(400, ids.length - i); }
+      if(n) await admRegistrar('registro-limpo', dias ? `mais antigos que ${dias} dias` : 'tudo', `${n} ${n===1?'ação apagada':'ações apagadas'}`);
+      toast(n ? `🗑️ ${n} ${n===1?'ação apagada':'ações apagadas'}` : 'Nada para apagar');
+    }catch(e){ toast('Não consegui limpar agora (' + ((e&&e.code)||'erro') + '). Publique as regras da Beta 48.'); }
+    openAdminLog();
+  }, { title:'Limpar registro?', emo:'🧾', okLabel:'Apagar', danger:true });
+}
+
+Object.assign(window, { admLimparLog, admPremium, admEncerrar, admBloquear, admBloquearConfirma, admExcluirConta, admExcluirContaGo, admExcluirSoDados, admApagarRegistroAdmin, openAdminLog, admRegistrar, fnChamar, openContasExcluidas, admLiberarEmail, admLiberarBackup, admVoltarLista });
 
 // =====================================================================
 // 38. Beta 40 — Correções de cadastro e usabilidade
@@ -15700,6 +15721,23 @@ window.maRefreshThread = function(){
   return _maRefreshB48.apply(this, arguments);
 };
 
+// 6) Tom de pele dos emojis de volta na tela "Estilo dos ícones" (some quando a Aparência foi refeita).
+//    As amostras de cada tom mostram o próprio tom (não recebem o tom escolhido por cima).
+window.aplicaTomEmoji = function(root){
+  const mod = (EMOJI_TONES.find(x=>x.id===_emojiTone)||EMOJI_TONES[0]).mod;
+  const w = document.createTreeWalker(root||document.body, NodeFilter.SHOW_TEXT, { acceptNode:n=>{ const pe = n.parentNode; const p = pe && pe.nodeName;
+    if(p==='SCRIPT'||p==='STYLE'||p==='TEXTAREA'||p==='NOSCRIPT') return NodeFilter.FILTER_REJECT;
+    if(pe && pe.closest && pe.closest('[data-tom-fixo]')) return NodeFilter.FILTER_REJECT;
+    return NodeFilter.FILTER_ACCEPT; } });
+  const lista = []; let n; while(n = w.nextNode()) lista.push(n);
+  lista.forEach(t=>{ const novo = _aplicaTomTexto(t.nodeValue, mod); if(novo !== t.nodeValue) t.nodeValue = novo; });
+};
+const _setEmojiToneB48 = window.setEmojiTone;
+window.setEmojiTone = function(id){
+  document.querySelectorAll('.tom-op').forEach(b=>{ const on = b.getAttribute('onclick') === `setEmojiTone('${id}')`; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  return _setEmojiToneB48.apply(this, arguments);
+};
+
 (function(){ if(document.getElementById('cup-css')) return; const s = document.createElement('style'); s.id = 'cup-css';
   s.textContent = `
 .cup-form{display:flex;flex-direction:column;gap:8px;margin:6px 0 12px}
@@ -15707,6 +15745,10 @@ window.maRefreshThread = function(){
 .cup-linha{display:flex;gap:8px}
 .cup-acoes{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}.cup-acoes .btn{padding:8px 10px;font-size:12px}
 .cup-novos{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:14px;background:rgba(var(--primary-rgb),.10);margin-bottom:12px}
+.tom-grade{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.tom-op{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:14px;border:1px solid var(--border);background:var(--card,transparent);color:var(--text);cursor:pointer;font:inherit}
+.tom-op.on{border-color:var(--primary);box-shadow:0 0 0 2px rgba(var(--primary-rgb),.25)}
+.tom-op .tom-emo{font-size:26px;line-height:1}.tom-op small{font-size:11px;color:var(--text-dim);text-align:center}
 .cup-novos textarea{font-family:ui-monospace,monospace;letter-spacing:2px;resize:vertical}
 `; document.head.appendChild(s); })();
 

@@ -281,13 +281,15 @@ service cloud.firestore {
     }
 
     // Beta 40: registro das ações administrativas (quem fez, o quê, em quem, quando).
-    // Administradores criam; só o principal lê. Ninguém altera nem apaga um registro.
+    // Administradores criam; só o principal lê e apaga (Beta 48). Ninguém altera um registro.
     match /adminLog/{logDoc} {
       allow create: if isAdmin()
         && request.resource.data.por == userEmail()
         && request.resource.data.em == request.time;
       allow read: if isOwner();
-      allow update, delete: if false;
+      // Beta 48: só o administrador principal limpa o registro (o app grava uma linha "Registro limpo")
+      allow delete: if isOwner();
+      allow update: if false;
     }
 
     // Beta 46: alimentação da casa (2 a 6 pessoas). Só os membros leem e alteram. Para entrar, a pessoa
