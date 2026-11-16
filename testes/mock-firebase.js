@@ -32,6 +32,17 @@
   const negado = path => /^usuariosAutorizados\//.test(path) && (window.__MOCK_NEGA_AUTORIZACAO || (!MOCK_USER.__tokenVerified && !/@aluno\.metatreino\.app$/.test(MOCK_USER.email)));
   // regra da Beta 42: conta marcada como excluída não grava os próprios dados (o administrador sim)
   const gravacaoNegada = path => /^usuarios\//.test(path) && !!store['contasExcluidas/' + String(MOCK_USER.email).toLowerCase()] && !window.__MOCK_ADMIN_GRAVA;
+  // Beta 46: ouvintes de documento (onSnapshot) e a regra da coleção familias (só membros leem)
+  const ouvintes = {};
+  function avisa(path){ (ouvintes[path]||[]).slice().forEach(cb=>setTimeout(()=>cb(snap(path)), 0)); }
+  window.__mockAvisa = avisa;
+  function famNegado(path, op, data){
+    if(!/^familias\//.test(path) || store[path] === undefined) return false;
+    const membro = (store[path].membros||[]).includes(MOCK_USER.uid);
+    if(op === 'read') return !membro;
+    if(op === 'update' && !membro){ const v = data && data.membros; return !(v && v.__op === 'union' && v.v.length === 1 && v.v[0] === MOCK_USER.uid && (store[path].membros||[]).length < 6); }
+    return false;
+  }
   function snap(path){ const d = store[path]; return { exists: d !== undefined, id: path.split('/').pop(), data: ()=> d === undefined ? undefined : JSON.parse(JSON.stringify(d)), ref:{ path } }; }
   function validaFirestore(v, p){
     if(v === undefined) throw new Error('Function setDoc() called with invalid data. Unsupported field value: undefined (' + p + ')');
@@ -42,12 +53,32 @@
   function docRef(path){
     return {
       id: path.split('/').pop(), path,
-      get: ()=> negado(path) ? Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })) : Promise.resolve(snap(path)),
-      set: (data, opt)=>{ if(gravacaoNegada(path)) return Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })); try{ validaFirestore(data, path); }catch(e){ return Promise.reject(e); } window.__mockWrites.push({path, at:Date.now(), bytes: JSON.stringify(data).length}); store[path] = (opt && opt.merge) ? Object.assign({}, store[path]||{}, data) : JSON.parse(JSON.stringify(data)); persist(); return Promise.resolve(); },
-      update: (data)=>{ store[path] = Object.assign({}, store[path]||{}, data); persist(); return Promise.resolve(); },
-      delete: ()=>{ delete store[path]; persist(); return Promise.resolve(); },
+      get: ()=> (negado(path) || famNegado(path, 'read')) ? Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })) : Promise.resolve(snap(path)),
+      set: (data, opt)=>{ if(gravacaoNegada(path)) return Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })); try{ validaFirestore(data, path); }catch(e){ return Promise.reject(e); } window.__mockWrites.push({path, at:Date.now(), bytes: JSON.stringify(data).length}); const base = (opt && opt.merge) ? JSON.parse(JSON.stringify(store[path]||{})) : {};
+        Object.keys(data).forEach(k=>{ const v = data[k];
+          if(v && v.__op === 'del') delete base[k];
+          else if(v && v.__op === 'union'){ const a = Array.isArray(base[k]) ? base[k] : []; v.v.forEach(x=>{ if(!a.includes(x)) a.push(x); }); base[k] = a; }
+          else if(v && v.__op === 'remove') base[k] = (Array.isArray(base[k]) ? base[k] : []).filter(x=>!v.v.includes(x));
+          else base[k] = JSON.parse(JSON.stringify(v)); });
+        store[path] = base; persist(); avisa(path); return Promise.resolve(); },
+      // Beta 46: update com caminho pontuado ("a.b.c"), arrayUnion/arrayRemove/delete e aviso aos ouvintes
+      update: (data)=>{
+        if(store[path] === undefined) return Promise.reject(Object.assign(new Error('No document to update'), { code:'not-found' }));
+        if(famNegado(path, 'update', data)) return Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' }));
+        const doc = JSON.parse(JSON.stringify(store[path]));
+        Object.keys(data).forEach(k=>{
+          const partes = k.split('.'); let o = doc; for(let i=0;i<partes.length-1;i++){ if(!o[partes[i]] || typeof o[partes[i]] !== 'object') o[partes[i]] = {}; o = o[partes[i]]; }
+          const ult = partes[partes.length-1], v = data[k];
+          if(v && v.__op === 'union'){ const a = Array.isArray(o[ult]) ? o[ult] : []; v.v.forEach(x=>{ if(!a.includes(x)) a.push(x); }); o[ult] = a; }
+          else if(v && v.__op === 'remove'){ o[ult] = (Array.isArray(o[ult]) ? o[ult] : []).filter(x=>!v.v.includes(x)); }
+          else if(v && v.__op === 'del'){ delete o[ult]; }
+          else o[ult] = JSON.parse(JSON.stringify(v));
+        });
+        store[path] = doc; persist(); avisa(path); return Promise.resolve();
+      },
+      delete: ()=>{ delete store[path]; persist(); avisa(path); return Promise.resolve(); },
       collection: (c)=>colRef(path+'/'+c),
-      onSnapshot: (cb)=>{ setTimeout(()=>cb(snap(path)), 0); return ()=>{}; }
+      onSnapshot: (cb, erro)=>{ (ouvintes[path] = ouvintes[path] || []).push(cb); setTimeout(()=>{ if(famNegado(path, 'read')){ if(erro) erro(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })); return; } cb(snap(path)); }, 0); return ()=>{ ouvintes[path] = (ouvintes[path]||[]).filter(f=>f!==cb); }; }
     };
   }
   function colRef(path, filtros){
@@ -81,7 +112,7 @@
     waitForPendingWrites: ()=>Promise.resolve(),
     runTransaction: (fn)=>fn({ get:(r)=>r.get(), set:(r,d)=>r.set(d), update:(r,d)=>r.update(d) })
   };
-  fsFn.FieldValue = { serverTimestamp:()=>Date.now(), increment:(n)=>n, arrayUnion:(...a)=>a, arrayRemove:()=>[], delete:()=>null };
+  fsFn.FieldValue = { serverTimestamp:()=>Date.now(), increment:(n)=>n, arrayUnion:(...a)=>({__op:'union', v:a}), arrayRemove:(...a)=>({__op:'remove', v:a}), delete:()=>({__op:'del'}) };
   const authFn = ()=>auth;
   authFn.GoogleAuthProvider = function(){ this.setCustomParameters=()=>{}; };
   authFn.EmailAuthProvider = { credential:()=>({}) };
