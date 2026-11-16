@@ -224,8 +224,8 @@ async def temas(b):
             await pg.evaluate("document.querySelectorAll('#modal-inner .tc-ponto')[document.querySelector('#modal-inner .tc')._idx + 1].click(); 0"); await pg.wait_for_timeout(900)
             confere('pontos navegam entre os temas (Beta 44: sem setas)', await pg.evaluate("document.querySelector('#modal-inner .tc')._idx") == k0 + 1 and await pg.evaluate("document.querySelectorAll('#modal-inner .tc-seta').length") == 0)
             await pg.evaluate("mtTcIr(document.querySelector('#modal-inner .tc'), _tcOrdem().indexOf('coral'))"); await pg.wait_for_timeout(500)
-            info = await pg.evaluate("document.querySelector('#modal-inner .tc-nome').innerText")
-            confere('Coral aparece como "Premium"', 'Coral' in info and 'Premium' in info, info)
+            info = await pg.evaluate("[document.querySelector('#modal-inner .tc-nome').innerText, !!document.querySelector('#modal-inner .tc-nome .tc-prem svg, #modal-inner .tc-nome .tc-prem')]")
+            confere('Coral aparece com a estrela Premium (Beta 48: só a estrela)', 'Coral' in info[0] and info[1], info)
             # gesto lateral: rolar o trilho atualiza o tema em foco
             await pg.evaluate("const tr = document.querySelector('#modal-inner .tc-trilho'); tr.scrollTo({left:0}); tr.dispatchEvent(new Event('scroll'))"); await pg.wait_for_timeout(400)
             confere('deslizar para o lado troca o tema em foco', await pg.evaluate("document.querySelector('#modal-inner .tc')._idx") == 0)

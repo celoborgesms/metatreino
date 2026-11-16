@@ -83,7 +83,7 @@
   }
   function colRef(path, filtros){
     filtros = filtros || [];
-    const passa = k=>filtros.every(([c, op, v])=>{ const d = store[k] || {}; return op === '==' ? d[c] === v : true; });
+    const passa = k=>filtros.every(([c, op, v])=>{ const d = store[k] || {}; return op === '==' ? d[c] === v : op === '>' ? (d[c] !== undefined && d[c] !== null && d[c] > v) : true; });
     const q = {
       doc: (id)=>docRef(path+'/'+(id || ('auto'+Math.random().toString(36).slice(2,10)))),
       add: (data)=>{ const id='auto'+Math.random().toString(36).slice(2,10); store[path+'/'+id]=JSON.parse(JSON.stringify(data)); persist(); return Promise.resolve(docRef(path+'/'+id)); },
