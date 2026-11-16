@@ -17,15 +17,18 @@ function _cupomFmt(c){ c = _cupomNorm(c); return c.length === 8 ? c.slice(0,4) +
 function _cupomNovo(){ const r = crypto.getRandomValues(new Uint32Array(8)); let s = ''; for(let i=0;i<8;i++) s += CUPOM_LETRAS[r[i] % CUPOM_LETRAS.length]; return s; }
 const _cupData = ms => new Date(ms).toLocaleDateString('pt-BR');
 
+const CUPOM_INTERVALO = 30*86400000;
+function _cupomLiberaEm(acc){ const em = acc && acc.cupomEm ? msDe(acc.cupomEm) : 0; return em ? em + CUPOM_INTERVALO : 0; }
 // ---------- aluno: resgatar ----------
 function openCupom(){
-  const p = planoAtual();
+  const p = planoAtual(); const libera = _cupomLiberaEm(myAccess), espera = libera > Date.now();
   $('modal-inner').innerHTML = `<div id="cupom-tela"><h3>🎟️ Tenho um cupom</h3>
-    <p class="fam-p">Digite o código do cupom. Ele libera dias de Premium na sua conta e vale uma vez só.</p>
+    <p class="fam-p">Digite o código do cupom. Ele libera dias de Premium na sua conta. Cada pessoa usa um cupom a cada 30 dias.</p>
     ${p.premium && p.vitalicio ? '<p class="fam-p"><b>Você já tem Premium sem prazo</b>, então não precisa de cupom.</p>' : ''}
+    ${espera && !(p.premium && p.vitalicio) ? `<p class="fam-p"><b>Você já usou um cupom.</b> O próximo pode ser usado a partir de <b>${_cupData(libera)}</b>.</p>` : ''}
     <input id="cupom-cod" class="input" maxlength="10" autocomplete="off" autocapitalize="characters" placeholder="Ex.: K7M2-QX4P" style="text-align:center;letter-spacing:3px;font-weight:800;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" data-teclado>
     <div id="cupom-msg" class="fam-mini" aria-live="polite" style="min-height:18px"></div>
-    <button class="btn btn-primary btn-block" id="cupom-ok" onclick="cupomResgatar()" ${p.premium && p.vitalicio ? 'disabled' : ''}>Usar cupom</button>
+    <button class="btn btn-primary btn-block" id="cupom-ok" onclick="cupomResgatar()" ${(p.premium && p.vitalicio) || espera ? 'disabled' : ''}>Usar cupom</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Voltar</button></div>`;
   $('modal-back').classList.add('on');
 }
@@ -44,6 +47,9 @@ async function cupomResgatar(){
   if(bt){ bt.disabled = true; bt.textContent = 'Conferindo…'; }
   const volta = ()=>{ if(bt){ bt.disabled = false; bt.textContent = 'Usar cupom'; } };
   try{
+    // um cupom por pessoa a cada 30 dias (as regras do Firestore conferem o mesmo)
+    const libera = _cupomLiberaEm(myAccess);
+    if(libera > Date.now()){ if(bt) bt.textContent = 'Usar cupom'; return msg('Você já usou um cupom. O próximo pode ser usado a partir de ' + _cupData(libera) + '.'); }
     const cRef = db.collection('cupons').doc(cod);
     const cs = await cRef.get();
     if(!cs.exists){ volta(); return msg('Cupom não encontrado. Confira as letras e números.'); }

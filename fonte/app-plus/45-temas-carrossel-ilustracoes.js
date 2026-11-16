@@ -80,7 +80,7 @@ function _tcInfo(tc){
   const k = tc._ordem[tc._idx]; const t = THEMES[k]; if(!t) return;
   const livre = _tcLivre(k);
   const prem = (typeof temaPremium === 'function') ? temaPremium(k) : !!t.premium;
-  tc.querySelector('.tc-nome').innerHTML = `<b>${mtEsc(t.nome)}</b>${tc.dataset.ctx==='cadastro' && k==='areia'?'<span class="tc-atual">Sugerido</span>':''}${prem?`<span class="pl-mini tc-prem">${typeof PL_EST!=='undefined'?PL_EST:''}Premium</span>`:''}<small>${mtEsc(t.sub||'')}</small>${livre ? '' : `<button type="button" class="tc-premium" onclick="mtPremiumAviso('temas')">Disponível no Premium · conhecer</button>`}`;
+  tc.querySelector('.tc-nome').innerHTML = `<b>${mtEsc(t.nome)}</b>${tc.dataset.ctx==='cadastro' && k==='areia'?'<span class="tc-atual">Sugerido</span>':''}${prem?`<span class="pl-mini tc-prem">${typeof PL_EST!=='undefined'?PL_EST:'⭐'}</span>`:''}<small>${mtEsc(t.sub||'')}</small>${livre ? '' : `<button type="button" class="tc-premium" onclick="mtPremiumAviso('temas')">Disponível no Premium · conhecer</button>`}`;
   tc.querySelectorAll('.tc-ponto').forEach((p,i)=>{ p.classList.toggle('on', i===tc._idx); p.setAttribute('aria-current', i===tc._idx ? 'true' : 'false'); });
   [...tc.querySelectorAll('.tc-slide')].forEach((s,i)=>s.classList.toggle('foco', i===tc._idx));
 }

@@ -201,7 +201,7 @@ mtGancho('renderProfile', { depois(){
     // linhas Premium ganham o selo (o recurso continua conferido na função)
     if(!p.premium){
       [['inicio-row','Personalizar início'],['theme-row','Aparência']].forEach(([id])=>{ const r = $(id); if(r && !r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">'+PL_EST+'</span>'); });
-      document.querySelectorAll('#scr-profile .list-row[onclick*="arqRelatorio"], #scr-profile .list-row[onclick*="library"]').forEach(r=>{ if(!r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">' + PL_EST + 'Premium</span>'); });   // Beta 48: antes saía o texto "${PL_EST}" literal
+      document.querySelectorAll('#scr-profile .list-row[onclick*="arqRelatorio"], #scr-profile .list-row[onclick*="library"]').forEach(r=>{ if(!r.querySelector('.pl-mini')) r.insertAdjacentHTML('beforeend','<span class="pl-mini">' + PL_EST + '</span>'); });   // Beta 48: só a estrela, igual às outras linhas do Perfil
     } else document.querySelectorAll('#scr-profile .pl-mini').forEach(x=>x.remove());
   }catch(e){ console.log('perfil (plano):', e); }
 }});
@@ -437,7 +437,7 @@ openAparencia = function(){
   const opt = k=>{ const t = THEMES[k]; const trava = !prem && temaPremium(k); const exclusivo = !!t.premium;
     return `<button type="button" class="ap-opt ${k===cur?'on':''} ${trava?'pl-trava':''}" onclick="setTheme('${k}');setTimeout(openAparencia,30)" aria-label="Tema ${mtEsc(t.nome)}${trava?' (Premium)':''}">
       <span class="wz-tema-prev ap-prev-real" data-theme="${k}" aria-hidden="true"><span class="tp-top"><i></i><b></b></span><span class="tp-card"><b></b><i></i><em></em></span><span class="tp-btn"></span><span class="tp-tab"><i></i><i></i><i></i><i></i></span></span>
-      <div class="ap-name"><span>${mtEsc(t.nome)}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}${trava||exclusivo?`<span class="pl-mini">${PL_EST}Premium</span>`:''}</div><small style="color:var(--text-mute);font-size:11px;margin-top:-4px">${mtEsc(t.sub)}</small></button>`; };
+      <div class="ap-name"><span>${mtEsc(t.nome)}</span>${k===cur?'<span style="color:var(--primary-2)">✓</span>':''}${trava||exclusivo?`<span class="pl-mini">${PL_EST}</span>`:''}</div><small style="color:var(--text-mute);font-size:11px;margin-top:-4px">${mtEsc(t.sub)}</small></button>`; };
   const deco = (typeof decoEnabled==='function') ? decoEnabled() : true;
   $('modal-inner').innerHTML = `<h3>Aparência</h3>
     ${!prem ? `<div class="pl-faixa">No plano Básico: <b>Brasa</b> (escuro) e <b>Areia</b> (claro). Os outros temas são Premium. <a href="#" onclick="openPlanos();return false">Ver planos ›</a></div>` : ''}
@@ -462,7 +462,7 @@ mtGancho('wzRenderTemas', { depois(){
       const k = (b.getAttribute('onclick')||'').match(/wzEscolheTema\('(\w+)'\)/); if(!k) return;
       const t = THEMES[k[1]]; if(!t) return;
       const nome = b.querySelector('.wz-tema-nome');
-      if(nome && temaPremium(k[1]) && !nome.querySelector('.pl-mini')) nome.insertAdjacentHTML('beforeend', `<small class="pl-mini">${PL_EST}Premium</small>`);
+      if(nome && temaPremium(k[1]) && !nome.querySelector('.pl-mini')) nome.insertAdjacentHTML('beforeend', `<small class="pl-mini">${PL_EST}</small>`);
       b.classList.toggle('pl-trava', !temaLiberado(k[1]));
     });
   }catch(e){}

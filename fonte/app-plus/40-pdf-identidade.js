@@ -291,7 +291,7 @@ mtGancho('renderPlan', { depois(){
   try{
     const box = $('plan-details'); if(!box) return;
     const ex = $('pl-pdf'); if(ex) ex.remove();
-    box.insertAdjacentHTML('afterend', `<button class="btn btn-outline btn-block" id="pl-pdf" style="margin-top:12px" onclick="pdfTreino()">📄 Baixar o plano em PDF${mtPremium()?'':' <span class="pl-mini">'+PL_EST+'Premium</span>'}</button>`);
+    box.insertAdjacentHTML('afterend', `<button class="btn btn-outline btn-block" id="pl-pdf" style="margin-top:12px" onclick="pdfTreino()">📄 Baixar o plano em PDF${mtPremium()?'':' <span class="pl-mini">'+PL_EST+'</span>'}</button>`);
   }catch(e){}
 }});
 mtGancho('openNutri', { depois(){
@@ -305,7 +305,7 @@ mtGancho('openNutri', { depois(){
 mtGancho('renderProfile', { depois(){
   try{
     const rel = document.querySelector('#scr-profile .list-row[onclick*="arqRelatorio"]'); if(!rel || $('pf-pdf-plano')) return;
-    rel.insertAdjacentHTML('afterend', `<div class="list-row" id="pf-pdf-plano" onclick="pdfTreino()">📋 <span>Plano de treino em PDF</span>${mtPremium()?'<span style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span>':'<span class="pl-mini" style="margin-left:auto">'+PL_EST+'Premium</span>'}</div>`);
+    rel.insertAdjacentHTML('afterend', `<div class="list-row" id="pf-pdf-plano" onclick="pdfTreino()">📋 <span>Plano de treino em PDF</span>${mtPremium()?'<span style="margin-left:auto;color:var(--text-mute);font-size:12px">›</span>':'<span class="pl-mini" style="margin-left:auto">'+PL_EST+'</span>'}</div>`);
   }catch(e){}
 }});
 
