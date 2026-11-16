@@ -239,6 +239,23 @@ window.maRefreshThread = function(){
   return _maRefreshB48.apply(this, arguments);
 };
 
+// 6) Tom de pele dos emojis de volta na tela "Estilo dos ícones" (some quando a Aparência foi refeita).
+//    As amostras de cada tom mostram o próprio tom (não recebem o tom escolhido por cima).
+window.aplicaTomEmoji = function(root){
+  const mod = (EMOJI_TONES.find(x=>x.id===_emojiTone)||EMOJI_TONES[0]).mod;
+  const w = document.createTreeWalker(root||document.body, NodeFilter.SHOW_TEXT, { acceptNode:n=>{ const pe = n.parentNode; const p = pe && pe.nodeName;
+    if(p==='SCRIPT'||p==='STYLE'||p==='TEXTAREA'||p==='NOSCRIPT') return NodeFilter.FILTER_REJECT;
+    if(pe && pe.closest && pe.closest('[data-tom-fixo]')) return NodeFilter.FILTER_REJECT;
+    return NodeFilter.FILTER_ACCEPT; } });
+  const lista = []; let n; while(n = w.nextNode()) lista.push(n);
+  lista.forEach(t=>{ const novo = _aplicaTomTexto(t.nodeValue, mod); if(novo !== t.nodeValue) t.nodeValue = novo; });
+};
+const _setEmojiToneB48 = window.setEmojiTone;
+window.setEmojiTone = function(id){
+  document.querySelectorAll('.tom-op').forEach(b=>{ const on = b.getAttribute('onclick') === `setEmojiTone('${id}')`; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  return _setEmojiToneB48.apply(this, arguments);
+};
+
 (function(){ if(document.getElementById('cup-css')) return; const s = document.createElement('style'); s.id = 'cup-css';
   s.textContent = `
 .cup-form{display:flex;flex-direction:column;gap:8px;margin:6px 0 12px}
@@ -246,6 +263,10 @@ window.maRefreshThread = function(){
 .cup-linha{display:flex;gap:8px}
 .cup-acoes{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}.cup-acoes .btn{padding:8px 10px;font-size:12px}
 .cup-novos{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:14px;background:rgba(var(--primary-rgb),.10);margin-bottom:12px}
+.tom-grade{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.tom-op{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:14px;border:1px solid var(--border);background:var(--card,transparent);color:var(--text);cursor:pointer;font:inherit}
+.tom-op.on{border-color:var(--primary);box-shadow:0 0 0 2px rgba(var(--primary-rgb),.25)}
+.tom-op .tom-emo{font-size:26px;line-height:1}.tom-op small{font-size:11px;color:var(--text-dim);text-align:center}
 .cup-novos textarea{font-family:ui-monospace,monospace;letter-spacing:2px;resize:vertical}
 `; document.head.appendChild(s); })();
 

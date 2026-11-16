@@ -408,6 +408,9 @@ function openEstiloIconesB40(){
     <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Vale para o app inteiro e fica salvo na sua conta (aparece igual nos outros aparelhos).</p>
     <div class="ic-opcoes">${iconeOpcoesHtml(cur, 'setEstiloIcones')}</div>
     ${cur==='linha' ? `<div class="mt-sec">Traço</div>${['fina','linha','duo'].map(k=>`<div class="ap-pack ${k===getPacote()?'on':''}" onclick="setPacote('${k}');setTimeout(openEstiloIconesB40,30)"><div><b style="font-size:14px">${ICO_PACOTES[k].nome}</b><div style="font-size:11.5px;color:var(--text-mute)">${ICO_PACOTES[k].sub}</div></div><div class="ap-sample ${k}">${amostraLinha}</div></div>`).join('')}` : ''}
+    ${cur==='emoji' && typeof EMOJI_TONES !== 'undefined' ? (()=>{ const tom = getEmojiTone(); return `<div class="mt-sec">Tom de pele</div>
+      <p class="mt-muted" style="margin:0 0 8px;font-size:12px">Para os emojis de pessoas e mãos (💪 🏃 👋). Vale neste aparelho.</p>
+      <div class="tom-grade" role="radiogroup" aria-label="Tom de pele dos emojis">${EMOJI_TONES.map(t=>`<button type="button" class="tom-op ${t.id===tom?'on':''}" role="radio" aria-checked="${t.id===tom}" aria-label="${t.nome}" onclick="${t.id===tom?'':`setEmojiTone('${t.id}')`}"><span class="tom-emo" data-tom-fixo>💪${t.mod}</span><small>${t.nome.replace(' (amarelo)','')}</small></button>`).join('')}</div>`; })() : ''}
     <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="closeModal();renderProfile()">Pronto</button>`;
   $('modal-back').classList.add('on');
 }

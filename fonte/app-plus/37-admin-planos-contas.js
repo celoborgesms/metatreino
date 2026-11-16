@@ -438,10 +438,28 @@ async function openAdminLog(){
     const s = await db.collection('adminLog').orderBy('em','desc').limit(80).get();
     const L = []; s.forEach(d=>L.push(d.data()));
     L.sort((a,b)=>msDe(b.em)-msDe(a.em));
-    const nome = { premium:'Premium concedido/renovado', gratuito:'Passou para Básico', bloquear:'Conta suspensa', desbloquear:'Conta desbloqueada', 'admin-conceder':'Administrador autorizado', 'admin-remover':'Administrador removido', 'admin-apagar-registro':'Registro de admin apagado', 'excluir-conta':'Conta excluída', 'excluir-conta-parcial':'Exclusão parcial', 'excluir-dados':'Dados apagados e conta suspensa', 'excluir-dados-parcial':'Dados apagados (parcial)', 'liberar-email':'E-mail liberado após exclusão', 'liberar-backup':'Restauração de backup liberada' };
+    const nome = { premium:'Premium concedido/renovado', gratuito:'Passou para Básico', bloquear:'Conta suspensa', desbloquear:'Conta desbloqueada', 'admin-conceder':'Administrador autorizado', 'admin-remover':'Administrador removido', 'admin-apagar-registro':'Registro de admin apagado', 'excluir-conta':'Conta excluída', 'excluir-conta-parcial':'Exclusão parcial', 'excluir-dados':'Dados apagados e conta suspensa', 'excluir-dados-parcial':'Dados apagados (parcial)', 'liberar-email':'E-mail liberado após exclusão', 'liberar-backup':'Restauração de backup liberada', cupons:'Cupons', 'registro-limpo':'Registro de ações limpo' };
     $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><div style="max-height:60vh;overflow:auto">${L.map(x=>`<div class="adm-log"><b>${mtEsc(nome[x.acao]||x.acao)}</b> · ${mtEsc(x.alvo||'')}<br>${mtEsc(msDe(x.em)?new Date(msDe(x.em)).toLocaleString('pt-BR'):'')} · por ${mtEsc(x.por||'')}${x.origem==='servidor'?' (servidor)':''}</div>`).join('') || '<div class="mt-muted">Nenhuma ação registrada ainda.</div>'}</div>
+      ${L.length ? `<div class="mt-sec">Limpar registro</div><div class="cup-acoes"><button class="btn btn-ghost" onclick="admLimparLog(30)">Apagar mais antigos que 30 dias</button><button class="btn btn-ghost" onclick="admLimparLog(0)">🗑️ Apagar tudo</button></div>` : ''}
       <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
   }catch(e){ $('modal-inner').innerHTML = `<h3>🧾 Registro de ações</h3><p class="mt-muted">Não consegui ler o registro (${mtEsc((e&&e.code)||'erro')}). Publique as regras desta versão (coleção adminLog).</p><button class="btn btn-ghost btn-block" onclick="closeModal()">Fechar</button>`; }
 }
 
-Object.assign(window, { admPremium, admEncerrar, admBloquear, admBloquearConfirma, admExcluirConta, admExcluirContaGo, admExcluirSoDados, admApagarRegistroAdmin, openAdminLog, admRegistrar, fnChamar, openContasExcluidas, admLiberarEmail, admLiberarBackup, admVoltarLista });
+// Beta 48: limpar o registro (só o administrador principal). Fica uma linha dizendo quem limpou e quando.
+function admLimparLog(dias){
+  if(!mtPrincipal()) return;
+  const txt = dias ? `Apagar as ações com mais de ${dias} dias? As mais recentes continuam.` : 'Apagar todo o registro de ações do painel? Não dá para desfazer.';
+  appConfirm(txt, async ()=>{
+    const corte = dias ? Date.now() - dias*86400000 : Infinity; let n = 0;
+    try{
+      const s = await db.collection('adminLog').get();
+      const ids = []; s.forEach(d=>{ const em = msDe(d.data().em); if(!dias || (em && em < corte)) ids.push(d.id); });
+      for(let i=0; i<ids.length; i+=400){ const b = db.batch(); ids.slice(i, i+400).forEach(id=>b.delete(db.collection('adminLog').doc(id))); await b.commit(); n += Math.min(400, ids.length - i); }
+      if(n) await admRegistrar('registro-limpo', dias ? `mais antigos que ${dias} dias` : 'tudo', `${n} ${n===1?'ação apagada':'ações apagadas'}`);
+      toast(n ? `🗑️ ${n} ${n===1?'ação apagada':'ações apagadas'}` : 'Nada para apagar');
+    }catch(e){ toast('Não consegui limpar agora (' + ((e&&e.code)||'erro') + '). Publique as regras da Beta 48.'); }
+    openAdminLog();
+  }, { title:'Limpar registro?', emo:'🧾', okLabel:'Apagar', danger:true });
+}
+
+Object.assign(window, { admLimparLog, admPremium, admEncerrar, admBloquear, admBloquearConfirma, admExcluirConta, admExcluirContaGo, admExcluirSoDados, admApagarRegistroAdmin, openAdminLog, admRegistrar, fnChamar, openContasExcluidas, admLiberarEmail, admLiberarBackup, admVoltarLista });
