@@ -77,7 +77,8 @@ async def conquistas(b):
     ctx, pg, erros = await nova(b)
     await semente(pg)
     await pg.evaluate("goTab('home')"); await pg.wait_for_timeout(300)
-    ids = await pg.evaluate("TROPHIES.filter(t=>!t.secret && !state.trophies.includes(t.id)).slice(0,4).map(t=>t.id)")
+    # Beta 49: etapas da mesma família (5K → 10K) viram um cartão só; o teste usa conquistas de famílias diferentes
+    ids = await pg.evaluate("(()=>{ const fam = id=>{ const i = CQ_FAMILIAS.findIndex(f=>f.includes(id)); return i < 0 ? 'u'+id : 'f'+i; }; const out = [], usadas = new Set(); TROPHIES.filter(t=>!t.secret && !state.trophies.includes(t.id) && !CQ_PRIMEIRAS.includes(t.id)).forEach(t=>{ const f = fam(t.id); if(out.length < 4 && !usadas.has(f)){ usadas.add(f); out.push(t.id); } }); return out; })()")
     await pg.evaluate(f"unlockTrophy('{ids[0]}')"); await pg.wait_for_timeout(2000)
     confere('fora do fim de um registro: nada abre por cima', not await pg.evaluate(MODAL_ON))
     confere('um aviso só: ponto na aba Desafios, sem selo no cartão do Início', await pg.evaluate("!!document.querySelector('.tab[data-tab=\"challenges\"] .cq-dot') && !document.querySelector('#home-trofeus .cq-badge')"))

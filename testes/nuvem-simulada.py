@@ -67,7 +67,55 @@ def permite(op, caminho, t, dados=None):
         return admin(t)
     if p[0] == 'adminLog': return (op == 'set' and admin(t) and (dados or {}).get('por') == em) or (op in ('get','list') and em == DONO and bool(t.get('verified')))
     if p[0] == 'admins': return op == 'get' and em == (p[1] if len(p) > 1 else '') or admin(t)
+    if p[0] == 'familias': return familia(op, caminho, t, dados)
     return True   # demais coleções (mensagens etc.): fora do escopo deste teste
+
+# Beta 49: firestore.rules de "familias" (administrador do cardápio; cada membro só a própria chave)
+def _alteradas(a, b):
+    a = a or {}; b = b or {}
+    return [k for k in set(a) | set(b) if json.dumps(a.get(k), sort_keys=True) != json.dumps(b.get(k), sort_keys=True)]
+def familia(op, caminho, t, depois):
+    uid = t.get('uid'); antes = LOJA.get(caminho); fid = caminho.split('/')[1] if '/' in caminho else ''
+    dono_app = (t.get('email') or '').lower() == DONO and t.get('verified')
+    if op in ('get', 'list'): return bool(dono_app or (antes and uid in (antes.get('membros') or [])))
+    if op == 'delete': return bool(dono_app or (antes and uid in (antes.get('membros') or []) and len(antes['membros']) == 1))
+    so = lambda lista, ok: all(k in ok for k in lista)
+    if antes is None:   # create
+        return bool(re.fullmatch(r'[A-Z2-9]{6}', fid)) and depois.get('membros') == [uid] and depois.get('dono') == uid \
+            and so(depois.keys(), ['membros','dono','nomes','perfis','config','cardapio','registro','criadoEm','v']) \
+            and so((depois.get('nomes') or {}).keys(), [uid]) and so((depois.get('perfis') or {}).keys(), [uid])
+    dm = depois.get('membros'); am = antes.get('membros') or []
+    if not isinstance(dm, list) or len(dm) > 6: return False
+    mudou = _alteradas(antes, depois); saiu = [x for x in am if x not in dm]
+    chaves = lambda campo, ok: so(_alteradas(antes.get(campo), depois.get(campo)), ok)
+    if antes.get('dono') == uid:
+        return so(mudou, ['config','cardapio','registro','dono','membros','nomes','perfis','v']) and all(x in am for x in dm) and depois.get('dono') in dm \
+            and chaves('nomes', saiu + [uid]) and chaves('perfis', saiu + [uid])
+    if uid in am:
+        return so(mudou, ['membros','nomes','perfis']) and (dm == am or (all(x in am for x in dm) and saiu == [uid] and len(dm) == len(am) - 1)) \
+            and chaves('nomes', [uid]) and chaves('perfis', [uid])
+    entrou = [x for x in dm if x not in am]
+    return all(x in dm for x in am) and entrou == [uid] and len(dm) == len(am) + 1 and so(mudou, ['membros','nomes','perfis']) \
+        and chaves('nomes', [uid]) and chaves('perfis', [uid])
+
+def aplica_update(doc, dados):
+    import copy
+    d = copy.deepcopy(doc)
+    for k, v in dados.items():
+        partes = k.split('.'); o = d
+        for c in partes[:-1]:
+            if not isinstance(o.get(c), dict): o[c] = {}
+            o = o[c]
+        u = partes[-1]
+        if isinstance(v, dict) and v.get('__apagar') is True: o.pop(u, None)
+        elif isinstance(v, dict) and v.get('__op') == 'union':
+            a = list(o.get(u) or []) if isinstance(o.get(u), list) else []
+            for x in v['v']:
+                if x not in a: a.append(x)
+            o[u] = a
+        elif isinstance(v, dict) and v.get('__op') == 'remove': o[u] = [x for x in (o.get(u) or []) if x not in v['v']]
+        else: o[u] = v
+    return d
 
 class H(SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -100,6 +148,11 @@ class H(SimpleHTTPRequestHandler):
                 final = dict(LOJA.get(caminho) or {}, **dados) if merge else dados
                 final = {k: v for k, v in final.items() if v != {'__apagar': True}}
                 if not permite('set', caminho, t, final): NEGADOS.append(['set', caminho, t.get('uid')]); return self._json(403, {'erro': 'permission-denied'})
+                LOJA[caminho] = final; VERSAO[0] += 1; return self._json(200, {'ok': True})
+            if op == 'update':
+                if caminho not in LOJA: return self._json(404, {'erro': 'not-found'})
+                final = aplica_update(LOJA[caminho], corpo.get('dados') or {})
+                if not permite('set', caminho, t, final): NEGADOS.append(['update', caminho, t.get('uid')]); return self._json(403, {'erro': 'permission-denied'})
                 LOJA[caminho] = final; VERSAO[0] += 1; return self._json(200, {'ok': True})
             if op == 'delete':
                 if not permite('delete', caminho, t): NEGADOS.append(['delete', caminho, t.get('uid')]); return self._json(403, {'erro': 'permission-denied'})

@@ -145,8 +145,9 @@ async def receitas(b):
     print('7. Porção ajustada ao plano individual')
     k = await pg.evaluate("""(()=>{ const p = nutriMontarPlano(nutriDiaSel()); const r = RC_RECEITAS.find(x=>x.id==='hamb_caseiro');
        const rs = rcRestricao(r, 0); const j = p.refeicoes.find(m=>m.id==='jantar'); const e = rcEncaixe(r, rs.itens, j.tot.kcal);
-       return { alvo:j.tot.kcal, kcal:e.tot.kcal, nao:!!e.naoCabe, esc:e.escala }; })()""")
-    confere('ganhar massa: porção do hambúrguer próxima do jantar do plano (±15%)', not k['nao'] and abs(k['kcal'] - k['alvo']) <= k['alvo']*0.15, k)
+       return { alvo:j.tot.kcal, kcal:e.tot.kcal, nao:!!e.naoCabe, esc:e.escala, falta:e.falta||0 }; })()""")
+    # Beta 49: quando a receita chega no máximo da escala e ainda fica abaixo do jantar, o app diz quanto falta (honesto)
+    confere('ganhar massa: porção do hambúrguer próxima do jantar do plano (±15%) ou avisa quanto falta', not k['nao'] and (abs(k['kcal'] - k['alvo']) <= k['alvo']*0.15 or (k['falta'] > 0 and abs(k['kcal'] + k['falta'] - k['alvo']) < 2)), k)
     await pg.evaluate(f"state.user.profile = Object.assign(state.user.profile, {PERFIS['emagrecer_f']}); state.nutri.objetivo = 'emagrecer'; state.nutri.refeicoes = 6; openReceita('hamb_pastel')"); await pg.wait_for_timeout(200)
     k2 = await pg.evaluate("""(()=>{ const p = nutriMontarPlano(nutriDiaSel()); const r = RC_RECEITAS.find(x=>x.id==='hamb_caseiro');
        const j = p.refeicoes.find(m=>m.id==='jantar'); const e = rcEncaixe(r, rcRestricao(r,0).itens, j.tot.kcal); return { alvo:j.tot.kcal, kcal:e.tot.kcal, nao:!!e.naoCabe, esc:e.escala }; })()""")

@@ -217,10 +217,30 @@ async def logadm(b):
     await foto(pg, 'b48-06-registro-acoes')
     confere('sem erros', not erros, erros[:3]); await ctx.close()
 
+async def acessoadm(b):
+    print('8. Painel admin só para administrador')
+    ctx = await b.new_context(viewport={'width':390,'height':844})
+    pg, erros = await pagina(ctx, {'uid':'uComum','email':'comum@example.com','emailVerified':True})
+    await pg.evaluate("goTab('profile')"); await pg.wait_for_timeout(400)
+    confere('aluno comum: botão do painel escondido no Perfil', await pg.evaluate("$('pf-admin-btn').classList.contains('hidden')"))
+    await pg.evaluate("goAdmin()"); await pg.wait_for_timeout(800)
+    confere('aluno comum: goAdmin() chamado por fora não abre o painel', not await pg.evaluate("$('scr-admin').classList.contains('active')"))
+    confere('sem erros (aluno)', not erros, erros[:3]); await pg.close()
+    pg0 = await ctx.new_page(); await pg0.goto(URL); await pg0.wait_for_timeout(800)
+    dono = await pg0.evaluate("String(ADMIN_EMAIL).toLowerCase()"); await pg0.close()
+    pg, erros = await pagina(ctx, {'uid':'sec','email':'secundario@example.com','emailVerified':True}, {'admins/secundario@example.com': {'ativo':True}})
+    await pg.evaluate("goTab('profile')"); await pg.wait_for_timeout(400)
+    confere('admin secundário ativo: vê o botão e abre o painel', not await pg.evaluate("$('pf-admin-btn').classList.contains('hidden')") and await pg.evaluate("goAdmin().then(()=>$('scr-admin').classList.contains('active'))"))
+    await pg.close()
+    pg, erros = await pagina(ctx, {'uid':'ex','email':'exadm@example.com','emailVerified':True}, {'admins/exadm@example.com': {'ativo':False}})
+    await pg.evaluate("goTab('profile')"); await pg.wait_for_timeout(400)
+    confere('admin desativado: botão escondido', await pg.evaluate("$('pf-admin-btn').classList.contains('hidden')"))
+    await ctx.close()
+
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
-        await basico(b); await ajustes(b); await cupons(b); await tom(b); await logadm(b)
+        await basico(b); await ajustes(b); await cupons(b); await tom(b); await logadm(b); await acessoadm(b)
         await b.close()
     print(f'\nBeta 48: {ok} ok, {falhou} falha(s)'); sys.exit(1 if falhou else 0)
 asyncio.run(main())

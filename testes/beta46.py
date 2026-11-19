@@ -33,7 +33,7 @@ async def casa(b):
     confere('entrada "Alimentação da casa" no plano alimentar', await pg.evaluate("!!document.getElementById('fam-entrada')"))
     await pg.evaluate("openFamilia()"); await pg.wait_for_timeout(200)
     t = await pg.evaluate("document.getElementById('modal-inner').innerText")
-    confere('explica: mesmo prato, porção de cada um, até 6 pessoas, o que é compartilhado', 'mesmo para todos' in t and 'porção' in t and '6 pessoas' in t and 'Peso, idade e e-mail não são compartilhados' in t, t[:300])
+    confere('explica: mesmo prato, porção de cada um, até 6 pessoas, o que é compartilhado', 'mesmo prato' in t and 'própria quantidade' in t and '6 pessoas' in t and 'Peso, idade, altura e e-mail não são compartilhados' in t, t[:300])
     await foto(pg, 'b46-01-casa-inicio')
     await pg.evaluate("famCriar()"); await pg.wait_for_timeout(800)
     r = await pg.evaluate(f"(()=>{{ const k = {FAM}; const d = window.__mockFS[k]; return {{ k, membros:d && d.membros, dono:d && d.dono, id: state.nutri.familia && state.nutri.familia.id, refs: d && d.config.refeicoes, txt: document.getElementById('modal-inner').innerText }}; }})()")
@@ -54,25 +54,26 @@ async def casa(b):
         const fat = {{}}; for(let i=1;i<=7;i++) fat[i] = {{ almoco:1.2, jantar:1.1 }};
         d.perfis.uB = {{ veg:true, lac:false, glu:false, fatores:fat }}; window.__mockAvisa(k); }})()""")
     await pg.wait_for_timeout(600)
-    r = await pg.evaluate("(()=>{ const p = nutriMontarPlano(3); const R = nutriComprasTotais('7dias'); return { chaves: p.refeicoes.filter(m=>m.compartilhada).map(m=>m.chave), outras: p.refeicoes.filter(m=>!m.compartilhada).map(m=>m.chave), pessoas: R.pessoas, total: Object.values(R.tot).reduce((s,t)=>s+t.g,0) }; })()")
+    r = await pg.evaluate("(()=>{ const p = nutriMontarPlano(3); const R = nutriComprasTotais('7dias','casa'); return { chaves: p.refeicoes.filter(m=>m.compartilhada).map(m=>m.chave), outras: p.refeicoes.filter(m=>!m.compartilhada).map(m=>m.chave), pessoas: R.pessoas, total: Object.values(R.tot).reduce((s,t)=>s+t.g,0) }; })()")
     confere('restrição de alguém da casa vale nas refeições da casa (vegetariano)', all(c.endswith('v') for c in r['chaves']) and not any(c.endswith('v') for c in r['outras']), r)
     confere('lista de compras soma as porções das 2 pessoas', r['pessoas'] == 2 and r['total'] > solo * 1.15, [solo, r])
     await pg.evaluate("nutriListaCompras('7dias')"); await pg.wait_for_timeout(200)
     t = await pg.evaluate("document.getElementById('modal-inner').innerText")
     confere('tela da lista mostra "para 2 pessoas"', 'da casa' in t and '2 pessoas' in t, t[:200])
     await foto(pg, 'b46-03-lista-casa')
-    # registro: "comi" no almoço vai para o grupo
+    # Beta 49: "comi" é pessoal (a alimentação é individual) — não vai para o grupo
     await pg.evaluate("openNutri(); nutriComi('almoco'); 0"); await pg.wait_for_timeout(1600)
     hoje = await pg.evaluate("chaveDia(new Date())")
-    reg = await pg.evaluate(f"((window.__mockFS[{FAM}].registro||{{}})['{hoje}']||{{}}).almoco")
-    confere('"comi" numa refeição da casa vai para o grupo', reg and reg.get('ok') is True and reg.get('por') == 'uA', reg)
-    # o outro celular tira um alimento do jantar → aparece aqui
-    item = await pg.evaluate("nutriMontarPlano(getDayIdx()).refeicoes.find(m=>m.id==='jantar').itens[0].id")
-    await pg.evaluate(f"""(()=>{{ const k = {FAM}; const d = window.__mockFS[k]; d.registro['{hoje}'] = d.registro['{hoje}'] || {{}};
-        d.registro['{hoje}'].jantar = {{ ok:false, x:['{item}'], add:[], em:Date.now(), por:'uB' }}; window.__mockAvisa(k); }})()""")
+    reg = await pg.evaluate(f"window.__mockFS[{FAM}].registro || null")
+    confere('Beta 49: "comi" numa refeição da casa é pessoal (não vai para o grupo)', reg is None, reg)
+    # a composição do prato decidida pelo administrador (outro celular) aparece aqui, na minha porção
+    item = await pg.evaluate("(()=>{ const it = nutriMontarPlano(getDayIdx()).refeicoes.find(m=>m.id==='jantar').itens; return it[it.length-1].id; })()")
+    kcal0 = await pg.evaluate("Math.round(nutriMontarPlano(getDayIdx()).refeicoes.find(m=>m.id==='jantar').tot.kcal)")
+    await pg.evaluate(f"""(()=>{{ const k = {FAM}; const d = window.__mockFS[k]; d.cardapio = d.cardapio || {{}}; d.cardapio['{hoje}'] = {{ jantar: {{ x:['{item}'], add:[] }} }}; window.__mockAvisa(k); }})()""")
     await pg.wait_for_timeout(600)
-    confere('o que a outra pessoa marca no jantar da casa aparece igual aqui', await pg.evaluate(f"!!(((state.nutriLog||{{}})['{hoje}']||{{}}).jantar||{{adj:{{}}}}).adj['{item}']"))
-    confere('e não volta para o grupo como mudança minha (sem eco)', await pg.evaluate(f"window.__mockFS[{FAM}].registro['{hoje}'].jantar.por") == 'uB')
+    r = await pg.evaluate(f"(()=>{{ const m = nutriMontarPlano(getDayIdx()).refeicoes.find(m=>m.id==='jantar'); return {{ tem: m.itens.some(i=>i.id==='{item}'), kcal: Math.round(m.tot.kcal) }}; }})()")
+    confere('o alimento tirado do prato da casa sai daqui também', not r['tem'], r)
+    confere('e a minha porção é recalculada (calorias do meu plano, ±8%)', abs(r['kcal'] - kcal0) <= kcal0*0.08, [kcal0, r])
     # trocar o prato da casa troca para todos
     ch = await pg.evaluate("nutriMontarPlano(3).refeicoes.find(m=>m.id==='almoco').chave")
     p0 = await pg.evaluate("nutriMontarPlano(3).refeicoes.find(m=>m.id==='almoco').prato")
@@ -80,14 +81,14 @@ async def casa(b):
     r = await pg.evaluate(f"({{ tr: window.__mockFS[{FAM}].config.trocas, prato: nutriMontarPlano(3).refeicoes.find(m=>m.id==='almoco').prato }})")
     confere('"Outro prato" numa refeição da casa troca para todos', (r['tr'] or {}).get(ch) == 1 and r['prato'] != p0, [p0, r])
     # quantidade é pessoal (não sincroniza)
-    confere('quantidade editada não vai para o grupo (é a porção de cada um)', 'q' not in json.dumps((await pg.evaluate(f"window.__mockFS[{FAM}].registro"))))
+    confere('quantidade editada não vai para o grupo (é a porção de cada um)', 'adj' not in json.dumps((await pg.evaluate(f"window.__mockFS[{FAM}]"))))
     # refeições da casa configuráveis
     await pg.evaluate("openFamilia(); famAlternaRefeicao('cafe')"); await pg.wait_for_timeout(300)
     confere('dá para escolher outras refeições da casa (ex.: café)', await pg.evaluate(f"window.__mockFS[{FAM}].config.refeicoes.includes('cafe')"))
     await pg.evaluate("famAlternaRefeicao('cafe')"); await pg.wait_for_timeout(300)
     # PDF: lista de compras da casa
     rp = await pg.evaluate("""(()=>{ const out = []; const S = { precisa(){}, secao(t,s){ out.push('S:'+t+'|'+(s||'')); }, tabela(c, l){ out.push('T:'+l.length); }, nota(t){ out.push('N:'+t); } };
-       nutriPdfCompras(S, { C:{ a:'#000', aClaro:'#eee' } }); return out; })()""")
+       nutriPdfCompras(S, { C:{ a:'#000', aClaro:'#eee', ink:'#000', dim:'#555' } }, 'casa'); return out; })()""")
     confere('PDF ganha a lista de compras com a casa (2 pessoas)', any('2 pessoas' in x for x in rp) and any(x.startswith('T:') for x in rp), rp)
     # sair mantém o cardápio
     antesSair = await pg.evaluate("nutriMontarPlano(3).refeicoes.map(m=>m.id+':'+m.prato).join('|')")

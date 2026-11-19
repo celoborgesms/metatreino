@@ -36,13 +36,43 @@
   const ouvintes = {};
   function avisa(path){ (ouvintes[path]||[]).slice().forEach(cb=>setTimeout(()=>cb(snap(path)), 0)); }
   window.__mockAvisa = avisa;
-  function famNegado(path, op, data){
-    if(!/^familias\//.test(path) || store[path] === undefined) return false;
-    const membro = (store[path].membros||[]).includes(MOCK_USER.uid);
-    if(op === 'read') return !membro;
-    if(op === 'update' && !membro){ const v = data && data.membros; return !(v && v.__op === 'union' && v.v.length === 1 && v.v[0] === MOCK_USER.uid && (store[path].membros||[]).length < 6); }
-    return false;
+  // Beta 49: tradução fiel das regras de "familias" (firestore.rules). Como no Firestore de verdade, LER um
+  // código que não existe é negado para quem não é o administrador principal (a regra olha a lista de membros).
+  function _keysAlteradas(a, b){ a = a || {}; b = b || {}; const ks = new Set([...Object.keys(a), ...Object.keys(b)]); return [...ks].filter(k=>JSON.stringify(a[k]) !== JSON.stringify(b[k])); }
+  function famPermite(op, antes, depois, uid){
+    const dono = window.__MOCK_DONO_APP === uid;
+    if(op === 'read') return dono || !!(antes && (antes.membros||[]).includes(uid));
+    if(op === 'delete') return dono || !!(antes && (antes.membros||[]).includes(uid) && antes.membros.length === 1);
+    const temSo = (lista, ok)=>lista.every(k=>ok.includes(k));
+    if(op === 'create'){
+      return /^[A-Z2-9]{6}$/.test(depois.__id) && JSON.stringify(depois.membros) === JSON.stringify([uid]) && depois.dono === uid
+        && temSo(Object.keys(depois).filter(k=>k!=='__id'), ['membros','dono','nomes','perfis','config','cardapio','registro','criadoEm','v'])
+        && temSo(Object.keys(depois.nomes||{}), [uid]) && temSo(Object.keys(depois.perfis||{}), [uid]);
+    }
+    // update
+    if(!Array.isArray(depois.membros) || depois.membros.length > 6) return false;
+    const mudou = _keysAlteradas(antes, depois).filter(k=>k!=='__id');
+    const soChaves = (campo, ok)=>temSo(_keysAlteradas(antes[campo], depois[campo]), ok);
+    const am = antes.membros||[], dm = depois.membros;
+    const saiu = am.filter(x=>!dm.includes(x));
+    const membro = am.includes(uid), adm = antes.dono === uid;
+    if(adm) return temSo(mudou, ['config','cardapio','registro','dono','membros','nomes','perfis','v']) && dm.every(x=>am.includes(x)) && dm.includes(depois.dono)
+      && soChaves('nomes', saiu.concat([uid])) && soChaves('perfis', saiu.concat([uid]));
+    if(membro) return temSo(mudou, ['membros','nomes','perfis']) && (JSON.stringify(dm) === JSON.stringify(am) || (dm.every(x=>am.includes(x)) && saiu.length === 1 && saiu[0] === uid && dm.length === am.length - 1))
+      && soChaves('nomes', [uid]) && soChaves('perfis', [uid]);
+    const entrou = dm.filter(x=>!am.includes(x));
+    return am.every(x=>dm.includes(x)) && entrou.length === 1 && entrou[0] === uid && dm.length === am.length + 1
+      && temSo(mudou, ['membros','nomes','perfis']) && soChaves('nomes', [uid]) && soChaves('perfis', [uid]);
   }
+  function famNegado(path, op, depois){
+    if(!/^familias\//.test(path)) return false;
+    const antes = store[path];
+    if(op === 'read') return !famPermite('read', antes, null, MOCK_USER.uid);
+    if(op === 'delete') return !famPermite('delete', antes, null, MOCK_USER.uid);
+    if(antes === undefined) return !famPermite('create', null, Object.assign({ __id: path.split('/').pop() }, depois), MOCK_USER.uid);
+    return !famPermite('update', antes, depois, MOCK_USER.uid);
+  }
+  window.__mockFamPermite = famPermite;
   function snap(path){ const d = store[path]; return { exists: d !== undefined, id: path.split('/').pop(), data: ()=> d === undefined ? undefined : JSON.parse(JSON.stringify(d)), ref:{ path } }; }
   function validaFirestore(v, p){
     if(v === undefined) throw new Error('Function setDoc() called with invalid data. Unsupported field value: undefined (' + p + ')');
@@ -54,7 +84,7 @@
     return {
       id: path.split('/').pop(), path,
       get: ()=> (negado(path) || famNegado(path, 'read')) ? Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })) : Promise.resolve(snap(path)),
-      set: (data, opt)=>{ if(gravacaoNegada(path)) return Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })); try{ validaFirestore(data, path); }catch(e){ return Promise.reject(e); } window.__mockWrites.push({path, at:Date.now(), bytes: JSON.stringify(data).length}); const base = (opt && opt.merge) ? JSON.parse(JSON.stringify(store[path]||{})) : {};
+      set: (data, opt)=>{ if(gravacaoNegada(path)) return Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })); if(/^familias\//.test(path) && famNegado(path, 'set', (opt && opt.merge) ? Object.assign(JSON.parse(JSON.stringify(store[path]||{})), data) : JSON.parse(JSON.stringify(data)))) return Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })); try{ validaFirestore(data, path); }catch(e){ return Promise.reject(e); } window.__mockWrites.push({path, at:Date.now(), bytes: JSON.stringify(data).length}); const base = (opt && opt.merge) ? JSON.parse(JSON.stringify(store[path]||{})) : {};
         Object.keys(data).forEach(k=>{ const v = data[k];
           if(v && v.__op === 'del') delete base[k];
           else if(v && v.__op === 'union'){ const a = Array.isArray(base[k]) ? base[k] : []; v.v.forEach(x=>{ if(!a.includes(x)) a.push(x); }); base[k] = a; }
@@ -64,7 +94,6 @@
       // Beta 46: update com caminho pontuado ("a.b.c"), arrayUnion/arrayRemove/delete e aviso aos ouvintes
       update: (data)=>{
         if(store[path] === undefined) return Promise.reject(Object.assign(new Error('No document to update'), { code:'not-found' }));
-        if(famNegado(path, 'update', data)) return Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' }));
         const doc = JSON.parse(JSON.stringify(store[path]));
         Object.keys(data).forEach(k=>{
           const partes = k.split('.'); let o = doc; for(let i=0;i<partes.length-1;i++){ if(!o[partes[i]] || typeof o[partes[i]] !== 'object') o[partes[i]] = {}; o = o[partes[i]]; }
@@ -74,9 +103,10 @@
           else if(v && v.__op === 'del'){ delete o[ult]; }
           else o[ult] = JSON.parse(JSON.stringify(v));
         });
+        if(famNegado(path, 'update', doc)) return Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' }));
         store[path] = doc; persist(); avisa(path); return Promise.resolve();
       },
-      delete: ()=>{ delete store[path]; persist(); avisa(path); return Promise.resolve(); },
+      delete: ()=>{ if(famNegado(path, 'delete')) return Promise.reject(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })); delete store[path]; persist(); avisa(path); return Promise.resolve(); },
       collection: (c)=>colRef(path+'/'+c),
       onSnapshot: (cb, erro)=>{ (ouvintes[path] = ouvintes[path] || []).push(cb); setTimeout(()=>{ if(famNegado(path, 'read')){ if(erro) erro(Object.assign(new Error('Missing or insufficient permissions.'), { code:'permission-denied' })); return; } cb(snap(path)); }, 0); return ()=>{ ouvintes[path] = (ouvintes[path]||[]).filter(f=>f!==cb); }; }
     };

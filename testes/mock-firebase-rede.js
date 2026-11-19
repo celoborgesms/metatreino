@@ -11,6 +11,7 @@
     const r = await fetch('/__fs/' + corpo.op, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({ token: token() }, corpo)) });
     const j = await r.json();
     if(r.status === 403){ const e = new Error('Missing or insufficient permissions.'); e.code = 'permission-denied'; throw e; }
+    if(r.status === 404){ const e = new Error('No document to update'); e.code = 'not-found'; throw e; }
     return j;
   }
   function erroRede(){ const e = new Error('Failed to get document because the client is offline.'); e.code = 'unavailable'; return e; }
@@ -29,7 +30,7 @@
       id: caminho.split('/').pop(), path: caminho,
       get: async ()=>{ if(offline()) throw erroRede(); return snap(caminho, await chama({ op:'get', caminho })); },
       set: (d, o)=>grava('set', caminho, d, o && o.merge),
-      update: (d)=>grava('set', caminho, d, true),
+      update: (d)=>grava('update', caminho, d),   // Beta 49: caminho pontuado e arrayUnion/arrayRemove/delete, como no Firestore
       delete: ()=>grava('delete', caminho),
       collection: (c)=>colRef(caminho + '/' + c),
       onSnapshot: (cb, erro)=>{
@@ -60,7 +61,7 @@
   };
   const fs = { collection: c=>colRef(c), doc: docRef, enablePersistence: ()=>Promise.resolve(), waitForPendingWrites: ()=>Promise.resolve(),
     batch: ()=>{ const ops = []; return { set:(r,d,o)=>ops.push(()=>r.set(d,o)), update:(r,d)=>ops.push(()=>r.update(d)), delete:(r)=>ops.push(()=>r.delete()), commit:()=>Promise.all(ops.map(f=>f())) }; } };
-  const fsFn = ()=>fs; fsFn.FieldValue = { delete:()=>({ __del:true }), serverTimestamp:()=>Date.now(), increment:(n)=>n, arrayUnion:(...a)=>a, arrayRemove:()=>[] };
+  const fsFn = ()=>fs; fsFn.FieldValue = { delete:()=>({ __del:true }), serverTimestamp:()=>Date.now(), increment:(n)=>n, arrayUnion:(...a)=>({ __op:'union', v:a }), arrayRemove:(...a)=>({ __op:'remove', v:a }) };
   const authFn = ()=>auth; authFn.GoogleAuthProvider = function(){ this.setCustomParameters = ()=>{}; }; authFn.EmailAuthProvider = { credential:()=>({}) }; authFn.Auth = { Persistence:{ LOCAL:'local' } };
   window.firebase = { initializeApp:()=>({}), auth:authFn, firestore:fsFn, apps:[] };
 })();
