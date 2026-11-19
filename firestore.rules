@@ -1,7 +1,9 @@
 rules_version = '2';
 
 // =============================================================
-// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 48)
+// METATREINO — REGRAS DO FIRESTORE (2027.1 Beta 49)
+// Beta 49: "familias" com permissão por campo (administrador do cardápio da casa; cada membro só altera o
+//          próprio apelido/perfil; criar não depende de ler o código antes). Nenhuma outra coleção mudou.
 // Beta 48: coleção "cupons" e resgate de cupom em usuariosAutorizados (só junto com um cupom livre).
 // Beta 46: coleção "familias" (alimentação da casa). Nenhuma outra permissão mudou.
 // Beta 43: coleção "diagnosticoAcesso" (falhas técnicas de acesso, sem
@@ -292,27 +294,57 @@ service cloud.firestore {
       allow update: if false;
     }
 
-    // Beta 46: alimentação da casa (2 a 6 pessoas). Só os membros leem e alteram. Para entrar, a pessoa
-    // precisa do código (o id do documento) e só pode acrescentar a si mesma, com apelido e perfil próprios.
-    // Para sair, só tira a si mesma. O documento guarda apelidos, restrições, proporção da porção e o
-    // registro das refeições da casa — nada de peso, idade ou e-mail.
+    // Beta 46: alimentação da casa (2 a 6 pessoas). Beta 49: permissões por campo.
+    //  • Só os membros leem. Ninguém lê um código que não é seu (criar não lê antes: grava direto).
+    //  • ADMINISTRADOR (campo "dono"): muda o cardápio compartilhado (config, cardapio), tira pessoas do
+    //    grupo, passa a administração para outro membro e apaga o registro antigo. Não altera apelido nem
+    //    perfil de quem continua no grupo.
+    //  • MEMBRO: só altera o PRÓPRIO apelido e o PRÓPRIO perfil (restrições e total de compras); pode sair
+    //    (tira só a si mesmo). Não mexe em cardápio, configuração, administrador nem nos dados dos outros.
+    //  • QUEM ENTRA: precisa do código; só acrescenta a si mesmo, com o próprio apelido/perfil. Máximo 6.
+    //  • Nada de peso, idade, altura ou e-mail no documento.
     match /familias/{famId} {
       function famMembro(){ return signedIn() && request.auth.uid in resource.data.membros; }
+      function famAdm(){ return signedIn() && resource.data.dono == request.auth.uid; }
       function famDepois(){ return request.resource.data; }
+      function famMudou(){ return famDepois().diff(resource.data).affectedKeys(); }
+      // o mapa (nomes/perfis) só mudou nas chaves permitidas
+      function famSoChaves(campo, chaves){
+        return famDepois().get(campo, {}).diff(resource.data.get(campo, {})).affectedKeys().hasOnly(chaves);
+      }
+      function famSaiuSo(uid){
+        return resource.data.membros.hasAll(famDepois().membros)
+          && resource.data.membros.removeAll(famDepois().membros).hasOnly([uid])
+          && famDepois().membros.size() == resource.data.membros.size() - 1;
+      }
       allow read: if famMembro() || isOwner();
-      allow create: if signedIn() && famId.size() == 6
-        && famDepois().membros == [request.auth.uid] && famDepois().dono == request.auth.uid;
-      allow update: if signedIn() && famDepois().membros.size() <= 6 && (
-        // membro: mexe no cardápio e no registro; a lista de membros fica igual (ou ele sai)
-        (famMembro() && (famDepois().membros.hasAll(resource.data.membros)
-                         ? famDepois().membros.size() == resource.data.membros.size()
-                         : resource.data.membros.removeAll(famDepois().membros).hasOnly([request.auth.uid])))
+      allow create: if signedIn() && famId.matches('^[A-Z2-9]{6}$')
+        && famDepois().membros == [request.auth.uid] && famDepois().dono == request.auth.uid
+        && famDepois().keys().hasOnly(['membros','dono','nomes','perfis','config','cardapio','registro','criadoEm','v'])
+        && famDepois().get('nomes', {}).keys().hasOnly([request.auth.uid])
+        && famDepois().get('perfis', {}).keys().hasOnly([request.auth.uid]);
+      allow update: if signedIn() && famDepois().membros is list && famDepois().membros.size() <= 6 && (
+        // administrador: cardápio e configuração; pode tirar pessoas (não acrescenta) e passar a administração
+        (famAdm()
+          && famMudou().hasOnly(['config','cardapio','registro','dono','membros','nomes','perfis','v'])
+          && resource.data.membros.hasAll(famDepois().membros)
+          && famDepois().dono in famDepois().membros
+          && famSoChaves('nomes', resource.data.membros.removeAll(famDepois().membros).concat([request.auth.uid]))
+          && famSoChaves('perfis', resource.data.membros.removeAll(famDepois().membros).concat([request.auth.uid])))
+        // membro (não administrador): só o próprio apelido/perfil; a lista fica igual ou ele sai
+        || (famMembro() && !famAdm()
+          && famMudou().hasOnly(['membros','nomes','perfis'])
+          && (famDepois().membros == resource.data.membros || famSaiuSo(request.auth.uid))
+          && famSoChaves('nomes', [request.auth.uid])
+          && famSoChaves('perfis', [request.auth.uid]))
         // quem entra: só se acrescenta e só escreve o próprio apelido/perfil
         || (!(request.auth.uid in resource.data.membros)
-            && famDepois().membros.hasAll(resource.data.membros)
-            && famDepois().membros.removeAll(resource.data.membros).hasOnly([request.auth.uid])
-            && famDepois().diff(resource.data).affectedKeys().hasOnly(['membros','nomes','perfis'])
-            && famDepois().dono == resource.data.dono)
+          && famDepois().membros.hasAll(resource.data.membros)
+          && famDepois().membros.removeAll(resource.data.membros).hasOnly([request.auth.uid])
+          && famDepois().membros.size() == resource.data.membros.size() + 1
+          && famMudou().hasOnly(['membros','nomes','perfis'])
+          && famSoChaves('nomes', [request.auth.uid])
+          && famSoChaves('perfis', [request.auth.uid]))
       );
       allow delete: if (famMembro() && resource.data.membros.size() == 1) || isOwner();
     }

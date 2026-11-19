@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 48 =====
-const APP_VERSION = '2027.1-beta.48';
+// ===== MetaTreino 2027.1 Beta 49 =====
+const APP_VERSION = '2027.1-beta.49';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -11550,8 +11550,8 @@ const NUTRI_ALIMENTOS = {
   grao:     ['Grão-de-bico cozido', 164, 8.9, 27, 2.6, null, null],
   tofu:     ['Tofu', 76, 8, 2, 4.8, null, null],
   legumes:  ['Legumes cozidos', 35, 1.5, 7, 0.3, null, null, true],
-  salada:   ['Salada crua', 20, 1, 4, 0.2, null, null, true],
-  azeite:   ['Azeite', 884, 0, 0, 100, null, {g:4,nome:'col. de chá'}, true],
+  salada:   ['Salada crua (folhas e tomate)', 20, 1, 4, 0.2, null, null, true],
+  azeite:   ['Azeite de oliva', 884, 0, 0, 100, null, {g:4,nome:'col. de chá'}, true],
   mel:      ['Mel', 309, 0.4, 84, 0, null, {g:7,nome:'col. de chá'}],
   amendoim: ['Pasta de amendoim', 590, 25, 20, 50, null, {g:15,nome:'col. de sopa'}],
   castanha: ['Castanhas', 570, 18, 25, 46, null, {g:10,nome:'punhado pequeno'}],
@@ -11572,14 +11572,70 @@ const NUTRI_ALIMENTOS = {
   requeijao:['Requeijão', 260, 9, 3, 24, null, {g:30,nome:'col. de sopa'}],
   queijoprato:['Queijo prato (fatia)', 360, 23, 2, 29, 20, null],
   presunto: ['Presunto magro (fatia)', 120, 17, 1.5, 5, 15, null],
-  leiteint: ['Leite integral', 61, 3.2, 4.6, 3.3, null, {g:200,nome:'copo'}]
+  leiteint: ['Leite integral', 61, 3.2, 4.6, 3.3, null, {g:200,nome:'copo'}],
+  // Beta 49: mais variedade (valores da TACO 4ª ed., alimento pronto para consumo — revisáveis por nutricionista)
+  arrozint: ['Arroz integral cozido', 124, 2.6, 25.8, 1.0, null, {g:45,nome:'col. de servir'}],
+  feijaopreto:['Feijão preto cozido', 77, 4.5, 14.0, 0.5, null, {g:80,nome:'concha'}],
+  abobora:  ['Abóbora cabotiá cozida', 48, 1.4, 10.8, 0.7, null, null],
+  mandioquinha:['Mandioquinha (batata-baroa) cozida', 80, 0.9, 18.9, 0.2, null, null],
+  brocolis: ['Brócolis cozido', 25, 2.1, 4.4, 0.5, null, null, true],
+  cenoura:  ['Cenoura cozida', 30, 0.8, 6.7, 0.2, null, null, true],
+  lombo:    ['Lombo suíno assado', 210, 35.7, 0, 6.4, null, null],
+  goiaba:   ['Goiaba vermelha', 54, 1.1, 13.0, 0.4, 170, null],
+  manga:    ['Manga palmer', 72, 0.4, 19.4, 0.2, null, null],
+  tangerina:['Tangerina (mexerica)', 38, 0.8, 9.6, 0.1, 100, null]
 };
+// Beta 49: para que serve cada ingrediente na refeição (nada aparece no cardápio sem finalidade).
+// [texto da tela, texto curto do PDF]. Itens sem entrada são consumidos como estão.
+const NUTRI_USO = {
+  azeite:  ['Para temperar a salada ou finalizar o prato (não é para beber)', 'para temperar ou finalizar'],
+  oleo:    ['Usado no preparo (refogar ou grelhar), não é para consumir puro', 'usado no preparo'],
+  manteiga:['Passada no pão', 'no pão'],
+  requeijao:['Passado no pão ou na tapioca', 'no pão'],
+  mel:     ['Por cima da fruta, do iogurte ou da panqueca', 'por cima'],
+  amendoim:['Pasta de amendoim integral, sem açúcar', 'pasta integral'],
+  legumes: ['Cozidos no vapor ou refogados: abobrinha, chuchu, vagem, cenoura ou brócolis', 'cozidos ou refogados'],
+  salada:  ['Folhas (alface, rúcula, agrião) e tomate, crus; tempere com limão (e o azeite, se estiver no prato)', 'folhas e tomate crus'],
+  tomate:  ['Cru, na salada ou no sanduíche', 'cru'],
+  brocolis:['Cozido no vapor ou refogado no óleo indicado', 'no vapor ou refogado'],
+  cenoura: ['Cozida no vapor ou refogada no óleo indicado', 'no vapor ou refogada'],
+  abobora: ['Cozida ou assada, sem açúcar', 'cozida ou assada'],
+  aveia:   ['Misturada na fruta, no iogurte ou no leite', 'misturada'],
+  granola:['Por cima do iogurte ou da fruta', 'por cima'],
+  whey:    ['Batido com água ou com o leite da refeição', 'batido'],
+  frango:  ['Grelhado, assado ou desfiado; peso do alimento pronto', 'pronto'],
+  sobrecoxa:['Assada, sem a pele; peso do alimento pronto', 'assada, sem pele'],
+  patinho: ['Grelhado ou moído; peso do alimento pronto', 'pronto'],
+  acem:    ['Moído e refogado; peso do alimento pronto', 'refogado'],
+  lombo:   ['Assado, sem a capa de gordura; peso do alimento pronto', 'assado'],
+  peixe:   ['Grelhado ou assado; peso do alimento pronto', 'grelhado'],
+  figado:  ['Grelhado ou acebolado; peso do alimento pronto', 'grelhado'],
+  ovo:     ['Cozido, mexido ou omelete (com o óleo indicado, se houver)', 'cozido ou mexido'],
+  arroz:   ['Peso do arroz já cozido', 'cozido'], arrozint:['Peso do arroz já cozido', 'cozido'],
+  feijao:  ['Peso do feijão já cozido, com caldo', 'cozido'], feijaopreto:['Peso do feijão já cozido, com caldo', 'cozido'],
+  macarrao:['Peso do macarrão já cozido', 'cozido'],
+  soja:    ['Hidratada e refogada', 'hidratada'],
+  tofu:    ['Grelhado ou refogado', 'grelhado'],
+  atum:    ['Em água, escorrido', 'escorrido'], sardinha:['Escorrida do óleo da lata', 'escorrida'],
+  tapioca: ['Goma hidratada, feita na frigideira sem óleo', 'na frigideira'],
+  cuscuz:  ['Flocão de milho cozido no vapor; peso pronto', 'cozido'],
+  castanha:['Caju ou do Pará, sem sal', 'sem sal']
+};
+function nutriUso(id, curto){ const u = NUTRI_USO[id]; return u ? u[curto ? 1 : 0] : ''; }
+// Beta 49: o prato de cada dia gira por TODAS as opções da refeição. Antes o passo era sempre 3: em listas
+// com 6, 9 ou 12 opções, a semana repetia os mesmos 2 a 4 pratos.
+function _mdc(a, b){ return b ? _mdc(b, a % b) : a; }
+function nutriVarIdx(diaIdx, idxSlot, seed, troca, L){
+  if(!(L > 1)) return 0;
+  const passo = [3,5,7,4,2,1].find(p=>_mdc(p, L) === 1) || 1;
+  return (((diaIdx*passo + idxSlot*2 + (+seed||0) + (+troca||0)) % L) + L) % L;
+}
 // ingredientes mais caros: ficam de fora no modo econômico
 const NUTRI_CARO = ['patinho','acem','peixe','atum','minas','mucarela','ricota','cottage','whey','castanha','abacate','granola','peru','tofu','morango'];
-const NUTRI_CATEG = { proteinas:['🍗 Proteínas',['presunto','frango','sobrecoxa','patinho','acem','figado','peixe','atum','sardinha','ovo','soja','tofu','peru','whey','lentilha','grao']], carbo:['🍚 Cereais, tubérculos e pães',['paoforma','batataing','milho','arroz','feijao','macarrao','batata','mandioca','cuscuz','pao','paoint','paodq','tapioca','aveia','granola']], frutas:['🍌 Frutas e hortifrúti',['tomate','melancia','uva','pera','banana','maca','laranja','mamao','abacaxi','morango','abacate','legumes','salada']], lat:['🥛 Laticínios',['leiteint','requeijao','queijoprato','leite','iogurte','minas','cottage','ricota','mucarela']], outros:['🫒 Outros',['manteiga','azeite','oleo','amendoim','castanha','mel']] };
+const NUTRI_CATEG = { proteinas:['🍗 Proteínas',['presunto','frango','sobrecoxa','patinho','acem','lombo','figado','peixe','atum','sardinha','ovo','soja','tofu','peru','whey']], graos:['🫘 Grãos e leguminosas',['arroz','arrozint','feijao','feijaopreto','lentilha','grao','macarrao','aveia','granola','milho']], carbo:['🍞 Pães, tubérculos e massas',['paoforma','pao','paoint','paodq','tapioca','cuscuz','batata','batataing','mandioca','mandioquinha']], frutas:['🍌 Frutas',['banana','maca','laranja','tangerina','goiaba','manga','mamao','abacaxi','morango','melancia','uva','pera','abacate']], verduras:['🥦 Verduras e legumes',['salada','tomate','legumes','brocolis','cenoura','abobora']], lat:['🥛 Laticínios',['leiteint','requeijao','queijoprato','leite','iogurte','minas','cottage','ricota','mucarela']], outros:['🫒 Óleos e outros',['manteiga','azeite','oleo','amendoim','castanha','mel']] };
 const NUTRI_LACTOSE = ['leiteint','requeijao','queijoprato','manteiga','leite','iogurte','minas','cottage','ricota','mucarela','whey','paodq'];
 const NUTRI_GLUTEN = ['paoforma','pao','paoint','aveia','granola','macarrao'];
-const NUTRI_CRU = { arroz:3, feijao:2.5, macarrao:2.2, lentilha:2.5, grao:2.5, soja:3, frango:.75, sobrecoxa:.75, patinho:.75, acem:.75, peixe:.8, figado:.8 };   // quanto o cozido rende em relação ao cru
+const NUTRI_CRU = { arroz:3, arrozint:2.6, feijao:2.5, feijaopreto:2.5, macarrao:2.2, lentilha:2.5, grao:2.5, soja:3, frango:.75, sobrecoxa:.75, patinho:.75, acem:.75, lombo:.7, peixe:.8, figado:.8 };   // quanto o cozido rende em relação ao cru
 // Cada refeição tem várias opções (n = nome do prato, i = itens). veg = versão vegetariana (ovo e leite liberados).
 const NUTRI_REFEICOES = [
   { id:'cafe', nome:'Café da manhã', icone:'☕', hora:'07:00', opcoes:[
@@ -11595,7 +11651,12 @@ const NUTRI_REFEICOES = [
     {n:'Cuscuz com ovo e mamão',      i:[['cuscuz',150],['ovo',2],['mamao',150]]},
     {n:'Ovos mexidos com batata-doce',i:[['ovo',3],['batata',150],['laranja',1]]},
     {n:'Pão com ovo e leite',         i:[['pao',2],['ovo',2],['leite',200]]},
-    {n:'Cuscuz com leite e banana',   i:[['cuscuz',150],['leite',200],['banana',1],['ovo',1]]} ] },
+    {n:'Cuscuz com leite e banana',   i:[['cuscuz',150],['leite',200],['banana',1],['ovo',1]]},
+    {n:'Pão integral com ovos mexidos e goiaba', i:[['paoint',2],['ovo',2],['goiaba',1]]},
+    {n:'Cuscuz com ovo e tangerina',  i:[['cuscuz',150],['ovo',2],['tangerina',2]]},
+    {n:'Iogurte com aveia e manga',   i:[['iogurte',170],['aveia',30],['manga',120]]},
+    {n:'Pão de forma com requeijão e ovo', i:[['paoforma',2],['requeijao',20],['ovo',2],['banana',1]]},
+    {n:'Tapioca com ovo e manga',     i:[['tapioca',60],['ovo',2],['manga',100]]} ] },
   { id:'lanche1', nome:'Lanche da manhã', icone:'🍎', hora:'10:00', opcoes:[
     {n:'Iogurte com aveia e maçã',    i:[['iogurte',170],['aveia',20],['maca',1]]},
     {n:'Banana com castanhas',        i:[['banana',1],['castanha',20]]},
@@ -11605,7 +11666,11 @@ const NUTRI_REFEICOES = [
     {n:'Vitamina de morango',         i:[['leite',250],['morango',150],['aveia',20]]},
     {n:'Banana com pasta de amendoim',i:[['banana',1],['amendoim',15],['aveia',15]]},
     {n:'Maçã com pasta de amendoim',  i:[['maca',1],['amendoim',20]]},
-    {n:'Batata-doce com ovo cozido',  i:[['batata',120],['ovo',1]]} ] },
+    {n:'Batata-doce com ovo cozido',  i:[['batata',120],['ovo',1]]},
+    {n:'Goiaba com castanhas',        i:[['goiaba',1],['castanha',15]]},
+    {n:'Iogurte com tangerina',       i:[['iogurte',170],['tangerina',2]]},
+    {n:'Pão de forma com pasta de amendoim', i:[['paoforma',1],['amendoim',15]]},
+    {n:'Manga com aveia',             i:[['manga',150],['aveia',15]]} ] },
   { id:'almoco', nome:'Almoço', icone:'🍛', hora:'12:30', opcoes:[
     {n:'Prato feito com frango',            i:[['arroz',150],['feijao',100],['frango',120],['legumes',100],['salada',80],['azeite',4]]},
     {n:'Prato feito com patinho',           i:[['arroz',150],['feijao',80],['patinho',110],['legumes',100],['salada',80],['azeite',4]]},
@@ -11622,7 +11687,14 @@ const NUTRI_REFEICOES = [
     {n:'Arroz, feijão e ovo frito',         i:[['arroz',150],['feijao',100],['ovo',2],['legumes',100],['salada',80],['azeite',4]]},
     {n:'Arroz com frango desfiado e legumes',i:[['arroz',150],['frango',120],['legumes',150],['azeite',4]]},
     {n:'Macarrão com ovo e legumes',        i:[['macarrao',150],['ovo',2],['legumes',120],['salada',80],['azeite',4]]},
-    {n:'Cuscuz com frango e legumes',       i:[['cuscuz',200],['frango',120],['legumes',100],['azeite',4]]} ],
+    {n:'Cuscuz com frango e legumes',       i:[['cuscuz',200],['frango',120],['legumes',100],['azeite',4]]},
+    {n:'Arroz integral, feijão preto e frango',i:[['arrozint',150],['feijaopreto',100],['frango',120],['brocolis',80],['salada',80],['azeite',4]]},
+    {n:'Lombo com abóbora e arroz',         i:[['arroz',120],['lombo',110],['abobora',120],['salada',80],['azeite',4]]},
+    {n:'Frango com mandioquinha e cenoura', i:[['mandioquinha',150],['frango',120],['cenoura',80],['salada',80],['azeite',4]]},
+    {n:'Arroz, feijão preto e ovos',        i:[['arroz',150],['feijaopreto',120],['ovo',2],['cenoura',80],['salada',80],['azeite',4]]},
+    {n:'Sobrecoxa com arroz integral e brócolis',i:[['arrozint',150],['sobrecoxa',120],['brocolis',100],['salada',80],['azeite',4]]},
+    {n:'Carne moída com abóbora e arroz',   i:[['arroz',130],['acem',100],['abobora',120],['salada',80],['azeite',4]]},
+    {n:'Tilápia com mandioquinha e brócolis',i:[['mandioquinha',150],['peixe',140],['brocolis',100],['salada',80],['azeite',4]]} ],
     veg:[
     {n:'Arroz, feijão e ovos',              i:[['arroz',150],['feijao',120],['ovo',2],['legumes',100],['salada',80],['azeite',4]]},
     {n:'Arroz com lentilha e tofu',         i:[['arroz',120],['lentilha',120],['tofu',100],['salada',80],['azeite',4]]},
@@ -11630,7 +11702,11 @@ const NUTRI_REFEICOES = [
     {n:'Macarrão com ricota e grão-de-bico',i:[['macarrao',150],['ricota',60],['grao',80],['legumes',120],['salada',80],['azeite',4]]},
     {n:'Escondidinho de mandioca com tofu', i:[['mandioca',150],['tofu',120],['legumes',100],['salada',80],['azeite',4]]},
     {n:'Arroz, feijão e omelete',           i:[['arroz',150],['feijao',100],['ovo',3],['legumes',100],['salada',80],['azeite',4]]},
-    {n:'Arroz, feijão e soja com legumes',  i:[['arroz',150],['feijao',80],['soja',100],['legumes',120],['salada',80],['azeite',4]]} ] },
+    {n:'Arroz, feijão e soja com legumes',  i:[['arroz',150],['feijao',80],['soja',100],['legumes',120],['salada',80],['azeite',4]]},
+    {n:'Arroz integral, feijão preto e ovos',i:[['arrozint',150],['feijaopreto',120],['ovo',2],['brocolis',80],['salada',80],['azeite',4]]},
+    {n:'Abóbora com grão-de-bico e arroz',  i:[['arroz',120],['grao',100],['abobora',120],['salada',80],['azeite',4]]},
+    {n:'Lentilha com arroz integral e cenoura',i:[['arrozint',130],['lentilha',120],['cenoura',80],['salada',80],['azeite',4]]},
+    {n:'Soja com abóbora e arroz',          i:[['arroz',130],['soja',100],['abobora',120],['salada',80],['azeite',4]]} ] },
   { id:'lanche2', nome:'Lanche da tarde', icone:'🥪', hora:'16:00', opcoes:[
     {n:'Sanduíche de ovo com banana',       i:[['pao',1],['ovo',2],['banana',1]]},
     {n:'Iogurte com banana e aveia',        i:[['banana',1],['aveia',30],['iogurte',170]]},
@@ -11642,14 +11718,19 @@ const NUTRI_REFEICOES = [
     {n:'Cuscuz com ovo e banana',           i:[['cuscuz',120],['ovo',1],['banana',1]]},
     {n:'Banana com aveia e leite',          i:[['leite',250],['banana',1],['aveia',30]]},
     {n:'Tapioca com ovo e banana',          i:[['tapioca',50],['ovo',2],['banana',1]]},
-    {n:'Batata-doce com ovos',              i:[['batata',150],['ovo',2]]} ],
+    {n:'Batata-doce com ovos',              i:[['batata',150],['ovo',2]]},
+    {n:'Pão integral com ovo e tangerina',  i:[['paoint',2],['ovo',1],['tangerina',2]]},
+    {n:'Iogurte com manga e aveia',         i:[['iogurte',170],['manga',100],['aveia',20]]},
+    {n:'Mandioquinha com frango desfiado',  i:[['mandioquinha',150],['frango',60]]} ],
     veg:[
     {n:'Sanduíche de ovo com banana',       i:[['pao',1],['ovo',2],['banana',1]]},
     {n:'Iogurte com banana e aveia',        i:[['banana',1],['aveia',30],['iogurte',170]]},
     {n:'Tapioca com queijo e maçã',         i:[['tapioca',50],['minas',40],['maca',1]]},
     {n:'Pão de queijo com fruta',           i:[['paodq',3],['banana',1],['iogurte',100]]},
     {n:'Sanduíche de queijo e peito de peru',i:[['paoint',2],['ricota',50],['maca',1]]},
-    {n:'Cuscuz com ovo e banana',           i:[['cuscuz',120],['ovo',1],['banana',1]]} ] },
+    {n:'Cuscuz com ovo e banana',           i:[['cuscuz',120],['ovo',1],['banana',1]]},
+    {n:'Pão integral com ovo e tangerina',  i:[['paoint',2],['ovo',1],['tangerina',2]]},
+    {n:'Iogurte com manga e aveia',         i:[['iogurte',170],['manga',100],['aveia',20]]} ] },
   { id:'jantar', nome:'Jantar', icone:'🌙', hora:'19:30', opcoes:[
     {n:'Omelete com legumes e arroz',       i:[['ovo',3],['legumes',120],['arroz',100],['salada',80],['azeite',4]]},
     {n:'Frango com batata-doce',            i:[['frango',120],['batata',150],['legumes',120],['azeite',4]]},
@@ -11660,7 +11741,13 @@ const NUTRI_REFEICOES = [
     {n:'Salada completa com atum e ovo',    i:[['salada',200],['atum',80],['ovo',2],['arroz',80],['azeite',4]]},
     {n:'Sobrecoxa com mandioca',            i:[['sobrecoxa',120],['mandioca',120],['legumes',120],['azeite',4]]},
     {n:'Ovos mexidos com mandioca',         i:[['ovo',3],['mandioca',120],['salada',100],['azeite',4]]},
-    {n:'Sopa de feijão com legumes',        i:[['feijao',150],['legumes',200],['mandioca',80]]} ],
+    {n:'Sopa de feijão com legumes',        i:[['feijao',150],['legumes',200],['mandioca',80]]},
+    {n:'Lombo com mandioquinha e brócolis', i:[['lombo',100],['mandioquinha',130],['brocolis',100],['azeite',4]]},
+    {n:'Omelete com abóbora e salada',      i:[['ovo',3],['abobora',150],['salada',100],['azeite',4]]},
+    {n:'Frango com arroz integral e cenoura',i:[['frango',120],['arrozint',120],['cenoura',100],['azeite',4]]},
+    {n:'Sopa de abóbora com frango',        i:[['abobora',250],['frango',100],['cenoura',80]]},
+    {n:'Feijão preto com ovo e arroz',      i:[['feijaopreto',120],['arroz',100],['ovo',2],['salada',100],['azeite',4]]},
+    {n:'Macarrão com carne moída e brócolis',i:[['macarrao',120],['acem',90],['brocolis',100],['azeite',4]]} ],
     veg:[
     {n:'Omelete com legumes e arroz',       i:[['ovo',3],['legumes',120],['arroz',100],['salada',80],['azeite',4]]},
     {n:'Tofu com batata-doce',              i:[['tofu',120],['batata',150],['legumes',120],['azeite',4]]},
@@ -11669,14 +11756,20 @@ const NUTRI_REFEICOES = [
     {n:'Tapioca recheada de queijo e ovo',  i:[['tapioca',70],['ovo',2],['minas',30],['salada',100]]},
     {n:'Salada completa com grão-de-bico',  i:[['salada',200],['grao',100],['ovo',2],['arroz',60],['azeite',4]]},
     {n:'Ovos mexidos com mandioca',         i:[['ovo',3],['mandioca',120],['salada',100],['azeite',4]]},
-    {n:'Sopa de feijão com legumes',        i:[['feijao',150],['legumes',200],['mandioca',80]]} ] },
+    {n:'Sopa de feijão com legumes',        i:[['feijao',150],['legumes',200],['mandioca',80]]},
+    {n:'Omelete com abóbora e salada',      i:[['ovo',3],['abobora',150],['salada',100],['azeite',4]]},
+    {n:'Sopa de abóbora com grão-de-bico',  i:[['abobora',250],['grao',100],['cenoura',80]]},
+    {n:'Feijão preto com ovo e arroz',      i:[['feijaopreto',120],['arroz',100],['ovo',2],['salada',100],['azeite',4]]} ] },
   { id:'ceia', nome:'Ceia', icone:'🌜', hora:'21:30', opcoes:[
     {n:'Iogurte com castanhas',             i:[['iogurte',170],['castanha',15]]},
     {n:'Leite com aveia',                   i:[['leite',250],['aveia',30]]},
     {n:'Cottage com morango',               i:[['cottage',100],['morango',100]]},
     {n:'Banana com pasta de amendoim',      i:[['banana',1],['amendoim',15]]},
     {n:'Maçã com pasta de amendoim',        i:[['maca',1],['amendoim',20]]},
-    {n:'Ovo cozido com banana',             i:[['ovo',1],['banana',1]]} ] }
+    {n:'Ovo cozido com banana',             i:[['ovo',1],['banana',1]]},
+    {n:'Iogurte com aveia',                 i:[['iogurte',170],['aveia',15]]},
+    {n:'Tangerina com castanhas',           i:[['tangerina',2],['castanha',10]]},
+    {n:'Leite com banana',                  i:[['leite',200],['banana',1]]} ] }
 ];
 // quanto cada refeição pesa no dia, conforme o nº de refeições
 const NUTRI_SHARE = {
@@ -11767,10 +11860,10 @@ function nutriItem(id, qtdBase, f){
     gramas = Math.max(passo, Math.round(q/passo)*passo);
     texto = `${gramas}${id==='leite'||id==='iogurte'?' ml':' g'}`;
     if(med){ const n = Math.round(gramas/med.g*2)/2; if(n>=1 && med.g>=15) texto += ` (≈ ${String(n).replace('.5',',5')} ${med.nome})`; }
-    if(id==='azeite' || id==='oleo') texto = `1 col. de chá (${gramas} g)`;
+    if(id==='azeite' || id==='oleo'){ const ml = Math.max(1, Math.round(gramas/0.92)); const col = Math.round(gramas/4*2)/2; texto = `${ml} ml (≈ ${String(col).replace('.5',',5')} col. de chá)`; }
   }
   const k = gramas/100;
-  return { id, nome, texto, gramas, un: un ? gramas/un : 0, kcal:kcal100*k, p:p*k, c:c*k, g:g*k };
+  return { id, nome, texto, gramas, un: un ? gramas/un : 0, kcal:kcal100*k, p:p*k, c:c*k, g:g*k, uso: nutriUso(id) };
 }
 function nutriMontarPlano(diaIdx){
   const calc0 = nutriCalcular(); if(calc0.erro) return calc0;
@@ -11793,7 +11886,7 @@ function nutriMontarPlano(diaIdx){
     if(proib.size){ const livre = lista.filter(op=>!op.i.some(([id])=>proib.has(id))); if(livre.length) lista = livre; }   // restrição vem antes do preço
     if(n.economico){ const barato = lista.filter(op=>!op.i.some(([id])=>NUTRI_CARO.includes(id))); if(barato.length>=2) lista = barato; }
     const chave = r.id + (n.vegetariano?'v':'');
-    const v = (diaIdx*3 + idx*2 + n.seed + (n.trocas[chave]||0)) % lista.length;
+    const v = nutriVarIdx(diaIdx, idx, n.seed, n.trocas[chave]||0, lista.length);
     const op = lista[v];
     const k0 = op.i.reduce((s,[id,q])=>{ const a=NUTRI_ALIMENTOS[id]; return s + a[1]*(a[5]? q*a[5] : q)/100; },0);
     const alvo = calc.kcal * shares[r.id];
@@ -11831,10 +11924,10 @@ function nutriEquivalencias(){
   };
   const lista = (ids,m,alvo)=>ids.filter(id=>!(ec && NUTRI_CARO.includes(id)) && !proib.has(id)).map(id=>g(id,m,alvo)).filter(Boolean);
   return [
-    {t:'🍗 Proteínas', sub:'cada item ≈ 25 g de proteína', l:lista(['frango','sobrecoxa','patinho','acem','figado','peixe','sardinha','atum','ovo','soja','tofu','peru','cottage','whey'],2,25)},
-    {t:'🍚 Carboidratos', sub:'cada item ≈ 30 g de carboidrato', l:lista(['arroz','macarrao','batata','mandioca','cuscuz','pao','paoint','tapioca','aveia','feijao'],3,30)},
+    {t:'🍗 Proteínas', sub:'cada item ≈ 25 g de proteína', l:lista(['frango','sobrecoxa','patinho','acem','lombo','figado','peixe','sardinha','atum','ovo','soja','tofu','peru','cottage','whey'],2,25)},
+    {t:'🍚 Carboidratos', sub:'cada item ≈ 30 g de carboidrato', l:lista(['arroz','arrozint','macarrao','batata','mandioca','mandioquinha','cuscuz','pao','paoint','tapioca','aveia','feijao','feijaopreto'],3,30)},
     {t:'🥑 Gorduras boas', sub:'cada item ≈ 10 g de gordura', l:lista(['azeite','amendoim','castanha','abacate','minas'],4,10)},
-    {t:'🍌 Frutas', sub:'cada item ≈ 15 g de carboidrato', l:lista(['banana','maca','laranja','mamao','abacaxi','morango'],3,15)}
+    {t:'🍌 Frutas', sub:'cada item ≈ 15 g de carboidrato', l:lista(['banana','maca','laranja','tangerina','goiaba','manga','mamao','abacaxi','morango'],3,15)}
   ];
 }
 const NUTRI_OBJ = { emagrecer:'🔥 Emagrecer', massa:'💪 Ganhar massa', manter:'⚖️ Manter / recomposição' };
@@ -11842,7 +11935,7 @@ const NUTRI_OBJ = { emagrecer:'🔥 Emagrecer', massa:'💪 Ganhar massa', mante
 function nutriDiaSel(){ return window.__nutriDia || ((typeof getDayIdx==='function') ? getDayIdx() : 1); }
 function nutriDataDia(dIdx){ const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - ((typeof getDayIdx==='function' ? getDayIdx() : 1) - 1) + (dIdx - 1)); return d; }
 function nutriKeyDia(dIdx){ return chaveDia(nutriDataDia(dIdx)); }
-function nutriTextoQtd(id,q){ const f=NUTRI_ALIMENTOS[id]; if(f[5]) return `${q} unid.`; return `${q}${(id==='leite'||id==='iogurte')?' ml':' g'}`; }
+function nutriTextoQtd(id,q){ const f=NUTRI_ALIMENTOS[id]; if(f[5]) return `${q} unid.`; if(id==='azeite'||id==='oleo') return `${Math.max(1,Math.round(q/0.92))} ml`; return `${q}${(id==='leite'||id==='iogurte')?' ml':' g'}`; }
 function nutriEfetivo(it, a){
   if(a && a.x) return {...it, kcal:0, p:0, c:0, g:0, removido:true};
   if(a && a.q!==undefined){ const f = NUTRI_ALIMENTOS[it.id]; const gramas = f[5] ? a.q*f[5] : a.q; const k = gramas/100;
@@ -12120,7 +12213,7 @@ function openNutri(){
         <span class="mk"><b>${kcalMostra}</b><small>${comidas[m.id] ? '✅ comi' : (m._mudou ? `${dm>0?'+':''}${dm} kcal` : 'kcal')}</small></span>
       </summary>
       <div class="mb">
-        ${m._itens.map(i=>`<div class="mrow ${i.removido?'rm':''}"><span class="n">${i.nome}${i.editado?' <small style="color:var(--primary-2)">editado</small>':''}${i.adicionado?' <small style="color:var(--accent)">acrescentado</small>':''}</span><span class="q">${i.removido?'não vou comer':i.texto}</span>${editavel?`<span class="ba"><button class="ib" onclick="${i.adicionado?`nutriAddEditar('${m.id}',${i.idx})`:`nutriEditar('${m.id}','${i.id}')`}">✎</button><button class="ib" onclick="${i.adicionado?`nutriAddRemover('${m.id}',${i.idx})`:`nutriRemover('${m.id}','${i.id}')`}">${i.removido?'↩':'✕'}</button></span>`:''}</div>`).join('')}
+        ${m._itens.map(i=>`<div class="mrow ${i.removido?'rm':''}"><span class="n">${i.nome}${i.editado?' <small style="color:var(--primary-2)">editado</small>':''}${i.adicionado?' <small style="color:var(--accent)">acrescentado</small>':''}${!i.removido ? `<small class="n-uso">${[i.uso || nutriUso(i.id), i.kcal>=1 ? Math.round(i.kcal) + ' kcal' : ''].filter(Boolean).join(' · ')}</small>` : ''}</span><span class="q">${i.removido?'não vou comer':i.texto}</span>${editavel?`<span class="ba"><button class="ib" onclick="${i.adicionado?`nutriAddEditar('${m.id}',${i.idx})`:`nutriEditar('${m.id}','${i.id}')`}">✎</button><button class="ib" onclick="${i.adicionado?`nutriAddRemover('${m.id}',${i.idx})`:`nutriRemover('${m.id}','${i.id}')`}">${i.removido?'↩':'✕'}</button></span>`:''}</div>`).join('')}
         ${editavel?`<button class="btn btn-ghost btn-block" style="margin-top:8px;padding:9px;font-size:13px" onclick="nutriAddAbrir('${m.id}')">➕ Adicionar alimento</button>`:''}
         <div class="mfoot"><span>${m._mudou ? `Com seus ajustes: ${Math.round(m._real.kcal)} kcal (${dm>0?'+':''}${dm} vs recomendado) · P ${Math.round(m._real.p)}g` : `P ${Math.round(m.tot.p)}g · C ${Math.round(m.tot.c)}g · G ${Math.round(m.tot.g)}g`}</span>
           ${editavel?`<button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="nutriTrocar('${m.chave}')">🔄 Outro prato (${m.variante}/${m.total})</button>`:''}</div>

@@ -15,6 +15,10 @@ Tom de pele dos emojis: a escolha existia na Aparência antiga (link "Tom dos em
 
 Registro de ações do painel: o administrador principal pode apagar as ações com mais de 30 dias ou o registro inteiro. As regras passaram a permitir `delete` em `adminLog` só para o principal; ninguém altera um registro. Depois de limpar, o app grava "Registro de ações limpo" (quem, quando, quantas), para a limpeza também ficar registrada.
 
+Login com Google: o login antigo (signInWithPopup) passa pela página `<projeto>.firebaseapp.com/__/auth/handler`, porque o site não está no Firebase Hosting. Agora existe o caminho direto do Google Identity Services (token do Google → `signInWithCredential`): mesma conta, mesmo uid e o mesmo tratamento de "e-mail que já tem senha". Ele só liga com `MT_GOOGLE_CLIENT_ID` preenchido. Em qualquer erro do Google, o app volta ao login antigo. Os quatro caminhos (entrou, fechou, falhou, sem o script do Google) foram simulados.
+
+Painel admin: conferido de novo. Aluno comum e admin com `ativo:false` não veem o botão e não abrem o painel, nem chamando `goAdmin()`. Admin secundário ativo vê e abre. Os dados continuam protegidos pelas regras do Firestore.
+
 Encontrado nos testes de regressão e corrigido:
 - **Meta Assistente:** uma resposta ainda "digitando" redesenhava o assistente por cima de outra janela, como a confirmação "Limpar a conversa?". Agora só atualiza se o assistente estiver aberto.
 - **Dois aparelhos abertos ao mesmo tempo:** o carrossel de conquistas gravava na nuvem no instante em que abria. Se o outro aparelho mudasse algo nesse mesmo segundo (no teste, o apelido), essa mudança era perdida. Agora o carrossel marca como visto no aparelho e grava ao fechar.

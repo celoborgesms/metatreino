@@ -1,3 +1,35 @@
+# MetaTreino 2027.1 Beta 49 — Alimentação da casa refeita, conquistas com progressão e corrida no tempo certo
+
+**Publique o `firestore.rules` desta versão** (só a coleção `familias` mudou; nenhuma outra permissão).
+
+1. **Alimentação da casa — criar o grupo:** corrigido o "Não consegui gerar um código livre" no segundo celular. O app lia o código antes de criar e as regras negam ler um documento que ainda não existe (só a conta do administrador principal conseguia). Agora cria direto; as regras continuam impedindo sobrescrever um grupo existente.
+2. **Administrador da casa:** quem cria administra (troca o prato, tira ou acrescenta alimentos no prato da casa, escolhe as refeições, os dias e os horários, liga "cada um pode trocar só para si", tira pessoas). Dá para passar a administração. Os outros veem o prato da casa com a própria porção.
+3. **A comida é compartilhada, a alimentação é individual:** o prato e a composição são iguais para todos; quantidade e calorias saem do plano de cada um (tirar um alimento recalcula a porção de cada pessoa para manter as calorias dela). "Comi", quantidade editada e alimento "só para mim" são pessoais.
+4. **Lista de compras e PDF:** "Só eu" ou "Casa toda" (soma o que cada pessoa vai comer em TODAS as refeições, na porção do próprio plano). Alimentos agrupados, quantidade + unidade (unid., g/kg cru, ml/L), período e categorias (proteínas, grãos, pães e tubérculos, frutas, verduras e legumes, laticínios, óleos). PDF da casa novo (cardápio da casa + compras com a parte de cada pessoa) e PDF individual.
+5. **Cardápio mais claro:** cada alimento mostra para que serve e as calorias ("Óleo de soja: 4 ml — usado no preparo, não é para consumir puro"). Azeite e óleo em ml.
+6. **Cardápio mais variado:** +40 pratos (café, lanches, almoço, jantar, ceia) com 10 alimentos novos da TACO. A semana passa por todas as opções; antes, em listas de 6, 9 ou 12 pratos, só 2 a 4 se repetiam.
+7. **Conquistas sem desbloqueio em massa:** marcos que você já tinha antes do app (pelo cadastro de corrida) entram como "Experiência reconhecida"; etapas da mesma família viram um cartão ("Meia maratona — inclui 5K e 10K"); a primeira atividade vem sempre primeiro; no máximo 5 cartões por registro.
+8. **Metas do mês × medalha do desafio:** bronze/prata/ouro passam a se chamar "Metas do mês" (automáticas). A medalha exclusiva é só a do desafio, para quem participa e cumpre a meta no período. **Participação automática:** ninguém precisa mais tocar em "Participar"; quem sai não volta sozinho.
+9. **Metas do mês por nível:** as de corrida escalam pelo nível do motor de corrida (iniciante → competitivo).
+10. **Medalhas:** "Medalhas e metas" com ícone centrado, um item por meta (B/P/O) e o selo; recompensa do desafio alinhada.
+11. **Corrida no tempo escolhido:** nenhum treino passa do tempo do cadastro (20, 30, 45, 60 min…). Se não cabe, encurta aquecimento/desaquecimento, depois a parte principal; se nem assim, vira uma sessão mais curta e segura, com o motivo no treino.
+12. **Corrida com limitação:** regra por região (joelho, tornozelo/pé, canela, quadril, lombar, outra). Duas regiões = só treinos leves. Orientação de parar quando a dor muda a passada.
+13. **Meta Assistente:** separa dias ativos, treinos do plano concluídos e atividades extras ("ativo em 5 dias, concluiu 3 de 4 treinos e fez 2 atividades extras").
+14. **Trocar exercício:** nunca sugere o que já está no treino de hoje (nem o original de outra troca nem a mesma variação com outro nome); cada opção aparece uma vez.
+15. **Cadastro:** o boneco do primeiro passo virou anéis de progresso (estilo relógio).
+16. **Semana com menos tempo (corrida) no domingo:** quando o único dia que sobra já tem o treino, o app diz que nada muda (antes mostrava "Aplicar" sem efeito).
+17. **Offline:** o gerador de PDF já fica guardado na instalação; rede muito lenta abre o app pela cópia guardada após 4 s.
+
+## Como testar a casa com dois celulares
+- [ ] Publique o `firestore.rules`.
+- [ ] Celular 1: Plano alimentar › 🏠 Alimentação da casa › Criar o grupo (vira administrador) › Convidar.
+- [ ] Celular 2 (outra conta): digite o código › Entrar. Também teste "Criar o grupo" numa conta comum: tem que funcionar.
+- [ ] Os dois: o almoço da casa tem o mesmo prato e quantidades diferentes.
+- [ ] Celular 2: "Outro prato" no almoço da casa → avisa que o administrador decide.
+- [ ] Celular 1: troque o prato, tire um alimento (✕ › "Tirar do prato da casa") e acrescente um → aparece no 2 em alguns segundos, na porção dele.
+- [ ] Lista de compras › "Casa toda": cada item mostra a parte de cada um. 📄 PDF da casa.
+- [ ] Tela da casa › "Tornar administrador" no outro; depois "Sair do grupo".
+
 # MetaTreino 2027.1 Beta 48 — Cupons de Premium e correções dos prints
 
 **Publique o `firestore.rules` desta versão** (coleção nova `cupons` e resgate de cupom).
@@ -11,6 +43,7 @@
 7. **Cupons de Premium (novo, grátis no Firebase):** Painel admin › 🎟️ Cupons de Premium. Crie até 100 cupons por vez, com 1 a 365 dias de Premium e data-limite opcional; copie os códigos para divulgar; veja quantos já foram usados; apague os livres. O aluno usa em Planos › "Tenho um cupom" (também no aviso de recurso Premium). Cada cupom vale uma vez, e cada pessoa só usa **um cupom a cada 30 dias** (a tela mostra a data em que o próximo é liberado; as regras do Firestore conferem o mesmo). Os dias somam ao teste ou ao Premium com prazo.
 9. **Tom de pele dos emojis de volta:** Perfil › Estilo dos ícones › Emojis coloridos › "Tom de pele" (Padrão, Claro, Médio-claro, Médio, Médio-escuro e Escuro), cada opção com a amostra no próprio tom. A opção tinha sumido na Beta 40, quando a tela de Aparência foi refeita. O tom escolhido antes continua salvo no aparelho.
 10. **Registro de ações do painel:** no fim da tela 🧾 Registro de ações há "Apagar mais antigos que 30 dias" e "🗑️ Apagar tudo". Só o administrador principal vê e usa. Depois de limpar fica uma linha "Registro de ações limpo" com quem limpou e quando.
+11. **Login com Google sem a tela "firebaseapp.com" (pronto, falta ligar):** o app já tem o login direto do Google (Google Identity Services). Para ligar, preencha `MT_GOOGLE_CLIENT_ID` em `fonte/app-plus/50-cupons-ajustes.js` com o "ID do cliente da Web" e monte de novo. No Google Cloud, adicione `https://metatreino.app` em "Origens JavaScript autorizadas" desse cliente. Enquanto estiver vazio, o login continua como antes. Se o Google falhar, o app volta sozinho ao login antigo.
 8. **Admin dos cupons:**
    - **🗑️ Apagar histórico:** apaga a campanha inteira, com os cupons usados e os livres. Quem já usou continua com o Premium e o prazo que ganhou; os códigos livres deixam de funcionar.
    - **Quem usou cupom:** lista as pessoas com a data do último cupom e quando o próximo fica liberado. Em cada uma:

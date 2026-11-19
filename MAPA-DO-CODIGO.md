@@ -85,6 +85,9 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `46-diagnostico-acesso.js` | Beta 43: `mtLogAcesso` (falhas de acesso → `diagnosticoAcesso`, sem e-mail/UID, hash da conta, 1 registro a cada 10 min), painel "Diagnóstico de acesso" do principal, rótulo "Tentar novamente" |
 | `47-lanches-fora-da-rotina.js` | Beta 43: receitas "Lanches para sair da rotina" — tabela `RC_ING` (TACO/rótulos), `RC_RECEITAS`, ajuste da porção à refeição (`rcEncaixe`), restrições (`rcRestricao`), favoritas (`state.nutri.receitasFav`), custo informado pelo aluno, registro no plano, ilustrações SVG |
 | `48-fim-registro-descanso.js` | Beta 44: conquistas no fim do registro (`cqCelebrar`, janela de 2 min após salvar), ponto na aba Desafios, "não vou treinar hoje" no topo e pergunta antes de registrar, fichas técnicas corrigidas (`MT_FICHA_FIXA`) |
+| `49-alimentacao-casa.js` | Beta 46, refeita na Beta 49: alimentação da casa. Administrador (`dono`, `famSouAdm`, `famPassarAdm`, `famRemoverMembro`), configuração (`config.refeicoes/dias/horas/economico/trocaPropria`), composição do prato da casa por data (`cardapio[dk][mid] = {x, add}`, `famTirarDaCasa`, acréscimo via `nutriEdSalvar`), prato comum e porção individual (`famPrato`, `nutriMontarPlano(dia, dkData)`), "fora da casa" só num dia (`state.nutri.famFora`), perfil publicado só na própria chave (`perfis[uid] = {veg,lac,glu,fatores,compras}`), lista individual/da casa (`nutriComprasTotais(escopo, 'eu'|'casa')`, `nutriQtdCompra`, `nutriNomeCompra`), PDF da casa (`pdfAlimentacaoCasa`) |
+| `50-cupons-ajustes.js` | Beta 48: cupons de Premium e ajustes |
+| `51-conquistas-progressao.js` | Beta 49: metas do mês por nível da modalidade (`cqEscalaBase`, `mkDesafio`), experiência anterior (`cqExpReconhece`, `state.trophyExp`), celebração agrupada (`cqAgrupar`, `CQ_FAMILIAS`, `CQ_PRIMEIRAS`, máximo 5 cartões), "Metas do mês" × "Medalhas de desafio" (`openMedals`), participação automática (`cqAutoParticipa`, `state.eventosRecusados`), desenho de boas-vindas do cadastro |
 
 Parte nova: próximo número livre (ex.: `41-nome-da-funcao.js`).
 
@@ -147,6 +150,7 @@ Embrulhar a função inteira (`window.f = function(){...}`) só quando for preci
 | `config/mural`, `config/contato`, `config/calistenia`, `config/specialAward` | Mural/logo, contato, ajustes da calistenia, Conquista Especial | todos leem; admins gravam |
 | `desafiosTematicos/{id}` e `.../participantes/{uid}` | Desafios criados e quem participa | ver regras |
 | `videosExercicios`, `exerciciosCustom`, `caliExercicios`, `caliModelos` | Vídeos e exercícios cadastrados pelos admins. `videosExercicios.creditos` = só o que o admin liberou do parceiro (ficha/Biblioteca) | todos leem; admins gravam |
+| `familias/{código}` | Beta 49: grupo da casa — `membros`, `dono` (administrador), `nomes`, `perfis` (cada um só a própria chave: restrições, total de compras), `config` e `cardapio` (só o administrador). Sem peso, idade, altura ou e-mail | membros leem; ver regras |
 | `perguntasNaoRespondidas`, `relatos`, `videosReportados` | Mensagens e relatos dos alunos | aluno cria; admins leem |
 
 O dono do app (administrador principal) é reconhecido pelo e-mail definido em `ADMIN_EMAIL` (app.js) e nas regras.
