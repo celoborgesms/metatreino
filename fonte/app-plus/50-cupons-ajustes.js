@@ -256,6 +256,64 @@ window.setEmojiTone = function(id){
   return _setEmojiToneB48.apply(this, arguments);
 };
 
+// 7) O painel só abre para administrador. O botão já ficava escondido para os outros, e o Firestore já
+//    recusava os dados; agora nem a tela vazia abre se alguém chamar goAdmin() por fora.
+const _goAdminB48 = window.goAdmin;
+window.goAdmin = function(){
+  if(!mtAdmin()){ try{ ['pf-admin-btn','quiz-admin-btn','pick-admin-btn','pf-admin-lbl'].forEach(id=>{ const e = $(id); if(e) e.classList.add('hidden'); }); }catch(e){} return; }
+  return _goAdminB48.apply(this, arguments);
+};
+
+// 8) Entrar com Google sem passar pela tela "meu-treino-inteligente.firebaseapp.com".
+//    Com o ID do cliente Web preenchido abaixo, o botão usa o login do próprio Google (Google Identity
+//    Services): abre só a escolha de conta do Google, que mostra "metatreino.app"/"MetaTreino", e o app
+//    entra no Firebase com o token recebido (signInWithCredential). Mesma conta, mesmo uid, mesmos dados.
+//    Vazio = continua o login de antes. Se o Google não carregar ou der erro, cai no login de antes.
+//    No Google Cloud, esse cliente precisa ter https://metatreino.app em "Origens JavaScript autorizadas".
+const MT_GOOGLE_CLIENT_ID = '';
+let _gisCarrega = null, _gisCliente = null;
+function _gisPronto(){
+  if(!MT_GOOGLE_CLIENT_ID) return Promise.reject(new Error('sem-cliente'));
+  if(window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
+  if(_gisCarrega) return _gisCarrega;
+  _gisCarrega = new Promise((ok, falha)=>{
+    const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+    sc.onload = ()=> (window.google && google.accounts && google.accounts.oauth2) ? ok() : falha(new Error('gis'));
+    sc.onerror = ()=>{ _gisCarrega = null; falha(new Error('gis-rede')); };
+    document.head.appendChild(sc);
+    setTimeout(()=>falha(new Error('gis-tempo')), 8000);
+  });
+  return _gisCarrega;
+}
+// carrega cedo na tela de entrada, para o toque no botão abrir a janela na hora (sem ser bloqueada)
+if(MT_GOOGLE_CLIENT_ID) setTimeout(()=>{ try{ if(!fbAuth.currentUser) _gisPronto().catch(()=>{}); }catch(e){} }, 1200);
+const _doGoogleAntigo = window.doGoogleSignIn;
+window.doGoogleSignIn = function(){
+  const pronto = MT_GOOGLE_CLIENT_ID && window.google && google.accounts && google.accounts.oauth2;
+  if(!pronto){ if(MT_GOOGLE_CLIENT_ID) _gisPronto().catch(()=>{}); return _doGoogleAntigo.apply(this, arguments); }
+  const btn = $('google-btn'), lbl = $('google-btn-lbl'), err = $('auth-err');
+  if(btn && btn.dataset.ocupado === '1') return;
+  if(err) err.innerHTML = '';
+  if(btn){ btn.style.opacity = '0.7'; btn.dataset.ocupado = '1'; }
+  if(lbl) lbl.textContent = 'Entrando...';
+  const volta = ()=>{ if(btn){ btn.style.opacity = '1'; btn.dataset.ocupado = ''; } if(lbl) lbl.textContent = 'Continuar com Google'; };
+  const antigo = ()=>{ volta(); _doGoogleAntigo(); };
+  try{
+    _gisCliente = _gisCliente || google.accounts.oauth2.initTokenClient({ client_id: MT_GOOGLE_CLIENT_ID, scope: 'openid email profile', callback: ()=>{} });
+    _gisCliente.callback = r=>{
+      if(!r || r.error || !r.access_token){ volta(); return; }   // pessoa fechou ou recusou: só volta o botão
+      const cred = firebase.auth.GoogleAuthProvider.credential(null, r.access_token);
+      fbAuth.signInWithCredential(cred).then(volta, e=>{
+        console.log('Erro no login Google (GIS):', e); volta();
+        if(e && e.code === 'auth/account-exists-with-different-credential') return mtVincularGoogleNaContaExistente(e);
+        antigo();   // qualquer outro problema: tenta pelo caminho de antes
+      });
+    };
+    _gisCliente.error_callback = e=>{ console.log('GIS:', e && e.type); if(e && e.type === 'popup_closed') return volta(); antigo(); };
+    _gisCliente.requestAccessToken({ prompt: 'select_account' });
+  }catch(e){ console.log('GIS falhou:', e); antigo(); }
+};
+
 (function(){ if(document.getElementById('cup-css')) return; const s = document.createElement('style'); s.id = 'cup-css';
   s.textContent = `
 .cup-form{display:flex;flex-direction:column;gap:8px;margin:6px 0 12px}

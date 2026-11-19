@@ -423,6 +423,24 @@ const RT = {
 };
 const RT_NIVEL_MIN = { caminhada:0, camcorre:0, regenerativo:1, continua:1, leve:1, longao:1, fartlek:2, subida:2, tempo:2, limiar:3, tiros_longos:3, velocidade:3, tiros_curtos:4, ritmo_prova:2, prova:0 };
 const RT_IMPACTO = ['subida','velocidade','tiros_curtos'];
+// Beta 49: cada limitação tira os estímulos incompatíveis com ela (antes: qualquer limitação = a mesma lista).
+// O app não diagnostica nem trata: adapta de forma conservadora e orienta parar quando a dor muda a passada.
+const RUN_LIM_EVITA = {
+  joelho:['subida','velocidade','tiros_curtos','tiros_longos'],        // descidas, impacto e picos de velocidade
+  tornozelo:['velocidade','tiros_curtos','subida'],                    // arrancadas, mudanças bruscas e terreno inclinado
+  canela:['velocidade','tiros_curtos','tiros_longos','subida'],         // carga de impacto repetida
+  quadril:['velocidade','tiros_curtos','subida'],
+  lombar:['subida','velocidade','tiros_curtos'],
+  outra:['subida','velocidade','tiros_curtos','tiros_longos']
+};
+const RUN_LIM_ORIENT = {
+  joelho:'Joelho: prefira terreno plano e macio e desça ladeiras caminhando.',
+  tornozelo:'Tornozelo/pé: evite terreno irregular e curvas fechadas em velocidade; use tênis firme.',
+  canela:'Canela: o volume sobe devagar; prefira pista, esteira ou terra batida ao asfalto.',
+  quadril:'Quadril: passada curta e cadência um pouco mais alta.',
+  lombar:'Lombar: tronco alto, passada curta e nada de ladeiras fortes.'
+};
+function rLimEvita(lims){ const s = new Set(); (lims||[]).forEach(k=>(RUN_LIM_EVITA[k]||RUN_LIM_EVITA.outra).forEach(t=>s.add(t))); return s; }
 function _alvo(Z, k, fallback){
   if(Z && Z[k]) return `${rFaixa(Z[k])} · esforço ${RZ_INFO[k].rpe}/10`;
   const i = RZ_INFO[k]; return fallback || (i ? `esforço ${i.rpe}/10 — ${i.txt.toLowerCase()}` : '');
@@ -434,9 +452,14 @@ function rSessao(tipo, o){
   const pista = ter==='pista', esteira = ter==='esteira', trilha = ter==='trilha';
   let warm, main = [], cool, alvo = '', orient = [], kmMain = null;
   const warmLeve = n => ({name:'Aquecimento', exs:[{name:'Caminhada rápida', desc:'Comece andando e aumente o passo aos poucos.', min:n||5}, {name:'Mobilidade', desc:'10 círculos de tornozelo, 10 elevações de joelho e 10 balanços de perna para cada lado.', min:2}]});
-  const warmQual = ()=>({name:'Aquecimento', exs:[{name:'Trote leve', desc:'Bem devagar no começo, soltando aos poucos.', min:o.nv>=4?15:10}, {name:'Educativos e acelerações', desc:'Skipping baixo, anfersen e dribling (20 m cada) e 4 acelerações progressivas de 20 s, voltando caminhando.', min:5}]});
+  // Beta 49: com pouco tempo (o.compacto), aquecimento e desaquecimento encurtam — sem pular o aquecimento
+  const warmQual = ()=> o.compacto
+    ? {name:'Aquecimento', exs:[{name:'Trote leve', desc:'Bem devagar no começo, soltando aos poucos.', min:o.nv>=4?8:6}, {name:'Educativos e acelerações', desc:'Skipping baixo e anfersen (20 m cada) e 2 acelerações progressivas de 20 s.', min:3}]}
+    : {name:'Aquecimento', exs:[{name:'Trote leve', desc:'Bem devagar no começo, soltando aos poucos.', min:o.nv>=4?15:10}, {name:'Educativos e acelerações', desc:'Skipping baixo, anfersen e dribling (20 m cada) e 4 acelerações progressivas de 20 s, voltando caminhando.', min:5}]};
   const coolLeve = ()=>({name:'Desaquecimento', exs:[{name:'Caminhada', desc:'Desacelere andando até a respiração normalizar.', min:5}]});
-  const coolQual = ()=>({name:'Desaquecimento', exs:[{name:'Trote bem leve', desc:'Deixe o coração baixar aos poucos.', min:8}, {name:'Alongamento leve', desc:'Panturrilha, posterior de coxa, quadríceps e quadril: 30 s de cada lado, sem forçar.', min:4}]});
+  const coolQual = ()=> o.compacto
+    ? {name:'Desaquecimento', exs:[{name:'Trote bem leve', desc:'Deixe o coração baixar aos poucos.', min:3}, {name:'Alongamento leve', desc:'Panturrilha, posterior de coxa e quadril: 20 s de cada lado.', min:2}]}
+    : {name:'Desaquecimento', exs:[{name:'Trote bem leve', desc:'Deixe o coração baixar aos poucos.', min:8}, {name:'Alongamento leve', desc:'Panturrilha, posterior de coxa, quadríceps e quadril: 30 s de cada lado, sem forçar.', min:4}]};
   const repTxt = (n, x)=>`${n}× ${x}`;
   if(tipo==='caminhada'){
     const m = Math.round(o.min||25);
@@ -446,8 +469,11 @@ function rSessao(tipo, o){
     alvo = 'caminhada firme · esforço 3–4/10';
     orient = ['O objetivo é constância: complete o tempo sem pressa.', 'Tênis confortável e superfície regular ajudam muito no começo.'];
   } else if(tipo==='camcorre'){
-    const e = RUN_EST[_clamp(o.est||1,1,RUN_EST.length-1)];
-    const curto = o.maxTotal && (e.rep*(e.corre+e.anda) + 12) > o.maxTotal;
+    const e0 = RUN_EST[_clamp(o.est||1,1,RUN_EST.length-1)];
+    const curto = o.maxTotal && (e0.rep*(e0.corre+e0.anda) + 12) > o.maxTotal;
+    // Beta 49: se nem com aquecimento curto cabe, faz menos blocos (o estágio continua o mesmo)
+    const cabe = o.maxTotal ? Math.floor((o.maxTotal - 6)/(e0.corre+e0.anda)) : e0.rep;
+    const e = Object.assign({}, e0, { rep: Math.max(2, Math.min(e0.rep, cabe)) });
     warm = curto ? {name:'Aquecimento', exs:[{name:'Caminhada rápida + mobilidade', desc:'Ande aumentando o passo e solte tornozelos e quadris.', min:3}]} : warmLeve(5);
     main = [{name:repTxt(e.rep, `(${e.corre} min correndo leve + ${e.anda} min caminhando)`), desc:`Corra devagar — tão devagar que daria para conversar. Se faltar ar, diminua a velocidade antes de parar. A caminhada faz parte do treino: mantenha o passo firme.`, min:e.rep*(e.corre+e.anda)}];
     cool = curto ? {name:'Desaquecimento', exs:[{name:'Caminhada', desc:'Desacelere andando.', min:3}]} : coolLeve();
@@ -548,7 +574,10 @@ function rSessao(tipo, o){
     alvo = zp ? `${rFaixa(zp)} (estimativa)` : 'pelo esforço';
     orient = ['Nada de novo no dia da prova: tênis, roupa e café da manhã já testados.', 'Intercalar caminhada não é fracasso — é estratégia.'];
   }
-  if(o.lim && (tipo!=='caminhada')) orient.push('Com a limitação que você informou: se a dor aparecer e mudar sua passada, pare e caminhe. Dor que persiste precisa de avaliação profissional.');
+  if(o.lim && (tipo!=='caminhada')){
+    (o.limList||[]).forEach(k=>{ if(RUN_LIM_ORIENT[k]) orient.push(RUN_LIM_ORIENT[k]); });
+    orient.push('Com a limitação que você informou: se a dor aparecer e mudar sua passada, pare e caminhe. Dor que persiste precisa de avaliação profissional.');
+  }
   const blocks = [warm, {name:'Principal', exs:main}, cool];
   const duration = blocks.reduce((s,b)=>s+b.exs.reduce((x,e)=>x+(e.min||0),0),0);
   let km = null;
@@ -569,7 +598,8 @@ function rSemanaFase(ctx, M, semTs){
 }
 function rComposicao(ctx, M, F, n, opts){
   const setup = (ctx.run||{}).setup||{}; const goal = rGoal(setup); const nv = M.nivel;
-  const lim = ((setup.aval||{}).lim||[]).length > 0;
+  const limList = (setup.aval||{}).lim||[]; const lim = limList.length > 0;
+  const evita = rLimEvita(limList);
   const ter = setup.terrain || 'asfalto';
   const hib = !!(ctx.lift && ctx.lift.plan && (ctx.lift.plan.workouts||[]).length >= 3);
   if(nv === 0){
@@ -596,6 +626,7 @@ function rComposicao(ctx, M, F, n, opts){
   if(n === 3 && nv <= 3) Q = Math.min(Q, 1);
   if(hib && nv <= 3) Q = Math.min(Q, 1);
   if(lim) Q = Math.min(Q, 1);
+  if(limList.length >= 2) Q = 0;            // duas regiões ou mais: só treinos leves até melhorar
   if(opts && opts.fadiga) Q = 0;
   // tipos de qualidade por fase / nível / objetivo (o rodízio semanal evita repetir sempre o mesmo)
   const listas = {
@@ -604,8 +635,9 @@ function rComposicao(ctx, M, F, n, opts){
     especifica: nv===2 ? ['ritmo_prova','fartlek','tempo'] : ({ '5km':['tiros_curtos','tiros_longos','tempo','ritmo_prova'], '10km':['tiros_longos','limiar','ritmo_prova','tempo'], '21km':['limiar','ritmo_prova','tempo','tiros_longos'], '42km':['limiar','ritmo_prova','tempo'] })[goal] || ['limiar','tiros_longos','tempo'],
     taper:['ritmo_prova'], recuperacao:['fartlek']
   };
-  let lista = (listas[fase] || listas.base).filter(t=>RT_NIVEL_MIN[t] <= nv && !(lim && RT_IMPACTO.includes(t)) && !(t==='subida' && ter==='pista'));
-  if(!lista.length) lista = ['fartlek'];
+  let lista = (listas[fase] || listas.base).filter(t=>RT_NIVEL_MIN[t] <= nv && !evita.has(t) && !(t==='subida' && ter==='pista'));
+  if(!lista.length) lista = evita.has('fartlek') ? [] : ['fartlek'];
+  if(!lista.length) Q = 0;
   const rot = Math.round((M.semanaRef||0)/(7*DIA_MS)) % lista.length;
   lista = lista.slice(rot).concat(lista.slice(0, rot));
   const quals = []; for(let i=0;i<Q && i<lista.length;i++) quals.push(lista[i]);
@@ -691,7 +723,7 @@ function rMontarSemana(ctx, M, semTs, opts){
   const sess = {};
   // primeiro as fixas (qualidade, prova, iniciante), depois longão e leves com o que sobra
   let usado = 0;
-  const base = { nv, q, terreno: setup.terrain, Z, est: M.estagio, goal, lim, raceKm: (RGOAL[goal]||{}).km };
+  const base = { nv, q, terreno: setup.terrain, Z, est: M.estagio, goal, lim, limList: (setup.aval||{}).lim||[], raceKm: (RGOAL[goal]||{}).km };
   Object.keys(mapa).forEach(k=>{ const t = mapa[k];
     if(RT[t].q || t==='prova' || t==='camcorre'){
       let o = Object.assign({}, base, { taper: F.fase==='taper', maxTotal: tempos.sessao });
@@ -724,6 +756,32 @@ function rMontarSemana(ctx, M, semTs, opts){
       const tetoDur = tetoTipo ? Math.max(tetoTipo.dur_leve||0, tetoTipo.dur_regenerativo||0) : 0;
       if(tetoDur && sess[k].duration > tetoDur){ sess[k] = rSessao(t, Object.assign({}, base, { min: Math.max(20, Math.round(min - (sess[k].duration - tetoDur))), strides })); } });
   }
+  // Beta 49: o tempo escolhido é LIMITE, não estimativa. Treino que não cabe encurta aquecimento/desaquecimento,
+  // depois a parte principal; se nem assim couber, vira uma sessão mais curta e segura (com o motivo no treino).
+  Object.keys(sess).forEach(k=>{
+    const s = sess[k]; const t = s.tipo; if(t==='prova') return;
+    const limite = t==='longao' ? tempos.longo : tempos.sessao;
+    if(s.duration <= limite) return;
+    let s2 = s;
+    if(RT[t].q){
+      let o = Object.assign({}, base, { taper: F.fase==='taper', maxTotal: limite, compacto:true });
+      s2 = rSessao(t, o);
+      while(s2.duration > limite && o.q > 0){ o = Object.assign({}, o, { q:o.q-1 }); s2 = rSessao(t, o); }
+      if(s2.duration > limite && t!=='fartlek' && nv >= 2 && !rLimEvita(base.limList).has('fartlek')){ const f = rSessao('fartlek', Object.assign({}, base, { q:0, compacto:true })); if(f.duration <= limite) s2 = f; }
+      if(s2.duration > limite) s2 = rSessao('leve', Object.assign({}, base, { min: Math.max(8, limite - 11) }));
+      if(s2.tipo !== t){ nota[k] = `${RT[t].nome} completo não cabe em ${limite} min: hoje é ${RT[s2.tipo].nome.toLowerCase()} (${Math.round(s2.duration)} min), mais curto e seguro.`; mapa[k] = s2.tipo; }
+    } else if(t==='camcorre'){
+      s2 = rSessao(t, Object.assign({}, base, { maxTotal: limite }));
+    } else {
+      const principal = s.blocks[1].exs.reduce((x,e)=>x+(e.min||0),0);
+      const extra = s.duration - principal;                                 // aquecimento + desaquecimento
+      const temAcel = s.blocks[1].exs.some(e=>/aceler/i.test(e.name));
+      const min = Math.max(5, limite - extra - 0);
+      const mp = t==='longao' && s.blocks[1].exs.length > 1 && !temAcel;
+      s2 = rSessao(t, Object.assign({}, base, { min: Math.min(min, principal - (temAcel ? 4 : 0)), strides:false, mp }));
+    }
+    sess[k] = s2;
+  });
   // por que cada treino
   const pernas = rDiasPerna(ctx);
   const dLongo = Object.keys(mapa).map(Number).find(d=>mapa[d]==='longao');
@@ -1308,6 +1366,16 @@ function runSemanaPrevia(){
   const saem = antes.filter(w=>w.motor && !tiposDepois.includes(w.motor.tipo));
   const minA = antes.reduce((t,w)=>t+(+w.duration||0),0), minD = depois.reduce((t,w)=>t+(+w.duration||0),0);
   const notas = depois.filter(w=>w.motor && w.motor.nota).map(w=>`${w.dayName}: ${w.motor.nota}`);
+  // Beta 49: escolher exatamente os dias que já estavam no plano (o caso de domingo, quando só sobra o próprio
+  // domingo) não muda nada — antes o botão "Aplicar" aparecia mesmo assim e parecia não funcionar
+  const assin = ws => ws.map(w=>w.dayIdx + ':' + (w.motor && w.motor.tipo) + ':' + w.duration).join('|');
+  if(assin(antes) === assin(depois)){
+    window.__rsDias = null;
+    $('modal-inner').innerHTML = `<h3>📅 Como fica a semana</h3>
+      <p class="mt-muted" style="margin:6px 0 12px">Com ${dias.length===1?'esse dia':'esses dias'} a semana fica <b>igual</b>: ${dias.length===1 && dias[0]===7 ? 'hoje é domingo e o único dia que sobra já tem o treino do plano' : 'os treinos que faltam já estão nesses dias'}. Não há nada a reorganizar.</p>
+      <div class="row" style="gap:8px"><button class="btn btn-ghost btn-block" onclick="openRunSemana()">Escolher outros dias</button><button class="btn btn-primary btn-block" onclick="closeModal()">Ok</button></div>`;
+    return;
+  }
   window.__rsDias = teste.especial.dias;
   $('modal-inner').innerHTML = `<h3>📅 Como fica a semana</h3>
     <div class="section-lbl" style="margin:6px 0 4px">Antes</div>

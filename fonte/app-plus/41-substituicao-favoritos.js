@@ -137,7 +137,16 @@ function mtCandidatosTroca(w, cur, motivo, setup){
   const cat = EX_BANK.find(c=>c.name===cur.part) || EX_BANK.find(c=>c.items.some(x=>slug(x.name)===cur.id));
   if(!cat) return null;
   const origId = (cur.troca && cur.troca.orig && cur.troca.orig.id) || cur.id;
+  // Beta 49: nunca sugerir o que já está no treino de hoje — nem o exercício original de outra troca (voltaria
+  // repetido ao desfazer), nem o mesmo exercício com outro nome/variação entre parênteses. O original DESTE
+  // exercício já tem o botão "Voltar ao original", então também não aparece de novo na lista.
   const usados = new Set((w.exercises||[]).map(e=>e.id)); usados.delete(cur.id);
+  (w.exercises||[]).forEach(e=>{ if(e && e.id !== cur.id && e.troca && e.troca.orig) usados.add(e.troca.orig.id); });
+  if(cur.troca && cur.troca.orig) usados.add(cur.troca.orig.id);
+  const nomeBase = n=>mtNorm(String(n||'')).replace(/\([^)]*\)/g,'').replace(/\s+/g,' ').trim();
+  const nomesUsados = new Set((w.exercises||[]).filter(e=>e.id!==cur.id).map(e=>nomeBase(e.name)));
+  (w.exercises||[]).forEach(e=>{ if(e && e.troca && e.troca.orig) nomesUsados.add(nomeBase(e.troca.orig.name)); });
+  const repete = ex=>usados.has(slug(ex.name)) || nomesUsados.has(nomeBase(ex.name));
   const okEquip = (typeof limEquipOk === 'function') ? limEquipOk(setup) : (()=>true);
   const lims = (typeof limDoSetup === 'function') ? limDoSetup(setup) : [];
   const limBloq = ex => lims.find(k=>LIM_REGRAS[k].evitar.test(ex.name||''));
@@ -150,7 +159,7 @@ function mtCandidatosTroca(w, cur, motivo, setup){
   const out = { mais:[], compat:[], secund:[], favs:[], mesmoEq:[], cat:cat.name };
   cat.items.forEach(ex=>{
     const id = slug(ex.name);
-    if(id === cur.id || usados.has(id)) return;
+    if(id === cur.id || repete(ex)) return;
     if(!okEquip(ex)) return;                                   // equipamento que o aluno não tem
     if(limBloq(ex)) return;                                    // força a região marcada nas limitações
     if(iniciante && (MT_AVANCADOS.test(mtNorm(ex.name)) || /avancado/.test(mtNorm(ex.sub)))) return;
@@ -205,7 +214,7 @@ function mtCandidatosTroca(w, cur, motivo, setup){
   // mesmo movimento catalogado em outro grupo (ex.: pullover com halter está em Peito; chin-up em Bíceps)
   if(!base.pad.startsWith('outro:')){
     EX_BANK.forEach(c=>{ if(c === cat) return; c.items.forEach(ex=>{
-      const id = slug(ex.name); if(id === cur.id || usados.has(id) || !okEquip(ex) || limBloq(ex)) return;
+      const id = slug(ex.name); if(id === cur.id || repete(ex) || !okEquip(ex) || limBloq(ex)) return;
       if(iniciante && MT_AVANCADOS.test(mtNorm(ex.name))) return;
       if(mtPadrao(ex).pad !== base.pad) return;
       const eq = mtEquipClasse(ex);
@@ -223,6 +232,14 @@ function mtCandidatosTroca(w, cur, motivo, setup){
                         : motivo === 'preferencia' ? (eqDe(b) - eqDe(a)) || (b.score - a.score) : b.score - a.score);
   // favoritos compatíveis no topo; favoritos que só servem como "secundária" ficam fora deste destaque
   out.favs = [...(motivo === 'preferencia' ? out.mesmoEq : []), ...out.mais, ...out.compat].filter(x=>x.fav);
+  // Beta 49: cada exercício aparece uma vez só, na primeira seção em que é mostrado (mesmo catalogado em dois grupos)
+  const vistos = new Set();
+  const unico = arr=>arr.filter(x=>{ if(vistos.has(x.id)) return false; vistos.add(x.id); return true; });
+  const ordem = motivo === 'preferencia' ? ['mesmoEq','mais','compat','secund'] : ['mais','compat','mesmoEq','secund'];
+  ordem.forEach(k=>{ out[k] = unico(out[k]); });
+  // favoritos: seção própria (o render já os tira das outras seções), sem repetir entre si
+  const fv = new Set(); out.favs = out.favs.filter(x=>{ if(fv.has(x.id)) return false; fv.add(x.id); return true; });
+  out.secund = out.secund.filter(x=>!fv.has(x.id));
   out.secund = out.secund.slice(0, 6);
   return out;
 }

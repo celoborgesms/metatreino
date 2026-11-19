@@ -2,6 +2,23 @@
 // ---------- 8. HOME INTELIGENTE ----------
 // Um único card no topo que muda conforme o momento do aluno (iniciante, voltando, consistente,
 // treino concluído, perto da prova). Não repete avisos que o app já mostra (dor, férias, pendências).
+// Beta 49: três números diferentes, que antes viravam um só ("dias ativos" contava como treino do plano):
+//  • dias ativos = qualquer atividade; • treinos do plano concluídos = sessões da modalidade planejada
+//    (musculação do plano de musculação, corrida do plano de corrida — no máximo uma por modalidade por dia);
+//  • atividades extras = caminhada/bike/corrida avulsa que não fazem parte de nenhum plano.
+function mtAdesao(a, b){
+  const h = mtHist().filter(x=>x.at>=a && x.at<b);
+  const planos = { lift: !!(state.modules.lift && state.modules.lift.plan), run: !!(state.modules.run && state.modules.run.plan) };
+  const runWs = (planos.run && state.modules.run.plan.workouts) || [];
+  const corridaCaminha = runWs.some(w=>w.motor && ['caminhada','camcorre'].includes(w.motor.tipo));
+  const modDe = x => x._t==='musculacao' ? (planos.lift ? 'lift' : null) : (x._t==='corrida' || (x._t==='caminhada' && corridaCaminha)) ? (planos.run ? 'run' : null) : null;
+  const feitos = new Set(); let extras = 0;
+  h.forEach(x=>{ const m = modDe(x); const k = m + '|' + mtDia0(x.at); if(m && !feitos.has(k)) feitos.add(k); else if(!m) extras++; });
+  const porSem = ['lift','run'].reduce((t,m)=>t + (planos[m] ? (state.modules[m].plan.workouts||[]).filter(w=>!(w.motor && w.motor.tipo==='prova')).length : 0), 0);
+  const semanas = Math.max(1/7, (Math.min(b, Date.now()+1) - a)/(7*DIA_MS));
+  const planejados = Math.max(porSem ? 1 : 0, Math.round(porSem*Math.min(semanas, 1e6)));
+  return { dias: new Set(h.map(x=>mtDia0(x.at))).size, concluidos: Math.min(feitos.size, planejados || feitos.size), feitos: feitos.size, planejados, extras, porSem };
+}
 function contextoAluno(){
   const h = mtHist();
   const total = h.length;
@@ -21,7 +38,9 @@ function contextoAluno(){
   const prs14 = Object.values(state.prs||{}).filter(p=>p && p.at >= Date.now()-14*DIA_MS).length;
   const hora = new Date().getHours();
   const nome = (typeof maName==='function') ? maName() : 'atleta';
-  return { h, total, last, diasSem, hojeFeito, planejados, semDias, diaSemana, streak, prova, dor, ferias, prs14, hora, nome };
+  const sem = mtAdesao(semIni, Date.now()+1);
+  return { h, total, last, diasSem, hojeFeito, planejados, semDias, diaSemana, streak, prova, dor, ferias, prs14, hora, nome,
+    semTreinos: Math.min(sem.feitos, sem.porSem || sem.feitos), semPlanejados: sem.porSem, semExtras: sem.extras };
 }
 function _proxTreinoTxt(){
   try{
@@ -66,7 +85,7 @@ function renderHomeSmart(){
     a = `<button class="btn btn-ghost" onclick="mtPergunta('corrida_analise')">Como estou na corrida?</button>`;
     cls = 'warn';
   } else if(c.diaSemana >= 4 && c.semDias + (8-c.diaSemana) < c.planejados){
-    k = 'Frequência'; t = `${c.semDias} de ${c.planejados} dias nesta semana`;
+    k = 'Frequência'; t = c.semPlanejados ? `${c.semTreinos} de ${c.semPlanejados} treinos do plano nesta semana${c.semExtras?` · ${c.semExtras} ${c.semExtras===1?'atividade extra':'atividades extras'}`:''}` : `${c.semDias} de ${c.planejados} dias nesta semana`;
     p = 'A semana ainda dá para salvar parcialmente. Uma sessão hoje, mesmo curta, mantém o hábito vivo.';
     a = `<button class="btn btn-primary" onclick="goTab('sessions')">Treinar agora</button>`;
     cls = 'alert';
@@ -75,7 +94,7 @@ function renderHomeSmart(){
     p = 'O trabalho está aparecendo. Mantenha a técnica e a progressão gradual — é ela que sustenta os próximos recordes.';
     a = `<button class="btn btn-ghost" onclick="mtPergunta('cargas')">Ver minhas cargas</button>`;
   } else if(c.semDias >= Math.min(c.planejados, c.diaSemana) || c.streak >= 3){
-    k = 'Consistência'; t = c.streak>=3 ? `${c.streak} dias seguidos ativos` : `Semana em dia: ${c.semDias} de ${c.planejados}`;
+    k = 'Consistência'; t = c.streak>=3 ? `${c.streak} dias seguidos ativos` : c.semPlanejados ? `Semana em dia: ${c.semTreinos} de ${c.semPlanejados} treinos do plano` : `Semana em dia: ${c.semDias} de ${c.planejados}`;
     p = `Disciplina é isso: aparecer mesmo sem vontade.${prox&&!c.hojeFeito?` Seu próximo treino é ${prox}.`:''}`;
     a = `<button class="btn btn-ghost" onclick="mtPergunta('consistencia')">Ver minha consistência</button>`;
   } else {
@@ -231,14 +250,17 @@ function analiseMes(){
   const mes = now.toLocaleDateString('pt-BR',{month:'long'});
   const planejados = contextoAluno().planejados;
   const semanas = Math.max(1, (Date.now()-ini)/(7*DIA_MS));
-  const adesao = Math.min(100, Math.round(A.dias/(planejados*semanas)*100));
+  const AD = mtAdesao(ini, Date.now()+1);
+  // adesão = treinos do PLANO concluídos ÷ planejados até hoje (caminhada/bike avulsas não contam como treino do plano)
+  const adesao = AD.porSem ? Math.min(100, Math.round(AD.concluidos/Math.max(1, AD.planejados)*100)) : Math.min(100, Math.round(A.dias/(planejados*semanas)*100));
   let t = `<b>Análise de ${mes} até hoje</b> (comparando com o mesmo período do mês passado):<br><br>`;
   t += `• Dias ativos: <b>${A.dias}</b>${_seta(A.dias,B.dias)}<br>• Sessões: <b>${A.sessoes}</b>${_seta(A.sessoes,B.sessoes)}<br>• Tempo de treino: <b>${Math.floor(A.min/60)}h${String(A.min%60).padStart(2,'0')}</b>${_seta(A.min,B.min,'min')}<br>`;
   if(state.modules.lift) t += `• Musculação: <b>${A.lift}</b> treinos${_seta(A.lift,B.lift)} · recordes: <b>${A.prs}</b><br>`;
   if(A.kmRun||B.kmRun) t += `• Corrida: <b>${mtFmtKm(A.kmRun)} km</b>${_seta(A.kmRun,B.kmRun,'km')}<br>`;
   if(A.kmWalk||B.kmWalk) t += `• Caminhada: <b>${mtFmtKm(A.kmWalk)} km</b>${_seta(A.kmWalk,B.kmWalk,'km')}<br>`;
   if(A.kmBike||B.kmBike) t += `• Bike: <b>${mtFmtKm(A.kmBike)} km</b>${_seta(A.kmBike,B.kmBike,'km')}<br>`;
-  t += `<br>Adesão ao plano: <b>${adesao}%</b> dos dias planejados (${planejados} por semana).`;
+  t += AD.porSem ? `<br>Você esteve ativo em <b>${A.dias}</b> ${A.dias===1?'dia':'dias'}, concluiu <b>${AD.concluidos} de ${AD.planejados}</b> treinos planejados${AD.extras?` e fez <b>${AD.extras}</b> ${AD.extras===1?'atividade extra':'atividades extras'} (fora do plano)`:''}.<br>Adesão ao plano: <b>${adesao}%</b>.`
+    : `<br>Adesão ao plano: <b>${adesao}%</b> dos dias planejados (${planejados} por semana).`;
   t += '<br><br>' + (adesao>=85 ? 'Mês muito consistente. Se quiser evoluir mais, o caminho agora é qualidade: técnica, progressão de carga e sono.'
     : adesao>=60 ? 'Boa base. O próximo passo é proteger os dias de treino na agenda — os que mais falham costumam ser sempre os mesmos.'
     : 'A frequência está abaixo do planejado. Vale ajustar o plano para menos dias por semana e cumprir 100% deles, em vez de planejar muito e fazer pouco.');
@@ -298,7 +320,7 @@ function analiseConsistencia(){
   const media = semanas.slice(0,7).reduce((s,n)=>s+n,0)/7;
   let t = `<b>Consistência das últimas 7 semanas completas:</b><br><br>`;
   t += `• Semanas cumprindo o plano (${c.planejados} dias): <b>${completas} de 7</b><br>• Média: <b>${media.toLocaleString('pt-BR',{maximumFractionDigits:1})}</b> dias ativos por semana<br>• Sequência atual: <b>${c.streak}</b> ${c.streak===1?'dia':'dias'}<br>• Dia em que você mais treina: <b>${nomes[melhor]}</b><br>`;
-  t += `• Semana atual: <b>${semanas[7]}</b> de ${c.planejados} dias<br><br>`;
+  t += c.semPlanejados ? `• Semana atual: <b>${semanas[7]}</b> ${semanas[7]===1?'dia ativo':'dias ativos'}, <b>${c.semTreinos} de ${c.semPlanejados}</b> treinos do plano${c.semExtras?` e ${c.semExtras} ${c.semExtras===1?'atividade extra':'atividades extras'}`:''}<br><br>` : `• Semana atual: <b>${semanas[7]}</b> de ${c.planejados} dias<br><br>`;
   t += completas>=6 ? 'Excelente regularidade. Esse é o fator que mais pesa no resultado a longo prazo.'
     : completas>=4 ? 'Boa regularidade, com algumas semanas incompletas. Ver quais dias costumam falhar ajuda a ajustar o plano.'
     : `Mais da metade das semanas ficou abaixo do plano. Talvez ${Math.max(2, Math.round(media))} dias por semana seja um plano mais realista agora — e cumprir 100% motiva mais do que planejar demais.`;

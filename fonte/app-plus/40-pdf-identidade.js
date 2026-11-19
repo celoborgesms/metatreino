@@ -270,9 +270,9 @@ function pdfMontarAlimentacao(jsPDF, arte){
     if(d > 1) S.precisa(70);
     S.secao(`${DN[d-1]} · ${pl.treino ? 'dia de treino' : 'dia de descanso'}`, `${_fmtN(dia.kcal)} kcal · P ${_fmtN(dia.p)} g · C ${_fmtN(dia.c)} g · G ${_fmtN(dia.g)} g`);
     S.tabela([{t:'Refeição', w:30, negrito:true, quebra:true}, {t:'Alimentos e quantidades', w:92, quebra:true}, {t:'kcal', w:13, dir:1}, {t:'P', w:11, dir:1}, {t:'C', w:11, dir:1}, {t:'G', w:11, dir:1}],
-      refs.map(r=>[`${r.m.nome}\n${r.m.hora}`, r.itens.map(i=>`${i.nome}: ${i.texto}`).join('\n'), _fmtN(r.tot.kcal), _fmtN(r.tot.p), _fmtN(r.tot.c), _fmtN(r.tot.g)]), { t:7.8 });
+      refs.map(r=>[`${r.m.nome}${r.m.compartilhada?' (casa)':''}\n${r.m.hora}`, r.itens.map(i=>{ const u = (typeof nutriUso==='function') ? nutriUso(i.id, true) : ''; return `${i.nome}: ${i.texto}${u ? ' — ' + u : ''}`; }).join('\n'), _fmtN(r.tot.kcal), _fmtN(r.tot.p), _fmtN(r.tot.c), _fmtN(r.tot.g)]), { t:7.8 });
   }
-  if(typeof nutriPdfCompras === 'function') nutriPdfCompras(S, arte);   // Beta 46: lista de compras (com a casa, se houver)
+  if(typeof nutriPdfCompras === 'function') nutriPdfCompras(S, arte, 'eu');   // Beta 49: lista individual (a da casa tem PDF próprio)
   const eq = nutriEquivalencias();
   S.secao('Trocas equivalentes', 'mesma quantidade do nutriente', arte.C.a);
   S.tabela([{t:'Grupo', w:34, negrito:true, quebra:true}, {t:'Opções (cada uma vale o mesmo)', w:142, quebra:true}], eq.map(g=>[`${g.t.replace(/^[^\wÀ-ú]+/,'')}\n${g.sub}`, g.l.join(' · ')]), { cabCor:arte.C.aClaro, cabTxt:arte.C.a, t:7.8 });
