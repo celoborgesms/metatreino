@@ -270,10 +270,18 @@ function analiseMes(){
 function _e1rm(peso, reps){ peso=+peso||0; reps=+reps||0; if(!peso||!reps) return 0; return peso*(1+Math.min(reps,12)/30); }
 function analiseCargas(){
   const desde = Date.now() - 49*DIA_MS;
-  const res = [];
+  const res = [], corpo = [];
   Object.keys(state.progress||{}).forEach(id=>{
     const sess = (state.progress[id]||[]).filter(p=>p.date>=desde && p.sets && p.sets.length).sort((a,b)=>a.date-b.date);
     if(sess.length < 3) return;
+    // Beta 49: peso do corpo (flexão, barra, prancha…): sem carga, a evolução é medida pelas repetições (ou
+    // segundos) da melhor série — antes esses exercícios ficavam de fora da análise
+    if(sess.every(p=>p.sets.every(s=>!(+s.peso > 0)))){
+      const rp = sess.map(p=>({ d:p.date, v:Math.max(0,...p.sets.map(s=>+s.reps||0)) })).filter(x=>x.v>0);
+      if(rp.length >= 3){ const a = (rp[0].v+rp[1].v)/2, b = (rp[rp.length-1].v+rp[rp.length-2].v)/2; let nome = id; try{ nome = nomeDoEx(id) || id; }catch(e){}
+        corpo.push({ nome, dif:(b-a)/a*100, ini:rp[0].v, fim:rp[rp.length-1].v, span:(rp[rp.length-1].d - rp[0].d)/DIA_MS }); }
+      return;
+    }
     const best = sess.map(p=>({d:p.date, v:Math.max(0,...p.sets.map(s=>_e1rm(s.peso,s.reps))), peso:Math.max(0,...p.sets.map(s=>+s.peso||0))})).filter(x=>x.v>0);
     if(best.length < 3) return;
     const ini = best.slice(0,2).reduce((s,x)=>s+x.v,0)/2, fim = best.slice(-2).reduce((s,x)=>s+x.v,0)/2;
@@ -282,6 +290,8 @@ function analiseCargas(){
     let nome = id; try{ nome = nomeDoEx(id) || id; }catch(e){}
     res.push({ id, nome, dif, span, n:best.length, pesoIni:best[0].peso, pesoFim:best[best.length-1].peso });
   });
+  const blocoCorpo = corpo.length ? `🤸 <b>Peso do corpo</b> (pela melhor série): ${corpo.slice(0,4).map(r=>`${mtEsc(r.nome)} ${r.ini}→${r.fim}${r.dif>=5?' ✅':r.dif<=-10?' ⚠️':''}`).join(', ')}.${corpo.some(r=>r.dif>-5 && r.dif<5 && r.span>=21) ? ' Quando as repetições param de subir, avance para uma variação mais difícil (ex.: flexão com os pés elevados) ou acrescente uma pausa de 2 s embaixo.' : ''}<br><br>` : '';
+  if(!res.length && corpo.length) return `Analisei seus exercícios das últimas 7 semanas:<br><br>${blocoCorpo}Regra de ouro: progrida primeiro nas repetições com boa técnica; depois, na dificuldade da variação.`;
   if(!res.length) return 'Ainda não tenho séries suficientes para analisar suas cargas. Preciso de pelo menos 3 sessões do mesmo exercício nas últimas semanas, com carga e repetições registradas. 📒';
   const sobe = res.filter(r=>r.dif>=2.5).sort((a,b)=>b.dif-a.dif);
   const parado = res.filter(r=>r.dif>-2.5 && r.dif<2.5 && r.span>=21);
@@ -291,6 +301,7 @@ function analiseCargas(){
   if(sobe.length) t += `📈 <b>Evoluindo:</b> ${sobe.slice(0,4).map(fmt).join(', ')}.<br><br>`;
   if(parado.length) t += `➖ <b>Estáveis há 3+ semanas:</b> ${parado.slice(0,4).map(fmt).join(', ')}.<br>Para destravar: mude a faixa de repetições por 3 semanas (ex.: de 8–10 para 12–15), ou troque por uma variação do mesmo movimento. Se o sono ou a alimentação estiverem fracos, comece por eles.<br><br>`;
   if(cai.length) t += `📉 <b>Em queda:</b> ${cai.slice(0,3).map(fmt).join(', ')}.<br>Pode ser fadiga acumulada. Uma semana com cerca de 10% menos carga costuma resolver. Se houver dor, priorize a recuperação.<br><br>`;
+  t += blocoCorpo;
   if(!sobe.length && !parado.length && !cai.length) t += 'Os exercícios ainda têm pouco tempo de histórico para dizer se estagnaram. Continue registrando. ';
   t += 'Regra de ouro: só suba a carga quando completar todas as séries com boa técnica e ainda sobrar 1–2 repetições.';
   return t;

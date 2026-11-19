@@ -338,12 +338,23 @@ mtGancho('saveData', { depois(){ if(!famAtiva()) return; _famPodaFora(); famAgen
 function _famAplica(doc){
   const uid = _famUid(); const ant = famCache() || {};
   if(!doc || !Array.isArray(doc.membros) || !doc.membros.includes(uid)){ famSaiuLocal('removido'); return; }
-  const J = x=>JSON.stringify(x || null);
+  // comparação estável (a nuvem pode devolver as chaves dos mapas em outra ordem: antes isso redesenhava a tela
+  // a cada gravação própria, e ela "piscava" e voltava ao topo)
+  const ord = v=>Array.isArray(v) ? v.map(ord) : (v && typeof v === 'object') ? Object.keys(v).sort().reduce((o,k)=>{ if(k !== '__id') o[k] = ord(v[k]); return o; }, {}) : v;
+  const J = x=>JSON.stringify(ord(x || null));
   const cardapioMudou = J(doc.config) !== J(ant.config) || J(doc.cardapio) !== J(ant.cardapio);
-  const mudou = cardapioMudou || J(doc.membros) !== J(ant.membros) || J(doc.perfis) !== J(ant.perfis) || J(doc.nomes) !== J(ant.nomes) || doc.dono !== ant.dono;
+  const perfisMudaram = J(doc.perfis) !== J(ant.perfis);
+  const mudou = cardapioMudou || J(doc.membros) !== J(ant.membros) || J(doc.nomes) !== J(ant.nomes) || doc.dono !== ant.dono
+    || (perfisMudaram && _famRestricoesMudaram(doc, ant));
   _famGuardaCache(doc);
   if(cardapioMudou || J(doc.perfis && doc.perfis[uid]) === 'null') famAgendaEnvio(1500);      // o prato mudou: minha lista também
   if(mudou) _famRedesenha();
+  else if(perfisMudaram){ try{ const mi = $('modal-inner'); if($('modal-back').classList.contains('on') && mi && mi.querySelector('#fam-compras') && window.__comprasModo === 'casa') nutriListaCompras(); }catch(e){} }
+}
+// restrições (vegetariano, sem lactose, sem glúten) de alguém mudaram → o prato da casa pode mudar
+function _famRestricoesMudaram(doc, ant){
+  const r = d=>Object.keys((d && d.perfis) || {}).sort().map(u=>{ const p = d.perfis[u] || {}; return u + ':' + (!!p.veg) + (!!p.lac) + (!!p.glu); }).join('|');
+  return r(doc) !== r(ant);
 }
 function _famRedesenha(){
   try{

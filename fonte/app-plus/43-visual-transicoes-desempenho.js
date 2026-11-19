@@ -52,6 +52,7 @@ window._decoAgenda = function(){
   new MutationObserver(()=>{
     if(!mtMovimentoOk() || !mi.animate) return;
     const back = document.getElementById('modal-back'); if(!back || !back.classList.contains('on')) return;
+    if(window.__mtMesmaTela) return;      // Beta 49: redesenho da MESMA tela (marcar, tirar um item) não anima: não pisca
     const t = performance.now(); if(t - ult < 120) return; ult = t;
     try{ mi.animate([{ opacity:.55, transform:'translateY(6px)' }, { opacity:1, transform:'none' }], { duration:180, easing:'cubic-bezier(.2,.8,.2,1)' }); }catch(e){}
   }).observe(mi, { childList:true });

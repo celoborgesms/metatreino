@@ -17,6 +17,10 @@ for(const equip of EQUIPS) for(const level of NIVEIS) for(const goal of OBJ) for
     const w2 = JSON.parse(JSON.stringify(w));
     if(w2.exercises.length >= 3){ const o = w2.exercises[1]; w2.exercises[1] = Object.assign({}, w2.exercises[2], { id:'troca-'+o.id, name:'Exercício trocado', troca:{ orig:o, dia:'2099-01-01' } }); }
     w2.exercises.forEach(cur=>{
+      // Beta 49 (2): as duas abas não repetem exercício entre si
+      const rO = app.mtCandidatosTroca(w2, cur, 'ocupado', setup), rP = app.mtCandidatosTroca(w2, cur, 'preferencia', setup);
+      if(rO && rP){ const ids = r=>[...r.mais, ...r.compat, ...r.mesmoEq, ...r.secund, ...r.favs].map(x=>x.id); const a = new Set(ids(rO)); const rep = ids(rP).filter(x=>a.has(x));
+        t('"Equipamento ocupado" e "Prefiro outro" sem exercício em comum', !rep.length, `${equip}/${level} ${w.k} ${cur.name}: ${rep}`); }
       ['ocupado','preferencia','grupo'].forEach(mot=>{
         const r = app.mtCandidatosTroca(w2, cur, mot, setup); if(!r) return; casos++;
         const lista = [...r.mais, ...r.compat, ...r.mesmoEq, ...r.secund];

@@ -135,10 +135,45 @@ async def outros(b):
     confere('offline: gerador de PDF guardado na instalação e rede lenta com tempo limite', "jspdf.umd.min.js" in sw and 'REDE_TIMEOUT_MS' in sw)
     confere('sem erros', not erros, erros[:3]); await ctx.close()
 
+
+async def rodada2(b):
+    print('5. Segunda rodada: troca sem repetir entre abas, mapa muscular, telas sem piscar, planos, feriado')
+    ctx, pg, erros = await nova(b, 'uR2')
+    r = await pg.evaluate("""(()=>{ const out = []; state.modules.lift.plan.workouts.forEach(w=>w.exercises.forEach(cur=>{
+        if(['corpo','improvisado'].includes(mtEquipClasse(cur))) return;
+        const nomes = m=>{ mtTrocaAbrir(cur.id, m); return [...document.querySelectorAll('#modal-inner .tx-item:not(.tx-volta) .tx-nome')].map(e=>e.textContent); };
+        const a = nomes('ocupado'), p = nomes('preferencia'); const rep = a.filter(x=>p.includes(x)); if(rep.length) out.push(cur.name + ': ' + rep.join(', ')); })); closeModal(); return out; })()""")
+    confere('"Equipamento ocupado" e "Prefiro outro" nunca mostram o mesmo exercício', not r, r[:5])
+    await pg.evaluate("state.active='lift'; goTab('sessions')"); await pg.wait_for_timeout(600)
+    confere('Treinos: cartão com aquecimento, principal e volta à calma + mapa muscular', await pg.evaluate("!!document.getElementById('mm-card') && document.querySelectorAll('#mm-card .mm-fase').length===3 && document.querySelectorAll('#mm-card .mm-svg').length===2"))
+    n = await pg.evaluate("document.querySelectorAll('#mm-card .mm-m.on').length")
+    confere('músculos do treino de hoje coloridos', n > 0, n)
+    await pg.evaluate("mmSel([...document.querySelectorAll('#mm-card .mm-m.on')].find(e=>e.style.fillOpacity==='1' || e.style.fillOpacity==='').dataset.m)"); await pg.wait_for_timeout(200)
+    t = await pg.evaluate("document.getElementById('mm-info').innerText")
+    confere('tocar no músculo mostra o que faz, exercícios de hoje e séries da semana', 'Hoje, principal' in t and 'Últimos 7 dias' in t, t[:200])
+    await pg.evaluate("mmFase('aq')")
+    confere('aquecimento explica o que fazer', 'cardio leve' in await pg.evaluate("document.getElementById('mm-fase-txt').innerText"))
+    await pg.evaluate("mmModo('semana'); mmSexo()"); await pg.wait_for_timeout(200)
+    confere('semana e corpo feminino/masculino', await pg.evaluate("document.querySelector('#mm-card .mm-tit').textContent.includes('7 dias') && document.querySelectorAll('#mm-card .mm-svg').length===2"))
+    await pg.evaluate("window.__anims=0; const o=Element.prototype.animate; Element.prototype.animate=function(){ if(this.id==='modal-inner') window.__anims++; return o.apply(this,arguments); }; window.mtPremium=()=>true; openNutri(); document.querySelectorAll('details.mealc[ontoggle*=nutriTog]').forEach(d=>d.open=true); 0"); await pg.wait_for_timeout(400)
+    y0 = await pg.evaluate("""(()=>{ const d=[...document.querySelectorAll('details.mealc[ontoggle*=nutriTog]')].filter(x=>x.querySelector('.ba .ib')).slice(-1)[0]; d.scrollIntoView({block:'start'}); window.__anims=0; return Math.round(d.getBoundingClientRect().top); })()""")
+    await pg.evaluate("""(()=>{ const d=[...document.querySelectorAll('details.mealc[ontoggle*=nutriTog]')].filter(x=>x.querySelector('.ba .ib')).slice(-1)[0]; d.querySelector('.ba .ib:last-child').click(); })()"""); await pg.wait_for_timeout(500)
+    r = await pg.evaluate("""(()=>{ const d=[...document.querySelectorAll('details.mealc[ontoggle*=nutriTog]')].filter(x=>x.querySelector('.ba .ib')).slice(-1)[0]; return [Math.round(d.getBoundingClientRect().top), window.__anims]; })()""")
+    confere('plano alimentar: tirar um alimento não pisca e não volta ao topo', abs(r[0] - y0) <= 2 and r[1] == 0, [y0, r])
+    await pg.evaluate("closeModal(); openPlanos()"); await pg.wait_for_timeout(200)
+    confere('planos: tabela inteira visível, sem arrastar para o lado', await pg.evaluate("(()=>{ const w=document.querySelector('.pl-tabela-wrap'); return w.scrollWidth <= w.clientWidth + 1; })()"))
+    await pg.evaluate("closeModal()")
+    r = await pg.evaluate("""(()=>{ const og = window.feriadoDe; const amanha = chaveDia(new Date(Date.now()+86400000)); window.feriadoDe = d=>chaveDia(new Date(d))===amanha ? 'Feriado teste' : null;
+        state.active='run'; const run = state.modules.run; const dia = (getDayIdx()%7)+1; if(!run.plan.workouts.some(w=>w.dayIdx===dia)) run.plan.workouts.push(Object.assign({}, run.plan.workouts[0], { dayIdx:dia }));
+        state.feriados = {}; run.setup.terrain = 'asfalto'; renderFeriado(); const rua = !document.getElementById('card-feriado').classList.contains('hidden');
+        run.setup.terrain = 'esteira'; renderFeriado(); const est = !document.getElementById('card-feriado').classList.contains('hidden'); window.feriadoDe = og; run.setup.terrain = 'asfalto'; return { rua, est }; })()""")
+    confere('feriado amanhã: aviso de academia só para corrida na esteira (não na rua)', r['rua'] is False and r['est'] is True, r)
+    confere('sem erros', not erros, erros[:3]); await ctx.close()
+
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
-        await cardapio(b); await conquistas(b); await desafio(b); await outros(b)
+        await cardapio(b); await conquistas(b); await desafio(b); await outros(b); await rodada2(b)
         await b.close()
     print(f'\nBeta 49: {ok} ok, {falhou} falha(s)')
     if falhou: sys.exit(1)

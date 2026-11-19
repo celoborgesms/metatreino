@@ -55,8 +55,9 @@ async def substituicao(b):
     r = await pg.evaluate("""(()=>{ const e = {id:'crossover-no-cabo-alto', name:'Crossover no Cabo (alto)', sub:'Peito Inferior', part:'Peito', sets:3, reps:'12', rest:'60s'}; const w = {exercises:[e]};
       const o = mtCandidatosTroca(w, e, 'ocupado', {equip:'academia'}), p = mtCandidatosTroca(w, e, 'preferencia', {equip:'academia'});
       const pos = (c,n)=>[...c.mais, ...c.compat].findIndex(x=>x.ex.name===n);
-      return { ocupFim: pos(o,'Crossover no Cabo (baixo)') === -1 && o.mesmoEq.some(x=>x.ex.name==='Crossover no Cabo (baixo)'), prefPrimeiro: (p.mesmoEq[0]||{ex:{}}).ex.name === 'Crossover no Cabo (baixo)', aviso:(o.mesmoEq.find(x=>x.ex.name==='Crossover no Cabo (baixo)')||{}).aviso }; })()""")
-    confere('aparelho ocupado: o mesmo tipo de aparelho vai para o fim, com aviso; por preferência vem primeiro (Beta 44)', r['ocupFim'] and r['prefPrimeiro'] and 'mesmo tipo de equipamento' in (r['aviso'] or ''), r)
+      const todos = c=>[...c.mais, ...c.compat, ...c.mesmoEq, ...c.secund, ...c.favs];
+      return { ocupFora: !todos(o).some(x=>x.ex.name==='Crossover no Cabo (baixo)'), prefPrimeiro: (p.mesmoEq[0]||{ex:{}}).ex.name === 'Crossover no Cabo (baixo)' }; })()""")
+    confere('aparelho ocupado: o mesmo tipo de aparelho não aparece (fica só em "Prefiro outro", onde vem primeiro)', r['ocupFora'] and r['prefPrimeiro'], r)
     # equipamento, limitações e nível
     r = await pg.evaluate("""(()=>{ const e = {id:'supino-reto-com-halteres', name:'Supino Reto com Halteres', sub:'Peito', part:'Peito'}; const w={exercises:[e]};
       const h = mtCandidatosTroca(w, e, 'ocupado', {equip:'halteres'}); const todos = [...h.mais,...h.compat,...h.secund];

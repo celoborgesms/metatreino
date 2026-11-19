@@ -233,6 +233,14 @@ function mtCandidatosTroca(w, cur, motivo, setup){
   // favoritos compatíveis no topo; favoritos que só servem como "secundária" ficam fora deste destaque
   out.favs = [...(motivo === 'preferencia' ? out.mesmoEq : []), ...out.mais, ...out.compat].filter(x=>x.fav);
   // Beta 49: cada exercício aparece uma vez só, na primeira seção em que é mostrado (mesmo catalogado em dois grupos)
+  // Beta 49 (2): as duas abas NUNCA mostram o mesmo exercício. "Equipamento ocupado" = só OUTRO tipo de
+  // equipamento (o mesmo aparelho/estação também pode estar ocupado). "Prefiro outro" = só o MESMO tipo de
+  // equipamento (o aparelho está livre). Se uma aba ficar sem opção, ela fica vazia em vez de repetir a outra.
+  if(motivo === 'ocupado' || motivo === 'preferencia'){
+    const mesmo = x=>mtEquipClasse(x.ex) === baseEq;
+    const fica = x=> motivo === 'ocupado' ? !mesmo(x) : mesmo(x);
+    ['mais','compat','mesmoEq','secund','favs'].forEach(k=>{ out[k] = out[k].filter(fica); });
+  }
   const vistos = new Set();
   const unico = arr=>arr.filter(x=>{ if(vistos.has(x.id)) return false; vistos.add(x.id); return true; });
   const ordem = motivo === 'preferencia' ? ['mesmoEq','mais','compat','secund'] : ['mais','compat','mesmoEq','secund'];
@@ -326,7 +334,7 @@ function mtTrocaAbrir(exId, motivo){
     </div><p class="tx-motivo-d">Outros exercícios que trabalham ${mtEsc(cur.part ? 'o mesmo grupo (' + cur.part + ')' : 'a mesma região')}, pelos mesmos critérios de compatibilidade.</p>` : `<div class="seg-mini" role="group" aria-label="Motivo da troca">
       <button type="button" class="${_mtTroca.motivo==='ocupado'?'on':''}" aria-pressed="${_mtTroca.motivo==='ocupado'}" onclick="mtTrocaAbrir('${mtJsStr(exId)}','ocupado')">Equipamento ocupado</button>
       <button type="button" class="${_mtTroca.motivo==='preferencia'?'on':''}" aria-pressed="${_mtTroca.motivo==='preferencia'}" onclick="mtTrocaAbrir('${mtJsStr(exId)}','preferencia')">Prefiro outro</button>
-    </div><p class="tx-motivo-d">${_mtTroca.motivo==='ocupado' ? 'Primeiro, opções em <b>outro equipamento</b>, para você não esperar. O mesmo tipo de aparelho fica no fim.' : 'O aparelho está livre e você quer variar: primeiro, opções no <b>mesmo tipo de equipamento</b> e variações de ênfase.'}</p>`}
+    </div><p class="tx-motivo-d">${_mtTroca.motivo==='ocupado' ? 'Só opções em <b>outro equipamento</b>, para você não esperar. As do mesmo equipamento ficam em “Prefiro outro”.' : 'O aparelho está livre e você quer variar: só opções no <b>mesmo tipo de equipamento</b>. As de outro equipamento ficam em “Equipamento ocupado”.'}</p>`}
     <div class="tx-lista">
       ${orig ? `<div class="tx-sec"><div class="tx-item tx-volta" role="button" tabindex="0" onclick="mtTrocaDesfazer('${mtJsStr(exId)}')"><div class="tx-info"><div class="tx-nome">Voltar ao original: ${mtEsc(orig.name)}</div><div class="tx-sub">Desfaz a troca deste treino</div></div><span class="tx-go">↩</span></div></div>` : ''}
       ${sec('Seus favoritos compatíveis', '', r.favs, 'fav')}
@@ -335,7 +343,9 @@ function mtTrocaAbrir(exId, motivo){
       ${sec('Compatíveis', 'Mesmo grupo, variação do movimento ou da ênfase', r.compat.filter(x=>!favIds.has(x.id)), 'compat')}
       ${nada ? (semEq
         ? `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} neste grupo muscular${(mod.setup.lim||[]).length?' com as limitações informadas':''}. Se usar uma das opções abaixo, saiba que <b>não equivalem</b> ao exercício original.</div>`
-        : `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível</b> para ${mtEsc(cur.name)} com o seu equipamento${(mod.setup.lim||[]).length?' e as limitações informadas':''}. Se preferir, espere o equipamento liberar ou use uma das opções abaixo, sabendo que <b>não equivalem</b> ao exercício original.</div>`) : ''}
+        : _mtTroca.motivo==='preferencia'
+          ? `<div class="tx-vazio"><b>Não há outra opção no mesmo tipo de equipamento</b> para ${mtEsc(cur.name)}${(mod.setup.lim||[]).length?' com as limitações informadas':''}. As opções em outro equipamento estão em <b>Equipamento ocupado</b>${r.secund.length?'; abaixo, outras do mesmo equipamento que <b>não equivalem</b> ao original':''}.</div>`
+          : `<div class="tx-vazio"><b>Não foi encontrada alternativa compatível em outro equipamento</b> para ${mtEsc(cur.name)}${(mod.setup.lim||[]).length?' com as limitações informadas':''}. Se preferir, espere o equipamento liberar, veja <b>Prefiro outro</b> (mesmo equipamento) ou use uma das opções abaixo, sabendo que <b>não equivalem</b> ao exercício original.</div>`) : ''}
       ${_mtTroca.motivo==='ocupado' ? sec('No mesmo tipo de equipamento', 'Também servem, mas podem estar ocupados', r.mesmoEq.filter(x=>!favIds.has(x.id)), 'compat') : ''}
       ${r.secund.length ? (nada ? sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')
         : `<details class="tx-mais-opc"><summary>Outras opções do grupo (${r.secund.length}) — não equivalentes</summary>${sec('Alternativas secundárias', 'Treinam o mesmo grupo de outro jeito — não são equivalentes ao original', r.secund, 'secund')}</details>`) : ''}
