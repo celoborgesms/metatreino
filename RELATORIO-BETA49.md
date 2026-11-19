@@ -83,7 +83,24 @@
   - `acabamento.py`: 3 itens sobre "desenho próprio no painel do administrador". Na Beta 48 são 4.
   - `atualizacao.py`: neste ambiente a página fica na tela de login. Repeti com a Beta 48 só com o número da versão trocado e falhou igual. A abertura offline da versão nova (item 5 do teste) passa.
 
+## 5b. Segunda rodada (depois de publicar as regras)
+| Pedido | Causa real | O que foi feito | Arquivo |
+|---|---|---|---|
+| "Equipamento ocupado" e "Prefiro outro" repetindo | As duas abas usavam a mesma lista e só mudava a ordem (o mesmo aparelho ia para o fim em "ocupado") | Abas separadas pelo tipo de equipamento: ocupado = outro equipamento; prefiro outro = mesmo equipamento. Sem opção → aba vazia com o motivo | `41-substituicao-favoritos.js` |
+| Mapa muscular como na imagem | — (novo) | Cartão no topo da sessão de musculação: etapas (aquecimento, principal, volta à calma) + corpo frente/costas, masculino/feminino, músculos coloridos; o toque mostra função, exercícios de hoje e séries da semana | `53-mapa-muscular.js` (novo) |
+| Plano alimentar e casa piscando e voltando ao topo | Cada mudança redesenhava a tela inteira, a animação de abrir rodava de novo e a rolagem voltava antes de outros blocos entrarem. Na casa, a nuvem devolvia os mesmos dados com as chaves em outra ordem | Redesenho da mesma tela sem animação e com o bloco visível no mesmo lugar; comparação estável dos dados da casa; mudança no perfil de outra pessoa só redesenha se mudar restrição | `52-telas-sem-piscar.js` (novo), `43-…`, `49-alimentacao-casa.js` |
+| Planos cortando texto | Tabela com largura mínima fixa | Colunas 50/25/25 com quebra de linha | `52-telas-sem-piscar.js` |
+| Feriado avisando corrida no asfalto | O aviso valia para qualquer treino no dia seguinte | Só academia (musculação) ou corrida na esteira | `app.js` (`renderFeriado`) |
+| Melhorias da outra IA | — | Exercícios com o peso do corpo entram na análise de evolução do assistente (pelas repetições) | `05-home-inteligente-meta-assistente.js` |
+
+**Testes da segunda rodada:**
+- `beta49.py`: **43 ok**. Inclui abas sem nome repetido em todos os exercícios do plano, mapa que desenha e responde ao toque, Hoje/Semana, corpo feminino, tirar alimento sem animação e sem mudar a posição, planos sem rolagem lateral, feriado asfalto × esteira.
+- `troca-sem-repetir.js`: **38.584 ok**, também conferindo que as abas não têm nada em comum.
+- `beta41.py` atualizado para a regra nova (o mesmo aparelho não aparece mais em "ocupado"): **72 ok**.
+- Regressão de novo, tudo passando: beta37 (8), beta38 (87), beta39 (94), beta40 (128), beta42 (12), beta43 (78), beta44 (51), beta46 (29), beta48 (56), casa-dois-celulares (30), registro-series (23), serie-descanso (24), cronometro (21), compartilhar (10), acessibilidade (7) e as suítes Node.
+
 ## 6. Pendências (honestas)
+- **Mapa muscular:** o desenho é próprio (não é cópia da sua imagem) e foi conferido em tela de celular nos temas claro e escuro. Principal/auxiliar vem do grupo e subgrupo de cada exercício do catálogo; exercício fora do catálogo usa só o grupo informado.
 - **Regras do Firestore:**
   - Não rodaram no emulador oficial: o download dele é bloqueado aqui.
   - Foram traduzidas linha a linha para as duas nuvens simuladas, que os testes usam.

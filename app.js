@@ -1260,7 +1260,7 @@ function renderFeriado(){
   if(fH && wHoje && !feito && !state.feriados[kH]){
     card.classList.remove('hidden');
     card.innerHTML = `<div class="card-title">🎌 Hoje é feriado: ${fH}</div>
-      <div class="card-sub" style="margin-top:4px;line-height:1.5">${lift?'Muita academia fecha em feriado. O que você vai fazer com o treino de hoje?':'Feriado é um ótimo dia para correr ao ar livre. Ou descansar sem culpa.'}</div>
+      <div class="card-sub" style="margin-top:4px;line-height:1.5">${lift?'Muita academia fecha em feriado. O que você vai fazer com o treino de hoje?':(((mod.setup||{}).terrain)==='esteira'?'Muita academia fecha em feriado. Se a esteira não estiver disponível, dá para correr na rua no mesmo tempo, em ritmo de conversa.':'Feriado é um ótimo dia para correr ao ar livre. Ou descansar sem culpa.')}</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
         ${lift?`<button class="btn btn-primary" onclick="feriadoEscolha('casa')">🏠 Treinar em casa (peso do corpo)</button>
         <button class="btn btn-ghost" onclick="feriadoEscolha('academia')">🏋️ Minha academia está aberta</button>`:`<button class="btn btn-primary" onclick="feriadoEscolha('academia')">🏃 Vou treinar</button>`}
@@ -1273,7 +1273,10 @@ function renderFeriado(){
     card.innerHTML = `<div class="card-title">🏠 Feriado: treino em casa ativado</div><div class="card-sub">Hoje seus exercícios estão na versão sem equipamento. Amanhã a ficha volta ao normal.</div>`;
     return;
   }
-  if(fA && !state.feriados['aviso-'+kA]){
+  // Beta 49: o aviso de "academia fechada" só faz sentido para quem depende de academia: musculação com
+  // equipamento de academia ou corrida na esteira. Corrida na rua, trilha ou pista não recebe esse aviso.
+  const precisaAcademia = lift ? (((mod.setup||{}).equip||'academia') === 'academia') : (((mod.setup||{}).terrain||'asfalto') === 'esteira');
+  if(fA && !state.feriados['aviso-'+kA] && precisaAcademia){
     const wAm = ws.find(w=>w.dayIdx===((getDayIdx()%7)+1));
     if(wAm){
       card.classList.remove('hidden');

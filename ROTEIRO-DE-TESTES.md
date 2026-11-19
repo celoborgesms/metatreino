@@ -3,6 +3,7 @@
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
 ## 00000. Beta 49 — casa, conquistas e corrida
+- [ ] **Segunda rodada:** trocar exercício sem nome em comum entre "Equipamento ocupado" e "Prefiro outro"; cartão de etapas e "Músculos trabalhados" na sessão de musculação (toque, Hoje/Semana, feminino/masculino); plano alimentar e casa sem piscar nem subir; tabela de planos sem arrastar; aviso de feriado só com academia ou esteira.
 - [ ] **Casa com dois celulares** (contas diferentes): criar o grupo numa conta comum funciona; o outro entra pelo código; mesmo prato, quantidades diferentes; só o administrador troca o prato e tira/acrescenta alimentos; lista "Casa toda" mostra a parte de cada um; PDF da casa; passar a administração; sair.
 - [ ] **Conquistas:** conta nova de corredor experiente (tempo recente de 21 km no cadastro) → primeiro registro de 21 km mostra no máximo 5 cartões, com "Primeira atividade no MetaTreino" e "Experiência reconhecida". Conta de iniciante → os primeiros 5 km aparecem como conquista nova.
 - [ ] **Desafios:** sem botão "Participar"; "você está participando". Sair do desafio → não volta sozinho. "Medalhas e metas" separa medalhas de desafio das metas do mês.

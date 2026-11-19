@@ -19,6 +19,12 @@
 15. **Cadastro:** o boneco do primeiro passo virou anéis de progresso (estilo relógio).
 16. **Semana com menos tempo (corrida) no domingo:** quando o único dia que sobra já tem o treino, o app diz que nada muda (antes mostrava "Aplicar" sem efeito).
 17. **Offline:** o gerador de PDF já fica guardado na instalação; rede muito lenta abre o app pela cópia guardada após 4 s.
+18. **Trocar exercício — "Equipamento ocupado" × "Prefiro outro" sem repetir:** as abas agora são separadas pelo equipamento. "Ocupado" mostra só opções em OUTRO equipamento; "Prefiro outro" só no MESMO tipo de equipamento. Um exercício nunca aparece nas duas. Sem opção, a aba fica vazia com o motivo.
+19. **Mapa muscular (Treinos › sessão de musculação, no topo):** etapas da sessão (Aquecimento · Principal · Volta à calma; toque para ver o que fazer e quanto tempo) e "Músculos trabalhados": corpo de frente e de costas, masculino ou feminino, com os músculos do treino coloridos (cor cheia = principal, clara = auxiliar). Tocar num músculo mostra o que ele faz, quais exercícios de hoje o trabalham e as séries dos últimos 7 dias comparadas à faixa de 10–20 séries por semana. "Semana" pinta pelo volume dos últimos 7 dias. Desenho em SVG feito no próprio app (sem imagens baixadas), guardado depois do primeiro desenho para não travar. Fica recolhido se você fechar.
+20. **Plano alimentar e Alimentação da casa sem piscar:** tirar um alimento, marcar "Comi" ou mudar algo na casa não refaz a animação da tela e não volta ao topo. A casa também parou de redesenhar quando a nuvem devolve os mesmos dados.
+21. **Planos Básico e Premium:** a tabela cabe na tela; os textos quebram linha, sem arrastar para o lado.
+22. **Aviso de feriado:** só aparece quando o treino de amanhã depende de um lugar que pode fechar (academia, ou corrida na esteira). Corrida na rua/asfalto, trilha ou pista não recebe mais o aviso.
+23. **Meta Assistente — exercícios com o peso do corpo:** flexão, barra fixa e afins entram na análise de evolução pelas repetições da melhor série (antes ficavam de fora por não terem carga).
 
 ## Como testar a casa com dois celulares
 - [ ] Publique o `firestore.rules`.
@@ -29,6 +35,13 @@
 - [ ] Celular 1: troque o prato, tire um alimento (✕ › "Tirar do prato da casa") e acrescente um → aparece no 2 em alguns segundos, na porção dele.
 - [ ] Lista de compras › "Casa toda": cada item mostra a parte de cada um. 📄 PDF da casa.
 - [ ] Tela da casa › "Tornar administrador" no outro; depois "Sair do grupo".
+
+## Como testar o resto desta rodada
+- [ ] Trocar exercício: compare "Equipamento ocupado" e "Prefiro outro" — nenhum nome em comum.
+- [ ] Treinos (musculação): toque em Aquecimento / Principal / Volta à calma; abra "Músculos trabalhados", toque num músculo colorido, troque Hoje/Semana e "Ver corpo feminino".
+- [ ] Plano alimentar: role até o jantar, tire um alimento (✕) → a tela não pisca nem sobe.
+- [ ] Perfil › Planos: a tabela inteira cabe sem arrastar.
+- [ ] Corrida no asfalto com feriado amanhã → sem aviso de academia. Na esteira → com aviso.
 
 # MetaTreino 2027.1 Beta 48 — Cupons de Premium e correções dos prints
 
