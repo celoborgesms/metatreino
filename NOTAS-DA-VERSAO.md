@@ -1,3 +1,31 @@
+# MetaTreino 2027.1 Beta 55 — Auditoria: dados coerentes entre módulos
+
+**Não precisa publicar o `firestore.rules`.** Nenhum arquivo novo na raiz; nenhum campo novo na nuvem além dos que já existiam (`conqPend`, `nutriLog`, `importLog`).
+
+1. **Retomada por modalidade.** A musculação olha só treinos de musculação; a corrida, só corridas. E só é retomada quando havia treino regular antes da pausa (2+ sessões nas 6 semanas anteriores): um registro isolado e antigo não define "as cargas de antes". Na corrida, o título do aviso também vem do plano de corrida.
+2. **Importação integrada:**
+   - conquistas aparecem como no registro manual;
+   - a atividade importada pode ser compartilhada como imagem, com FC, subida e o percurso;
+   - o detalhe da atividade importada mostra os dados do arquivo original e permite baixar o arquivo original;
+   - o histórico técnico de importações abre a atividade;
+   - um arquivo antigo não vira mais "treino do plano" de hoje;
+   - uma atividade com mais de 90 dias avisa que vai para o Histórico completo.
+3. **Detalhe de toda atividade:** a registrada à mão também mostra modalidade, ritmo, esforço e origem antes do formulário de edição.
+4. **Números impossíveis:** se o ritmo informado for mais rápido que o recorde mundial (ex.: 8 km em 10 min), o app pergunta antes de salvar. Se o aluno salvar assim mesmo, a atividade fica no histórico, mas não conta para recordes, conquistas nem para o melhor ritmo do PDF.
+5. **Conquistas novas:** cada uma fica em "Novas" até o aluno tocar nela (só aquela sai). Abrir a aba não marca nada como visto. Existe também "Marcar todas como vistas".
+6. **Desafios:** seção "Novidades" no topo, com cada novidade (nova conquista, medalha, desafio concluído, desafio do mês encerrado, novo desafio) e onde ela está. A aba mostra um número pequeno em vez de dois pontos diferentes.
+7. **Progresso:** sem o seletor Musculação | Corrida, porque a modalidade vem do Início e do Perfil. O subtítulo diz qual está sendo mostrada. O calendário mostra só a modalidade ativa, e os gráficos de caminhada e bike saem da musculação.
+8. **Treinos:** na musculação, o atalho virou "Importar do relógio". O registro manual está dentro de Integrações e atividades e continua no módulo de corrida.
+9. **Alimentação — trocar alimento:**
+   - o app sugere opções do mesmo grupo, na quantidade equivalente, e mostra a diferença de calorias e macros;
+   - a troca só acontece depois de confirmar e vale só naquele dia, só para o aluno: o cardápio, o prato da casa e a lista de compras não mudam;
+   - respeita as restrições de vegetariano, lactose e glúten;
+   - quando não há equivalente, o app avisa em vez de sugerir qualquer coisa.
+10. **Anatomia:** a ficha do músculo ganhou "Seu histórico com este músculo": último estímulo, corrida recente que usou o músculo e próximo treino previsto. Não mostra percentual de recuperação.
+11. **PDF:** tabela por modalidade (corrida, caminhada, bike) com comparação com o período anterior e origem. A FC do relógio aparece na lista de sessões, e as importadas são marcadas com *.
+12. **Login:** o aviso "O app demorou para abrir" não conta mais o tempo escolhendo a conta do Google e some sozinho se o app abrir. A etapa 1 do cadastro ("Escolha o visual") não pisca mais antes da tela inicial.
+13. **Telas pequenas:** chips de gráficos, Cardio, Anatomia, os dias em Treinos e o resumo de Conquistas quebram linha em vez de esconder conteúdo para o lado. O calendário, que passava 5 px da tela em 360 px, foi corrigido.
+
 # MetaTreino 2027.1 Beta 54 — Integrações e atividades (GPX, TCX e FIT)
 
 **Não precisa publicar o `firestore.rules`.** Arquivo novo na raiz: `fit-parser.min.js` (precisa subir junto).

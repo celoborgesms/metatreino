@@ -3800,7 +3800,7 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
       <div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div>
     </div>
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 54</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 55</span>
     </div>
   </div>
 </div>
@@ -3872,14 +3872,31 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
       + '<pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;color:#888;margin-top:16px">'+texto().replace(/</g,'&lt;')+'</pre>';
     document.body.appendChild(d);
   }
-  setTimeout(function(){
-    var preso = window.__loginIniciado || document.documentElement.classList.contains('restaurando') || (typeof fbAuth === 'undefined');
-    if(!window.__mtOk && preso) mostra();
-  }, 16000);
+  // Beta 55: o relógio conta só o tempo em que o app está na tela e esperando por ele mesmo. Antes eram
+  // 16 s desde a abertura — e o tempo escolhendo a conta do Google (numa aba por cima do app) entrava
+  // na conta: o login voltava e caía em "O app demorou para abrir". Agora:
+  //  • a espera do login conta a partir de quando o Google devolve a conta (__mtCarregandoConta);
+  //  • com o app em segundo plano (aba do Google por cima) o relógio para;
+  //  • se o app terminar de abrir depois do aviso, o aviso some sozinho.
+  var t0 = Date.now(), visivel = 0, ultimo = Date.now();
+  var vig = setInterval(function(){
+    var agora = Date.now();
+    if(document.visibilityState !== 'hidden') visivel += agora - ultimo;
+    ultimo = agora;
+    var d = document.getElementById('mt-diag');
+    if(window.__mtOk){ if(d) d.remove(); clearInterval(vig); return; }
+    if(d) return;
+    var cl = window.__mtCarregandoConta;
+    var preso = (cl && agora - cl > 20000) ||
+      ((document.documentElement.classList.contains('restaurando') || typeof fbAuth === 'undefined') && visivel > 16000) ||
+      (window.__loginIniciado && !cl && visivel > 30000);
+    if(preso) mostra();
+    if(agora - t0 > 600000) clearInterval(vig);
+  }, 1000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.54"></script>
-<script src="./app-plus.js?v=2027.1-beta.54"></script>
+<script src="./app.js?v=2027.1-beta.55"></script>
+<script src="./app-plus.js?v=2027.1-beta.55"></script>
 <script>
 // Beta 36: app.js e app-plus.js precisam ser da MESMA versão. Se um deles não carregou ou veio de outra
 // versão (cache no meio de uma atualização), recarrega uma vez — senão partes antigas (como a tela antiga

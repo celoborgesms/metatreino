@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 54 — app-plus.js
+// MetaTreino 2027.1 Beta 55 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.54' };
+const MTP = { versao: '2027.1-beta.55' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -3217,9 +3217,17 @@ Object.assign(window, { caliAbrirTroca, caliDefinirPos, caliPreferir, caliQual, 
 //   3. progressão (dados mostram que dá para subir)
 //   4. normal
 // =====================================================================
-const RET = { PAUSA_MIN: 7, JANELA: 14 };
+const RET = { PAUSA_MIN: 7, JANELA: 14, BASE_DIAS: 42, BASE_MIN: 2 };
+// Beta 55: a retomada da MUSCULAÇÃO olha só o histórico de musculação. Antes usava o histórico de todas as
+// modalidades (mtHist): uma caminhada importada de 53 dias atrás fazia o app dizer "De volta depois de 53 dias"
+// e cortar cargas e séries de quem treinou musculação ontem. A corrida tem a retomada dela (rPausa, parte 11).
+// Também só é retomada quando havia treino de verdade antes da pausa: pelo menos 2 sessões de musculação nas
+// 6 semanas que terminaram nela. Um registro isolado e antigo (ex.: um treino importado de meses atrás) é
+// histórico/experiência, não "a condição de antes" — não serve de base para dizer quanto da carga usar.
+function mtHistMusc(){ return (((state.modules.lift||{}).history)||[]).filter(x=>x && x.at).sort((a,b)=>a.at-b.at); }
+function _retBase(h, inicioPausa){ return h.filter(x=>x.at < inicioPausa + DIA_MS && x.at >= inicioPausa - RET.BASE_DIAS*DIA_MS).length; }
 function estadoTreino(){
-  const h = mtHist();
+  const h = mtHistMusc();
   const out = { tipo:'normal', prioridade:4 };
   if(!h.length) return out;
   const dias = [...new Set(h.map(x=>mtDia0(x.at)))].sort((a,b)=>a-b);
@@ -3235,6 +3243,7 @@ function estadoTreino(){
       if(gap >= RET.PAUSA_MIN){ pausa = gap; retorno = dias[i]; inicioPausa = dias[i-1]; break; }
     }
   }
+  if(pausa >= RET.PAUSA_MIN && _retBase(h, inicioPausa) < RET.BASE_MIN){ pausa = 0; retorno = null; inicioPausa = null; }
   if(pausa >= RET.PAUSA_MIN){
     // referência inicial de 70%, ajustada ao histórico e à experiência (nunca regra fixa)
     const antes = h.filter(x=>x.at < inicioPausa + DIA_MS && x.at >= inicioPausa - 42*DIA_MS).length;
@@ -3263,6 +3272,17 @@ function estadoTreino(){
   if(prog) return { tipo:'progressao', prioridade:3, dica:prog, desde };
   return Object.assign(out, { desde });
 }
+// pausa só das corridas (para quem registra corridas sem plano de corrida); mesma regra de base
+function estadoTreinoCorrida(){
+  const h = (((state.modules.run||{}).history)||[]).filter(x=>x && x.at && (!x.activity || x.activity==='corrida')).sort((a,b)=>a.at-b.at);
+  if(!h.length) return { tipo:'normal' };
+  const dias = [...new Set(h.map(x=>mtDia0(x.at)))]; const hoje = mtDia0(); const ult = dias[dias.length-1];
+  let pausa = Math.round((hoje-ult)/DIA_MS), ini = ult, retorno = null;
+  if(pausa < RET.PAUSA_MIN){ pausa = 0;
+    for(let i=dias.length-1;i>0;i--){ if(hoje - dias[i] >= RET.JANELA*DIA_MS) break; const g = Math.round((dias[i]-dias[i-1])/DIA_MS); if(g >= RET.PAUSA_MIN){ pausa = g; ini = dias[i-1]; retorno = dias[i]; break; } } }
+  if(pausa < RET.PAUSA_MIN || _retBase(h, ini) < RET.BASE_MIN) return { tipo:'normal' };
+  return { tipo:'retomada', pausa, retorno, semana: !retorno || (hoje-retorno) < 7*DIA_MS ? 1 : 2 };
+}
 function cargaRetomada(exId, est){
   est = est || estadoTreino();
   const ref = est.inicioPausa ? est.inicioPausa + DIA_MS : Date.now();
@@ -3285,7 +3305,8 @@ const _progressionTipOrig = progressionTip;
 const _liftLoadSugB13 = liftLoadSuggestion;
 window.liftLoadSuggestion = function(){
   const est = estadoTreino();
-  if(est.tipo==='retomada') return { emo:'🔁', txt: textoRetomada(est).replace(/<\/?b>/g,'') };
+  // Beta 55: curto — o texto completo já está no aviso de retomada do Início (antes o mesmo parágrafo aparecia duas vezes)
+  if(est.tipo==='retomada') return { emo:'🔁', txt: `Retomada: cerca de ${est.pct}% das cargas de antes${est.menosSeries?' e uma série a menos por exercício':''}. Não suba a carga nesta semana.` };
   const s = _liftLoadSugB13.apply(this, arguments);
   // "treino puxado" não vira "mantenha a carga" automaticamente: segura a progressão e deixa espaço para reduzir
   if(s && /Último treino foi puxado/.test(s.txt)) return { emo:'⚖️', txt:'Último treino foi puxado. Não suba a carga hoje: se as primeiras séries pesarem mais que o normal, reduza ~5% e priorize a execução.' };
@@ -3294,7 +3315,9 @@ window.liftLoadSuggestion = function(){
 window.progressionTip = function(){ const est = estadoTreino(); if(est.tipo==='retomada' || est.tipo==='recuperacao') return null; return _progressionTipOrig.apply(this, arguments); };
 const _runSugB13 = runSmartSuggestion;
 window.runSmartSuggestion = function(w){
-  const est = estadoTreino();
+  // Beta 55: a dica da corrida não usa mais a retomada da musculação; com plano de corrida, quem decide é rPausa
+  const temMotor = !!(state.modules.run && state.modules.run.plan && state.modules.run.plan.motor);
+  const est = temMotor ? { tipo:'normal' } : estadoTreinoCorrida();
   if(est.tipo==='retomada') return { emo:'🔁', txt:`Retomada após ${est.pausa} dias: corra em ritmo de conversa e faça cerca de ${est.semana===1?'60–70%':'80%'} da distância planejada. Sem tiros nesta ${est.semana===1?'primeira ':''}semana.` };
   return _runSugB13.apply(this, arguments);
 };
@@ -3337,7 +3360,6 @@ analiseRetomada = function(){
   t += `<b>Semana 2</b> — ~${Math.min(95, est.pctBase+15)}% das cargas, séries normais.${est.semana===2?' ← <i>você está aqui</i>':''}<br>`;
   t += `<b>Depois</b> — o app reavalia pelas suas séries da semana 2 e só então volta a sugerir progressão.<br>`;
   if(exemplos.length) t += `<br>Exemplos com suas cargas: ${exemplos.map(x=>`${mtEsc(x.e.name)}: ${x.c.antes} → <b>${x.c.sugerido} kg</b>`).join(' · ')}.`;
-  if(state.modules.run) t += `<br><br>Corrida/caminhada: ${est.semana===1?'60–70%':'cerca de 80%'} do volume de antes, em ritmo de conversa, sem tiros.`;
   t += '<br><br>Você não está começando do zero — o corpo recupera rápido o que já conquistou. Mas mesmo que fique fácil, não suba a carga durante a retomada.';
   return t;
 };
@@ -3359,6 +3381,7 @@ maInterpret = function(txt){
       const r = f.apply(this, arguments);
       try{
         if(typeof r !== 'string' || !PROG.test(r)) return r;
+        if(state.active === 'run' && state.modules.run) return r;   // Beta 55: na corrida, não mistura a retomada da musculação
         const est = estadoTreino(); if(est.tipo!=='retomada') return r;
         return `🔁 <b>Antes de tudo: você está em retomada</b> (pausa de ${est.pausa} dias). Por ${est.semana===1?'esta semana e a próxima':'esta semana'}, a regra é ~${est.pct}% das cargas de antes e nada de subir carga — o que está abaixo vale para depois da retomada.<br><br>` + r;
       }catch(e){ return r; }
@@ -3370,7 +3393,7 @@ maNudge = function(){
   const n = _maNudgeB13.apply(this, arguments);
   try{
     const est = estadoTreino();
-    if(est.tipo==='retomada' && n && /(sub|aument|progred|recorde|PR\b|\+\d)/i.test(n.text||'')) return { text:`🔁 Retomada: ~${est.pct}% das cargas por enquanto`, tone:'important', dica:{completa: analiseRetomada()} };
+    if(est.tipo==='retomada' && !(state.active === 'run' && state.modules.run) && n && /(sub|aument|progred|recorde|PR\b|\+\d)/i.test(n.text||'')) return { text:`🔁 Retomada: ~${est.pct}% das cargas por enquanto`, tone:'important', dica:{completa: analiseRetomada()} };
   }catch(e){}
   return n;
 };
@@ -3380,7 +3403,16 @@ renderHomeSmart = function(){
   _renderHomeSmartB13.apply(this, arguments);
   try{
     const el = $('home-smart'); if(!el || !el.firstElementChild) return;
-    const est = estadoTreino(); const k = el.querySelector('.smart-k');
+    const k = el.querySelector('.smart-k');
+    // Beta 55: no módulo de corrida, a retomada é a da corrida (parte 11). A da musculação não aparece aqui.
+    if(state.active === 'run' && state.modules.run){
+      if(k && /Retomada/.test(k.textContent)){
+        k.textContent = 'Pausa curta';
+        const pp = el.querySelector('.smart-p'); if(pp) pp.textContent = 'Poucos dias sem treinar não pedem plano especial. Siga o plano e faça o primeiro treino bem leve.';
+      }
+      return;
+    }
+    const est = estadoTreino();
     if(est.tipo==='retomada'){
       el.innerHTML = `<div class="smart alert"><div style="display:flex;align-items:flex-start;gap:8px"><div class="smart-k" style="flex:1">Em retomada · semana ${est.semana}</div><button onclick="mtLS('mt_smart_fechado', String(mtDia0()));renderHomeSmart()" aria-label="Ocultar hoje" style="background:none;border:0;color:var(--text-mute);font-size:15px;padding:0 2px;cursor:pointer">✕</button></div>
         <div class="smart-t">${est.retorno?`De volta depois de ${est.pausa} dias`:`${est.pausa} dias sem treinar — vamos voltar com calma`}</div>
@@ -5508,10 +5540,10 @@ renderHomeSmart = function(){
           <div class="smart-a"><button class="btn btn-primary" onclick="goTab('sessions')">Ver treinos</button><button class="btn btn-ghost" onclick="mtPergunta('retomada')">Plano de retomada</button></div></div>`;
       } else if(k) k.textContent = `Em retomada · semana ${F.k} de ${F.N}`;
       const pp = el.querySelector('.smart-p'); if(pp) pp.innerHTML = runTextoRetomada(F, M);
-    } else if(k && /retomada/i.test(k.textContent) && p){
-      // retomada geral (musculação) mas a corrida já voltou ao normal: avisa sem contradizer o plano de corrida
-      p.innerHTML = 'A corrida já saiu da retomada e segue o plano normal. ' + (state.modules.lift ? 'Na musculação, siga a orientação de cargas reduzidas desta semana.' : '');
     }
+    // Beta 55: o título também vem do plano de corrida (antes: "De volta depois de 53 dias", calculado com
+    // todas as modalidades, em cima do texto "Retomada da corrida depois de 10 dias")
+    if(F.fase === 'retomada'){ const tt = el.querySelector('.smart-t'); if(tt) tt.textContent = (M.retomada && M.retomada.voltou) ? `De volta à corrida depois de ${F.pausa} dias` : 'De volta à corrida, com calma'; }
   }catch(e){}
 };
 const _maRetomadaRunB14 = MA_ANSWERS.retomada;
@@ -6338,7 +6370,7 @@ function arqResumoAnos(D){
   D.lift.forEach(x=>{ const a = A(_anoDe(x.at)); a.lift++; a.liftMin += +x.duration||0; a.dias.add(mtDia0(x.at)); });
   D.run.forEach(x=>{ const a = A(_anoDe(x.at)); a.dias.add(mtDia0(x.at));
     if(_ehCorr(x)){ a.run++; a.km += +x.distance||0; a.runMin += +x.duration||0; a.maiorKm = Math.max(a.maiorKm, +x.distance||0);
-      if(+x.distance >= 3 && +x.duration > 0){ const p = x.duration/x.distance; if(!a.melhorPace || p < a.melhorPace) a.melhorPace = p; } }
+      if(+x.distance >= 3 && +x.duration > 0 && !(typeof mtAtvInvalida === 'function' && mtAtvInvalida(x))){ const p = x.duration/x.distance; if(!a.melhorPace || p < a.melhorPace) a.melhorPace = p; } }
     else if(x.activity==='caminhada'){ a.cam++; a.camKm += +x.distance||0; } else if(x.activity==='bike'){ a.bike++; a.bikeKm += +x.distance||0; } });
   Object.keys(anos).forEach(y=>{ anos[y].vol = _volumeArq(D, new Date(+y,0,1).getTime(), new Date(+y+1,0,1).getTime()); });
   // anos que só têm resumo de cargas (sem sessões) também aparecem
@@ -6374,7 +6406,7 @@ async function arqAbrirHistorico(){
     ${(a.lift || a.vol) ? `<div class="arq-sub">🏋️ Musculação</div><div class="arq-grid">
       <div class="qs"><div class="qs-v">${a.lift}</div><div class="qs-l">treinos</div></div>
       <div class="qs"><div class="qs-v">${_fmtHoras(a.liftMin)}</div><div class="qs-l">de treino</div></div>
-      <div class="qs"><div class="qs-v">${a.vol>=1000?_fmtN(a.vol/1000,1)+' t':_fmtN(a.vol)+' kg'}</div><div class="qs-l">volume</div></div></div>` : ''}
+      ${a.vol > 0 ? `<div class="qs"><div class="qs-v">${a.vol>=1000?_fmtN(a.vol/1000,1)+' t':_fmtN(a.vol)+' kg'}</div><div class="qs-l">volume</div></div>` : ''}</div>` : ''}
     ${a.run ? `<div class="arq-sub">🏃 Corrida</div><div class="arq-grid">
       <div class="qs"><div class="qs-v">${a.run}</div><div class="qs-l">corridas</div></div>
       <div class="qs"><div class="qs-v">${_fmtN(a.km,1)} km</div><div class="qs-l">${_fmtHoras(a.runMin)}</div></div>
@@ -6782,7 +6814,7 @@ function arqMontarPDF(jsPDF, opt, aviso, arte){
     secao('Corrida', C.run);
     const km = corr.reduce((s,x)=>s+(+x.distance||0), 0), min = corr.reduce((s,x)=>s+(+x.duration||0), 0);
     const comPace = corr.filter(x=>+x.distance >= 1 && +x.duration > 0);
-    const melhor = comPace.filter(x=>+x.distance >= 3).map(x=>x.duration/x.distance).sort((a,b)=>a-b)[0];
+    const melhor = comPace.filter(x=>+x.distance >= 3 && !(typeof mtAtvInvalida === 'function' && mtAtvInvalida(x))).map(x=>x.duration/x.distance).sort((a,b)=>a-b)[0];
     tiles([
       { v:_fmtN(corr.length), l:'corridas' },
       { v:_fmtN(km, 1) + ' km', l:'percorridos' },
@@ -6804,9 +6836,21 @@ function arqMontarPDF(jsPDF, opt, aviso, arte){
     if(provas.length){ precisa(20); fonte(9.5, 'bold'); cor(C.ink); txt('Provas no período', M, y + 4); y += 7;
       tabela([{t:'Data', w:24}, {t:'Prova', w:60}, {t:'Distância', w:22, dir:1}, {t:'Tempo', w:24, dir:1}, {t:'Ritmo', w:24, dir:1}],
         provas.map(p=>[_dataBR(p.at, true), p.name || 'Prova', _fmtN(p.distance, 2) + ' km', rFmtMin(p.duration), +p.distance > 0 ? fmtPaceMin(p.duration/p.distance) : '-'])); }
-    const outras = R.filter(x=>!_ehCorr(x));
-    if(outras.length){ const cam = outras.filter(x=>x.activity==='caminhada'), bk = outras.filter(x=>x.activity==='bike');
-      nota(`Também no período: ${cam.length} caminhada(s) (${_fmtN(cam.reduce((s,x)=>s+(+x.distance||0),0),1)} km) e ${bk.length} pedal(is) de bike (${_fmtN(bk.reduce((s,x)=>s+(+x.distance||0),0),1)} km).`); }
+    // Beta 55: cada modalidade com os próprios números e a comparação com o período anterior de mesmo tamanho
+    const MODS = [['corrida','Corrida',_ehCorr],['caminhada','Caminhada',x=>x.activity==='caminhada'],['bike','Bike',x=>x.activity==='bike']];
+    const antIni = dias ? ini - span : null;
+    const linhasMod = MODS.map(([k, nome, f])=>{
+      const a = R.filter(f); if(!a.length) return null;
+      const kmA = a.reduce((t,x)=>t+(+x.distance||0),0), minA = a.reduce((t,x)=>t+(+x.duration||0),0);
+      const med = kmA > 0 && minA > 0 ? (k === 'bike' ? _fmtN(kmA/(minA/60),1) + ' km/h' : fmtPaceMin(minA/kmA)) : '-';
+      let comp = '-';
+      if(antIni){ const b = D.run.filter(x=>f(x) && x.at >= antIni && x.at < ini); const kmB = b.reduce((t,x)=>t+(+x.distance||0),0);
+        comp = !b.length ? 'sem registros antes' : (kmB > 0 ? ((kmA-kmB)/kmB*100 >= 0 ? '+' : '') + Math.round((kmA-kmB)/kmB*100) + '% km' : '-'); }
+      const rel = a.filter(x=>x.imp).length;
+      return [nome, _fmtN(a.length), _fmtN(kmA, 1) + ' km', _fmtHoras(minA), med, comp, rel ? `${rel} do relógio` : 'manual'];
+    }).filter(Boolean);
+    if(linhasMod.length){ precisa(24); fonte(9.5, 'bold'); cor(C.ink); txt('Por modalidade' + (antIni ? ' (comparação com o período anterior)' : ''), M, y + 4); y += 7;
+      tabela([{t:'Modalidade', w:24}, {t:'Sessões', w:16, dir:1}, {t:'Distância', w:24, dir:1}, {t:'Tempo', w:20, dir:1}, {t:'Ritmo/vel.', w:26, dir:1}, {t:'Vs. anterior', w:28, dir:1}, {t:'Origem', w:24, dir:1}], linhasMod); }
   }
 
   // ----- peso corporal -----
@@ -6832,11 +6876,14 @@ function arqMontarPDF(jsPDF, opt, aviso, arte){
       tabela([{t:'Data', w:20}, {t:'Tipo', w:22}, {t:'Treino', w:70}, {t:'Duração', w:20, dir:1}, {t:'Detalhe', w:40, dir:1}],
         lista.slice(0, MAX).map(x=>{
           const isRun = x.module === 'run' || D.run.includes(x);
-          const tipo = isRun ? (x.activity==='caminhada' ? 'Caminhada' : x.activity==='bike' ? 'Bike' : (x.isRace ? 'Prova' : 'Corrida')) : 'Musculação';
-          const det = isRun ? (+x.distance > 0 ? `${_fmtN(x.distance, 2)} km · ${fmtPaceMin(x.duration/x.distance)}` : '') : ((x.exercisesDone||[]).length ? `${x.exercisesDone.length} exercícios` : '');
+          const tipo = (isRun ? (x.activity==='caminhada' ? 'Caminhada' : x.activity==='bike' ? 'Bike' : x.activity==='forca' ? 'Força' : (x.isRace ? 'Prova' : 'Corrida')) : 'Musculação') + (x.imp ? ' *' : '');
+          const vel = +x.distance > 0 && +x.duration > 0 ? (x.activity==='bike' ? `${_fmtN(x.distance/(x.duration/60),1)} km/h` : fmtPaceMin(x.duration/x.distance)) : '';
+          const fc = x.imp && x.imp.fcMed ? ` · FC ${x.imp.fcMed}` : '';
+          const det = isRun ? (+x.distance > 0 ? `${_fmtN(x.distance, 2)} km · ${vel}${fc}` : fc.slice(3)) : (((x.exercisesDone||[]).length ? `${x.exercisesDone.length} exercícios` : '') + fc);
           return [_dataBR(x.at, true), tipo, x.name || '', x.duration ? _fmtHoras(x.duration) : '-', det];
         }));
       if(lista.length > MAX) nota(`Mostrando as ${MAX} sessões mais recentes de ${lista.length}.`);
+      if(lista.some(x=>x.imp)) nota('* importada de arquivo do relógio ou de outro app (GPX, TCX ou FIT).');
     }
   }
 
@@ -7944,8 +7991,11 @@ function mtsDeHistorico(x){
     const d = _mtsDur(dur); nums.push({ l:'Tempo', v:d.v, u:d.u });
     if(tipo === 'bike'){ if(km && dur) nums.push({ l:'Velocidade média', v:_mtsN(km/(dur/60),1), u:'km/h' }); }
     else { const p = _mtsPace(dur, km) || (x.pace ? String(x.pace).replace(/\/?km$/,'') : null); if(p) nums.push({ l:'Ritmo médio', v:p, u:'/km' }); }
+    // Beta 55: atividade importada do relógio traz frequência cardíaca e subida (só o que existe no arquivo)
+    const I = x.imp || {};
+    if(I.fcMed) nums.push({ l:'FC média', v:String(I.fcMed), u:'bpm' });
     if(tipo !== 'bike' && km && dur) nums.push({ l:'Velocidade', v:_mtsN(km/(dur/60),1), u:'km/h' });
-    if(x.elev || x.elevacao) nums.push({ l:'Elevação', v:_mtsN(x.elev||x.elevacao), u:'m' });
+    if(x.elev || x.elevacao || I.subida) nums.push({ l:'Subida', v:_mtsN(x.elev||x.elevacao||I.subida), u:'m' });
     return { tipo, titulo:_mtsSemEmoji(x.name) || MTS_KICKER[tipo], data:x.at,
       hero: km ? { v:_mtsN(km, km<10?2:1), u:'km' } : { v:d.v, u:d.u||'' }, nums: km ? nums.slice(0,3) : nums.slice(1,4),
       extra: x.isRace ? ['Prova'] : [], texto:`${MTS_KICKER[tipo]} no MetaTreino` };
@@ -8230,6 +8280,20 @@ async function mtsDesenhar(cv, d, o){
     const mx = (disp==='grade' || o.fmt!=='story' && disp!=='destaque') ? (W-medTam)/2 : pad - medTam*0.06;
     const my2 = y - medTam - W*0.03;
     x.save(); x.shadowColor = _mtsRgba(d.medalha.cor, .55); x.shadowBlur = W*0.05; x.drawImage(medImg, mx, Math.max(my+ms+W*0.03, my2), medTam, medTam); x.restore();
+  } else if(d.rota && d.rota.length > 1){
+    // Beta 55: percurso da atividade importada (desenhado a partir dos pontos guardados neste aparelho)
+    const topo = my + ms + W*0.07, base = y - W*0.06, alt = base - topo;
+    if(alt > W*0.2){
+      const tr = d.rota; const la = tr.map(p=>p[0]), lo = tr.map(p=>p[1]);
+      const la0 = Math.min(...la), la1 = Math.max(...la), lo0 = Math.min(...lo), lo1 = Math.max(...lo);
+      const k = Math.cos((la0+la1)/2*Math.PI/180); const w = Math.max(1e-6, (lo1-lo0)*k), h = Math.max(1e-6, la1-la0);
+      const caixaW = W - pad*2, caixaH = Math.min(alt, W*0.9); const esc = Math.min(caixaW/w, caixaH/h);
+      const ox = pad + (caixaW - w*esc)/2, oy = topo + (alt - h*esc)/2;
+      x.save(); x.strokeStyle = P.acc; x.lineWidth = W*0.009; x.lineJoin = 'round'; x.lineCap = 'round'; x.shadowColor = _mtsRgba(P.acc, .45); x.shadowBlur = W*0.02;
+      x.beginPath(); tr.forEach(([a,b],i)=>{ const px = ox + (b-lo0)*k*esc, py = oy + (la1-a)*esc; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke(); x.restore();
+      const pt = (p)=>[ox + (p[1]-lo0)*k*esc, oy + (la1-p[0])*esc];
+      [[tr[0], '#3ecf8e'], [tr[tr.length-1], P.txt]].forEach(([p, c])=>{ const [px, py] = pt(p); x.fillStyle = c; x.beginPath(); x.arc(px, py, W*0.012, 0, Math.PI*2); x.fill(); });
+    }
   } else if(d.emoji){
     x.save(); x.globalAlpha = 1; x.fillStyle = '#000'; x.font = `${W*0.16}px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif`; x.textAlign = disp==='grade' ? 'center' : 'left';
     x.fillText(d.emoji, disp==='grade' ? W/2 : pad, y - (disp==='compacto' ? W*0.08 : W*0.04)); x.restore();
@@ -9433,8 +9497,16 @@ function irParaCadastro(){
 }
 
 // ---- 1. controle de acesso ----
+// Beta 55: enquanto a conta carrega depois do login (state.user já existe, o perfil ainda não), nenhuma
+// troca de aba manda para o cadastro. Antes, um redesenho nesse meio-segundo mostrava a etapa 1 do
+// cadastro ("Escolha o visual") piscando antes da tela inicial.
+function cadCarregandoConta(){ return !!window.__mtCarregandoConta && Date.now() - window.__mtCarregandoConta < 45000; }
+mtGancho('afterGoogleSignIn', { antes(){ window.__mtCarregandoConta = Date.now(); } });
+mtGancho('bootAfterAuth', { antes(){ window.__mtCarregandoConta = 0; } });
+mtGancho('mostraSemDados', { antes(){ window.__mtCarregandoConta = 0; } });
 const _goTabCad = window.goTab;
 window.goTab = function(tab){
+  if(cadCarregandoConta()) return;
   if(cadBloqueado()){
     // já está numa tela do cadastro: fica nela (sem perder a etapa); senão, volta para o cadastro
     if(CAD_TELAS.includes(cadTelaAtiva())){ const tb = $('tabbar'); if(tb) tb.classList.add('hidden'); }
@@ -9446,7 +9518,8 @@ window.goTab = function(tab){
 mtGancho('showScreen', { depois(id){
   try{
     const app = CAD_TELAS_APP.includes(id);
-    if(app && cadBloqueado()){ irParaCadastro(); return; }
+    if(!app && id !== 'scr-auth' && !CAD_TELAS.includes(id)) window.__mtCarregandoConta = 0;   // sem acesso, conta suspensa etc.
+    if(app && cadBloqueado() && !cadCarregandoConta()){ irParaCadastro(); return; }
     if(!app || cadBloqueado()) cadEscondeAssistente();
     if(CAD_TELAS.includes(id)){ const tb = $('tabbar'); if(tb) tb.classList.add('hidden'); wzEntrou(id); }
   }catch(e){ console.log('cadastro (tela):', e); }
@@ -13231,7 +13304,7 @@ function cqNovoItem(p, i){
   const nv = t ? medalNivel(t) : (p.kind==='medalha' || p.kind==='marco' ? 'rara' : p.kind==='secreto' ? 'especial' : 'comum');
   const ico = t ? trophyIco(t) : (p.emo && /<svg|<span/.test(p.emo) ? p.emo : `<span class="cq-emo">${mtEsc(p.emo||'')}</span>`);
   const tipo = { trofeu:'Conquista desbloqueada', secreto:'Segredo revelado', medalha:'Medalha do mês', marco:'Marco alcançado', evento:'Desafio concluído' }[p.kind] || p.tipo;
-  return `<div class="cq-novo nv-${nv}" style="--i:${i}"${t?` role="button" tabindex="0" onclick="openTrophyDetail('${t.id}')"`:''}>
+  return `<div class="cq-novo nv-${nv}" style="--i:${i}" data-k="${mtEsc(p.k)}" role="button" tabindex="0" onclick="cqVerNova('${mtJsStr(p.k)}')" onkeydown="if(event.key==='Enter')cqVerNova('${mtJsStr(p.k)}')">
     <span class="cq-novo-luz" aria-hidden="true"></span>
     <div class="cq-med">${ico}</div>
     <div class="cq-novo-txt"><small>${mtEsc(tipo)}${nv!=='comum'?' · '+CQ_NV[nv]:''}</small><b>${mtEsc(t ? t.name : p.nome)}</b><span>${mtEsc(t ? t.desc : p.desc)}</span></div></div>`;
@@ -13267,12 +13340,13 @@ window.openTrophies = function(){
   const s = { desafiosEncerrados: (state.desafiosEncerrados||[]) };   // leitura; a gravação abaixo usa cqEstado()
   const semAnim = !!window.__cqSemAnim; window.__cqSemAnim = false;
   const pend = cqPendentes();
-  // abertura nova: as que estão na fila passam a ser "desta visita"; voltando do detalhe, a lista se mantém
-  if(!semAnim || !_cqSessao) _cqSessao = pend.itens.slice();
-  else _cqSessao = _cqSessao.concat(pend.itens.filter(p=>!_cqSessao.some(x=>x.k===p.k)));
+  // Beta 55: cada conquista nova fica em "Novas" até o aluno tocar NELA (cqVerNova). Abrir a aba não marca
+  // nada como visto, e tocar em uma não marca as outras. A fila (state.conqPend) é da conta: vale em todos os aparelhos.
+  _cqSessao = pend.itens.slice();
   const novas = _cqSessao;
   _cqRecentes = new Set(novas.map(p=>p.tid).filter(Boolean));
-  const animar = !semAnim && (pend.itens.length > 0 || pend.meses.length > 0);
+  const animar = !semAnim && (pend.itens.some(p=>!_cqJaAnimadas.has(p.k)) || pend.meses.length > 0);
+  pend.itens.forEach(p=>_cqJaAnimadas.add(p.k));
   const tot = TROPHIES.length, tenho = state.trophies.length;
   const porNv = { comum:[0,0], rara:[0,0], especial:[0,0] };
   TROPHIES.forEach(t=>{ const n = medalNivel(t); porNv[n][1]++; if(state.trophies.includes(t.id)) porNv[n][0]++; });
@@ -13287,7 +13361,7 @@ window.openTrophies = function(){
     <div class="cq-resumo"><div class="cq-anel" style="--p:${pctAll}"><b>${tenho}</b><small>de ${tot}</small></div>
       <div class="cq-conts">${contagem('comum','Comuns')}${contagem('rara','Raras')}${contagem('especial','Especiais')}</div></div>
     ${meses.map(d=>cqResumoMes(d, animar)).join('')}
-    ${novas.length?`<section class="cq-novos"><div class="cq-sec-t">${novas.length===1?'Nova conquista':'Novas conquistas · '+novas.length}</div>${novas.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${novas.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${novas.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}</section>`:''}
+    ${novas.length?`<section class="cq-novos"><div class="cq-sec-t">${novas.length===1?'Nova conquista':'Novas conquistas · '+novas.length}</div><p class="cq-novos-dica">Toque em cada uma para ver. Depois de vista, ela fica só na coleção.</p>${novas.slice().reverse().slice(0,CQ_MAX_NOVOS).map((p,i)=>cqNovoItem(p, i)).join('')}${novas.length>CQ_MAX_NOVOS?`<div class="cq-mais-novos">E mais ${novas.length-CQ_MAX_NOVOS} — destacadas com “Nova” na coleção abaixo.</div>`:''}${novas.length>1?`<button type="button" class="cq-todas-vistas" onclick="cqTodasVistas()">Marcar todas como vistas</button>`:''}</section>`:''}
     <div class="cq-filtros" id="cq-filtros" role="group" aria-label="Filtrar conquistas">${filtros.map(([f,l])=>`<button type="button" data-f="${f}" class="filter-chip ${_cqFiltro===f?'on':''}" aria-pressed="${_cqFiltro===f}" onclick="cqFiltrar('${f}')">${l}</button>`).join('')}</div>
     <div id="cq-grade-box" class="${animar?'cq-entra':''}">${cqGrade()}</div>
     ${state.specialTrophy ? `<div class="sa-card cq-eterna" role="button" tabindex="0" onclick="openSpecialTrophy()" onkeydown="if(event.key==='Enter')openSpecialTrophy()">
@@ -13298,12 +13372,9 @@ window.openTrophies = function(){
     <button class="btn btn-outline btn-block hl-primary" style="margin-top:14px" onclick="shareTrophiesImage()">Compartilhar minhas conquistas</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
   back.classList.add('on');
-  // registra a apresentação (uma vez só, sincronizado com a conta)
-  if(pend.itens.length || meses.length){
+  // o resumo do desafio mensal encerrado é apresentado uma vez (as conquistas novas, não: ver cqVerNova)
+  if(meses.length){
     const s = cqEstado();
-    const ks = pend.itens.map(p=>p.k);
-    s.conqVistas = s.conqVistas.concat(ks).slice(-CQ_MAX_VISTAS);
-    s.conqPend = s.conqPend.filter(p=>!ks.includes(p.k));
     const agora = Date.now();
     s.desafiosEncerrados.forEach(d=>{ if(!d.visto && meses.some(m=>m.key===d.key)){ d.visto = true; d.vistoEm = agora; } });
     saveData();
@@ -13329,7 +13400,19 @@ function cqCartaoInicio(){
 }
 mtGancho('goTab', { depois(t){ if((t||'home')==='home') cqCartaoInicio(); } });
 
-Object.assign(window, { cqFiltrar, cqTemNovidade, cqPendentes, cqIndicadores, cqFotoDoMes });
+// Beta 55: ver UMA conquista nova — só ela sai das "novas"
+const _cqJaAnimadas = new Set();
+function cqVerNova(k){
+  const p = ((state && state.conqPend) || []).find(x=>x.k === k);
+  cqMarcaVista(x=>x.k === k);
+  if(p && p.tid && TROPHIES.some(t=>t.id === p.tid)){ try{ window._trophyScroll = ($('modal-inner')||{}).scrollTop || 0; }catch(e){} openTrophyDetail(p.tid); return; }
+  const c = document.querySelector(`.cq-novo[data-k="${CSS.escape(k)}"]`);
+  if(c){ c.classList.add('cq-saindo'); setTimeout(()=>{ try{ window.__cqSemAnim = true; const sc = $('modal-inner').scrollTop; openTrophies(); $('modal-inner').scrollTop = sc; }catch(e){} }, 220); }
+}
+function cqTodasVistas(){ cqMarcaVista(()=>true); window.__cqSemAnim = true; const sc = $('modal-inner').scrollTop; openTrophies(); try{ $('modal-inner').scrollTop = sc; }catch(e){} }
+// tocar na medalha "Nova" da coleção também conta como vista (só aquela)
+mtGancho('openTrophyDetail', { antes(id){ try{ if(((state && state.conqPend)||[]).some(x=>x.tid === id)) cqMarcaVista(x=>x.tid === id); }catch(e){} } });
+Object.assign(window, { cqVerNova, cqTodasVistas, cqFiltrar, cqTemNovidade, cqPendentes, cqIndicadores, cqFotoDoMes });
 
 // =====================================================================
 // 43. Beta 41 — Transições, montagem do plano, fundos decorativos novos e desempenho
@@ -17331,12 +17414,13 @@ function perfAplica(){
   const evo = $('perf-evo');
   if(evo) evo.querySelectorAll('button, .chip, .seg').forEach(b=>{
     const t = (b.textContent || '').trim();
-    const run = /^(Corrida|Ritmo|Km|Distância)/i.test(t), lift = /musculação/i.test(t);
+    const run = /^(Corrida|Ritmo|Km|Distância|Caminhada|Bike|Pedal)/i.test(t), lift = /musculação/i.test(t);   // Beta 55: cardio também
     b.classList.toggle('pf-outra', (ativo === 'lift' && run) || (ativo === 'run' && lift));
   });
   // seletor de modalidade (só com as duas)
   const wrap = scr.querySelector('.wrap'); if(!wrap) return;
-  const ambas = !!(state.modules.lift && state.modules.lift.plan && state.modules.run && state.modules.run.plan);
+  // Beta 55: sem seletor aqui — a modalidade é a do Início/Perfil (o subtítulo diz qual; parte 58)
+  const ambas = false;
   let m = $('perf-mod');
   if(ambas){
     const html = `<button type="button" class="${ativo==='lift'?'on':''}" aria-pressed="${ativo==='lift'}" onclick="perfModulo('lift')">Musculação</button><button type="button" class="${ativo==='run'?'on':''}" aria-pressed="${ativo==='run'}" onclick="perfModulo('run')">Corrida</button>`;
@@ -18202,17 +18286,31 @@ function openIntegracoes(){
     <div class="integ-priv">🔒 O percurso GPS e o arquivo original ficam só neste aparelho. Na sua conta vão os números (distância, tempos, frequência cardíaca, parciais). Excluir a atividade apaga tudo.</div>
     <div class="section-lbl" style="margin:14px 0 6px">Atividades importadas (${lista.length})</div>
     ${lista.length ? lista.slice(0, 30).map(({mk, idx, x})=>`<button type="button" class="integ-item" onclick="openAtividade('${mk}',${idx})"><span class="ii-ico">${ESP[x.imp.esporte] || '⌚'}</span><span class="ii-tx"><b>${mtEsc(String(x.name||'').replace(/^[^\wÀ-ú]+/,''))}</b><small>${new Date(x.at).toLocaleDateString('pt-BR')} · ${x.imp.esporte === 'musculacao' ? `${x.duration} min` : `${_atvBr(x.distance||0, 2)} km · ${_atvFmtDur((x.duration||0)*60)}`} · ${String(x.imp.fmt).toUpperCase()}</small></span><span class="ii-seta">›</span></button>`).join('') : '<p class="integ-mini">Nenhuma ainda.</p>'}
-    ${log.length ? `<details class="integ-sec"><summary>Histórico de importações</summary>${log.map(l=>`<div class="integ-log ${l.ok?'ok':'erro'}"><b>${mtEsc(l.arq)}</b><small>${new Date(l.em).toLocaleString('pt-BR')} · ${mtEsc(l.res)}</small></div>`).join('')}</details>` : ''}
+    ${(()=>{ const ids = new Set(lista.map(({x})=>x.imp.id)); const antigas = (state.importLog||[]).filter(l=>l.ok && l.id && !ids.has(l.id) && !/complement/i.test(l.res)).length;
+      return antigas ? `<p class="integ-mini">📦 ${antigas === 1 ? '1 atividade importada tem' : antigas + ' atividades importadas têm'} mais de ${HISTORY_RETENTION_DAYS} dias e ${antigas === 1 ? 'está' : 'estão'} no <a href="#" onclick="arqAbrirHistorico();return false">Histórico completo</a>.</p>` : ''; })()}
+    ${log.length ? `<details class="integ-sec"><summary>Histórico técnico de importações</summary><p class="integ-mini">Cada arquivo enviado e o resultado. Toque para abrir a atividade.</p>${log.map(l=>{ const a = l.id ? atvTodas().find(({x})=>x.imp && x.imp.id === l.id) : null;
+      const tx = `<b>${mtEsc(l.arq)}</b><small>${new Date(l.em).toLocaleString('pt-BR')} · ${mtEsc(l.res)}${l.ok && l.id && !a ? ' · no Histórico completo' : ''}</small>`;
+      return a ? `<button type="button" class="integ-log ok integ-log-btn" onclick="openAtividade('${a.mk}',${a.idx})">${tx}<span class="ii-seta">›</span></button>` : `<div class="integ-log ${l.ok?'ok':'erro'}">${tx}</div>`; }).join('')}</details>` : ''}
+    <button type="button" class="integ-manual" onclick="openActivityLog()">Sem relógio? <b>Registrar uma atividade à mão</b> ›</button>
     <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button></div>`;
   $('modal-back').classList.add('on');
 }
-function _atvLog(arq, ok, res){ state.importLog = (state.importLog || []).concat({ arq:String(arq||'arquivo').slice(0,60), ok, res:String(res).slice(0,140), em:Date.now() }).slice(-30); }
+function _atvLog(arq, ok, res, id){ const l = { arq:String(arq||'arquivo').slice(0,60), ok, res:String(res).slice(0,140), em:Date.now() }; if(id) l.id = id; state.importLog = (state.importLog || []).concat(l).slice(-30); }
 
 // ---------- 8. importar: fila de arquivos → prévia → salvar ----------
-let _atvFila = [], _atvAtual = null;
+let _atvFila = [], _atvAtual = null, _atvComemora = false;
 function atvEscolheu(inp){ const fs = [...(inp.files || [])]; inp.value = ''; if(!fs.length) return; _atvFila = fs; atvProximo(); }
 async function atvProximo(){
-  const f = _atvFila.shift(); if(!f){ _atvAtual = null; return openIntegracoes(); }
+  const f = _atvFila.shift();
+  if(!f){
+    _atvAtual = null;
+    // Beta 55: conquista desbloqueada pela importação → fecha a tela para a janela de conquistas aparecer
+    // (a mesma do fim de um registro manual). Sem conquista nova, volta para Integrações.
+    const cel = _atvComemora && ((typeof awardQueue !== 'undefined' && awardQueue.length) || (state.conqPend||[]).some(p=>!p.cel && p.at >= (window.__mtRegEm||0) - 1000));
+    _atvComemora = false;
+    if(cel){ closeModal(); try{ if(state.ui && state.ui.tab) goTab(state.ui.tab); }catch(e){} return; }
+    return openIntegracoes();
+  }
   const mi = $('modal-inner'); mi.innerHTML = `<div class="integ-proc"><div class="integ-spin"></div><b>Lendo ${mtEsc(f.name)}…</b><small>${_atvFila.length ? `mais ${_atvFila.length} na fila` : ''}</small></div>`;
   try{
     const r = await atvProcessaArquivo(f);
@@ -18247,6 +18345,10 @@ function _atvExOpcoes(sel){
 function _atvTreinoDoDia(esporte, ts){
   const mk = esporte === 'musculacao' ? 'lift' : 'run'; const mod = state.modules[mk];
   if(!mod || !mod.plan || (esporte !== 'corrida' && esporte !== 'musculacao')) return null;
+  // Beta 55: só atividades desta semana do plano. Um treino de força de 5 meses atrás virava "Treino B — Costas
+  // + Bíceps" só porque caiu numa terça.
+  const ini = (typeof planStartTs === 'function' && planStartTs(mod)) || mod.createdAt || 0;
+  if(ts < Date.now() - 7*86400000 || (ini && ts < _atvDia(ini))) return null;
   const di = (new Date(ts).getDay() || 7);
   const w = (mod.plan.workouts || []).find(x=>x.dayIdx === di); if(!w) return null;
   const feito = (mod.history || []).some(h=>h.id === w.k && _atvDia(h.at) === _atvDia(ts));
@@ -18274,6 +18376,7 @@ function atvPrevia(){
       ${!musc && A.melhores['5'] ? card('Melhor 5 km', _atvFmtDur(A.melhores['5'])) : ''}${!musc && A.melhores['1'] ? card('Melhor 1 km', _atvFmtDur(A.melhores['1'])) : ''}${bike && A.velMax ? card('Velocidade máx.', `${_atvBr(A.velMax,1)} km/h`) : ''}</div>
     ${falta.length ? `<p class="integ-mini">Este arquivo não trouxe: ${falta.join(', ')}.</p>` : ''}
     ${A.avisos.map(a=>`<p class="ip-aviso">${mtEsc(a)}</p>`).join('')}
+    ${A.inicio < Date.now() - HISTORY_RETENTION_DAYS*86400000 ? `<p class="integ-mini">📦 Esta atividade tem mais de ${HISTORY_RETENTION_DAYS} dias. Ela conta para os totais, recordes e conquistas e fica guardada no <b>Histórico completo</b> (arquivo anual), como os seus outros treinos antigos — não na lista dos últimos ${HISTORY_RETENTION_DAYS} dias.</p>` : ''}
     ${comp ? `<p class="ip-comp">${comp}</p>` : ''}
     ${A.track.length ? `<div class="ip-mapa">${atvPercursoSVG(A.track)}</div>` : ''}
     ${A.parciais.length ? `<details class="integ-sec"><summary>Parciais (${A.parciais.length})</summary>${atvParciaisHTML(A)}</details>` : ''}
@@ -18327,9 +18430,11 @@ async function atvConfirma(){
   const ini = Date.parse(($('ip-ini') || {}).value || ''); if(isFinite(ini) && Math.abs(ini - R.A.inicio) > 60000){ R.A.inicio = ini; }
   const plano = $('ip-plano') && $('ip-plano').checked ? _atvTreinoDoDia(R.A.esporte, R.A.inicio) : null;
   const modoDup = (document.querySelector('input[name="ip-dup"]:checked') || {}).value || null;
+  window.__mtRegEm = Date.now();     // Beta 55: as conquistas de uma importação aparecem como as de um registro manual
+  _atvComemora = true;
   const r = atvSalvar(R.A, { origem:'arquivo', hash:R.hash, grupos:R.grupos, plano, dup: R.dup && R.dup.tipo === 'manual' ? R.dup : null, modoDup });
   if(r && r.id) await atvLocalGuarda(r.id, { track:R.A.track, raw:R.buf, arq:R.arq, fmt:R.A.formato, em:Date.now() });
-  _atvLog(R.arq, true, r.msg); saveData();
+  _atvLog(R.arq, true, r.msg, r.id); saveData();
   toast('✅ ' + r.msg);
   atvProximo();
 }
@@ -18420,9 +18525,25 @@ async function openAtividade(mk, idx){
     ${loc && loc.track && loc.track.length ? `<div class="ip-mapa">${atvPercursoSVG(loc.track)}</div>` : (I.temGps ? '<p class="integ-mini">O percurso fica guardado só no aparelho onde a atividade foi importada.</p>' : '')}
     ${A.parciais.length ? `<details class="integ-sec" open><summary>Parciais</summary>${atvParciaisHTML(A)}</details>` : ''}
     ${musc && (x.exercisesDone||[]).length ? `<div class="section-lbl" style="margin:12px 0 4px">Exercícios</div>${x.exercisesDone.map(e=>`<div class="mrow"><span class="n">${mtEsc(e.name)}</span><span class="q">${e.sets} séries · ${mtEsc(e.best||'')}</span></div>`).join('')}` : ''}
-    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="atvExcluir('${mk}',${idx})">🗑️ Excluir atividade e dados importados</button>
+    <details class="integ-sec"><summary>Dados do arquivo original</summary>
+      <div class="ip-orig">${[['Formato', String(I.fmt||'').toUpperCase()], ['Aparelho', I.disp], ['Arquivo', loc && loc.arq], ['Importado em', I.em && new Date(I.em).toLocaleString('pt-BR')], ['Tempo total gravado', I.totalMin && _atvFmtDur(I.totalMin*60)], ['Registro do plano', x.id && x.id !== 'imp' ? 'contou como o treino do plano deste dia' : '']].filter(r=>r[1]).map(r=>`<div><span>${r[0]}</span><b>${mtEsc(r[1])}</b></div>`).join('')}</div>
+      ${loc && loc.raw ? `<button type="button" class="btn btn-ghost btn-block" style="margin-top:8px" onclick="atvBaixaOriginal('${I.id}')">⬇️ Baixar o arquivo original</button>` : '<p class="integ-mini">O arquivo original fica só no aparelho onde foi importado.</p>'}</details>
+    <button class="btn btn-outline btn-block hl-primary" style="margin-top:12px" onclick="atvCompartilhar('${mk}',${idx})">📤 Compartilhar como imagem</button>
+    <button class="btn btn-block" style="margin-top:8px;background:var(--tint-danger);color:var(--danger-soft);border:1px solid rgba(244,63,94,0.3)" onclick="atvExcluir('${mk}',${idx})">🗑️ Excluir atividade e dados importados</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openIntegracoes()">‹ Integrações e atividades</button></div>`;
   $('modal-back').classList.add('on');
+}
+// Beta 55: compartilhar uma atividade importada pela mesma Central do registro manual (com o percurso, se houver)
+async function atvCompartilhar(mk, idx){
+  const x = ((state.modules[mk]||{}).history||[])[idx]; if(!x) return;
+  const d = mtsDeHistorico(x); if(!d){ toast('Ainda não há dados para montar esse card.'); return; }
+  try{ const loc = x.imp && await atvLocalLe(x.imp.id); if(loc && loc.track && loc.track.length > 1) d.rota = loc.track; }catch(e){}
+  mtsAbrir(d);
+}
+async function atvBaixaOriginal(id){
+  try{ const loc = await atvLocalLe(id); if(!loc || !loc.raw) return toast('O arquivo original não está neste aparelho.');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([loc.raw])); a.download = loc.arq || ('atividade.' + (loc.fmt||'fit')); document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  }catch(e){ toast('Não foi possível baixar o arquivo.'); }
 }
 function atvGraficoSerie(I){
   const s = I.serie; const bike = I.esporte === 'bike';
@@ -18436,7 +18557,7 @@ function atvGraficoSerie(I){
 }
 function atvExcluir(mk, idx){
   const mod = state.modules[mk]; const x = mod && mod.history && mod.history[idx]; if(!x) return;
-  appConfirm('A atividade sai do histórico, dos gráficos e dos recordes, e o percurso e o arquivo guardados neste aparelho são apagados.', async ()=>{
+  appConfirm('A atividade sai do histórico, dos gráficos e dos recordes, e o percurso e o arquivo guardados neste aparelho são apagados. As conquistas que você já desbloqueou continuam na sua coleção (elas registram um momento que aconteceu); os totais e as próximas conquistas passam a contar sem esta atividade.', async ()=>{
     const id = x.imp && x.imp.id;
     if(x.module === 'lift'){
       Object.keys(state.progress||{}).forEach(k=>{
@@ -18697,3 +18818,455 @@ window.openAssistant = function(){
 
 Object.assign(window, { openIntegracoes, atvEscolheu, atvProximo, atvProcessaArquivo, atvFormato, atvLeGPX, atvLeTCX, atvLeFIT, atvCalcula, atvAgrupaSeries, atvDuplicata, atvPrevia, atvTrocaEsporte,
   atvCancela, atvConfirma, atvSalvar, openAtividade, atvExcluir, atvTodas, atvLocalLe, atvCarregaFit, openCardio, cdGrafico, maAtividades, ATV_FONTES });
+
+// =====================================================================
+// 58. Beta 55 — auditoria: dados coerentes entre módulos, novidades em Desafios,
+//     Progresso pela modalidade ativa, importação no lugar certo e recuperação informativa
+// =====================================================================
+// O que esta parte faz (o resto da Beta 55 está nas partes 10, 11, 15, 26, 33, 42, 54 e 57):
+//  1. Atividade impossível (ritmo mais rápido que recorde mundial, bike a 90 km/h) não vira recorde nem
+//     conquista. No registro à mão o app pergunta antes de salvar. Importação já tinha essa regra (imp.valido).
+//  2. Desafios: seção "Novidades" no topo, com cada coisa nova e onde ela está. O indicador da aba é um número
+//     pequeno (quantas novidades) e some quando tudo foi visto.
+//  3. Progresso › Desempenho: sem o seletor Musculação | Corrida (a modalidade vem do Início/Perfil). O calendário
+//     mostra só a modalidade ativa; os chips de cardio não aparecem na musculação.
+//  4. Treinos (musculação): o atalho "Registrar atividade" vira "Importar do relógio" (abre Integrações e
+//     atividades, que também tem o registro à mão). Na corrida, o registro continua no plano e no atalho.
+//  5. Detalhe de uma atividade registrada à mão: o mesmo resumo das importadas (modalidade, ritmo, esforço, origem).
+//  6. Anatomia muscular: "Seu histórico com este músculo" — último estímulo, séries da semana, próximo treino
+//     previsto e se uma corrida recente também usou o músculo. Informativo; sem percentual de recuperação.
+
+// ---------- 1. atividade com números impossíveis ----------
+const MT_RITMO_MIN = { corrida: 2.6, caminhada: 4.0 };   // min/km mais rápidos que isso não são humanos (recorde mundial ~2:50/km nos 10 km)
+const MT_BIKE_MAX = 75;                                   // km/h de média
+function mtAtvRitmoImpossivel(tipo, km, min){
+  km = +km; min = +min; if(!(km > 0) || !(min > 0)) return false;
+  if(tipo === 'bike') return km / (min/60) > MT_BIKE_MAX;
+  const lim = MT_RITMO_MIN[tipo === 'caminhada' ? 'caminhada' : 'corrida'];
+  return km >= 0.4 && (min / km) < lim;
+}
+function mtAtvInvalida(x){
+  if(!x) return false;
+  if(x.imp && x.imp.valido === false) return true;
+  if(x.module === 'lift' || x.activity === 'forca') return false;
+  return mtAtvRitmoImpossivel(x.activity || 'corrida', x.distance, x.duration);
+}
+// registro à mão: pergunta antes de salvar um número impossível
+const _saveActivityLogB55 = window.saveActivityLog;
+window.saveActivityLog = function(){
+  try{
+    const km = parseFloat((($('act-km')||{}).value||'').replace(',','.')); const min = parseTimeToMin((($('act-min')||{}).value)||'');
+    if(!window.__mtRitmoOk && mtAtvRitmoImpossivel(actLogType, km, min)){
+      const rit = actLogType === 'bike' ? `${(km/(min/60)).toFixed(1).replace('.',',')} km/h de média` : `ritmo de ${fmtPaceMin(min/km)}`;
+      appConfirm(`${String(km).replace('.',',')} km em ${fmtDur(min)} dá ${rit} — mais rápido que o recorde mundial. Confira a distância e o tempo (minutos:segundos).<br><br>Se salvar assim, a atividade fica no histórico, mas <b>não conta para recordes nem conquistas</b>.`,
+        ()=>{ // a janela de confirmação já substituiu o formulário: salva com os números lidos antes
+          window.__mtRegEm = Date.now();
+          let r; window.__mtSemConquista = true;
+          try{ r = maLogActivity(actLogType, km, min, window.__rpe || 5); } finally { window.__mtSemConquista = false; }
+          closeModal(); toast(r && r.msg ? r.msg.replace(/<[^>]+>/g,'') : '✅ Atividade registrada!');
+          if(state.ui.tab) goTab(state.ui.tab); },
+        { title:'Esses números estão certos?', okLabel:'Salvar assim mesmo', cancelLabel:'Corrigir' });
+      return;
+    }
+  }catch(e){}
+  return _saveActivityLogB55.apply(this, arguments);
+};
+// enquanto salva uma atividade com números impossíveis (o aluno confirmou), nenhuma conquista é desbloqueada
+const _unlockTrophyB55 = window.unlockTrophy;
+window.unlockTrophy = function(){ if(window.__mtSemConquista) return false; return _unlockTrophyB55.apply(this, arguments); };
+// conquistas de corrida: nada a partir de números impossíveis (a parte 57 já filtrava os importados inválidos)
+const _checkRunEvolutionB55 = window.checkRunEvolution;
+window.checkRunEvolution = function(km, pace){
+  try{ const p = parsePace(pace); if(p && p < MT_RITMO_MIN.corrida) return; }catch(e){}
+  const R = state.modules.run; const orig = R && R.history;
+  if(!orig) return _checkRunEvolutionB55.apply(this, arguments);
+  const ult = orig[orig.length-1];
+  R.history = orig.filter(x=>x === ult || !mtAtvInvalida(x));
+  try{ return _checkRunEvolutionB55.apply(this, arguments); } finally { R.history = orig; }
+};
+// recordes: refeitos sem as atividades impossíveis (a parte 57 já faz isso para as importadas)
+mtGancho('renderRecords', { depois(){
+  try{
+    const list = $('records-list'); const R = state.modules.run; if(!list || !R) return;
+    const todas = R.history || []; if(!todas.some(x=>mtAtvInvalida(x) && !(x.imp && x.imp.valido === false))) return;
+    const H = todas.filter(x=>!mtAtvInvalida(x)); const dt = ts=>new Date(ts).toLocaleDateString('pt-BR');
+    const linha = t=>[...list.querySelectorAll('.rec-row')].find(r=>{ const e = r.querySelector(':scope > div > div'); return e && e.textContent.trim() === t; });
+    const acerta = (t, x, val)=>{ const r = linha(t); if(!r) return; if(!x){ r.remove(); return; } const d = r.querySelectorAll(':scope > div > div')[1]; if(d) d.textContent = dt(x.at); const v = r.querySelector('.rec-val'); if(v) v.textContent = val; };
+    const cor = H.filter(x=>!x.activity || x.activity === 'corrida');
+    const maior = cor.filter(x=>x.distance).reduce((a,x)=>!a || x.distance > a.distance ? x : a, null); acerta('Maior distância', maior, maior && `${maior.distance} km`);
+    const pace = cor.filter(x=>x.pace && x.distance >= 1).reduce((a,x)=>!a || parsePace(x.pace) < parsePace(a.pace) ? x : a, null); acerta('Melhor ritmo', pace, pace && pace.pace);
+    [['bike','Maior pedalada'],['caminhada','Maior caminhada']].forEach(([t, tit])=>{ const m = H.filter(x=>x.activity === t && x.distance).reduce((a,x)=>!a || x.distance > a.distance ? x : a, null); acerta(tit, m, m && `${m.distance} km`); });
+  }catch(e){}
+}});
+// histórico: um selo discreto avisa por que a atividade não conta para recordes
+mtGancho('renderHistory', { depois(){
+  try{
+    if(state.active !== 'run') return; const h = ((state.modules.run||{}).history)||[];
+    document.querySelectorAll('#history-list .hist-card[onclick^="openHistoryEntry"]').forEach(c=>{
+      const i = +((c.getAttribute('onclick').match(/\d+/)||[])[0]); const x = h[i]; if(!x || !mtAtvInvalida(x) || c.querySelector('.hist-susp')) return;
+      const meta = c.querySelector('.hist-meta'); if(meta) meta.insertAdjacentHTML('beforeend', '<span class="hist-orig hist-susp" title="Ritmo ou velocidade impossível: não conta para recordes">⚠️ confira</span>');
+    });
+  }catch(e){}
+}});
+
+// ---------- 5. detalhe de uma atividade registrada à mão ----------
+const _openHistoryEntryB55 = window.openHistoryEntry;
+window.openHistoryEntry = function(idx){
+  const r = _openHistoryEntryB55.apply(this, arguments);
+  try{
+    if(state.active !== 'run') return r;
+    const x = (((state.modules.run||{}).history)||[])[idx]; if(!x || x.imp) return r;
+    const mi = $('modal-inner'); const h3 = mi && mi.querySelector('h3'); if(!h3 || mi.querySelector('.he-resumo')) return r;
+    const tipo = x.activity === 'bike' ? 'Bike' : x.activity === 'caminhada' ? 'Caminhada' : x.activity === 'forca' ? 'Força' : 'Corrida';
+    const km = +x.distance || 0, min = +x.duration || 0;
+    const ritmo = km && min ? (x.activity === 'bike' ? `${(km/(min/60)).toFixed(1).replace('.',',')} km/h` : fmtPaceMin(min/km)) : '';
+    const c = (l, v)=>v ? `<div class="ip-c"><small>${l}</small><b>${v}</b></div>` : '';
+    h3.insertAdjacentHTML('afterend', `<div class="he-resumo"><p class="integ-mini">${new Date(x.at).toLocaleString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })} · <span class="ii-orig">${x.id === 'ma' ? 'Registro manual' : 'Registrado no plano'}</span></p>
+      <div class="ip-cards">${c('Modalidade', tipo)}${c('Distância', km ? `${mtFmtKm(km)} km` : '')}${c('Duração', min ? fmtDur(min) : '')}${c(x.activity === 'bike' ? 'Velocidade' : 'Ritmo', ritmo)}${c('Esforço (RPE)', x.rpe ? `${x.rpe}/10` : '')}${x.isRace ? c('Tipo', 'Prova') : ''}</div>
+      ${mtAtvInvalida(x) ? '<p class="ip-aviso">⚠️ Esse ritmo é mais rápido que o recorde mundial: confira a distância e o tempo. Enquanto isso, a atividade não conta para recordes.</p>' : ''}
+      <div class="section-lbl" style="margin:12px 0 0">Editar</div></div>`);
+  }catch(e){}
+  return r;
+};
+
+// ---------- 2. Desafios: novidades num lugar só ----------
+function mtEventoNovo(){
+  try{ const e = eventoPrincipal(); if(!e) return null; return mtLS('mt_chal_visto') !== e.key ? e : null; }catch(e){ return null; }
+}
+const MT_NOV_TIPO = { trofeu:'Nova conquista', secreto:'Segredo revelado', medalha:'Nova medalha', marco:'Marco alcançado', evento:'Desafio concluído' };
+let _mtEvNovoAntes = null;
+mtGancho('renderChallenges', { antes(){ _mtEvNovoAntes = mtEventoNovo(); }, depois(){
+  try{
+    const root = $('chal-root'); if(!root) return; const velho = $('mt-novidades'); if(velho) velho.remove();
+    const p = cqPendentes(); const itens = p.itens.slice().reverse();
+    const linhas = [];
+    if(_mtEvNovoAntes) linhas.push(`<div class="nov-l nov-ev"><span class="nov-ico">🆕</span><span class="nov-tx"><b>Novo desafio: ${mtEsc(_mtEvNovoAntes.nome || 'desafio temático')}</b><small>Está logo abaixo, no topo desta aba.</small></span></div>`);
+    p.meses.forEach(d=>linhas.push(`<button type="button" class="nov-l" onclick="openTrophies()"><span class="nov-ico">🏁</span><span class="nov-tx"><b>Desafio do mês encerrado</b><small>${mtEsc((d.tema||{}).nome || '')} · veja o resultado em Conquistas</small></span><span class="ii-seta">›</span></button>`));
+    itens.slice(0, 4).forEach(it=>{
+      const t = it.tid ? TROPHIES.find(x=>x.id === it.tid) : null;
+      linhas.push(`<button type="button" class="nov-l" onclick="mtNovAbre('${mtJsStr(it.k)}')"><span class="nov-ico">${it.kind === 'medalha' ? '🥇' : it.kind === 'evento' ? '✅' : '🏆'}</span><span class="nov-tx"><b>${mtEsc(MT_NOV_TIPO[it.kind] || 'Novidade')}: ${mtEsc(t ? t.name : it.nome)}</b><small>${mtEsc(t ? t.desc : (it.desc || ''))}</small></span><span class="ii-seta">›</span></button>`);
+    });
+    if(itens.length > 4) linhas.push(`<button type="button" class="nov-l nov-mais" onclick="openTrophies()">Ver as outras ${itens.length - 4} em Conquistas ›</button>`);
+    if(!linhas.length) return;
+    root.insertAdjacentHTML('afterbegin', `<section class="nov-box" id="mt-novidades" aria-label="Novidades"><div class="nov-t">Novidades <span>${linhas.length > 5 ? itens.length + p.meses.length + (_mtEvNovoAntes?1:0) : ''}</span></div>${linhas.join('')}</section>`);
+  }catch(e){ console.log('novidades:', e); }
+}});
+function mtNovAbre(k){
+  const it = ((state.conqPend)||[]).find(x=>x.k === k);
+  if(it && it.tid && TROPHIES.some(t=>t.id === it.tid)){ cqMarcaVista(x=>x.k === k); try{ renderChallenges(); }catch(e){} openTrophyDetail(it.tid); return; }
+  openTrophies();
+}
+// o indicador da aba: um número pequeno, que soma tudo o que ainda não foi visto (sem dois pontos diferentes)
+const _cqIndicadoresB55 = window.cqIndicadores;
+window.cqIndicadores = function(){
+  const r = _cqIndicadoresB55 ? _cqIndicadoresB55.apply(this, arguments) : undefined;
+  try{
+    const n = cqTemNovidade() + (mtEventoNovo() ? 1 : 0);
+    const old = $('tab-dot-chal'); if(old) old.classList.remove('on');
+    document.querySelectorAll('.tab[data-tab="challenges"]').forEach(t=>{
+      let d = t.querySelector('.cq-dot');
+      if(n && !d){ d = document.createElement('span'); d.className = 'cq-dot'; d.setAttribute('aria-hidden','true'); t.appendChild(d); }
+      if(!n){ if(d) d.remove(); }
+      else { const tx = n > 9 ? '9+' : String(n); if(d.textContent !== tx) d.textContent = tx; d.classList.add('cq-num'); }
+      t.setAttribute('aria-label', n ? `Desafios — ${n} ${n===1?'novidade':'novidades'}` : 'Desafios');
+    });
+  }catch(e){}
+  return r;
+};
+mtGancho('renderMonthlyCard', { depois(){ try{ cqIndicadores(); }catch(e){} } });
+mtGancho('renderChallenges', { depois(){ try{ cqIndicadores(); }catch(e){} } });
+
+// ---------- 3. Progresso: a modalidade vem do Início/Perfil ----------
+mtGancho('renderPerf', { depois(){ mtPerfModInfo(); } });
+mtGancho('goTab', { depois(t){ if(t === 'perf') mtPerfModInfo(); } });
+function mtPerfModInfo(){
+  try{
+    const scr = $('scr-perf'); if(!scr) return; const sub = scr.querySelector('.wrap h1 + .text-dim, .wrap h1 ~ .text-dim'); if(!sub) return;
+    const ambas = !!(state.modules.lift && state.modules.run);
+    const mod = state.active === 'run' ? 'Corrida e cardio' : 'Musculação';
+    const tx = ambas ? `Últimos 7 dias · ${mod}` : 'Últimos 7 dias';
+    if(sub.textContent !== tx) sub.textContent = tx;
+    sub.title = ambas ? 'Para ver a outra modalidade, troque o módulo no Início ou no Perfil.' : '';
+  }catch(e){}
+}
+// calendário: só a modalidade ativa (com as duas modalidades)
+const _renderCalendarB55 = window.renderCalendar;
+window.renderCalendar = function(){
+  const L = state && state.modules && state.modules.lift, R = state && state.modules && state.modules.run;
+  if(!L || !R) return _renderCalendarB55.apply(this, arguments);
+  const outro = state.active === 'run' ? L : R; const h = outro.history;
+  outro.history = [];
+  try{ return _renderCalendarB55.apply(this, arguments); } finally { outro.history = h; }
+};
+
+// ---------- 4. Treinos: o atalho certo para cada modalidade ----------
+const MT_ICO_RELOGIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="3"/><path d="M9 6.5l.8-3h4.4l.8 3M9 17.5l.8 3h4.4l.8-3M12 9.5V12l1.6 1.2"/></svg>';
+function mtTreinosAtalho(){
+  try{
+    const box = $('sess-qlinks'); if(!box) return;
+    const b = [...box.querySelectorAll('.qlink')].find(x=>/openActivityLog|openIntegracoes/.test(x.getAttribute('onclick')||'')); if(!b) return;
+    const lift = state.active !== 'run';
+    const html = lift ? `<span class="ql-ico">${MT_ICO_RELOGIO}</span>Importar do relógio` : null;
+    if(lift){ if(b.dataset.b55 !== 'lift'){ b.innerHTML = html; b.setAttribute('onclick', 'openIntegracoes()'); b.setAttribute('aria-label', 'Importar atividade do relógio (GPX, TCX ou FIT)'); b.dataset.b55 = 'lift'; } }
+    else if(b.dataset.b55 === 'lift'){ b.innerHTML = '<span>➕</span>Registrar atividade'; b.setAttribute('onclick', 'openActivityLog()'); b.removeAttribute('aria-label'); b.dataset.b55 = 'run'; }
+  }catch(e){}
+}
+mtGancho('goTab', { depois(t){ if(t === 'sessions') mtTreinosAtalho(); } });
+mtGancho('renderSessions', { depois(){ mtTreinosAtalho(); } });
+
+// ---------- 6. anatomia: histórico do músculo (informativo, sem "% recuperado") ----------
+const MM_PERNAS_CORRIDA = { quadriceps:1, posteriores:1, gluteos:1, panturrilha:1, tibial:1 };
+function mmHistoricoMusculo(k){
+  const out = { ultimo:null, proximo:null, corrida:null };
+  try{
+    Object.entries(state.progress || {}).forEach(([id, arr])=>{
+      const ex = _mmExDoBanco(id); if(!ex) return; const m = mmMusculosDe(ex);
+      if(!m.prim.includes(k) && !m.sec.includes(k)) return;
+      (arr||[]).forEach(p=>{ if((p.sets||[]).length && (!out.ultimo || p.date > out.ultimo)) out.ultimo = p.date; });
+    });
+    const mod = state.modules.lift;
+    if(mod && mod.plan){
+      const hoje = (new Date().getDay() || 7); const feitoHoje = (mod.history||[]).some(h=>mtDia0(h.at) === mtDia0());
+      for(let d = feitoHoje ? 1 : 0; d <= 7; d++){
+        const di = ((hoje - 1 + d) % 7) + 1;
+        const w = (mod.plan.workouts||[]).find(x=>x.dayIdx === di); if(!w) continue;
+        const M = _mmMusculosDoTreino(w); if(M.prim[k] || M.sec[k]){ out.proximo = { d, w }; break; }
+      }
+    }
+    if(MM_PERNAS_CORRIDA[k]){
+      const R = (((state.modules.run||{}).history)||[]).filter(x=>(!x.activity || x.activity === 'corrida') && x.at >= Date.now() - 3*DIA_MS && !mtAtvInvalida(x));
+      if(R.length) out.corrida = R.reduce((a,x)=>x.at > a.at ? x : a);
+    }
+  }catch(e){}
+  return out;
+}
+function _mmQuando(ts){ const d = Math.round((mtDia0() - mtDia0(ts))/DIA_MS); return d === 0 ? 'hoje' : d === 1 ? 'ontem' : `há ${d} dias`; }
+const _mmFichaB55 = window.mmFicha;
+window.mmFicha = function(){
+  const r = _mmFichaB55.apply(this, arguments);
+  try{
+    const box = $('mm-ficha'); const k = _mm.sel; if(!box || box.hidden || !k) return r;
+    const H = mmHistoricoMusculo(k); const DN = ['','segunda','terça','quarta','quinta','sexta','sábado','domingo'];
+    const linhas = [];
+    linhas.push(H.ultimo ? `Último estímulo registrado: <b>${_mmQuando(H.ultimo)}</b>.` : 'Nenhuma série registrada para este músculo ainda.');
+    if(H.corrida){ const q = _mmQuando(H.corrida.at); linhas.push(`${/^h[áa] /.test(q) ? 'A corrida feita ' + q : 'A corrida de ' + q} (${mtFmtKm(H.corrida.distance||0)} km) também exigiu este músculo.`); }
+    if(H.proximo) linhas.push(`Próximo estímulo previsto: <b>${H.proximo.d === 0 ? 'hoje' : H.proximo.d === 1 ? 'amanhã' : DN[(((new Date().getDay()||7) - 1 + H.proximo.d) % 7) + 1]}</b> (${mtEsc(H.proximo.w.name || '')}).`);
+    const html = `<div class="mm-f-sec mm-hist"><h5>Seu histórico com este músculo</h5><p>${linhas.join('<br>')}</p><p class="mm-mute">A recuperação depende do volume, da intensidade, do sono e da sua experiência — não só das horas. Use isto como referência, não como regra.</p></div>`;
+    const ult = box.querySelector('p.mm-mute:last-child'); if(ult) ult.insertAdjacentHTML('beforebegin', html); else box.insertAdjacentHTML('beforeend', html);
+  }catch(e){}
+  return r;
+};
+
+// ---------- estilos ----------
+(function(){
+  const st = document.createElement('style'); st.id = 'b55-css';
+  st.textContent = `
+.cq-dot.cq-num{min-width:16px;height:16px;padding:0 4px;border-radius:99px;font-size:10px;font-weight:800;line-height:16px;text-align:center;color:#fff;box-sizing:border-box;top:2px!important}
+#tab-dot-chal{display:none!important}
+.nov-box{margin:4px 0 16px;padding:12px 14px;border-radius:18px;background:var(--surface,var(--card));border:1px solid rgba(var(--primary-rgb),.35)}
+.nov-t{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-2);margin-bottom:6px}
+.nov-l{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--border);padding:10px 0;color:var(--text);font:inherit;cursor:pointer}
+.nov-l:first-of-type{border-top:0}
+.nov-ico{font-size:20px;flex:0 0 auto}.nov-tx{flex:1;min-width:0}.nov-tx b{display:block;font-size:13.5px;overflow-wrap:anywhere}.nov-tx small{display:block;font-size:12px;color:var(--text-dim);margin-top:2px}
+.nov-mais{justify-content:center;font-weight:700;color:var(--primary-2);font-size:13px}
+.cq-novos-dica{font-size:12px;color:var(--text-dim);margin:0 0 8px}
+.cq-novo{cursor:pointer;transition:opacity .2s, transform .2s}.cq-novo.cq-saindo{opacity:0;transform:scale(.96)}
+.cq-todas-vistas{display:block;margin:8px auto 0;background:none;border:0;color:var(--text-dim);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer}
+.he-resumo .ip-cards{margin-top:8px}
+.hist-susp{background:rgba(245,158,11,.14)!important;color:#f5b041!important}
+.integ-manual{display:block;width:100%;margin-top:12px;padding:12px;border-radius:14px;border:1px dashed var(--border);background:none;color:var(--text-dim);font:inherit;font-size:13px;text-align:center;cursor:pointer}
+.integ-manual b{color:var(--text)}
+.integ-log-btn{display:flex!important;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;color:inherit;font:inherit;cursor:pointer}
+.integ-log-btn > b, .integ-log-btn > small{flex:1 1 100%}
+.ip-orig{display:grid;gap:4px;margin-top:6px}.ip-orig div{display:flex;justify-content:space-between;gap:10px;font-size:12.5px}.ip-orig span{color:var(--text-dim)}.ip-orig b{text-align:right;overflow-wrap:anywhere}
+.ql-ico svg{width:16px;height:16px;vertical-align:-3px}
+.mm-hist p{margin:4px 0}
+/* responsividade: nada importante escondido para o lado em telas pequenas */
+#perf-evo .chip-row, #perf-evo .chips, #perf-evo .seg-row, .evo-chips, .cd-chips, .mm-modos{flex-wrap:wrap!important;overflow-x:visible!important}
+.evo-chips .nxchip, .cd-chips > *, .mm-modos > *{flex:0 1 auto!important}
+.cal-grid{grid-template-columns:repeat(7,minmax(0,1fr))!important}
+.mod-toggle{min-width:0}.mod-toggle .seg{min-width:0;overflow-wrap:anywhere;white-space:normal}
+.cq-conts{min-width:0;grid-template-columns:repeat(3,minmax(0,1fr))!important}.cq-cont{min-width:0;padding-left:3px!important;padding-right:3px!important}.cq-cont span{font-size:clamp(9.5px,2.7vw,11px)!important;white-space:nowrap}
+@media (max-width:340px){.cq-resumo{flex-wrap:wrap;justify-content:center}.cq-conts{flex:1 1 100%}}
+#sessions-chips{flex-wrap:wrap!important;overflow-x:visible!important}
+#sessions-chips > *{flex:1 1 58px!important;min-width:0!important}
+.cq-filtros{flex-wrap:wrap!important;overflow-x:visible!important}
+.cq-filtros .filter-chip{flex:0 1 auto}
+.qlinks{flex-wrap:wrap}
+`;
+  document.head.appendChild(st);
+})();
+
+Object.assign(window, { mtAtvInvalida, mtAtvRitmoImpossivel, mtNovAbre, mtEventoNovo, mtTreinosAtalho, mmHistoricoMusculo, mtPerfModInfo });
+
+// =====================================================================
+// 59. Beta 55 — Substituição inteligente de alimentos (Alimentação)
+// =====================================================================
+// Ao tocar num alimento do cardápio, além de mudar a quantidade e de "não vou comer", aparece
+// "Trocar por outro alimento". O app procura alimentos do MESMO grupo (fruta por fruta, proteína por
+// proteína, carboidrato por carboidrato) que combinem com aquela refeição e calcula a quantidade que
+// rende o mesmo nutriente principal (carboidrato da fruta, proteína da carne...). Só sugere quando a
+// diferença de calorias fica pequena (até ~20% ou 25 kcal) e os outros nutrientes não destoam.
+//  • Mostra: original × sugerido, as duas quantidades e a diferença de kcal, proteína, carbo e gordura.
+//  • Só troca depois de confirmar. A troca vale para aquele dia e aquela refeição, só para a pessoa
+//    (state.nutriLog é de cada um): o cardápio original, o prato da casa e a lista de compras não mudam.
+//  • Respeita vegetariano, sem lactose e sem glúten. Não sugere salgados/doces de "fora da rotina".
+//  • Sem troca equivalente, diz isso — não sugere qualquer coisa.
+//  • Desfazer: tocar no alimento trocado → "Desfazer a troca" (o original volta).
+// Modelo no registro do dia: original em adj[id] = {x:1, sub:novo}; o substituto em add[] = {id, q, subDe:id}.
+
+const SUB_CARNES = ['presunto','frango','sobrecoxa','patinho','acem','lombo','figado','peixe','atum','sardinha','peru'];
+// o que combina com cada tipo de refeição (proteínas e carboidratos); frutas, laticínios e o resto valem sempre
+const SUB_REFEICAO = {
+  leve: { proteinas:['ovo','presunto','peru','whey','atum','frango','tofu'], carbo:['pao','paoint','paoforma','paodq','tapioca','cuscuz','batata','mandioca','mandioquinha'], graos:['aveia','granola','milho'] },
+  prato:{ proteinas:['frango','sobrecoxa','patinho','acem','lombo','figado','peixe','atum','sardinha','ovo','soja','tofu','peru'], carbo:['batata','batataing','mandioca','mandioquinha','cuscuz','pao','paoint'], graos:['arroz','arrozint','feijao','feijaopreto','lentilha','grao','macarrao','milho'] }
+};
+function _subCategoria(id){ for(const [k, v] of Object.entries(NUTRI_CATEG)){ if(k !== 'fora' && v[1].includes(id)) return k; } return null; }
+function _subTipoRefeicao(mid){ return /almoco|jantar/.test(mid) ? 'prato' : 'leve'; }
+function _subMacros(id, q){ const f = NUTRI_ALIMENTOS[id]; const g = f[5] ? q*f[5] : q; const k = g/100; return { kcal:f[1]*k, p:f[2]*k, c:f[3]*k, g:f[4]*k, gramas:g }; }
+// nutriente que define a equivalência em cada grupo (índice no NUTRI_ALIMENTOS: 2 prot, 3 carbo, 4 gord, 1 kcal)
+const SUB_CHAVE = { frutas:3, graos:3, carbo:3, proteinas:2, lat:2, outros:4, verduras:1 };
+function _subArredonda(id, qBruta){
+  const f = NUTRI_ALIMENTOS[id];
+  if(f[5]) return Math.max(1, Math.round(qBruta));
+  const passo = (id==='leite'||id==='iogurte') ? 50 : (f[6] && f[6].g <= 20 ? f[6].g : 5);
+  return Math.max(passo, Math.round(qBruta/passo)*passo);
+}
+function subCandidatos(mid, fid, q0){
+  const cat = _subCategoria(fid); if(!cat) return { cat:null, lista:[] };
+  const n = nutriConfig();
+  const proib = new Set([...(n.semLactose ? NUTRI_LACTOSE : []), ...(n.semGluten ? NUTRI_GLUTEN : []), ...(n.vegetariano ? SUB_CARNES : [])]);
+  const fora = window.NUTRI_FORA_IDS || new Set();
+  const o = _subMacros(fid, q0); const ci = SUB_CHAVE[cat] || 1;
+  const permitidos = (SUB_REFEICAO[_subTipoRefeicao(mid)] || {})[cat];
+  const alvoNut = ci === 1 ? o.kcal : [0, 0, o.p, o.c, o.g][ci];
+  const out = [];
+  NUTRI_CATEG[cat][1].forEach(id=>{
+    if(id === fid || proib.has(id) || fora.has(id) || !NUTRI_ALIMENTOS[id]) return;
+    if(id === 'whey' && fid !== 'whey') return;                       // suplemento só troca por suplemento
+    if(permitidos && !permitidos.includes(id)) return;
+    const f = NUTRI_ALIMENTOS[id]; const por = f[ci]; if(!por || por <= 0) return;
+    const gramas = alvoNut / por * 100; const qB = f[5] ? gramas / f[5] : gramas;
+    if(!isFinite(qB) || qB <= 0) return;
+    const q = _subArredonda(id, qB);
+    const s = _subMacros(id, q);
+    // limites: quantidade que dá para comer de verdade e diferença pequena
+    if(!f[5] && s.gramas > Math.max(400, o.gramas*3)) return;
+    if(f[5] && q > 4) return;
+    const dk = s.kcal - o.kcal, tolK = Math.max(25, o.kcal*0.2);
+    if(Math.abs(dk) > tolK) return;
+    if(cat === 'proteinas' && Math.abs(s.g - o.g) > Math.max(6, o.g*0.8)) return;     // carne magra × gordurosa
+    if((cat === 'frutas' || cat === 'graos' || cat === 'carbo') && Math.abs(s.p - o.p) > Math.max(6, o.p)) return;
+    const pena = Math.abs(dk)/Math.max(1, o.kcal) + Math.abs(s.p - o.p)/40 + Math.abs(s.g - o.g)/25 + Math.abs(s.c - o.c)/80;
+    out.push({ id, q, s, dk, pena });
+  });
+  out.sort((a,b)=>a.pena - b.pena);
+  return { cat, lista: out.slice(0, 5), o };
+}
+function _subFmtQ(id, q){ return nutriTextoQtd(id, q).replace(/^(\d+)\.5/, '$1,5'); }
+function _subDif(v, u){ const r = Math.round(v); return r === 0 ? `±0${u}` : `${r > 0 ? '+' : '−'}${Math.abs(r)}${u}`; }
+
+// botão no editor do alimento
+mtGancho('nutriEdRender', { depois(){
+  try{
+    const e = window.__ned; const mi = $('modal-inner'); if(!e || !mi) return;
+    if(e.mode === 'adj' && !mi.querySelector('#sub-btn')){
+      const b = mi.querySelector('.btn.btn-primary'); if(!b) return;
+      b.insertAdjacentHTML('afterend', `<button class="btn btn-outline btn-block" id="sub-btn" style="margin-top:8px" onclick="subAbrir('${e.mid}','${e.fid}')">🔄 Trocar por outro alimento</button>`);
+    }
+    // alimento que entrou numa troca: oferece desfazer
+    if(e.mode === 'addedit'){
+      const a = nutriMealLog(e.mid, false).add[e.idx];
+      if(a && a.subDe && !mi.querySelector('#sub-desfaz')){
+        const h = mi.querySelector('h3'); const orig = (NUTRI_ALIMENTOS[a.subDe]||[''])[0];
+        if(h) h.insertAdjacentHTML('afterend', `<p class="sub-nota">🔄 Trocado no lugar de <b>${mtEsc(orig)}</b> só neste dia.</p>`);
+        const b = mi.querySelector('.btn.btn-primary'); if(b) b.insertAdjacentHTML('afterend', `<button class="btn btn-ghost btn-block" id="sub-desfaz" style="margin-top:8px" onclick="subDesfazer('${e.mid}',${e.idx})">↩️ Desfazer a troca (volta ${mtEsc(orig)})</button>`);
+      }
+    }
+  }catch(err){ console.log('substituição:', err); }
+}});
+function _subQAtual(mid, fid){
+  const plano = nutriMontarPlano(nutriDiaSel()); if(plano.erro) return null;
+  const meal = plano.refeicoes.find(m=>m.id === mid); const it = meal && meal.itens.find(i=>i.id === fid); if(!it) return null;
+  const f = NUTRI_ALIMENTOS[fid]; const a = nutriMealLog(mid, false).adj[fid];
+  const q = (a && a.q !== undefined) ? a.q : (f[5] ? Math.round(it.un*2)/2 : Math.round(it.gramas));
+  return { q, meal };
+}
+function subAbrir(mid, fid){
+  const A = _subQAtual(mid, fid); if(!A) return;
+  const f = NUTRI_ALIMENTOS[fid]; const R = subCandidatos(mid, fid, A.q); const o = _subMacros(fid, A.q);
+  window.__sub = { mid, fid, q:A.q, R };
+  const linha = (c, i)=>`<button type="button" class="sub-op" onclick="subVer(${i})"><span class="sub-op-n"><b>${mtEsc(NUTRI_ALIMENTOS[c.id][0])}</b><small>${_subFmtQ(c.id, c.q)} · ${Math.round(c.s.kcal)} kcal <em class="${Math.abs(c.dk) < 10 ? 'ok' : ''}">(${_subDif(c.dk, ' kcal')})</em></small></span><span class="ii-seta">›</span></button>`;
+  $('modal-inner').innerHTML = `<h3>🔄 Trocar ${mtEsc(f[0])}</h3>
+    <p class="sub-p">No cardápio: <b>${_subFmtQ(fid, A.q)}</b> · ${Math.round(o.kcal)} kcal · P ${Math.round(o.p)} g · C ${Math.round(o.c)} g · G ${Math.round(o.g)} g</p>
+    ${R.lista.length ? `<p class="sub-p">Opções do mesmo grupo, na quantidade que rende ${({3:'o mesmo carboidrato',2:'a mesma proteína',4:'a mesma gordura',1:'as mesmas calorias'})[SUB_CHAVE[R.cat]||1]}${R.cat==='frutas'?' da fruta':''}:</p>${R.lista.map(linha).join('')}
+      <p class="sub-mini">A troca vale só para hoje${nutriDiaSel() !== ((typeof getDayIdx==='function') ? getDayIdx() : 1) ? ' (neste dia)' : ''}, só para você. O cardápio e a lista de compras continuam iguais.</p>`
+      : `<div class="sub-vazio">Não encontrei uma troca equivalente para <b>${mtEsc(f[0])}</b> nesta refeição${(nutriConfig().semLactose || nutriConfig().semGluten || nutriConfig().vegetariano) ? ' com as suas restrições' : ''}. Em vez de sugerir qualquer alimento, prefiro não trocar: você pode ajustar a quantidade ou acrescentar outro alimento à refeição.</div>`}
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="nutriEditar('${mid}','${fid}')">‹ Voltar</button>`;
+  $('modal-back').classList.add('on');
+}
+function subVer(i){
+  const S = window.__sub; if(!S) return; const c = S.R.lista[i]; if(!c) return;
+  const o = S.R.o; const fo = NUTRI_ALIMENTOS[S.fid], fn = NUTRI_ALIMENTOS[c.id];
+  const L = (n, a, b, u)=>`<tr><th>${n}</th><td>${Math.round(a)}${u}</td><td>${Math.round(b)}${u}</td><td class="${Math.abs(b-a) < (u===' kcal'?10:2) ? 'ok' : ''}">${_subDif(b - a, u)}</td></tr>`;
+  $('modal-inner').innerHTML = `<h3>Confirmar a troca?</h3>
+    <table class="sub-tab"><thead><tr><th></th><th>Original</th><th>Sugerido</th><th>Dif.</th></tr></thead><tbody>
+      <tr><th>Alimento</th><td>${mtEsc(fo[0])}</td><td>${mtEsc(fn[0])}</td><td></td></tr>
+      <tr><th>Qtd.</th><td>${_subFmtQ(S.fid, S.q)}</td><td>${_subFmtQ(c.id, c.q)}</td><td></td></tr>
+      ${L('Calorias', o.kcal, c.s.kcal, ' kcal')}${L('Proteína', o.p, c.s.p, ' g')}${L('Carbo', o.c, c.s.c, ' g')}${L('Gordura', o.g, c.s.g, ' g')}
+    </tbody></table>
+    <p class="sub-mini">Só nesta refeição de hoje e só para você. Dá para desfazer tocando no alimento trocado.</p>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="subConfirmar(${i})">✅ Trocar</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="subAbrir('${S.mid}','${S.fid}')">‹ Ver outras opções</button>`;
+}
+function subConfirmar(i){
+  const S = window.__sub; if(!S) return; const c = S.R.lista[i]; if(!c) return;
+  const m = nutriMealLog(S.mid, true);
+  m.add = (m.add||[]).filter(a=>a.subDe !== S.fid);              // uma troca por alimento
+  m.adj[S.fid] = { x:1, sub:c.id };
+  m.add.push({ id:c.id, q:c.q, subDe:S.fid });
+  nutriLimpa(S.mid); nutriAbrirRef(S.mid); saveData(); window.__sub = null;
+  toast(`🔄 ${NUTRI_ALIMENTOS[S.fid][0]} trocado por ${NUTRI_ALIMENTOS[c.id][0]}`);
+  openNutri();
+}
+function subDesfazer(mid, idx){
+  const m = nutriMealLog(mid, true); const a = m.add[idx]; if(!a || !a.subDe) return;
+  m.add.splice(idx, 1); if(m.adj[a.subDe] && m.adj[a.subDe].sub) delete m.adj[a.subDe];
+  nutriLimpa(mid); nutriAbrirRef(mid); saveData(); openNutri();
+}
+// tirar o substituto da refeição ou voltar o original pelo "não vou comer": a troca toda se desfaz junto
+mtGancho('nutriEdSalvar', { antes(reset){
+  try{ const e = window.__ned; if(!e || e.mode !== 'addedit' || !(reset || e.q === 0)) return;
+    const m = nutriMealLog(e.mid, false); const a = m.add && m.add[e.idx]; if(a && a.subDe && m.adj[a.subDe] && m.adj[a.subDe].sub) delete m.adj[a.subDe]; }catch(err){}
+}});
+mtGancho('nutriRemover', { antes(mid, fid){
+  try{ const m = nutriMealLog(mid, false); if(m.adj && m.adj[fid] && m.adj[fid].sub) m.add = (m.add||[]).filter(a=>a.subDe !== fid); }catch(err){}
+}});
+// o substituto aparece com "no lugar de …"
+const _nutriItemExtraB55 = window.nutriItemExtra;
+window.nutriItemExtra = function(a, idx){
+  const r = _nutriItemExtraB55.apply(this, arguments);
+  try{ if(r && a && a.subDe && NUTRI_ALIMENTOS[a.subDe]){ r.texto = `${r.texto} · no lugar de ${NUTRI_ALIMENTOS[a.subDe][0].toLowerCase()}`; r.troca = a.subDe; } }catch(e){}
+  return r;
+};
+
+(function(){
+  const st = document.createElement('style'); st.id = 'b55-sub-css';
+  st.textContent = `
+.sub-p{font-size:13px;color:var(--text-dim);line-height:1.5;margin:4px 0 10px}
+.sub-op{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:12px 14px;margin-top:8px;border-radius:14px;border:1px solid var(--border);background:var(--surface-2,transparent);color:var(--text);font:inherit;cursor:pointer}
+.sub-op-n{flex:1;min-width:0}.sub-op-n b{display:block;font-size:14px}.sub-op-n small{display:block;font-size:12.5px;color:var(--text-dim);margin-top:2px}
+.sub-op em{font-style:normal;color:var(--accent-2,#f5b041)}.sub-op em.ok{color:var(--primary-2)}
+.sub-mini{font-size:11.5px;color:var(--text-mute);line-height:1.5;margin-top:10px}
+.sub-vazio{padding:14px;border-radius:14px;background:var(--surface-2,rgba(255,255,255,.04));font-size:13px;line-height:1.55;color:var(--text-dim)}
+.sub-nota{font-size:12.5px;color:var(--text-dim);margin:4px 0 10px}
+.sub-tab{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px;table-layout:fixed}
+.sub-tab th,.sub-tab td{padding:7px 4px;border-bottom:1px solid var(--border);text-align:right;overflow-wrap:anywhere}
+.sub-tab th:first-child{text-align:left;color:var(--text-dim);font-weight:600;width:24%;overflow-wrap:normal}
+.sub-tab th:last-child,.sub-tab td:last-child{width:19%}
+.sub-tab thead th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-mute)}
+.sub-tab td.ok{color:var(--primary-2)}
+`;
+  document.head.appendChild(st);
+})();
+Object.assign(window, { subAbrir, subVer, subConfirmar, subDesfazer, subCandidatos });

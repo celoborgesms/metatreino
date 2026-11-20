@@ -2,6 +2,18 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. Beta 55 — auditoria
+- [ ] Sair e entrar com o Google: sem "O app demorou para abrir" e sem a etapa "Escolha o visual" piscando.
+- [ ] Com a caminhada antiga importada: Início da musculação sem "De volta depois de 53 dias"; na corrida, o aviso só da corrida.
+- [ ] Importar um arquivo que desbloqueia conquista: a janela de conquistas aparece ao terminar.
+- [ ] Abrir uma atividade importada: compartilhar (com percurso), "Dados do arquivo original", excluir.
+- [ ] Conquistas: com 2+ novas, tocar em uma e conferir que só ela sai; fechar, abrir em outro aparelho.
+- [ ] Desafios: seção "Novidades" e o número na aba somem depois de ver tudo.
+- [ ] Progresso sem o seletor; Treinos (musculação) com "Importar do relógio".
+- [ ] Registrar 8 km em 10 min: o app pergunta; salvo assim, não vira recorde.
+- [ ] Alimentação: trocar uma fruta e uma proteína; desfazer; na Casa, conferir que o outro celular não mudou.
+- [ ] Celular pequeno (≈ 360 px): Desempenho, Conquistas, Cardio e Treinos sem nada escondido para o lado.
+
 ## 00000. Beta 54 — integrações e atividades
 - [ ] Importar FIT, TCX e GPX reais (Zepp, Garmin, Strava…) de corrida, caminhada, bike e musculação; conferir com o app de origem.
 - [ ] Duplicado (mesmo arquivo e registro manual), arquivo cortado, rota sem horário.
