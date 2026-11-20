@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 57 — app-plus.js
+// MetaTreino 2027.1 Beta 58 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.57' };
+const MTP = { versao: '2027.1-beta.58' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -965,7 +965,12 @@ function renderHomeSmart(){
   if(c.ferias || c.dor || fechado){ el.innerHTML = ''; return; }
   let k = '', t = '', p = '', a = '', cls = '';
   const prox = _proxTreinoTxt();
-  if(c.total === 0){
+  if(c.planFuturo && !c.hojeFeito){
+    // Beta 58: plano que ainda não começou — nada de pausa, atraso ou "semana em risco"
+    k = 'Primeiros passos'; t = prox ? `Seu plano começa ${prox}` : 'Seu plano começa em breve';
+    p = 'Até lá, nada de atraso: é só chegar descansado. Se quiser começar antes, é só treinar — o plano se ajusta à data.';
+    a = '';
+  } else if(c.total === 0){
     k = 'Primeiros passos'; t = 'Seu primeiro treino é o mais importante';
     p = 'Comece com cargas leves e foque na técnica. Registre as séries: é com elas que o MetaTreino aprende o seu ritmo e ajusta as próximas sugestões.';
     a = '';   // Beta 44: sem "Ver treino"/"Como executar" — o treino de hoje e o "Ver como fazer" de cada exercício já estão logo abaixo
@@ -974,7 +979,7 @@ function renderHomeSmart(){
     p = `Hidratação, uma refeição com proteína e uma boa noite de sono completam o treino.${prox?` Próxima sessão ${prox}.`:''}`;
     a = `<button class="btn btn-ghost" onclick="openWeekSummary()">Resumo da semana</button>`;
     cls = 'info';
-  } else if(c.diasSem !== null && c.diasSem >= 4){
+  } else if(c.diasSem !== null && c.diasSem >= 4 && c.pausaReal !== false){
     k = 'Retomada'; t = `${c.diasSem} dias sem treinar — vamos voltar com calma`;
     p = 'Na primeira semana, use cerca de 70% das cargas de antes e menos séries. Voltar bem vale mais que voltar forte.';
     a = `<button class="btn btn-primary" onclick="goTab('sessions')">Treinar hoje</button><button class="btn btn-ghost" onclick="mtPergunta('retomada')">Plano de retomada</button>`;
@@ -984,7 +989,7 @@ function renderHomeSmart(){
     p = c.prova<=7 ? 'Semana de polimento: volume menor, sono em dia e nada de novidade no tênis ou na alimentação.' : 'Fase de manter: os treinos-chave continuam, o volume começa a cair perto da data.';
     a = `<button class="btn btn-ghost" onclick="mtPergunta('corrida_analise')">Como estou na corrida?</button>`;
     cls = 'warn';
-  } else if(c.diaSemana >= 4 && c.semDias + (8-c.diaSemana) < c.planejados){
+  } else if(c.diaSemana >= 4 && !c.semanaInicio && c.semDias + (8-c.diaSemana) < c.planejados){
     k = 'Frequência'; t = c.semPlanejados ? `${c.semTreinos} de ${c.semPlanejados} treinos do plano nesta semana${c.semExtras?` · ${c.semExtras} ${c.semExtras===1?'atividade extra':'atividades extras'}`:''}` : `${c.semDias} de ${c.planejados} dias nesta semana`;
     p = 'A semana ainda dá para salvar parcialmente. Uma sessão hoje, mesmo curta, mantém o hábito vivo.';
     a = `<button class="btn btn-primary" onclick="goTab('sessions')">Treinar agora</button>`;
@@ -1101,8 +1106,8 @@ function _motivaCategorias(c){
   let animo = null; try{ animo = (typeof maCtxGet==='function') ? maCtxGet('animo') : null; }catch(e){}
   if(animo === 'baixo') out.push('desanimado');
   if(c.hojeFeito) out.push('treinou_hoje');
-  if(c.diasSem !== null && c.diasSem >= 8) out.push('retorno_longo');
-  else if(c.diasSem !== null && c.diasSem >= 3) out.push('retorno_curto');
+  if(c.pausaReal !== false && c.diasSem !== null && c.diasSem >= 8) out.push('retorno_longo');
+  else if(c.pausaReal !== false && c.diasSem !== null && c.diasSem >= 3) out.push('retorno_curto');
   if(c.prova !== null && c.prova >= 0 && c.prova <= 14) out.push('prova');
   if(c.prs14 > 0) out.push('evoluindo');
   if(c.total < 6) out.push('iniciante');
@@ -1209,6 +1214,8 @@ function analiseCargas(){
 function analiseRetomada(){
   const c = contextoAluno();
   if(c.diasSem === null) return 'Você ainda não tem treinos registrados — então não é retomada, é começo! Comece pelo treino de hoje com cargas leves. 💪';
+  if(c.planFuturo) return `Seu plano ainda não começou${_proxTreinoTxt() ? ' — o primeiro treino é ' + _proxTreinoTxt() : ''}. Não é retomada: é começo. Comece com cargas leves e foque na técnica. 💪`;
+  if(c.pausaReal === false && c.diasSem >= 4) return `Seu último registro foi há ${c.diasSem} dias, mas antes dele ainda não havia uma rotina de treinos no app — então não há "cargas de antes" para reduzir. Siga o plano normal, começando leve e com boa técnica. 💪`;
   if(c.diasSem < 4) return `Seu último treino foi há ${c.diasSem===0?'menos de um dia':c.diasSem+' '+(c.diasSem===1?'dia':'dias')}. Isso é descanso normal, não precisa de plano de retomada. Siga o plano como está. ✅`;
   const longa = c.diasSem >= 21;
   let t = `Faz <b>${c.diasSem} dias</b> desde o seu último treino. Plano de retomada sugerido:<br><br>`;
@@ -3225,7 +3232,8 @@ const RET = { PAUSA_MIN: 7, JANELA: 14, BASE_DIAS: 42, BASE_MIN: 2 };
 // 6 semanas que terminaram nela. Um registro isolado e antigo (ex.: um treino importado de meses atrás) é
 // histórico/experiência, não "a condição de antes" — não serve de base para dizer quanto da carga usar.
 function mtHistMusc(){ return (((state.modules.lift||{}).history)||[]).filter(x=>x && x.at).sort((a,b)=>a.at-b.at); }
-function _retBase(h, inicioPausa){ return h.filter(x=>x.at < inicioPausa + DIA_MS && x.at >= inicioPausa - RET.BASE_DIAS*DIA_MS).length; }
+// Beta 58: conta DIAS distintos (dois arquivos importados do mesmo dia não são "uma rotina")
+function _retBase(h, inicioPausa){ return new Set(h.filter(x=>x.at < inicioPausa + DIA_MS && x.at >= inicioPausa - RET.BASE_DIAS*DIA_MS).map(x=>mtDia0(x.at))).size; }
 function estadoTreino(){
   const h = mtHistMusc();
   const out = { tipo:'normal', prioridade:4 };
@@ -3351,6 +3359,9 @@ analiseRetomada = function(){
   const c = contextoAluno();
   if(est.tipo !== 'retomada'){
     if(c.diasSem === null) return 'Você ainda não tem treinos registrados — então não é retomada, é começo! Comece pelo treino de hoje com cargas leves. 💪';
+    // Beta 58: plano que ainda não começou, ou registros sem rotina antes — não é pausa
+    if(c.planFuturo) return `Seu plano ainda não começou${_proxTreinoTxt() ? ' — o primeiro treino é ' + _proxTreinoTxt() : ''}. Não é retomada: é começo. Comece com cargas leves e foque na técnica. 💪`;
+    if(c.pausaReal === false && c.diasSem >= 4) return `Seu último registro foi há ${c.diasSem} dias, mas antes dele ainda não havia uma rotina de treinos no app — então não há "cargas de antes" para reduzir. Siga o plano normal, começando leve e com boa técnica. 💪`;
     return `Seu último treino foi há ${c.diasSem===0?'menos de um dia':c.diasSem+' '+(c.diasSem===1?'dia':'dias')}. Isso é ${c.diasSem>=4?'uma pausa curta: pode seguir o plano normal, só capriche no aquecimento':'descanso normal'}. Plano de retomada é para pausas de 7 dias ou mais. ✅`;
   }
   const exs = (state.modules.lift && state.modules.lift.plan && state.modules.lift.plan.workouts||[]).flatMap(w=>w.exercises||[]).filter((e,i,a)=>a.findIndex(x=>x.id===e.id)===i);
@@ -6001,7 +6012,15 @@ function dayAutoNotes(ts){
   if(lifts.some(h=>h.feel==='exausto')) out.push({ k:'feel', emo:'🥵', txt:'Treino muito puxado: você marcou "exausto".' });
   // recordes e cargas
   const prs = state.prs || {}; const prHoje = new Set();
-  Object.keys(prs).forEach(id=>{ const p = prs[id]; if(p && p.at && noDia(p.at)){ prHoje.add(id); out.push({ k:'pr:'+id, emo:'🏆', txt:`Recorde em ${_nomeEx(id)}: ${p.peso>0 ? String(p.peso).replace('.',',')+' kg × '+p.reps : p.reps+' repetições'}` }); } });
+  // Beta 58: recorde só conta quando havia registro anterior do exercício (o primeiro registro não é recorde)
+  // e vários viram UMA linha — o calendário mostra o essencial, o resto está no histórico.
+  const recs = [];
+  Object.keys(prs).forEach(id=>{ const p = prs[id]; if(!(p && p.at && noDia(p.at))) return; prHoje.add(id);
+    const antes = (state.progress[id]||[]).some(q=>q && q.date && q.date < ini && q.sets && q.sets.length);
+    if(antes) recs.push({ id, p }); });
+  const _rTxt = r=>`${_nomeEx(r.id)} (${r.p.peso>0 ? String(r.p.peso).replace('.',',')+' kg × '+r.p.reps : r.p.reps+' rep.'})`;
+  if(recs.length === 1) out.push({ k:'pr:'+recs[0].id, emo:'🏆', txt:`Recorde em ${_rTxt(recs[0])}` });
+  else if(recs.length > 1) out.push({ k:'prs', emo:'🏆', txt:`${recs.length} recordes: ${recs.slice(0,2).map(_rTxt).join(', ')}${recs.length > 2 ? ` e mais ${recs.length-2}` : ''}` });
   const subidas = [];
   Object.keys(state.progress||{}).forEach(id=>{
     if(prHoje.has(id)) return;
@@ -6025,16 +6044,17 @@ function dayAutoNotes(ts){
   if(maiorHoje >= 3 && anteriores.length >= 3 && maiorHoje > Math.max(...anteriores.map(r=>+r.distance))) out.push({ k:'maiorkm', emo:'📏', txt:`Sua maior distância até aqui: ${mtFmtKm(maiorHoje)} km` });
   if(typeof RUN_METAS !== 'undefined') RUN_METAS.forEach(m=>{ const at = (S.metas||{})[m.k]; if(at && typeof at === 'number' && noDia(at)) out.push({ k:'meta:'+m.k, emo:'🎯', txt:`Meta alcançada: ${m.nome}` }); });
   // volta depois de uma pausa (primeiro treino após 7+ dias)
+  // Beta 58: só quando é volta de verdade — mesma modalidade e com rotina antes da pausa (mtVoltaNoDia, parte 61).
+  // Antes, uma conta nova com um treino importado de 17 dias atrás "voltava depois de 17 dias parada".
   if(lifts.length || ativ.length){
-    const todas = [...((state.modules.lift && state.modules.lift.history)||[]), ...((state.modules.run && state.modules.run.history)||[])].map(h=>h && h.at).filter(t=>t && t < ini);
-    const ult = todas.length ? Math.max(...todas) : null;
-    if(ult){ const dias = Math.round((ini - _dia0(ult))/DIA_MS); if(dias >= 7) out.push({ k:'volta', emo:'🔁', txt:`Voltou a treinar depois de ${dias} dias parado(a).` }); }
+    const v = (typeof mtVoltaNoDia === 'function') ? mtVoltaNoDia(ini, 7) : null;
+    if(v) out.push({ k:'volta', emo:'🔁', txt:`Voltou ${v.mod === 'run' ? 'a correr' : 'à musculação'} depois de ${v.dias} dias parado(a).` });
   }
   // conquistas
   const tds = state.trophyDates || {};
   const tHoje = Object.keys(tds).filter(id=>noDia(tds[id]));
-  tHoje.slice(0,3).forEach(id=>{ const t = (typeof TROPHIES!=='undefined' ? TROPHIES.find(x=>x.id===id) : null); if(t) out.push({ k:'trofeu:'+id, emo:'🎖️', txt:`Conquista desbloqueada: ${t.name}` }); });
-  if(tHoje.length > 3) out.push({ k:'trofeu+', emo:'🎖️', txt:`E mais ${tHoje.length-3} conquista${tHoje.length-3>1?'s':''} neste dia.` });
+  // Beta 58: uma entrada por conquista, mas o calendário as agrupa numa área própria, recolhida (_dnRender)
+  tHoje.forEach(id=>{ const t = (typeof TROPHIES!=='undefined' ? TROPHIES.find(x=>x.id===id) : null); if(t) out.push({ k:'trofeu:'+id, emo:'🎖️', txt:t.name, conq:true }); });
   const ocultas = new Set(((state.dayNotesOcultas||{})[ini])||[]);
   return out.map(n=>Object.assign(n, { oculta: ocultas.has(n.k) }));
 }
@@ -6055,9 +6075,15 @@ function _dnRender(ts){
   let box = $('dn-auto'); if(box) box.remove();
   if(!vis.length && !ocultas.length) return;
   box = document.createElement('div'); box.id = 'dn-auto'; box.className = 'dn-auto';
+  // Beta 58: o dia mostra o essencial. Conquistas ficam numa área própria, recolhida; acima de 4 destaques,
+  // o resto fica em "Ver mais" (nada é apagado — só não ocupa a tela toda).
+  const conq = vis.filter(n=>n.conq), prin = vis.filter(n=>!n.conq);
+  const item = n=>`<div class="dn-item"><span class="dn-emo">${n.emo}</span><span class="dn-txt">${mtEsc(n.txt)}</span>
+      <button class="dn-b" title="Editar no texto" aria-label="Editar: ${mtEsc(n.txt)}" onclick="dnEditar(${ini},'${mtJsStr(n.k)}')">✏️</button><button class="dn-b" title="Remover" aria-label="Remover: ${mtEsc(n.txt)}" onclick="dnRemover(${ini},'${mtJsStr(n.k)}')">✕</button></div>`;
   box.innerHTML = `<div class="dn-h">✨ Destaques do dia <small>automáticos</small></div>
-    ${vis.map(n=>`<div class="dn-item"><span class="dn-emo">${n.emo}</span><span class="dn-txt">${mtEsc(n.txt)}</span>
-      <button class="dn-b" title="Editar no texto" aria-label="Editar: ${mtEsc(n.txt)}" onclick="dnEditar(${ini},'${mtJsStr(n.k)}')">✏️</button><button class="dn-b" title="Remover" aria-label="Remover: ${mtEsc(n.txt)}" onclick="dnRemover(${ini},'${mtJsStr(n.k)}')">✕</button></div>`).join('')}
+    ${prin.slice(0,4).map(item).join('')}
+    ${prin.length > 4 ? `<details class="dn-mais"><summary>Ver mais ${prin.length-4} destaque${prin.length-4>1?'s':''}</summary>${prin.slice(4).map(item).join('')}</details>` : ''}
+    ${conq.length ? `<details class="dn-conq"><summary>🎖️ ${conq.length === 1 ? '1 conquista' : conq.length + ' conquistas'} neste dia</summary>${conq.map(item).join('')}</details>` : ''}
     ${ocultas.length ? `<button class="dn-rest" onclick="dnRestaurar(${ini})">Mostrar ${ocultas.length} destaque${ocultas.length>1?'s':''} removido${ocultas.length>1?'s':''}</button>` : ''}
     <div class="dn-nota">Gerados pelos seus registros. ✏️ leva o texto para a sua anotação, onde você edita e acrescenta.</div>`;
   campo.parentNode.insertBefore(box, campo);
@@ -12563,7 +12589,7 @@ function pdfMontarAlimentacao(jsPDF, arte){
     S.tabela([{t:'Refeição', w:30, negrito:true, quebra:true}, {t:'Alimentos e quantidades', w:92, quebra:true}, {t:'kcal', w:13, dir:1}, {t:'P', w:11, dir:1}, {t:'C', w:11, dir:1}, {t:'G', w:11, dir:1}],
       refs.map(r=>[`${r.m.nome}${r.m.compartilhada?' (casa)':''}\n${r.m.hora}`, r.itens.map(i=>{ const u = (typeof nutriUso==='function') ? nutriUso(i.id, true) : ''; return `${i.nome}: ${i.texto}${u ? ' — ' + u : ''}`; }).join('\n'), _fmtN(r.tot.kcal), _fmtN(r.tot.p), _fmtN(r.tot.c), _fmtN(r.tot.g)]), { t:7.8 });
   }
-  if(typeof nutriPdfCompras === 'function') nutriPdfCompras(S, arte, 'eu');   // Beta 49: lista individual (a da casa tem PDF próprio)
+  // Beta 58: a lista de compras tem PDF próprio (pdfListaCompras, parte 62) — o cardápio não a repete
   const eq = nutriEquivalencias();
   S.secao('Trocas equivalentes', 'mesma quantidade do nutriente', arte.C.a);
   S.tabela([{t:'Grupo', w:34, negrito:true, quebra:true}, {t:'Opções (cada uma vale o mesmo)', w:142, quebra:true}], eq.map(g=>[`${g.t.replace(/^[^\wÀ-ú]+/,'')}\n${g.sub}`, g.l.join(' · ')]), { cabCor:arte.C.aClaro, cabTxt:arte.C.a, t:7.8 });
@@ -13355,7 +13381,8 @@ window.openTrophies = function(){
   const antigos = encerrados.filter(d=>d.visto);
   const meses = pend.meses.slice().sort((a,b)=>b.key.localeCompare(a.key));
   const contagem = (n,l)=>`<div class="cq-cont nv-${n}"><b>${porNv[n][0]}<small>/${porNv[n][1]}</small></b><span>${l}</span></div>`;
-  const filtros = [['todas','Todas'],['ok','Desbloqueadas'],['and','Em andamento'],['blq','Bloqueadas']];
+  // Beta 58: rótulos curtos — os quatro cabem numa linha até em 320 px (antes "Desbloqueadas" e "Em andamento" quebravam)
+  const filtros = [['todas','Todas'],['ok','Ganhas'],['and','Em curso'],['blq','Bloqueadas']];
   $('modal-inner').innerHTML = `<div class="cq${animar?' cq-anim':''}">
     <div class="cq-topo"><h3>Conquistas</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
     <div class="cq-resumo"><div class="cq-anel" style="--p:${pctAll}"><b>${tenho}</b><small>de ${tot}</small></div>
@@ -15720,7 +15747,7 @@ function openFamilia(){
     <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${P.economico?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaEconomico()">💰 Pratos econômicos na casa</button><button class="seg ${famTrocaPropria()?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaTrocaPropria()">🔄 Cada um pode trocar só para si</button></div>
     ${restr.length ? `<p class="fam-p" style="margin-top:10px">As refeições da casa respeitam as restrições de todos: <b>${restr.join(', ')}</b>.</p>` : ''}
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="nutriListaCompras(null,'casa')">🛒 Lista de compras da casa</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="pdfAlimentacaoCasa()">📄 PDF da casa (cardápio e compras)</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="pdfAlimentacaoCasa()">📄 Cardápio da casa em PDF</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="famSair()">Sair do grupo (mantém meu cardápio)</button>
     ${volta}</div>`;
   $('modal-back').classList.add('on'); mi.scrollTop = 0;
@@ -15740,7 +15767,7 @@ mtGancho('openNutri', { depois(){
     if(!famAtiva()) return;
     bt.textContent = `🛒 Lista de compras (só eu ou da casa)`;
     const pdf = mi.querySelector('#nutri-pdf');
-    if(pdf && !mi.querySelector('#nutri-pdf-casa')) pdf.insertAdjacentHTML('afterend', `<button class="btn btn-ghost btn-block" id="nutri-pdf-casa" style="margin:0 0 8px" onclick="pdfAlimentacaoCasa()">📄 PDF da casa (cardápio e compras)</button>`);
+    if(pdf && !mi.querySelector('#nutri-pdf-casa')) pdf.insertAdjacentHTML('afterend', `<button class="btn btn-ghost btn-block" id="nutri-pdf-casa" style="margin:0 0 8px" onclick="pdfAlimentacaoCasa()">📄 Cardápio da casa em PDF</button>`);
     const pl = nutriMontarPlano(nutriDiaSel()); if(!pl || pl.erro) return;
     const adm = famSouAdm(), editavel = nutriDiaSel() >= getDayIdx();
     pl.refeicoes.forEach(m=>{
@@ -15865,7 +15892,7 @@ window.nutriListaCompras = function(escopo, modo){
       <button class="seg ${escopo==='semana'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('semana')">Até domingo</button>
       <button class="seg ${escopo==='7dias'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('7dias')">Próximos 7 dias</button>
     </div>
-    <p class="fam-p" style="margin:4px 0">Período: <b>${_famPeriodoTxt(R.periodo)}</b>${R.casa ? ` · <b>${R.pessoas} pessoas</b>: soma o que cada uma vai comer, na porção do próprio plano (todas as refeições, não só as da casa). O que cada pessoa vai comer, dia a dia, está no <b>PDF da casa</b>.` : '.'}</p>
+    <p class="fam-p" style="margin:4px 0">Período: <b>${_famPeriodoTxt(R.periodo)}</b>${R.casa ? ` · <b>${R.pessoas} pessoas</b>: soma o que cada uma vai comer, na porção do próprio plano (todas as refeições, não só as da casa). A parte de cada pessoa está no <b>PDF da lista</b>.` : '.'}</p>
     ${R.avisos.map(a=>`<p class="fam-aviso">${mtEsc(a)}</p>`).join('')}
     <p style="color:var(--text-dim);font-size:12px;line-height:1.55;margin:4px 0 0">${R.editados?`Já com ${R.editados===1?'a sua 1 edição':'as suas '+R.editados+' edições'}. `:''}Dias que já passaram não entram. Toque num item para marcar “já tenho”. Grãos e carnes em peso cru; óleos e leite em ml/L; frutas e pães em unidades.</p>
     <div style="max-height:50vh;overflow-y:auto">${blocos || '<div class="text-dim" style="padding:14px 0;font-size:13px">Nada a comprar neste período.</div>'}</div>
@@ -15913,7 +15940,7 @@ function pdfMontarCasa(jsPDF, arte){
   if(!famAtiva()) throw new Error('Você não está num grupo da casa');
   const P = famParams(); const n = nutriConfig();
   const nomes = famMembros().map(u=>u===_famUid()?'você':famNome(u)).join(', ');
-  const S = pdfDoc(jsPDF, arte, { titulo:'Alimentação da casa', sub:`${famMembros().length} pessoas: ${nomes}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
+  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio da casa', sub:`${famMembros().length} pessoas: ${nomes}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
   S.nota('A comida é compartilhada, a alimentação é individual: o prato abaixo é o mesmo para todos, e cada pessoa vê no app a própria quantidade e calorias, calculadas pelo plano dela.', { caixa:true, cor:arte.C.ink });
   const DN = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
   const linhas = [];
@@ -15929,7 +15956,7 @@ function pdfMontarCasa(jsPDF, arte){
     S.secao('Cardápio da casa — próximos 7 dias', 'quantidades individuais no app de cada pessoa');
     S.tabela([{t:'Dia', w:24, negrito:true, quebra:true}, {t:'Refeição', w:24, quebra:true}, {t:'Prato', w:44, quebra:true, negrito:true}, {t:'Ingredientes e uso', w:84, quebra:true}], linhas, { t:7.6 });
   }
-  nutriPdfCompras(S, arte, 'casa');
+  // Beta 58: as compras somadas da casa estão no PDF da lista de compras (parte 62)
   S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém da casa tem doença, alergia ou usa medicação, procure um profissional.');
   return S.fim(`metatreino-casa-${chaveDia(new Date())}.pdf`, _pdfAluno());
 }
@@ -17143,7 +17170,7 @@ function mmAbrir(opts){
   mi.classList.remove('modal-video','modal-ex','short'); $('modal-back').classList.remove('ex-open');
   mi.dataset.tela = 'anatomia';
   mi.innerHTML = `<div class="mm-jan" id="mm-jan">
-    <div class="mm-cab-t"><div><h3>Anatomia muscular</h3><small id="mm-sub"></small></div><button class="mm-x" onclick="${_mm.volta ? 'mmVoltar()' : 'closeModal()'}" aria-label="${_mm.volta ? 'Voltar' : 'Fechar'}">✕</button></div>
+    <div class="mm-cab-t"><div><h3>Mapa muscular</h3><small id="mm-sub"></small></div><button class="mm-x" onclick="${_mm.volta ? 'mmVoltar()' : 'closeModal()'}" aria-label="${_mm.volta ? 'Voltar' : 'Fechar'}">✕</button></div>
     <div class="mm-modos" role="tablist" aria-label="O que mostrar">
       ${_mm.ex ? `<button type="button" role="tab" data-modo="ex" onclick="mmModo('ex')">Exercício</button>` : ''}
       ${temTreino ? `<button type="button" role="tab" data-modo="hoje" onclick="mmModo('hoje')">Treino de hoje</button>` : ''}
@@ -17235,7 +17262,7 @@ function mmRenderEntradaProgresso(){
     if(state.active !== 'lift' || !state.modules.lift){ if(velho) velho.remove(); return; }
     if(velho) return;
     const evo = $('perf-evo');
-    const html = `<button type="button" class="card mm-entrada${_mmTemaClaro() ? ' mm-claro' : ''}" id="mm-entrada" onclick="mmAbrir({modo:'semana'})"><span class="mm-ent-ico">${mmCorpoSVG('frente', _mmSexo())}</span><span class="mm-ent-tx"><b>Anatomia muscular</b><small>Músculos trabalhados na semana, localização, função e exercícios</small></span><span class="mm-ent-seta">›</span></button>`;
+    const html = `<button type="button" class="card mm-entrada${_mmTemaClaro() ? ' mm-claro' : ''}" id="mm-entrada" onclick="mmAbrir({modo:'semana'})"><span class="mm-ent-ico">${mmCorpoSVG('frente', _mmSexo())}</span><span class="mm-ent-tx"><b>Mapa muscular</b><small>Músculos trabalhados na semana, localização, função e exercícios</small></span><span class="mm-ent-seta">›</span></button>`;
     if(evo) evo.insertAdjacentHTML('beforebegin', html); else { const wrap = scr.querySelector('.wrap'); if(wrap) wrap.insertAdjacentHTML('beforeend', html); }
   }catch(e){}
 }
@@ -17346,7 +17373,7 @@ Object.assign(window, { mmCorpoSVG, mmMusculosDe, mmSeriesSemana, mmExerciciosDo
 
 const PERF_BLOCOS = [
   { k:'resumo',       nome:'Resumo dos últimos 7 dias', desc:'treinos, volume, recordes e sequência', sel:['#perf-resumo'] },
-  { k:'anatomia',     nome:'Anatomia muscular',         desc:'só na musculação', mod:'lift', sel:['#mm-entrada'] },
+  { k:'anatomia',     nome:'Mapa muscular',             desc:'só na musculação', mod:'lift', sel:['#mm-entrada'] },
   { k:'evolucao',     nome:'Evolução',                  desc:'gráficos de frequência, tempo, peso e volume', sel:['#perf-evo'] },
   { k:'corrida',      nome:'Evolução da corrida',       desc:'só na corrida', mod:'run', sel:['#perf-run-card'] },
   { k:'calistenia',   nome:'Calistenia',                desc:'se você usa', sel:['#perf-cali'] },
@@ -17725,7 +17752,7 @@ window.pdfMontarCasa = function(jsPDF, arte){
   const P = famParams(); const eu = _famUid();
   const membros = [eu].concat(famMembros().filter(u=>u!==eu));
   const nomeDe = u=>u===eu ? `${_famMeuApelido()} (você)` : famNome(u);
-  const S = pdfDoc(jsPDF, arte, { titulo:'Alimentação da casa', sub:`${membros.length} pessoas: ${membros.map(nomeDe).join(', ')}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
+  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio da casa', sub:`${membros.length} pessoas: ${membros.map(nomeDe).join(', ')}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
   S.nota('A comida é compartilhada, a alimentação é individual: nas refeições da casa o prato é o mesmo para todos, e a quantidade de cada pessoa sai do plano dela. Abaixo, o que cada uma vai comer, separado.', { caixa:true, cor:arte.C.ink });
   const DN = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   const fd = dk=>{ const dt = new Date(dk + 'T12:00:00'); return `${DN[dt.getDay()]} ${dk.slice(8,10)}/${dk.slice(5,7)}`; };
@@ -17767,8 +17794,7 @@ window.pdfMontarCasa = function(jsPDF, arte){
     });
     if(linhas.length) S.tabela([{t:'Dia', w:20, negrito:true}, {t:'Refeição', w:30, quebra:true}, {t:'Prato e quantidades', w:110, quebra:true}, {t:'kcal', w:16, dir:1, negrito:true}], linhas, { t:7.4 });
   });
-  // 6.3 compras somadas (com a parte de cada um)
-  nutriPdfCompras(S, arte, 'casa');
+  // Beta 58: as compras somadas (com a parte de cada um) estão no PDF da lista de compras (pdfListaCompras, parte 62)
   S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém da casa tem doença, alergia ou usa medicação, procure um profissional.');
   return S.fim(`metatreino-casa-${chaveDia(new Date())}.pdf`, _pdfAluno());
 };
@@ -19443,3 +19469,560 @@ mtGancho('goTab', { depois(t){ if(t === 'sessions') mtDiasChips(); } });
   document.head.appendChild(st);
 })();
 Object.assign(window, { _gfPainel, mtDiasChips });
+// =====================================================================
+// 61. Beta 58 — auditoria: pausas e voltas reais, importações e registro técnico,
+//     mapa muscular por treino, séries no detalhe do treino
+// ---------------------------------------------------------------------
+//  1. Pausa / volta por MODALIDADE e só com rotina de verdade antes:
+//     - mtVoltaReal(min): conquista "A Volta por Cima" (app.js chama esta função).
+//     - mtVoltaNoDia(dia, min): destaque "Voltou a treinar" do calendário (parte 14).
+//     - contextoAluno() ganha planFuturo, semanaInicio, pausaReal e diasSem da modalidade ativa:
+//       o card do Início, os avisos do Meta Assistente (retorno_*) e o "Plano de retomada" deixam
+//       de falar em pausa para conta nova, plano que ainda não começou ou registro antigo isolado.
+//     A base é a MESMA da retomada de cargas (estadoTreino / estadoTreinoCorrida / _retBase, parte 10):
+//     2+ dias com treino nas 6 semanas que terminaram na pausa. Nenhum sistema paralelo.
+//  2. Importações: abrir a atividade nunca trava (leitura local com tempo-limite, erro visível),
+//     percurso e gráfico à prova de pontos vazios; TODO registro técnico abre um detalhe e pode
+//     ser removido; o registro técnico vale 30 dias (qualquer resultado).
+//  3. Prevenção de duplicata depois do arquivo anual: state.impHashes guarda só a "impressão
+//     digital" (hash + chave + data) das importações que saíram do histórico recente.
+//  4. Mapa muscular: em "Treino de hoje" / "Exercício" só os músculos do treino respondem ao toque.
+//  5. Detalhe do treino: cada série com a carga e as repetições reais (registros antigos: resumo).
+// =====================================================================
+
+// ---------- 1. pausa e volta por modalidade ----------
+const MT_LOG_DIAS = 30;          // registro técnico de importações
+const MT_HASH_MAX = 400;         // impressões digitais guardadas (≈ 30 bytes cada)
+
+function _mtHistMod(mk){
+  return (((state.modules[mk]||{}).history)||[]).filter(x=>x && x.at);
+}
+// sessões agendadas que passaram sem treino, entre "desde" (exclusive) e ontem — usa os dias do plano
+function _mtAgendadasPerdidas(mk, desde){
+  try{
+    const m = state.modules[mk]; if(!m || !m.plan) return null;
+    const dias = new Set(((m.plan.workouts)||[]).map(w=>+w.dayIdx).filter(Boolean)); if(!dias.size) return null;
+    const ini = Math.max(mtDia0(desde) + DIA_MS, mtDia0(planStartTs(m) || 0)); const hoje = mtDia0();
+    let n = 0; for(let t = ini; t < hoje; t += DIA_MS){ const d = new Date(t).getDay() || 7; if(dias.has(d)) n++; }
+    return n;
+  }catch(e){ return null; }
+}
+function mtPausaInfo(mk){
+  mk = mk || state.active || 'lift';
+  const m = state.modules[mk]; const h = _mtHistMod(mk).sort((a,b)=>a.at-b.at);
+  const h0 = mtDia0();
+  const ini = m ? (planStartTs(m) || 0) : 0;
+  const planFuturo = !!(m && m.startAt && m.startAt > h0);
+  const ult = h.length ? h[h.length-1].at : 0;
+  const dias = ult ? Math.round((h0 - mtDia0(ult))/DIA_MS) : null;
+  const base = ult ? _retBase(h, mtDia0(ult)) : 0;
+  const perdidas = ult ? _mtAgendadasPerdidas(mk, ult) : null;
+  // pausa real: havia rotina, o plano já começou e (quando há agenda) passou ao menos um treino agendado
+  const real = !!(ult && !planFuturo && base >= RET.BASE_MIN && (perdidas === null || perdidas > 0));
+  return { mk, ult, dias, base, perdidas, planFuturo, real, inicio: ini };
+}
+// a conquista: a sessão de HOJE fecha uma pausa de min+ dias na mesma modalidade, com rotina antes dela
+function mtVoltaReal(minDias){
+  minDias = minDias || 10;
+  try{
+    return ['lift','run'].some(mk=>{
+      const h = _mtHistMod(mk); const dias = [...new Set(h.map(x=>mtDia0(x.at)))].sort((a,b)=>a-b);
+      if(dias.length < RET.BASE_MIN + 1) return false;
+      const hoje = mtDia0(); if(dias[dias.length-1] !== hoje) return false;
+      const antes = dias[dias.length-2]; const gap = Math.round((hoje - antes)/DIA_MS);
+      if(gap < minDias) return false;
+      // a sessão que fecha a pausa precisa ser registrada agora (não um arquivo antigo importado hoje)
+      const deHoje = h.filter(x=>mtDia0(x.at) === hoje);
+      if(!deHoje.length) return false;
+      return _retBase(h.filter(x=>x.at < hoje), antes) >= RET.BASE_MIN;
+    });
+  }catch(e){ return false; }
+}
+// destaque do calendário: no dia "ini", alguma modalidade voltou depois de min+ dias, com rotina antes?
+function mtVoltaNoDia(ini, minDias){
+  minDias = minDias || 7;
+  for(const mk of ['lift','run']){
+    const h = _mtHistMod(mk); const doDia = h.some(x=>mtDia0(x.at) === ini); if(!doDia) continue;
+    const ant = h.filter(x=>x.at < ini); if(!ant.length) continue;
+    const ult = Math.max(...ant.map(x=>x.at)); const dias = Math.round((ini - mtDia0(ult))/DIA_MS);
+    if(dias >= minDias && _retBase(ant, mtDia0(ult)) >= RET.BASE_MIN) return { mod: mk, dias };
+  }
+  return null;
+}
+// o contexto do Início e do Meta Assistente passa a saber da modalidade e da agenda
+(function(){
+  const _ctx = window.contextoAluno; if(typeof _ctx !== 'function') return;
+  window.contextoAluno = function(){
+    const c = _ctx.apply(this, arguments);
+    try{
+      const P = mtPausaInfo(state.active);
+      c.planFuturo = P.planFuturo;
+      const m = state.modules[state.active];
+      const st = m ? (m.startAt || m.createdAt || 0) : 0;
+      c.semanaInicio = !!(st && st > mtDia0() - 6*DIA_MS);      // primeira semana do plano: sem cobrança de frequência
+      // "dias sem treinar" da modalidade ativa (antes: a última atividade de QUALQUER modalidade)
+      if(P.ult) c.diasSem = P.dias; else if(c.total) c.diasSem = null;
+      c.pausaReal = P.real;
+      c.pausa = P;
+    }catch(e){}
+    return c;
+  };
+})();
+
+// ---------- 2. importações: abrir sempre, com erro visível ----------
+(function(){
+  const _le = window.atvLocalLe;
+  if(typeof _le === 'function') window.atvLocalLe = function(id){
+    // o IndexedDB pode ficar preso (aba antiga aberta, modo privado do Safari): nunca segura a tela por mais de 2,5 s
+    return Promise.race([ _le.apply(this, arguments), new Promise(ok=>setTimeout(()=>ok(null), 2500)) ]);
+  };
+  const _apaga = window.atvLocalApaga;
+  if(typeof _apaga === 'function') window.atvLocalApaga = function(id){
+    try{ if(id && Array.isArray(state.impHashes)) state.impHashes = state.impHashes.filter(h=>h.id !== id); }catch(e){}
+    return Promise.race([ _apaga.apply(this, arguments), new Promise(ok=>setTimeout(ok, 2500)) ]);
+  };
+  const _perc = window.atvPercursoSVG;
+  if(typeof _perc === 'function') window.atvPercursoSVG = function(tr){
+    try{
+      const ok = (tr||[]).filter(p=>Array.isArray(p) && isFinite(+p[0]) && isFinite(+p[1]) && !(+p[0] === 0 && +p[1] === 0));
+      return ok.length >= 2 ? _perc.call(this, ok) : '';
+    }catch(e){ console.log('percurso:', e); return ''; }
+  };
+  const _graf = window.atvGraficoSerie;
+  if(typeof _graf === 'function') window.atvGraficoSerie = function(I){
+    try{
+      const s = ((I && I.serie)||[]).filter(p=>Array.isArray(p) && isFinite(+p[0]));
+      return s.length > 3 ? _graf.call(this, Object.assign({}, I, { serie:s })) : '';
+    }catch(e){ console.log('gráfico da atividade:', e); return ''; }
+  };
+  const _abre = window.openAtividade;
+  if(typeof _abre === 'function') window.openAtividade = async function(mk, idx){
+    const x = (((state.modules[mk]||{}).history)||[])[idx];
+    if(!x || !x.imp){ toast('Esta atividade não está mais no histórico recente.'); try{ openIntegracoes(); }catch(e){} return; }
+    try{ return await _abre.apply(this, arguments); }
+    catch(e){
+      console.log('openAtividade:', e);
+      // mostra o essencial e deixa excluir — nunca um toque "morto"
+      const mi = $('modal-inner');
+      mi.innerHTML = `<div id="integ-det"><h3>${mtEsc(String(x.name||'Atividade').replace(/^[^\wÀ-ú]+/,''))}</h3>
+        <p class="integ-mini">${new Date(x.at).toLocaleString('pt-BR')} · Importado de arquivo ${mtEsc(String(x.imp.fmt||'').toUpperCase())}</p>
+        <p class="ip-aviso">Não foi possível montar todos os detalhes desta atividade (${mtEsc(String(e && e.message || e).slice(0,80))}). Os números dela continuam no histórico.</p>
+        <button class="btn btn-block" style="margin-top:8px;background:var(--tint-danger);color:var(--danger-soft);border:1px solid rgba(244,63,94,0.3)" onclick="atvExcluir('${mk}',${idx})">🗑️ Excluir atividade e dados importados</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openIntegracoes()">‹ Integrações e atividades</button></div>`;
+      $('modal-back').classList.add('on');
+    }
+  };
+})();
+
+// ---------- 2b. registro técnico: 30 dias, todo item abre e pode ser removido ----------
+function mtLogPoda(){
+  const L = state.importLog; if(!Array.isArray(L) || !L.length) return false;
+  const corte = Date.now() - MT_LOG_DIAS*DIA_MS;
+  const novo = L.filter(l=>l && l.em && l.em >= corte).slice(-30);
+  if(novo.length === L.length) return false;
+  state.importLog = novo; return true;
+}
+(function(){
+  const _log = window._atvLog;
+  if(typeof _log === 'function') window._atvLog = function(){ const r = _log.apply(this, arguments); try{ mtLogPoda(); }catch(e){} return r; };
+})();
+function _mtLogAtv(l){ return l && l.id ? atvTodas().find(({x})=>x.imp && x.imp.id === l.id) : null; }
+function _mtLogStatus(l){
+  if(l.ok && _mtLogAtv(l)) return { cls:'ok', t:'Importada' };
+  if(l.ok && /complement/i.test(l.res||'')) return { cls:'ok', t:'Complementou um registro' };
+  if(l.ok && l.id && (state.impHashes||[]).some(h=>h.id === l.id)) return { cls:'ok', t:'No Histórico completo' };
+  if(l.ok && l.id) return { cls:'mute', t:'Atividade excluída' };
+  if(/cancel/i.test(l.res||'')) return { cls:'mute', t:'Cancelada' };
+  if(/já importada/i.test(l.res||'')) return { cls:'mute', t:'Duplicata evitada' };
+  return { cls:'erro', t:'Não importada' };
+}
+function mtLogLista(){
+  const box = document.querySelector('#integ-tela .mt-log'); if(!box) return;
+  const L = (state.importLog||[]).slice().reverse();
+  if(!L.length){ box.remove(); return; }
+  box.querySelector('.mt-log-l').innerHTML = L.map(l=>{ const s = _mtLogStatus(l);
+    return `<button type="button" class="integ-log integ-log-btn mt-lg-${s.cls}" onclick="mtLogVer(${+l.em})"><span class="ii-tx"><b>${mtEsc(l.arq)}</b><small><i class="mt-lg-st">${s.t}</i> · ${new Date(l.em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</small></span><span class="ii-seta">›</span></button>`; }).join('');
+}
+function mtLogVer(em){
+  const l = (state.importLog||[]).find(x=>+x.em === +em); if(!l){ toast('Registro não encontrado.'); return openIntegracoes(); }
+  const a = _mtLogAtv(l); const s = _mtLogStatus(l);
+  const mi = $('modal-inner');
+  mi.innerHTML = `<div id="integ-logdet"><h3>Registro de importação</h3>
+    <div class="ip-orig mt-lgd">${[['Arquivo', mtEsc(l.arq)], ['Quando', new Date(l.em).toLocaleString('pt-BR')], ['Situação', s.t], ['Resultado', mtEsc(l.res||'—')]].map(([k,v])=>`<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>
+    <p class="integ-mini">Este é só o registro técnico do envio do arquivo. Ele some sozinho depois de ${MT_LOG_DIAS} dias. Remover o registro <b>não</b> apaga a atividade${a ? ' — para isso, abra a atividade e use “Excluir”' : ''}.</p>
+    ${a ? `<button class="btn btn-primary btn-block" style="margin-top:10px" onclick="openAtividade('${a.mk}',${a.idx})">Abrir a atividade</button>` : ''}
+    ${!a && s.t === 'No Histórico completo' && typeof arqAbrirHistorico === 'function' ? `<button class="btn btn-outline btn-block" style="margin-top:10px" onclick="arqAbrirHistorico()">Ver no Histórico completo</button>` : ''}
+    <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="mtLogRemover(${+l.em})">Remover este registro</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openIntegracoes()">‹ Integrações e atividades</button></div>`;
+  $('modal-back').classList.add('on');
+}
+function mtLogRemover(em){
+  state.importLog = (state.importLog||[]).filter(x=>+x.em !== +em);
+  saveData(); toast('Registro removido'); openIntegracoes();
+}
+function mtLogLimpar(){
+  appConfirm('Remove todos os registros técnicos de envio de arquivos. As atividades importadas continuam no histórico.', ()=>{
+    state.importLog = []; saveData(); toast('Registros removidos'); openIntegracoes();
+  }, { title:'Limpar registros?', okLabel:'Limpar' });
+}
+mtGancho('openIntegracoes', { antes(){ try{ if(mtLogPoda()) saveData(); }catch(e){} }, depois(){
+  try{
+    const tela = $('integ-tela'); if(!tela) return;
+    // a seção antiga (itens sem atividade eram <div> sem toque) vira a lista nova
+    const velho = [...tela.querySelectorAll('details.integ-sec')].find(d=>/Histórico técnico/.test((d.querySelector('summary')||{}).textContent||''));
+    if(velho){
+      velho.classList.add('mt-log'); velho.innerHTML = `<summary>Registro técnico de importações</summary>
+        <p class="integ-mini">Cada arquivo enviado e o resultado, dos últimos ${MT_LOG_DIAS} dias. Toque para ver o detalhe ou remover.</p>
+        <div class="mt-log-l"></div><button type="button" class="integ-manual mt-log-limpa" onclick="mtLogLimpar()">Limpar registros</button>`;
+      mtLogLista();
+    }
+    // "atividades no Histórico completo": conta pela impressão digital (não depende do registro técnico, que vale 30 dias)
+    const aviso = [...tela.querySelectorAll('p.integ-mini')].find(p=>/📦/.test(p.textContent));
+    const ids = new Set(atvTodas().filter(({x})=>x.imp).map(({x})=>x.imp.id));
+    const arq = (state.impHashes||[]).filter(h=>h.id && !ids.has(h.id)).length;
+    const html = arq ? `📦 ${arq === 1 ? '1 atividade importada tem' : arq + ' atividades importadas têm'} mais de ${HISTORY_RETENTION_DAYS} dias e ${arq === 1 ? 'está' : 'estão'} no <a href="#" onclick="arqAbrirHistorico();return false">Histórico completo</a>.` : '';
+    if(aviso){ if(html) aviso.innerHTML = html; else aviso.remove(); }
+    else if(html){ const lbl = [...tela.querySelectorAll('.section-lbl')].find(d=>/Atividades importadas/.test(d.textContent)); const lst = lbl && lbl.nextElementSibling;
+      (lst || lbl) && (lst || lbl).insertAdjacentHTML('afterend', `<p class="integ-mini">${html}</p>`); }
+  }catch(e){ console.log('registro técnico:', e); }
+} });
+
+// ---------- 3. duplicata depois do arquivo anual ----------
+function _mtGuardaHashes(antesDe){
+  try{
+    const L = Array.isArray(state.impHashes) ? state.impHashes : []; const tem = new Set(L.map(h=>h.h));
+    let mudou = false;
+    atvTodas().forEach(({x})=>{ const I = x.imp; if(!I || !I.hash || tem.has(I.hash) || x.at >= antesDe) return;
+      L.push({ h:I.hash, c:I.chave || null, at:x.at, id:I.id || null, e:I.esporte || null }); tem.add(I.hash); mudou = true; });
+    if(mudou){ L.sort((a,b)=>b.at-a.at); state.impHashes = L.slice(0, MT_HASH_MAX); }
+    return mudou;
+  }catch(e){ return false; }
+}
+// antes da limpeza de 90 dias: o que vai para o arquivo anual deixa a impressão digital
+mtGancho('cleanupOldHistory', { antes(){ _mtGuardaHashes(Date.now() - (HISTORY_RETENTION_DAYS - 5)*DIA_MS); } });
+(function(){
+  const _dup = window.atvDuplicata;
+  if(typeof _dup === 'function') window.atvDuplicata = function(A, hash){
+    const r = _dup.apply(this, arguments); if(r) return r;
+    try{
+      const ch = _atvChave(A);
+      const h = (state.impHashes||[]).find(x=>x.h === hash || (x.c && x.c === ch));
+      if(h) return { tipo:'importada', arquivada:true, alvo:{ x:{ at:h.at } } };
+    }catch(e){}
+    return null;
+  };
+})();
+mtGancho('atvPrevia', { depois(){
+  try{
+    const R = _atvAtual; if(!R || !R.dup || !R.dup.arquivada) return;
+    const d = document.querySelector('#integ-previa .ip-dup'); if(!d) return;
+    d.innerHTML = `⚠️ <b>Esta atividade já foi importada</b> (${new Date(R.dup.alvo.x.at).toLocaleDateString('pt-BR')}) e está no Histórico completo. Importar de novo contaria em dobro.
+      <button type="button" class="integ-manual" style="margin-top:6px" onclick="mtImportarMesmoAssim()">Excluí essa atividade antes — <b>importar mesmo assim</b> ›</button>`;
+  }catch(e){}
+} });
+function mtImportarMesmoAssim(){ const R = _atvAtual; if(!R) return; R.dup = null; R.forcado = true; atvPrevia(); }
+
+// ---------- arrumação na abertura (uma vez por sessão; grava só se algo mudou) ----------
+let _mt58Arrumou = false;
+mtGancho('renderHome', { depois(){
+  if(_mt58Arrumou || !state || !state.user) return; _mt58Arrumou = true;
+  try{
+    let mudou = mtLogPoda();
+    // marcas de "destaque removido" do calendário (dado técnico, ~20 bytes cada): só o último ano.
+    // As anotações escritas pelo aluno (dayNotes) NÃO são tocadas.
+    const O = state.dayNotesOcultas; const corte = Date.now() - 365*DIA_MS;
+    if(O) Object.keys(O).forEach(k=>{ if(+k && +k < corte){ delete O[k]; mudou = true; } });
+    if(mudou) saveData();
+  }catch(e){}
+} });
+
+// ---------- 4. mapa muscular: no treino, só os músculos do treino respondem ----------
+function _mmRestrito(){ return _mm && (_mm.modo === 'hoje' || _mm.modo === 'ex'); }
+(function(){
+  const _sel = window.mmSel;
+  if(typeof _sel === 'function') window.mmSel = function(k){
+    try{
+      if(k && _mmRestrito() && !_mmPapeis()[k]){
+        toast(`${(MM_INFO[k]||{}).nome || 'Este músculo'} não é trabalhado ${_mm.modo === 'ex' ? 'neste exercício' : 'no treino de hoje'}. Para ver todos, use “Explorar”.`);
+        return;
+      }
+    }catch(e){}
+    return _sel.apply(this, arguments);
+  };
+})();
+mtGancho('mmPintar', { depois(){
+  try{
+    const palco = $('mm-palco'); if(!palco) return; const r = _mmRestrito(); const P = r ? _mmPapeis() : {};
+    palco.classList.toggle('mm-restrito', r);
+    palco.querySelectorAll('.mm-m').forEach(el=>{ const off = r && !P[el.dataset.m]; el.classList.toggle('mm-off', off); el.setAttribute('aria-disabled', off ? 'true' : 'false'); });
+    const leg = $('mm-leg'); if(leg && r && !leg.querySelector('.mm-dica-off')) leg.insertAdjacentHTML('beforeend', '<span class="mm-mute mm-dica-off">Os demais ficam apagados: toque em “Explorar” para ver o corpo inteiro.</span>');
+  }catch(e){}
+} });
+
+// ---------- 5. detalhe do treino: série por série ----------
+const _fmtKg = v=>String(+v||0).replace('.',',');
+mtGancho('openHistoryEntry', { depois(idx){
+  try{
+    if(state.active !== 'lift') return;
+    const x = (((state.modules.lift||{}).history)||[])[idx]; if(!x || x.imp || !(x.exercisesDone||[]).length) return;
+    const mi = $('modal-inner');
+    const linhas = [...mi.querySelectorAll('.card > div > div')].filter(d=>{ const b = d.querySelector('b.mono'); return b && /×/.test(b.textContent); });
+    if(linhas.length !== x.exercisesDone.length) return;
+    const dia = mtDia0(x.at);
+    linhas.forEach((ln, i)=>{
+      const e = x.exercisesDone[i];
+      const reg = ((state.progress||{})[e.id]||[]).find(p=>p && p.date && mtDia0(p.date) === dia && (p.sets||[]).length);
+      const iso = (typeof exUsaTempo === 'function') && exUsaTempo(e.id);
+      const series = reg ? reg.sets.map((s,j)=>`<span class="hd-s"><i>${j+1}</i>${+s.peso > 0 ? `${_fmtKg(s.peso)} kg × ${+s.reps||0}` : `${+s.reps||0} ${iso ? 's' : 'rep.'}`}</span>`).join('')
+        : `<span class="hd-s">${e.sets}× · ${mtEsc(e.best||'')}</span>`;
+      const vol = reg ? reg.sets.reduce((t,s)=>t + (+s.peso||0)*(+s.reps||0), 0) : 0;
+      ln.outerHTML = `<div class="hd-ex"><div class="hd-n">${mtEsc(e.name)}${vol ? `<small>${Math.round(vol).toLocaleString('pt-BR')} kg de volume</small>` : ''}</div><div class="hd-ss">${series}</div></div>`;
+    });
+  }catch(e){ console.log('detalhe por série:', e); }
+} });
+
+// ---------- 6. Treinos: ações do exercício alinhadas (sem 3 linhas de botões em telas pequenas) ----------
+function mtExAcoes(){
+  try{
+    document.querySelectorAll('#scr-sessions .ex .row').forEach(r=>{
+      if(r.classList.contains('ex-acoes') || !r.querySelector('button')) return;
+      r.classList.add('ex-acoes');
+      r.querySelectorAll('button').forEach(b=>{
+        if(/^▶ Ver como fazer$/.test(b.textContent.trim())) b.textContent = '▶ Como fazer';
+        if(!b.classList.contains('btn-primary') && !/Editar séries|Voltar à sugestão/.test(b.textContent)) b.classList.add('ex-sec');
+      });
+    });
+  }catch(e){}
+}
+mtGancho('renderSessions', { depois(){ mtExAcoes(); } });
+mtGancho('selectSession', { depois(){ mtExAcoes(); } });
+mtGancho('goTab', { depois(t){ if(t === 'sessions') mtExAcoes(); } });
+
+// ---------- CSS ----------
+(function(){ if(document.getElementById('b58-css')) return; const s = document.createElement('style'); s.id = 'b58-css';
+  s.textContent = `
+/* mapa muscular: músculos fora do treino apagados */
+.mm-palco.mm-restrito .mm-m.mm-off{ fill-opacity:.18 !important; stroke-opacity:.35; filter:grayscale(1); cursor:not-allowed; }
+.mm-dica-off{ flex-basis:100%; }
+/* detalhe do treino: série por série, sem quebra feia */
+.hd-ex{ padding:8px 0; border-top:1px solid var(--border); }
+.hd-ex:first-child{ border-top:0; }
+.hd-n{ font-size:13.5px; font-weight:700; color:var(--text); line-height:1.3; overflow-wrap:anywhere; }
+.hd-n small{ display:block; font-weight:500; font-size:11.5px; color:var(--text-dim); margin-top:1px; }
+.hd-ss{ display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+.hd-s{ display:inline-flex; align-items:center; gap:5px; font:600 12px/1 var(--mono, ui-monospace, monospace); padding:5px 8px; border-radius:8px; background:var(--tint-primary); color:var(--primary-2); white-space:nowrap; }
+.hd-s i{ font-style:normal; font-size:10.5px; opacity:.7; }
+/* registro técnico */
+.mt-log .integ-log-btn{ display:flex; align-items:center; gap:8px; width:100%; text-align:left; }
+.mt-log .ii-tx{ flex:1; min-width:0; }
+.mt-log .ii-tx b{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mt-lg-st{ font-style:normal; font-weight:700; }
+.mt-lg-ok .mt-lg-st{ color:var(--success, #22c55e); } .mt-lg-erro .mt-lg-st{ color:var(--danger-soft, #f87171); } .mt-lg-mute .mt-lg-st{ color:var(--text-dim); }
+.mt-log-limpa{ margin-top:6px; }
+.mt-lgd{ display:grid; gap:8px; margin:8px 0; }
+.mt-lgd div{ display:flex; flex-direction:column; gap:2px; }
+.mt-lgd small{ color:var(--text-dim); font-size:11.5px; } .mt-lgd b{ font-size:13.5px; overflow-wrap:anywhere; }
+/* calendário: conquistas e "ver mais" recolhidos */
+.dn-conq, .dn-mais{ margin-top:6px; border:1px solid var(--border); border-radius:10px; padding:2px 10px; }
+.dn-conq summary, .dn-mais summary{ cursor:pointer; font-size:12.5px; font-weight:700; color:var(--text-dim); padding:8px 0; list-style:none; }
+.dn-conq summary::-webkit-details-marker, .dn-mais summary::-webkit-details-marker{ display:none; }
+.dn-conq summary::after, .dn-mais summary::after{ content:'›'; float:right; transition:transform .2s; }
+.dn-conq[open] summary::after, .dn-mais[open] summary::after{ transform:rotate(90deg); }
+/* Treinos: atalhos do topo numa linha (ícone em cima, rótulo embaixo) */
+#sess-qlinks{ display:grid !important; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:8px; }
+#sess-qlinks .qlink{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; text-align:center; min-width:0; padding:10px 6px; line-height:1.2; white-space:normal; margin:0; }
+/* ações do exercício: o principal ocupa a linha, os secundários dividem a de baixo por igual */
+.ex .ex-acoes{ display:flex !important; flex-wrap:wrap; gap:6px; }
+.ex .ex-acoes > :not(.ex-sec){ flex:1 1 100%; }
+.ex .ex-acoes > .ex-sec{ flex:1 1 0; }
+.ex .ex-acoes .btn{ min-width:0; padding:8px 6px !important; font-size:12.5px !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; justify-content:center; text-align:center; }
+.ex .ex-desc{ overflow-wrap:anywhere; }
+@media (max-width:374px){
+  .ex .ex-acoes{ gap:4px; }
+  .ex .ex-acoes .ex-sec{ font-size:11.5px !important; padding:8px 1px !important; letter-spacing:-.01em; }
+  .ex .ex-acoes:has(.ex-sec ~ .ex-sec ~ .ex-sec) .ex-sec .ico{ display:none; }
+}
+/* registro de atividade: atalho do relógio em duas linhas organizadas (antes quebrava no meio da frase) */
+.integ-atalho{ line-height:1.35; }
+.integ-atalho b{ display:block; color:var(--text); margin-top:1px; }
+/* conquistas: os 4 filtros numa linha */
+.cq-filtros{ display:grid !important; grid-template-columns:repeat(4, minmax(0,1fr)); gap:6px; overflow:visible !important; }
+.cq-filtros .filter-chip{ min-width:0; padding-left:4px; padding-right:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; }
+`;
+  document.head.appendChild(s); })();
+// =====================================================================
+// 62. Beta 58 — PDFs: cardápio, lista de compras e treino como documentos distintos
+// ---------------------------------------------------------------------
+//  • Cabeçalho profissional e discreto: faixa clara com um ícone de linha fina (sem desenhos
+//    coloridos de maçã/brócolis nem o boneco de palito). Sem marca d'água: mais limpo na impressão.
+//  • Plano alimentar: só o cardápio (dia → refeição e horário → alimentos e quantidades → orientação).
+//  • Lista de compras: PDF próprio — por categoria, com caixinha para marcar, total do período e,
+//    na casa, a parte de cada pessoa. Nenhuma refeição nem dado do plano de ninguém.
+//  • Plano de treino: mapa anatômico (frente e costas) com os músculos da semana, gerado do mesmo
+//    desenho do Mapa muscular (parte 53), e cada exercício numa linha com hierarquia clara.
+// =====================================================================
+
+// ---------- cabeçalho e marca ----------
+const _PDF_ICONE = {
+  musculacao: 'M478 65 H522 M470 50 V80 M462 56 V74 M530 50 V80 M538 56 V74',
+  corrida:    'M462 88 C 478 70 490 92 504 74 S 528 52 540 60 M540 60 m-7 -15 a7 7 0 1 1 14 0 c0 7 -7 11 -7 16 c0 -5 -7 -9 -7 -16z',
+  alimentacao:'M500 65 m-22 0 a22 22 0 1 0 44 0 a22 22 0 1 0 -44 0 M466 42 V88 M462 42 V54 Q466 59 470 54 V42 M534 42 Q542 56 535 68 V88',
+  compras:    'M466 52 H476 L484 80 H526 L533 60 H480 M490 88 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0 M520 88 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0',
+  relatorio:  'M466 86 H536 M470 78 L488 64 L502 72 L530 48 M520 48 H530 V58'
+};
+window.pdfArteCab = function(tipo, C){
+  const P = _pdfHexDe(C.p), PC = _pdfHexDe(_pdfMistura(C.p, 0.86)), AC = _pdfHexDe(_pdfMistura(C.a, 0.86));
+  const d = _PDF_ICONE[tipo] || _PDF_ICONE.relatorio;
+  return _svgFig(`<defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="${PC}" stop-opacity="0"/><stop offset="1" stop-color="${AC}" stop-opacity=".9"/></linearGradient></defs>
+    <rect x="300" y="0" width="300" height="130" fill="url(#g)"/>
+    ${[0,1,2,3].map(i=>`<circle cx="500" cy="65" r="${44 + i*22}" fill="none" stroke="${P}" stroke-width="1" opacity="${0.22 - i*0.05}"/>`).join('')}
+    <circle cx="500" cy="65" r="38" fill="#ffffff" opacity=".92"/>
+    <path d="${d}" fill="none" stroke="${P}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`, '0 0 600 130');
+};
+window.pdfArteMarca = function(){ return _svgFig('', '0 0 10 10'); };
+
+// mapa anatômico da semana (frente e costas lado a lado), com estilo próprio para impressão
+function _pdfCorpoSVG(papeis, C){
+  const sexo = (typeof _mmSexo === 'function') ? _mmSexo() : null;
+  const corpo = v=>mmCorpoSVG(v, sexo).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  const P = _pdfHexDe(C.p), S2 = _pdfHexDe(_pdfMistura(C.p, 0.55));
+  const regras = Object.keys(papeis).map(k=>`.mm-m[data-m="${k}"]{fill:${papeis[k] === 'prim' ? P : S2}}`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 392 440"><style>
+    path,ellipse{stroke-linejoin:round}.mm-sil,.mm-ext,.mm-est{fill:#eef0f3;stroke:#a9b0bb;stroke-width:.9}
+    .mm-cab{fill:#c9ced6;stroke:#a9b0bb;stroke-width:.8}.mm-lin{fill:none;stroke:#a9b0bb;stroke-width:.6}
+    .mm-m{fill:#e3e6eb;stroke:#a9b0bb;stroke-width:.8}${regras}</style>
+    <g transform="translate(-12,2)">${corpo('frente')}</g><g transform="translate(192,2)">${corpo('costas')}</g></svg>`;
+}
+function _pdfPapeisSemana(ws){
+  const papeis = {}, series = {};
+  ws.forEach(w=>(w.exercises||[]).forEach(e=>{ let m; try{ m = mmMusculosDe(e); }catch(x){ return; } const n = +e.sets || 0;
+    m.prim.forEach(k=>{ papeis[k] = 'prim'; series[k] = (series[k]||0) + n; });
+    m.sec.forEach(k=>{ if(papeis[k] !== 'prim') papeis[k] = 'sec'; series[k] = (series[k]||0) + n*0.5; }); }));
+  return { papeis, series };
+}
+(function(){
+  const _prep = window.pdfPrepArte;
+  window.pdfPrepArte = async function(tipo){
+    const a = await _prep.apply(this, arguments);
+    a.marca = null;   // sem marca d'água
+    if(tipo === 'musculacao'){
+      try{ const ws = (state.modules.lift && state.modules.lift.plan && state.modules.lift.plan.workouts) || [];
+        const S = _pdfPapeisSemana(ws); a.semana = S;
+        if(Object.keys(S.papeis).length) a.corpo = await _svgPng(_pdfCorpoSVG(S.papeis, a.C), 784, 880, 1);
+      }catch(e){ console.log('mapa do PDF:', e); }
+    }
+    return a;
+  };
+})();
+
+// ---------- plano de treino ----------
+window.pdfMontarTreino = function(jsPDF, arte){
+  const mod = state.modules.lift; const st = mod.setup || {}; const ws = ((mod.plan && mod.plan.workouts) || []).slice().sort((a,b)=>(a.dayIdx||9)-(b.dayIdx||9));
+  const modal = { calistenia:'Calistenia', hibrido:'Híbrido (musculação + calistenia)' }[st.modalidade] || 'Musculação';
+  const ini = mod.startAt ? new Date(mod.startAt).toLocaleDateString('pt-BR') : '';
+  const S = pdfDoc(jsPDF, arte, { titulo:`Plano de treino · ${modal}`, sub:`${_pdfAluno()} · ${_GOAL_LIFT[st.goal]||st.goal||''} · nível ${_NIVEL_LIFT[st.level]||st.level||''}`, sub2:`${ws.length} treinos por semana${ini?` · início em ${ini}`:''}` });
+  const { doc, M, W, C } = S;
+  const totalEx = ws.reduce((s,w)=>s+(w.exercises||[]).length, 0), totalSer = ws.reduce((s,w)=>s+(w.exercises||[]).reduce((a,e)=>a+(+e.sets||0),0), 0);
+  S.cartoes([{ v:String(ws.length), l:'treinos na semana' }, { v:String(totalEx), l:'exercícios' }, { v:String(totalSer), l:'séries por semana' }, { v:_fmtN(ws.reduce((s,w)=>s+(+w.duration||0),0)/Math.max(1,ws.length)) + ' min', l:'duração média' }]);
+  const lims = (typeof limDoSetup === 'function') ? limDoSetup(st) : [];
+  if(lims.length) S.nota(`Adaptado ao que você informou (${lims.map(k=>LIM_NOME[k]).join(', ')}): exercícios que forçam essas regiões foram trocados e o volume foi contido. Use cargas que não provoquem dor; se a dor persistir ou piorar, procure avaliação profissional.`, { caixa:true });
+  // músculos da semana: figura à esquerda, séries por músculo à direita (sem espaço vazio)
+  if(arte.corpo && arte.semana){
+    const ks = Object.keys(arte.semana.series).sort((a,b)=>arte.semana.series[b]-arte.semana.series[a]);
+    const fw = 58, fh = fw*440/392; S.precisa(fh + 18);
+    S.secao('Músculos trabalhados na semana', 'pelas séries do plano');
+    const y0 = S.y;
+    try{ doc.addImage(arte.corpo, 'PNG', M, y0, fw, fh, 'mt-corpo', 'FAST'); }catch(e){}
+    S.fonte(6.8); S.cor(C.dim); S.txt('FRENTE', M + fw*0.24, y0 + fh + 3.4, { align:'center' }); S.txt('COSTAS', M + fw*0.75, y0 + fh + 3.4, { align:'center' });
+    const x = M + fw + 8, cw = W - fw - 8; let y = y0 + 2;
+    const max = Math.max(1, ...ks.map(k=>arte.semana.series[k]));
+    ks.slice(0, 14).forEach(k=>{
+      const v = arte.semana.series[k]; const prim = arte.semana.papeis[k] === 'prim';
+      S.fonte(8.2, prim ? 'bold' : 'normal'); S.cor(C.ink); S.txt((MM_INFO[k]||{}).nome || k, x, y + 3);
+      S.fonte(8); S.cor(C.dim); S.txt(`${_fmtN(v, 1)} séries`, x + cw, y + 3, { align:'right' });
+      doc.setFillColor(...C.zebra); doc.roundedRect(x, y + 4.4, cw, 1.6, .8, .8, 'F');
+      doc.setFillColor(...(prim ? C.p : _pdfMistura(C.p, 0.55))); doc.roundedRect(x, y + 4.4, Math.max(1.6, cw*v/max), 1.6, .8, .8, 'F');
+      y += 8.2;
+    });
+    S.fonte(7); S.cor(C.dim); S.txt('Escuro: músculo principal · claro: secundário (conta meia série)', x, Math.max(y, y0) + 2);
+    S.y = Math.max(y + 6, y0 + fh + 8);
+  }
+  // cada treino: cabeçalho, foco e uma linha por exercício
+  const cols = { n:M, ex:M + 8, ser:M + 92, desc:M + 124, carga:M + 143, nota:M + 163 };
+  const cab = ()=>{ doc.setFillColor(...C.pClaro); doc.roundedRect(M, S.y, W, 6.4, 1.4, 1.4, 'F'); S.fonte(7, 'bold'); S.cor(C.p);
+    S.txt('EXERCÍCIO', cols.ex, S.y + 4.3); S.txt('SÉRIES × REPETIÇÕES', cols.ser, S.y + 4.3); S.txt('DESCANSO', cols.desc, S.y + 4.3); S.txt('ÚLTIMA', cols.carga, S.y + 4.3); S.txt('ANOTAÇÕES', cols.nota, S.y + 4.3); S.y += 7.6; };
+  ws.forEach(w=>{
+    S.precisa(34);
+    S.secao(`${w.k ? 'Treino ' + w.k + ' · ' : ''}${String(w.name||'').replace(/^Treino\s+\w\s*[—-]\s*/,'')}`, `${w.dayName||''}${w.duration?` · ~${w.duration} min`:''}`);
+    try{ const Mu = _mmMusculosDoTreino(w); const foco = Object.keys(Mu.prim).map(k=>_mmCurto(k)); if(foco.length) S.nota(`Foco: ${_mmLista(foco)}.`, { t:7.8 }); }catch(e){}
+    cab();
+    (w.exercises||[]).forEach((e, i)=>{
+      const nome = doc.splitTextToSize(_pdfTxt(e.name + (e.adaptadoDe ? ` (no lugar de ${e.adaptadoDe})` : '')), cols.ser - cols.ex - 3);
+      const h = Math.max(10.5, nome.length*3.7 + 6.5);
+      if(S.y + h > S.PH - 18){ S.nova(); cab(); }
+      if(i % 2 === 1){ doc.setFillColor(...C.zebra); doc.rect(M, S.y - 0.6, W, h, 'F'); }
+      doc.setFillColor(...C.pClaro); doc.circle(cols.n + 3, S.y + 3.4, 2.7, 'F'); S.fonte(7.4, 'bold'); S.cor(C.p); S.txt(String(i+1), cols.n + 3, S.y + 4.5, { align:'center' });
+      S.fonte(8.8, 'bold'); S.cor(C.ink); doc.text(nome, cols.ex, S.y + 4.2);
+      S.fonte(7.2); S.cor(C.dim); S.txt(e.part || e.sub || '', cols.ex, S.y + 4.2 + nome.length*3.7);
+      S.fonte(9.5, 'bold'); S.cor(C.ink); S.txt(`${e.sets||'-'} × ${e.reps||'-'}`, cols.ser, S.y + 4.4);
+      S.fonte(8.2); S.cor(C.ink); S.txt(String(e.rest||'-'), cols.desc, S.y + 4.4);
+      const u = _ultimaCarga(e.id); S.cor(u ? C.ink : C.dim); S.txt(u || '-', cols.carga, S.y + 4.4);
+      doc.setDrawColor(...C.linha); doc.setLineWidth(0.25); doc.line(cols.nota, S.y + h - 2.4, M + W, S.y + h - 2.4);
+      S.y += h;
+    });
+    doc.setDrawColor(...C.linha); doc.setLineWidth(0.2); doc.line(M, S.y, M + W, S.y); S.y += 5;
+  });
+  S.secao('Como usar este plano', null, C.a);
+  S.nota('Aquecimento: 5 a 8 minutos de cardio leve e 1 a 2 séries leves do primeiro exercício. Faça as repetições com técnica controlada; quando fechar o topo da faixa em todas as séries com folga, suba a carga no treino seguinte (o app mostra a sugestão em cada exercício). Cada série pode ter carga e repetições diferentes — registre como fez. Ao terminar, registre o esforço de 1 a 10: ele ajusta as próximas sugestões.', { cor:C.ink, t:8.4 });
+  S.nota('Plano gerado pelo MetaTreino a partir das suas respostas e do seu histórico. É uma orientação geral e não substitui avaliação médica nem o acompanhamento de um profissional de educação física.');
+  return S.fim(`metatreino-plano-treino-${chaveDia(new Date())}.pdf`, _pdfAluno());
+};
+
+// ---------- lista de compras (PDF próprio) ----------
+function pdfMontarCompras(jsPDF, arte){
+  const escopo = window.__comprasEsc || '7dias'; const modo = (window.__comprasModo === 'casa' && famAtiva()) ? 'casa' : 'eu';
+  const R = nutriComprasTotais(escopo, modo); const tot = R.tot;
+  const semKey = chaveDia(nutriDataDia(1)) + (R.casa ? '-casa' : ''); const ok = ((state.comprasOk||{})[semKey]) || {};
+  const S = pdfDoc(jsPDF, arte, { titulo: R.casa ? 'Lista de compras da casa' : 'Lista de compras', sub:`Período: ${_famPeriodoTxt(R.periodo)}${R.casa ? ` · ${R.pessoas} pessoas` : ''}`,
+    sub2: R.casa ? 'Soma o que cada pessoa vai comer, na porção do próprio plano' : 'Pelo seu cardápio, já com as suas edições' });
+  const { doc, M, W, C } = S;
+  const ids = Object.keys(tot).filter(id=>!ok[id]); const jaTem = Object.keys(tot).filter(id=>ok[id]).length;
+  const nCat = Object.values(NUTRI_CATEG).filter(([, l])=>l.some(id=>ids.includes(id))).length;
+  S.cartoes([{ v:String(ids.length), l:'itens a comprar' }, { v:String(nCat), l:'categorias' }, { v:String(R.periodo.n||0), l: R.periodo.n === 1 ? 'dia' : 'dias' }].concat(R.casa ? [{ v:String(R.pessoas), l:'pessoas' }] : []), C.a);
+  const porPessoa = R.casa && R.pessoas > 1;
+  Object.values(NUTRI_CATEG).forEach(([titulo, lista])=>{
+    const l = lista.filter(id=>ids.includes(id)); if(!l.length) return;
+    S.precisa(16);
+    S.fonte(9.6, 'bold'); S.cor(C.ink); S.txt(titulo.replace(/^[^\wÀ-ú]+/,''), M, S.y + 3); S.fonte(7.4); S.cor(C.dim); S.txt(`${l.length} ${l.length === 1 ? 'item' : 'itens'}`, M + W, S.y + 3, { align:'right' });
+    doc.setDrawColor(...C.a); doc.setLineWidth(0.4); doc.line(M, S.y + 4.8, M + W, S.y + 4.8); S.y += 7.5;
+    l.forEach((id, i)=>{
+      const q = nutriQtdCompra(id, tot[id].g);
+      const pp = porPessoa ? R.quem.filter(u=>tot[id].por[u]).map(u=>`${u===_famUid()?'Você':famNome(u)}: ${_nutriFmtCompra(id, { g:tot[id].por[u] })}`).join(' · ') : '';
+      const h = pp ? 9.6 : 6.6; if(S.y + h > S.PH - 18) S.nova();
+      if(i % 2 === 1){ doc.setFillColor(...C.zebra); doc.rect(M, S.y - 0.8, W, h, 'F'); }
+      doc.setDrawColor(...C.dim); doc.setLineWidth(0.3); doc.roundedRect(M + 1, S.y + 0.4, 3.4, 3.4, .6, .6, 'S');
+      S.fonte(8.8); S.cor(C.ink); S.txt(nutriNomeCompra(id) + (q.obs ? ` (${q.obs})` : ''), M + 7, S.y + 3.3);
+      S.fonte(8.8, 'bold'); S.txt(`${q.n} ${q.un}`, M + W - 1.5, S.y + 3.3, { align:'right' });
+      if(pp){ S.fonte(7); S.cor(C.dim); S.txt(pp, M + 7, S.y + 7); }
+      S.y += h;
+    });
+    S.y += 3;
+  });
+  if(!ids.length) S.nota('Nada a comprar neste período.', { caixa:true });
+  if(jaTem) S.nota(`${jaTem} ${jaTem === 1 ? 'item marcado' : 'itens marcados'} como “já tenho” no app ${jaTem === 1 ? 'ficou' : 'ficaram'} de fora.`, { t:7.6 });
+  R.avisos.forEach(a=>S.nota(a, { t:7.4 }));
+  S.nota('Grãos e carnes em peso cru; óleos e leite em ml/L; frutas e pães em unidades. Quantidades arredondadas para facilitar a compra.', { t:7.4 });
+  return S.fim(`metatreino-lista-de-compras-${chaveDia(new Date())}.pdf`, _pdfAluno());
+}
+function pdfListaCompras(){ return _pdfGerar('pdfAlimentacao', 'compras', pdfMontarCompras, R_ROT_COMPRAS()); }
+function R_ROT_COMPRAS(){ return (window.__comprasModo === 'casa' && famAtiva()) ? 'Lista de compras da casa' : 'Lista de compras'; }
+
+// a tela da lista de compras: o botão de PDF gera a LISTA (antes gerava o plano alimentar inteiro)
+mtGancho('nutriListaCompras', { depois(){
+  try{
+    const b = [...document.querySelectorAll('#fam-compras button')].find(x=>/pdfAlimentacao(Casa)?\(\)/.test(x.getAttribute('onclick')||''));
+    if(b){ b.setAttribute('onclick', 'pdfListaCompras()'); b.textContent = '📄 Lista de compras em PDF'; }
+  }catch(e){}
+} });
+
+Object.assign(window, { pdfListaCompras, pdfMontarCompras });

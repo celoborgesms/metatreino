@@ -2,6 +2,18 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. Beta 58 — auditoria
+- [ ] Conta nova com plano para daqui a alguns dias (e com um treino importado antigo): Início sem "Pausa curta"/"dias sem treinar"; sem "A Volta por Cima".
+- [ ] Integrações › Registro técnico: tocar num item cancelado, num com erro e num de atividade excluída → abre o detalhe; "Remover este registro" funciona.
+- [ ] Abrir uma atividade importada de verdade (a do vídeo): abre; se algo falhar, aparece o aviso com "Excluir" (não fica sem resposta).
+- [ ] Lista de compras › "Lista de compras em PDF": só a lista, por categoria. "Plano alimentar em PDF": só o cardápio. Imprimir os dois.
+- [ ] PDF do treino: figura com músculos da semana; tabela legível na tela e impressa.
+- [ ] Calendário num dia com várias conquistas: elas ficam em "🎖️ N conquistas neste dia", recolhidas.
+- [ ] Mapa muscular › Treino de hoje: músculos fora do treino apagados e sem ficha; Explorar com o corpo todo.
+- [ ] Histórico › treino com cargas diferentes por série: cada série aparece.
+- [ ] Casa pareada: Perfil › Começar do zero → depois do cadastro, o grupo da casa continua (as duas pessoas).
+- [ ] Celular pequeno (iPhone SE / Android 360): Treinos com os atalhos numa linha e os botões do exercício em duas linhas; Conquistas com os 4 filtros numa linha.
+
 ## 00000. Beta 56 — acabamento visual
 - [ ] Tema claro (Coral, Claro, Areia): "Seu primeiro treino é…" legível; nenhum texto apagado nas abas.
 - [ ] Treinos da corrida com 4 dias "Caminhada ativa": tudo dentro dos cartões.

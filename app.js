@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 57 =====
-const APP_VERSION = '2027.1-beta.57';
+// ===== MetaTreino 2027.1 Beta 58 =====
+const APP_VERSION = '2027.1-beta.58';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -838,10 +838,14 @@ function doRestart(){
   // Beta 38: o que é apagado continua o mesmo de antes (treinos, séries, recordes, conquistas, pesagens,
   // arquivo anual e o questionário). O texto agora diz isso com todas as letras, e as PREFERÊNCIAS do app
   // (tema, áudio dos vídeos, como o Início é organizado) ficam — recomeçar a jornada não é configurar o app de novo.
-  appConfirm('Isto apaga seu progresso: treinos, séries, recordes, conquistas, pesagens e o questionário inicial. Você responde tudo de novo e monta um plano novo.\n\nContinuam: sua conta, seu acesso e as preferências do app (como o tema).\n\nSe quer só trocar de plano sem perder o histórico, use "Recriar plano" em Perfil › Meu plano.', ()=>{
+  appConfirm('Isto apaga seu progresso: treinos, séries, recordes, conquistas, pesagens e o questionário inicial. Você responde tudo de novo e monta um plano novo.\n\nContinuam: sua conta, seu acesso, as preferências do app (como o tema) e o seu grupo da Alimentação da casa.\n\nSe quer só trocar de plano sem perder o histórico, use "Recriar plano" em Perfil › Meu plano.', ()=>{
     const keep = { name:state.user.name, email:state.user.email, isAdmin:state.user.isAdmin };
     const pref = {};
     ['prefs','inicioOcultos','inicioOrdem','inicioOrdemInd','inicioEnxuto'].forEach(k=>{ if(state[k] !== undefined) pref[k] = JSON.parse(JSON.stringify(state[k])); });
+    // Beta 58: o vínculo da Alimentação da casa é compartilhado com outra pessoa — recomeçar o SEU progresso não
+    // tira você do grupo (antes o link sumia junto com state.nutri e a outra pessoa continuava vendo você no grupo).
+    // O que é seu (registro alimentar, preferências do cardápio, pesagens) recomeça do zero.
+    try{ const fam = state.nutri && state.nutri.familia; if(fam && fam.id) pref.nutri = { familia: JSON.parse(JSON.stringify(fam)) }; }catch(e){}
     try{ if(typeof arqApagarTudo==='function') arqApagarTudo(uidDados()); }catch(e){}   // o arquivo anual também faz parte do progresso
     state = Object.assign({ user:keep, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null},
       zeradoEm: Date.now() }, pref);   // Beta 38: o outro aparelho (ou a cópia antiga deste) não devolve o progresso apagado
@@ -5977,7 +5981,9 @@ function checkTrophies(){
   if(temSab && temDom) unlockTrophy('weekend');
   // a volta por cima: alguma pausa de 10+ dias seguida de um treino
   const diasOrd = [...new Set(allHist.map(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime(); }))].sort((a,b)=>a-b);
-  for(let i=1;i<diasOrd.length;i++){ if((diasOrd[i]-diasOrd[i-1])/86400000 >= 10){ unlockTrophy('comeback'); break; } }
+  // Beta 58: só vale uma volta de verdade (mtVoltaReal, parte 61): pausa de 10+ dias na MESMA modalidade, depois
+  // de um período em que o aluno treinava (2+ sessões nas 6 semanas antes). Conta nova ou um registro antigo isolado não contam.
+  if(typeof mtVoltaReal === 'function' ? mtVoltaReal(10) : false) unlockTrophy('comeback');
   // sabedoria: registrou treino em modo adaptado por dor
   if(allHist.some(x=>x.adaptedWith && /dor/i.test(x.adaptedWith))) unlockTrophy('humble');
   // treinou no próprio aniversário

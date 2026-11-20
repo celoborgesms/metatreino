@@ -1,3 +1,34 @@
+# MetaTreino 2027.1 Beta 58 — Auditoria: pausas reais, importações, PDFs e telas pequenas
+
+**Não precisa publicar o `firestore.rules`.** Nenhuma coleção nova. Um campo novo e pequeno no documento do próprio aluno: `impHashes`, só a impressão digital das importações arquivadas (no máximo 400, ~30 bytes cada).
+
+1. **Pausa e "A Volta por Cima" só com histórico de verdade:**
+   - conta nova, plano que ainda não começou ou um treino importado isolado não geram mais "Pausa curta", "Retomada", avisos de retorno nem a conquista;
+   - a pausa é contada por modalidade (musculação × corrida), não pela última atividade de qualquer tipo;
+   - é preciso rotina antes da pausa (2+ dias com treino nas 6 semanas anteriores) e, quando há agenda, um treino agendado que passou sem registro;
+   - na primeira semana do plano, o Início não cobra frequência.
+2. **Importações:**
+   - todo item do registro técnico abre um detalhe e pode ser removido (antes, cancelados, erros e excluídas eram texto sem toque);
+   - o registro técnico vale 30 dias, qualquer que seja o resultado;
+   - a atividade importada abre mesmo com dados incompletos, e o percurso não quebra com pontos vazios;
+   - reimportar um arquivo que já foi para o Histórico completo é detectado. Se você tinha excluído a atividade, dá para "importar mesmo assim".
+3. **PDFs:**
+   - o plano alimentar traz só o cardápio;
+   - a lista de compras tem PDF próprio, por categoria, com caixinhas e, na casa, a parte de cada pessoa;
+   - o PDF da casa virou "Cardápio da casa";
+   - os cabeçalhos ficaram discretos, com um ícone de linha fina: saíram a maçã, os legumes coloridos e o boneco de palito;
+   - não há mais marca d'água;
+   - o PDF de treino tem a figura anatômica (frente e costas) com os músculos da semana e uma linha por exercício (séries × repetições, descanso, última carga e espaço para anotar).
+4. **Calendário:** conquistas do dia numa área própria, recolhida. No máximo 4 destaques à vista, o resto em "Ver mais". Vários recordes viram uma linha só.
+5. **Mapa muscular** (novo nome de "Anatomia muscular"): em "Treino de hoje" e "Exercício", os músculos fora do treino ficam apagados e não abrem a ficha. "Explorar" continua com o corpo inteiro.
+6. **Detalhe do treino:** mostra série por série, com a carga e as repetições reais de cada uma (inclusive séries sem carga) e o volume do exercício. Registros antigos continuam com o resumo.
+7. **"Começar do zero":** mantém o grupo da Alimentação da casa. O resto do progresso continua sendo apagado.
+8. **Telas pequenas:**
+   - Treinos: os atalhos do topo ficam numa linha;
+   - as ações do exercício ficam em duas linhas alinhadas (antes eram até quatro);
+   - Conquistas: os filtros ficam numa linha (Todas · Ganhas · Em curso · Bloqueadas);
+   - o atalho "Tem o treino no relógio?" ficou em duas linhas organizadas.
+
 # MetaTreino 2027.1 Beta 57 — Dias da semana em Treinos
 
 1. **Faixa de dias:** os botões dos dias viraram uma faixa de cartões iguais, de cantos arredondados (não mais pílulas), numa linha só. Cada cartão mostra o dia abreviado (SEG, QUA…) e um rótulo curto: "Treino A" na musculação; "Leve", "Longão", "Tiros", "Limiar" ou "Caminhar" na corrida.
