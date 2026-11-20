@@ -1,3 +1,27 @@
+# MetaTreino 2027.1 Beta 60 — Corrida é corrida, musculação é musculação
+
+**Não precisa publicar o `firestore.rules`.**
+
+1. **Progresso › Evolução por modalidade:**
+   - na corrida saem Peso, Volume, Calistenia e Isometria;
+   - na musculação saem Corrida, Ritmo, Caminhada e Bike;
+   - Frequência e Tempo de treino contam só as sessões da modalidade que está aberta.
+2. **Personalizar progresso:** "Calistenia" agora é um bloco só da musculação e não aparece mais na lista da corrida.
+3. **"Dicas para esta sessão" removido** da musculação e da corrida, porque era a mesma frase todos os dias. A única informação que mudava o treino, o formato em circuito do objetivo Resistência, virou o bloco "Como fazer o circuito", que só aparece para esse objetivo.
+4. **Novo "Personalizar treinos"**, no fim da tela de Treinos:
+   - separado por modalidade: personalizar a corrida não mexe na musculação, e o contrário também;
+   - dá para desligar os blocos de apoio: atalhos do topo, programação semanal, frase de foco, resumo, andamento, orientações, "por que este treino", finalizador de cardio e "Fale com o treinador";
+   - exercícios, séries e os botões de salvar e pular nunca somem;
+   - é de graça (é para tirar o que não ajuda, não um recurso Premium).
+
+# MetaTreino 2027.1 Beta 59 — Corrida sem plano, Progresso por modalidade
+
+**Não precisa publicar o `firestore.rules`.**
+
+1. **Progresso da corrida sem plano:** quem só registra atividades avulsas (corrida, caminhada, bike) agora vê o Desempenho normal: distância, ritmo, recordes, calendário, evolução e histórico. Antes era mandado para "monte um plano". Sem plano não existe meta de semana e mês, então o cartão Metas mostra a sequência e explica isso, em vez de "3/0 · 0%". A tela de começar continua só para quem ainda não tem nenhum registro.
+2. **Personalizar progresso por modalidade:** corrida e musculação têm escolhas separadas. O título mostra qual está sendo editada, e a lista traz só os blocos daquela modalidade. Quem já tinha personalizado mantém a escolha antiga como ponto de partida das duas.
+3. **"Tem o treino no relógio?":** ícone, texto em duas linhas e a seta ao lado. A "›" não cai mais sozinha para a linha de baixo.
+
 # MetaTreino 2027.1 Beta 58 — Auditoria: pausas reais, importações, PDFs e telas pequenas
 
 **Não precisa publicar o `firestore.rules`.** Nenhuma coleção nova. Um campo novo e pequeno no documento do próprio aluno: `impHashes`, só a impressão digital das importações arquivadas (no máximo 400, ~30 bytes cada).

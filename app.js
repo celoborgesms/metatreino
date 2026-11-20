@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 58 =====
-const APP_VERSION = '2027.1-beta.58';
+// ===== MetaTreino 2027.1 Beta 60 =====
+const APP_VERSION = '2027.1-beta.60';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -3997,7 +3997,7 @@ function renderSessionDetail(w){
         <div class="info-cell"><div class="info-cell-icon">📅</div><div class="info-cell-lbl">DIA</div><div class="info-cell-val">${w.dayName}</div></div>
       </div>
     </div>
-    ${(((state.modules.lift||{}).history||[]).length + ((state.modules.run||{}).history||[]).length) >= 8 ? '' : `<div class="card card-info card-row"><div class="card-icon">💡</div><div><div class="card-title info">Dicas para esta sessão</div><div class="card-sub">${isLift?(((state.modules.lift||{}).setup||{}).goal==='resistencia'?'Formato circuito: emende os exercícios com pouco descanso e, no fim de cada volta, descanse 60-90s. Faça 2-3 voltas.':'Mantenha técnica antes de aumentar carga. Registre cada série para ver sua evolução.'):'Mantenha um ritmo onde você consiga conversar sem dificuldade. frequência cardíaca entre 60-70% do máximo (220 menos sua idade).'}</div></div></div>`}
+    ${''/* Beta 60: o cartão "Dicas para esta sessão" saiu (era a mesma frase todos os dias, nos dois módulos) */}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
     ${concluidoAnterior ? cardConcluidoAnterior(_entSem) : isSkippedToday(w)
@@ -5010,20 +5010,23 @@ function renderPerf(){
       : '';
   }catch(e){}
   const _pm = state.modules[state.active];
-  if(_pm && !_pm.plan){ showScreen('scr-runlog'); renderRunLogScreen(); return; }
+  // Beta 59: corrida SEM plano mas COM registros avulsos mostra o Progresso normalmente (distância, ritmo,
+  // histórico, recordes) — só não há meta semanal. A tela "monte um plano" fica para quem não tem nada registrado.
+  if(_pm && !_pm.plan && !((_pm.history||[]).length)){ showScreen('scr-runlog'); renderRunLogScreen(); return; }
+  if(_pm && !_pm.plan) showScreen('scr-perf');
   renderCalendar();
   renderRecords();
   const mod = state.modules[state.active];
   const isLift = state.active==='lift';
   const h = mod.history||[];
-  const wkTarget = mod.plan.workouts.length;
+  const wkTarget = (mod.plan && mod.plan.workouts) ? mod.plan.workouts.length : 0;   // Beta 59: sem plano = sem meta
   const now = Date.now();
   const start = now - 7*86400000;
   const prevStart = now - 14*86400000;
   const weekDone = h.filter(x=>x.at>=start).length;
   $('s1-lbl').textContent = isLift?'Treinos 7d':'Atividades 7d';
-  $('s1-val').innerHTML = `${weekDone}<small>/${wkTarget}</small>`;
-  $('s1-note').textContent = Math.round(weekDone/wkTarget*100)+'% da meta';
+  $('s1-val').innerHTML = wkTarget ? `${weekDone}<small>/${wkTarget}</small>` : `${weekDone}`;
+  $('s1-note').textContent = wkTarget ? Math.round(weekDone/wkTarget*100)+'% da meta' : 'registros avulsos';
   // volume/km com variação REAL vs semana anterior
   $('s2-lbl').textContent = isLift?'Volume 7d':'Distância 7d';
   let cur, prev;
@@ -5105,7 +5108,11 @@ function renderPerf(){
     };
     const streakAtual = (typeof calcStreak==='function') ? calcStreak(h) : 0;
     const metaStreak = Math.max(7, Math.ceil((streakAtual+1)/7)*7);
-    gb.innerHTML = `<div style="display:flex;gap:6px;justify-content:space-around;padding:6px 0 2px">
+    // Beta 59: sem plano não há meta de semana/mês — mostra só a sequência e explica (antes: "3/0 · 0%")
+    if(!wkTarget){ gb.innerHTML = `<div style="display:flex;gap:14px;align-items:center;padding:6px 0 2px">
+      ${anel(streakAtual, metaStreak, 'SEQUÊNCIA', 'var(--accent)')}
+      <div style="flex:2;font-size:12.5px;line-height:1.45;color:var(--text-dim)">Você registra atividades avulsas, sem plano — então não há meta de semana e mês. <b style="color:var(--text)">${weekDone}</b> nos últimos 7 dias e <b style="color:var(--text)">${monthDone}</b> nos últimos 30.${isLift ? '' : `<br><a href="#" onclick="goTab('sessions');return false">Montar um plano de corrida ›</a>`}</div></div>`; }
+    else gb.innerHTML = `<div style="display:flex;gap:6px;justify-content:space-around;padding:6px 0 2px">
       ${anel(weekDone, wkTarget, 'SEMANA', 'var(--primary)')}
       ${anel(monthDone, monthTarget, 'MÊS', 'var(--info)')}
       ${anel(streakAtual, metaStreak, 'SEQUÊNCIA', 'var(--accent)')}

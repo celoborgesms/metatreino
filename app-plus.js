@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 58 — app-plus.js
+// MetaTreino 2027.1 Beta 60 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.58' };
+const MTP = { versao: '2027.1-beta.60' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -17386,14 +17386,28 @@ const PERF_BLOCOS = [
 const PERF_PADRAO = PERF_BLOCOS.map(b=>b.k);
 const PERF_ESSENCIAL = ['resumo','evolucao','corrida','recordes','metas'];
 
+// Beta 59: a personalização é POR MODALIDADE (antes, mudar o Progresso da corrida mudava o da musculação).
+// Quem já tinha personalizado: a escolha antiga vira o ponto de partida das duas (nada se perde).
+function _pfMod(){ return state && state.active === 'run' ? 'run' : 'lift'; }
+function _pfCfg(mk){
+  mk = mk || _pfMod();
+  if(!state.progressoMod || typeof state.progressoMod !== 'object') state.progressoMod = {};
+  if(!state.progressoMod[mk]){
+    const leg = { ocultos: Array.isArray(state.progressoOcultos) ? state.progressoOcultos.slice() : [], ordem: Array.isArray(state.progressoOrdem) ? state.progressoOrdem.slice() : null, basico: state.progressoBasico || null };
+    state.progressoMod[mk] = leg;
+  }
+  return state.progressoMod[mk];
+}
+function _pfNomeMod(){ return _pfMod() === 'run' ? 'Corrida' : 'Musculação'; }
+function _pfBlocosMod(){ const mk = _pfMod(); return PERF_BLOCOS.filter(b=>!b.mod || b.mod === mk).map(b=>b.k); }
 function _pfPremium(){ try{ return !_planoConhecido() || mtTem('inicioCompleto'); }catch(e){ return true; } }
 function perfOcultos(){
   if(!state) return [];
-  if(!_pfPremium()) return state.progressoBasico === 'essencial' ? PERF_PADRAO.filter(k=>!PERF_ESSENCIAL.includes(k)) : [];
-  return Array.isArray(state.progressoOcultos) ? state.progressoOcultos.filter(k=>PERF_PADRAO.includes(k)) : [];
+  if(!_pfPremium()) return _pfCfg().basico === 'essencial' ? PERF_PADRAO.filter(k=>!PERF_ESSENCIAL.includes(k)) : [];
+  return Array.isArray(_pfCfg().ocultos) ? _pfCfg().ocultos.filter(k=>PERF_PADRAO.includes(k)) : [];
 }
 function perfOrdem(){
-  const o = (_pfPremium() && Array.isArray(state.progressoOrdem)) ? state.progressoOrdem.filter(k=>PERF_PADRAO.includes(k)) : [];
+  const o = (_pfPremium() && Array.isArray(_pfCfg().ordem)) ? _pfCfg().ordem.filter(k=>PERF_PADRAO.includes(k)) : [];
   PERF_PADRAO.forEach(k=>{ if(!o.includes(k)) o.push(k); });
   return o;
 }
@@ -17482,9 +17496,9 @@ mtGancho('renderRecords', { depois(){ try{ perfAplica(); }catch(e){} } });
 function openPersonalizarProgresso(){
   const mi = $('modal-inner'); mi.classList.remove('modal-video','modal-ex');
   if(!_pfPremium()){
-    const ess = state.progressoBasico === 'essencial';
-    mi.innerHTML = `<h3>📊 Personalizar progresso</h3>
-      <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Escolha como a tela de Desempenho aparece. Vale na hora e fica salvo na sua conta.</p>
+    const ess = _pfCfg().basico === 'essencial';
+    mi.innerHTML = `<h3>📊 Personalizar progresso · ${_pfNomeMod()}</h3>
+      <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Escolha como o Desempenho da <b>${_pfNomeMod().toLowerCase()}</b> aparece. A outra modalidade tem a própria escolha. Fica salvo na sua conta.</p>
       <div class="pl-opcoes">
         <button type="button" class="pl-op ${!ess?'on':''}" onclick="pfBasico('completo')"><b>Completo</b><small>todos os blocos</small></button>
         <button type="button" class="pl-op ${ess?'on':''}" onclick="pfBasico('essencial')"><b>Só o essencial</b><small>resumo, evolução, recordes e metas</small></button>
@@ -17497,12 +17511,11 @@ function openPersonalizarProgresso(){
   const oc = perfOcultos();
   const linha = k=>{ const b = PERF_BLOCOS.find(x=>x.k===k); return `<label class="pi-row" data-ordem="${b.k}">${PI_ALCA}<span class="pi-txt"><b>${b.nome}</b>${b.desc?`<small>${b.desc}</small>`:''}</span>
       <input type="checkbox" class="pi-sw" data-k="${b.k}" ${oc.includes(b.k)?'':'checked'} onchange="pfAlterar(this)"></label>`; };
-  mi.innerHTML = `<h3>📊 Personalizar progresso</h3>
-    <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Escolha o que aparece em Progresso › Desempenho e em que ordem. Vale na hora e é salvo na sua conta.</p>
+  mi.innerHTML = `<h3>📊 Personalizar progresso · ${_pfNomeMod()}</h3>
+    <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Escolha o que aparece no Desempenho da <b>${_pfNomeMod().toLowerCase()}</b> e em que ordem. A outra modalidade tem a própria escolha. Fica salvo na sua conta.</p>
     <div class="pi-presets"><button type="button" onclick="pfPreset('completo')">Tudo</button><button type="button" onclick="pfPreset('essencial')">Só o essencial</button></div>
-    <div class="pi-fixos">A tela segue a modalidade ativa: blocos marcados como "só na musculação" ou "só na corrida" aparecem apenas nela.</div>
     <div class="pi-dica-ordem">Arraste pela alça <b>⠿</b> para mudar a ordem.</div>
-    <div class="card pi-lista" id="perf-lista" data-grupo="perf">${perfOrdem().map(linha).join('')}</div>
+    <div class="card pi-lista" id="perf-lista" data-grupo="perf">${perfOrdem().filter(k=>_pfBlocosMod().includes(k)).map(linha).join('')}</div>
     <button type="button" class="btn btn-ghost btn-block" style="margin-top:12px" onclick="pfPadrao()">Voltar ao padrão</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal();goTab('perf')">Pronto</button>`;
   $('modal-back').classList.add('on');
@@ -17512,7 +17525,8 @@ function openPersonalizarProgresso(){
 const _piSalvaOrdemB51 = window._piSalvaOrdem;
 window._piSalvaOrdem = function(lista){
   if(lista && lista.dataset.grupo === 'perf'){
-    state.progressoOrdem = [...lista.querySelectorAll('[data-ordem]')].map(r=>r.dataset.ordem); saveData(); perfAplica(); return;
+    const vis = [...lista.querySelectorAll('[data-ordem]')].map(r=>r.dataset.ordem);
+    _pfCfg().ordem = vis.concat(PERF_PADRAO.filter(k=>!vis.includes(k))); saveData(); perfAplica(); return;
   }
   return _piSalvaOrdemB51.apply(this, arguments);
 };
@@ -17520,19 +17534,19 @@ function pfAlterar(el){
   if(!_pfPremium()) return mtPremiumAviso('inicioCompleto');
   const k = el.dataset.k; let oc = perfOcultos();
   oc = el.checked ? oc.filter(x=>x!==k) : [...new Set([...oc, k])];
-  state.progressoOcultos = oc; saveData(); perfAplica();
+  _pfCfg().ocultos = oc; saveData(); perfAplica();
 }
 function pfPreset(p){
   if(!_pfPremium()) return mtPremiumAviso('inicioCompleto');
-  state.progressoOcultos = p === 'essencial' ? PERF_PADRAO.filter(k=>!PERF_ESSENCIAL.includes(k)) : [];
+  _pfCfg().ocultos = p === 'essencial' ? PERF_PADRAO.filter(k=>!PERF_ESSENCIAL.includes(k)) : [];
   saveData(); perfAplica();
-  document.querySelectorAll('#perf-lista .pi-sw').forEach(i=>{ i.checked = !state.progressoOcultos.includes(i.dataset.k); });
+  document.querySelectorAll('#perf-lista .pi-sw').forEach(i=>{ i.checked = !_pfCfg().ocultos.includes(i.dataset.k); });
   toast(p === 'essencial' ? '📊 Só o essencial no Progresso' : '📊 Progresso completo');
 }
-function pfBasico(k){ state.progressoBasico = k === 'essencial' ? 'essencial' : 'completo'; saveData(); perfAplica(); openPersonalizarProgresso(); }
+function pfBasico(k){ _pfCfg().basico = k === 'essencial' ? 'essencial' : 'completo'; saveData(); perfAplica(); openPersonalizarProgresso(); }
 function pfPadrao(){
   appConfirm('O Desempenho volta para a ordem original, com todos os blocos visíveis.', ()=>{
-    state.progressoOrdem = null; state.progressoOcultos = []; saveData(); perfAplica(); openPersonalizarProgresso(); toast('Progresso no padrão');
+    _pfCfg().ordem = null; _pfCfg().ocultos = []; saveData(); perfAplica(); openPersonalizarProgresso(); toast('Progresso no padrão');
   }, { title:'Voltar ao padrão?', okLabel:'Voltar ao padrão' });
 }
 
@@ -18624,7 +18638,7 @@ window.openHistoryEntry = function(idx){
 // "Registrar atividade": atalho para a mesma tela
 mtGancho('openActivityLog', { depois(){
   try{ const mi = $('modal-inner'); if(!mi || mi.querySelector('#integ-atalho')) return; const h = mi.querySelector('h3');
-    if(h) h.insertAdjacentHTML('afterend', `<button type="button" class="integ-atalho" id="integ-atalho" onclick="openIntegracoes()">⌚ Tem o treino no relógio? <b>Importar arquivo (GPX, TCX, FIT)</b> ›</button>`); }catch(e){}
+    if(h) h.insertAdjacentHTML('afterend', `<button type="button" class="integ-atalho" id="integ-atalho" onclick="openIntegracoes()"><span class="ia-ico" aria-hidden="true">⌚</span><span class="ia-tx">Tem o treino no relógio?<b>Importar arquivo (GPX, TCX, FIT)</b></span><span class="ia-seta" aria-hidden="true">›</span></button>`); }catch(e){}
 }});
 // recordes: atividades com dados inconsistentes não contam; melhores esforços de 5 e 10 km entram
 mtGancho('renderRecords', { depois(){
@@ -19843,8 +19857,11 @@ mtGancho('goTab', { depois(t){ if(t === 'sessions') mtExAcoes(); } });
   .ex .ex-acoes:has(.ex-sec ~ .ex-sec ~ .ex-sec) .ex-sec .ico{ display:none; }
 }
 /* registro de atividade: atalho do relógio em duas linhas organizadas (antes quebrava no meio da frase) */
-.integ-atalho{ line-height:1.35; }
-.integ-atalho b{ display:block; color:var(--text); margin-top:1px; }
+.integ-atalho{ display:flex !important; align-items:center; gap:10px; line-height:1.35; }
+.integ-atalho .ia-ico{ flex:none; font-size:18px; }
+.integ-atalho .ia-tx{ flex:1; min-width:0; }
+.integ-atalho .ia-tx b{ display:block; color:var(--text); margin-top:1px; }
+.integ-atalho .ia-seta{ flex:none; font-size:20px; color:var(--text-dim); }
 /* conquistas: os 4 filtros numa linha */
 .cq-filtros{ display:grid !important; grid-template-columns:repeat(4, minmax(0,1fr)); gap:6px; overflow:visible !important; }
 .cq-filtros .filter-chip{ min-width:0; padding-left:4px; padding-right:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; }
@@ -20026,3 +20043,117 @@ mtGancho('nutriListaCompras', { depois(){
 } });
 
 Object.assign(window, { pdfListaCompras, pdfMontarCompras });
+// =====================================================================
+// 63. Beta 60 — corrida é corrida, musculação é musculação
+// ---------------------------------------------------------------------
+//  • Progresso › Evolução: só os gráficos da modalidade ativa. Na corrida saem Peso, Volume,
+//    Calistenia e Isometria; na musculação saem Corrida, Ritmo, Caminhada e Bike. Frequência e
+//    Tempo de treino contam só as sessões da modalidade ativa.
+//  • Personalizar progresso: "Calistenia" é bloco da musculação (não aparece na lista da corrida).
+//  • Treinos: "Personalizar treinos", por modalidade (state.treinosMod.lift / .run, independentes).
+//    Esconde só blocos de apoio — atalhos, programação semanal, frase de foco, resumo, andamento,
+//    orientações, "por que este treino", finalizador de cardio, ajuda. Exercícios, séries, cronômetro
+//    e os botões de salvar/pular NUNCA podem ser escondidos. É de graça: tirar o que não é útil não é recurso Premium.
+//  • O cartão "Dicas para esta sessão" (mesma frase todos os dias) saiu do app.js. A única parte que
+//    mudava o treino — o formato em circuito do objetivo Resistência — virou o bloco "Como fazer o
+//    circuito", que só aparece para esse objetivo (e também pode ser escondido).
+// =====================================================================
+
+// ---------- Evolução por modalidade ----------
+const EVO_SO = { lift:['peso','volume','cali_reps','cali_iso'], run:['run','pace','walk','bike','bikev'] };
+(function(){
+  const _M = window.mtMetricas;
+  window.mtMetricas = function(){
+    const M = _M.apply(this, arguments);
+    try{
+      const mk = state.active === 'run' ? 'run' : 'lift'; const outro = mk === 'run' ? 'lift' : 'run';
+      const hMod = ()=>(((state.modules[mk]||{}).history)||[]).filter(x=>x && x.at);
+      return M.filter(m=>!EVO_SO[outro].includes(m.k)).map(m=>{
+        if(m.k === 'freq') return Object.assign({}, m, { serie:bs=>bs.map(b=>({ v:new Set(hMod().filter(x=>x.at>=b.a && x.at<b.b).map(x=>mtDia0(x.at))).size, b })) });
+        if(m.k === 'tempo') return Object.assign({}, m, { serie:bs=>bs.map(b=>({ v:Math.round(hMod().filter(x=>x.at>=b.a && x.at<b.b).reduce((s,x)=>s+(+x.duration||0),0)), b })) });
+        return m;
+      });
+    }catch(e){ return M; }
+  };
+})();
+try{ const b = PERF_BLOCOS.find(x=>x.k === 'calistenia'); if(b){ b.mod = 'lift'; b.desc = 'só na musculação, se você usa'; } }catch(e){}
+
+// ---------- Personalizar treinos (por modalidade) ----------
+const TREINO_BLOCOS = [
+  { k:'atalhos',     nome:'Atalhos do topo',            desc:'Meu plano, Biblioteca, Importar',          sel:()=>[$('sess-qlinks')] },
+  { k:'programacao', nome:'Programação semanal',        desc:'meta, semana do plano e treinos por semana', sel:()=>{ const w = $('weekly-info'); return [w && w.closest('.card')]; } },
+  { k:'foco',        nome:'Frase de foco do treino',    desc:'a frase abaixo do nome do treino',          sel:()=>[...document.querySelectorAll('#session-detail-slot .today-desc')] },
+  { k:'resumo',      nome:'Resumo do treino',           desc:'duração, exercícios ou distância e dia',    sel:()=>[...document.querySelectorAll('#session-detail-slot .info-grid')] },
+  { k:'andamento',   nome:'Andamento do treino',        desc:'quantos exercícios já foram registrados',   mod:'lift', sel:()=>[...document.querySelectorAll('#session-detail-slot .tr-anda')] },
+  { k:'circuito',    nome:'Como fazer o circuito',      desc:'só no objetivo Resistência',                mod:'lift', sel:()=>[$('tp-circuito')] },
+  { k:'orientacoes', nome:'Orientações do treino',      desc:'fases do treino e músculos trabalhados',    mod:'lift', sel:()=>[...document.querySelectorAll('#session-detail-slot .mg-card')] },
+  { k:'finalizador', nome:'Finalizador de cardio',      desc:'sugestão de cardio em treinos curtos',      mod:'lift', sel:()=>[...document.querySelectorAll('#session-detail-slot .hl-warn')] },
+  { k:'porque',      nome:'Por que este treino',        desc:'tipo, objetivo e intensidade',              mod:'run',  sel:()=>[...document.querySelectorAll('#session-detail-slot .run-why')] },
+  { k:'orientacoesr',nome:'Orientações da corrida',     desc:'lembretes de segurança e de ritmo',         mod:'run',  sel:()=>[...document.querySelectorAll('#session-detail-slot .run-orient')] },
+  { k:'ajuda',       nome:'"Dúvidas? Fale com o treinador"', desc:'atalho para o Meta Assistente',        sel:()=>[...document.querySelectorAll('#scr-sessions .help')] }
+];
+function _tpMod(){ return state && state.active === 'run' ? 'run' : 'lift'; }
+function _tpNomeMod(){ return _tpMod() === 'run' ? 'Corrida' : 'Musculação'; }
+function _tpCfg(mk){
+  mk = mk || _tpMod();
+  if(!state.treinosMod || typeof state.treinosMod !== 'object') state.treinosMod = {};
+  if(!state.treinosMod[mk]) state.treinosMod[mk] = { ocultos: [] };
+  if(!Array.isArray(state.treinosMod[mk].ocultos)) state.treinosMod[mk].ocultos = [];
+  return state.treinosMod[mk];
+}
+function _tpBlocos(){ const mk = _tpMod(); const res = ((state.modules.lift||{}).setup||{}).goal === 'resistencia';
+  return TREINO_BLOCOS.filter(b=>(!b.mod || b.mod === mk) && (b.k !== 'circuito' || res)); }
+function _tpCircuito(){
+  try{
+    if(_tpMod() !== 'lift' || ((state.modules.lift||{}).setup||{}).goal !== 'resistencia') return;
+    const slot = $('session-detail-slot'); if(!slot || $('tp-circuito')) return;
+    const bloco = slot.querySelector('.block'); if(!bloco) return;
+    bloco.insertAdjacentHTML('beforebegin', `<div id="tp-circuito" class="card card-info card-row" style="margin:10px 0"><div class="card-icon">🔁</div><div><div class="card-title info">Como fazer o circuito</div><div class="card-sub">Faça um exercício depois do outro com pouco descanso; no fim de cada volta, descanse 60–90 s. Faça 2 a 3 voltas.</div></div></div>`);
+  }catch(e){}
+}
+function treinosAplica(){
+  try{
+    if(!state || !state.user || !$('scr-sessions')) return;
+    _tpCircuito();
+    const oc = _tpCfg().ocultos;
+    TREINO_BLOCOS.forEach(b=>{ let els = []; try{ els = (b.sel()||[]).filter(Boolean); }catch(e){}
+      const esconde = oc.includes(b.k) && (!b.mod || b.mod === _tpMod());
+      els.forEach(el=>el.classList.toggle('tp-oculto', esconde)); });
+    const wrap = document.querySelector('#scr-sessions .wrap'); if(!wrap) return;
+    let a = $('treinos-personalizar');
+    if(!a){ a = document.createElement('div'); a.id = 'treinos-personalizar'; a.className = 'tp-link'; wrap.appendChild(a); }
+    else if(a !== wrap.lastElementChild) wrap.appendChild(a);
+    const n = _tpBlocos().filter(b=>oc.includes(b.k)).length;
+    const html = `<a href="#" onclick="openPersonalizarTreinos();return false">⚙️ Personalizar treinos · ${_tpNomeMod().toLowerCase()}</a>${n ? ` · ${n} ${n===1?'bloco oculto':'blocos ocultos'}` : ''}`;
+    if(a.innerHTML !== html) a.innerHTML = html;
+  }catch(e){ console.log('personalizar treinos:', e); }
+}
+function openPersonalizarTreinos(){
+  const mi = $('modal-inner'); mi.classList.remove('modal-video','modal-ex');
+  const oc = _tpCfg().ocultos;
+  mi.innerHTML = `<h3>⚙️ Personalizar treinos · ${_tpNomeMod()}</h3>
+    <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Desligue o que não ajuda no seu treino de <b>${_tpNomeMod().toLowerCase()}</b>. A outra modalidade tem a própria escolha. Exercícios, séries e os botões de salvar continuam sempre.</p>
+    <div class="card pi-lista">${_tpBlocos().map(b=>`<label class="pi-row"><span class="pi-txt"><b>${b.nome}</b><small>${b.desc}</small></span>
+      <input type="checkbox" class="pi-sw" data-k="${b.k}" ${oc.includes(b.k)?'':'checked'} onchange="tpAlterar(this)"></label>`).join('')}</div>
+    <button type="button" class="btn btn-ghost btn-block" style="margin-top:12px" onclick="tpPadrao()">Mostrar tudo de novo</button>
+    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal();goTab('sessions')">Pronto</button>`;
+  $('modal-back').classList.add('on');
+}
+function tpAlterar(el){
+  const c = _tpCfg(); const k = el.dataset.k;
+  c.ocultos = el.checked ? c.ocultos.filter(x=>x!==k) : [...new Set([...c.ocultos, k])];
+  saveData(); treinosAplica();
+}
+function tpPadrao(){ _tpCfg().ocultos = []; saveData(); treinosAplica(); openPersonalizarTreinos(); toast(`Treinos de ${_tpNomeMod().toLowerCase()} com tudo à mostra`); }
+mtGancho('renderSessions', { depois(){ treinosAplica(); } });
+mtGancho('selectSession', { depois(){ treinosAplica(); } });
+mtGancho('goTab', { depois(t){ if(t === 'sessions') treinosAplica(); } });
+Object.assign(window, { openPersonalizarTreinos, tpAlterar, tpPadrao, treinosAplica });
+
+(function(){ if(document.getElementById('b60-css')) return; const s = document.createElement('style'); s.id = 'b60-css';
+  s.textContent = `
+.tp-oculto{ display:none !important; }
+.tp-link{ text-align:center; font-size:12.5px; color:var(--text-dim); margin:18px 0 6px; }
+.tp-link a{ color:var(--primary-2); font-weight:600; text-decoration:none; }
+`;
+  document.head.appendChild(s); })();
