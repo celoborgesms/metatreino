@@ -69,7 +69,7 @@ async def main():
         confere('perfil publicado leva a semana (r, c, k e refeições), sem dados pessoais', r['n'] == 7 and r['campos'] == 'c,k,m,r' and r['meal'] >= 3 and not r['sem'], r)
         await pg.evaluate("closeModal(); nutriListaCompras('7dias','casa')"); await pg.wait_for_timeout(200)
         t = await pg.evaluate("[document.querySelectorAll('#fam-compras .fam-por').length, document.getElementById('fam-compras').innerText]")
-        confere('lista de compras da casa: tudo junto (sem divisão por pessoa) e indica o PDF', t[0] == 0 and 'PDF da casa' in t[1], t[1][:200])
+        confere('lista de compras da casa: tudo junto (sem divisão por pessoa) e indica o PDF da lista (Beta 58)', t[0] == 0 and 'PDF da lista' in t[1], t[1][:200])
         await pg.evaluate("window._pdfUlt = null; pdfAlimentacaoCasa()")
         ok = False
         for _ in range(60):
@@ -82,7 +82,14 @@ async def main():
             txt = '\n'.join(pg_.extract_text() for pg_ in pypdf.PdfReader(io.BytesIO(base64.b64decode(b64))).pages)
             confere('PDF: resumo por dia com recomendado × planejado e o motivo', 'Recomendado' in txt and 'Planejado' in txt and 'Casa:' in txt, txt[:300])
             confere('PDF: cardápio separado de cada pessoa', '(você)' in txt and txt.count('Cardápio de ') >= 2 and 'Cardápio de Emilly' in txt, [l for l in txt.split('\n') if 'Cardápio' in l][:4])
-            confere('PDF: lista de compras somada com a parte de cada um', 'Lista de compras da casa' in txt and 'Emilly:' in txt)
+            confere('PDF da casa é só o cardápio (Beta 58: a lista tem PDF próprio)', 'Lista de compras' not in txt, [l for l in txt.split('\n') if 'compras' in l.lower()][:5])
+            await pg.evaluate("window._pdfUlt = null; window.__comprasModo='casa'; pdfListaCompras()")
+            for _ in range(60):
+                await pg.wait_for_timeout(300)
+                if await pg.evaluate("!!window._pdfUlt"): break
+            b64 = await pg.evaluate("new Promise(r=>{ const f = new FileReader(); f.onload = ()=>r(f.result.split(',')[1]); f.readAsDataURL(window._pdfUlt.blob); })")
+            txt2 = '\n'.join(pg_.extract_text() for pg_ in pypdf.PdfReader(io.BytesIO(base64.b64decode(b64))).pages)
+            confere('PDF da lista de compras da casa: somada, com a parte de cada um', 'Lista de compras da casa' in txt2 and 'Emilly:' in txt2, txt2[:300])
             if SAIDA: open(os.path.join(SAIDA, 'b52-casa.pdf'), 'wb').write(base64.b64decode(b64))
         confere('sem erros', not erros, erros[:3])
         await b.close()

@@ -75,8 +75,8 @@ async def main():
           document.getElementById('mm-palco').dispatchEvent(new MouseEvent('click', { bubbles:true, clientX: p.x + p.width + 1.5, clientY: p.y + p.height/2 }));
           return !!document.querySelector('#mm-palco .mm-m.sel'); })()""")
         confere('toque na costura entre dois músculos ainda seleciona (área de toque ampliada)', r)
-        r = await pg.evaluate("""(()=>{ mmVista('frente'); mmSel('posteriores'); const v = document.querySelector('#mm-palco .mm-svg').getAttribute('aria-label'); return v; })()""")
-        confere('escolher um músculo da outra vista pela lista troca para essa vista', 'de costas' in r, r)
+        r = await pg.evaluate("""(()=>{ mmModo('livre'); mmVista('frente'); mmSel('posteriores'); const v = document.querySelector('#mm-palco .mm-svg').getAttribute('aria-label'); return v; })()""")
+        confere('escolher um músculo da outra vista pela lista troca para essa vista (Explorar; no treino, só os do treino — Beta 58)', 'de costas' in r, r)
         r = await pg.evaluate("""(()=>{ mmModo('semana'); const a = document.querySelectorAll('#mm-chips .mm-chip').length; mmModo('livre'); const b = document.querySelectorAll('#mm-chips .mm-chip').length; return [a, b, Object.keys(MM_INFO).length]; })()""")
         confere('"Últimos 7 dias" e "Explorar" (todos os músculos)', r[0] > 0 and r[1] == r[2], r)
         await pg.evaluate("closeModal()")
