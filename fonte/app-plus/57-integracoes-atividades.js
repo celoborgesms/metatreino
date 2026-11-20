@@ -639,7 +639,7 @@ window.openHistoryEntry = function(idx){
 // "Registrar atividade": atalho para a mesma tela
 mtGancho('openActivityLog', { depois(){
   try{ const mi = $('modal-inner'); if(!mi || mi.querySelector('#integ-atalho')) return; const h = mi.querySelector('h3');
-    if(h) h.insertAdjacentHTML('afterend', `<button type="button" class="integ-atalho" id="integ-atalho" onclick="openIntegracoes()">⌚ Tem o treino no relógio? <b>Importar arquivo (GPX, TCX, FIT)</b> ›</button>`); }catch(e){}
+    if(h) h.insertAdjacentHTML('afterend', `<button type="button" class="integ-atalho" id="integ-atalho" onclick="openIntegracoes()"><span class="ia-ico" aria-hidden="true">⌚</span><span class="ia-tx">Tem o treino no relógio?<b>Importar arquivo (GPX, TCX, FIT)</b></span><span class="ia-seta" aria-hidden="true">›</span></button>`); }catch(e){}
 }});
 // recordes: atividades com dados inconsistentes não contam; melhores esforços de 5 e 10 km entram
 mtGancho('renderRecords', { depois(){

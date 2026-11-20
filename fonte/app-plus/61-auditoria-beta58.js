@@ -372,8 +372,11 @@ mtGancho('goTab', { depois(t){ if(t === 'sessions') mtExAcoes(); } });
   .ex .ex-acoes:has(.ex-sec ~ .ex-sec ~ .ex-sec) .ex-sec .ico{ display:none; }
 }
 /* registro de atividade: atalho do relógio em duas linhas organizadas (antes quebrava no meio da frase) */
-.integ-atalho{ line-height:1.35; }
-.integ-atalho b{ display:block; color:var(--text); margin-top:1px; }
+.integ-atalho{ display:flex !important; align-items:center; gap:10px; line-height:1.35; }
+.integ-atalho .ia-ico{ flex:none; font-size:18px; }
+.integ-atalho .ia-tx{ flex:1; min-width:0; }
+.integ-atalho .ia-tx b{ display:block; color:var(--text); margin-top:1px; }
+.integ-atalho .ia-seta{ flex:none; font-size:20px; color:var(--text-dim); }
 /* conquistas: os 4 filtros numa linha */
 .cq-filtros{ display:grid !important; grid-template-columns:repeat(4, minmax(0,1fr)); gap:6px; overflow:visible !important; }
 .cq-filtros .filter-chip{ min-width:0; padding-left:4px; padding-right:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; }

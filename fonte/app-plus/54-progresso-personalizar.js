@@ -28,14 +28,28 @@ const PERF_BLOCOS = [
 const PERF_PADRAO = PERF_BLOCOS.map(b=>b.k);
 const PERF_ESSENCIAL = ['resumo','evolucao','corrida','recordes','metas'];
 
+// Beta 59: a personalização é POR MODALIDADE (antes, mudar o Progresso da corrida mudava o da musculação).
+// Quem já tinha personalizado: a escolha antiga vira o ponto de partida das duas (nada se perde).
+function _pfMod(){ return state && state.active === 'run' ? 'run' : 'lift'; }
+function _pfCfg(mk){
+  mk = mk || _pfMod();
+  if(!state.progressoMod || typeof state.progressoMod !== 'object') state.progressoMod = {};
+  if(!state.progressoMod[mk]){
+    const leg = { ocultos: Array.isArray(state.progressoOcultos) ? state.progressoOcultos.slice() : [], ordem: Array.isArray(state.progressoOrdem) ? state.progressoOrdem.slice() : null, basico: state.progressoBasico || null };
+    state.progressoMod[mk] = leg;
+  }
+  return state.progressoMod[mk];
+}
+function _pfNomeMod(){ return _pfMod() === 'run' ? 'Corrida' : 'Musculação'; }
+function _pfBlocosMod(){ const mk = _pfMod(); return PERF_BLOCOS.filter(b=>!b.mod || b.mod === mk).map(b=>b.k); }
 function _pfPremium(){ try{ return !_planoConhecido() || mtTem('inicioCompleto'); }catch(e){ return true; } }
 function perfOcultos(){
   if(!state) return [];
-  if(!_pfPremium()) return state.progressoBasico === 'essencial' ? PERF_PADRAO.filter(k=>!PERF_ESSENCIAL.includes(k)) : [];
-  return Array.isArray(state.progressoOcultos) ? state.progressoOcultos.filter(k=>PERF_PADRAO.includes(k)) : [];
+  if(!_pfPremium()) return _pfCfg().basico === 'essencial' ? PERF_PADRAO.filter(k=>!PERF_ESSENCIAL.includes(k)) : [];
+  return Array.isArray(_pfCfg().ocultos) ? _pfCfg().ocultos.filter(k=>PERF_PADRAO.includes(k)) : [];
 }
 function perfOrdem(){
-  const o = (_pfPremium() && Array.isArray(state.progressoOrdem)) ? state.progressoOrdem.filter(k=>PERF_PADRAO.includes(k)) : [];
+  const o = (_pfPremium() && Array.isArray(_pfCfg().ordem)) ? _pfCfg().ordem.filter(k=>PERF_PADRAO.includes(k)) : [];
   PERF_PADRAO.forEach(k=>{ if(!o.includes(k)) o.push(k); });
   return o;
 }
@@ -124,9 +138,9 @@ mtGancho('renderRecords', { depois(){ try{ perfAplica(); }catch(e){} } });
 function openPersonalizarProgresso(){
   const mi = $('modal-inner'); mi.classList.remove('modal-video','modal-ex');
   if(!_pfPremium()){
-    const ess = state.progressoBasico === 'essencial';
-    mi.innerHTML = `<h3>📊 Personalizar progresso</h3>
-      <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Escolha como a tela de Desempenho aparece. Vale na hora e fica salvo na sua conta.</p>
+    const ess = _pfCfg().basico === 'essencial';
+    mi.innerHTML = `<h3>📊 Personalizar progresso · ${_pfNomeMod()}</h3>
+      <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Escolha como o Desempenho da <b>${_pfNomeMod().toLowerCase()}</b> aparece. A outra modalidade tem a própria escolha. Fica salvo na sua conta.</p>
       <div class="pl-opcoes">
         <button type="button" class="pl-op ${!ess?'on':''}" onclick="pfBasico('completo')"><b>Completo</b><small>todos os blocos</small></button>
         <button type="button" class="pl-op ${ess?'on':''}" onclick="pfBasico('essencial')"><b>Só o essencial</b><small>resumo, evolução, recordes e metas</small></button>
@@ -139,12 +153,11 @@ function openPersonalizarProgresso(){
   const oc = perfOcultos();
   const linha = k=>{ const b = PERF_BLOCOS.find(x=>x.k===k); return `<label class="pi-row" data-ordem="${b.k}">${PI_ALCA}<span class="pi-txt"><b>${b.nome}</b>${b.desc?`<small>${b.desc}</small>`:''}</span>
       <input type="checkbox" class="pi-sw" data-k="${b.k}" ${oc.includes(b.k)?'':'checked'} onchange="pfAlterar(this)"></label>`; };
-  mi.innerHTML = `<h3>📊 Personalizar progresso</h3>
-    <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Escolha o que aparece em Progresso › Desempenho e em que ordem. Vale na hora e é salvo na sua conta.</p>
+  mi.innerHTML = `<h3>📊 Personalizar progresso · ${_pfNomeMod()}</h3>
+    <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Escolha o que aparece no Desempenho da <b>${_pfNomeMod().toLowerCase()}</b> e em que ordem. A outra modalidade tem a própria escolha. Fica salvo na sua conta.</p>
     <div class="pi-presets"><button type="button" onclick="pfPreset('completo')">Tudo</button><button type="button" onclick="pfPreset('essencial')">Só o essencial</button></div>
-    <div class="pi-fixos">A tela segue a modalidade ativa: blocos marcados como "só na musculação" ou "só na corrida" aparecem apenas nela.</div>
     <div class="pi-dica-ordem">Arraste pela alça <b>⠿</b> para mudar a ordem.</div>
-    <div class="card pi-lista" id="perf-lista" data-grupo="perf">${perfOrdem().map(linha).join('')}</div>
+    <div class="card pi-lista" id="perf-lista" data-grupo="perf">${perfOrdem().filter(k=>_pfBlocosMod().includes(k)).map(linha).join('')}</div>
     <button type="button" class="btn btn-ghost btn-block" style="margin-top:12px" onclick="pfPadrao()">Voltar ao padrão</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal();goTab('perf')">Pronto</button>`;
   $('modal-back').classList.add('on');
@@ -154,7 +167,8 @@ function openPersonalizarProgresso(){
 const _piSalvaOrdemB51 = window._piSalvaOrdem;
 window._piSalvaOrdem = function(lista){
   if(lista && lista.dataset.grupo === 'perf'){
-    state.progressoOrdem = [...lista.querySelectorAll('[data-ordem]')].map(r=>r.dataset.ordem); saveData(); perfAplica(); return;
+    const vis = [...lista.querySelectorAll('[data-ordem]')].map(r=>r.dataset.ordem);
+    _pfCfg().ordem = vis.concat(PERF_PADRAO.filter(k=>!vis.includes(k))); saveData(); perfAplica(); return;
   }
   return _piSalvaOrdemB51.apply(this, arguments);
 };
@@ -162,19 +176,19 @@ function pfAlterar(el){
   if(!_pfPremium()) return mtPremiumAviso('inicioCompleto');
   const k = el.dataset.k; let oc = perfOcultos();
   oc = el.checked ? oc.filter(x=>x!==k) : [...new Set([...oc, k])];
-  state.progressoOcultos = oc; saveData(); perfAplica();
+  _pfCfg().ocultos = oc; saveData(); perfAplica();
 }
 function pfPreset(p){
   if(!_pfPremium()) return mtPremiumAviso('inicioCompleto');
-  state.progressoOcultos = p === 'essencial' ? PERF_PADRAO.filter(k=>!PERF_ESSENCIAL.includes(k)) : [];
+  _pfCfg().ocultos = p === 'essencial' ? PERF_PADRAO.filter(k=>!PERF_ESSENCIAL.includes(k)) : [];
   saveData(); perfAplica();
-  document.querySelectorAll('#perf-lista .pi-sw').forEach(i=>{ i.checked = !state.progressoOcultos.includes(i.dataset.k); });
+  document.querySelectorAll('#perf-lista .pi-sw').forEach(i=>{ i.checked = !_pfCfg().ocultos.includes(i.dataset.k); });
   toast(p === 'essencial' ? '📊 Só o essencial no Progresso' : '📊 Progresso completo');
 }
-function pfBasico(k){ state.progressoBasico = k === 'essencial' ? 'essencial' : 'completo'; saveData(); perfAplica(); openPersonalizarProgresso(); }
+function pfBasico(k){ _pfCfg().basico = k === 'essencial' ? 'essencial' : 'completo'; saveData(); perfAplica(); openPersonalizarProgresso(); }
 function pfPadrao(){
   appConfirm('O Desempenho volta para a ordem original, com todos os blocos visíveis.', ()=>{
-    state.progressoOrdem = null; state.progressoOcultos = []; saveData(); perfAplica(); openPersonalizarProgresso(); toast('Progresso no padrão');
+    _pfCfg().ordem = null; _pfCfg().ocultos = []; saveData(); perfAplica(); openPersonalizarProgresso(); toast('Progresso no padrão');
   }, { title:'Voltar ao padrão?', okLabel:'Voltar ao padrão' });
 }
 
