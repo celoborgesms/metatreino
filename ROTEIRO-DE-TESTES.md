@@ -2,6 +2,23 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. Beta 54 — integrações e atividades
+- [ ] Importar FIT, TCX e GPX reais (Zepp, Garmin, Strava…) de corrida, caminhada, bike e musculação; conferir com o app de origem.
+- [ ] Duplicado (mesmo arquivo e registro manual), arquivo cortado, rota sem horário.
+- [ ] Android, iPhone e computador; abrir em outro aparelho (os números aparecem, o percurso fica no aparelho que importou).
+
+## 00000. Beta 53 — calorias do dia
+- [ ] A meta muda entre descanso, musculação, corrida, longão e dia com dois treinos; o quadro "de onde vêm as calorias" está certo.
+- [ ] Corrida avulsa registrada hoje soma; treino pulado sai da conta; dia passado sem registro = descanso.
+
+## 00000. Beta 52 — casa e cardápio
+- [ ] Casa: tirar/acrescentar no prato mostra "recomendado → com o ajuste" para cada pessoa; "Manter as calorias de cada um" recalcula.
+- [ ] PDF da casa por pessoa; lista de compras somada; "Fora da rotina" no Adicionar alimento.
+
+## 00000. Beta 51 — Progresso
+- [ ] Desempenho: ordem fixa (a Anatomia não desce), só blocos da modalidade ativa, seletor Musculação | Corrida.
+- [ ] Personalizar progresso: Básico (Completo / Só o essencial) e Premium (bloco a bloco, arrastar, padrão).
+
 ## 00000. Beta 50 — anatomia muscular e orientações
 - [ ] Treinos sem mapa fixo; Orientações (Preparação / Sessão de treino / Finalização) mudam conforme o dia (peito × pernas × costas × ombro).
 - [ ] Mapa: masculino, feminino e sem sexo no perfil; FRENTE/COSTAS; toque nos músculos (também nas bordas); ficha completa.

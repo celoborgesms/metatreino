@@ -1,4 +1,4 @@
-const APP_VERSION = '2027.1-beta.50';
+const APP_VERSION = '2027.1-beta.54';
 const CACHE = 'metatreino-' + APP_VERSION;
 // manifest.json entra aqui de propósito: é o arquivo que o Chrome consulta pra
 // detectar mudança de ícone/nome e reemitir o app instalado. Em cache-first ele
@@ -7,7 +7,7 @@ const CRITICAL = ['./index.html', './app.js', './app-plus.js', './manifest.json'
 const STATIC = ['./icon.svg', './icon-512.png']; // cache-first
 // Beta 49: o gerador de PDF entra no cache já na instalação (antes só depois do primeiro PDF feito com internet:
 // quem nunca tinha gerado um PDF não conseguia gerar offline). Fica fora do addAll para não travar a instalação.
-const OPCIONAIS = ['./jspdf.umd.min.js'];
+const OPCIONAIS = ['./jspdf.umd.min.js', './fit-parser.min.js'];
 // Beta 49: rede lenta não segura a abertura do app. Se a rede não responde em 4 s e já existe cópia guardada,
 // abre com a cópia; a resposta da rede, quando chegar, atualiza o cache para a próxima vez.
 const REDE_TIMEOUT_MS = 4000;

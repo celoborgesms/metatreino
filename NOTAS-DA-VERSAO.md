@@ -1,3 +1,129 @@
+# MetaTreino 2027.1 Beta 54 — Integrações e atividades (GPX, TCX e FIT)
+
+**Não precisa publicar o `firestore.rules`.** Arquivo novo na raiz: `fit-parser.min.js` (precisa subir junto).
+
+1. **Onde fica:** Progresso › Histórico › **Integrações e atividades**. Há também um atalho em Treinos › "Registrar atividade" ("Importar arquivo"). Os dois abrem a mesma tela.
+2. **O que a tela tem:**
+   - o botão de importar (aceita vários arquivos de uma vez);
+   - o que cada formato traz, avisando que depende do relógio;
+   - como exportar do Garmin, Zepp/Amazfit, Strava, COROS, Polar e outros;
+   - a situação de cada plataforma para sincronização automática;
+   - a lista de atividades importadas e o histórico das importações.
+3. **Importação inteligente:**
+   - reconhece o formato sozinha, valida e lê o arquivo;
+   - descobre a modalidade, a data e a hora (no fuso do aparelho);
+   - mostra uma prévia: duração, tempo total, distância, ritmo ou velocidade, FC média e máxima, cadência, subida, calorias do relógio, melhores 1 e 5 km, percurso e parciais. Também diz o que o arquivo **não** trouxe;
+   - deixa corrigir a modalidade e o horário, e salva só depois da confirmação.
+   - **Arquivo com problema:** cortado, sem horário, só com a rota ou de outro formato recebe uma mensagem simples, sem erro técnico.
+4. **Corrida, caminhada e bike** entram no mesmo histórico do registro manual. A partir daí aparecem no histórico (com selo ⌚ FIT/GPX/TCX), nos gráficos, nos recordes, nas conquistas, nas calorias do dia (com as calorias do relógio) e no Meta Assistente.
+   - **Recordes:** "Melhor 5 km", "Melhor 10 km" e "Melhor meia" calculados dentro das corridas.
+   - **Dados inconsistentes:** atividades com GPS aos saltos ou velocidade impossível entram no histórico, mas não contam para recordes.
+   - **Caminhada e bike** nunca entram nos recordes de corrida.
+5. **Musculação:**
+   - **Arquivo com séries:** se o FIT traz exercícios, séries, repetições e cargas, o app liga cada exercício à biblioteca (dá para trocar).
+   - **Aquecimento:** você marca as séries de aquecimento, que ficam fora da evolução de carga.
+   - **Registros existentes:** um exercício já registrado naquele dia não é sobrescrito.
+   - **Recordes:** pelas mesmas regras do registro manual.
+   - **Arquivo sem séries:** entram só a duração, a FC e as calorias.
+6. **Duplicidade:**
+   - **Mesma atividade importada de novo:** o app avisa e não salva.
+   - **Treino já registrado à mão:** o app pergunta e, por padrão, complementa o registro existente em vez de duplicar.
+7. **Cardio** (Progresso › Desempenho): corrida, caminhada e bike, por 7 dias, 30 dias, 3 meses, 6 meses, 1 ano ou todo o histórico.
+   - **Gráficos:** distância, tempo, ritmo ou velocidade, FC média, subida, melhores 5 e 10 km.
+   - **Comparação:** cada número vem comparado com o período anterior.
+8. **Meta Assistente:** novo "⌚ Análise das minhas atividades".
+   - **O que analisa:** volume da semana contra as 4 anteriores, ritmo em distâncias parecidas mês contra mês, FC no mesmo ritmo, bike em pedaladas parecidas (distância e subida), caminhadas e cargas da musculação (mesma carga com mais repetições também conta).
+   - **Cuidado:** só compara com dados suficientes.
+9. **Privacidade:**
+   - **No aparelho:** o percurso GPS e o arquivo original ficam só no aparelho em que a atividade foi importada.
+   - **Na conta:** vão os números, as parciais e um resumo de cerca de 80 pontos para os gráficos.
+   - **Exclusão:** excluir a atividade apaga tudo, inclusive as séries e o recorde que vieram dela.
+
+## Como testar a Beta 54
+- [ ] No Zepp (T-Rex 3 Pro): exporte uma caminhada ou corrida em FIT, TCX e GPX e importe as três. A prévia deve mostrar os mesmos números do Zepp (km, tempo, FC média, passos/min); na segunda e na terceira o app deve avisar que a atividade já foi importada.
+- [ ] Exporte um "Treino de Força" do Zepp (TCX e FIT) e veja se o arquivo trouxe as séries. Se não trouxer, entram só a duração e a FC.
+- [ ] Registre uma corrida à mão e importe o mesmo treino: deve oferecer "Complementar".
+- [ ] Progresso › Desempenho › Cardio; Histórico › abrir a atividade › Excluir.
+- [ ] Meta Assistente › "Análise das minhas atividades".
+- [ ] Android, iPhone (o seletor de arquivos deve deixar escolher .fit) e computador.
+
+# MetaTreino 2027.1 Beta 53 — Calorias do dia pelo treino de verdade
+
+**Não precisa publicar o `firestore.rules`.**
+
+1. **As calorias de cada dia saem dos treinos daquele dia.**
+   - **Conta:** metabolismo basal × 1,4 (a rotina sem exercício) + o gasto dos treinos do dia.
+   - **Musculação:** pela duração.
+   - **Corrida:** pelos km (cerca de 0,95 kcal por kg por km); sem km, pela duração e pelo tipo (leve, longão, intervalado, ritmo, regenerativo, corre e caminha).
+   - **Caminhada e bike avulsas:** pela distância e pela velocidade.
+   - **Antes:** um fator pela quantidade de dias com treino, igual para 3 km leves e para um longão de 20 km.
+2. **Musculação e corrida no mesmo dia somam.**
+3. **Previsto × feito:**
+   - **Dia que já passou:** vale o que foi registrado; sem registro, conta como descanso.
+   - **Hoje:** o que foi registrado mais o que ainda está previsto; um treino pulado sai da conta.
+   - **Dias futuros:** valem pelo plano.
+4. **O objetivo vem por cima do gasto do dia, como antes:**
+   - emagrecer = 80% do gasto do dia; ganhar massa = gasto + 10% (mínimo 250); manter = o gasto.
+   - O ajuste pelo peso real e o mínimo seguro continuam valendo.
+   - A proteína e a gordura não mudam; o que sobe nos dias grandes é o carboidrato.
+5. **Na tela do plano, um quadro mostra de onde vêm as calorias do dia:** rotina, cada treino (com "feito" quando já foi registrado), gasto do dia e meta. Há dicas próprias para dia de longão, corrida intensa e dia com dois treinos.
+6. **Média da semana:** a meta da semana vem do mesmo cálculo, pelos treinos previstos. Para quem só faz musculação, ela fica um pouco menor que antes; para quem corre bastante, um pouco maior (exemplos no relatório).
+
+## Como testar a Beta 53
+- [ ] Plano alimentar: compare um dia de descanso, um de musculação e um de longão. A meta muda, e o quadro mostra o porquê.
+- [ ] Registre uma corrida avulsa hoje: a meta de hoje sobe e o quadro marca "feito".
+- [ ] Pule o treino de hoje: a meta volta para a de descanso.
+
+# MetaTreino 2027.1 Beta 52 — Ajustes da casa com calorias, PDF por pessoa e cardápio maior
+
+**Não precisa publicar o `firestore.rules`** (nada mudou nas regras).
+
+1. **Prato da casa com saldo de calorias.**
+   - **O que muda:** quando o administrador tira ou acrescenta um alimento, o resto do prato não é mais recalculado. Cada pessoa vê no próprio plano quanto ficou:
+     - na refeição: "Ajuste da casa: sem arroz. Recomendado 667 kcal → com o ajuste 520 kcal (−147 kcal)";
+     - no topo do dia: um aviso com o motivo e o total "Recomendado 2378 → com os ajustes 2231 kcal".
+   - **Opção do administrador:** "Manter as calorias de cada um", na tela da casa. Ligada, as porções do resto do prato são recalculadas, como era antes.
+2. **PDF da casa por pessoa:**
+   - **Resumo por dia:** para cada pessoa, recomendado × planejado, a diferença e o motivo (ajuste da casa ou ajustes próprios).
+   - **Cardápio separado:** o de cada pessoa, com prato, quantidades e kcal de cada refeição e o total do dia.
+   - **Lista de compras:** somada, com a parte de cada um.
+3. **Lista de compras no app:** mostra tudo junto. A parte de cada pessoa ficou no PDF.
+4. **O que é publicado no grupo:** cada pessoa publica a semana dela (o que vai comer em cada refeição, em gramas, e as calorias recomendadas e planejadas), para o PDF da casa. Não vão peso, idade, altura nem e-mail.
+5. **Cardápio mais amplo:** mais 45 pratos, entre eles escondidinho, crepioca, bife com arroz e feijão, tilápia com purê, sopa de lentilha, grão-de-bico e wrap de tapioca.
+6. **"Fora da rotina"** em "Adicionar alimento": pizza, hambúrguer, cachorro-quente, batata frita, coxinha, pastel, salgadinho, lasanha, refrigerante, suco de caixinha, cerveja, vinho, chocolate, brigadeiro, sorvete, bolo, biscoito recheado e açaí.
+   - **Para que serve:** registrar o que a pessoa comeu ou vai comer, com calorias e quanto representam da meta do dia, sem julgamento.
+   - **Onde não aparece:** nunca entra no cardápio sugerido nem na lista de compras.
+
+## Como testar a Beta 52
+- [ ] Casa: o administrador tira um alimento do almoço → nos dois celulares aparece "Recomendado → com o ajuste" na refeição e no topo do dia, cada um com o próprio número.
+- [ ] Tela da casa › ligar "Manter as calorias de cada um" → o saldo some e as porções são recalculadas.
+- [ ] PDF da casa: resumo por dia, cardápio de cada pessoa e compras somadas.
+- [ ] Lista de compras da casa: tudo junto.
+- [ ] Adicionar alimento › Fora da rotina › Pizza: mostra kcal e % da meta; não aparece na lista de compras.
+
+# MetaTreino 2027.1 Beta 51 — Progresso organizado e personalizável
+
+**Não precisa publicar o `firestore.rules`** (nada mudou nas regras).
+
+1. **"Anatomia muscular" não pula mais de lugar.**
+   - **Causa:** o cartão era desenhado logo depois do resumo, e em seguida a montagem da tela (parte 19) movia evolução, calendário e recordes para cima dele.
+   - **Correção:** cada bloco do Desempenho agora tem posição fixa, que não depende da ordem em que é desenhado.
+2. **Progresso segue a modalidade, como o Início.**
+   - **Na musculação:** não aparecem "Evolução da corrida", recordes de corrida (maior distância, melhor ritmo) nem o gráfico de km.
+   - **Na corrida:** não aparecem a anatomia nem os recordes de carga.
+   - **Seletor no topo:** quem tem as duas modalidades vê "Musculação | Corrida" e troca sem sair do Progresso.
+   - **Sem filtro:** o calendário e a "Distribuição das atividades" continuam mostrando as duas, porque resumem o conjunto.
+3. **"⚙️ Personalizar progresso"** no fim da tela, no mesmo estilo do "Personalizar início":
+   - **Básico:** "Completo" ou "Só o essencial" (resumo, evolução, recordes e metas), com o selo Premium.
+   - **Premium:** cada bloco liga ou desliga, a ordem muda arrastando pela alça ⠿, e há "Tudo", "Só o essencial" e "Voltar ao padrão". Tudo fica salvo na conta.
+   - **Mesmo recurso:** é o mesmo item Premium do Início. Na tabela de planos ele passou a se chamar "Personalização do Início e do Progresso".
+4. **Correção interna:** o novo seletor usava um nome de elemento que já existia no Perfil; foi trocado antes da entrega e o Perfil continua igual.
+
+## Como testar a Beta 51
+- [ ] Progresso › Desempenho (musculação): a ordem é resumo, Anatomia, Evolução… e nada muda de lugar depois de alguns segundos.
+- [ ] Sem "Evolução da corrida" e sem recordes de corrida. Toque em "Corrida" no seletor: aparecem os blocos da corrida.
+- [ ] "Personalizar progresso" no Básico (Completo / Só o essencial) e no Premium (interruptores, arrastar, Voltar ao padrão).
+
 # MetaTreino 2027.1 Beta 50 — Anatomia muscular e orientações do treino
 
 **Não precisa publicar o `firestore.rules`** (nada mudou nas regras).

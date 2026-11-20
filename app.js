@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 50 =====
-const APP_VERSION = '2027.1-beta.50';
+// ===== MetaTreino 2027.1 Beta 54 =====
+const APP_VERSION = '2027.1-beta.54';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -11874,13 +11874,15 @@ function nutriMontarPlano(diaIdx){
   const hojeIdx = (typeof getDayIdx==='function') ? getDayIdx() : 1;
   diaIdx = diaIdx || hojeIdx;
   const diasT = nutriDiasTreino();
-  const treino = diasT.has(diaIdx);
-  // média da semana continua igual: dia de treino +5%, descanso um pouco menos
+  // Beta 53: calorias do dia pelo gasto dos treinos DESSE dia (parte 56: nutriDiaEnergia)
+  const _E = (typeof nutriDiaEnergia==='function') ? nutriDiaEnergia(diaIdx, nutriKeyDia(diaIdx), calc0) : null;
+  const treino = _E ? _E.treino : diasT.has(diaIdx);
+  // (sem a parte 56) média da semana igual: dia de treino +5%, descanso um pouco menos
   const nT = diasT.size, y = nT>=1 && nT<=6 ? Math.min(0.05, 0.08*(7-nT)/nT) : 0;   // descanso nunca cai mais que ~8%
   const fDia = nT>=1 && nT<=6 ? (treino ? 1+y : 1 - y*nT/(7-nT)) : 1;
-  const kcalDia = Math.round(calc0.kcal*fDia/10)*10;
+  const kcalDia = _E ? _E.kcal : Math.round(calc0.kcal*fDia/10)*10;
   const carbDia = Math.max(80, Math.round((kcalDia - calc0.prot*4 - calc0.gord*9)/4/5)*5);
-  const calc = {...calc0, kcal:kcalDia, carb:carbDia};
+  const calc = {...calc0, kcal:kcalDia, carb:carbDia, energia:_E};
   const shares = NUTRI_SHARE[n.refeicoes] || NUTRI_SHARE[5];
   const slots = NUTRI_REFEICOES.filter(r => shares[r.id]);
   const montar = (gf)=> slots.map((r,idx)=>{
@@ -12247,7 +12249,7 @@ function openNutri(){
           <span><i style="background:var(--accent)"></i>Carbo <b>${c.carb}g</b></span>
           <span><i style="background:var(--prep)"></i>Gordura <b>${c.gord}g</b></span>
         </div>
-        <div style="font-size:11.5px;color:var(--text-dim);margin-top:10px;line-height:1.5">Gasto estimado: ${c.tdee} kcal (${c.dias} treinos/semana). ${c.ajusteNota||''}</div>
+        <div style="font-size:11.5px;color:var(--text-dim);margin-top:10px;line-height:1.5">${c.modelo==='b53' ? `Média da semana: gasto ~${c.tdee} kcal (${c.dias} ${c.dias===1?'dia':'dias'} com treino). O detalhe deste dia está logo abaixo.` : `Gasto estimado: ${c.tdee} kcal (${c.dias} treinos/semana).`} ${c.ajusteNota||''}</div>
       </div>
       ${c.avisos.map(a=>`<div class="card card-alert" style="padding:12px 14px;font-size:12.5px;line-height:1.5">⚠️ ${a}</div>`).join('')}
       ${refs}
