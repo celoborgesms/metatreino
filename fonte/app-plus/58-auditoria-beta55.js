@@ -268,8 +268,7 @@ window.mmFicha = function(){
 .mod-toggle{min-width:0}.mod-toggle .seg{min-width:0;overflow-wrap:anywhere;white-space:normal}
 .cq-conts{min-width:0;grid-template-columns:repeat(3,minmax(0,1fr))!important}.cq-cont{min-width:0;padding-left:3px!important;padding-right:3px!important}.cq-cont span{font-size:clamp(9.5px,2.7vw,11px)!important;white-space:nowrap}
 @media (max-width:340px){.cq-resumo{flex-wrap:wrap;justify-content:center}.cq-conts{flex:1 1 100%}}
-#sessions-chips{flex-wrap:wrap!important;overflow-x:visible!important}
-#sessions-chips > *{flex:1 1 58px!important;min-width:0!important}
+/* dias da semana em Treinos: estilo na parte 60 (Beta 56) */
 .cq-filtros{flex-wrap:wrap!important;overflow-x:visible!important}
 .cq-filtros .filter-chip{flex:0 1 auto}
 .qlinks{flex-wrap:wrap}
