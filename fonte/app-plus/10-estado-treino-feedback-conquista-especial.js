@@ -7,9 +7,17 @@
 //   3. progressão (dados mostram que dá para subir)
 //   4. normal
 // =====================================================================
-const RET = { PAUSA_MIN: 7, JANELA: 14 };
+const RET = { PAUSA_MIN: 7, JANELA: 14, BASE_DIAS: 42, BASE_MIN: 2 };
+// Beta 55: a retomada da MUSCULAÇÃO olha só o histórico de musculação. Antes usava o histórico de todas as
+// modalidades (mtHist): uma caminhada importada de 53 dias atrás fazia o app dizer "De volta depois de 53 dias"
+// e cortar cargas e séries de quem treinou musculação ontem. A corrida tem a retomada dela (rPausa, parte 11).
+// Também só é retomada quando havia treino de verdade antes da pausa: pelo menos 2 sessões de musculação nas
+// 6 semanas que terminaram nela. Um registro isolado e antigo (ex.: um treino importado de meses atrás) é
+// histórico/experiência, não "a condição de antes" — não serve de base para dizer quanto da carga usar.
+function mtHistMusc(){ return (((state.modules.lift||{}).history)||[]).filter(x=>x && x.at).sort((a,b)=>a.at-b.at); }
+function _retBase(h, inicioPausa){ return h.filter(x=>x.at < inicioPausa + DIA_MS && x.at >= inicioPausa - RET.BASE_DIAS*DIA_MS).length; }
 function estadoTreino(){
-  const h = mtHist();
+  const h = mtHistMusc();
   const out = { tipo:'normal', prioridade:4 };
   if(!h.length) return out;
   const dias = [...new Set(h.map(x=>mtDia0(x.at)))].sort((a,b)=>a-b);
@@ -25,6 +33,7 @@ function estadoTreino(){
       if(gap >= RET.PAUSA_MIN){ pausa = gap; retorno = dias[i]; inicioPausa = dias[i-1]; break; }
     }
   }
+  if(pausa >= RET.PAUSA_MIN && _retBase(h, inicioPausa) < RET.BASE_MIN){ pausa = 0; retorno = null; inicioPausa = null; }
   if(pausa >= RET.PAUSA_MIN){
     // referência inicial de 70%, ajustada ao histórico e à experiência (nunca regra fixa)
     const antes = h.filter(x=>x.at < inicioPausa + DIA_MS && x.at >= inicioPausa - 42*DIA_MS).length;
@@ -53,6 +62,17 @@ function estadoTreino(){
   if(prog) return { tipo:'progressao', prioridade:3, dica:prog, desde };
   return Object.assign(out, { desde });
 }
+// pausa só das corridas (para quem registra corridas sem plano de corrida); mesma regra de base
+function estadoTreinoCorrida(){
+  const h = (((state.modules.run||{}).history)||[]).filter(x=>x && x.at && (!x.activity || x.activity==='corrida')).sort((a,b)=>a.at-b.at);
+  if(!h.length) return { tipo:'normal' };
+  const dias = [...new Set(h.map(x=>mtDia0(x.at)))]; const hoje = mtDia0(); const ult = dias[dias.length-1];
+  let pausa = Math.round((hoje-ult)/DIA_MS), ini = ult, retorno = null;
+  if(pausa < RET.PAUSA_MIN){ pausa = 0;
+    for(let i=dias.length-1;i>0;i--){ if(hoje - dias[i] >= RET.JANELA*DIA_MS) break; const g = Math.round((dias[i]-dias[i-1])/DIA_MS); if(g >= RET.PAUSA_MIN){ pausa = g; ini = dias[i-1]; retorno = dias[i]; break; } } }
+  if(pausa < RET.PAUSA_MIN || _retBase(h, ini) < RET.BASE_MIN) return { tipo:'normal' };
+  return { tipo:'retomada', pausa, retorno, semana: !retorno || (hoje-retorno) < 7*DIA_MS ? 1 : 2 };
+}
 function cargaRetomada(exId, est){
   est = est || estadoTreino();
   const ref = est.inicioPausa ? est.inicioPausa + DIA_MS : Date.now();
@@ -75,7 +95,8 @@ const _progressionTipOrig = progressionTip;
 const _liftLoadSugB13 = liftLoadSuggestion;
 window.liftLoadSuggestion = function(){
   const est = estadoTreino();
-  if(est.tipo==='retomada') return { emo:'🔁', txt: textoRetomada(est).replace(/<\/?b>/g,'') };
+  // Beta 55: curto — o texto completo já está no aviso de retomada do Início (antes o mesmo parágrafo aparecia duas vezes)
+  if(est.tipo==='retomada') return { emo:'🔁', txt: `Retomada: cerca de ${est.pct}% das cargas de antes${est.menosSeries?' e uma série a menos por exercício':''}. Não suba a carga nesta semana.` };
   const s = _liftLoadSugB13.apply(this, arguments);
   // "treino puxado" não vira "mantenha a carga" automaticamente: segura a progressão e deixa espaço para reduzir
   if(s && /Último treino foi puxado/.test(s.txt)) return { emo:'⚖️', txt:'Último treino foi puxado. Não suba a carga hoje: se as primeiras séries pesarem mais que o normal, reduza ~5% e priorize a execução.' };
@@ -84,7 +105,9 @@ window.liftLoadSuggestion = function(){
 window.progressionTip = function(){ const est = estadoTreino(); if(est.tipo==='retomada' || est.tipo==='recuperacao') return null; return _progressionTipOrig.apply(this, arguments); };
 const _runSugB13 = runSmartSuggestion;
 window.runSmartSuggestion = function(w){
-  const est = estadoTreino();
+  // Beta 55: a dica da corrida não usa mais a retomada da musculação; com plano de corrida, quem decide é rPausa
+  const temMotor = !!(state.modules.run && state.modules.run.plan && state.modules.run.plan.motor);
+  const est = temMotor ? { tipo:'normal' } : estadoTreinoCorrida();
   if(est.tipo==='retomada') return { emo:'🔁', txt:`Retomada após ${est.pausa} dias: corra em ritmo de conversa e faça cerca de ${est.semana===1?'60–70%':'80%'} da distância planejada. Sem tiros nesta ${est.semana===1?'primeira ':''}semana.` };
   return _runSugB13.apply(this, arguments);
 };
@@ -127,7 +150,6 @@ analiseRetomada = function(){
   t += `<b>Semana 2</b> — ~${Math.min(95, est.pctBase+15)}% das cargas, séries normais.${est.semana===2?' ← <i>você está aqui</i>':''}<br>`;
   t += `<b>Depois</b> — o app reavalia pelas suas séries da semana 2 e só então volta a sugerir progressão.<br>`;
   if(exemplos.length) t += `<br>Exemplos com suas cargas: ${exemplos.map(x=>`${mtEsc(x.e.name)}: ${x.c.antes} → <b>${x.c.sugerido} kg</b>`).join(' · ')}.`;
-  if(state.modules.run) t += `<br><br>Corrida/caminhada: ${est.semana===1?'60–70%':'cerca de 80%'} do volume de antes, em ritmo de conversa, sem tiros.`;
   t += '<br><br>Você não está começando do zero — o corpo recupera rápido o que já conquistou. Mas mesmo que fique fácil, não suba a carga durante a retomada.';
   return t;
 };
@@ -149,6 +171,7 @@ maInterpret = function(txt){
       const r = f.apply(this, arguments);
       try{
         if(typeof r !== 'string' || !PROG.test(r)) return r;
+        if(state.active === 'run' && state.modules.run) return r;   // Beta 55: na corrida, não mistura a retomada da musculação
         const est = estadoTreino(); if(est.tipo!=='retomada') return r;
         return `🔁 <b>Antes de tudo: você está em retomada</b> (pausa de ${est.pausa} dias). Por ${est.semana===1?'esta semana e a próxima':'esta semana'}, a regra é ~${est.pct}% das cargas de antes e nada de subir carga — o que está abaixo vale para depois da retomada.<br><br>` + r;
       }catch(e){ return r; }
@@ -160,7 +183,7 @@ maNudge = function(){
   const n = _maNudgeB13.apply(this, arguments);
   try{
     const est = estadoTreino();
-    if(est.tipo==='retomada' && n && /(sub|aument|progred|recorde|PR\b|\+\d)/i.test(n.text||'')) return { text:`🔁 Retomada: ~${est.pct}% das cargas por enquanto`, tone:'important', dica:{completa: analiseRetomada()} };
+    if(est.tipo==='retomada' && !(state.active === 'run' && state.modules.run) && n && /(sub|aument|progred|recorde|PR\b|\+\d)/i.test(n.text||'')) return { text:`🔁 Retomada: ~${est.pct}% das cargas por enquanto`, tone:'important', dica:{completa: analiseRetomada()} };
   }catch(e){}
   return n;
 };
@@ -170,7 +193,16 @@ renderHomeSmart = function(){
   _renderHomeSmartB13.apply(this, arguments);
   try{
     const el = $('home-smart'); if(!el || !el.firstElementChild) return;
-    const est = estadoTreino(); const k = el.querySelector('.smart-k');
+    const k = el.querySelector('.smart-k');
+    // Beta 55: no módulo de corrida, a retomada é a da corrida (parte 11). A da musculação não aparece aqui.
+    if(state.active === 'run' && state.modules.run){
+      if(k && /Retomada/.test(k.textContent)){
+        k.textContent = 'Pausa curta';
+        const pp = el.querySelector('.smart-p'); if(pp) pp.textContent = 'Poucos dias sem treinar não pedem plano especial. Siga o plano e faça o primeiro treino bem leve.';
+      }
+      return;
+    }
+    const est = estadoTreino();
     if(est.tipo==='retomada'){
       el.innerHTML = `<div class="smart alert"><div style="display:flex;align-items:flex-start;gap:8px"><div class="smart-k" style="flex:1">Em retomada · semana ${est.semana}</div><button onclick="mtLS('mt_smart_fechado', String(mtDia0()));renderHomeSmart()" aria-label="Ocultar hoje" style="background:none;border:0;color:var(--text-mute);font-size:15px;padding:0 2px;cursor:pointer">✕</button></div>
         <div class="smart-t">${est.retorno?`De volta depois de ${est.pausa} dias`:`${est.pausa} dias sem treinar — vamos voltar com calma`}</div>

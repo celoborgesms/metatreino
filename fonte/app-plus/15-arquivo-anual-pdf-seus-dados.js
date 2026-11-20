@@ -267,7 +267,7 @@ function arqResumoAnos(D){
   D.lift.forEach(x=>{ const a = A(_anoDe(x.at)); a.lift++; a.liftMin += +x.duration||0; a.dias.add(mtDia0(x.at)); });
   D.run.forEach(x=>{ const a = A(_anoDe(x.at)); a.dias.add(mtDia0(x.at));
     if(_ehCorr(x)){ a.run++; a.km += +x.distance||0; a.runMin += +x.duration||0; a.maiorKm = Math.max(a.maiorKm, +x.distance||0);
-      if(+x.distance >= 3 && +x.duration > 0){ const p = x.duration/x.distance; if(!a.melhorPace || p < a.melhorPace) a.melhorPace = p; } }
+      if(+x.distance >= 3 && +x.duration > 0 && !(typeof mtAtvInvalida === 'function' && mtAtvInvalida(x))){ const p = x.duration/x.distance; if(!a.melhorPace || p < a.melhorPace) a.melhorPace = p; } }
     else if(x.activity==='caminhada'){ a.cam++; a.camKm += +x.distance||0; } else if(x.activity==='bike'){ a.bike++; a.bikeKm += +x.distance||0; } });
   Object.keys(anos).forEach(y=>{ anos[y].vol = _volumeArq(D, new Date(+y,0,1).getTime(), new Date(+y+1,0,1).getTime()); });
   // anos que só têm resumo de cargas (sem sessões) também aparecem
@@ -303,7 +303,7 @@ async function arqAbrirHistorico(){
     ${(a.lift || a.vol) ? `<div class="arq-sub">🏋️ Musculação</div><div class="arq-grid">
       <div class="qs"><div class="qs-v">${a.lift}</div><div class="qs-l">treinos</div></div>
       <div class="qs"><div class="qs-v">${_fmtHoras(a.liftMin)}</div><div class="qs-l">de treino</div></div>
-      <div class="qs"><div class="qs-v">${a.vol>=1000?_fmtN(a.vol/1000,1)+' t':_fmtN(a.vol)+' kg'}</div><div class="qs-l">volume</div></div></div>` : ''}
+      ${a.vol > 0 ? `<div class="qs"><div class="qs-v">${a.vol>=1000?_fmtN(a.vol/1000,1)+' t':_fmtN(a.vol)+' kg'}</div><div class="qs-l">volume</div></div>` : ''}</div>` : ''}
     ${a.run ? `<div class="arq-sub">🏃 Corrida</div><div class="arq-grid">
       <div class="qs"><div class="qs-v">${a.run}</div><div class="qs-l">corridas</div></div>
       <div class="qs"><div class="qs-v">${_fmtN(a.km,1)} km</div><div class="qs-l">${_fmtHoras(a.runMin)}</div></div>
@@ -711,7 +711,7 @@ function arqMontarPDF(jsPDF, opt, aviso, arte){
     secao('Corrida', C.run);
     const km = corr.reduce((s,x)=>s+(+x.distance||0), 0), min = corr.reduce((s,x)=>s+(+x.duration||0), 0);
     const comPace = corr.filter(x=>+x.distance >= 1 && +x.duration > 0);
-    const melhor = comPace.filter(x=>+x.distance >= 3).map(x=>x.duration/x.distance).sort((a,b)=>a-b)[0];
+    const melhor = comPace.filter(x=>+x.distance >= 3 && !(typeof mtAtvInvalida === 'function' && mtAtvInvalida(x))).map(x=>x.duration/x.distance).sort((a,b)=>a-b)[0];
     tiles([
       { v:_fmtN(corr.length), l:'corridas' },
       { v:_fmtN(km, 1) + ' km', l:'percorridos' },
@@ -733,9 +733,21 @@ function arqMontarPDF(jsPDF, opt, aviso, arte){
     if(provas.length){ precisa(20); fonte(9.5, 'bold'); cor(C.ink); txt('Provas no período', M, y + 4); y += 7;
       tabela([{t:'Data', w:24}, {t:'Prova', w:60}, {t:'Distância', w:22, dir:1}, {t:'Tempo', w:24, dir:1}, {t:'Ritmo', w:24, dir:1}],
         provas.map(p=>[_dataBR(p.at, true), p.name || 'Prova', _fmtN(p.distance, 2) + ' km', rFmtMin(p.duration), +p.distance > 0 ? fmtPaceMin(p.duration/p.distance) : '-'])); }
-    const outras = R.filter(x=>!_ehCorr(x));
-    if(outras.length){ const cam = outras.filter(x=>x.activity==='caminhada'), bk = outras.filter(x=>x.activity==='bike');
-      nota(`Também no período: ${cam.length} caminhada(s) (${_fmtN(cam.reduce((s,x)=>s+(+x.distance||0),0),1)} km) e ${bk.length} pedal(is) de bike (${_fmtN(bk.reduce((s,x)=>s+(+x.distance||0),0),1)} km).`); }
+    // Beta 55: cada modalidade com os próprios números e a comparação com o período anterior de mesmo tamanho
+    const MODS = [['corrida','Corrida',_ehCorr],['caminhada','Caminhada',x=>x.activity==='caminhada'],['bike','Bike',x=>x.activity==='bike']];
+    const antIni = dias ? ini - span : null;
+    const linhasMod = MODS.map(([k, nome, f])=>{
+      const a = R.filter(f); if(!a.length) return null;
+      const kmA = a.reduce((t,x)=>t+(+x.distance||0),0), minA = a.reduce((t,x)=>t+(+x.duration||0),0);
+      const med = kmA > 0 && minA > 0 ? (k === 'bike' ? _fmtN(kmA/(minA/60),1) + ' km/h' : fmtPaceMin(minA/kmA)) : '-';
+      let comp = '-';
+      if(antIni){ const b = D.run.filter(x=>f(x) && x.at >= antIni && x.at < ini); const kmB = b.reduce((t,x)=>t+(+x.distance||0),0);
+        comp = !b.length ? 'sem registros antes' : (kmB > 0 ? ((kmA-kmB)/kmB*100 >= 0 ? '+' : '') + Math.round((kmA-kmB)/kmB*100) + '% km' : '-'); }
+      const rel = a.filter(x=>x.imp).length;
+      return [nome, _fmtN(a.length), _fmtN(kmA, 1) + ' km', _fmtHoras(minA), med, comp, rel ? `${rel} do relógio` : 'manual'];
+    }).filter(Boolean);
+    if(linhasMod.length){ precisa(24); fonte(9.5, 'bold'); cor(C.ink); txt('Por modalidade' + (antIni ? ' (comparação com o período anterior)' : ''), M, y + 4); y += 7;
+      tabela([{t:'Modalidade', w:24}, {t:'Sessões', w:16, dir:1}, {t:'Distância', w:24, dir:1}, {t:'Tempo', w:20, dir:1}, {t:'Ritmo/vel.', w:26, dir:1}, {t:'Vs. anterior', w:28, dir:1}, {t:'Origem', w:24, dir:1}], linhasMod); }
   }
 
   // ----- peso corporal -----
@@ -761,11 +773,14 @@ function arqMontarPDF(jsPDF, opt, aviso, arte){
       tabela([{t:'Data', w:20}, {t:'Tipo', w:22}, {t:'Treino', w:70}, {t:'Duração', w:20, dir:1}, {t:'Detalhe', w:40, dir:1}],
         lista.slice(0, MAX).map(x=>{
           const isRun = x.module === 'run' || D.run.includes(x);
-          const tipo = isRun ? (x.activity==='caminhada' ? 'Caminhada' : x.activity==='bike' ? 'Bike' : (x.isRace ? 'Prova' : 'Corrida')) : 'Musculação';
-          const det = isRun ? (+x.distance > 0 ? `${_fmtN(x.distance, 2)} km · ${fmtPaceMin(x.duration/x.distance)}` : '') : ((x.exercisesDone||[]).length ? `${x.exercisesDone.length} exercícios` : '');
+          const tipo = (isRun ? (x.activity==='caminhada' ? 'Caminhada' : x.activity==='bike' ? 'Bike' : x.activity==='forca' ? 'Força' : (x.isRace ? 'Prova' : 'Corrida')) : 'Musculação') + (x.imp ? ' *' : '');
+          const vel = +x.distance > 0 && +x.duration > 0 ? (x.activity==='bike' ? `${_fmtN(x.distance/(x.duration/60),1)} km/h` : fmtPaceMin(x.duration/x.distance)) : '';
+          const fc = x.imp && x.imp.fcMed ? ` · FC ${x.imp.fcMed}` : '';
+          const det = isRun ? (+x.distance > 0 ? `${_fmtN(x.distance, 2)} km · ${vel}${fc}` : fc.slice(3)) : (((x.exercisesDone||[]).length ? `${x.exercisesDone.length} exercícios` : '') + fc);
           return [_dataBR(x.at, true), tipo, x.name || '', x.duration ? _fmtHoras(x.duration) : '-', det];
         }));
       if(lista.length > MAX) nota(`Mostrando as ${MAX} sessões mais recentes de ${lista.length}.`);
+      if(lista.some(x=>x.imp)) nota('* importada de arquivo do relógio ou de outro app (GPX, TCX ou FIT).');
     }
   }
 

@@ -56,7 +56,7 @@ function famParams(){
       const ps = Object.values(c.perfis || {});
       const algum = k=>eu[k] || ps.some(p=>p && p[k]);
       return { refeicoes: famRefs(), seed: +cf.seed || 0, trocas: cf.trocas || {}, veg: algum('veg'), lac: algum('lac'), glu: algum('glu'), economico: cf.economico !== false,
-        dias: cf.dias || {}, horas: cf.horas || {}, cardapio: c.cardapio || {}, casa:true };
+        dias: cf.dias || {}, horas: cf.horas || {}, cardapio: c.cardapio || {}, compensa: !!cf.compensa, casa:true };
     }
     if(n.cardapioFixo && Array.isArray(n.cardapioFixo.refeicoes)) return Object.assign({ trocas:{}, dias:{}, horas:{}, cardapio:{} }, n.cardapioFixo, { casa:false });
   }catch(e){}
@@ -94,12 +94,16 @@ function famPrato(r, diaIdx, P, n, idxSlot, dk){
   const trocaId = id=>(eco && id==='azeite') ? 'oleo' : id;
   // composição: o prato + o que o administrador acrescentou − o que ele tirou (só nas refeições da casa)
   let itens = op.i.map(([id,q])=>[trocaId(id), q]);
+  const orig = itens.map(([id,q])=>[id,q]);
   const cp = (comp && P.casa) ? _famComposicao(P, dk, r.id) : { x:[], add:[] };
   if(cp.x.length) itens = itens.filter(([id])=>!cp.x.includes(id));
   cp.add.forEach(a=>{ if(!a || !NUTRI_ALIMENTOS[a.id] || !(+a.q > 0)) return; const ex = itens.find(([id])=>id===a.id); if(ex) ex[1] += +a.q; else itens.push([a.id, +a.q]); });
   if(!itens.length) itens = op.i.map(([id,q])=>[trocaId(id), q]);          // prato vazio não existe: volta ao original
-  const k0 = itens.reduce((s,[id,q])=>{ const a=NUTRI_ALIMENTOS[id]; return s + a[1]*(a[5]? q*a[5] : q)/100; },0) || 1;
-  return { comp, op, v, total:lista.length, chave, eco, k0, itens, tirados: cp.x.slice(), fora };
+  const kc = l=>l.reduce((s,[id,q])=>{ const a=NUTRI_ALIMENTOS[id]; return s + a[1]*(a[5]? q*a[5] : q)/100; },0) || 1;
+  const k0 = kc(itens), k0orig = kc(orig);
+  const acrescentados = cp.add.filter(a=>a && NUTRI_ALIMENTOS[a.id] && +a.q > 0).map(a=>a.id);
+  const mudou = !!(comp && P.casa && (cp.x.some(id=>orig.some(([o])=>o===id)) || acrescentados.length));
+  return { comp, op, v, total:lista.length, chave, eco, k0, k0orig, orig, itens, tirados: cp.x.slice(), acrescentados, mudou, fora };
 }
 window.nutriMontarPlano = function(diaIdx, dkData){
   const P = famParams();
@@ -110,28 +114,34 @@ window.nutriMontarPlano = function(diaIdx, dkData){
   diaIdx = diaIdx || hojeIdx;
   const dk = dkData || nutriKeyDia(diaIdx);      // dkData: o mesmo dia da semana na semana que vem (lista de 7 dias)
   const diasT = nutriDiasTreino();
-  const treino = diasT.has(diaIdx);
+  const _E = (typeof nutriDiaEnergia==='function') ? nutriDiaEnergia(diaIdx, dk, calc0) : null;     // Beta 53 (parte 56)
+  const treino = _E ? _E.treino : diasT.has(diaIdx);
   const nT = diasT.size, y = nT>=1 && nT<=6 ? Math.min(0.05, 0.08*(7-nT)/nT) : 0;
   const fDia = nT>=1 && nT<=6 ? (treino ? 1+y : 1 - y*nT/(7-nT)) : 1;
-  const kcalDia = Math.round(calc0.kcal*fDia/10)*10;
+  const kcalDia = _E ? _E.kcal : Math.round(calc0.kcal*fDia/10)*10;
   const carbDia = Math.max(80, Math.round((kcalDia - calc0.prot*4 - calc0.gord*9)/4/5)*5);
-  const calc = {...calc0, kcal:kcalDia, carb:carbDia};
+  const calc = {...calc0, kcal:kcalDia, carb:carbDia, energia:_E};
   const shares = NUTRI_SHARE[n.refeicoes] || NUTRI_SHARE[5];
   const slots = NUTRI_REFEICOES.filter(r => shares[r.id]);
   const montar = (gf)=> slots.map((r,idx)=>{
     const pr = famPrato(r, diaIdx, P, n, idx, dk);
     const alvo = calc.kcal * shares[r.id];
-    const f = Math.min(2.4, Math.max(.55, alvo*gf/pr.k0));       // a porção é SEMPRE a desta pessoa
+    // Beta 52: o que o administrador tira ou acrescenta muda as calorias de cada um (o resto do prato não é
+    // recalculado), a não ser que ele ligue "manter as calorias de cada um" (config.compensa)
+    const compensa = !!(P.casa && P.compensa);
+    const f = Math.min(2.4, Math.max(.55, alvo*gf/((pr.mudou && !compensa) ? pr.k0orig : pr.k0)));       // a porção é SEMPRE a desta pessoa
     const itens = pr.itens.map(([id,q])=>nutriItem(id, q, f));
     const tot = itens.reduce((t,i)=>({kcal:t.kcal+i.kcal,p:t.p+i.p,c:t.c+i.c,g:t.g+i.g}),{kcal:0,p:0,c:0,g:0});
+    const recKcal = (pr.mudou && !compensa) ? pr.orig.reduce((s,[id,q])=>s + nutriItem(id, q, f).kcal, 0) : tot.kcal;
     const preTreino = treino && r.id==='lanche2';
     const daCasa = pr.comp && P.casa;
     const hora = (daCasa && (P.horas||{})[r.id] && /^\d{2}:\d{2}$/.test(P.horas[r.id])) ? P.horas[r.id] : r.hora;
     return { id:r.id, chave:pr.chave, nome: preTreino ? 'Pré-treino' : r.nome, icone: preTreino ? '⚡' : r.icone, hora, prato:pr.op.n, itens, tot, variante:pr.v+1, total:pr.total, preTreino,
-      compartilhada: daCasa, foraDaCasa: !!pr.fora, tiradosCasa: daCasa ? pr.tirados : [], fator:f, alvoKcal: Math.round(alvo) };
+      compartilhada: daCasa, foraDaCasa: !!pr.fora, tiradosCasa: daCasa ? pr.tirados : [], acrescentadosCasa: daCasa ? pr.acrescentados : [], mudouCasa: !!(daCasa && pr.mudou), compensada: !!(daCasa && pr.mudou && compensa),
+      recKcal: Math.round(recKcal), casaDelta: Math.round(tot.kcal - recKcal), fator:f, alvoKcal: Math.round(alvo) };
   });
   let refeicoes = montar(1);
-  const somaK = rs => rs.reduce((s,m)=>s+m.tot.kcal,0);
+  const somaK = rs => rs.reduce((s,m)=>s+m.recKcal,0);
   if(Math.abs(somaK(refeicoes)-calc.kcal)/calc.kcal > 0.03) refeicoes = montar(Math.min(1.35, Math.max(.75, calc.kcal/somaK(refeicoes))));
   const dia = refeicoes.reduce((t,m)=>({kcal:t.kcal+m.tot.kcal,p:t.p+m.tot.p,c:t.c+m.tot.c,g:t.g+m.tot.g}),{kcal:0,p:0,c:0,g:0});
   const dicas = [];
@@ -143,7 +153,8 @@ window.nutriMontarPlano = function(diaIdx, dkData){
   if(calc.objetivo==='massa') dicas.push('Não pule refeições: para ganhar massa, o difícil costuma ser comer o suficiente todo dia.');
   if(P.casa && refeicoes.some(m=>m.compartilhada)) dicas.push('Nas refeições da casa o prato é o mesmo para todos; a quantidade e as calorias são as do seu plano.');
   dicas.push('Beba água ao longo do dia, não só nas refeições. Em dia de treino, some uns 500 ml.');
-  return { calc, refeicoes, dia, dicas, treino, diaIdx };
+  const casaDelta = refeicoes.reduce((s,m)=>s + (m.casaDelta||0), 0);
+  return { calc, refeicoes, dia, dicas, treino, diaIdx, casaDelta, diaRec: Math.round(dia.kcal - casaDelta) };
 };
 
 // ---------- gravação no grupo ----------
@@ -230,7 +241,7 @@ function famTirarDaCasa(mid, fid){
   if(cp2.add.length === cp.add.length && !cp2.x.includes(fid)) cp2.x.push(fid);
   try{ const m = nutriMealLog(mid, false); if(m && m.adj) delete m.adj[fid]; }catch(e){}
   _famComposicaoSalva(dk, mid, cp2); nutriAbrirRef(mid); saveData();
-  toast('🏠 Tirado do prato da casa. As porções de todos foram recalculadas para manter as calorias de cada um.');
+  toast(famParams().compensa ? '🏠 Tirado do prato da casa. As porções foram recalculadas para manter as calorias de cada um.' : '🏠 Tirado do prato da casa. Cada pessoa vê no próprio plano quantas calorias a menos ficou.');
   openNutri();
 }
 function famVoltarNaCasa(mid, fid){
@@ -294,7 +305,7 @@ function nutriComprasMinhas(dias){
     const d = ((hojeIdx-1+k)%7)+1, dk = chaveDia(new Date(Date.now()+k*86400000));
     const pl = nutriMontarPlanoData(d, dk); if(!pl || pl.erro) continue;
     const lg = nutriLogDe(dk); const dia = {};
-    const soma = (id,g)=>{ if(!(g>0)) return; dia[id] = Math.round((dia[id]||0) + g); };
+    const soma = (id,g)=>{ if(!(g>0) || (window.NUTRI_FORA_IDS && window.NUTRI_FORA_IDS.has(id))) return; dia[id] = Math.round((dia[id]||0) + g); };
     pl.refeicoes.forEach(m=>{ const l = lg(m.id);
       m.itens.forEach(i=>{ const e = nutriEfetivo(i, l.adj[i.id]); if(!e.removido) soma(e.id, e.gramas); });
       (l.add||[]).forEach((a,idx)=>{ const x = nutriItemExtra(a,idx); if(x && !x.custom) soma(x.id, x.gramas); }); });
@@ -311,14 +322,15 @@ function _famMeuPerfil(){
       pl.refeicoes.forEach(m=>{ if(m.compartilhada){ fatores[d] = fatores[d] || {}; fatores[d][m.id] = Math.round(m.fator*1000)/1000; } }); }
   }catch(e){}
   let compras = {}; try{ compras = nutriComprasMinhas(); }catch(e){}
-  return { veg:r.veg, lac:r.lac, glu:r.glu, fatores, compras:{ de: chaveDia(new Date()), dias: compras } };
+  let semana = {}; try{ semana = famMinhaSemana(); }catch(e){}
+  return { veg:r.veg, lac:r.lac, glu:r.glu, fatores, compras:{ de: chaveDia(new Date()), dias: compras }, semana };
 }
 function famEnviar(){
   try{
     if(!famAtiva()) return;
     const c = famCache(), uid = _famUid(); const campos = {};
     const meu = _famMeuPerfil(); const ant = (c.perfis||{})[uid] || null;
-    const sem = p=>p ? JSON.stringify({ veg:p.veg, lac:p.lac, glu:p.glu, fatores:p.fatores, compras:p.compras }) : '';
+    const sem = p=>p ? JSON.stringify({ veg:p.veg, lac:p.lac, glu:p.glu, fatores:p.fatores, compras:p.compras, semana:p.semana||null }) : '';
     if(sem(ant) !== sem(meu)){ meu.em = Date.now(); campos['perfis.' + uid] = meu; c.perfis = c.perfis || {}; c.perfis[uid] = meu; }
     const apelido = _famMeuApelido(); if((c.nomes||{})[uid] !== apelido){ campos['nomes.' + uid] = apelido; c.nomes = c.nomes || {}; c.nomes[uid] = apelido; }
     if(famSouAdm()){
@@ -595,8 +607,8 @@ mtGancho('openNutri', { depois(){
       const mb = d.querySelector('.mb'); if(!mb || mb.querySelector('.fam-info')) return;
       if(m.compartilhada){
         const tir = (m.tiradosCasa||[]).filter(id=>NUTRI_ALIMENTOS[id]);
-        mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">🏠 Prato da casa${adm ? ' — você administra' : ` — decidido por ${mtEsc(famNome(famAdmUid()))}`}. A quantidade abaixo é a <b>sua</b>: ${Math.round(m.tot.kcal)} kcal pelo seu plano.
-          ${tir.length && Math.abs(m.tot.kcal - m.alvoKcal) > m.alvoKcal*0.15 ? `<div class="fam-tirados">Sem o que saiu do prato, esta refeição fica com ${Math.round(m.tot.kcal)} kcal (a sua parte prevista era ${m.alvoKcal}). ${m.tot.kcal < m.alvoKcal ? 'Se precisar, acrescente uma proteína ou um carboidrato só para você.' : 'Se quiser, reduza a sua quantidade.'}</div>` : ''}
+        mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">🏠 Prato da casa${adm ? ' — você administra' : ` — decidido por ${mtEsc(famNome(famAdmUid()))}`}. A quantidade abaixo é a <b>sua</b>: ${Math.round(m.tot.kcal)} kcal.
+          ${famAjusteHTML(m)}
           ${tir.length ? `<div class="fam-tirados">Fora do prato da casa hoje: ${tir.map(id=>`${mtEsc(NUTRI_ALIMENTOS[id][0])}${adm && editavel ? ` <button class="fam-link" onclick="famVoltarNaCasa('${m.id}','${id}')">devolver</button>` : ''}`).join(' · ')}</div>` : ''}</div>`);
       } else if(m.foraDaCasa){
         mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">Neste dia você está com outro prato, só para você. ${editavel ? `<button class="fam-link" onclick="famVoltarCasa('${m.id}')">Voltar ao prato da casa</button>` : ''}</div>`);
@@ -604,6 +616,20 @@ mtGancho('openNutri', { depois(){
     });
   }catch(e){ console.log('casa (tela):', e); }
 }});
+
+// Beta 52: o que mudou no prato da casa e quanto isso muda as calorias DESTA pessoa
+function famAjusteNomes(m){
+  const tir = (m.tiradosCasa||[]).filter(id=>NUTRI_ALIMENTOS[id]).map(id=>'sem ' + NUTRI_ALIMENTOS[id][0].toLowerCase());
+  const add = (m.acrescentadosCasa||[]).filter(id=>NUTRI_ALIMENTOS[id]).map(id=>'+ ' + NUTRI_ALIMENTOS[id][0].toLowerCase());
+  return tir.concat(add);
+}
+function famAjusteHTML(m){
+  if(!m || !m.mudouCasa) return '';
+  const o = famAjusteNomes(m).join(', ');
+  if(m.compensada) return `<div class="fam-ajuste">Ajuste da casa: ${mtEsc(o)}. As porções foram recalculadas para manter as suas ${Math.round(m.tot.kcal)} kcal.</div>`;
+  const d = m.casaDelta || 0; const sinal = d > 0 ? '+' : d < 0 ? '−' : '';
+  return `<div class="fam-ajuste ${d > 0 ? 'mais' : d < 0 ? 'menos' : ''}">Ajuste da casa: ${mtEsc(o)}.<br>Recomendado <b>${m.recKcal} kcal</b> → com o ajuste <b>${Math.round(m.tot.kcal)} kcal</b> (${d ? `${sinal}${Math.abs(d)} kcal` : 'igual'}).</div>`;
+}
 
 // ---------- lista de compras (e PDF): individual ou da casa ----------
 // quantidade de compra padronizada: unidade, ml/L, g/kg (grãos e carnes em peso cru)
@@ -632,7 +658,7 @@ function nutriComprasTotais(escopo, modo){
   escopo = escopo || 'semana';
   const dias = _nutriDiasJanela(escopo);
   const uid = _famUid() || 'eu';
-  const tot = {}; const soma = (id, g, quem)=>{ if(!(g>0) || !NUTRI_ALIMENTOS[id]) return; const t = tot[id] = tot[id] || { g:0, por:{} }; t.g += g; t.por[quem] = (t.por[quem]||0) + g; };
+  const tot = {}; const soma = (id, g, quem)=>{ if(!(g>0) || !NUTRI_ALIMENTOS[id] || (window.NUTRI_FORA_IDS && window.NUTRI_FORA_IDS.has(id))) return; const t = tot[id] = tot[id] || { g:0, por:{} }; t.g += g; t.por[quem] = (t.por[quem]||0) + g; };
   let editados = 0, diasOk = 0;
   dias.forEach(({d,dk})=>{
     const pl = nutriMontarPlanoData(d, dk); if(!pl || pl.erro) return; diasOk++;
@@ -680,7 +706,7 @@ window.nutriListaCompras = function(escopo, modo){
   const R = nutriComprasTotais(escopo, modo); const tot = R.tot;
   const semKey = chaveDia(nutriDataDia(1)) + (R.casa ? '-casa' : ''); state.comprasOk = state.comprasOk || {}; const ok = state.comprasOk[semKey] = state.comprasOk[semKey] || {};
   const fmt = id=>_nutriFmtCompra(id, tot[id]);
-  const porPessoa = id=>R.casa && R.pessoas > 1 ? `<small class="fam-por">${R.quem.map(u=>`${u===_famUid()?'você':mtEsc(famNome(u))} ${_nutriFmtCompra(id, { g:(tot[id].por[u]||0) })}`).filter((x,i)=>tot[id].por[R.quem[i]]).join(' · ')}</small>` : '';
+  const porPessoa = id=>'';     // Beta 52: a lista mostra tudo junto; a parte de cada pessoa fica no PDF da casa
   const blocos = Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
     const itens = ids.filter(id=>tot[id]).map(id=>`<div class="mrow ${ok[id]?'rm':''}" style="cursor:pointer" onclick="nutriCompraOk('${id}')"><span class="n">${ok[id]?'☑':'☐'} ${nutriNomeCompra(id)}${porPessoa(id)}</span><span class="q">${fmt(id)}</span></div>`).join('');
     return itens ? `<div class="section-lbl" style="margin:14px 0 2px">${titulo}</div>${itens}` : '';
@@ -696,7 +722,7 @@ window.nutriListaCompras = function(escopo, modo){
       <button class="seg ${escopo==='semana'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('semana')">Até domingo</button>
       <button class="seg ${escopo==='7dias'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('7dias')">Próximos 7 dias</button>
     </div>
-    <p class="fam-p" style="margin:4px 0">Período: <b>${_famPeriodoTxt(R.periodo)}</b>${R.casa ? ` · <b>${R.pessoas} pessoas</b>: soma o que cada uma vai comer, na porção do próprio plano (todas as refeições, não só as da casa).` : '.'}</p>
+    <p class="fam-p" style="margin:4px 0">Período: <b>${_famPeriodoTxt(R.periodo)}</b>${R.casa ? ` · <b>${R.pessoas} pessoas</b>: soma o que cada uma vai comer, na porção do próprio plano (todas as refeições, não só as da casa). O que cada pessoa vai comer, dia a dia, está no <b>PDF da casa</b>.` : '.'}</p>
     ${R.avisos.map(a=>`<p class="fam-aviso">${mtEsc(a)}</p>`).join('')}
     <p style="color:var(--text-dim);font-size:12px;line-height:1.55;margin:4px 0 0">${R.editados?`Já com ${R.editados===1?'a sua 1 edição':'as suas '+R.editados+' edições'}. `:''}Dias que já passaram não entram. Toque num item para marcar “já tenho”. Grãos e carnes em peso cru; óleos e leite em ml/L; frutas e pães em unidades.</p>
     <div style="max-height:50vh;overflow-y:auto">${blocos || '<div class="text-dim" style="padding:14px 0;font-size:13px">Nada a comprar neste período.</div>'}</div>

@@ -40,8 +40,16 @@ function irParaCadastro(){
 }
 
 // ---- 1. controle de acesso ----
+// Beta 55: enquanto a conta carrega depois do login (state.user já existe, o perfil ainda não), nenhuma
+// troca de aba manda para o cadastro. Antes, um redesenho nesse meio-segundo mostrava a etapa 1 do
+// cadastro ("Escolha o visual") piscando antes da tela inicial.
+function cadCarregandoConta(){ return !!window.__mtCarregandoConta && Date.now() - window.__mtCarregandoConta < 45000; }
+mtGancho('afterGoogleSignIn', { antes(){ window.__mtCarregandoConta = Date.now(); } });
+mtGancho('bootAfterAuth', { antes(){ window.__mtCarregandoConta = 0; } });
+mtGancho('mostraSemDados', { antes(){ window.__mtCarregandoConta = 0; } });
 const _goTabCad = window.goTab;
 window.goTab = function(tab){
+  if(cadCarregandoConta()) return;
   if(cadBloqueado()){
     // já está numa tela do cadastro: fica nela (sem perder a etapa); senão, volta para o cadastro
     if(CAD_TELAS.includes(cadTelaAtiva())){ const tb = $('tabbar'); if(tb) tb.classList.add('hidden'); }
@@ -53,7 +61,8 @@ window.goTab = function(tab){
 mtGancho('showScreen', { depois(id){
   try{
     const app = CAD_TELAS_APP.includes(id);
-    if(app && cadBloqueado()){ irParaCadastro(); return; }
+    if(!app && id !== 'scr-auth' && !CAD_TELAS.includes(id)) window.__mtCarregandoConta = 0;   // sem acesso, conta suspensa etc.
+    if(app && cadBloqueado() && !cadCarregandoConta()){ irParaCadastro(); return; }
     if(!app || cadBloqueado()) cadEscondeAssistente();
     if(CAD_TELAS.includes(id)){ const tb = $('tabbar'); if(tb) tb.classList.add('hidden'); wzEntrou(id); }
   }catch(e){ console.log('cadastro (tela):', e); }

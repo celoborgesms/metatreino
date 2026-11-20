@@ -69,8 +69,11 @@ function mtsDeHistorico(x){
     const d = _mtsDur(dur); nums.push({ l:'Tempo', v:d.v, u:d.u });
     if(tipo === 'bike'){ if(km && dur) nums.push({ l:'Velocidade média', v:_mtsN(km/(dur/60),1), u:'km/h' }); }
     else { const p = _mtsPace(dur, km) || (x.pace ? String(x.pace).replace(/\/?km$/,'') : null); if(p) nums.push({ l:'Ritmo médio', v:p, u:'/km' }); }
+    // Beta 55: atividade importada do relógio traz frequência cardíaca e subida (só o que existe no arquivo)
+    const I = x.imp || {};
+    if(I.fcMed) nums.push({ l:'FC média', v:String(I.fcMed), u:'bpm' });
     if(tipo !== 'bike' && km && dur) nums.push({ l:'Velocidade', v:_mtsN(km/(dur/60),1), u:'km/h' });
-    if(x.elev || x.elevacao) nums.push({ l:'Elevação', v:_mtsN(x.elev||x.elevacao), u:'m' });
+    if(x.elev || x.elevacao || I.subida) nums.push({ l:'Subida', v:_mtsN(x.elev||x.elevacao||I.subida), u:'m' });
     return { tipo, titulo:_mtsSemEmoji(x.name) || MTS_KICKER[tipo], data:x.at,
       hero: km ? { v:_mtsN(km, km<10?2:1), u:'km' } : { v:d.v, u:d.u||'' }, nums: km ? nums.slice(0,3) : nums.slice(1,4),
       extra: x.isRace ? ['Prova'] : [], texto:`${MTS_KICKER[tipo]} no MetaTreino` };
@@ -355,6 +358,20 @@ async function mtsDesenhar(cv, d, o){
     const mx = (disp==='grade' || o.fmt!=='story' && disp!=='destaque') ? (W-medTam)/2 : pad - medTam*0.06;
     const my2 = y - medTam - W*0.03;
     x.save(); x.shadowColor = _mtsRgba(d.medalha.cor, .55); x.shadowBlur = W*0.05; x.drawImage(medImg, mx, Math.max(my+ms+W*0.03, my2), medTam, medTam); x.restore();
+  } else if(d.rota && d.rota.length > 1){
+    // Beta 55: percurso da atividade importada (desenhado a partir dos pontos guardados neste aparelho)
+    const topo = my + ms + W*0.07, base = y - W*0.06, alt = base - topo;
+    if(alt > W*0.2){
+      const tr = d.rota; const la = tr.map(p=>p[0]), lo = tr.map(p=>p[1]);
+      const la0 = Math.min(...la), la1 = Math.max(...la), lo0 = Math.min(...lo), lo1 = Math.max(...lo);
+      const k = Math.cos((la0+la1)/2*Math.PI/180); const w = Math.max(1e-6, (lo1-lo0)*k), h = Math.max(1e-6, la1-la0);
+      const caixaW = W - pad*2, caixaH = Math.min(alt, W*0.9); const esc = Math.min(caixaW/w, caixaH/h);
+      const ox = pad + (caixaW - w*esc)/2, oy = topo + (alt - h*esc)/2;
+      x.save(); x.strokeStyle = P.acc; x.lineWidth = W*0.009; x.lineJoin = 'round'; x.lineCap = 'round'; x.shadowColor = _mtsRgba(P.acc, .45); x.shadowBlur = W*0.02;
+      x.beginPath(); tr.forEach(([a,b],i)=>{ const px = ox + (b-lo0)*k*esc, py = oy + (la1-a)*esc; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke(); x.restore();
+      const pt = (p)=>[ox + (p[1]-lo0)*k*esc, oy + (la1-p[0])*esc];
+      [[tr[0], '#3ecf8e'], [tr[tr.length-1], P.txt]].forEach(([p, c])=>{ const [px, py] = pt(p); x.fillStyle = c; x.beginPath(); x.arc(px, py, W*0.012, 0, Math.PI*2); x.fill(); });
+    }
   } else if(d.emoji){
     x.save(); x.globalAlpha = 1; x.fillStyle = '#000'; x.font = `${W*0.16}px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif`; x.textAlign = disp==='grade' ? 'center' : 'left';
     x.fillText(d.emoji, disp==='grade' ? W/2 : pad, y - (disp==='compacto' ? W*0.08 : W*0.04)); x.restore();

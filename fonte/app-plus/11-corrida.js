@@ -1656,10 +1656,10 @@ renderHomeSmart = function(){
           <div class="smart-a"><button class="btn btn-primary" onclick="goTab('sessions')">Ver treinos</button><button class="btn btn-ghost" onclick="mtPergunta('retomada')">Plano de retomada</button></div></div>`;
       } else if(k) k.textContent = `Em retomada · semana ${F.k} de ${F.N}`;
       const pp = el.querySelector('.smart-p'); if(pp) pp.innerHTML = runTextoRetomada(F, M);
-    } else if(k && /retomada/i.test(k.textContent) && p){
-      // retomada geral (musculação) mas a corrida já voltou ao normal: avisa sem contradizer o plano de corrida
-      p.innerHTML = 'A corrida já saiu da retomada e segue o plano normal. ' + (state.modules.lift ? 'Na musculação, siga a orientação de cargas reduzidas desta semana.' : '');
     }
+    // Beta 55: o título também vem do plano de corrida (antes: "De volta depois de 53 dias", calculado com
+    // todas as modalidades, em cima do texto "Retomada da corrida depois de 10 dias")
+    if(F.fase === 'retomada'){ const tt = el.querySelector('.smart-t'); if(tt) tt.textContent = (M.retomada && M.retomada.voltou) ? `De volta à corrida depois de ${F.pausa} dias` : 'De volta à corrida, com calma'; }
   }catch(e){}
 };
 const _maRetomadaRunB14 = MA_ANSWERS.retomada;

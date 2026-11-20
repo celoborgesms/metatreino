@@ -16,7 +16,7 @@ const MT_RECURSOS = {
   pdfTreino:      { nome:'PDF do plano de treino', txt:'Seu plano de musculação ou corrida em um documento pronto para imprimir.' },
   pdfAlimentacao: { nome:'PDF do plano alimentar', txt:'O cardápio da semana com refeições, quantidades e valores nutricionais em PDF.' },
   relatorio:      { nome:'Relatório completo de evolução', txt:'Relatório em PDF com gráficos de volume, cargas, quilômetros, ritmo, peso e conquistas.' },
-  inicioCompleto: { nome:'Personalização completa do Início', txt:'Escolher bloco por bloco o que aparece e arrastar para mudar a ordem.' },
+  inicioCompleto: { nome:'Personalização completa do Início e do Progresso', txt:'Escolher bloco por bloco o que aparece no Início e em Progresso e arrastar para mudar a ordem.' },
   temas:          { nome:'Todos os temas', txt:'Os 10 temas do app. No Básico ficam Brasa (escuro) e Areia (claro).' },
   assistente:     { nome:'Meta Assistente completo', txt:'Análises da sua evolução, aviso de subir de nível, sugestões no dia a dia, orientação para as provas e comandos que ajustam o plano.' },
   clima:          { nome:'Cenário e dicas pelo clima', txt:'O desenho do Início e as dicas de treino acompanham o tempo de agora (usa sua localização).' }
@@ -83,7 +83,7 @@ function openPlanos(){
       ${L('Plano alimentar personalizado (com PDF)', false, true)}
       ${L('PDF dos treinos e relatório detalhado de evolução', false, true)}
       ${L('Temas', '2', '10')}
-      ${L('Personalização do Início', 'básica', 'completa')}
+      ${L('Personalização do Início e do Progresso', 'básica', 'completa')}
       ${L('Cenário do Início pelo clima', false, true)}
     </tbody></table></div>
     ${p.premium && !p.admin ? '' : (p.admin ? '' : mtContatoPremiumHtml())}
