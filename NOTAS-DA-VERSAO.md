@@ -1,3 +1,21 @@
+# MetaTreino 2027.1 Beta 57 — Dias da semana em Treinos
+
+1. **Faixa de dias:** os botões dos dias viraram uma faixa de cartões iguais, de cantos arredondados (não mais pílulas), numa linha só. Cada cartão mostra o dia abreviado (SEG, QUA…) e um rótulo curto: "Treino A" na musculação; "Leve", "Longão", "Tiros", "Limiar" ou "Caminhar" na corrida.
+   - O nome completo continua no cartão da sessão logo abaixo, e o leitor de tela também lê o nome completo.
+   - O "feito" virou um ✓ pequeno no canto, no lugar do ✅.
+   - Com 6 ou 7 dias, a faixa usa duas linhas, sem rolar para o lado.
+2. A exportação para o Intervals.icu ficou de fora por enquanto. O estudo continua no projeto (`ESTUDO-EXPORTACAO-INTERVALS.md`) para quando quiser retomar.
+
+# MetaTreino 2027.1 Beta 56 — Acabamento visual (contraste, gráficos, percurso)
+
+**Não precisa publicar o `firestore.rules`.** A exportação para o Intervals.icu ainda não está aqui: o estudo (`ESTUDO-EXPORTACAO-INTERVALS.md`) espera aprovação.
+
+1. **Texto azul quase invisível nos temas claros:** "Seu primeiro treino é…", as dicas de clima da prova e um balão do Meta Assistente usavam um azul-claro fixo. Agora usam a cor de informação do tema. Uma varredura de contraste em todas as telas e todos os temas encontrou mais um caso: o selo "próxima" no tema Ametista, que também foi corrigido.
+2. **Dias da semana em Treinos:** os cartões viraram uma grade que quebra linha, e o nome do treino ("Caminhada ativa") cabe inteiro dentro do cartão.
+3. **Desenho decorativo da corrida:** saiu o bonequinho. Entraram a pista, um percurso com início e bandeira de chegada, e marcas de km.
+4. **Gráfico da atividade importada:** um painel para cada medida (ritmo, frequência cardíaca, altitude), com nome, unidade, média, mínimo e máximo, e o eixo em km ou minutos. O ritmo é suavizado e "mais alto = mais rápido". As cores são diferentes entre si em todos os temas.
+5. **Percurso:** início (verde) e fim (escuro) com nome, ou "Início e fim" quando é ida e volta. Também ganhou setas de sentido, as marcas de cada km e uma legenda.
+
 # MetaTreino 2027.1 Beta 55 — Auditoria: dados coerentes entre módulos
 
 **Não precisa publicar o `firestore.rules`.** Nenhum arquivo novo na raiz; nenhum campo novo na nuvem além dos que já existiam (`conqPend`, `nutriLog`, `importLog`).

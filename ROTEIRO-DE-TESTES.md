@@ -2,6 +2,11 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. Beta 56 — acabamento visual
+- [ ] Tema claro (Coral, Claro, Areia): "Seu primeiro treino é…" legível; nenhum texto apagado nas abas.
+- [ ] Treinos da corrida com 4 dias "Caminhada ativa": tudo dentro dos cartões.
+- [ ] Atividade importada: gráficos separados (ritmo, FC, altitude) e percurso com início, fim, setas e km.
+
 ## 00000. Beta 55 — auditoria
 - [ ] Sair e entrar com o Google: sem "O app demorou para abrir" e sem a etapa "Escolha o visual" piscando.
 - [ ] Com a caminhada antiga importada: Início da musculação sem "De volta depois de 53 dias"; na corrida, o aviso só da corrida.

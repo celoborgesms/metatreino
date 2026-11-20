@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 55 =====
-const APP_VERSION = '2027.1-beta.55';
+// ===== MetaTreino 2027.1 Beta 57 =====
+const APP_VERSION = '2027.1-beta.57';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -3395,7 +3395,7 @@ function renderHome(){
         '• ⏰ Chegue cedo e aqueça 10 min com trote leve<br>' +
         '• 🐢 Largue mais devagar do que a empolgação pede<br>' +
         '• 💧 Beba água nos postos, mesmo sem sede' +
-        ((t=>t&&t.dicas&&t.dicas.length ? `<br><br><b style="color:#7dd3fc">${t.titulo}</b><br>${t.dicas.map(d=>'• '+d).join('<br>')}` : '')(typeof runWeatherTips==='function'?runWeatherTips(_ri.hora?_ri.largada:null):null));
+        ((t=>t&&t.dicas&&t.dicas.length ? `<br><br><b style="color:var(--info-soft)">${t.titulo}</b><br>${t.dicas.map(d=>'• '+d).join('<br>')}` : '')(typeof runWeatherTips==='function'?runWeatherTips(_ri.hora?_ri.largada:null):null));
     }
   }
   else if(daysToR !== null && daysToR >= 0 && daysToR < 365){
@@ -3838,7 +3838,7 @@ function renderSessions(){
   if(_psEl){
     const fwS = _preStart ? planFirstWorkoutInfo(mod) : null;
     _psEl.innerHTML = fwS
-      ? `<div class="note note-info"><div class="note-line" style="color:#7dd3fc">▶️ Seu primeiro treino é <b>${fwS.fmt}</b> (${fwS.quando}). Dá uma olhada no que vem por aí — e se quiser começar antes, é só treinar: eu ajusto a data. 😉</div></div>`
+      ? `<div class="note note-info"><div class="note-line" style="color:var(--info-soft)">▶️ Seu primeiro treino é <b>${fwS.fmt}</b> (${fwS.quando}). Dá uma olhada no que vem por aí — e se quiser começar antes, é só treinar: eu ajusto a data. 😉</div></div>`
       : '';
   }
 
@@ -8360,7 +8360,7 @@ function maBubblesHTML(){
         <span style="width:7px;height:7px;border-radius:50%;background:var(--primary-2);animation:matype 1.1s ease-in-out .36s infinite"></span>
       </div>`)
     : m.working
-    ? comAvatar(`<div style="background:var(--tint-info);border:1px solid var(--line-info);border-radius:var(--radius-card) var(--radius-card) var(--radius-card) 4px;padding:11px 14px;font-size:13px;color:#7dd3fc;display:flex;gap:8px;align-items:center">
+    ? comAvatar(`<div style="background:var(--tint-info);border:1px solid var(--line-info);border-radius:var(--radius-card) var(--radius-card) var(--radius-card) 4px;padding:11px 14px;font-size:13px;color:var(--info-soft);display:flex;gap:8px;align-items:center">
         <span style="display:inline-block;animation:maspin 1.1s linear infinite">⚙️</span><span>${m.working}…</span>
       </div>`)
     : m.who==='bot'
