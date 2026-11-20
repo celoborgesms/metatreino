@@ -193,7 +193,7 @@ window.pdfMontarCasa = function(jsPDF, arte){
   const P = famParams(); const eu = _famUid();
   const membros = [eu].concat(famMembros().filter(u=>u!==eu));
   const nomeDe = u=>u===eu ? `${_famMeuApelido()} (você)` : famNome(u);
-  const S = pdfDoc(jsPDF, arte, { titulo:'Alimentação da casa', sub:`${membros.length} pessoas: ${membros.map(nomeDe).join(', ')}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
+  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio da casa', sub:`${membros.length} pessoas: ${membros.map(nomeDe).join(', ')}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
   S.nota('A comida é compartilhada, a alimentação é individual: nas refeições da casa o prato é o mesmo para todos, e a quantidade de cada pessoa sai do plano dela. Abaixo, o que cada uma vai comer, separado.', { caixa:true, cor:arte.C.ink });
   const DN = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   const fd = dk=>{ const dt = new Date(dk + 'T12:00:00'); return `${DN[dt.getDay()]} ${dk.slice(8,10)}/${dk.slice(5,7)}`; };
@@ -235,8 +235,7 @@ window.pdfMontarCasa = function(jsPDF, arte){
     });
     if(linhas.length) S.tabela([{t:'Dia', w:20, negrito:true}, {t:'Refeição', w:30, quebra:true}, {t:'Prato e quantidades', w:110, quebra:true}, {t:'kcal', w:16, dir:1, negrito:true}], linhas, { t:7.4 });
   });
-  // 6.3 compras somadas (com a parte de cada um)
-  nutriPdfCompras(S, arte, 'casa');
+  // Beta 58: as compras somadas (com a parte de cada um) estão no PDF da lista de compras (pdfListaCompras, parte 62)
   S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém da casa tem doença, alergia ou usa medicação, procure um profissional.');
   return S.fim(`metatreino-casa-${chaveDia(new Date())}.pdf`, _pdfAluno());
 };

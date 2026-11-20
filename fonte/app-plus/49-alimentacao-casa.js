@@ -577,7 +577,7 @@ function openFamilia(){
     <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${P.economico?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaEconomico()">💰 Pratos econômicos na casa</button><button class="seg ${famTrocaPropria()?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaTrocaPropria()">🔄 Cada um pode trocar só para si</button></div>
     ${restr.length ? `<p class="fam-p" style="margin-top:10px">As refeições da casa respeitam as restrições de todos: <b>${restr.join(', ')}</b>.</p>` : ''}
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="nutriListaCompras(null,'casa')">🛒 Lista de compras da casa</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="pdfAlimentacaoCasa()">📄 PDF da casa (cardápio e compras)</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="pdfAlimentacaoCasa()">📄 Cardápio da casa em PDF</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="famSair()">Sair do grupo (mantém meu cardápio)</button>
     ${volta}</div>`;
   $('modal-back').classList.add('on'); mi.scrollTop = 0;
@@ -597,7 +597,7 @@ mtGancho('openNutri', { depois(){
     if(!famAtiva()) return;
     bt.textContent = `🛒 Lista de compras (só eu ou da casa)`;
     const pdf = mi.querySelector('#nutri-pdf');
-    if(pdf && !mi.querySelector('#nutri-pdf-casa')) pdf.insertAdjacentHTML('afterend', `<button class="btn btn-ghost btn-block" id="nutri-pdf-casa" style="margin:0 0 8px" onclick="pdfAlimentacaoCasa()">📄 PDF da casa (cardápio e compras)</button>`);
+    if(pdf && !mi.querySelector('#nutri-pdf-casa')) pdf.insertAdjacentHTML('afterend', `<button class="btn btn-ghost btn-block" id="nutri-pdf-casa" style="margin:0 0 8px" onclick="pdfAlimentacaoCasa()">📄 Cardápio da casa em PDF</button>`);
     const pl = nutriMontarPlano(nutriDiaSel()); if(!pl || pl.erro) return;
     const adm = famSouAdm(), editavel = nutriDiaSel() >= getDayIdx();
     pl.refeicoes.forEach(m=>{
@@ -722,7 +722,7 @@ window.nutriListaCompras = function(escopo, modo){
       <button class="seg ${escopo==='semana'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('semana')">Até domingo</button>
       <button class="seg ${escopo==='7dias'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('7dias')">Próximos 7 dias</button>
     </div>
-    <p class="fam-p" style="margin:4px 0">Período: <b>${_famPeriodoTxt(R.periodo)}</b>${R.casa ? ` · <b>${R.pessoas} pessoas</b>: soma o que cada uma vai comer, na porção do próprio plano (todas as refeições, não só as da casa). O que cada pessoa vai comer, dia a dia, está no <b>PDF da casa</b>.` : '.'}</p>
+    <p class="fam-p" style="margin:4px 0">Período: <b>${_famPeriodoTxt(R.periodo)}</b>${R.casa ? ` · <b>${R.pessoas} pessoas</b>: soma o que cada uma vai comer, na porção do próprio plano (todas as refeições, não só as da casa). A parte de cada pessoa está no <b>PDF da lista</b>.` : '.'}</p>
     ${R.avisos.map(a=>`<p class="fam-aviso">${mtEsc(a)}</p>`).join('')}
     <p style="color:var(--text-dim);font-size:12px;line-height:1.55;margin:4px 0 0">${R.editados?`Já com ${R.editados===1?'a sua 1 edição':'as suas '+R.editados+' edições'}. `:''}Dias que já passaram não entram. Toque num item para marcar “já tenho”. Grãos e carnes em peso cru; óleos e leite em ml/L; frutas e pães em unidades.</p>
     <div style="max-height:50vh;overflow-y:auto">${blocos || '<div class="text-dim" style="padding:14px 0;font-size:13px">Nada a comprar neste período.</div>'}</div>
@@ -770,7 +770,7 @@ function pdfMontarCasa(jsPDF, arte){
   if(!famAtiva()) throw new Error('Você não está num grupo da casa');
   const P = famParams(); const n = nutriConfig();
   const nomes = famMembros().map(u=>u===_famUid()?'você':famNome(u)).join(', ');
-  const S = pdfDoc(jsPDF, arte, { titulo:'Alimentação da casa', sub:`${famMembros().length} pessoas: ${nomes}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
+  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio da casa', sub:`${famMembros().length} pessoas: ${nomes}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
   S.nota('A comida é compartilhada, a alimentação é individual: o prato abaixo é o mesmo para todos, e cada pessoa vê no app a própria quantidade e calorias, calculadas pelo plano dela.', { caixa:true, cor:arte.C.ink });
   const DN = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
   const linhas = [];
@@ -786,7 +786,7 @@ function pdfMontarCasa(jsPDF, arte){
     S.secao('Cardápio da casa — próximos 7 dias', 'quantidades individuais no app de cada pessoa');
     S.tabela([{t:'Dia', w:24, negrito:true, quebra:true}, {t:'Refeição', w:24, quebra:true}, {t:'Prato', w:44, quebra:true, negrito:true}, {t:'Ingredientes e uso', w:84, quebra:true}], linhas, { t:7.6 });
   }
-  nutriPdfCompras(S, arte, 'casa');
+  // Beta 58: as compras somadas da casa estão no PDF da lista de compras (parte 62)
   S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém da casa tem doença, alergia ou usa medicação, procure um profissional.');
   return S.fim(`metatreino-casa-${chaveDia(new Date())}.pdf`, _pdfAluno());
 }

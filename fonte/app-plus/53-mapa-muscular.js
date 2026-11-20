@@ -364,7 +364,7 @@ function mmAbrir(opts){
   mi.classList.remove('modal-video','modal-ex','short'); $('modal-back').classList.remove('ex-open');
   mi.dataset.tela = 'anatomia';
   mi.innerHTML = `<div class="mm-jan" id="mm-jan">
-    <div class="mm-cab-t"><div><h3>Anatomia muscular</h3><small id="mm-sub"></small></div><button class="mm-x" onclick="${_mm.volta ? 'mmVoltar()' : 'closeModal()'}" aria-label="${_mm.volta ? 'Voltar' : 'Fechar'}">✕</button></div>
+    <div class="mm-cab-t"><div><h3>Mapa muscular</h3><small id="mm-sub"></small></div><button class="mm-x" onclick="${_mm.volta ? 'mmVoltar()' : 'closeModal()'}" aria-label="${_mm.volta ? 'Voltar' : 'Fechar'}">✕</button></div>
     <div class="mm-modos" role="tablist" aria-label="O que mostrar">
       ${_mm.ex ? `<button type="button" role="tab" data-modo="ex" onclick="mmModo('ex')">Exercício</button>` : ''}
       ${temTreino ? `<button type="button" role="tab" data-modo="hoje" onclick="mmModo('hoje')">Treino de hoje</button>` : ''}
@@ -456,7 +456,7 @@ function mmRenderEntradaProgresso(){
     if(state.active !== 'lift' || !state.modules.lift){ if(velho) velho.remove(); return; }
     if(velho) return;
     const evo = $('perf-evo');
-    const html = `<button type="button" class="card mm-entrada${_mmTemaClaro() ? ' mm-claro' : ''}" id="mm-entrada" onclick="mmAbrir({modo:'semana'})"><span class="mm-ent-ico">${mmCorpoSVG('frente', _mmSexo())}</span><span class="mm-ent-tx"><b>Anatomia muscular</b><small>Músculos trabalhados na semana, localização, função e exercícios</small></span><span class="mm-ent-seta">›</span></button>`;
+    const html = `<button type="button" class="card mm-entrada${_mmTemaClaro() ? ' mm-claro' : ''}" id="mm-entrada" onclick="mmAbrir({modo:'semana'})"><span class="mm-ent-ico">${mmCorpoSVG('frente', _mmSexo())}</span><span class="mm-ent-tx"><b>Mapa muscular</b><small>Músculos trabalhados na semana, localização, função e exercícios</small></span><span class="mm-ent-seta">›</span></button>`;
     if(evo) evo.insertAdjacentHTML('beforebegin', html); else { const wrap = scr.querySelector('.wrap'); if(wrap) wrap.insertAdjacentHTML('beforeend', html); }
   }catch(e){}
 }

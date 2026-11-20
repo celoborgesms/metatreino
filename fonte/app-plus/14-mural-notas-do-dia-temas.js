@@ -224,7 +224,15 @@ function dayAutoNotes(ts){
   if(lifts.some(h=>h.feel==='exausto')) out.push({ k:'feel', emo:'🥵', txt:'Treino muito puxado: você marcou "exausto".' });
   // recordes e cargas
   const prs = state.prs || {}; const prHoje = new Set();
-  Object.keys(prs).forEach(id=>{ const p = prs[id]; if(p && p.at && noDia(p.at)){ prHoje.add(id); out.push({ k:'pr:'+id, emo:'🏆', txt:`Recorde em ${_nomeEx(id)}: ${p.peso>0 ? String(p.peso).replace('.',',')+' kg × '+p.reps : p.reps+' repetições'}` }); } });
+  // Beta 58: recorde só conta quando havia registro anterior do exercício (o primeiro registro não é recorde)
+  // e vários viram UMA linha — o calendário mostra o essencial, o resto está no histórico.
+  const recs = [];
+  Object.keys(prs).forEach(id=>{ const p = prs[id]; if(!(p && p.at && noDia(p.at))) return; prHoje.add(id);
+    const antes = (state.progress[id]||[]).some(q=>q && q.date && q.date < ini && q.sets && q.sets.length);
+    if(antes) recs.push({ id, p }); });
+  const _rTxt = r=>`${_nomeEx(r.id)} (${r.p.peso>0 ? String(r.p.peso).replace('.',',')+' kg × '+r.p.reps : r.p.reps+' rep.'})`;
+  if(recs.length === 1) out.push({ k:'pr:'+recs[0].id, emo:'🏆', txt:`Recorde em ${_rTxt(recs[0])}` });
+  else if(recs.length > 1) out.push({ k:'prs', emo:'🏆', txt:`${recs.length} recordes: ${recs.slice(0,2).map(_rTxt).join(', ')}${recs.length > 2 ? ` e mais ${recs.length-2}` : ''}` });
   const subidas = [];
   Object.keys(state.progress||{}).forEach(id=>{
     if(prHoje.has(id)) return;
@@ -248,16 +256,17 @@ function dayAutoNotes(ts){
   if(maiorHoje >= 3 && anteriores.length >= 3 && maiorHoje > Math.max(...anteriores.map(r=>+r.distance))) out.push({ k:'maiorkm', emo:'📏', txt:`Sua maior distância até aqui: ${mtFmtKm(maiorHoje)} km` });
   if(typeof RUN_METAS !== 'undefined') RUN_METAS.forEach(m=>{ const at = (S.metas||{})[m.k]; if(at && typeof at === 'number' && noDia(at)) out.push({ k:'meta:'+m.k, emo:'🎯', txt:`Meta alcançada: ${m.nome}` }); });
   // volta depois de uma pausa (primeiro treino após 7+ dias)
+  // Beta 58: só quando é volta de verdade — mesma modalidade e com rotina antes da pausa (mtVoltaNoDia, parte 61).
+  // Antes, uma conta nova com um treino importado de 17 dias atrás "voltava depois de 17 dias parada".
   if(lifts.length || ativ.length){
-    const todas = [...((state.modules.lift && state.modules.lift.history)||[]), ...((state.modules.run && state.modules.run.history)||[])].map(h=>h && h.at).filter(t=>t && t < ini);
-    const ult = todas.length ? Math.max(...todas) : null;
-    if(ult){ const dias = Math.round((ini - _dia0(ult))/DIA_MS); if(dias >= 7) out.push({ k:'volta', emo:'🔁', txt:`Voltou a treinar depois de ${dias} dias parado(a).` }); }
+    const v = (typeof mtVoltaNoDia === 'function') ? mtVoltaNoDia(ini, 7) : null;
+    if(v) out.push({ k:'volta', emo:'🔁', txt:`Voltou ${v.mod === 'run' ? 'a correr' : 'à musculação'} depois de ${v.dias} dias parado(a).` });
   }
   // conquistas
   const tds = state.trophyDates || {};
   const tHoje = Object.keys(tds).filter(id=>noDia(tds[id]));
-  tHoje.slice(0,3).forEach(id=>{ const t = (typeof TROPHIES!=='undefined' ? TROPHIES.find(x=>x.id===id) : null); if(t) out.push({ k:'trofeu:'+id, emo:'🎖️', txt:`Conquista desbloqueada: ${t.name}` }); });
-  if(tHoje.length > 3) out.push({ k:'trofeu+', emo:'🎖️', txt:`E mais ${tHoje.length-3} conquista${tHoje.length-3>1?'s':''} neste dia.` });
+  // Beta 58: uma entrada por conquista, mas o calendário as agrupa numa área própria, recolhida (_dnRender)
+  tHoje.forEach(id=>{ const t = (typeof TROPHIES!=='undefined' ? TROPHIES.find(x=>x.id===id) : null); if(t) out.push({ k:'trofeu:'+id, emo:'🎖️', txt:t.name, conq:true }); });
   const ocultas = new Set(((state.dayNotesOcultas||{})[ini])||[]);
   return out.map(n=>Object.assign(n, { oculta: ocultas.has(n.k) }));
 }
@@ -278,9 +287,15 @@ function _dnRender(ts){
   let box = $('dn-auto'); if(box) box.remove();
   if(!vis.length && !ocultas.length) return;
   box = document.createElement('div'); box.id = 'dn-auto'; box.className = 'dn-auto';
+  // Beta 58: o dia mostra o essencial. Conquistas ficam numa área própria, recolhida; acima de 4 destaques,
+  // o resto fica em "Ver mais" (nada é apagado — só não ocupa a tela toda).
+  const conq = vis.filter(n=>n.conq), prin = vis.filter(n=>!n.conq);
+  const item = n=>`<div class="dn-item"><span class="dn-emo">${n.emo}</span><span class="dn-txt">${mtEsc(n.txt)}</span>
+      <button class="dn-b" title="Editar no texto" aria-label="Editar: ${mtEsc(n.txt)}" onclick="dnEditar(${ini},'${mtJsStr(n.k)}')">✏️</button><button class="dn-b" title="Remover" aria-label="Remover: ${mtEsc(n.txt)}" onclick="dnRemover(${ini},'${mtJsStr(n.k)}')">✕</button></div>`;
   box.innerHTML = `<div class="dn-h">✨ Destaques do dia <small>automáticos</small></div>
-    ${vis.map(n=>`<div class="dn-item"><span class="dn-emo">${n.emo}</span><span class="dn-txt">${mtEsc(n.txt)}</span>
-      <button class="dn-b" title="Editar no texto" aria-label="Editar: ${mtEsc(n.txt)}" onclick="dnEditar(${ini},'${mtJsStr(n.k)}')">✏️</button><button class="dn-b" title="Remover" aria-label="Remover: ${mtEsc(n.txt)}" onclick="dnRemover(${ini},'${mtJsStr(n.k)}')">✕</button></div>`).join('')}
+    ${prin.slice(0,4).map(item).join('')}
+    ${prin.length > 4 ? `<details class="dn-mais"><summary>Ver mais ${prin.length-4} destaque${prin.length-4>1?'s':''}</summary>${prin.slice(4).map(item).join('')}</details>` : ''}
+    ${conq.length ? `<details class="dn-conq"><summary>🎖️ ${conq.length === 1 ? '1 conquista' : conq.length + ' conquistas'} neste dia</summary>${conq.map(item).join('')}</details>` : ''}
     ${ocultas.length ? `<button class="dn-rest" onclick="dnRestaurar(${ini})">Mostrar ${ocultas.length} destaque${ocultas.length>1?'s':''} removido${ocultas.length>1?'s':''}</button>` : ''}
     <div class="dn-nota">Gerados pelos seus registros. ✏️ leva o texto para a sua anotação, onde você edita e acrescenta.</div>`;
   campo.parentNode.insertBefore(box, campo);

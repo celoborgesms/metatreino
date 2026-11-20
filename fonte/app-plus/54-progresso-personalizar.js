@@ -15,7 +15,7 @@
 
 const PERF_BLOCOS = [
   { k:'resumo',       nome:'Resumo dos últimos 7 dias', desc:'treinos, volume, recordes e sequência', sel:['#perf-resumo'] },
-  { k:'anatomia',     nome:'Anatomia muscular',         desc:'só na musculação', mod:'lift', sel:['#mm-entrada'] },
+  { k:'anatomia',     nome:'Mapa muscular',             desc:'só na musculação', mod:'lift', sel:['#mm-entrada'] },
   { k:'evolucao',     nome:'Evolução',                  desc:'gráficos de frequência, tempo, peso e volume', sel:['#perf-evo'] },
   { k:'corrida',      nome:'Evolução da corrida',       desc:'só na corrida', mod:'run', sel:['#perf-run-card'] },
   { k:'calistenia',   nome:'Calistenia',                desc:'se você usa', sel:['#perf-cali'] },

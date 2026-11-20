@@ -237,7 +237,8 @@ window.openTrophies = function(){
   const antigos = encerrados.filter(d=>d.visto);
   const meses = pend.meses.slice().sort((a,b)=>b.key.localeCompare(a.key));
   const contagem = (n,l)=>`<div class="cq-cont nv-${n}"><b>${porNv[n][0]}<small>/${porNv[n][1]}</small></b><span>${l}</span></div>`;
-  const filtros = [['todas','Todas'],['ok','Desbloqueadas'],['and','Em andamento'],['blq','Bloqueadas']];
+  // Beta 58: rótulos curtos — os quatro cabem numa linha até em 320 px (antes "Desbloqueadas" e "Em andamento" quebravam)
+  const filtros = [['todas','Todas'],['ok','Ganhas'],['and','Em curso'],['blq','Bloqueadas']];
   $('modal-inner').innerHTML = `<div class="cq${animar?' cq-anim':''}">
     <div class="cq-topo"><h3>Conquistas</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
     <div class="cq-resumo"><div class="cq-anel" style="--p:${pctAll}"><b>${tenho}</b><small>de ${tot}</small></div>

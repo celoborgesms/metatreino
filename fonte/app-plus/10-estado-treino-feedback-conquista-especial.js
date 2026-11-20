@@ -15,7 +15,8 @@ const RET = { PAUSA_MIN: 7, JANELA: 14, BASE_DIAS: 42, BASE_MIN: 2 };
 // 6 semanas que terminaram nela. Um registro isolado e antigo (ex.: um treino importado de meses atrás) é
 // histórico/experiência, não "a condição de antes" — não serve de base para dizer quanto da carga usar.
 function mtHistMusc(){ return (((state.modules.lift||{}).history)||[]).filter(x=>x && x.at).sort((a,b)=>a.at-b.at); }
-function _retBase(h, inicioPausa){ return h.filter(x=>x.at < inicioPausa + DIA_MS && x.at >= inicioPausa - RET.BASE_DIAS*DIA_MS).length; }
+// Beta 58: conta DIAS distintos (dois arquivos importados do mesmo dia não são "uma rotina")
+function _retBase(h, inicioPausa){ return new Set(h.filter(x=>x.at < inicioPausa + DIA_MS && x.at >= inicioPausa - RET.BASE_DIAS*DIA_MS).map(x=>mtDia0(x.at))).size; }
 function estadoTreino(){
   const h = mtHistMusc();
   const out = { tipo:'normal', prioridade:4 };
@@ -141,6 +142,9 @@ analiseRetomada = function(){
   const c = contextoAluno();
   if(est.tipo !== 'retomada'){
     if(c.diasSem === null) return 'Você ainda não tem treinos registrados — então não é retomada, é começo! Comece pelo treino de hoje com cargas leves. 💪';
+    // Beta 58: plano que ainda não começou, ou registros sem rotina antes — não é pausa
+    if(c.planFuturo) return `Seu plano ainda não começou${_proxTreinoTxt() ? ' — o primeiro treino é ' + _proxTreinoTxt() : ''}. Não é retomada: é começo. Comece com cargas leves e foque na técnica. 💪`;
+    if(c.pausaReal === false && c.diasSem >= 4) return `Seu último registro foi há ${c.diasSem} dias, mas antes dele ainda não havia uma rotina de treinos no app — então não há "cargas de antes" para reduzir. Siga o plano normal, começando leve e com boa técnica. 💪`;
     return `Seu último treino foi há ${c.diasSem===0?'menos de um dia':c.diasSem+' '+(c.diasSem===1?'dia':'dias')}. Isso é ${c.diasSem>=4?'uma pausa curta: pode seguir o plano normal, só capriche no aquecimento':'descanso normal'}. Plano de retomada é para pausas de 7 dias ou mais. ✅`;
   }
   const exs = (state.modules.lift && state.modules.lift.plan && state.modules.lift.plan.workouts||[]).flatMap(w=>w.exercises||[]).filter((e,i,a)=>a.findIndex(x=>x.id===e.id)===i);

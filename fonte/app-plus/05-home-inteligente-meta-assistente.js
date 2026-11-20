@@ -65,7 +65,12 @@ function renderHomeSmart(){
   if(c.ferias || c.dor || fechado){ el.innerHTML = ''; return; }
   let k = '', t = '', p = '', a = '', cls = '';
   const prox = _proxTreinoTxt();
-  if(c.total === 0){
+  if(c.planFuturo && !c.hojeFeito){
+    // Beta 58: plano que ainda não começou — nada de pausa, atraso ou "semana em risco"
+    k = 'Primeiros passos'; t = prox ? `Seu plano começa ${prox}` : 'Seu plano começa em breve';
+    p = 'Até lá, nada de atraso: é só chegar descansado. Se quiser começar antes, é só treinar — o plano se ajusta à data.';
+    a = '';
+  } else if(c.total === 0){
     k = 'Primeiros passos'; t = 'Seu primeiro treino é o mais importante';
     p = 'Comece com cargas leves e foque na técnica. Registre as séries: é com elas que o MetaTreino aprende o seu ritmo e ajusta as próximas sugestões.';
     a = '';   // Beta 44: sem "Ver treino"/"Como executar" — o treino de hoje e o "Ver como fazer" de cada exercício já estão logo abaixo
@@ -74,7 +79,7 @@ function renderHomeSmart(){
     p = `Hidratação, uma refeição com proteína e uma boa noite de sono completam o treino.${prox?` Próxima sessão ${prox}.`:''}`;
     a = `<button class="btn btn-ghost" onclick="openWeekSummary()">Resumo da semana</button>`;
     cls = 'info';
-  } else if(c.diasSem !== null && c.diasSem >= 4){
+  } else if(c.diasSem !== null && c.diasSem >= 4 && c.pausaReal !== false){
     k = 'Retomada'; t = `${c.diasSem} dias sem treinar — vamos voltar com calma`;
     p = 'Na primeira semana, use cerca de 70% das cargas de antes e menos séries. Voltar bem vale mais que voltar forte.';
     a = `<button class="btn btn-primary" onclick="goTab('sessions')">Treinar hoje</button><button class="btn btn-ghost" onclick="mtPergunta('retomada')">Plano de retomada</button>`;
@@ -84,7 +89,7 @@ function renderHomeSmart(){
     p = c.prova<=7 ? 'Semana de polimento: volume menor, sono em dia e nada de novidade no tênis ou na alimentação.' : 'Fase de manter: os treinos-chave continuam, o volume começa a cair perto da data.';
     a = `<button class="btn btn-ghost" onclick="mtPergunta('corrida_analise')">Como estou na corrida?</button>`;
     cls = 'warn';
-  } else if(c.diaSemana >= 4 && c.semDias + (8-c.diaSemana) < c.planejados){
+  } else if(c.diaSemana >= 4 && !c.semanaInicio && c.semDias + (8-c.diaSemana) < c.planejados){
     k = 'Frequência'; t = c.semPlanejados ? `${c.semTreinos} de ${c.semPlanejados} treinos do plano nesta semana${c.semExtras?` · ${c.semExtras} ${c.semExtras===1?'atividade extra':'atividades extras'}`:''}` : `${c.semDias} de ${c.planejados} dias nesta semana`;
     p = 'A semana ainda dá para salvar parcialmente. Uma sessão hoje, mesmo curta, mantém o hábito vivo.';
     a = `<button class="btn btn-primary" onclick="goTab('sessions')">Treinar agora</button>`;
@@ -201,8 +206,8 @@ function _motivaCategorias(c){
   let animo = null; try{ animo = (typeof maCtxGet==='function') ? maCtxGet('animo') : null; }catch(e){}
   if(animo === 'baixo') out.push('desanimado');
   if(c.hojeFeito) out.push('treinou_hoje');
-  if(c.diasSem !== null && c.diasSem >= 8) out.push('retorno_longo');
-  else if(c.diasSem !== null && c.diasSem >= 3) out.push('retorno_curto');
+  if(c.pausaReal !== false && c.diasSem !== null && c.diasSem >= 8) out.push('retorno_longo');
+  else if(c.pausaReal !== false && c.diasSem !== null && c.diasSem >= 3) out.push('retorno_curto');
   if(c.prova !== null && c.prova >= 0 && c.prova <= 14) out.push('prova');
   if(c.prs14 > 0) out.push('evoluindo');
   if(c.total < 6) out.push('iniciante');
@@ -309,6 +314,8 @@ function analiseCargas(){
 function analiseRetomada(){
   const c = contextoAluno();
   if(c.diasSem === null) return 'Você ainda não tem treinos registrados — então não é retomada, é começo! Comece pelo treino de hoje com cargas leves. 💪';
+  if(c.planFuturo) return `Seu plano ainda não começou${_proxTreinoTxt() ? ' — o primeiro treino é ' + _proxTreinoTxt() : ''}. Não é retomada: é começo. Comece com cargas leves e foque na técnica. 💪`;
+  if(c.pausaReal === false && c.diasSem >= 4) return `Seu último registro foi há ${c.diasSem} dias, mas antes dele ainda não havia uma rotina de treinos no app — então não há "cargas de antes" para reduzir. Siga o plano normal, começando leve e com boa técnica. 💪`;
   if(c.diasSem < 4) return `Seu último treino foi há ${c.diasSem===0?'menos de um dia':c.diasSem+' '+(c.diasSem===1?'dia':'dias')}. Isso é descanso normal, não precisa de plano de retomada. Siga o plano como está. ✅`;
   const longa = c.diasSem >= 21;
   let t = `Faz <b>${c.diasSem} dias</b> desde o seu último treino. Plano de retomada sugerido:<br><br>`;
