@@ -1,3 +1,35 @@
+# MetaTreino 2027.1 Beta 50 — Anatomia muscular e orientações do treino
+
+**Não precisa publicar o `firestore.rules`** (nada mudou nas regras).
+
+1. **O mapa saiu do topo de Treinos.** No lugar fica só o cartão compacto "Orientações do treino" e o link "Ver músculos trabalhados ›". O mapa virou consulta, aberto quando você quiser, a partir de:
+   - **Treinos:** "Ver músculos trabalhados" (treino de hoje);
+   - **Progresso › Desempenho:** cartão "Anatomia muscular" (últimos 7 dias ou explorar qualquer músculo);
+   - **ficha do exercício:** principal / secundário / estabilizador e "Ver no mapa muscular ›" (o ✕ volta para a ficha).
+   É o mesmo mapa nos três lugares; ele não é repetido em telas diferentes.
+2. **Orientações do treino:** Preparação · Sessão de treino · Finalização. Os textos são curtos e montados com os exercícios, os músculos, o equipamento (academia ou casa) e a duração do dia:
+   - um treino de pernas pede mobilidade de quadril e tornozelos, e um de peito pede ombros e abertura do peito;
+   - as séries leves de aquecimento aparecem só quando o primeiro exercício usa carga, e o texto avisa que elas não são registradas nem entram na evolução de carga;
+   - em treino só com o peso do corpo, nenhuma série extra é pedida;
+   - o alongamento é opcional ("se quiser, sem forçar").
+3. **Ilustração anatômica refeita (SVG próprio, estilo atlas):**
+   - **Proporções:** cerca de 8 cabeças de altura e os grupos musculares separados por costuras finas.
+   - **Um corpo por vez:** masculino ou feminino conforme o sexo do perfil, ou uma versão neutra quando o perfil não tem essa informação.
+   - **Vista:** botões FRENTE / COSTAS, com o mesmo enquadramento nas duas.
+   - **Corpo fixo:** não muda com peso e altura.
+4. **Ficha do músculo:** nome, localização, função, movimentos, exercícios do MetaTreino em que ele é principal, secundário ou estabilizador, quais exercícios de hoje o trabalham e as séries da semana.
+   - **Destaques:** principal = cor cheia, secundário = cor clara, estabilizador = contorno tracejado. Um estabilizador nunca é marcado como principal.
+   - **Toque:** se o dedo cair na borda entre dois músculos, o app escolhe o mais próximo. Escolher pela lista um músculo da outra vista troca a vista.
+5. **Mesma fonte da ficha do exercício:** os papéis dos músculos vêm do grupo e da ênfase de cada exercício do catálogo. Em todos os 123 exercícios, o músculo principal do mapa aparece no texto "Músculos trabalhados" da ficha.
+
+## Como testar a Beta 50
+- [ ] Treinos (musculação): o mapa não aparece sozinho. Toque em Preparação, Sessão de treino e Finalização nos dias de peito, costas, pernas e ombro: os textos mudam com o treino.
+- [ ] "Ver músculos trabalhados ›": FRENTE/COSTAS, toque num músculo e confira a ficha. Toque na borda entre dois músculos.
+- [ ] Perfil masculino, perfil feminino e perfil sem sexo: um corpo só, na versão certa.
+- [ ] Progresso › Desempenho › Anatomia muscular: "Últimos 7 dias" e "Explorar".
+- [ ] Biblioteca › um exercício: "Principal / Secundário / Estabilizador" › "Ver no mapa muscular" › ✕ volta para a ficha.
+- [ ] Android, iPhone e computador.
+
 # MetaTreino 2027.1 Beta 49 — Alimentação da casa refeita, conquistas com progressão e corrida no tempo certo
 
 **Publique o `firestore.rules` desta versão** (só a coleção `familias` mudou; nenhuma outra permissão).

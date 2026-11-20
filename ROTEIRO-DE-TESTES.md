@@ -2,6 +2,12 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. Beta 50 — anatomia muscular e orientações
+- [ ] Treinos sem mapa fixo; Orientações (Preparação / Sessão de treino / Finalização) mudam conforme o dia (peito × pernas × costas × ombro).
+- [ ] Mapa: masculino, feminino e sem sexo no perfil; FRENTE/COSTAS; toque nos músculos (também nas bordas); ficha completa.
+- [ ] Entradas: "Ver músculos trabalhados", Progresso › Anatomia muscular, ficha do exercício › Ver no mapa (✕ volta para a ficha).
+- [ ] Android, iPhone e computador.
+
 ## 00000. Beta 49 — casa, conquistas e corrida
 - [ ] **Segunda rodada:** trocar exercício sem nome em comum entre "Equipamento ocupado" e "Prefiro outro"; cartão de etapas e "Músculos trabalhados" na sessão de musculação (toque, Hoje/Semana, feminino/masculino); plano alimentar e casa sem piscar nem subir; tabela de planos sem arrastar; aviso de feriado só com academia ou esteira.
 - [ ] **Casa com dois celulares** (contas diferentes): criar o grupo numa conta comum funciona; o outro entra pelo código; mesmo prato, quantidades diferentes; só o administrador troca o prato e tira/acrescenta alimentos; lista "Casa toda" mostra a parte de cada um; PDF da casa; passar a administração; sair.
