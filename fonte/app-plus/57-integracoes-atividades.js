@@ -598,7 +598,7 @@ function atvGraficoSerie(I){
 }
 function atvExcluir(mk, idx){
   const mod = state.modules[mk]; const x = mod && mod.history && mod.history[idx]; if(!x) return;
-  appConfirm('A atividade sai do histórico, dos gráficos e dos recordes, e o percurso e o arquivo guardados neste aparelho são apagados. As conquistas que você já desbloqueou continuam na sua coleção (elas registram um momento que aconteceu); os totais e as próximas conquistas passam a contar sem esta atividade.', async ()=>{
+  appConfirm('A atividade sai do histórico, dos gráficos e dos recordes, e o percurso e o arquivo guardados neste aparelho são apagados. Os totais passam a contar sem ela, e conquistas e desafios ganhos nas últimas 48 horas que dependiam dela também saem.', async ()=>{
     const id = x.imp && x.imp.id;
     if(x.module === 'lift'){
       Object.keys(state.progress||{}).forEach(k=>{
@@ -611,8 +611,13 @@ function atvExcluir(mk, idx){
         if(!state.progress[k].length) delete state.progress[k];
       });
     }
+    try{ if(typeof marcaExcluido === 'function') marcaExcluido(mk, x); }catch(e){}   // não volta pela sincronização
     mod.history.splice(idx, 1);
-    ensureStats(); saveData(); if(id) await atvLocalApaga(id);
+    // Beta 61: tira a contribuição dela dos contadores vitalícios (antes só ensureStats, que nunca desce)
+    // e revisa conquistas e desafios das últimas 48 h (parte 64)
+    try{ subtractFromStats(x); }catch(e){} ensureStats();
+    try{ if(typeof mtRevisaConquistas === 'function') mtRevisaConquistas(); }catch(e){}
+    saveData(); if(id) await atvLocalApaga(id);
     toast('Atividade excluída'); openIntegracoes();
   }, { title:'Excluir atividade?', okLabel:'Excluir' });
 }
