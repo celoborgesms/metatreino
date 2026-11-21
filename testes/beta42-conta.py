@@ -253,9 +253,10 @@ async def ilustracoes_montagem(b):
     print('7. Ilustrações e tela de montagem')
     ctx, pg, erros = await nova(b)
     await pg.evaluate("mtSemente()"); await pg.wait_for_timeout(1500); await pg.evaluate("closeModal()")
-    r = await pg.evaluate("({ perfil: /M134 104c3-20/.test(DECO2_SVG.perfil), desafios: /M168 58.5l3.4 7/.test(DECO2_SVG.desafios), corrida: /translate\\(150 44\\)/.test(DECO2_SVG.corrida) && /a124 124/.test(DECO2_SVG.corrida), hist: /M134 38l4 4 7-8/.test(DECO2_SVG.historico) })")
+    r = await pg.evaluate("({ perfil: /M134 104c3-20/.test(DECO2_SVG.perfil), desafios: /M168 58.5l3.4 7/.test(DECO2_SVG.desafios), corrida: /<svg|<g|<path/.test(DECO2_SVG.corrida||''), hist: /M134 38l4 4 7-8/.test(DECO2_SVG.historico) })")
     confere('Perfil (pessoa) e Desafios (medalha) voltaram aos desenhos anteriores', r['perfil'] and r['desafios'], r)
-    confere('Corrida: pista com corredor · Histórico: registros e evolução', r['corrida'] and r['hist'], r)
+    # o desenho da Corrida foi redesenhado depois (Beta 59); aqui só confere que existe
+    confere('Corrida: desenho presente · Histórico: registros e evolução', r['corrida'] and r['hist'], r)
     for tema in ('zepp', 'areia', 'aurora', 'claro'):
         await pg.evaluate(f"applyTheme('{tema}')")
         for aba in ('profile', 'history', 'challenges'):

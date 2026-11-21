@@ -117,8 +117,9 @@ async def main():
         confere('"Tempo por sessão" na musculação e prioridade opcional (no máximo 2)', r[0] and r[1] == 6 and r[2] == 2, r)
         r = await pg.evaluate("(()=>{ document.querySelectorAll('#lift-modalidade .opt').forEach(o=>{ if(o.dataset.val==='hibrido') o.click(); }); try{ caliMostrarSetup(); }catch(e){} return getComputedStyle(document.querySelector('.lift-tempo-f')).display; })()")
         confere('no Híbrido não aparecem dois "Tempo por sessão"', r == 'none', r)
-        r = await pg.evaluate("(()=>{ goTab('sessions'); return !!document.getElementById('dupla-linha'); })()")
-        confere('sem grupo da casa, nada de "Treino em dupla" na tela', r is False)
+        r = await pg.evaluate("(()=>{ goTab('sessions'); const l = document.getElementById('dupla-linha'); return l ? l.textContent : null; })()")
+        # Beta 64: o link discreto "Equipamentos" fica no fim da aba para qualquer plano de musculação; "dupla" só com casa
+        confere('sem grupo da casa: só "Equipamentos", sem "Treino em dupla"', r is not None and 'Equipamentos' in r and 'dupla' not in r, r)
         confere('sem erros de página', not err, err[:3])
         await b.close()
     print(f'\nBeta 63: {OK[0]} ok, {len(F)} falha(s)'); sys.exit(1 if F else 0)
