@@ -89,7 +89,7 @@ async def main():
                 if await pg.evaluate("!!window._pdfUlt"): break
             b64 = await pg.evaluate("new Promise(r=>{ const f = new FileReader(); f.onload = ()=>r(f.result.split(',')[1]); f.readAsDataURL(window._pdfUlt.blob); })")
             txt2 = '\n'.join(pg_.extract_text() for pg_ in pypdf.PdfReader(io.BytesIO(base64.b64decode(b64))).pages)
-            confere('PDF da lista de compras da casa: somada, com a parte de cada um', 'Lista de compras da casa' in txt2 and 'Emilly:' in txt2, txt2[:300])
+            confere('PDF da lista de compras da casa: somada, com a parte de cada um', 'Lista de compras do grupo' in txt2 and 'Emilly:' in txt2, txt2[:300])
             if SAIDA: open(os.path.join(SAIDA, 'b52-casa.pdf'), 'wb').write(base64.b64decode(b64))
         confere('sem erros', not erros, erros[:3])
         await b.close()

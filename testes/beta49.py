@@ -48,7 +48,7 @@ async def cardapio(b):
     confere('compras: unidades, kg cru, ml e L', u[0]['n']=='15' and u[0]['un']=='unid.' and u[1]['un'] == 'g' and u[1]['obs']=='cru' and u[2]['un']=='ml' and u[3]['un']=='L' and u[4]['un'] in ('g','kg') and u[4]['obs']=='cru', u)
     await pg.evaluate("nutriListaCompras('7dias')"); await pg.wait_for_timeout(200)
     t = await pg.evaluate("document.getElementById('modal-inner').innerText")
-    confere('lista individual (sem grupo): período e categorias, sem "Casa toda"', 'Período' in t and 'Casa toda' not in t and 'frutas' in t.lower() and 'verduras e legumes' in t.lower(), t[:300])
+    confere('lista individual (sem grupo): período e categorias, sem "Grupo todo"', 'Período' in t and 'Grupo todo' not in t and 'frutas' in t.lower() and 'verduras e legumes' in t.lower(), t[:300])
     rp = await pg.evaluate("""(()=>{ const out = []; const S = { precisa(){}, secao(t,s){ out.push('S:'+t+'|'+(s||'')); }, tabela(c, l){ out.push('T:'+c.map(x=>x.t).join('/')+':'+l.length); }, nota(t){ out.push('N:'+t); } };
        nutriPdfCompras(S, { C:{ a:'#000', aClaro:'#eee', ink:'#000', dim:'#555' } }, 'eu'); return out; })()""")
     confere('PDF: Alimento | Quantidade | Unidade, por categoria e com o período', any(x.startswith('T:Alimento/Quantidade/Unidade') for x in rp) and any('período' in x for x in rp), rp[:6])

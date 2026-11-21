@@ -30,7 +30,7 @@ async def casa(b):
     pg, erros = await nova(ctx, {'uid':'uA','email':'a@example.com','displayName':'Marcelo','emailVerified':True})
     antes = await pg.evaluate("nutriMontarPlano(3).refeicoes.map(m=>m.id+':'+m.prato).join('|')")
     await pg.evaluate("openNutri()"); await pg.wait_for_timeout(300)
-    confere('entrada "Alimentação da casa" no plano alimentar', await pg.evaluate("!!document.getElementById('fam-entrada')"))
+    confere('entrada "Cardápio compartilhado" no plano alimentar', await pg.evaluate("!!document.getElementById('fam-entrada')"))
     await pg.evaluate("openFamilia()"); await pg.wait_for_timeout(200)
     t = await pg.evaluate("document.getElementById('modal-inner').innerText")
     confere('explica: mesmo prato, porção de cada um, até 6 pessoas, o que é compartilhado', 'mesmo prato' in t and 'própria quantidade' in t and '6 pessoas' in t and 'Peso, idade, altura e e-mail não são compartilhados' in t, t[:300])
@@ -47,7 +47,7 @@ async def casa(b):
     pl = await pg.evaluate("nutriMontarPlano(3).refeicoes.map(m=>({id:m.id, casa:!!m.compartilhada, prato:m.prato}))")
     confere('almoço e jantar marcados como refeições da casa; o resto é individual', all(m['casa'] == (m['id'] in ('almoco','jantar')) for m in pl), pl)
     await pg.evaluate("openNutri()"); await pg.wait_for_timeout(300)
-    confere('selo "Casa" nas refeições compartilhadas', await pg.evaluate("document.querySelectorAll('#modal-inner .fam-selo').length") == 2)
+    confere('selo "Compartilhada" nas refeições compartilhadas', await pg.evaluate("document.querySelectorAll('#modal-inner .fam-selo').length") == 2)
     solo = await pg.evaluate("Object.values(nutriComprasTotais('7dias').tot).reduce((s,t)=>s+t.g,0)")
     # outra pessoa entra (simula o celular dela): vegetariana, porção 20% maior
     await pg.evaluate(f"""(()=>{{ const k = {FAM}; const d = window.__mockFS[k]; d.membros.push('uB'); d.nomes.uB = 'Emilly';
@@ -59,7 +59,7 @@ async def casa(b):
     confere('lista de compras soma as porções das 2 pessoas', r['pessoas'] == 2 and r['total'] > solo * 1.15, [solo, r])
     await pg.evaluate("nutriListaCompras('7dias')"); await pg.wait_for_timeout(200)
     t = await pg.evaluate("document.getElementById('modal-inner').innerText")
-    confere('tela da lista mostra "para 2 pessoas"', 'da casa' in t and '2 pessoas' in t, t[:200])
+    confere('tela da lista mostra "para 2 pessoas"', 'do grupo' in t and '2 pessoas' in t, t[:200])
     await foto(pg, 'b46-03-lista-casa')
     # Beta 49: "comi" é pessoal (a alimentação é individual) — não vai para o grupo
     await pg.evaluate("openNutri(); nutriComi('almoco'); 0"); await pg.wait_for_timeout(1600)

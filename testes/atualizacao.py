@@ -9,7 +9,7 @@ import asyncio, sys, os, shutil, subprocess, time, tempfile
 from playwright.async_api import async_playwright
 ANT, NOVA = sys.argv[1], sys.argv[2]
 import re
-ALVO = re.search(r"beta\.\d+", open(os.path.join(NOVA, 'service-worker.js'), encoding='utf-8').read()).group(0)   # versão esperada = a da pasta nova
+ALVO = re.search(r"(?:beta|rc)\.\d+", open(os.path.join(NOVA, 'service-worker.js'), encoding='utf-8').read()).group(0)   # versão esperada = a da pasta nova
 SITE = tempfile.mkdtemp(prefix='mt-site-'); PORTA = 8799
 def publica(pasta):
     for f in os.listdir(SITE):

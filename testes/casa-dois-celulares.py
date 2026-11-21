@@ -145,7 +145,7 @@ async def main():
             confere('cada alimento guarda a parte de cada pessoa (ex.: 6 + 9 = 15)', r['linha'] and abs(r['linha']['g'] - r['linha']['por']['uA'] - r['linha']['por']['uB']) < 0.5, r['linha'])
             await pa.evaluate("nutriListaCompras('7dias','casa')"); await pa.wait_for_timeout(200)
             t = await pa.evaluate("document.getElementById('modal-inner').innerText")
-            confere('tela: "Só eu" e "Casa toda", período e unidades', 'Só eu' in t and 'Casa toda' in t and 'Período' in t and re.search(r'\d+ (g|kg|unid\.|ml|L)', t), t[:400])
+            confere('tela: "Só eu" e "Grupo todo", período e unidades', 'Só eu' in t and 'Grupo todo' in t and 'Período' in t and re.search(r'\d+ (g|kg|unid\.|ml|L)', t), t[:400])
             u = await pa.evaluate("[nutriQtdCompra('banana', 80*15), nutriQtdCompra('arroz', 750), nutriQtdCompra('azeite', 56), nutriQtdCompra('leite', 1400)]")
             confere('unidades padronizadas: 15 unid., arroz cru em g, azeite em ml, leite em L', u[0]['n']=='15' and u[0]['un']=='unid.' and u[1]['un']=='g' and u[1]['obs']=='cru' and u[2]['un']=='ml' and u[3]['un']=='L', u)
             # Beta 62: o cardápio da outra pessoa chega (antes a gravação do perfil falhava no Firestore real por
@@ -167,10 +167,10 @@ async def main():
             if okL:
                 b64 = await pa.evaluate("new Promise(r=>{ const f = new FileReader(); f.onload = ()=>r(f.result.split(',')[1]); f.readAsDataURL(window._pdfUlt.blob); })")
                 txt = '\n'.join(x.extract_text() for x in pypdf.PdfReader(io.BytesIO(base64.b64decode(b64))).pages)
-                confere('PDF da lista de compras da casa soma as duas pessoas (parte de cada uma)', 'Lista de compras da casa' in txt and '2 pessoas' in txt and 'Você:' in txt, txt[:300])
+                confere('PDF da lista de compras da casa soma as duas pessoas (parte de cada uma)', 'Lista de compras do grupo' in txt and '2 pessoas' in txt and 'Você:' in txt, txt[:300])
             else: confere('PDF da lista de compras da casa gerado', False)
             tx = await pa.evaluate("(()=>{ closeModal(); nutriListaCompras('7dias','casa'); return window.__nutriTextoCompras || '' })()")
-            confere('lista em texto (copiar/compartilhar) também é a da casa', 'casa, 2 pessoas' in tx, tx[:120])
+            confere('lista em texto (copiar/compartilhar) também é a da casa', 'grupo, 2 pessoas' in tx, tx[:120])
             await pa.evaluate("closeModal(); window._pdfUlt = null; pdfAlimentacao()")
             okP2 = await espera(pa, "!!window._pdfUlt", 20000)
             confere('PDF individual continua funcionando', okP2)
