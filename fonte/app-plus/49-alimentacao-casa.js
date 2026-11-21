@@ -1,20 +1,20 @@
 
 // =====================================================================
-// 49. Alimentação da casa (Beta 46, refeita na Beta 49), assistente sem corrida para quem só faz musculação
+// 49. Cardápio compartilhado (Beta 46, refeita na Beta 49), assistente sem corrida para quem só faz musculação
 //     e avisos do primeiro acesso sem um em cima do outro
 // =====================================================================
 // REGRA DA CASA (Beta 49): a COMIDA é compartilhada, a ALIMENTAÇÃO é individual.
 //  • Um cria o grupo e recebe um código de 6 letras; quem mora junto digita o código (até 6 pessoas).
 //  • O ADMINISTRADOR da casa (quem criou, ou quem recebeu a administração) decide o cardápio compartilhado:
 //    quais refeições são da casa, em quais dias e horários, o prato (trocar), tirar ou acrescentar alimentos
-//    no prato da casa e se cada pessoa pode trocar o prato só para si.
+//    no prato compartilhado e se cada pessoa pode trocar o prato só para si.
 //  • Todos veem o MESMO prato. A QUANTIDADE e as calorias são de cada um, calculadas pelo plano de cada pessoa
 //    (peso, objetivo, calorias). Nada é copiado de um celular para o outro: só a composição do prato.
 //  • "Comi", quantidade editada e alimento acrescentado "só para mim" são pessoais (não vão para o grupo).
 //  • Lista de compras e PDF: individual (só o seu) ou da casa (soma o que cada pessoa vai comer de verdade,
 //    agrupado por alimento, com unidade e período).
 //  • Na nuvem (familias/{código}): membros, administrador, apelidos, restrições (sim/não), a configuração e a
-//    composição do prato da casa, e o total de compras de cada pessoa nos próximos dias. Nada de peso, idade,
+//    composição do prato compartilhado, e o total de compras de cada pessoa nos próximos dias. Nada de peso, idade,
 //    altura ou e-mail. As regras do Firestore deixam cada pessoa alterar só o próprio apelido/perfil, e só o
 //    administrador alterar cardápio e configuração.
 
@@ -38,7 +38,7 @@ function _famGuardaCache(d){ d = d || {}; d.__id = famId(); window.__famCache = 
 function famAtiva(){ const c = famCache(); return !!(c && Array.isArray(c.membros) && c.membros.includes(_famUid())); }
 function famRefs(){ const c = famCache(); return (c && c.config && Array.isArray(c.config.refeicoes)) ? c.config.refeicoes : FAM_REF_PADRAO; }
 function famMembros(){ const c = famCache(); return (c && c.membros) || []; }
-function famNome(uid){ const c = famCache(); return (c && c.nomes && c.nomes[uid]) || 'Pessoa da casa'; }
+function famNome(uid){ const c = famCache(); return (c && c.nomes && c.nomes[uid]) || 'Pessoa do grupo'; }
 function famAdmUid(){ const c = famCache(); return (c && c.dono) || null; }
 function famSouAdm(){ return famAtiva() && famAdmUid() === _famUid(); }
 function _famCfg(){ const c = famCache(); return (c && c.config) || {}; }
@@ -64,7 +64,7 @@ function famParams(){
 }
 function _famForaKey(dk, mid){ return dk + '|' + mid; }
 function famFora(dk, mid){ try{ const f = nutriConfig().famFora || {}; const v = f[_famForaKey(dk, mid)]; return v ? +v : 0; }catch(e){ return 0; } }
-// a refeição é da casa NESTE dia? (refeição marcada, dia marcado e a pessoa não trocou só para ela)
+// a refeição é compartilhado NESTE dia? (refeição marcada, dia marcado e a pessoa não trocou só para ela)
 function famDaCasaNoDia(P, mid, diaIdx, dk){
   if(!P || !P.refeicoes.includes(mid)) return false;
   const d = (P.dias || {})[mid]; if(Array.isArray(d) && d.length && !d.includes(diaIdx)) return false;
@@ -74,7 +74,7 @@ function famDaCasaNoDia(P, mid, diaIdx, dk){
 function famCompartilhada(mid, diaIdx){ const P = famParams(); diaIdx = diaIdx || nutriDiaSel(); return !!(P && P.casa && famDaCasaNoDia(P, mid, diaIdx, nutriKeyDia(diaIdx))); }
 function _famComposicao(P, dk, mid){ const x = ((P && P.cardapio) || {})[dk]; const m = x && x[mid]; return { x:(m && Array.isArray(m.x)) ? m.x : [], add:(m && Array.isArray(m.add)) ? m.add : [] }; }
 
-// ---------- cardápio: o prato das refeições da casa sai dos parâmetros comuns ----------
+// ---------- cardápio: o prato das refeições compartilhadas sai dos parâmetros comuns ----------
 const _nutriMontarPlanoB46 = window.nutriMontarPlano;
 function famPrato(r, diaIdx, P, n, idxSlot, dk){
   dk = dk || nutriKeyDia(diaIdx);
@@ -86,13 +86,13 @@ function famPrato(r, diaIdx, P, n, idxSlot, dk){
   if(eco){ const barato = lista.filter(op=>!op.i.some(([id])=>NUTRI_CARO.includes(id))); if(barato.length>=2) lista = barato; }
   const chave = r.id + (veg?'v':'');
   const idxUse = comp ? NUTRI_REFEICOES.findIndex(x=>x.id===r.id) : idxSlot;
-  // quem saiu do prato da casa só neste dia segue o próprio cardápio, deslocado pelas trocas que fez
+  // quem saiu do prato compartilhado só neste dia segue o próprio cardápio, deslocado pelas trocas que fez
   const fora = (!comp && P && P.casa && P.refeicoes.includes(r.id)) ? famFora(dk, r.id) : 0;
   const seed = comp ? P.seed : n.seed, tr = comp ? ((P.trocas||{})[chave]||0) : ((n.trocas[chave]||0) + fora);
   const v = nutriVarIdx(diaIdx, idxUse, seed, tr, lista.length);
   const op = lista[v];
   const trocaId = id=>(eco && id==='azeite') ? 'oleo' : id;
-  // composição: o prato + o que o administrador acrescentou − o que ele tirou (só nas refeições da casa)
+  // composição: o prato + o que o administrador acrescentou − o que ele tirou (só nas refeições compartilhadas)
   let itens = op.i.map(([id,q])=>[trocaId(id), q]);
   const orig = itens.map(([id,q])=>[id,q]);
   const cp = (comp && P.casa) ? _famComposicao(P, dk, r.id) : { x:[], add:[] };
@@ -151,7 +151,7 @@ window.nutriMontarPlano = function(diaIdx, dkData){
   else dicas.push('Dia de descanso: calorias um pouco menores, mas mantenha a proteína. É nela que o músculo se recupera.');
   if(calc.objetivo==='emagrecer') dicas.push('Priorize proteína em toda refeição e legumes à vontade: ajudam a manter a saciedade e a massa muscular.');
   if(calc.objetivo==='massa') dicas.push('Não pule refeições: para ganhar massa, o difícil costuma ser comer o suficiente todo dia.');
-  if(P.casa && refeicoes.some(m=>m.compartilhada)) dicas.push('Nas refeições da casa o prato é o mesmo para todos; a quantidade e as calorias são as do seu plano.');
+  if(P.casa && refeicoes.some(m=>m.compartilhada)) dicas.push('Nas refeições compartilhadas o prato é o mesmo para todos; a quantidade e as calorias são as do seu plano.');
   dicas.push('Beba água ao longo do dia, não só nas refeições. Em dia de treino, some uns 500 ml.');
   const casaDelta = refeicoes.reduce((s,m)=>s + (m.casaDelta||0), 0);
   return { calc, refeicoes, dia, dicas, treino, diaIdx, casaDelta, diaRec: Math.round(dia.kcal - casaDelta) };
@@ -164,7 +164,7 @@ async function _famAtualiza(campos){
   try{ await _famTempo(db.collection('familias').doc(id).update(campos)); return true; }
   catch(e){
     console.log('casa (gravar):', e && (e.code || e.message));
-    if(e && e.code === 'permission-denied') toast('Não foi possível salvar no grupo da casa: só o administrador muda o cardápio compartilhado.');
+    if(e && e.code === 'permission-denied') toast('Não foi possível salvar no grupo: só o administrador muda o cardápio compartilhado.');
     return false;
   }
 }
@@ -196,15 +196,15 @@ window.nutriTrocar = function(chave){
     if(c.cardapio && c.cardapio[dk] && c.cardapio[dk][mid]){ delete c.cardapio[dk][mid]; campos['cardapio.' + dk + '.' + mid] = firebase.firestore.FieldValue.delete(); }
     _famGuardaCache(c); _famAtualiza(campos);
     try{ const dia = (state.nutriLog||{})[dk]; if(dia) delete dia[mid]; }catch(e){}
-    nutriAbrirRef(chave); saveData(); famAgendaEnvio(); toast('🏠 Prato da casa trocado para todos. Cada um continua com a própria porção.');
+    nutriAbrirRef(chave); saveData(); famAgendaEnvio(); toast('👥 Prato compartilhado trocado para todos. Cada um continua com a própria porção.');
     return openNutri();
   }
   if(famTrocaPropria()){
-    return famEscolha('Trocar o prato', `O ${FAM_NOMES_REF_MIN[mid]||'prato'} de ${NUTRI_DIAS[d-1].toLowerCase()} é da casa. Você pode comer outro prato só neste dia; para os outros nada muda.`, [
+    return famEscolha('Trocar o prato', `O ${FAM_NOMES_REF_MIN[mid]||'prato'} de ${NUTRI_DIAS[d-1].toLowerCase()} é compartilhado. Você pode comer outro prato só neste dia; para os outros nada muda.`, [
       { t:'Trocar só para mim neste dia', f:()=>{ n.famFora = n.famFora || {}; n.famFora[_famForaKey(dk, mid)] = 1; try{ const dia = (state.nutriLog||{})[dk]; if(dia) delete dia[mid]; }catch(e){} nutriAbrirRef(chave); saveData(); openNutri(); } }
     ]);
   }
-  toast(`Só ${famNome(famAdmUid())} (administrador da casa) troca o prato da casa. Você pode ajustar a sua quantidade ou usar as trocas equivalentes.`);
+  toast(`Só ${famNome(famAdmUid())} (administrador do grupo) troca o prato compartilhado. Você pode ajustar a sua quantidade ou usar as trocas equivalentes.`);
 };
 function famVoltarCasa(mid){
   const dk = nutriKeyDia(nutriDiaSel()); const n = nutriConfig();
@@ -225,7 +225,7 @@ function famEscolha(titulo, texto, opcoes){
 }
 function famEscolhaOk(i){ const o = (window.__famOpc||[])[i]; window.__famOpc = null; if(o && o.f) o.f(); }
 
-// ---------- administrador: tirar e acrescentar alimentos no prato da casa ----------
+// ---------- administrador: tirar e acrescentar alimentos no prato compartilhado ----------
 function _famComposicaoSalva(dk, mid, cp){
   const c = famCache(); c.cardapio = c.cardapio || {}; c.cardapio[dk] = c.cardapio[dk] || {};
   const vazio = !cp.x.length && !cp.add.length;
@@ -241,7 +241,7 @@ function famTirarDaCasa(mid, fid){
   if(cp2.add.length === cp.add.length && !cp2.x.includes(fid)) cp2.x.push(fid);
   try{ const m = nutriMealLog(mid, false); if(m && m.adj) delete m.adj[fid]; }catch(e){}
   _famComposicaoSalva(dk, mid, cp2); nutriAbrirRef(mid); saveData();
-  toast(famParams().compensa ? '🏠 Tirado do prato da casa. As porções foram recalculadas para manter as calorias de cada um.' : '🏠 Tirado do prato da casa. Cada pessoa vê no próprio plano quantas calorias a menos ficou.');
+  toast(famParams().compensa ? '👥 Tirado do prato compartilhado. As porções foram recalculadas para manter as calorias de cada um.' : '👥 Tirado do prato compartilhado. Cada pessoa vê no próprio plano quantas calorias a menos ficou.');
   openNutri();
 }
 function famVoltarNaCasa(mid, fid){
@@ -254,8 +254,8 @@ window.nutriRemover = function(mid, fid){
   const m = nutriMealLog(mid, false);
   if(m && m.adj && m.adj[fid] && m.adj[fid].x) return _nutriRemoverB49.apply(this, arguments);     // desfazer o "só eu"
   const nome = (NUTRI_ALIMENTOS[fid]||[''])[0];
-  famEscolha('Tirar ' + nome, 'Você administra a alimentação da casa. Isso vale para todos ou só para você?', [
-    { t:'Tirar do prato da casa (todos)', f:()=>famTirarDaCasa(mid, fid) },
+  famEscolha('Tirar ' + nome, 'Você administra a cardápio compartilhado. Isso vale para todos ou só para você?', [
+    { t:'Tirar do prato compartilhado (todos)', f:()=>famTirarDaCasa(mid, fid) },
     { t:'Só eu não vou comer', f:()=>_nutriRemoverB49(mid, fid) }
   ]);
 };
@@ -263,8 +263,8 @@ const _nutriAddAbrirB49 = window.nutriAddAbrir;
 window.nutriAddAbrir = function(mid){
   window.__famAddCasa = false;
   if(!famSouAdm() || !famCompartilhada(mid)) return _nutriAddAbrirB49.apply(this, arguments);
-  famEscolha('Acrescentar alimento', 'Acrescentar ao prato da casa (todos recebem, cada um na própria proporção) ou só para você?', [
-    { t:'Acrescentar ao prato da casa', f:()=>{ window.__famAddCasa = true; _nutriAddAbrirB49(mid); } },
+  famEscolha('Acrescentar alimento', 'Acrescentar ao prato compartilhado (todos recebem, cada um na própria proporção) ou só para você?', [
+    { t:'Acrescentar ao prato compartilhado', f:()=>{ window.__famAddCasa = true; _nutriAddAbrirB49(mid); } },
     { t:'Só para mim', f:()=>{ window.__famAddCasa = false; _nutriAddAbrirB49(mid); } }
   ]);
 };
@@ -276,7 +276,7 @@ window.nutriAddCustom = function(){
 const _nutriEdRenderB49 = window.nutriEdRender;
 window.nutriEdRender = function(){
   const r = _nutriEdRenderB49.apply(this, arguments);
-  try{ const e = window.__ned; if(e && e.mode === 'add' && window.__famAddCasa){ const p = document.querySelector('#modal-inner p'); if(p) p.innerHTML = 'Quanto <b>você</b> vai comer? Os outros recebem a quantidade proporcional à porção de cada um, e as porções da refeição são recalculadas para manter as calorias de todos.'; const b = document.querySelector('#modal-inner .btn-primary'); if(b) b.textContent = 'Acrescentar ao prato da casa'; } }catch(err){}
+  try{ const e = window.__ned; if(e && e.mode === 'add' && window.__famAddCasa){ const p = document.querySelector('#modal-inner p'); if(p) p.innerHTML = 'Quanto <b>você</b> vai comer? Os outros recebem a quantidade proporcional à porção de cada um, e as porções da refeição são recalculadas para manter as calorias de todos.'; const b = document.querySelector('#modal-inner .btn-primary'); if(b) b.textContent = 'Acrescentar ao prato compartilhado'; } }catch(err){}
   return r;
 };
 const _nutriEdSalvarB49 = window.nutriEdSalvar;
@@ -290,7 +290,7 @@ window.nutriEdSalvar = function(reset){
     const dk = nutriKeyDia(nutriDiaSel()); const cp = _famComposicao(famParams(), dk, e.mid);
     const add = cp.add.slice(); const ex = add.find(a=>a.id===e.fid); if(ex) ex.q = +ex.q + qBase; else add.push({ id:e.fid, q:qBase });
     _famComposicaoSalva(dk, e.mid, { x:cp.x.filter(x=>x!==e.fid), add });
-    nutriAbrirRef(e.mid); saveData(); toast('🏠 Acrescentado ao prato da casa.'); return openNutri();
+    nutriAbrirRef(e.mid); saveData(); toast('👥 Acrescentado ao prato compartilhado.'); return openNutri();
   }
   return _nutriEdSalvarB49.apply(this, arguments);
 };
@@ -373,7 +373,7 @@ function _famAplica(doc){
   if(mudou) _famRedesenha();
   else if(perfisMudaram){ try{ const mi = $('modal-inner'); if($('modal-back').classList.contains('on') && mi && mi.querySelector('#fam-compras') && window.__comprasModo === 'casa') nutriListaCompras(); }catch(e){} }
 }
-// restrições (vegetariano, sem lactose, sem glúten) de alguém mudaram → o prato da casa pode mudar
+// restrições (vegetariano, sem lactose, sem glúten) de alguém mudaram → o prato compartilhado pode mudar
 function _famRestricoesMudaram(doc, ant){
   const r = d=>Object.keys((d && d.perfis) || {}).sort().map(u=>{ const p = d.perfis[u] || {}; return u + ':' + (!!p.veg) + (!!p.lac) + (!!p.glu); }).join('|');
   return r(doc) !== r(ant);
@@ -410,8 +410,8 @@ function _famMeuApelido(){ const p = (state.user && state.user.profile) || {}; r
 // membro); se o código já existir, a gravação vira alteração, é negada, e o app tenta outro código.
 async function famCriar(){
   if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao');
-  const uid = _famUid(); if(!uid) return toast('Entre na sua conta para criar o grupo da casa.');
-  if(navigator.onLine === false) return toast('Sem internet agora. Conecte-se para criar o grupo da casa.');
+  const uid = _famUid(); if(!uid) return toast('Entre na sua conta para criar o grupo.');
+  if(navigator.onLine === false) return toast('Sem internet agora. Conecte-se para criar o grupo.');
   const n = nutriConfig();
   const msg = t=>{ const e = $('fam-msg'); if(e) e.textContent = t; };
   msg('Criando o grupo…');
@@ -423,7 +423,7 @@ async function famCriar(){
       await _famTempo(db.collection('familias').doc(id).set(doc));
       n.familia = { id, desde: Date.now() }; delete n.cardapioFixo; delete n.famFora;
       _famGuardaCache(doc); saveData(); famOuvir(); famAgendaEnvio(300);
-      toast('🏠 Grupo da casa criado. Você é o administrador. Mande o código para quem mora com você.');
+      toast('👥 Grupo criado. Você é o administrador. Mande o código para quem vai dividir as refeições com você.');
       return openFamilia();
     }catch(e){
       const code = e && e.code;
@@ -450,7 +450,7 @@ async function famEntrar(){
     if(!d || !(d.membros||[]).includes(uid)) return msg('Não consegui entrar. Confira o código.');
     const n = nutriConfig(); n.familia = { id, desde: Date.now() }; delete n.cardapioFixo; delete n.famFora;
     _famGuardaCache(d); saveData(); famOuvir(); famAgendaEnvio(300);
-    toast('🏠 Pronto! O prato das refeições da casa é o mesmo para todos; a sua porção continua a sua.');
+    toast('👥 Pronto! O prato das refeições compartilhadas é o mesmo para todos; a sua porção continua a sua.');
     openFamilia();
   }catch(e){
     const code = e && e.code;
@@ -460,7 +460,7 @@ async function famEntrar(){
       : 'Sem conexão agora. Tente de novo em instantes.');
   }
 }
-// sai mantendo o cardápio: o prato da casa vira o "cardápio guardado" desta pessoa
+// sai mantendo o cardápio: o prato compartilhado vira o "cardápio guardado" desta pessoa
 function _famCongela(){
   const P = famParams(); const n = nutriConfig();
   if(P && P.casa) n.cardapioFixo = { refeicoes:P.refeicoes.slice(), seed:P.seed, trocas:Object.assign({}, P.trocas), veg:P.veg, lac:P.lac, glu:P.glu, economico:P.economico, dias:Object.assign({}, P.dias) };
@@ -472,19 +472,19 @@ function famSaiuLocal(motivo){
   try{ localStorage.removeItem(_famCacheKey()); }catch(e){}
   const n = nutriConfig(); delete n.familia; delete n.famFora; window.__famCache = null;
   saveData();
-  if(motivo === 'removido' || motivo === 'apagado') toast('🏠 Você não faz mais parte do grupo da casa. Seu cardápio atual foi mantido.');
+  if(motivo === 'removido' || motivo === 'apagado') toast('👥 Você não faz mais parte do grupo. Seu cardápio atual foi mantido.');
   _famRedesenha();
 }
 function famSair(){
   const c = famCache() || {}, uid = _famUid();
   const outros = (c.membros||[]).filter(x=>x!==uid);
   if(c.dono === uid && outros.length > 1){
-    return famEscolha('Antes de sair, escolha o novo administrador', 'Quem fica cuidando do cardápio da casa?', outros.map(o=>({ t:famNome(o), f:()=>_famSairConfirma(o) })));
+    return famEscolha('Antes de sair, escolha o novo administrador', 'Quem fica cuidando do cardápio compartilhado?', outros.map(o=>({ t:famNome(o), f:()=>_famSairConfirma(o) })));
   }
   _famSairConfirma(outros[0] || null);
 }
 function _famSairConfirma(novoAdm){
-  appConfirm('Você sai do grupo da casa. O cardápio que está agora continua igual no seu app; as próximas mudanças deixam de aparecer para os outros.', async ()=>{
+  appConfirm('Você sai do grupo. O cardápio que está agora continua igual no seu app; as próximas mudanças deixam de aparecer para os outros.', async ()=>{
     const id = famId(), uid = _famUid(), c = famCache() || {};
     const outros = (c.membros||[]).filter(x=>x!==uid);
     try{
@@ -494,42 +494,42 @@ function _famSairConfirma(novoAdm){
         if(c.dono === uid) campos.dono = (novoAdm && outros.includes(novoAdm)) ? novoAdm : outros[0];
         await _famTempo(db.collection('familias').doc(id).update(campos));
       }
-      famSaiuLocal('saiu'); toast('Você saiu do grupo da casa. Seu cardápio foi mantido.'); openNutri();
+      famSaiuLocal('saiu'); toast('Você saiu do grupo. Seu cardápio foi mantido.'); openNutri();
     }catch(e){ console.log('casa (sair):', e); toast('Não consegui sair agora (sem conexão?). Tente de novo.'); }
-  }, { title:'Sair do grupo da casa?', emo:'🏠', okLabel:'Sair e manter meu cardápio' });
+  }, { title:'Sair do grupo?', emo:'👥', okLabel:'Sair e manter meu cardápio' });
 }
 function famPassarAdm(outro){
   if(!famSouAdm() || !famMembros().includes(outro) || outro === _famUid()) return;
-  appConfirm(`${famNome(outro)} passa a administrar o cardápio da casa (trocar pratos, tirar e acrescentar alimentos, dias e horários). Você continua no grupo com a sua porção.`, async ()=>{
+  appConfirm(`${famNome(outro)} passa a administrar o cardápio compartilhado (trocar pratos, tirar e acrescentar alimentos, dias e horários). Você continua no grupo com a sua porção.`, async ()=>{
     const ok = await _famAtualiza({ dono: outro });
     if(ok){ const c = famCache(); c.dono = outro; _famGuardaCache(c); toast('Administração passada para ' + famNome(outro) + '.'); }
     openFamilia();
-  }, { title:'Passar a administração?', emo:'🏠', okLabel:'Passar', onCancel:()=>openFamilia() });
+  }, { title:'Passar a administração?', emo:'👥', okLabel:'Passar', onCancel:()=>openFamilia() });
 }
 function famRemoverMembro(outro){
   if(!famSouAdm() || outro === _famUid()) return;
-  appConfirm(`${famNome(outro)} sai do grupo da casa. O cardápio atual continua no app dessa pessoa, só deixa de acompanhar a casa.`, async ()=>{
+  appConfirm(`${famNome(outro)} sai do grupo. O cardápio atual continua no app dessa pessoa, só deixa de acompanhar a casa.`, async ()=>{
     const ok = await _famAtualiza({ membros: firebase.firestore.FieldValue.arrayRemove(outro), ['nomes.' + outro]: firebase.firestore.FieldValue.delete(), ['perfis.' + outro]: firebase.firestore.FieldValue.delete() });
-    if(ok) toast(famNome(outro) + ' saiu do grupo da casa.');
+    if(ok) toast(famNome(outro) + ' saiu do grupo.');
     openFamilia();
-  }, { title:'Tirar do grupo da casa?', emo:'🏠', okLabel:'Tirar do grupo', onCancel:()=>openFamilia() });
+  }, { title:'Tirar do grupo?', emo:'👥', okLabel:'Tirar do grupo', onCancel:()=>openFamilia() });
 }
 // configuração (só o administrador)
 function _famCfgGrava(campo, valor){
-  if(!famSouAdm()) return toast('Só o administrador da casa muda essa configuração.');
+  if(!famSouAdm()) return toast('Só o administrador do grupo muda essa configuração.');
   const c = famCache(); c.config = c.config || {}; c.config[campo] = valor; _famGuardaCache(c);
   _famAtualiza({ ['config.' + campo]: valor }); famAgendaEnvio(); openFamilia();
 }
 function famAlternaRefeicao(mid){
   const refs = famRefs().slice(); const i = refs.indexOf(mid);
-  if(i >= 0){ if(refs.length === 1) return toast('Deixe pelo menos uma refeição da casa (ou saia do grupo).'); refs.splice(i,1); } else refs.push(mid);
+  if(i >= 0){ if(refs.length === 1) return toast('Deixe pelo menos uma refeição compartilhada (ou saia do grupo).'); refs.splice(i,1); } else refs.push(mid);
   _famCfgGrava('refeicoes', refs);
 }
 function famAlternaEconomico(){ _famCfgGrava('economico', !(_famCfg().economico !== false)); }
 function famAlternaTrocaPropria(){ _famCfgGrava('trocaPropria', !famTrocaPropria()); }
 function famAlternaDia(mid, d){
   const dias = famDiasRef(mid).slice(); const i = dias.indexOf(d);
-  if(i >= 0){ if(dias.length === 1) return toast('Deixe pelo menos um dia (ou tire a refeição da casa).'); dias.splice(i,1); } else dias.push(d);
+  if(i >= 0){ if(dias.length === 1) return toast('Deixe pelo menos um dia (ou tire a refeição compartilhada).'); dias.splice(i,1); } else dias.push(d);
   const todos = Object.assign({}, _famCfg().dias || {}); dias.sort((a,b)=>a-b);
   if(dias.length === 7) delete todos[mid]; else todos[mid] = dias;
   _famCfgGrava('dias', todos);
@@ -541,7 +541,7 @@ function famHora(mid, v){
 }
 function famCompartilharCodigo(){
   const id = famId(); if(!id) return;
-  const t = `Vamos usar o mesmo cardápio no MetaTreino? Em Plano alimentar › Alimentação da casa, digite o código: ${id}`;
+  const t = `Vamos usar o mesmo cardápio no MetaTreino? Em Plano alimentar › Cardápio compartilhado, digite o código: ${id}`;
   if(navigator.share){ navigator.share({ text:t }).catch(()=>{}); return; }
   try{ navigator.clipboard.writeText(id).then(()=>toast('📋 Código copiado')); }catch(e){ toast('Código: ' + id); }
 }
@@ -551,19 +551,19 @@ function openFamilia(){
   if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao');
   const mi = $('modal-inner'); if(mi.dataset.tela === 'nutri') mi.dataset.tela = 'nutri-sub';
   const n = nutriConfig();
-  // Beta 64: aberta pelo Perfil › Minha casa, o botão fecha; aberta do plano alimentar, volta para ele
+  // Beta 64: aberta pelo Perfil › Meu grupo, o botão fecha; aberta do plano alimentar, volta para ele
   const volta = window.__casaDoPerfil ? `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="window.__casaDoPerfil=false;closeModal()">Fechar</button>` : `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">← Voltar ao plano alimentar</button>`;
   if(!famAtiva()){
-    mi.innerHTML = `<div id="fam-tela"><h3>🏠 Minha casa</h3>
+    mi.innerHTML = `<div id="fam-tela"><h3>👥 Meu grupo</h3>
       <p class="fam-p">Para quem mora junto: o mesmo cardápio com a porção de cada um e, se quiserem, o treino organizado para não disputarem aparelho. <b>A comida é compartilhada, a alimentação é individual:</b> todos veem o mesmo prato, cada um com a <b>própria quantidade e calorias</b>, calculadas pelo plano de cada pessoa.</p>
-      <ul class="fam-ul"><li>Quem cria o grupo é o administrador: decide o prato, os dias e os horários das refeições da casa. Dá para passar a administração depois.</li><li>A lista de compras e o PDF da casa somam o que cada pessoa vai comer.</li><li>Até ${FAM_MAX} pessoas. Cada uma precisa do plano alimentar (Premium).</li></ul>
-      ${n.cardapioFixo ? '<p class="fam-mini">Você saiu de um grupo e manteve o cardápio daquela época nas refeições da casa.</p>' : ''}
-      <button class="btn btn-primary btn-block" onclick="famCriar()">Criar o grupo da casa</button>
+      <ul class="fam-ul"><li>Quem cria o grupo é o administrador: decide o prato, os dias e os horários das refeições compartilhadas. Dá para passar a administração depois.</li><li>A lista de compras e o PDF do grupo somam o que cada pessoa vai comer.</li><li>Até ${FAM_MAX} pessoas. Cada uma precisa do plano alimentar (Premium).</li></ul>
+      ${n.cardapioFixo ? '<p class="fam-mini">Você saiu de um grupo e manteve o cardápio daquela época nas refeições compartilhadas.</p>' : ''}
+      <button class="btn btn-primary btn-block" onclick="famCriar()">Criar o grupo</button>
       <div class="fam-entrar"><label for="fam-codigo">Já tem um código?</label>
         <div class="fam-linha"><input id="fam-codigo" class="input" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="Ex.: K7M2QX" oninput="this.value=this.value.toUpperCase()" data-teclado>
         <button class="btn btn-ghost" onclick="famEntrar()">Entrar</button></div></div>
       <div id="fam-msg" class="fam-msg" aria-live="polite"></div>
-      <p class="fam-mini">No grupo ficam só o apelido, as restrições alimentares (vegetariano, sem lactose, sem glúten), o cardápio da casa e o total de compras de cada um. Peso, idade, altura e e-mail não são compartilhados.</p>
+      <p class="fam-mini">No grupo ficam só o apelido, as restrições alimentares (vegetariano, sem lactose, sem glúten), o cardápio compartilhado e o total de compras de cada um. Peso, idade, altura e e-mail não são compartilhados.</p>
       ${volta}</div>`;
     $('modal-back').classList.add('on'); mi.scrollTop = 0; return;
   }
@@ -574,23 +574,23 @@ function openFamilia(){
   const refsCasa = famRefs();
   const blocoRef = refsCasa.map(mid=>{ const dias = famDiasRef(mid); const h = famHoraRef(mid) || (NUTRI_REFEICOES.find(r=>r.id===mid)||{}).hora || '';
     return `<div class="fam-ref"><div class="fam-ref-t"><b>${FAM_NOMES_REF[mid]}</b>${adm ? `<input type="time" class="input fam-hora" value="${h}" aria-label="Horário do ${FAM_NOMES_REF_MIN[mid]}" onchange="famHora('${mid}', this.value)">` : `<span class="fam-mini">${h}</span>`}</div>
-      <div class="fam-dias" role="group" aria-label="Dias em que o ${FAM_NOMES_REF_MIN[mid]} é da casa">${FAM_DIAS_CURTO.map((t,i)=>`<button class="fam-dia ${dias.includes(i+1)?'on':''}" ${dis} aria-pressed="${dias.includes(i+1)}" aria-label="${NUTRI_DIAS[i]}" onclick="famAlternaDia('${mid}',${i+1})">${t}</button>`).join('')}</div></div>`; }).join('');
-  // Beta 64: tela reorganizada em blocos — quem está na casa, refeições da casa (recolhido), compras/PDF lado a lado,
+      <div class="fam-dias" role="group" aria-label="Dias em que o ${FAM_NOMES_REF_MIN[mid]} é compartilhado">${FAM_DIAS_CURTO.map((t,i)=>`<button class="fam-dia ${dias.includes(i+1)?'on':''}" ${dis} aria-pressed="${dias.includes(i+1)}" aria-label="${NUTRI_DIAS[i]}" onclick="famAlternaDia('${mid}',${i+1})">${t}</button>`).join('')}</div></div>`; }).join('');
+  // Beta 64: tela reorganizada em blocos — quem está na casa, refeições compartilhadas (recolhido), compras/PDF lado a lado,
   // treino em dupla e "sair" discreto no fim. As funções são as mesmas de antes.
   const _ec = `<div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${P.economico?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaEconomico()">💰 Pratos econômicos na casa</button><button class="seg ${famTrocaPropria()?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaTrocaPropria()">🔄 Cada um pode trocar só para si</button></div>`;
-  mi.innerHTML = `<div id="fam-tela"><h3>🏠 Minha casa</h3>
+  mi.innerHTML = `<div id="fam-tela"><h3>👥 Meu grupo</h3>
     <div class="fam-codigo-box"><small>Código do grupo</small><b>${mtEsc(famId())}</b><button class="btn btn-ghost" onclick="famCompartilharCodigo()">Convidar</button></div>
     <p class="fam-p"><b>A comida é compartilhada, a alimentação é individual.</b> O prato é o mesmo para todos; a quantidade e as calorias de cada um vêm do próprio plano.</p>
     <details class="fam-bloco" open><summary><b>Pessoas</b><small>${famMembros().length}/${FAM_MAX}</small></summary>
       <div class="fam-membros">${membros}</div>
-      <p class="fam-mini">${adm ? 'Você é o administrador do cardápio: troca o prato, tira ou acrescenta alimentos no prato da casa e define dias e horários.' : `${mtEsc(famNome(admUid))} administra o cardápio da casa. Você vê o prato da casa com a sua porção e pode ajustar a sua quantidade.`}</p>
+      <p class="fam-mini">${adm ? 'Você é o administrador do cardápio: troca o prato, tira ou acrescenta alimentos no prato compartilhado e define dias e horários.' : `${mtEsc(famNome(admUid))} administra o cardápio compartilhado. Você vê o prato compartilhado com a sua porção e pode ajustar a sua quantidade.`}</p>
     </details>
-    <details class="fam-bloco"><summary><b>Refeições da casa</b><small>${refsCasa.length ? refsCasa.map(k=>FAM_NOMES_REF_MIN[k]).join(' e ') : 'nenhuma'}</small></summary>
+    <details class="fam-bloco"><summary><b>Refeições compartilhadas</b><small>${refsCasa.length ? refsCasa.map(k=>FAM_NOMES_REF_MIN[k]).join(' e ') : 'nenhuma'}</small></summary>
       <div class="fam-chips">${Object.keys(FAM_NOMES_REF).map(k=>`<button class="rc-chip ${refsCasa.includes(k)?'on':''}" ${dis} aria-pressed="${refsCasa.includes(k)}" onclick="famAlternaRefeicao('${k}')">${FAM_NOMES_REF[k]}</button>`).join('')}</div>
       <div class="fam-refs">${blocoRef}</div>
       <p class="fam-mini">Quem usa menos refeições por dia (por exemplo 4) segue só as que existem no plano dele. Nos dias desmarcados, a refeição volta a ser individual.</p>
       ${_ec}
-      ${restr.length ? `<p class="fam-p" style="margin-top:10px">As refeições da casa respeitam as restrições de todos: <b>${restr.join(', ')}</b>.</p>` : ''}
+      ${restr.length ? `<p class="fam-p" style="margin-top:10px">As refeições compartilhadas respeitam as restrições de todos: <b>${restr.join(', ')}</b>.</p>` : ''}
     </details>
     <div class="fam-sec">Compras e cardápio</div>
     <div class="fam-2b"><button class="btn btn-primary" onclick="nutriListaCompras(null,'casa')">🛒 Lista de compras</button><button class="btn btn-ghost" onclick="pdfAlimentacaoCasa()">📄 Cardápio em PDF</button></div>
@@ -608,40 +608,40 @@ mtGancho('openNutri', { depois(){
     const bt = mi.querySelector('[onclick="nutriListaCompras()"]'); if(!bt) return;
     if(!mi.querySelector('#fam-entrada')){
       const ativo = famAtiva();
-      // Beta 64: conectar a casa agora fica em Perfil › Minha casa. Aqui: a entrada completa só para quem já está
+      // Beta 64: conectar a casa agora fica em Perfil › Meu grupo. Aqui: a entrada completa só para quem já está
       // num grupo; para os outros, uma linha discreta que leva ao mesmo lugar.
       if(ativo){
         const n = famMembros().length;
-        const sub = `${n} ${n===1?'pessoa':'pessoas'} · ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(' e ')} da casa${famSouAdm()?' · você administra':''}`;
-        bt.insertAdjacentHTML('afterend', `<button class="mealc rc-entrada" id="fam-entrada" onclick="window.__casaDoPerfil=false;openFamilia()"><span class="mi">🏠</span><span class="mt"><b>Alimentação da casa</b><small>${mtEsc(sub)}</small></span><span class="rc-seta">›</span></button>`);
+        const sub = `${n} ${n===1?'pessoa':'pessoas'} · ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(' e ')} em grupo${famSouAdm()?' · você administra':''}`;
+        bt.insertAdjacentHTML('afterend', `<button class="mealc rc-entrada" id="fam-entrada" onclick="window.__casaDoPerfil=false;openFamilia()"><span class="mi">👥</span><span class="mt"><b>Cardápio compartilhado</b><small>${mtEsc(sub)}</small></span><span class="rc-seta">›</span></button>`);
       } else {
-        bt.insertAdjacentHTML('afterend', `<div id="fam-entrada" class="fam-dica-perfil">Mora com alguém? Dá para dividir o cardápio em <a href="#" onclick="openMinhaCasa();return false">Perfil › Minha casa</a>.</div>`);
+        bt.insertAdjacentHTML('afterend', `<div id="fam-entrada" class="fam-dica-perfil">Divide as refeições com alguém? Dá para dividir o cardápio em <a href="#" onclick="openMinhaCasa();return false">Perfil › Meu grupo</a>.</div>`);
       }
     }
     if(!famAtiva()) return;
-    bt.textContent = `🛒 Lista de compras (só eu ou da casa)`;
+    bt.textContent = `🛒 Lista de compras (só eu ou do grupo)`;
     const pdf = mi.querySelector('#nutri-pdf');
-    if(pdf && !mi.querySelector('#nutri-pdf-casa')) pdf.insertAdjacentHTML('afterend', `<button class="btn btn-ghost btn-block" id="nutri-pdf-casa" style="margin:0 0 8px" onclick="pdfAlimentacaoCasa()">📄 Cardápio da casa em PDF</button>`);
+    if(pdf && !mi.querySelector('#nutri-pdf-casa')) pdf.insertAdjacentHTML('afterend', `<button class="btn btn-ghost btn-block" id="nutri-pdf-casa" style="margin:0 0 8px" onclick="pdfAlimentacaoCasa()">📄 Cardápio compartilhado em PDF</button>`);
     const pl = nutriMontarPlano(nutriDiaSel()); if(!pl || pl.erro) return;
     const adm = famSouAdm(), editavel = nutriDiaSel() >= getDayIdx();
     pl.refeicoes.forEach(m=>{
       const d = mi.querySelector(`details.mealc[ontoggle*="nutriTog('${m.chave}'"]`); if(!d) return;
       const t = d.querySelector('summary .mt b');
-      if(m.compartilhada && t && !t.querySelector('.fam-selo')) t.insertAdjacentHTML('beforeend', ' <span class="fam-selo">Casa</span>');
+      if(m.compartilhada && t && !t.querySelector('.fam-selo')) t.insertAdjacentHTML('beforeend', ' <span class="fam-selo">Compartilhada</span>');
       const mb = d.querySelector('.mb'); if(!mb || mb.querySelector('.fam-info')) return;
       if(m.compartilhada){
         const tir = (m.tiradosCasa||[]).filter(id=>NUTRI_ALIMENTOS[id]);
-        mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">🏠 Prato da casa${adm ? ' — você administra' : ` — decidido por ${mtEsc(famNome(famAdmUid()))}`}. A quantidade abaixo é a <b>sua</b>: ${Math.round(m.tot.kcal)} kcal.
+        mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">👥 Prato compartilhado${adm ? ' — você administra' : ` — decidido por ${mtEsc(famNome(famAdmUid()))}`}. A quantidade abaixo é a <b>sua</b>: ${Math.round(m.tot.kcal)} kcal.
           ${famAjusteHTML(m)}
-          ${tir.length ? `<div class="fam-tirados">Fora do prato da casa hoje: ${tir.map(id=>`${mtEsc(NUTRI_ALIMENTOS[id][0])}${adm && editavel ? ` <button class="fam-link" onclick="famVoltarNaCasa('${m.id}','${id}')">devolver</button>` : ''}`).join(' · ')}</div>` : ''}</div>`);
+          ${tir.length ? `<div class="fam-tirados">Fora do prato compartilhado hoje: ${tir.map(id=>`${mtEsc(NUTRI_ALIMENTOS[id][0])}${adm && editavel ? ` <button class="fam-link" onclick="famVoltarNaCasa('${m.id}','${id}')">devolver</button>` : ''}`).join(' · ')}</div>` : ''}</div>`);
       } else if(m.foraDaCasa){
-        mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">Neste dia você está com outro prato, só para você. ${editavel ? `<button class="fam-link" onclick="famVoltarCasa('${m.id}')">Voltar ao prato da casa</button>` : ''}</div>`);
+        mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">Neste dia você está com outro prato, só para você. ${editavel ? `<button class="fam-link" onclick="famVoltarCasa('${m.id}')">Voltar ao prato compartilhado</button>` : ''}</div>`);
       }
     });
   }catch(e){ console.log('casa (tela):', e); }
 }});
 
-// Beta 52: o que mudou no prato da casa e quanto isso muda as calorias DESTA pessoa
+// Beta 52: o que mudou no prato compartilhado e quanto isso muda as calorias DESTA pessoa
 function famAjusteNomes(m){
   const tir = (m.tiradosCasa||[]).filter(id=>NUTRI_ALIMENTOS[id]).map(id=>'sem ' + NUTRI_ALIMENTOS[id][0].toLowerCase());
   const add = (m.acrescentadosCasa||[]).filter(id=>NUTRI_ALIMENTOS[id]).map(id=>'+ ' + NUTRI_ALIMENTOS[id][0].toLowerCase());
@@ -650,9 +650,9 @@ function famAjusteNomes(m){
 function famAjusteHTML(m){
   if(!m || !m.mudouCasa) return '';
   const o = famAjusteNomes(m).join(', ');
-  if(m.compensada) return `<div class="fam-ajuste">Ajuste da casa: ${mtEsc(o)}. As porções foram recalculadas para manter as suas ${Math.round(m.tot.kcal)} kcal.</div>`;
+  if(m.compensada) return `<div class="fam-ajuste">Ajuste do grupo: ${mtEsc(o)}. As porções foram recalculadas para manter as suas ${Math.round(m.tot.kcal)} kcal.</div>`;
   const d = m.casaDelta || 0; const sinal = d > 0 ? '+' : d < 0 ? '−' : '';
-  return `<div class="fam-ajuste ${d > 0 ? 'mais' : d < 0 ? 'menos' : ''}">Ajuste da casa: ${mtEsc(o)}.<br>Recomendado <b>${m.recKcal} kcal</b> → com o ajuste <b>${Math.round(m.tot.kcal)} kcal</b> (${d ? `${sinal}${Math.abs(d)} kcal` : 'igual'}).</div>`;
+  return `<div class="fam-ajuste ${d > 0 ? 'mais' : d < 0 ? 'menos' : ''}">Ajuste do grupo: ${mtEsc(o)}.<br>Recomendado <b>${m.recKcal} kcal</b> → com o ajuste <b>${Math.round(m.tot.kcal)} kcal</b> (${d ? `${sinal}${Math.abs(d)} kcal` : 'igual'}).</div>`;
 }
 
 // ---------- lista de compras (e PDF): individual ou da casa ----------
@@ -707,8 +707,8 @@ function nutriComprasTotais(escopo, modo){
         if(cobertos < diasOk) avisos.push(`${famNome(o)}: a lista dessa pessoa foi atualizada em ${pf.em ? mtFmtData(pf.em) : 'data desconhecida'} e cobre ${cobertos} de ${diasOk} dias. Abrir o app no celular dela atualiza.`);
         return;
       }
-      // versão antiga do app (sem "compras"): só o prato da casa, pela proporção da porção publicada
-      avisos.push(`${famNome(o)} está com uma versão antiga do app: só as refeições da casa dessa pessoa entram na conta.`);
+      // versão antiga do app (sem "compras"): só o prato compartilhado, pela proporção da porção publicada
+      avisos.push(`${famNome(o)} está com uma versão antiga do app: só as refeições compartilhadas dessa pessoa entram na conta.`);
       dias.forEach(({d,dk})=>{
         NUTRI_REFEICOES.forEach(r=>{
           const f = ((pf.fatores||{})[d]||{})[r.id]; if(!f || !famDaCasaNoDia(P, r.id, d, dk)) return;
@@ -730,18 +730,18 @@ window.nutriListaCompras = function(escopo, modo){
   const R = nutriComprasTotais(escopo, modo); const tot = R.tot;
   const semKey = chaveDia(nutriDataDia(1)) + (R.casa ? '-casa' : ''); state.comprasOk = state.comprasOk || {}; const ok = state.comprasOk[semKey] = state.comprasOk[semKey] || {};
   const fmt = id=>_nutriFmtCompra(id, tot[id]);
-  const porPessoa = id=>'';     // Beta 52: a lista mostra tudo junto; a parte de cada pessoa fica no PDF da casa
+  const porPessoa = id=>'';     // Beta 52: a lista mostra tudo junto; a parte de cada pessoa fica no PDF do grupo
   const blocos = Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
     const itens = ids.filter(id=>tot[id]).map(id=>`<div class="mrow ${ok[id]?'rm':''}" style="cursor:pointer" onclick="nutriCompraOk('${id}')"><span class="n">${ok[id]?'☑':'☐'} ${nutriNomeCompra(id)}${porPessoa(id)}</span><span class="q">${fmt(id)}</span></div>`).join('');
     return itens ? `<div class="section-lbl" style="margin:14px 0 2px">${titulo}</div>${itens}` : '';
   }).join('');
-  window.__nutriTextoCompras = `🛒 Lista de compras (MetaTreino)${R.casa ? ` — casa, ${R.pessoas} pessoas` : ''}\nPeríodo: ${_famPeriodoTxt(R.periodo)}\n\n` + Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
+  window.__nutriTextoCompras = `🛒 Lista de compras (MetaTreino)${R.casa ? ` — grupo, ${R.pessoas} pessoas` : ''}\nPeríodo: ${_famPeriodoTxt(R.periodo)}\n\n` + Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
     const l = ids.filter(id=>tot[id] && !ok[id]).map(id=>`• ${nutriNomeCompra(id)}: ${fmt(id)}`); return l.length ? titulo+'\n'+l.join('\n') : '';
   }).filter(Boolean).join('\n\n');
-  $('modal-inner').innerHTML = `<div id="fam-compras"><h3>🛒 Lista de compras${R.casa ? ' da casa' : ''}</h3>
+  $('modal-inner').innerHTML = `<div id="fam-compras"><h3>🛒 Lista de compras${R.casa ? ' do grupo' : ''}</h3>
     ${famAtiva() ? `<div class="mod-toggle" style="margin:8px 0 0">
       <button class="seg ${modo==='eu'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras(null,'eu')">Só eu</button>
-      <button class="seg ${modo==='casa'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras(null,'casa')">Casa toda (${famMembros().length})</button></div>` : ''}
+      <button class="seg ${modo==='casa'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras(null,'casa')">Grupo todo (${famMembros().length})</button></div>` : ''}
     <div class="mod-toggle" style="margin:8px 0 6px">
       <button class="seg ${escopo==='semana'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('semana')">Até domingo</button>
       <button class="seg ${escopo==='7dias'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('7dias')">Próximos 7 dias</button>
@@ -751,7 +751,7 @@ window.nutriListaCompras = function(escopo, modo){
     <p style="color:var(--text-dim);font-size:12px;line-height:1.55;margin:4px 0 0">${R.editados?`Já com ${R.editados===1?'a sua 1 edição':'as suas '+R.editados+' edições'}. `:''}Dias que já passaram não entram. Toque num item para marcar “já tenho”. Grãos e carnes em peso cru; óleos e leite em ml/L; frutas e pães em unidades.</p>
     <div style="max-height:50vh;overflow-y:auto">${blocos || '<div class="text-dim" style="padding:14px 0;font-size:13px">Nada a comprar neste período.</div>'}</div>
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="nutriCopiarCompras()">📋 Copiar / compartilhar lista</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="${R.casa ? 'pdfAlimentacaoCasa()' : 'pdfAlimentacao()'}">📄 PDF ${R.casa ? 'da casa' : 'do meu plano'}</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="${R.casa ? 'pdfAlimentacaoCasa()' : 'pdfAlimentacao()'}">📄 PDF ${R.casa ? 'do grupo' : 'do meu plano'}</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">‹ Voltar ao plano</button></div>`;
   $('modal-back').classList.add('on');
 };
@@ -789,12 +789,12 @@ function nutriPdfCompras(S, arte, modo){
       : 'Já com as suas edições. Grãos e carnes em peso cru; quantidades arredondadas para facilitar a compra.');
   }catch(e){ console.log('pdf compras:', e); }
 }
-// PDF da casa: cardápio compartilhado da semana (o prato, sem quantidades — elas são de cada um) + compras somadas
+// PDF do grupo: cardápio compartilhado da semana (o prato, sem quantidades — elas são de cada um) + compras somadas
 function pdfMontarCasa(jsPDF, arte){
-  if(!famAtiva()) throw new Error('Você não está num grupo da casa');
+  if(!famAtiva()) throw new Error('Você não está num grupo');
   const P = famParams(); const n = nutriConfig();
   const nomes = famMembros().map(u=>u===_famUid()?'você':famNome(u)).join(', ');
-  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio da casa', sub:`${famMembros().length} pessoas: ${nomes}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
+  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio compartilhado', sub:`${famMembros().length} pessoas: ${nomes}`, sub2:`Refeições compartilhadas: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
   S.nota('A comida é compartilhada, a alimentação é individual: o prato abaixo é o mesmo para todos, e cada pessoa vê no app a própria quantidade e calorias, calculadas pelo plano dela.', { caixa:true, cor:arte.C.ink });
   const DN = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
   const linhas = [];
@@ -807,14 +807,14 @@ function pdfMontarCasa(jsPDF, arte){
     });
   });
   if(linhas.length){
-    S.secao('Cardápio da casa — próximos 7 dias', 'quantidades individuais no app de cada pessoa');
+    S.secao('Cardápio compartilhado — próximos 7 dias', 'quantidades individuais no app de cada pessoa');
     S.tabela([{t:'Dia', w:24, negrito:true, quebra:true}, {t:'Refeição', w:24, quebra:true}, {t:'Prato', w:44, quebra:true, negrito:true}, {t:'Ingredientes e uso', w:84, quebra:true}], linhas, { t:7.6 });
   }
   // Beta 58: as compras somadas da casa estão no PDF da lista de compras (parte 62)
-  S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém da casa tem doença, alergia ou usa medicação, procure um profissional.');
+  S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém do grupo tem doença, alergia ou usa medicação, procure um profissional.');
   return S.fim(`metatreino-casa-${chaveDia(new Date())}.pdf`, _pdfAluno());
 }
-function pdfAlimentacaoCasa(){ if(!famAtiva()) return toast('Entre num grupo da casa para gerar o PDF da casa.'); return _pdfGerar('pdfAlimentacao', 'alimentacao', pdfMontarCasa, 'Alimentação da casa'); }
+function pdfAlimentacaoCasa(){ if(!famAtiva()) return toast('Entre num grupo para gerar o PDF do grupo.'); return _pdfGerar('pdfAlimentacao', 'alimentacao', pdfMontarCasa, 'Cardápio compartilhado'); }
 
 // ---------- assistente: perguntas de corrida só para quem tem plano de corrida ----------
 const _MA_RUN_GUARDADAS = [];

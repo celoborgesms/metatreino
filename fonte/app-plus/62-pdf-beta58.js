@@ -131,7 +131,7 @@ function pdfMontarCompras(jsPDF, arte){
   const escopo = window.__comprasEsc || '7dias'; const modo = (window.__comprasModo === 'casa' && famAtiva()) ? 'casa' : 'eu';
   const R = nutriComprasTotais(escopo, modo); const tot = R.tot;
   const semKey = chaveDia(nutriDataDia(1)) + (R.casa ? '-casa' : ''); const ok = ((state.comprasOk||{})[semKey]) || {};
-  const S = pdfDoc(jsPDF, arte, { titulo: R.casa ? 'Lista de compras da casa' : 'Lista de compras', sub:`Período: ${_famPeriodoTxt(R.periodo)}${R.casa ? ` · ${R.pessoas} pessoas` : ''}`,
+  const S = pdfDoc(jsPDF, arte, { titulo: R.casa ? 'Lista de compras do grupo' : 'Lista de compras', sub:`Período: ${_famPeriodoTxt(R.periodo)}${R.casa ? ` · ${R.pessoas} pessoas` : ''}`,
     sub2: R.casa ? 'Soma o que cada pessoa vai comer, na porção do próprio plano' : 'Pelo seu cardápio, já com as suas edições' });
   const { doc, M, W, C } = S;
   const ids = Object.keys(tot).filter(id=>!ok[id]); const jaTem = Object.keys(tot).filter(id=>ok[id]).length;
@@ -163,7 +163,7 @@ function pdfMontarCompras(jsPDF, arte){
   return S.fim(`metatreino-lista-de-compras-${chaveDia(new Date())}.pdf`, _pdfAluno());
 }
 function pdfListaCompras(){ return _pdfGerar('pdfAlimentacao', 'compras', pdfMontarCompras, R_ROT_COMPRAS()); }
-function R_ROT_COMPRAS(){ return (window.__comprasModo === 'casa' && famAtiva()) ? 'Lista de compras da casa' : 'Lista de compras'; }
+function R_ROT_COMPRAS(){ return (window.__comprasModo === 'casa' && famAtiva()) ? 'Lista de compras do grupo' : 'Lista de compras'; }
 
 // a tela da lista de compras: o botão de PDF gera a LISTA (antes gerava o plano alimentar inteiro)
 mtGancho('nutriListaCompras', { depois(){

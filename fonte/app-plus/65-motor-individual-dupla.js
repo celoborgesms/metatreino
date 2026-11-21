@@ -9,13 +9,13 @@
 //     favoritos primeiro; senão uma semente da própria conta. Duas pessoas com as mesmas respostas
 //     recebem fichas diferentes, mas com o mesmo papel em cada posição (mesmo estímulo).
 //  3. Estações de treino (exEstacao): qual aparelho cada exercício ocupa (polia, leg press, banco…).
-//  4. Treino em dupla (usa o grupo da Alimentação da casa SÓ para saber quem treina no mesmo lugar):
+//  4. Treino em dupla (usa o grupo da Cardápio compartilhado SÓ para saber quem treina no mesmo lugar):
 //     cada pessoa publica, no próprio perfil do grupo, quais estações usa em cada dia (texto curto) e,
 //     se quiser, as janelas dos treinos (para as conquistas em dupla). "Organizar meu plano" muda SÓ o
 //     plano de quem tocou: troca a ordem dos treinos entre os SEUS dias e, se um aparelho de unidade única
 //     está com a outra pessoa no mesmo dia, troca por um equivalente (mesmo grupo, mesmo papel, equipamento
 //     que você tem, sem conflito com limitações). Sem equivalente, mantém e avisa. Dá para desfazer.
-//     Corrida e Alimentação da casa não são tocadas.
+//     Corrida e Cardápio compartilhado não são tocadas.
 //  5. Conquistas novas: Calistenia, Híbrido e Treinando juntos (comuns, raras, especiais e secretas),
 //     todas por critério verificável no histórico; e o ícone das conquistas de corrida (o tênis
 //     parecia um ferro de passar).
@@ -296,12 +296,12 @@ function openTreinoDupla(){
   const eqAberto = window.__dpEqAberto ? ' open' : '';
   mi.dataset.tela = 'dupla';
   mi.innerHTML = `<div id="dupla-tela"><h3>Equipamentos e treino em dupla</h3>
-    <p class="fam-p">Diga o que você tem: o plano evita o que falta e, se outra pessoa da casa treina no mesmo lugar, evita que vocês precisem do <b>mesmo aparelho no mesmo dia</b>. Cada um continua com o próprio plano, histórico e cargas — organizar muda só o <b>seu</b> plano. Corrida e cardápio não mudam.</p>
+    <p class="fam-p">Diga o que você tem: o plano evita o que falta e, se outra pessoa do grupo treina no mesmo lugar, evita que vocês precisem do <b>mesmo aparelho no mesmo dia</b>. Cada um continua com o próprio plano, histórico e cargas — organizar muda só o <b>seu</b> plano. Corrida e cardápio não mudam.</p>
     <details class="dp-eq"${eqAberto} ontoggle="window.__dpEqAberto=this.open"><summary>Meus equipamentos</summary>
       <p class="fam-p">Quantos de cada você tem: <b>0</b> = não tenho, <b>1</b> = um só, <b>2+</b> = dois ou mais. Sem resposta, o app considera 1 de cada aparelho e halteres em vários pares. Elásticos e kettlebell não aparecem porque nenhum exercício da biblioteca usa.</p>
       ${MT_EQ_GRUPOS.map(([t, l])=>`<div class="dp-eqg">${t}</div>${l.map(eqLinha).join('')}`).join('')}
     </details>
-    ${P ? `<label class="pi-row" style="margin:12px 0 8px"><span class="pi-txt"><b>Treino com ${mtEsc(P.nome)} no mesmo lugar</b><small>${cfg.on ? 'Ligado' : 'Desligado'} · ${D ? `${mtEsc(P.nome)} também ligou` : `${mtEsc(P.nome)} ainda não ligou`}</small></span><input type="checkbox" class="pi-sw" ${cfg.on?'checked':''} onchange="duplaLiga(this.checked)"></label>` : `<p class="fam-mini" style="margin-top:10px">Treino em dupla: as duas pessoas precisam estar no mesmo grupo de Perfil › Minha casa.</p>`}
+    ${P ? `<label class="pi-row" style="margin:12px 0 8px"><span class="pi-txt"><b>Treino com ${mtEsc(P.nome)} no mesmo lugar</b><small>${cfg.on ? 'Ligado' : 'Desligado'} · ${D ? `${mtEsc(P.nome)} também ligou` : `${mtEsc(P.nome)} ainda não ligou`}</small></span><input type="checkbox" class="pi-sw" ${cfg.on?'checked':''} onchange="duplaLiga(this.checked)"></label>` : `<p class="fam-mini" style="margin-top:10px">Treino em dupla: as duas pessoas precisam estar no mesmo grupo de Perfil › Meu grupo.</p>`}
     ${P && cfg.on && D ? `<div class="section-lbl" style="margin:10px 0 4px">Semana</div><div class="dp-tab">${linhas || '<p class="fam-p">Nenhum dia de musculação em comum.</p>'}</div>` : ''}
     <p class="fam-p" style="margin-top:8px">${CD.length ? `<b>${CD.length} ${CD.length===1?'exercício precisa':'exercícios precisam'}</b> de um aparelho que ${mtEsc(P ? P.nome : '')} também usa no mesmo dia. ` : ''}${CF.length ? `<b>${CF.length} ${CF.length===1?'exercício usa':'exercícios usam'}</b> algo que você marcou que não tem.` : ''}${!C.length ? 'Tudo certo: nenhum exercício do seu plano depende de algo que falta ou que está com outra pessoa.' : ''}</p>
     ${C.length ? `<button class="btn btn-primary btn-block" style="margin-top:4px" onclick="duplaOrganizar()">Organizar o meu plano</button>` : ''}
@@ -398,7 +398,7 @@ const MT_TROFEUS_63 = [
   { id:'hib_4sem',    emoji:'🔀', name:'Híbrido de Verdade',   desc:'4 semanas híbridas seguidas',                                   cat:'hibrido', nv:'rara' },
   { id:'hib_12',      emoji:'🔀', name:'Atleta Completo',      desc:'12 semanas híbridas',                                           cat:'hibrido', nv:'especial' },
   // Treinando juntos (dupla) — exige os horários dos treinos se cruzarem, não só o mesmo dia
-  { id:'dupla_1',     emoji:'🤝', name:'Parceiros de Treino',  desc:'Treinou junto com quem é da sua casa (horários que se cruzam)', cat:'dupla', nv:'comum' },
+  { id:'dupla_1',     emoji:'🤝', name:'Parceiros de Treino',  desc:'Treinou junto com quem é do seu grupo (horários que se cruzam)', cat:'dupla', nv:'comum' },
   { id:'dupla_5',     emoji:'🤝', name:'Um Apoia o Outro',     desc:'Treinaram juntos em 5 dias diferentes',                         cat:'dupla', nv:'rara' },
   { id:'dupla_20',    emoji:'🤝', name:'Dupla de Ferro',       desc:'Treinaram juntos em 20 dias diferentes',                        cat:'dupla', nv:'especial' },
   // Secretas

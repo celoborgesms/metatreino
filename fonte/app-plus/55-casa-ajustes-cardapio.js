@@ -2,12 +2,12 @@
 // =====================================================================
 // 55. Beta 52 — Ajustes da casa com calorias, PDF por pessoa, cardápio maior e "fora da rotina"
 // =====================================================================
-// • Prato da casa: o que o administrador tira ou acrescenta muda as calorias de cada pessoa (parte 49:
+// • Prato compartilhado: o que o administrador tira ou acrescenta muda as calorias de cada pessoa (parte 49:
 //   famPrato/nutriMontarPlano). Cada um vê "recomendado X → com o ajuste Y (±Z)" na refeição e no dia.
 //   O administrador pode ligar "Manter as calorias de cada um" (as porções são recalculadas, como antes).
 // • Cada pessoa publica no grupo a própria semana (o que vai comer em cada refeição, em gramas, e as
 //   calorias: recomendado, ajuste da casa e com os próprios ajustes). Nada de peso, idade, altura ou e-mail.
-// • PDF da casa: resumo por pessoa e por dia (recomendado × planejado e o motivo), o cardápio de CADA pessoa
+// • PDF do grupo: resumo por pessoa e por dia (recomendado × planejado e o motivo), o cardápio de CADA pessoa
 //   separado e a lista de compras somada. No app, a lista mostra tudo junto.
 // • Cardápio mais amplo: +45 pratos com os alimentos que já existem (cada refeição tem mais opções).
 // • "Fora da rotina": comidas comuns do dia a dia (pizza, hambúrguer, refrigerante, cerveja, doces…) para
@@ -131,7 +131,7 @@ mtGancho('openFamilia', { depois(){
     const eco = mi.querySelector('[onclick="famAlternaEconomico()"]'); const linha = eco && eco.closest('.mod-toggle'); if(!linha) return;
     const on = !!_famCfg().compensa, adm = famSouAdm();
     linha.insertAdjacentHTML('afterend', `<label class="fam-comp ${adm?'':'off'}" id="fam-compensa"><input type="checkbox" ${on?'checked':''} ${adm?'':'disabled'} onchange="famAlternaCompensa()">
-      <span><b>Manter as calorias de cada um</b><small>${on ? 'Ao tirar ou acrescentar um alimento no prato da casa, as porções do resto do prato são recalculadas para cada pessoa continuar na própria meta.' : 'Desligado: tirar ou acrescentar um alimento muda as calorias de cada pessoa, e cada uma vê no plano quanto ficou a mais ou a menos.'}</small></span></label>`);
+      <span><b>Manter as calorias de cada um</b><small>${on ? 'Ao tirar ou acrescentar um alimento no prato compartilhado, as porções do resto do prato são recalculadas para cada pessoa continuar na própria meta.' : 'Desligado: tirar ou acrescentar um alimento muda as calorias de cada pessoa, e cada uma vê no plano quanto ficou a mais ou a menos.'}</small></span></label>`);
   }catch(e){}
 }});
 
@@ -144,12 +144,12 @@ mtGancho('openNutri', { depois(){
     const primeira = mi.querySelector('details.mealc'); if(!primeira) return;
     const d = pl.casaDelta || 0, comp = ms.every(m=>m.compensada);
     const motivos = ms.map(m=>`${m.nome}: ${famAjusteNomes(m).join(', ')}`).join(' · ');
-    primeira.insertAdjacentHTML('beforebegin', `<div class="fam-ajuste-dia ${d>0?'mais':d<0?'menos':''}" id="fam-ajuste-dia">🏠 <b>Ajustes do prato da casa hoje</b><br>${mtEsc(motivos)}<br>
+    primeira.insertAdjacentHTML('beforebegin', `<div class="fam-ajuste-dia ${d>0?'mais':d<0?'menos':''}" id="fam-ajuste-dia">👥 <b>Ajustes do prato compartilhado hoje</b><br>${mtEsc(motivos)}<br>
       ${comp ? `Porções recalculadas: você continua com ~${Math.round(pl.dia.kcal)} kcal.` : `Recomendado <b>${pl.diaRec} kcal</b> → com os ajustes <b>${Math.round(pl.dia.kcal)} kcal</b> (${d>0?'+':d<0?'−':''}${Math.abs(d)} kcal).`}</div>`);
   }catch(e){ console.log('casa (dia):', e); }
 }});
 
-// ---------- 5. a minha semana, publicada no grupo (para o PDF da casa) ----------
+// ---------- 5. a minha semana, publicada no grupo (para o PDF do grupo) ----------
 // { dk: { r: recomendado, c: ajuste da casa, k: com os meus ajustes, m: { refeição: { n: prato, h: hora, i: [[id, g]], x: [[nome, kcal]] } } } }
 function famMinhaSemana(){
   const out = {}; const hojeIdx = getDayIdx();
@@ -168,7 +168,7 @@ function famMinhaSemana(){
   return out;
 }
 
-// ---------- 6. PDF da casa: por pessoa ----------
+// ---------- 6. PDF do grupo: por pessoa ----------
 function _famQtdTxt(id, g){
   const a = NUTRI_ALIMENTOS[id]; if(!a) return '';
   if(a[5]) return `${Math.max(1, Math.round(g/a[5]))} unid.`;
@@ -211,12 +211,12 @@ function _famMotivoCasa(dk){
 }
 const _pdfMontarCasaB49 = window.pdfMontarCasa;
 window.pdfMontarCasa = function(jsPDF, arte){
-  if(!famAtiva()) throw new Error('Você não está num grupo da casa');
+  if(!famAtiva()) throw new Error('Você não está num grupo');
   const P = famParams(); const eu = _famUid();
   const membros = [eu].concat(famMembros().filter(u=>u!==eu));
   const nomeDe = u=>u===eu ? `${_famMeuApelido()} (você)` : famNome(u);
-  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio da casa', sub:`${membros.length} pessoas: ${membros.map(nomeDe).join(', ')}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
-  S.nota('A comida é compartilhada, a alimentação é individual: nas refeições da casa o prato é o mesmo para todos, e a quantidade de cada pessoa sai do plano dela. Abaixo, o que cada uma vai comer, separado.', { caixa:true, cor:arte.C.ink });
+  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio compartilhado', sub:`${membros.length} pessoas: ${membros.map(nomeDe).join(', ')}`, sub2:`Refeições compartilhadas: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
+  S.nota('A comida é compartilhada, a alimentação é individual: nas refeições compartilhadas o prato é o mesmo para todos, e a quantidade de cada pessoa sai do plano dela. Abaixo, o que cada uma vai comer, separado.', { caixa:true, cor:arte.C.ink });
   const DN = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   const fd = dk=>{ const dt = new Date(dk + 'T12:00:00'); return `${DN[dt.getDay()]} ${dk.slice(8,10)}/${dk.slice(5,7)}`; };
   const sem = {}; membros.forEach(u=>{ try{ sem[u] = _famSemanaDe(u); }catch(e){ sem[u] = null; } });
@@ -251,14 +251,14 @@ window.pdfMontarCasa = function(jsPDF, arte){
         const txt = (m.i||[]).map(([id,g])=>`${NUTRI_ALIMENTOS[id] ? NUTRI_ALIMENTOS[id][0] : id} ${_famQtdTxt(id,g)}`).concat((m.x||[]).map(([n,k])=>`${n} (${k} kcal)`)).join(' · ');
         const k = Math.round(_famKcalItens(m.i) + (m.x||[]).reduce((t,[,v])=>t+(+v||0),0));
         const casa = famDaCasaNoDia(P, r.id, new Date(dk + 'T12:00:00').getDay() || 7, dk);
-        linhas.push([fd(dk), `${r.nome}${casa ? ' · casa' : ''}\n${m.h || r.hora}`, `${m.n || ''}\n${txt}`, String(k)]);
+        linhas.push([fd(dk), `${r.nome}${casa ? ' · compartilhada' : ''}\n${m.h || r.hora}`, `${m.n || ''}\n${txt}`, String(k)]);
       });
       linhas.push(['', 'Total do dia', `recomendado ${dia.r} kcal${dia.k !== dia.r ? ` · planejado ${dia.k} kcal (${sinal(dia.k - dia.r)})` : ''}`, String(dia.k)]);
     });
     if(linhas.length) S.tabela([{t:'Dia', w:20, negrito:true}, {t:'Refeição', w:30, quebra:true}, {t:'Prato e quantidades', w:110, quebra:true}, {t:'kcal', w:16, dir:1, negrito:true}], linhas, { t:7.4 });
   });
   // Beta 58: as compras somadas (com a parte de cada um) estão no PDF da lista de compras (pdfListaCompras, parte 62)
-  S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém da casa tem doença, alergia ou usa medicação, procure um profissional.');
+  S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém do grupo tem doença, alergia ou usa medicação, procure um profissional.');
   return S.fim(`metatreino-casa-${chaveDia(new Date())}.pdf`, _pdfAluno());
 };
 

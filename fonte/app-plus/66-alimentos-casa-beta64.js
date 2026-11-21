@@ -1,5 +1,5 @@
 // =====================================================================
-// 66. Beta 64 — mais alimentos e bebidas, busca melhor, "Minha casa" no Perfil
+// 66. Beta 64 — mais alimentos e bebidas, busca melhor, "Meu grupo" no Perfil
 // ---------------------------------------------------------------------
 //  • Alimentos novos (valores aproximados da TACO 4ª ed. / IBGE POF, por 100 g ou 100 ml, prontos para
 //    consumo). Bebidas vêm por unidade (copo, lata, taça, dose). Bebida alcoólica: as calorias do álcool
@@ -7,7 +7,7 @@
 //  • Tipos de ovo (cozido, frito, mexido, omelete, clara, codorna) e misturas do dia a dia.
 //  • Busca: sem acento, por qualquer palavra e por apelidos (refri, coca zero, pinga, chopp…), com o
 //    que começa pelo termo primeiro.
-//  • Perfil › Minha casa: o vínculo da casa (cardápio e treino em dupla) num lugar só.
+//  • Perfil › Meu grupo: o vínculo da casa (cardápio e treino em dupla) num lugar só.
 // =====================================================================
 const NUTRI_MAIS = {
   // ovos
@@ -107,12 +107,12 @@ window.nutriAddFiltra = function(){
     : `<div style="padding:14px 4px;color:var(--text-dim);font-size:13px">Nada encontrado. Use "Outro alimento" para digitar as calorias.</div>`;
 };
 
-// ---------- Perfil › Minha casa ----------
+// ---------- Perfil › Meu grupo ----------
 function openMinhaCasa(){ window.__casaDoPerfil = true; if(typeof openFamilia === 'function') openFamilia(); }
 function mtPerfilCasa(){
   try{
     const lista = document.querySelector('#pf-sentado-row'); if(!lista || $('pf-casa-row')) return;
-    lista.insertAdjacentHTML('afterend', `<div class="list-row" onclick="openMinhaCasa()" id="pf-casa-row">👥 <span>Minha casa</span><span id="pf-casa-val" style="margin-left:auto;color:var(--text-mute);font-size:12px"></span></div>`);
+    lista.insertAdjacentHTML('afterend', `<div class="list-row" onclick="openMinhaCasa()" id="pf-casa-row">👥 <span>Meu grupo</span><span id="pf-casa-val" style="margin-left:auto;color:var(--text-mute);font-size:12px"></span></div>`);
   }catch(e){}
 }
 function mtPerfilCasaVal(){
