@@ -551,10 +551,11 @@ function openFamilia(){
   if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao');
   const mi = $('modal-inner'); if(mi.dataset.tela === 'nutri') mi.dataset.tela = 'nutri-sub';
   const n = nutriConfig();
-  const volta = `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">← Voltar ao plano alimentar</button>`;
+  // Beta 64: aberta pelo Perfil › Minha casa, o botão fecha; aberta do plano alimentar, volta para ele
+  const volta = window.__casaDoPerfil ? `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="window.__casaDoPerfil=false;closeModal()">Fechar</button>` : `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">← Voltar ao plano alimentar</button>`;
   if(!famAtiva()){
-    mi.innerHTML = `<div id="fam-tela"><h3>🏠 Alimentação da casa</h3>
-      <p class="fam-p">Para quem mora junto e come a mesma comida. <b>A comida é compartilhada, a alimentação é individual:</b> todos veem o mesmo prato, cada um com a <b>própria quantidade e calorias</b>, calculadas pelo plano de cada pessoa.</p>
+    mi.innerHTML = `<div id="fam-tela"><h3>🏠 Minha casa</h3>
+      <p class="fam-p">Para quem mora junto: o mesmo cardápio com a porção de cada um e, se quiserem, o treino organizado para não disputarem aparelho. <b>A comida é compartilhada, a alimentação é individual:</b> todos veem o mesmo prato, cada um com a <b>própria quantidade e calorias</b>, calculadas pelo plano de cada pessoa.</p>
       <ul class="fam-ul"><li>Quem cria o grupo é o administrador: decide o prato, os dias e os horários das refeições da casa. Dá para passar a administração depois.</li><li>A lista de compras e o PDF da casa somam o que cada pessoa vai comer.</li><li>Até ${FAM_MAX} pessoas. Cada uma precisa do plano alimentar (Premium).</li></ul>
       ${n.cardapioFixo ? '<p class="fam-mini">Você saiu de um grupo e manteve o cardápio daquela época nas refeições da casa.</p>' : ''}
       <button class="btn btn-primary btn-block" onclick="famCriar()">Criar o grupo da casa</button>
@@ -574,21 +575,27 @@ function openFamilia(){
   const blocoRef = refsCasa.map(mid=>{ const dias = famDiasRef(mid); const h = famHoraRef(mid) || (NUTRI_REFEICOES.find(r=>r.id===mid)||{}).hora || '';
     return `<div class="fam-ref"><div class="fam-ref-t"><b>${FAM_NOMES_REF[mid]}</b>${adm ? `<input type="time" class="input fam-hora" value="${h}" aria-label="Horário do ${FAM_NOMES_REF_MIN[mid]}" onchange="famHora('${mid}', this.value)">` : `<span class="fam-mini">${h}</span>`}</div>
       <div class="fam-dias" role="group" aria-label="Dias em que o ${FAM_NOMES_REF_MIN[mid]} é da casa">${FAM_DIAS_CURTO.map((t,i)=>`<button class="fam-dia ${dias.includes(i+1)?'on':''}" ${dis} aria-pressed="${dias.includes(i+1)}" aria-label="${NUTRI_DIAS[i]}" onclick="famAlternaDia('${mid}',${i+1})">${t}</button>`).join('')}</div></div>`; }).join('');
-  mi.innerHTML = `<div id="fam-tela"><h3>🏠 Alimentação da casa</h3>
+  // Beta 64: tela reorganizada em blocos — quem está na casa, refeições da casa (recolhido), compras/PDF lado a lado,
+  // treino em dupla e "sair" discreto no fim. As funções são as mesmas de antes.
+  const _ec = `<div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${P.economico?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaEconomico()">💰 Pratos econômicos na casa</button><button class="seg ${famTrocaPropria()?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaTrocaPropria()">🔄 Cada um pode trocar só para si</button></div>`;
+  mi.innerHTML = `<div id="fam-tela"><h3>🏠 Minha casa</h3>
     <div class="fam-codigo-box"><small>Código do grupo</small><b>${mtEsc(famId())}</b><button class="btn btn-ghost" onclick="famCompartilharCodigo()">Convidar</button></div>
     <p class="fam-p"><b>A comida é compartilhada, a alimentação é individual.</b> O prato é o mesmo para todos; a quantidade e as calorias de cada um vêm do próprio plano.</p>
-    <div class="fam-sec">Quem está na casa (${famMembros().length}/${FAM_MAX})</div>
-    <div class="fam-membros">${membros}</div>
-    <p class="fam-mini">${adm ? 'Você é o administrador: troca o prato, tira ou acrescenta alimentos no prato da casa e define dias e horários.' : `${mtEsc(famNome(admUid))} administra o cardápio da casa. Você vê o prato da casa com a sua porção e pode ajustar a sua quantidade.`}</p>
-    <div class="fam-sec">Refeições da casa</div>
-    <div class="fam-chips">${Object.keys(FAM_NOMES_REF).map(k=>`<button class="rc-chip ${refsCasa.includes(k)?'on':''}" ${dis} aria-pressed="${refsCasa.includes(k)}" onclick="famAlternaRefeicao('${k}')">${FAM_NOMES_REF[k]}</button>`).join('')}</div>
-    <div class="fam-refs">${blocoRef}</div>
-    <p class="fam-mini">Quem usa menos refeições por dia (por exemplo 4) segue só as que existem no plano dele. Nos dias desmarcados, a refeição volta a ser individual.</p>
-    <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${P.economico?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaEconomico()">💰 Pratos econômicos na casa</button><button class="seg ${famTrocaPropria()?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaTrocaPropria()">🔄 Cada um pode trocar só para si</button></div>
-    ${restr.length ? `<p class="fam-p" style="margin-top:10px">As refeições da casa respeitam as restrições de todos: <b>${restr.join(', ')}</b>.</p>` : ''}
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="nutriListaCompras(null,'casa')">🛒 Lista de compras da casa</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="pdfAlimentacaoCasa()">📄 Cardápio da casa em PDF</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="famSair()">Sair do grupo (mantém meu cardápio)</button>
+    <details class="fam-bloco" open><summary><b>Pessoas</b><small>${famMembros().length}/${FAM_MAX}</small></summary>
+      <div class="fam-membros">${membros}</div>
+      <p class="fam-mini">${adm ? 'Você é o administrador do cardápio: troca o prato, tira ou acrescenta alimentos no prato da casa e define dias e horários.' : `${mtEsc(famNome(admUid))} administra o cardápio da casa. Você vê o prato da casa com a sua porção e pode ajustar a sua quantidade.`}</p>
+    </details>
+    <details class="fam-bloco"><summary><b>Refeições da casa</b><small>${refsCasa.length ? refsCasa.map(k=>FAM_NOMES_REF_MIN[k]).join(' e ') : 'nenhuma'}</small></summary>
+      <div class="fam-chips">${Object.keys(FAM_NOMES_REF).map(k=>`<button class="rc-chip ${refsCasa.includes(k)?'on':''}" ${dis} aria-pressed="${refsCasa.includes(k)}" onclick="famAlternaRefeicao('${k}')">${FAM_NOMES_REF[k]}</button>`).join('')}</div>
+      <div class="fam-refs">${blocoRef}</div>
+      <p class="fam-mini">Quem usa menos refeições por dia (por exemplo 4) segue só as que existem no plano dele. Nos dias desmarcados, a refeição volta a ser individual.</p>
+      ${_ec}
+      ${restr.length ? `<p class="fam-p" style="margin-top:10px">As refeições da casa respeitam as restrições de todos: <b>${restr.join(', ')}</b>.</p>` : ''}
+    </details>
+    <div class="fam-sec">Compras e cardápio</div>
+    <div class="fam-2b"><button class="btn btn-primary" onclick="nutriListaCompras(null,'casa')">🛒 Lista de compras</button><button class="btn btn-ghost" onclick="pdfAlimentacaoCasa()">📄 Cardápio em PDF</button></div>
+    ${typeof openTreinoDupla === 'function' ? `<button class="mealc rc-entrada" style="margin-top:12px" onclick="openTreinoDupla()"><span class="mi">🏋️</span><span class="mt"><b>Treino em dupla</b><small>aparelhos de quem treina no mesmo lugar</small></span><span class="rc-seta">›</span></button>` : ''}
+    <button class="fam-sair" onclick="famSair()">Sair do grupo (mantém meu cardápio)</button>
     ${volta}</div>`;
   $('modal-back').classList.add('on'); mi.scrollTop = 0;
 }
@@ -601,8 +608,15 @@ mtGancho('openNutri', { depois(){
     const bt = mi.querySelector('[onclick="nutriListaCompras()"]'); if(!bt) return;
     if(!mi.querySelector('#fam-entrada')){
       const ativo = famAtiva();
-      const sub = ativo ? `${famMembros().length} pessoas · ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(' e ')} da casa${famSouAdm()?' · você administra':''}` : 'mesmo prato, porção de cada um';
-      bt.insertAdjacentHTML('afterend', `<button class="mealc rc-entrada" id="fam-entrada" onclick="openFamilia()"><span class="mi">🏠</span><span class="mt"><b>Alimentação da casa</b><small>${mtEsc(sub)}</small></span><span class="rc-seta">›</span></button>`);
+      // Beta 64: conectar a casa agora fica em Perfil › Minha casa. Aqui: a entrada completa só para quem já está
+      // num grupo; para os outros, uma linha discreta que leva ao mesmo lugar.
+      if(ativo){
+        const n = famMembros().length;
+        const sub = `${n} ${n===1?'pessoa':'pessoas'} · ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(' e ')} da casa${famSouAdm()?' · você administra':''}`;
+        bt.insertAdjacentHTML('afterend', `<button class="mealc rc-entrada" id="fam-entrada" onclick="window.__casaDoPerfil=false;openFamilia()"><span class="mi">🏠</span><span class="mt"><b>Alimentação da casa</b><small>${mtEsc(sub)}</small></span><span class="rc-seta">›</span></button>`);
+      } else {
+        bt.insertAdjacentHTML('afterend', `<div id="fam-entrada" class="fam-dica-perfil">Mora com alguém? Dá para dividir o cardápio em <a href="#" onclick="openMinhaCasa();return false">Perfil › Minha casa</a>.</div>`);
+      }
     }
     if(!famAtiva()) return;
     bt.textContent = `🛒 Lista de compras (só eu ou da casa)`;

@@ -111,7 +111,9 @@ function exEstacao(ex){
   const r = R.find(([re])=>re.test(n)); return r ? r[1] : null;
 }
 // quantas unidades: o que a pessoa informou; sem informação, 1 de cada aparelho e halteres como vários pares
-function _duplaQtd(st, q){ q = q || {}; if(q[st] != null) return +q[st] || 1; return st === 'halteres' ? 2 : 1; }
+// Beta 64: 0 = não tenho (o plano evita), 1 = um só (evita disputa na dupla), 2 = dois ou mais
+function _duplaQtd(st, q){ q = q || {}; if(q[st] != null) return +q[st] === 0 ? 0 : (+q[st] || 1); return st === 'halteres' ? 2 : 1; }
+function _eqTenho(st){ return !st || _duplaQtd(st, _duplaCfg().q) > 0; }
 
 // ---------- 2. escolha individual entre equivalentes ----------
 function _mtHash(s){ let h = 2166136261; s = String(s||''); for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -186,7 +188,9 @@ function _duplaDiasParceiro(){
 // estação livre no dia (usada pelo gerador quando a dupla está ligada)
 function _duplaEstacaoLivre(st, dia){
   try{
-    if(!st || !dia || !_duplaCfg().on) return true;
+    if(!st) return true;
+    if(!_eqTenho(st)) return false;                       // marcou que não tem esse aparelho
+    if(!dia || !_duplaCfg().on) return true;
     const D = _duplaDiasParceiro(); if(!D) return true;
     const usos = (D.dias[String(dia)]||[]).filter(u=>u.st === st).length; if(!usos) return true;
     return Math.min(_duplaQtd(st, _duplaCfg().q), _duplaQtd(st, D.P.tr.q)) >= 2;
@@ -194,12 +198,15 @@ function _duplaEstacaoLivre(st, dia){
 }
 // conflitos do MEU plano com o da outra pessoa
 function mtDuplaConflitos(workouts){
-  const D = _duplaDiasParceiro(); if(!D) return null;
+  const D = _duplaCfg().on ? _duplaDiasParceiro() : null;
   const cfg = _duplaCfg(); const out = [];
   (workouts || ((state.modules.lift && state.modules.lift.plan && state.modules.lift.plan.workouts) || [])).forEach(w=>{
-    const dela = D.dias[String(w.dayIdx)] || []; if(!dela.length) return;
+    const dela = D ? (D.dias[String(w.dayIdx)] || []) : [];
     const n = (w.exercises||[]).length || 1;
     (w.exercises||[]).forEach((e,i)=>{ const st = exEstacao(e); if(!st) return;
+      // Beta 64: aparelho que a pessoa marcou que NÃO tem também entra (com ou sem dupla)
+      if(!_eqTenho(st)){ out.push({ dia:w.dayIdx, w, e, st, falta:true, meuPos:i/n, delaPos:0 }); return; }
+      if(!D) return;
       const u = dela.find(x=>x.st === st); if(!u) return;
       if(Math.min(_duplaQtd(st, cfg.q), _duplaQtd(st, D.P.tr.q)) >= 2) return;
       out.push({ dia:w.dayIdx, w, e, st, meuPos:i/n, delaPos:u.pos }); });
@@ -232,7 +239,7 @@ function _duplaEquivalente(e, w, setup){
 }
 function mtDuplaOrganizar(){
   const mod = state.modules.lift; if(!mod || !mod.plan) return { ok:false, msg:'Monte o plano de musculação primeiro.' };
-  if(!_duplaDiasParceiro()) return { ok:false, msg:'A outra pessoa ainda não ligou o treino em dupla (ou não abriu o app na versão nova).' };
+  if(!_duplaDiasParceiro() && !(mtDuplaConflitos()||[]).length) return { ok:false, msg:'Nada para organizar: a outra pessoa ainda não ligou o treino em dupla e o seu plano usa só aparelhos que você tem.' };
   const ws = (mod.plan.workouts||[]).filter(w=>!w.cali);
   const antes = JSON.parse(JSON.stringify(mod.plan.workouts));
   const nAntes = (mtDuplaConflitos()||[]).length;
@@ -253,7 +260,7 @@ function mtDuplaOrganizar(){
       const i = c.w.exercises.indexOf(c.e); if(i < 0) return;
       const novo = Object.assign({}, c.e, { id:slug(alt.name), name:alt.name, sub:alt.sub, equip:alt.equip, unit: alt.iso ? 'tempo' : c.e.unit, duplaDe:c.e.name });
       c.w.exercises[i] = novo; trocas.push({ de:c.e.name, para:alt.name, dia:c.w.dayName });
-    } else mantidos.push({ ex:c.e.name, st:MT_ESTACOES[c.st]||c.st, dia:c.w.dayName, dica: c.delaPos < 0.5 ? 'faça este no fim do treino' : 'faça este logo no começo' });
+    } else mantidos.push({ ex:c.e.name, st:MT_ESTACOES[c.st]||c.st, dia:c.w.dayName, dica: c.falta ? 'não há substituto equivalente com o que você tem — mantido' : (c.delaPos < 0.5 ? 'faça este no fim do treino' : 'faça este logo no começo') });
   });
   ws.forEach(w=>{ try{ w.duration = estimateLiftDuration(w.exercises, mod.setup.goal); }catch(e){} });
   mod.plan.workouts.sort((a,b)=>(a.dayIdx||9)-(b.dayIdx||9));
@@ -268,52 +275,57 @@ function mtDuplaDesfazer(){
   mod.plan.workouts = mod.duplaBackup.workouts; delete mod.duplaBackup; delete mod.duplaUlt; saveData(); return true;
 }
 // --- tela ---
+// Beta 64: a lista de aparelhos inclui TODO equipamento que algum exercício usa (não só os do plano atual),
+// com 0 / 1 / 2+. Marcar não fecha a lista nem pula a tela para o topo.
+const MT_EQ_GRUPOS = [
+  ['Pesos livres e banco', ['halteres','barra_livre','banco','banco_supino','rack','barra_fixa','paralelas']],
+  ['Máquinas e cabos', ['polia','legpress','extensora','flexora','smith','hack','maq_peito','maq_remada','maq_ombro','adut_abdut','maq_gluteo','maq_panturrilha','maq_braco']]
+];
 function openTreinoDupla(){
   const cfg = _duplaCfg(); const P = _duplaParceiro(); const mi = $('modal-inner');
-  if(!P){ mi.innerHTML = `<h3>Treino em dupla</h3><p class="fam-p">Para organizar os treinos com quem treina no mesmo lugar que você, as duas pessoas precisam estar no mesmo grupo da <b>Alimentação da casa</b> (é o vínculo que o app já tem). Nada do cardápio muda.</p><button class="btn btn-primary btn-block" onclick="closeModal()">Entendi</button>`; $('modal-back').classList.add('on'); return; }
-  const D = _duplaDiasParceiro(); const C = cfg.on ? (mtDuplaConflitos()||[]) : [];
+  const rolagem = mi.dataset.tela === 'dupla' ? mi.scrollTop : 0;
+  const D = P ? _duplaDiasParceiro() : null; const C = mtDuplaConflitos() || [];
+  const CD = C.filter(c=>!c.falta), CF = C.filter(c=>c.falta);
   const ws = ((state.modules.lift && state.modules.lift.plan && state.modules.lift.plan.workouts)||[]).slice().sort((a,b)=>a.dayIdx-b.dayIdx);
   const DN = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
-  const linhas = cfg.on && D ? [1,2,3,4,5,6,7].map(d=>{ const w = ws.find(x=>x.dayIdx === d); const g = D.grupos[String(d)];
-    if(!w && !g) return ''; const cf = C.filter(c=>c.dia === d);
+  const linhas = P && cfg.on && D ? [1,2,3,4,5,6,7].map(d=>{ const w = ws.find(x=>x.dayIdx === d); const g = D.grupos[String(d)];
+    if(!w && !g) return ''; const cf = CD.filter(c=>c.dia === d);
     return `<div class="dp-l ${cf.length?'conf':''}"><b>${DN[d-1]}</b><span>Você: ${w ? mtEsc(String(w.name||'').replace(/^Treino \w — /,'')) : '—'}</span><span>${mtEsc(P.nome)}: ${g ? mtEsc(g.replace(/\+/g,' + ')) : '—'}</span>${cf.length ? `<i>${cf.map(c=>MT_ESTACOES[c.st]||c.st).filter((v,i,a)=>a.indexOf(v)===i).join(', ')}</i>` : ''}</div>`; }).join('') : '';
-  const usadas = new Set(); ws.forEach(w=>(w.exercises||[]).forEach(e=>{ const s = exEstacao(e); if(s && s !== 'halteres') usadas.add(s); }));
-  if(D) Object.values(D.dias).forEach(l=>l.forEach(u=>{ if(u.st !== 'halteres') usadas.add(u.st); }));
   const U = state.modules.lift && state.modules.lift.duplaUlt;
-  mi.innerHTML = `<div id="dupla-tela"><h3>Treino em dupla · ${mtEsc(P.nome)}</h3>
-    <p class="fam-p">Para quem treina no mesmo lugar: o app evita que vocês dois precisem do <b>mesmo aparelho no mesmo dia</b>. Cada um continua com o próprio plano, histórico, cargas e conquistas — organizar muda só o <b>seu</b> plano. A corrida e o cardápio não mudam.</p>
-    <label class="pi-row" style="margin:8px 0"><span class="pi-txt"><b>Treinamos no mesmo lugar</b><small>${cfg.on ? 'Ligado' : 'Desligado'} · ${D ? `${mtEsc(P.nome)} também ligou` : `${mtEsc(P.nome)} ainda não ligou`}</small></span><input type="checkbox" class="pi-sw" ${cfg.on?'checked':''} onchange="duplaLiga(this.checked)"></label>
-    ${cfg.on ? `
-      ${D ? `<div class="section-lbl" style="margin:12px 0 4px">Semana</div><div class="dp-tab">${linhas || '<p class="fam-p">Nenhum dia de musculação em comum.</p>'}</div>
-      <p class="fam-p" style="margin-top:6px">${C.length ? `<b>${C.length} ${C.length===1?'exercício precisa':'exercícios precisam'}</b> de um aparelho que ${mtEsc(P.nome)} também usa no mesmo dia.` : 'Sem disputa de aparelho na semana. 👍'}</p>
-      <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="duplaOrganizar()" ${C.length?'':'disabled'}>Organizar o meu plano</button>
-      ${state.modules.lift && state.modules.lift.duplaBackup ? `<button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="duplaDesfazer()">Desfazer a última organização</button>` : ''}
-      ${U && (U.trocas.length || U.mantidos.length) ? `<div class="dp-ult">${U.trocas.map(t=>`<div>↔ ${mtEsc(t.dia)}: <b>${mtEsc(t.para)}</b> no lugar de ${mtEsc(t.de)}</div>`).join('')}${U.mantidos.map(m=>`<div>• ${mtEsc(m.dia)}: ${mtEsc(m.ex)} (${mtEsc(m.st)}) — sem equivalente; ${mtEsc(m.dica)}</div>`).join('')}</div>` : ''}`
-      : `<p class="fam-p" style="margin-top:8px">Quando ${mtEsc(P.nome)} também ligar, aparece aqui a semana de vocês dois e os aparelhos em comum.</p>`}
-      <details class="dp-eq"${usadas.size ? '' : ' open'}><summary>Quantos aparelhos vocês têm</summary>
-        <p class="fam-p">Só importa o que tem <b>uma unidade</b>. Sem resposta, o app considera 1 de cada aparelho e halteres em vários pares.</p>
-        ${[...usadas].map(s=>`<div class="dp-q"><span>${mtEsc(MT_ESTACOES[s]||s)}</span><div class="mod-toggle"><button class="seg ${_duplaQtd(s,cfg.q)<2?'on':''}" onclick="duplaQtd('${s}',1)">1</button><button class="seg ${_duplaQtd(s,cfg.q)>=2?'on':''}" onclick="duplaQtd('${s}',2)">2 ou mais</button></div></div>`).join('') || '<p class="fam-p">Monte o plano de musculação para ver os aparelhos.</p>'}
-      </details>
-      <label class="pi-row" style="margin-top:8px"><span class="pi-txt"><b>Conquistas em dupla</b><small>Compartilha só o dia e o horário dos seus treinos com ${mtEsc(P.nome)} (nada de cargas, peso ou distâncias)</small></span><input type="checkbox" class="pi-sw" ${cfg.conq!==false?'checked':''} onchange="duplaConq(this.checked)"></label>` : ''}
+  const eqLinha = s=>{ const q = _duplaQtd(s, cfg.q); return `<div class="dp-q"><span>${mtEsc(MT_ESTACOES[s]||s)}</span><div class="mod-toggle dp-q3">${[[0,'0'],[1,'1'],[2,'2+']].map(([v,t])=>`<button type="button" class="seg ${(v===2 ? q>=2 : q===v)?'on':''}" onclick="duplaQtd('${s}',${v})">${t}</button>`).join('')}</div></div>`; };
+  const eqAberto = window.__dpEqAberto ? ' open' : '';
+  mi.dataset.tela = 'dupla';
+  mi.innerHTML = `<div id="dupla-tela"><h3>Equipamentos e treino em dupla</h3>
+    <p class="fam-p">Diga o que você tem: o plano evita o que falta e, se outra pessoa da casa treina no mesmo lugar, evita que vocês precisem do <b>mesmo aparelho no mesmo dia</b>. Cada um continua com o próprio plano, histórico e cargas — organizar muda só o <b>seu</b> plano. Corrida e cardápio não mudam.</p>
+    <details class="dp-eq"${eqAberto} ontoggle="window.__dpEqAberto=this.open"><summary>Meus equipamentos</summary>
+      <p class="fam-p">Quantos de cada você tem: <b>0</b> = não tenho, <b>1</b> = um só, <b>2+</b> = dois ou mais. Sem resposta, o app considera 1 de cada aparelho e halteres em vários pares. Elásticos e kettlebell não aparecem porque nenhum exercício da biblioteca usa.</p>
+      ${MT_EQ_GRUPOS.map(([t, l])=>`<div class="dp-eqg">${t}</div>${l.map(eqLinha).join('')}`).join('')}
+    </details>
+    ${P ? `<label class="pi-row" style="margin:12px 0 8px"><span class="pi-txt"><b>Treino com ${mtEsc(P.nome)} no mesmo lugar</b><small>${cfg.on ? 'Ligado' : 'Desligado'} · ${D ? `${mtEsc(P.nome)} também ligou` : `${mtEsc(P.nome)} ainda não ligou`}</small></span><input type="checkbox" class="pi-sw" ${cfg.on?'checked':''} onchange="duplaLiga(this.checked)"></label>` : `<p class="fam-mini" style="margin-top:10px">Treino em dupla: as duas pessoas precisam estar no mesmo grupo de Perfil › Minha casa.</p>`}
+    ${P && cfg.on && D ? `<div class="section-lbl" style="margin:10px 0 4px">Semana</div><div class="dp-tab">${linhas || '<p class="fam-p">Nenhum dia de musculação em comum.</p>'}</div>` : ''}
+    <p class="fam-p" style="margin-top:8px">${CD.length ? `<b>${CD.length} ${CD.length===1?'exercício precisa':'exercícios precisam'}</b> de um aparelho que ${mtEsc(P ? P.nome : '')} também usa no mesmo dia. ` : ''}${CF.length ? `<b>${CF.length} ${CF.length===1?'exercício usa':'exercícios usam'}</b> algo que você marcou que não tem.` : ''}${!C.length ? 'Tudo certo: nenhum exercício do seu plano depende de algo que falta ou que está com outra pessoa.' : ''}</p>
+    ${C.length ? `<button class="btn btn-primary btn-block" style="margin-top:4px" onclick="duplaOrganizar()">Organizar o meu plano</button>` : ''}
+    ${state.modules.lift && state.modules.lift.duplaBackup ? `<button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="duplaDesfazer()">Desfazer a última organização</button>` : ''}
+    ${U && (U.trocas.length || U.mantidos.length) ? `<div class="dp-ult">${U.trocas.map(t=>`<div>↔ ${mtEsc(t.dia)}: <b>${mtEsc(t.para)}</b> no lugar de ${mtEsc(t.de)}</div>`).join('')}${U.mantidos.map(m=>`<div>• ${mtEsc(m.dia)}: ${mtEsc(m.ex)} (${mtEsc(m.st)}) — ${mtEsc(m.dica)}</div>`).join('')}</div>` : ''}
+    ${P && cfg.on ? `<label class="pi-row" style="margin-top:10px"><span class="pi-txt"><b>Conquistas em dupla</b><small>Compartilha só o dia e o horário dos seus treinos com ${mtEsc(P.nome)} (nada de cargas, peso ou distâncias)</small></span><input type="checkbox" class="pi-sw" ${cfg.conq!==false?'checked':''} onchange="duplaConq(this.checked)"></label>` : ''}
     <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button></div>`;
-  $('modal-back').classList.add('on');
+  $('modal-back').classList.add('on'); mi.scrollTop = rolagem;
 }
-function _duplaPublicaJa(){ try{ if(typeof famAgendaEnvio === 'function') famAgendaEnvio(200); }catch(e){} }
-function duplaLiga(on){ _duplaCfg().on = !!on; saveData(); _duplaPublicaJa(); openTreinoDupla(); }
+function _duplaPublicaJa(){ try{ if(typeof famAgendaEnvio === 'function' && typeof famAtiva === 'function' && famAtiva()) famAgendaEnvio(200); }catch(e){} }
+function duplaLiga(on){ _duplaCfg().on = !!on; saveData(); _duplaPublicaJa(); openTreinoDupla(); try{ mtDuplaLinha(); }catch(e){} }
 function duplaConq(on){ _duplaCfg().conq = !!on; saveData(); _duplaPublicaJa(); }
-function duplaQtd(st, n){ const c = _duplaCfg(); c.q = c.q || {}; c.q[st] = n; saveData(); _duplaPublicaJa(); openTreinoDupla(); }
-function duplaOrganizar(){ const r = mtDuplaOrganizar(); if(!r.ok){ toast(r.msg); return; } toast(r.depois < r.antes ? `Pronto: de ${r.antes} para ${r.depois} ${r.depois===1?'conflito':'conflitos'} de aparelho` : 'Não deu para reduzir sem prejudicar o treino — veja as dicas'); _duplaPublicaJa(); openTreinoDupla(); try{ renderSessions(); }catch(e){} }
+function duplaQtd(st, n){ const c = _duplaCfg(); c.q = c.q || {}; c.q[st] = n; window.__dpEqAberto = true; saveData(); _duplaPublicaJa(); openTreinoDupla(); try{ mtDuplaLinha(); }catch(e){} }
+function duplaOrganizar(){ const r = mtDuplaOrganizar(); if(!r.ok){ toast(r.msg); return; } toast(r.depois < r.antes ? `Pronto: de ${r.antes} para ${r.depois} ${r.depois===1?'pendência':'pendências'} de aparelho` : 'Não deu para reduzir sem prejudicar o treino — veja as dicas'); _duplaPublicaJa(); openTreinoDupla(); try{ renderSessions(); }catch(e){} }
 function duplaDesfazer(){ if(mtDuplaDesfazer()){ toast('Plano de volta como estava'); _duplaPublicaJa(); openTreinoDupla(); try{ renderSessions(); }catch(e){} } }
-// linha discreta em Treinos (só musculação, só para quem está num grupo da casa)
+// Beta 64: entrada discreta no FIM da tela de Treinos (antes ficava no topo, entre os atalhos e os dias)
 function mtDuplaLinha(){
   try{
     const old = $('dupla-linha'); if(old) old.remove();
-    if(state.active !== 'lift' || !state.modules.lift || !state.modules.lift.plan || typeof famAtiva !== 'function' || !famAtiva()) return;
-    const P = _duplaParceiro(); if(!P) return; const cfg = _duplaCfg();
-    const C = cfg.on ? (mtDuplaConflitos()||[]) : null;
-    const txt = !cfg.on ? 'Treinam no mesmo lugar? Organize os aparelhos' : !_duplaDiasParceiro() ? `Esperando ${P.nome} ligar` : C.length ? `${C.length} em comum` : 'sem disputa de aparelho';
-    const alvo = $('sess-qlinks'); if(!alvo) return;
-    alvo.insertAdjacentHTML('afterend', `<button type="button" id="dupla-linha" class="dupla-linha ${C && C.length ? 'conf' : ''}" onclick="openTreinoDupla()"><span>Treino em dupla · ${mtEsc(P.nome)}</span><small>${mtEsc(txt)}</small><i>›</i></button>`);
+    if(state.active !== 'lift' || !state.modules.lift || !state.modules.lift.plan) return;
+    const P = _duplaParceiro(); const cfg = _duplaCfg(); const C = mtDuplaConflitos() || [];
+    const txt = C.length ? `· ${C.length} ${C.length===1?'pendência':'pendências'} de aparelho` : (P && cfg.on ? `· com ${P.nome}` : '');
+    const wrap = document.querySelector('#scr-sessions .wrap'); if(!wrap) return;
+    wrap.insertAdjacentHTML('beforeend', `<div id="dupla-linha" class="dupla-linha ${C.length ? 'conf' : ''}"><a href="#" onclick="openTreinoDupla();return false">⚙️ Equipamentos${P ? ' e treino em dupla' : ' da academia'}</a>${txt ? `<small>${mtEsc(txt)}</small>` : ''}</div>`);
   }catch(e){}
 }
 mtGancho('renderSessions', { depois(){ mtDuplaLinha(); } });
@@ -502,11 +514,13 @@ try{
 
 (function(){ if(document.getElementById('b63-css')) return; const s = document.createElement('style'); s.id = 'b63-css';
   s.textContent = `
-.dupla-linha{ display:flex; align-items:center; gap:8px; width:100%; margin:8px 0 0; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--surface-2, rgba(255,255,255,.03)); color:var(--text); text-align:left; font:inherit; cursor:pointer; }
-.dupla-linha span{ font-weight:700; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dupla-linha small{ flex:1; min-width:0; color:var(--text-dim); font-size:12px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dupla-linha{ display:flex; flex-wrap:wrap; justify-content:center; align-items:baseline; gap:4px 8px; margin:14px 0 4px; font-size:12.5px; text-align:center; }
+.dupla-linha a{ color:var(--text-dim); font-weight:600; text-decoration:none; border-bottom:1px dashed var(--border); }
+.dupla-linha small{ color:var(--text-mute, var(--text-dim)); font-size:12px; }
 .dupla-linha.conf small{ color:var(--warning, #f59e0b); }
-.dupla-linha i{ font-style:normal; color:var(--text-dim); }
+.dp-eqg{ margin:10px 0 2px; font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--text-dim); }
+.dp-q3{ width:132px !important; flex:none; }
+.dp-q3 .seg{ padding:7px 0 !important; font-size:13px !important; }
 .dp-tab{ display:grid; gap:6px; }
 .dp-l{ display:grid; grid-template-columns:38px 1fr; gap:2px 8px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; font-size:12.5px; }
 .dp-l b{ grid-row:span 3; align-self:center; }
@@ -517,8 +531,8 @@ try{
 .dp-eq{ margin-top:10px; border:1px solid var(--border); border-radius:10px; padding:2px 10px 8px; }
 .dp-eq summary{ cursor:pointer; padding:8px 0; font-weight:700; font-size:13px; }
 .dp-q{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0; font-size:12.5px; }
-.dp-q .mod-toggle{ flex:none; width:150px; margin:0; }
-.dp-q .seg{ font-size:12px; padding:7px 4px; }
+.dp-q .mod-toggle{ flex:none; margin:0; }
+.dp-q > span{ min-width:0; overflow-wrap:anywhere; }
 .mm-fx-info{ display:grid; gap:4px; margin:8px 0 2px; font-size:12.5px; line-height:1.4; }
 .mm-fx-info span{ display:inline-block; min-width:92px; color:var(--text-dim); font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; }
 `;

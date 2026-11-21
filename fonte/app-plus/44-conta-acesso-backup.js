@@ -330,7 +330,7 @@ function mtBackupRecusado(motivo){
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
-function _mtRestaura(est, data, liberado){
+function _mtRestauraBackup(est, data, liberado){
   appConfirm(`Seus dados atuais serão SUBSTITUÍDOS pelos do arquivo.${liberado ? '\n\nRestauração liberada pelo suporte.' : ''}`, ()=>{
     const keepUser = { ...est.user, email: state.user.email, isAdmin: state.user.isAdmin };
     state = {...state, ...est, user:keepUser, ui:{tab:'home',selectedSession:null}};
@@ -359,15 +359,15 @@ window.importMyData = function(ev){
         const h = await _mtSha256(JSON.stringify(data.dados));
         if(h !== data.hash) return mtBackupRecusado('O conteúdo deste arquivo foi <b>alterado</b> depois de ser criado.');
         const reg = await _mtPrazo(db.collection('usuarios').doc(uidDados()).collection('backups').doc(h).get(), 9000);
-        if(reg.exists) return _mtRestaura(est, data, false);
-        if(await mtBackupLiberado()) return _mtRestaura(est, data, true);
+        if(reg.exists) return _mtRestauraBackup(est, data, false);
+        if(await mtBackupLiberado()) return _mtRestauraBackup(est, data, true);
         return mtBackupRecusado('Este backup foi criado em <b>outra conta</b> do MetaTreino e só pode ser restaurado nela.');
       }
       // formato antigo (antes da Beta 42): sem resumo — vale se for desta mesma conta
       const emArq = String((est.user && est.user.email) || '').toLowerCase();
       const meu = String((state.user && state.user.email) || '').toLowerCase();
-      if(emArq && emArq === meu) return _mtRestaura(est, data, false);
-      if(await mtBackupLiberado()) return _mtRestaura(est, data, true);
+      if(emArq && emArq === meu) return _mtRestauraBackup(est, data, false);
+      if(await mtBackupLiberado()) return _mtRestauraBackup(est, data, true);
       return mtBackupRecusado(emArq ? 'Este backup antigo pertence a <b>outra conta</b> do MetaTreino.' : 'Não foi possível confirmar a conta dona deste backup antigo.');
     }catch(e){ console.log('importar backup:', e); toast('⚠️ Não consegui conferir o backup agora. Confira a internet e tente de novo — nada foi alterado.'); }
   };
