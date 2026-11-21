@@ -27,18 +27,7 @@ async def main():
         confere('"Dicas para esta sessão" removido (musculação)', r is False)
         r = await pg.evaluate("(()=>{ state.active='run'; goTab('sessions'); const t = document.getElementById('scr-sessions').innerText.includes('Dicas para esta sessão'); state.active='lift'; goTab('sessions'); return t })()")
         confere('"Dicas para esta sessão" removido (corrida)', r is False)
-        r = await pg.evaluate("""(()=>{ openPersonalizarTreinos(); const ks=[...document.querySelectorAll('#modal-inner .pi-sw')].map(i=>i.dataset.k);
-          ['programacao','orientacoes','foco'].forEach(k=>{ const i=document.querySelector(`#modal-inner .pi-sw[data-k=${k}]`); i.checked=false; tpAlterar(i); }); closeModal(); goTab('sessions');
-          const vis = s=>{ const e=document.querySelector(s); return !!e && e.offsetParent!==null };
-          const L=[vis('#weekly-info'), vis('#session-detail-slot .mg-card'), vis('#session-detail-slot .today-desc'), vis('#session-detail-slot .block'), [...document.querySelectorAll('#session-detail-slot button')].some(b=>/Salvar treino/.test(b.textContent) && b.offsetParent)];
-          state.active='run'; goTab('sessions'); const R=[vis('#weekly-info'), vis('#session-detail-slot .today-desc')];
-          openPersonalizarTreinos(); const rk=[...document.querySelectorAll('#modal-inner .pi-sw')].map(i=>i.dataset.k); const t=document.querySelector('#modal-inner h3').textContent; closeModal(); state.active='lift';
-          return {ks, L, R, rk, t} })()""")
-        confere('musculação: esconder Programação, Orientações e Foco funciona', r['L'][:3] == [False, False, False], r['L'])
-        confere('exercícios e "Salvar treino" nunca somem', r['L'][3] and r['L'][4], r['L'])
-        confere('corrida não muda quando a musculação é personalizada', r['R'] == [True, True], r['R'])
-        confere('lista da corrida só com blocos da corrida (Por que este treino, Orientações da corrida)', 'porque' in r['rk'] and 'orientacoes' not in r['rk'] and 'andamento' not in r['rk'] and 'Corrida' in r['t'], r['rk'])
-        confere('"Como fazer o circuito" só aparece na lista para o objetivo Resistência', 'circuito' not in r['ks'], r['ks'])
+        # (Beta 61: "Personalizar treinos" foi retirado — ver testes/beta61.py)
         r = await pg.evaluate("""(()=>{ state.modules.lift.setup.goal='resistencia'; goTab('sessions'); const ok = !!document.getElementById('tp-circuito'); return ok })()""")
         confere('objetivo Resistência: o formato em circuito continua explicado no treino', r is True)
         confere('sem erros de página', not err, err[:3])

@@ -18,7 +18,13 @@
   const DEL = { __apagar:true };
   function limpa(v){ return JSON.parse(JSON.stringify(v, (k, x)=> (x && x.__del === true) ? DEL : x)); }
   function snap(caminho, j){ const d = j && j.dados; return { exists: !!(j && j.existe), id: caminho.split('/').pop(), data: ()=> d ? JSON.parse(JSON.stringify(d)) : undefined, ref:{ path:caminho }, metadata:{ hasPendingWrites:false, fromCache:false } }; }
+  // Beta 62: como o Firestore de verdade — lista dentro de lista é recusada (invalid-argument)
+  function semAninhada(v, p){
+    if(Array.isArray(v)) v.forEach((x,i)=>{ if(Array.isArray(x)){ const e = new Error('Nested arrays are not supported (' + p + '[' + i + '])'); e.code = 'invalid-argument'; throw e; } semAninhada(x, p + '[' + i + ']'); });
+    else if(v && typeof v === 'object' && !v.__op) Object.keys(v).forEach(k=>semAninhada(v[k], p + '.' + k));
+  }
   async function grava(op, caminho, dados, merge){
+    try{ if(dados) semAninhada(dados, caminho); }catch(e){ return Promise.reject(e); }
     const tarefa = ()=>chama({ op, caminho, dados: dados ? limpa(dados) : undefined, merge: !!merge });
     if(offline()){ return new Promise((res, rej)=>fila.push({ tarefa, res, rej })); }   // como o Firestore: confirma quando a internet volta
     return tarefa();

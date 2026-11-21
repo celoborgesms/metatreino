@@ -71,7 +71,8 @@ async def conquistas(b):
     await pg.evaluate("closeModal()"); await pg.wait_for_timeout(400)
     confere('cartão visto = todas as conquistas que ele representa saem das novas', await pg.evaluate("state.conqPend.length") == 0)
     await pg.evaluate("openTrophies()"); await pg.wait_for_timeout(800)
-    confere('na coleção: "Experiência anterior"', 'Experiência anterior' in await pg.evaluate("document.getElementById('modal-inner').innerText"))
+    # textContent: os grupos usam content-visibility:auto e o que está fora da tela não entra no innerText
+    confere('na coleção: "Experiência anterior"', 'Experiência anterior' in await pg.evaluate("document.getElementById('modal-inner').textContent"))
     await pg.evaluate("closeModal()")
     alvos = await pg.evaluate("(()=>{ const r = {}; [0,2,5].forEach(n=>{ state.modules.run.plan.motor.nivel = n; r[n] = mkDesafio('longao','ouro').alvo; }); state.modules.run.plan.motor.nivel = 5; return r; })()")
     confere('metas de corrida escalam pelo nível da corrida (iniciante < intermediário < competitivo)', alvos['0'] < alvos['2'] < alvos['5'], alvos)

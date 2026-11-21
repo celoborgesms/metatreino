@@ -94,6 +94,9 @@
       // Beta 46: update com caminho pontuado ("a.b.c"), arrayUnion/arrayRemove/delete e aviso aos ouvintes
       update: (data)=>{
         if(store[path] === undefined) return Promise.reject(Object.assign(new Error('No document to update'), { code:'not-found' }));
+        // Beta 62: como o Firestore de verdade, update também rejeita lista dentro de lista (antes só o set validava,
+        // e o cardápio publicado da casa — [[id, g]] — passava no teste e falhava no celular)
+        try{ Object.keys(data).forEach(k=>{ const v = data[k]; if(!(v && v.__op)) validaFirestore(v, path + ':' + k); }); }catch(e){ return Promise.reject(Object.assign(e, { code:'invalid-argument' })); }
         const doc = JSON.parse(JSON.stringify(store[path]));
         Object.keys(data).forEach(k=>{
           const partes = k.split('.'); let o = doc; for(let i=0;i<partes.length-1;i++){ if(!o[partes[i]] || typeof o[partes[i]] !== 'object') o[partes[i]] = {}; o = o[partes[i]]; }
