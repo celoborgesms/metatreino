@@ -3183,6 +3183,13 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
         <div class="opt opt-multi" data-val="7">Dom</div>
       </div>
     </div></div>
+    <!-- Beta 63: tempo disponível por sessão também na musculação (no Híbrido vale o "Tempo por sessão" da calistenia) -->
+    <div class="field gym-only lift-tempo-f" data-wz="3" data-rotulo="Tempo por sessão"><label>Tempo por sessão</label>
+      <div class="radio-grid" id="lift-tempo" style="grid-template-columns:repeat(5,1fr)">
+        <div class="opt" data-val="30">30 min</div><div class="opt" data-val="45">45 min</div><div class="opt on" data-val="60">60 min</div><div class="opt" data-val="75">75 min</div><div class="opt" data-val="90">90 min</div>
+      </div>
+      <div class="wz-nota">Cada treino é montado para caber nesse tempo — aquecimento, descansos e troca de aparelho incluídos.</div>
+    </div>
     <div class="field gym-only" data-wz="2"><label>Equipamentos da academia / casa</label>
       <div class="radio-grid opt-ico-grid" id="lift-equip">
         <div class="opt on" data-val="academia"><span data-ico="rack"></span>Academia completa</div>
@@ -3203,6 +3210,14 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
         <div class="opt" data-val="avancado">Avançado</div>
       </div>
       <div id="lift-level-hint" style="margin-top:8px;font-size:12.5px;color:var(--text-dim)"></div>
+    </div>
+    <!-- Beta 63: prioridade opcional — muda a ordem e o volume, nunca o sexo da pessoa -->
+    <div class="field gym-only" data-wz="4" data-rotulo="Prioridade"><label>Quer priorizar algum grupo? (opcional, até 2)</label>
+      <div class="radio-grid" id="lift-prio" style="grid-template-columns:repeat(3,1fr)">
+        <div class="opt opt-multi" data-val="Peito">Peito</div><div class="opt opt-multi" data-val="Costas">Costas</div><div class="opt opt-multi" data-val="Ombro">Ombros</div>
+        <div class="opt opt-multi" data-val="Braços">Braços</div><div class="opt opt-multi" data-val="Pernas">Pernas</div><div class="opt opt-multi" data-val="Glúteos">Glúteos</div>
+      </div>
+      <div class="wz-nota">O grupo escolhido abre o treino do dia, quando você está mais descansado, e recebe um pouco mais de volume na semana.</div>
     </div>
     <!-- Beta 40: dores e limitações para TODAS as modalidades (o gerador troca os exercícios incompatíveis) -->
     <div class="field" data-wz="4" data-rotulo="Dores ou limitações"><label>Alguma dor ou limitação? (opcional, marque quantas quiser)</label>
@@ -3800,7 +3815,7 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
       <div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div>
     </div>
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 61</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027.1 Beta 63</span>
     </div>
   </div>
 </div>
@@ -3895,8 +3910,8 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
   }, 1000);
 })();
 </script>
-<script src="./app.js?v=2027.1-beta.61"></script>
-<script src="./app-plus.js?v=2027.1-beta.61"></script>
+<script src="./app.js?v=2027.1-beta.63"></script>
+<script src="./app-plus.js?v=2027.1-beta.63"></script>
 <script>
 // Beta 36: app.js e app-plus.js precisam ser da MESMA versão. Se um deles não carregou ou veio de outra
 // versão (cache no meio de uma atualização), recarrega uma vez — senão partes antigas (como a tela antiga

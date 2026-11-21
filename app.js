@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 61 =====
-const APP_VERSION = '2027.1-beta.61';
+// ===== MetaTreino 2027.1 Beta 63 =====
+const APP_VERSION = '2027.1-beta.63';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -1850,7 +1850,10 @@ function finishSetup(m){
   const setup = m==='lift' ? {
     goal:readOpt('lift-goal'), days:parseInt(readOpt('lift-days')),
     equip:readOpt('lift-equip'), level:readOpt('lift-level'),
-    selectedDays: readSelectedDays('lift-week-days')
+    selectedDays: readSelectedDays('lift-week-days'),
+    // Beta 63: tempo por sessão e grupos prioritários (opcionais; sem resposta = comportamento anterior)
+    tempo: parseInt(readOpt('lift-tempo')) || 60,
+    prioridades: [...document.querySelectorAll('#lift-prio .opt-multi.on')].map(o=>o.dataset.val).slice(0,2)
   } : {
     goal:readOpt('run-goal'), level:readOpt('run-level'),
     days:parseInt(readOpt('run-days')), terrain:readOpt('run-terrain'),
@@ -1956,11 +1959,15 @@ function generatePlan(module, setup){
       {k:'B',name:'Inferior + Core',parts:['Pernas','Glúteos','Panturrilha','Core']},
       {k:'C',name:'Corpo inteiro',parts:['Pernas','Peito','Costas','Bíceps']}
     ];
-    const split = (_folga && setup.split3 !== 'classico') ? split3x2 : (splitMap[days] || splitMap[4]);
+    const _split0 = (_folga && setup.split3 !== 'classico') ? split3x2 : (splitMap[days] || splitMap[4]);
+    // Beta 63: grupo GRANDE marcado como prioridade abre o treino do dia (fica mais descansado). Braços como
+    // prioridade não passam na frente de peito/costas (pré-cansar o tríceps atrapalha o supino) — só ganham volume.
+    const _prio = (setup.prioridades || []).filter(p=>LIFT_GRANDES.includes(p));
+    const split = _split0.map(s=>{ const pr = s.parts.filter(p=>_prio.includes(p)); return pr.length ? { ...s, parts:[...pr, ...s.parts.filter(p=>!pr.includes(p))] } : s; });
     const dayNames = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
     const vistos = new Set(), usados = new Set();   // grupos e exercícios já usados antes na semana (Beta 33)
     const workouts = split.map((s,i)=>{
-      const exercises = buildLiftExercises(s.parts, setup, { indice:i, jaNaSemana:new Set(vistos), usadosSemana:new Set(usados) });
+      const exercises = buildLiftExercises(s.parts, setup, { indice:i, jaNaSemana:new Set(vistos), usadosSemana:new Set(usados), diaIdx:wkDays[i] });
       s.parts.forEach(p=>vistos.add(p)); exercises.forEach(e=>usados.add(e.id));
       return {
         ...s, dayIdx:wkDays[i], dayName:dayNames[wkDays[i]-1],
@@ -2270,8 +2277,13 @@ function liftDescanso(tier, goal, senior, reps){
 // recebem menos, e um grupo que já foi treinado antes na semana não repete o volume cheio.
 const LIFT_GRANDES = ['Peito','Costas','Pernas','Ombro','Glúteos'];
 function liftQuantos(grupo, parts, level, opts){
-  const nBig = level==='avancado'?4 : level==='intermediario'?3 : 2;
-  const nArm = level==='avancado'?3 : level==='intermediario'?2 : 1;
+  // Beta 63: subir de nível NÃO dá exercício a mais por si só. O avançado progride por séries (setsMap),
+  // carga, frequência e complexidade; o número de exercícios por grupo para em 3 (antes 4 — eram
+  // estímulos redundantes: 4 exercícios de peito no mesmo dia com 4 séries = 16 séries só de peito).
+  // Grupo que o aluno marcou como prioridade ganha 1 exercício (limitado pelo tempo da sessão).
+  const prio = !!(opts && opts.prioridades && opts.prioridades.some(p=>p===grupo || (p==='Braços' && (grupo==='Bíceps'||grupo==='Tríceps'))));
+  const nBig = (level==='iniciante' ? 2 : 3) + (prio && level!=='iniciante' ? 1 : 0);
+  const nArm = (level==='iniciante' ? 1 : 2) + (prio ? 1 : 0);
   const nSmall = level==='iniciante'?1 : 2;
   if(grupo==='Trapézio') return 1;
   if(grupo==='Core' || grupo==='Panturrilha') return nSmall;
@@ -2374,7 +2386,7 @@ function buildLiftExercises(parts, setup, opts){
     if(opts.usadosSemana && opts.usadosSemana.size) compat = [...compat].sort((a,b)=>(opts.usadosSemana.has(slug(a.name))?1:0)-(opts.usadosSemana.has(slug(b.name))?1:0));
     // iniciante: versões básicas antes das que pedem técnica (arqueiro, nórdico, salto, terra...)
     if(level==='iniciante') compat = [...compat].sort((a,b)=>(LIFT_AVANCADO.test(a.name)?1:0)-(LIFT_AVANCADO.test(b.name)?1:0));
-    const need = liftQuantos(p, parts, level, Object.assign({ goal }, opts));
+    const need = liftQuantos(p, parts, level, Object.assign({ goal, prioridades: setup.prioridades || [] }, opts));
     // Beta 33 — escolha por papel: segue a sequência do grupo (ex.: peito = supino/flexão →
     // inclinado → crucifixo) pegando, em cada papel, o primeiro da lista já girada da semana.
     // Papel sem opção no equipamento do aluno é pulado; o que faltar é completado com papéis
@@ -2386,7 +2398,10 @@ function buildLiftExercises(parts, setup, opts){
       const cands = compat.filter(e=>!pick.includes(e) && exPapel(e, p).id===papel && (papel!=='terra' || goal==='forca' || level==='avancado'));
       // quem tem carga (halteres/academia) faz com carga: flexão, pike e isometria de parede ficam para quem treina em casa
       const comCarga = (equip!=='casa' && p!=='Core') ? cands.find(e=>!LIFT_PESO_CORPO.test(e.name)) : null;
-      const ex = comCarga || cands[0];
+      // Beta 63: entre opções EQUIVALENTES do mesmo papel, a escolha é individual (favoritos, histórico de cargas
+      // e uma semente da própria conta) — duas pessoas com as mesmas respostas não recebem a mesma ficha (parte 65)
+      const _pool = comCarga ? cands.filter(e=>!LIFT_PESO_CORPO.test(e.name)) : cands;
+      const ex = (typeof liftEscolheIndividual === 'function' ? liftEscolheIndividual(_pool, p, papel, setup, opts) : null) || comCarga || cands[0];
       if(ex) pega(ex);
     }
     if(pick.length<need) compat.forEach(ex=>{ if(pick.length<need && !pick.includes(ex) && !usados.has(exPapel(ex, p).id)) pega(ex); });
@@ -2404,6 +2419,8 @@ function buildLiftExercises(parts, setup, opts){
       // core, panturrilha e trapézio: até 3 séries (trapézio ganha +1 quando é o único exercício do grupo no nível que teria 2)
       let s = pequeno ? Math.min(3, sets) : sets;
       if(p==='Trapézio' && needSmall>1) s = Math.min(4, sets);
+      // Beta 63: o avançado progride em VOLUME nos exercícios principais (+1 série, até 5), não em quantidade de exercícios
+      if(nivelVolume==='avancado' && !pequeno && tier==='principal') s = Math.min(5, s + 1);
       // repetições: core e panturrilha não fazem 4-6 (força); na força, os acessórios ficam em 8-10
       let r = reps;
       if(p==='Core' || p==='Panturrilha') r = LIFT_REPS_PEQUENOS[goal] || '12-15';
@@ -2419,7 +2436,8 @@ function buildLiftExercises(parts, setup, opts){
   // Beta 35: se ainda passar, tira também dos secundários e, por último, dos principais (mínimo 3 séries)
   // e também pelo TEMPO: nenhuma sessão gerada passa de ~90 min (força tem descansos longos)
   // Beta 38: no híbrido, o dia de academia respeita o "Tempo por sessão" do aluno (o mesmo dos dias de calistenia)
-  const tetoMin = (setup.modalidade==='hibrido' && +setup.caliTempo) ? (+setup.caliTempo + 5) : 90;
+  // Beta 63: na musculação vale o "Tempo por sessão" informado pelo aluno (antes: teto fixo de 90 min)
+  const tetoMin = (setup.modalidade==='hibrido' && +setup.caliTempo) ? (+setup.caliTempo + 5) : (+setup.tempo || 90);
   const passa = ()=> totalSeries() > teto || estimateLiftDuration(list, goal) > tetoMin;
   for(const [nivel, minimo] of [['acessorio',2],['secundario',2],['principal',3]]){
     for(let volta=0; volta<6 && passa(); volta++){
@@ -2460,9 +2478,17 @@ function estimateLiftDuration(exercises, goal){
   const restSec = {hipertrofia:75, forca:150, emagrecimento:40, resistencia:30}[goal||'hipertrofia'] || 75;
   const workSec = 45; // tempo médio executando uma série
   // Beta 33: usa o descanso de cada exercício (agora varia entre principal e acessório)
-  const segundos = exercises.reduce((s,ex)=>{ const n = (+ex.sets||3); const r = ex.rest ? parseRestSeconds(ex.rest) : restSec; return s + n*(workSec + r); }, 0);
-  // tempo das séries + transição/ajuste por exercício (troca de máquina, anilhas) + aquecimento
-  const mins = Math.round(segundos/60 + (exercises.length||0)*1.5 + 5);
+  // Beta 63: estimativa por exercício — execução pela faixa de repetições (~3,5 s por repetição + 10 s para
+  // posicionar), descanso só ENTRE as séries (n−1), 2 min de troca/ajuste por exercício (inclui o descanso
+  // até o próximo) e aquecimento de 6 min (9 min a partir de 50 anos). Antes: 45 s fixos por série e um
+  // descanso a mais por exercício.
+  const _med = t=>{ const n = String(t||'').match(/\d+/g); return n ? n.map(Number).reduce((a,b)=>a+b,0)/n.length : 10; };
+  const segundos = exercises.reduce((s,ex)=>{
+    const n = (+ex.sets||3); const r = ex.rest ? parseRestSeconds(ex.rest) : restSec;
+    const exec = ex.unit === 'tempo' || /s$/.test(String(ex.reps||'').trim()) ? _med(ex.reps) + 10 : Math.min(75, _med(ex.reps)*3.5 + 10);
+    return s + n*exec + Math.max(0, n-1)*r; }, 0) || exercises.length*(workSec+restSec);
+  let _aq = 6; try{ const pf = state.user && state.user.profile; if(pf && pf.age >= 50) _aq = 9; }catch(e){}
+  const mins = Math.round(segundos/60 + (exercises.length||0)*2 + _aq);
   return Math.max(20, Math.min(100, mins));
 }
 function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }

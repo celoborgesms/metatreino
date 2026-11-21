@@ -2,6 +2,16 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. Beta 63 — motor individual e treino em dupla
+- [ ] Alterar plano › Sua semana: escolher 45 min → nenhum treino passa de ~45 min (ou aparece o aviso).
+- [ ] Experiência: marcar Glúteos como prioridade → o treino de pernas começa por glúteo.
+- [ ] Você e a Emilly (mesmo grupo da casa): Treinos › "Treino em dupla" → ligar nos dois celulares → conferir a semana e os aparelhos em comum.
+- [ ] Informar os aparelhos que vocês têm 2 ou mais (ex.: halteres) → os conflitos somem da lista.
+- [ ] "Organizar o meu plano" → conferir se as trocas fazem sentido → "Desfazer" volta tudo.
+- [ ] O plano da outra pessoa, a corrida e o cardápio não mudam.
+- [ ] Treinar no mesmo horário que a outra pessoa (os dois registram) → conquista "Parceiros de Treino".
+- [ ] Conquistas: categorias Calistenia, Híbrido e Treinando juntos; ícone do tênis nas corridas.
+
 ## 00000. Beta 58 — auditoria
 - [ ] Conta nova com plano para daqui a alguns dias (e com um treino importado antigo): Início sem "Pausa curta"/"dias sem treinar"; sem "A Volta por Cima".
 - [ ] Integrações › Registro técnico: tocar num item cancelado, num com erro e num de atividade excluída → abre o detalhe; "Remover este registro" funciona.

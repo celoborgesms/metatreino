@@ -1,3 +1,44 @@
+# MetaTreino 2027.1 Beta 63 — Musculação individual, tempo por sessão e treino em dupla
+
+**Não precisa publicar o `firestore.rules`.** Detalhes técnicos em `RELATORIO-BETA63.md`.
+
+1. **Ficha individual:**
+   - duas pessoas com as mesmas respostas recebem exercícios diferentes, com o mesmo estímulo;
+   - favoritos entram no lugar do equivalente;
+   - o sexo não muda a divisão.
+2. **Prioridade (opcional, até 2 grupos):** o grupo abre o treino e ganha um pouco mais de volume.
+3. **Nível:** subir de nível não dá mais exercício; o avançado progride em séries, carga e complexidade. No máximo 3 exercícios por grupo no dia.
+4. **Tempo por sessão na musculação** (30 a 90 min):
+   - a estimativa é realista (repetições, descanso entre séries, troca de aparelho e aquecimento);
+   - o descanso nunca é cortado;
+   - se não couber, o treino avisa e sugere 1 dia ou 15 min a mais.
+5. **Classificação muscular revisada:**
+   - voador sem tríceps, extensora só quadríceps, flexora com panturrilha, stiff com posterior principal etc.;
+   - a ficha do exercício mostra movimento, ênfase, aparelho e equivalentes.
+6. **Treino em dupla** (usa o grupo da Alimentação da casa):
+   - mostra os aparelhos que os dois usariam no mesmo dia;
+   - "Organizar o meu plano" troca a ordem dos seus treinos e, se precisar, um exercício por um equivalente;
+   - muda só o seu plano e dá para desfazer;
+   - corrida e cardápio não mudam.
+7. **Conquistas novas:** Calistenia, Híbrido e Treinando juntos, mais 4 secretas.
+8. **Ícone do tênis** das conquistas de corrida redesenhado.
+
+# MetaTreino 2027.1 Beta 62 — Casa: cardápio e lista de compras voltam a ser compartilhados
+
+**Não precisa publicar o `firestore.rules`.** As regras estavam certas: o problema era o formato dos dados.
+
+- **Causa:** desde a Beta 55, cada pessoa publicava no grupo o cardápio da semana com listas dentro de listas (`[[alimento, gramas]]`). O Firestore não aceita esse formato e recusa a gravação inteira. Por isso nem o cardápio nem a lista de compras de uma pessoa chegavam à outra: o PDF dizia "ainda não publicou" e a lista "Casa toda" (texto e PDF) mostrava só a própria pessoa.
+- **Agravante:** o app marcava o perfil como "enviado" antes de a nuvem confirmar, então nunca tentava de novo.
+- **Correção:**
+  - o cardápio vai num formato aceito pelo Firestore e é lido de volta normalmente;
+  - o perfil só conta como enviado depois que a nuvem confirma, e se ela recusar, o app tenta de novo na próxima vez;
+  - quem já usava republica sozinho ao abrir o app (o formato mudou, então o app percebe que precisa enviar de novo).
+- **Testes:** a nuvem simulada agora recusa lista dentro de lista, como a de verdade (antes só aceitava, e por isso o erro passou). O teste dos dois celulares confere:
+  - o cardápio da outra pessoa chegando;
+  - o PDF da casa sem "ainda não publicou";
+  - a lista de compras da casa somando as duas pessoas, em PDF e em texto.
+- **Para funcionar:** os **dois celulares** precisam estar na Beta 62 e abrir o app uma vez.
+
 # MetaTreino 2027.1 Beta 61 — Conquistas que somem ao apagar, menos emoji, sem personalização de Treinos
 
 **Não precisa publicar o `firestore.rules`.**
