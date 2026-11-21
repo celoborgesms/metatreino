@@ -2,6 +2,15 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. Beta 64 — equipamentos, Minha casa no Perfil, alimentos e backup
+1. Treinos (musculação): role até o fim. Deve haver só o link "Equipamentos da academia". Toque: abra "Meus equipamentos", marque **0** na Polia e **2+** em Halteres — a lista continua aberta e a tela não pula. Aparece "exercícios usam algo que você marcou que não tem" e "Organizar o meu plano" troca o exercício de polia. "Desfazer" volta.
+2. Perfil › **Minha casa**: crie o grupo (ou entre com o código). A tela mostra Pessoas aberto, Refeições da casa recolhido, Lista de compras e Cardápio em PDF lado a lado, Treino em dupla e "Sair do grupo" no fim. No segundo celular, entre com o código pelo Perfil.
+3. Alimentação: troque o prato do almoço. Os gramas de Proteína/Carbo/Gordura na barra mudam (o número pequeno é a meta).
+4. "+ Acrescentar alimento": busque "ovo frito", "refri zero", "pinga", "garapa", "cafe com leite" (sem acento). Veja as categorias Bebidas e Pratos e misturas.
+5. Perfil › Seus dados: baixe um backup e restaure o mesmo arquivo. Deve pedir confirmação e restaurar (desde a Beta 52 isso falhava em silêncio).
+6. Perfil › Estou com dor › Ombro › Salvar. Depois "Estou sem dor". Os exercícios voltam **exatamente** como estavam.
+7. Refaça o plano de musculação com 3 dias e 30 min: cada treino deve mostrar ~30 min (não 45).
+
 ## 00000. Beta 63 — motor individual e treino em dupla
 - [ ] Alterar plano › Sua semana: escolher 45 min → nenhum treino passa de ~45 min (ou aparece o aviso).
 - [ ] Experiência: marcar Glúteos como prioridade → o treino de pernas começa por glúteo.

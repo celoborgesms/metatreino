@@ -1,3 +1,28 @@
+# MetaTreino 2027.1 Beta 64 — Equipamentos 0/1/2+, Minha casa no Perfil, mais alimentos e checkup
+
+**Não precisa publicar o `firestore.rules`.** Nada mudou nas regras nem nas coleções. Detalhes técnicos em `RELATORIO-BETA64.md`.
+
+1. **Equipamentos e treino em dupla:**
+   - o botão grande saiu; agora é um link discreto **no fim da aba Treinos** ("Equipamentos da academia", ou "Equipamentos e treino em dupla" para quem tem casa);
+   - cada aparelho tem **0, 1 ou 2+**. "0" faz o plano evitar o aparelho (vale também sem parceiro);
+   - a lista "Meus equipamentos" **não fecha mais** a cada escolha e a tela não pula para o topo;
+   - os itens estão separados em "Pesos livres e banco" e "Máquinas e cabos". Elásticos e kettlebell não entraram porque nenhum exercício da biblioteca usa (não dá para marcar algo que não muda nada).
+2. **Minha casa no Perfil:** criar o grupo, entrar com código, pessoas, refeições da casa, compras, PDF e treino em dupla num lugar só. Na Alimentação ficou só uma linha discreta para quem não tem grupo, e a entrada completa para quem tem.
+3. **Tela da casa reorganizada:** Pessoas (aberto), Refeições da casa (recolhido), dois botões lado a lado (Lista de compras e Cardápio em PDF), Treino em dupla, e "Sair do grupo" como link discreto no fim.
+4. **Barra de proteína, carbo e gordura:** mostra os gramas **do cardápio do dia com as suas trocas** sobre a meta (antes ficava fixa na meta e não mudava ao trocar o prato).
+5. **Alimentos e bebidas novos (54):**
+   - ovos: cozido, frito, mexido, omelete, clara, codorna;
+   - pratos e misturas: bife acebolado, carne de panela, picanha, costela, carne-seca, hambúrguer caseiro, almôndega, frango frito/empanado/desfiado, strogonoff, linguiça, feijoada, peixe frito, salmão, camarão, farofa, mandioca frita, salada de maionese;
+   - bebidas: sucos (laranja, uva integral, verde), refrigerante zero, água de coco, caldo de cana, café, café com leite, achocolatado, chá, isotônico, energético (comum e zero), cerveja sem álcool, chope, vinho branco, caipirinha, destilado;
+   - outros: purê, macarrão ao sugo, polenta, farinha de mandioca, vinagrete, queijo coalho, doce de leite, goiabada, açúcar;
+   - categorias novas **Bebidas** e **Pratos e misturas**; valores aproximados da TACO, por porção comum (copo, lata, dose).
+6. **Busca de alimentos:** sem acento, por qualquer palavra e por apelidos (refri, coca zero, pinga, garapa, aipim, Nescau…), com o que começa pelo termo primeiro.
+7. **Checkup — correções:**
+   - **restaurar backup não funcionava desde a Beta 52:** uma função nova de rolagem tinha o mesmo nome da de restaurar e a substituía. Corrigido (testado: dono restaura, arquivo alterado é recusado, outra conta é bloqueada);
+   - **tempo por sessão:** treinos de 3 dias com 30 min saíam com 45 min; agora respeitam o tempo. E com pouco tempo o corte tira primeiro o 2º exercício de um grupo, então "Costas + Bíceps" de 30 min não fica sem bíceps;
+   - **"Estou sem dor"** (e o fim do modo leve/TPM) devolve **os mesmos exercícios** de antes da adaptação, na mesma semana. Antes remontava e trocava os acessórios;
+   - Perfil › Minha casa mostra "1 pessoa" (não "1 pessoas").
+
 # MetaTreino 2027.1 Beta 63 — Musculação individual, tempo por sessão e treino em dupla
 
 **Não precisa publicar o `firestore.rules`.** Detalhes técnicos em `RELATORIO-BETA63.md`.

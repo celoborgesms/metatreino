@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 63 =====
-const APP_VERSION = '2027.1-beta.63';
+// ===== MetaTreino 2027.1 Beta 64 =====
+const APP_VERSION = '2027.1-beta.64';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2452,7 +2452,19 @@ function buildLiftExercises(parts, setup, opts){
   }
   // Beta 38: com pouco tempo (híbrido de 30 min), ainda passando: tira acessórios do fim (fica no mínimo 3 exercícios)
   while(tetoMin < 90 && list.length > 3 && estimateLiftDuration(list, goal) > tetoMin){
-    let k = -1; for(let i=list.length-1;i>=0;i--){ if(exPapel(list[i], list[i].part).tier !== 'principal'){ k = i; break; } }
+    // Beta 64: tira primeiro de um grupo que ainda tem outro exercício — "Peito + Tríceps" de 30 min fica com
+    // 2 de peito + 1 de tríceps, em vez de 3 de peito e nenhum de tríceps (o nome do treino continua verdadeiro)
+    const _nGrupo = p=>list.filter(x=>x.part===p).length;
+    let k = -1;
+    for(let i=list.length-1;i>=0;i--){ if(exPapel(list[i], list[i].part).tier !== 'principal' && _nGrupo(list[i].part) > 1){ k = i; break; } }
+    if(k < 0) for(let i=list.length-1;i>=0;i--){ if(list.findIndex(x=>x.part===list[i].part) < i){ k = i; break; } }
+    if(k < 0) for(let i=list.length-1;i>=0;i--){ if(exPapel(list[i], list[i].part).tier !== 'principal'){ k = i; break; } }
+    if(k < 0) break; list.splice(k, 1);
+  }
+  // Beta 64: no Superior / Corpo inteiro todos os exercícios podem ser "principais" e o treino de 30 min saía
+  // com 45. Se ainda passar do tempo pedido, tira o 2º exercício de um grupo (o 1º de cada grupo fica).
+  while(tetoMin < 90 && list.length > 3 && estimateLiftDuration(list, goal) > tetoMin + 3){
+    let k = -1; for(let i=list.length-1;i>=0;i--){ if(list.findIndex(x=>x.part===list[i].part) < i){ k = i; break; } }
     if(k < 0) break; list.splice(k, 1);
   }
   // dor: se algum grupo foi bloqueado, completa com sinergistas seguros — o treino continua útil
@@ -12242,7 +12254,10 @@ function openNutri(){
   const macComido = comidasL.reduce((t,m)=>({p:t.p+m._real.p,c:t.c+m._real.c,g:t.g+m._real.g}),{p:0,c:0,g:0});
   const diasT = nutriDiasTreino();
   const chips = NUTRI_DIAS.map((d,i)=>`<button class="nd ${i+1===dIdx?'on':''}" style="${i+1<hojeIdx?'opacity:.5':''}" onclick="nutriDia(${i+1})">${d}${diasT.has(i+1)?'<i>🏋️</i>':'<i></i>'}</button>`).join('');
-  const kc = c.kcal||1, pP = Math.round(c.prot*4/kc*100), pG = Math.round(c.gord*9/kc*100), pC = Math.max(0,100-pP-pG);
+  // Beta 64: a barra e os números acompanham o cardápio do dia COMO ESTÁ (prato trocado, item editado,
+  // acrescentado ou removido). Antes mostravam só a meta fixa e não mudavam com o prato.
+  const _rP = Math.round(diaReal.p||0), _rC = Math.round(diaReal.c||0), _rG = Math.round(diaReal.g||0);
+  const kc = (_rP*4 + _rC*4 + _rG*9) || 1, pP = Math.round(_rP*4/kc*100), pG = Math.round(_rG*9/kc*100), pC = Math.max(0,100-pP-pG);
   const objBtns = Object.keys(NUTRI_OBJ).map(k=>`<button class="seg ${n.objetivo===k?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriSet('objetivo','${k}')">${NUTRI_OBJ[k]}</button>`).join('');
   const refs = plano.refeicoes.map(m=>{
     const kcalMostra = Math.round((comidas[m.id] || m._mudou) ? m._real.kcal : m.tot.kcal);
@@ -12282,10 +12297,11 @@ function openNutri(){
         ${!editavel?`<div style="font-size:11.5px;color:var(--text-mute);margin-top:8px">Dia que já passou: só consulta.</div>`:''}
         <div class="macbar"><i style="width:${pP}%;background:var(--primary)"></i><i style="width:${pC}%;background:var(--accent)"></i><i style="width:${pG}%;background:var(--prep)"></i></div>
         <div class="maclg">
-          <span><i style="background:var(--primary)"></i>Proteína <b>${c.prot}g</b></span>
-          <span><i style="background:var(--accent)"></i>Carbo <b>${c.carb}g</b></span>
-          <span><i style="background:var(--prep)"></i>Gordura <b>${c.gord}g</b></span>
+          <span><i style="background:var(--primary)"></i>Proteína <b>${_rP}g</b><small>/${c.prot}</small></span>
+          <span><i style="background:var(--accent)"></i>Carbo <b>${_rC}g</b><small>/${c.carb}</small></span>
+          <span><i style="background:var(--prep)"></i>Gordura <b>${_rG}g</b><small>/${c.gord}</small></span>
         </div>
+        <div style="font-size:11px;color:var(--text-mute);margin-top:4px">Gramas no cardápio deste dia, já com as suas trocas / meta do dia</div>
         <div style="font-size:11.5px;color:var(--text-dim);margin-top:10px;line-height:1.5">${c.modelo==='b53' ? `Média da semana: gasto ~${c.tdee} kcal (${c.dias} ${c.dias===1?'dia':'dias'} com treino). O detalhe deste dia está logo abaixo.` : `Gasto estimado: ${c.tdee} kcal (${c.dias} treinos/semana).`} ${c.ajusteNota||''}</div>
       </div>
       ${c.avisos.map(a=>`<div class="card card-alert" style="padding:12px 14px;font-size:12.5px;line-height:1.5">⚠️ ${a}</div>`).join('')}

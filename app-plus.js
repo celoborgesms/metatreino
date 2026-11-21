@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 63 — app-plus.js
+// MetaTreino 2027.1 Beta 64 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.63' };
+const MTP = { versao: '2027.1-beta.64' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -13915,7 +13915,7 @@ function mtBackupRecusado(motivo){
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 }
-function _mtRestaura(est, data, liberado){
+function _mtRestauraBackup(est, data, liberado){
   appConfirm(`Seus dados atuais serão SUBSTITUÍDOS pelos do arquivo.${liberado ? '\n\nRestauração liberada pelo suporte.' : ''}`, ()=>{
     const keepUser = { ...est.user, email: state.user.email, isAdmin: state.user.isAdmin };
     state = {...state, ...est, user:keepUser, ui:{tab:'home',selectedSession:null}};
@@ -13944,15 +13944,15 @@ window.importMyData = function(ev){
         const h = await _mtSha256(JSON.stringify(data.dados));
         if(h !== data.hash) return mtBackupRecusado('O conteúdo deste arquivo foi <b>alterado</b> depois de ser criado.');
         const reg = await _mtPrazo(db.collection('usuarios').doc(uidDados()).collection('backups').doc(h).get(), 9000);
-        if(reg.exists) return _mtRestaura(est, data, false);
-        if(await mtBackupLiberado()) return _mtRestaura(est, data, true);
+        if(reg.exists) return _mtRestauraBackup(est, data, false);
+        if(await mtBackupLiberado()) return _mtRestauraBackup(est, data, true);
         return mtBackupRecusado('Este backup foi criado em <b>outra conta</b> do MetaTreino e só pode ser restaurado nela.');
       }
       // formato antigo (antes da Beta 42): sem resumo — vale se for desta mesma conta
       const emArq = String((est.user && est.user.email) || '').toLowerCase();
       const meu = String((state.user && state.user.email) || '').toLowerCase();
-      if(emArq && emArq === meu) return _mtRestaura(est, data, false);
-      if(await mtBackupLiberado()) return _mtRestaura(est, data, true);
+      if(emArq && emArq === meu) return _mtRestauraBackup(est, data, false);
+      if(await mtBackupLiberado()) return _mtRestauraBackup(est, data, true);
       return mtBackupRecusado(emArq ? 'Este backup antigo pertence a <b>outra conta</b> do MetaTreino.' : 'Não foi possível confirmar a conta dona deste backup antigo.');
     }catch(e){ console.log('importar backup:', e); toast('⚠️ Não consegui conferir o backup agora. Confira a internet e tente de novo — nada foi alterado.'); }
   };
@@ -15721,10 +15721,11 @@ function openFamilia(){
   if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao');
   const mi = $('modal-inner'); if(mi.dataset.tela === 'nutri') mi.dataset.tela = 'nutri-sub';
   const n = nutriConfig();
-  const volta = `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">← Voltar ao plano alimentar</button>`;
+  // Beta 64: aberta pelo Perfil › Minha casa, o botão fecha; aberta do plano alimentar, volta para ele
+  const volta = window.__casaDoPerfil ? `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="window.__casaDoPerfil=false;closeModal()">Fechar</button>` : `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">← Voltar ao plano alimentar</button>`;
   if(!famAtiva()){
-    mi.innerHTML = `<div id="fam-tela"><h3>🏠 Alimentação da casa</h3>
-      <p class="fam-p">Para quem mora junto e come a mesma comida. <b>A comida é compartilhada, a alimentação é individual:</b> todos veem o mesmo prato, cada um com a <b>própria quantidade e calorias</b>, calculadas pelo plano de cada pessoa.</p>
+    mi.innerHTML = `<div id="fam-tela"><h3>🏠 Minha casa</h3>
+      <p class="fam-p">Para quem mora junto: o mesmo cardápio com a porção de cada um e, se quiserem, o treino organizado para não disputarem aparelho. <b>A comida é compartilhada, a alimentação é individual:</b> todos veem o mesmo prato, cada um com a <b>própria quantidade e calorias</b>, calculadas pelo plano de cada pessoa.</p>
       <ul class="fam-ul"><li>Quem cria o grupo é o administrador: decide o prato, os dias e os horários das refeições da casa. Dá para passar a administração depois.</li><li>A lista de compras e o PDF da casa somam o que cada pessoa vai comer.</li><li>Até ${FAM_MAX} pessoas. Cada uma precisa do plano alimentar (Premium).</li></ul>
       ${n.cardapioFixo ? '<p class="fam-mini">Você saiu de um grupo e manteve o cardápio daquela época nas refeições da casa.</p>' : ''}
       <button class="btn btn-primary btn-block" onclick="famCriar()">Criar o grupo da casa</button>
@@ -15744,21 +15745,27 @@ function openFamilia(){
   const blocoRef = refsCasa.map(mid=>{ const dias = famDiasRef(mid); const h = famHoraRef(mid) || (NUTRI_REFEICOES.find(r=>r.id===mid)||{}).hora || '';
     return `<div class="fam-ref"><div class="fam-ref-t"><b>${FAM_NOMES_REF[mid]}</b>${adm ? `<input type="time" class="input fam-hora" value="${h}" aria-label="Horário do ${FAM_NOMES_REF_MIN[mid]}" onchange="famHora('${mid}', this.value)">` : `<span class="fam-mini">${h}</span>`}</div>
       <div class="fam-dias" role="group" aria-label="Dias em que o ${FAM_NOMES_REF_MIN[mid]} é da casa">${FAM_DIAS_CURTO.map((t,i)=>`<button class="fam-dia ${dias.includes(i+1)?'on':''}" ${dis} aria-pressed="${dias.includes(i+1)}" aria-label="${NUTRI_DIAS[i]}" onclick="famAlternaDia('${mid}',${i+1})">${t}</button>`).join('')}</div></div>`; }).join('');
-  mi.innerHTML = `<div id="fam-tela"><h3>🏠 Alimentação da casa</h3>
+  // Beta 64: tela reorganizada em blocos — quem está na casa, refeições da casa (recolhido), compras/PDF lado a lado,
+  // treino em dupla e "sair" discreto no fim. As funções são as mesmas de antes.
+  const _ec = `<div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${P.economico?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaEconomico()">💰 Pratos econômicos na casa</button><button class="seg ${famTrocaPropria()?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaTrocaPropria()">🔄 Cada um pode trocar só para si</button></div>`;
+  mi.innerHTML = `<div id="fam-tela"><h3>🏠 Minha casa</h3>
     <div class="fam-codigo-box"><small>Código do grupo</small><b>${mtEsc(famId())}</b><button class="btn btn-ghost" onclick="famCompartilharCodigo()">Convidar</button></div>
     <p class="fam-p"><b>A comida é compartilhada, a alimentação é individual.</b> O prato é o mesmo para todos; a quantidade e as calorias de cada um vêm do próprio plano.</p>
-    <div class="fam-sec">Quem está na casa (${famMembros().length}/${FAM_MAX})</div>
-    <div class="fam-membros">${membros}</div>
-    <p class="fam-mini">${adm ? 'Você é o administrador: troca o prato, tira ou acrescenta alimentos no prato da casa e define dias e horários.' : `${mtEsc(famNome(admUid))} administra o cardápio da casa. Você vê o prato da casa com a sua porção e pode ajustar a sua quantidade.`}</p>
-    <div class="fam-sec">Refeições da casa</div>
-    <div class="fam-chips">${Object.keys(FAM_NOMES_REF).map(k=>`<button class="rc-chip ${refsCasa.includes(k)?'on':''}" ${dis} aria-pressed="${refsCasa.includes(k)}" onclick="famAlternaRefeicao('${k}')">${FAM_NOMES_REF[k]}</button>`).join('')}</div>
-    <div class="fam-refs">${blocoRef}</div>
-    <p class="fam-mini">Quem usa menos refeições por dia (por exemplo 4) segue só as que existem no plano dele. Nos dias desmarcados, a refeição volta a ser individual.</p>
-    <div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${P.economico?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaEconomico()">💰 Pratos econômicos na casa</button><button class="seg ${famTrocaPropria()?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaTrocaPropria()">🔄 Cada um pode trocar só para si</button></div>
-    ${restr.length ? `<p class="fam-p" style="margin-top:10px">As refeições da casa respeitam as restrições de todos: <b>${restr.join(', ')}</b>.</p>` : ''}
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="nutriListaCompras(null,'casa')">🛒 Lista de compras da casa</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="pdfAlimentacaoCasa()">📄 Cardápio da casa em PDF</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="famSair()">Sair do grupo (mantém meu cardápio)</button>
+    <details class="fam-bloco" open><summary><b>Pessoas</b><small>${famMembros().length}/${FAM_MAX}</small></summary>
+      <div class="fam-membros">${membros}</div>
+      <p class="fam-mini">${adm ? 'Você é o administrador do cardápio: troca o prato, tira ou acrescenta alimentos no prato da casa e define dias e horários.' : `${mtEsc(famNome(admUid))} administra o cardápio da casa. Você vê o prato da casa com a sua porção e pode ajustar a sua quantidade.`}</p>
+    </details>
+    <details class="fam-bloco"><summary><b>Refeições da casa</b><small>${refsCasa.length ? refsCasa.map(k=>FAM_NOMES_REF_MIN[k]).join(' e ') : 'nenhuma'}</small></summary>
+      <div class="fam-chips">${Object.keys(FAM_NOMES_REF).map(k=>`<button class="rc-chip ${refsCasa.includes(k)?'on':''}" ${dis} aria-pressed="${refsCasa.includes(k)}" onclick="famAlternaRefeicao('${k}')">${FAM_NOMES_REF[k]}</button>`).join('')}</div>
+      <div class="fam-refs">${blocoRef}</div>
+      <p class="fam-mini">Quem usa menos refeições por dia (por exemplo 4) segue só as que existem no plano dele. Nos dias desmarcados, a refeição volta a ser individual.</p>
+      ${_ec}
+      ${restr.length ? `<p class="fam-p" style="margin-top:10px">As refeições da casa respeitam as restrições de todos: <b>${restr.join(', ')}</b>.</p>` : ''}
+    </details>
+    <div class="fam-sec">Compras e cardápio</div>
+    <div class="fam-2b"><button class="btn btn-primary" onclick="nutriListaCompras(null,'casa')">🛒 Lista de compras</button><button class="btn btn-ghost" onclick="pdfAlimentacaoCasa()">📄 Cardápio em PDF</button></div>
+    ${typeof openTreinoDupla === 'function' ? `<button class="mealc rc-entrada" style="margin-top:12px" onclick="openTreinoDupla()"><span class="mi">🏋️</span><span class="mt"><b>Treino em dupla</b><small>aparelhos de quem treina no mesmo lugar</small></span><span class="rc-seta">›</span></button>` : ''}
+    <button class="fam-sair" onclick="famSair()">Sair do grupo (mantém meu cardápio)</button>
     ${volta}</div>`;
   $('modal-back').classList.add('on'); mi.scrollTop = 0;
 }
@@ -15771,8 +15778,15 @@ mtGancho('openNutri', { depois(){
     const bt = mi.querySelector('[onclick="nutriListaCompras()"]'); if(!bt) return;
     if(!mi.querySelector('#fam-entrada')){
       const ativo = famAtiva();
-      const sub = ativo ? `${famMembros().length} pessoas · ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(' e ')} da casa${famSouAdm()?' · você administra':''}` : 'mesmo prato, porção de cada um';
-      bt.insertAdjacentHTML('afterend', `<button class="mealc rc-entrada" id="fam-entrada" onclick="openFamilia()"><span class="mi">🏠</span><span class="mt"><b>Alimentação da casa</b><small>${mtEsc(sub)}</small></span><span class="rc-seta">›</span></button>`);
+      // Beta 64: conectar a casa agora fica em Perfil › Minha casa. Aqui: a entrada completa só para quem já está
+      // num grupo; para os outros, uma linha discreta que leva ao mesmo lugar.
+      if(ativo){
+        const n = famMembros().length;
+        const sub = `${n} ${n===1?'pessoa':'pessoas'} · ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(' e ')} da casa${famSouAdm()?' · você administra':''}`;
+        bt.insertAdjacentHTML('afterend', `<button class="mealc rc-entrada" id="fam-entrada" onclick="window.__casaDoPerfil=false;openFamilia()"><span class="mi">🏠</span><span class="mt"><b>Alimentação da casa</b><small>${mtEsc(sub)}</small></span><span class="rc-seta">›</span></button>`);
+      } else {
+        bt.insertAdjacentHTML('afterend', `<div id="fam-entrada" class="fam-dica-perfil">Mora com alguém? Dá para dividir o cardápio em <a href="#" onclick="openMinhaCasa();return false">Perfil › Minha casa</a>.</div>`);
+      }
     }
     if(!famAtiva()) return;
     bt.textContent = `🛒 Lista de compras (só eu ou da casa)`;
@@ -20309,7 +20323,9 @@ function exEstacao(ex){
   const r = R.find(([re])=>re.test(n)); return r ? r[1] : null;
 }
 // quantas unidades: o que a pessoa informou; sem informação, 1 de cada aparelho e halteres como vários pares
-function _duplaQtd(st, q){ q = q || {}; if(q[st] != null) return +q[st] || 1; return st === 'halteres' ? 2 : 1; }
+// Beta 64: 0 = não tenho (o plano evita), 1 = um só (evita disputa na dupla), 2 = dois ou mais
+function _duplaQtd(st, q){ q = q || {}; if(q[st] != null) return +q[st] === 0 ? 0 : (+q[st] || 1); return st === 'halteres' ? 2 : 1; }
+function _eqTenho(st){ return !st || _duplaQtd(st, _duplaCfg().q) > 0; }
 
 // ---------- 2. escolha individual entre equivalentes ----------
 function _mtHash(s){ let h = 2166136261; s = String(s||''); for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -20384,7 +20400,9 @@ function _duplaDiasParceiro(){
 // estação livre no dia (usada pelo gerador quando a dupla está ligada)
 function _duplaEstacaoLivre(st, dia){
   try{
-    if(!st || !dia || !_duplaCfg().on) return true;
+    if(!st) return true;
+    if(!_eqTenho(st)) return false;                       // marcou que não tem esse aparelho
+    if(!dia || !_duplaCfg().on) return true;
     const D = _duplaDiasParceiro(); if(!D) return true;
     const usos = (D.dias[String(dia)]||[]).filter(u=>u.st === st).length; if(!usos) return true;
     return Math.min(_duplaQtd(st, _duplaCfg().q), _duplaQtd(st, D.P.tr.q)) >= 2;
@@ -20392,12 +20410,15 @@ function _duplaEstacaoLivre(st, dia){
 }
 // conflitos do MEU plano com o da outra pessoa
 function mtDuplaConflitos(workouts){
-  const D = _duplaDiasParceiro(); if(!D) return null;
+  const D = _duplaCfg().on ? _duplaDiasParceiro() : null;
   const cfg = _duplaCfg(); const out = [];
   (workouts || ((state.modules.lift && state.modules.lift.plan && state.modules.lift.plan.workouts) || [])).forEach(w=>{
-    const dela = D.dias[String(w.dayIdx)] || []; if(!dela.length) return;
+    const dela = D ? (D.dias[String(w.dayIdx)] || []) : [];
     const n = (w.exercises||[]).length || 1;
     (w.exercises||[]).forEach((e,i)=>{ const st = exEstacao(e); if(!st) return;
+      // Beta 64: aparelho que a pessoa marcou que NÃO tem também entra (com ou sem dupla)
+      if(!_eqTenho(st)){ out.push({ dia:w.dayIdx, w, e, st, falta:true, meuPos:i/n, delaPos:0 }); return; }
+      if(!D) return;
       const u = dela.find(x=>x.st === st); if(!u) return;
       if(Math.min(_duplaQtd(st, cfg.q), _duplaQtd(st, D.P.tr.q)) >= 2) return;
       out.push({ dia:w.dayIdx, w, e, st, meuPos:i/n, delaPos:u.pos }); });
@@ -20430,7 +20451,7 @@ function _duplaEquivalente(e, w, setup){
 }
 function mtDuplaOrganizar(){
   const mod = state.modules.lift; if(!mod || !mod.plan) return { ok:false, msg:'Monte o plano de musculação primeiro.' };
-  if(!_duplaDiasParceiro()) return { ok:false, msg:'A outra pessoa ainda não ligou o treino em dupla (ou não abriu o app na versão nova).' };
+  if(!_duplaDiasParceiro() && !(mtDuplaConflitos()||[]).length) return { ok:false, msg:'Nada para organizar: a outra pessoa ainda não ligou o treino em dupla e o seu plano usa só aparelhos que você tem.' };
   const ws = (mod.plan.workouts||[]).filter(w=>!w.cali);
   const antes = JSON.parse(JSON.stringify(mod.plan.workouts));
   const nAntes = (mtDuplaConflitos()||[]).length;
@@ -20451,7 +20472,7 @@ function mtDuplaOrganizar(){
       const i = c.w.exercises.indexOf(c.e); if(i < 0) return;
       const novo = Object.assign({}, c.e, { id:slug(alt.name), name:alt.name, sub:alt.sub, equip:alt.equip, unit: alt.iso ? 'tempo' : c.e.unit, duplaDe:c.e.name });
       c.w.exercises[i] = novo; trocas.push({ de:c.e.name, para:alt.name, dia:c.w.dayName });
-    } else mantidos.push({ ex:c.e.name, st:MT_ESTACOES[c.st]||c.st, dia:c.w.dayName, dica: c.delaPos < 0.5 ? 'faça este no fim do treino' : 'faça este logo no começo' });
+    } else mantidos.push({ ex:c.e.name, st:MT_ESTACOES[c.st]||c.st, dia:c.w.dayName, dica: c.falta ? 'não há substituto equivalente com o que você tem — mantido' : (c.delaPos < 0.5 ? 'faça este no fim do treino' : 'faça este logo no começo') });
   });
   ws.forEach(w=>{ try{ w.duration = estimateLiftDuration(w.exercises, mod.setup.goal); }catch(e){} });
   mod.plan.workouts.sort((a,b)=>(a.dayIdx||9)-(b.dayIdx||9));
@@ -20466,52 +20487,57 @@ function mtDuplaDesfazer(){
   mod.plan.workouts = mod.duplaBackup.workouts; delete mod.duplaBackup; delete mod.duplaUlt; saveData(); return true;
 }
 // --- tela ---
+// Beta 64: a lista de aparelhos inclui TODO equipamento que algum exercício usa (não só os do plano atual),
+// com 0 / 1 / 2+. Marcar não fecha a lista nem pula a tela para o topo.
+const MT_EQ_GRUPOS = [
+  ['Pesos livres e banco', ['halteres','barra_livre','banco','banco_supino','rack','barra_fixa','paralelas']],
+  ['Máquinas e cabos', ['polia','legpress','extensora','flexora','smith','hack','maq_peito','maq_remada','maq_ombro','adut_abdut','maq_gluteo','maq_panturrilha','maq_braco']]
+];
 function openTreinoDupla(){
   const cfg = _duplaCfg(); const P = _duplaParceiro(); const mi = $('modal-inner');
-  if(!P){ mi.innerHTML = `<h3>Treino em dupla</h3><p class="fam-p">Para organizar os treinos com quem treina no mesmo lugar que você, as duas pessoas precisam estar no mesmo grupo da <b>Alimentação da casa</b> (é o vínculo que o app já tem). Nada do cardápio muda.</p><button class="btn btn-primary btn-block" onclick="closeModal()">Entendi</button>`; $('modal-back').classList.add('on'); return; }
-  const D = _duplaDiasParceiro(); const C = cfg.on ? (mtDuplaConflitos()||[]) : [];
+  const rolagem = mi.dataset.tela === 'dupla' ? mi.scrollTop : 0;
+  const D = P ? _duplaDiasParceiro() : null; const C = mtDuplaConflitos() || [];
+  const CD = C.filter(c=>!c.falta), CF = C.filter(c=>c.falta);
   const ws = ((state.modules.lift && state.modules.lift.plan && state.modules.lift.plan.workouts)||[]).slice().sort((a,b)=>a.dayIdx-b.dayIdx);
   const DN = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
-  const linhas = cfg.on && D ? [1,2,3,4,5,6,7].map(d=>{ const w = ws.find(x=>x.dayIdx === d); const g = D.grupos[String(d)];
-    if(!w && !g) return ''; const cf = C.filter(c=>c.dia === d);
+  const linhas = P && cfg.on && D ? [1,2,3,4,5,6,7].map(d=>{ const w = ws.find(x=>x.dayIdx === d); const g = D.grupos[String(d)];
+    if(!w && !g) return ''; const cf = CD.filter(c=>c.dia === d);
     return `<div class="dp-l ${cf.length?'conf':''}"><b>${DN[d-1]}</b><span>Você: ${w ? mtEsc(String(w.name||'').replace(/^Treino \w — /,'')) : '—'}</span><span>${mtEsc(P.nome)}: ${g ? mtEsc(g.replace(/\+/g,' + ')) : '—'}</span>${cf.length ? `<i>${cf.map(c=>MT_ESTACOES[c.st]||c.st).filter((v,i,a)=>a.indexOf(v)===i).join(', ')}</i>` : ''}</div>`; }).join('') : '';
-  const usadas = new Set(); ws.forEach(w=>(w.exercises||[]).forEach(e=>{ const s = exEstacao(e); if(s && s !== 'halteres') usadas.add(s); }));
-  if(D) Object.values(D.dias).forEach(l=>l.forEach(u=>{ if(u.st !== 'halteres') usadas.add(u.st); }));
   const U = state.modules.lift && state.modules.lift.duplaUlt;
-  mi.innerHTML = `<div id="dupla-tela"><h3>Treino em dupla · ${mtEsc(P.nome)}</h3>
-    <p class="fam-p">Para quem treina no mesmo lugar: o app evita que vocês dois precisem do <b>mesmo aparelho no mesmo dia</b>. Cada um continua com o próprio plano, histórico, cargas e conquistas — organizar muda só o <b>seu</b> plano. A corrida e o cardápio não mudam.</p>
-    <label class="pi-row" style="margin:8px 0"><span class="pi-txt"><b>Treinamos no mesmo lugar</b><small>${cfg.on ? 'Ligado' : 'Desligado'} · ${D ? `${mtEsc(P.nome)} também ligou` : `${mtEsc(P.nome)} ainda não ligou`}</small></span><input type="checkbox" class="pi-sw" ${cfg.on?'checked':''} onchange="duplaLiga(this.checked)"></label>
-    ${cfg.on ? `
-      ${D ? `<div class="section-lbl" style="margin:12px 0 4px">Semana</div><div class="dp-tab">${linhas || '<p class="fam-p">Nenhum dia de musculação em comum.</p>'}</div>
-      <p class="fam-p" style="margin-top:6px">${C.length ? `<b>${C.length} ${C.length===1?'exercício precisa':'exercícios precisam'}</b> de um aparelho que ${mtEsc(P.nome)} também usa no mesmo dia.` : 'Sem disputa de aparelho na semana. 👍'}</p>
-      <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="duplaOrganizar()" ${C.length?'':'disabled'}>Organizar o meu plano</button>
-      ${state.modules.lift && state.modules.lift.duplaBackup ? `<button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="duplaDesfazer()">Desfazer a última organização</button>` : ''}
-      ${U && (U.trocas.length || U.mantidos.length) ? `<div class="dp-ult">${U.trocas.map(t=>`<div>↔ ${mtEsc(t.dia)}: <b>${mtEsc(t.para)}</b> no lugar de ${mtEsc(t.de)}</div>`).join('')}${U.mantidos.map(m=>`<div>• ${mtEsc(m.dia)}: ${mtEsc(m.ex)} (${mtEsc(m.st)}) — sem equivalente; ${mtEsc(m.dica)}</div>`).join('')}</div>` : ''}`
-      : `<p class="fam-p" style="margin-top:8px">Quando ${mtEsc(P.nome)} também ligar, aparece aqui a semana de vocês dois e os aparelhos em comum.</p>`}
-      <details class="dp-eq"${usadas.size ? '' : ' open'}><summary>Quantos aparelhos vocês têm</summary>
-        <p class="fam-p">Só importa o que tem <b>uma unidade</b>. Sem resposta, o app considera 1 de cada aparelho e halteres em vários pares.</p>
-        ${[...usadas].map(s=>`<div class="dp-q"><span>${mtEsc(MT_ESTACOES[s]||s)}</span><div class="mod-toggle"><button class="seg ${_duplaQtd(s,cfg.q)<2?'on':''}" onclick="duplaQtd('${s}',1)">1</button><button class="seg ${_duplaQtd(s,cfg.q)>=2?'on':''}" onclick="duplaQtd('${s}',2)">2 ou mais</button></div></div>`).join('') || '<p class="fam-p">Monte o plano de musculação para ver os aparelhos.</p>'}
-      </details>
-      <label class="pi-row" style="margin-top:8px"><span class="pi-txt"><b>Conquistas em dupla</b><small>Compartilha só o dia e o horário dos seus treinos com ${mtEsc(P.nome)} (nada de cargas, peso ou distâncias)</small></span><input type="checkbox" class="pi-sw" ${cfg.conq!==false?'checked':''} onchange="duplaConq(this.checked)"></label>` : ''}
+  const eqLinha = s=>{ const q = _duplaQtd(s, cfg.q); return `<div class="dp-q"><span>${mtEsc(MT_ESTACOES[s]||s)}</span><div class="mod-toggle dp-q3">${[[0,'0'],[1,'1'],[2,'2+']].map(([v,t])=>`<button type="button" class="seg ${(v===2 ? q>=2 : q===v)?'on':''}" onclick="duplaQtd('${s}',${v})">${t}</button>`).join('')}</div></div>`; };
+  const eqAberto = window.__dpEqAberto ? ' open' : '';
+  mi.dataset.tela = 'dupla';
+  mi.innerHTML = `<div id="dupla-tela"><h3>Equipamentos e treino em dupla</h3>
+    <p class="fam-p">Diga o que você tem: o plano evita o que falta e, se outra pessoa da casa treina no mesmo lugar, evita que vocês precisem do <b>mesmo aparelho no mesmo dia</b>. Cada um continua com o próprio plano, histórico e cargas — organizar muda só o <b>seu</b> plano. Corrida e cardápio não mudam.</p>
+    <details class="dp-eq"${eqAberto} ontoggle="window.__dpEqAberto=this.open"><summary>Meus equipamentos</summary>
+      <p class="fam-p">Quantos de cada você tem: <b>0</b> = não tenho, <b>1</b> = um só, <b>2+</b> = dois ou mais. Sem resposta, o app considera 1 de cada aparelho e halteres em vários pares. Elásticos e kettlebell não aparecem porque nenhum exercício da biblioteca usa.</p>
+      ${MT_EQ_GRUPOS.map(([t, l])=>`<div class="dp-eqg">${t}</div>${l.map(eqLinha).join('')}`).join('')}
+    </details>
+    ${P ? `<label class="pi-row" style="margin:12px 0 8px"><span class="pi-txt"><b>Treino com ${mtEsc(P.nome)} no mesmo lugar</b><small>${cfg.on ? 'Ligado' : 'Desligado'} · ${D ? `${mtEsc(P.nome)} também ligou` : `${mtEsc(P.nome)} ainda não ligou`}</small></span><input type="checkbox" class="pi-sw" ${cfg.on?'checked':''} onchange="duplaLiga(this.checked)"></label>` : `<p class="fam-mini" style="margin-top:10px">Treino em dupla: as duas pessoas precisam estar no mesmo grupo de Perfil › Minha casa.</p>`}
+    ${P && cfg.on && D ? `<div class="section-lbl" style="margin:10px 0 4px">Semana</div><div class="dp-tab">${linhas || '<p class="fam-p">Nenhum dia de musculação em comum.</p>'}</div>` : ''}
+    <p class="fam-p" style="margin-top:8px">${CD.length ? `<b>${CD.length} ${CD.length===1?'exercício precisa':'exercícios precisam'}</b> de um aparelho que ${mtEsc(P ? P.nome : '')} também usa no mesmo dia. ` : ''}${CF.length ? `<b>${CF.length} ${CF.length===1?'exercício usa':'exercícios usam'}</b> algo que você marcou que não tem.` : ''}${!C.length ? 'Tudo certo: nenhum exercício do seu plano depende de algo que falta ou que está com outra pessoa.' : ''}</p>
+    ${C.length ? `<button class="btn btn-primary btn-block" style="margin-top:4px" onclick="duplaOrganizar()">Organizar o meu plano</button>` : ''}
+    ${state.modules.lift && state.modules.lift.duplaBackup ? `<button class="btn btn-ghost btn-block" style="margin-top:6px" onclick="duplaDesfazer()">Desfazer a última organização</button>` : ''}
+    ${U && (U.trocas.length || U.mantidos.length) ? `<div class="dp-ult">${U.trocas.map(t=>`<div>↔ ${mtEsc(t.dia)}: <b>${mtEsc(t.para)}</b> no lugar de ${mtEsc(t.de)}</div>`).join('')}${U.mantidos.map(m=>`<div>• ${mtEsc(m.dia)}: ${mtEsc(m.ex)} (${mtEsc(m.st)}) — ${mtEsc(m.dica)}</div>`).join('')}</div>` : ''}
+    ${P && cfg.on ? `<label class="pi-row" style="margin-top:10px"><span class="pi-txt"><b>Conquistas em dupla</b><small>Compartilha só o dia e o horário dos seus treinos com ${mtEsc(P.nome)} (nada de cargas, peso ou distâncias)</small></span><input type="checkbox" class="pi-sw" ${cfg.conq!==false?'checked':''} onchange="duplaConq(this.checked)"></label>` : ''}
     <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button></div>`;
-  $('modal-back').classList.add('on');
+  $('modal-back').classList.add('on'); mi.scrollTop = rolagem;
 }
-function _duplaPublicaJa(){ try{ if(typeof famAgendaEnvio === 'function') famAgendaEnvio(200); }catch(e){} }
-function duplaLiga(on){ _duplaCfg().on = !!on; saveData(); _duplaPublicaJa(); openTreinoDupla(); }
+function _duplaPublicaJa(){ try{ if(typeof famAgendaEnvio === 'function' && typeof famAtiva === 'function' && famAtiva()) famAgendaEnvio(200); }catch(e){} }
+function duplaLiga(on){ _duplaCfg().on = !!on; saveData(); _duplaPublicaJa(); openTreinoDupla(); try{ mtDuplaLinha(); }catch(e){} }
 function duplaConq(on){ _duplaCfg().conq = !!on; saveData(); _duplaPublicaJa(); }
-function duplaQtd(st, n){ const c = _duplaCfg(); c.q = c.q || {}; c.q[st] = n; saveData(); _duplaPublicaJa(); openTreinoDupla(); }
-function duplaOrganizar(){ const r = mtDuplaOrganizar(); if(!r.ok){ toast(r.msg); return; } toast(r.depois < r.antes ? `Pronto: de ${r.antes} para ${r.depois} ${r.depois===1?'conflito':'conflitos'} de aparelho` : 'Não deu para reduzir sem prejudicar o treino — veja as dicas'); _duplaPublicaJa(); openTreinoDupla(); try{ renderSessions(); }catch(e){} }
+function duplaQtd(st, n){ const c = _duplaCfg(); c.q = c.q || {}; c.q[st] = n; window.__dpEqAberto = true; saveData(); _duplaPublicaJa(); openTreinoDupla(); try{ mtDuplaLinha(); }catch(e){} }
+function duplaOrganizar(){ const r = mtDuplaOrganizar(); if(!r.ok){ toast(r.msg); return; } toast(r.depois < r.antes ? `Pronto: de ${r.antes} para ${r.depois} ${r.depois===1?'pendência':'pendências'} de aparelho` : 'Não deu para reduzir sem prejudicar o treino — veja as dicas'); _duplaPublicaJa(); openTreinoDupla(); try{ renderSessions(); }catch(e){} }
 function duplaDesfazer(){ if(mtDuplaDesfazer()){ toast('Plano de volta como estava'); _duplaPublicaJa(); openTreinoDupla(); try{ renderSessions(); }catch(e){} } }
-// linha discreta em Treinos (só musculação, só para quem está num grupo da casa)
+// Beta 64: entrada discreta no FIM da tela de Treinos (antes ficava no topo, entre os atalhos e os dias)
 function mtDuplaLinha(){
   try{
     const old = $('dupla-linha'); if(old) old.remove();
-    if(state.active !== 'lift' || !state.modules.lift || !state.modules.lift.plan || typeof famAtiva !== 'function' || !famAtiva()) return;
-    const P = _duplaParceiro(); if(!P) return; const cfg = _duplaCfg();
-    const C = cfg.on ? (mtDuplaConflitos()||[]) : null;
-    const txt = !cfg.on ? 'Treinam no mesmo lugar? Organize os aparelhos' : !_duplaDiasParceiro() ? `Esperando ${P.nome} ligar` : C.length ? `${C.length} em comum` : 'sem disputa de aparelho';
-    const alvo = $('sess-qlinks'); if(!alvo) return;
-    alvo.insertAdjacentHTML('afterend', `<button type="button" id="dupla-linha" class="dupla-linha ${C && C.length ? 'conf' : ''}" onclick="openTreinoDupla()"><span>Treino em dupla · ${mtEsc(P.nome)}</span><small>${mtEsc(txt)}</small><i>›</i></button>`);
+    if(state.active !== 'lift' || !state.modules.lift || !state.modules.lift.plan) return;
+    const P = _duplaParceiro(); const cfg = _duplaCfg(); const C = mtDuplaConflitos() || [];
+    const txt = C.length ? `· ${C.length} ${C.length===1?'pendência':'pendências'} de aparelho` : (P && cfg.on ? `· com ${P.nome}` : '');
+    const wrap = document.querySelector('#scr-sessions .wrap'); if(!wrap) return;
+    wrap.insertAdjacentHTML('beforeend', `<div id="dupla-linha" class="dupla-linha ${C.length ? 'conf' : ''}"><a href="#" onclick="openTreinoDupla();return false">⚙️ Equipamentos${P ? ' e treino em dupla' : ' da academia'}</a>${txt ? `<small>${mtEsc(txt)}</small>` : ''}</div>`);
   }catch(e){}
 }
 mtGancho('renderSessions', { depois(){ mtDuplaLinha(); } });
@@ -20700,11 +20726,13 @@ try{
 
 (function(){ if(document.getElementById('b63-css')) return; const s = document.createElement('style'); s.id = 'b63-css';
   s.textContent = `
-.dupla-linha{ display:flex; align-items:center; gap:8px; width:100%; margin:8px 0 0; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--surface-2, rgba(255,255,255,.03)); color:var(--text); text-align:left; font:inherit; cursor:pointer; }
-.dupla-linha span{ font-weight:700; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dupla-linha small{ flex:1; min-width:0; color:var(--text-dim); font-size:12px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dupla-linha{ display:flex; flex-wrap:wrap; justify-content:center; align-items:baseline; gap:4px 8px; margin:14px 0 4px; font-size:12.5px; text-align:center; }
+.dupla-linha a{ color:var(--text-dim); font-weight:600; text-decoration:none; border-bottom:1px dashed var(--border); }
+.dupla-linha small{ color:var(--text-mute, var(--text-dim)); font-size:12px; }
 .dupla-linha.conf small{ color:var(--warning, #f59e0b); }
-.dupla-linha i{ font-style:normal; color:var(--text-dim); }
+.dp-eqg{ margin:10px 0 2px; font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--text-dim); }
+.dp-q3{ width:132px !important; flex:none; }
+.dp-q3 .seg{ padding:7px 0 !important; font-size:13px !important; }
 .dp-tab{ display:grid; gap:6px; }
 .dp-l{ display:grid; grid-template-columns:38px 1fr; gap:2px 8px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; font-size:12.5px; }
 .dp-l b{ grid-row:span 3; align-self:center; }
@@ -20715,8 +20743,8 @@ try{
 .dp-eq{ margin-top:10px; border:1px solid var(--border); border-radius:10px; padding:2px 10px 8px; }
 .dp-eq summary{ cursor:pointer; padding:8px 0; font-weight:700; font-size:13px; }
 .dp-q{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0; font-size:12.5px; }
-.dp-q .mod-toggle{ flex:none; width:150px; margin:0; }
-.dp-q .seg{ font-size:12px; padding:7px 4px; }
+.dp-q .mod-toggle{ flex:none; margin:0; }
+.dp-q > span{ min-width:0; overflow-wrap:anywhere; }
 .mm-fx-info{ display:grid; gap:4px; margin:8px 0 2px; font-size:12.5px; line-height:1.4; }
 .mm-fx-info span{ display:inline-block; min-width:92px; color:var(--text-dim); font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; }
 `;
@@ -20724,3 +20752,176 @@ try{
 
 Object.assign(window, { liftEscolheIndividual, exEstacao, mtDuplaPublica, mtDuplaConflitos, mtDuplaOrganizar, mtDuplaDesfazer, openTreinoDupla,
   duplaLiga, duplaConq, duplaQtd, duplaOrganizar, duplaDesfazer, mtChecaConquistas63, mtAvisoTempoHTML });
+// =====================================================================
+// 66. Beta 64 — mais alimentos e bebidas, busca melhor, "Minha casa" no Perfil
+// ---------------------------------------------------------------------
+//  • Alimentos novos (valores aproximados da TACO 4ª ed. / IBGE POF, por 100 g ou 100 ml, prontos para
+//    consumo). Bebidas vêm por unidade (copo, lata, taça, dose). Bebida alcoólica: as calorias do álcool
+//    entram nas kcal, mas não em proteína/carbo/gordura — por isso a soma dos macros fica abaixo das kcal.
+//  • Tipos de ovo (cozido, frito, mexido, omelete, clara, codorna) e misturas do dia a dia.
+//  • Busca: sem acento, por qualquer palavra e por apelidos (refri, coca zero, pinga, chopp…), com o
+//    que começa pelo termo primeiro.
+//  • Perfil › Minha casa: o vínculo da casa (cardápio e treino em dupla) num lugar só.
+// =====================================================================
+const NUTRI_MAIS = {
+  // ovos
+  ovocozido:   ['Ovo cozido', 146, 13.3, 0.6, 9.5, 50, null],
+  ovofrito:    ['Ovo frito', 240, 15.6, 1.2, 18.6, 50, null],
+  ovomexido:   ['Ovo mexido (com óleo)', 180, 12.5, 1.0, 14.0, 60, null],
+  omelete:     ['Omelete simples (2 ovos)', 155, 11.0, 1.0, 11.5, 120, null],
+  clara:       ['Clara de ovo', 52, 10.9, 0.7, 0.2, 33, null],
+  codorna:     ['Ovo de codorna', 177, 13.7, 0.8, 12.7, 10, null],
+  // misturas (peso do prato pronto)
+  bifeacebolado:['Bife acebolado', 230, 27.0, 2.0, 12.5, null, null],
+  carnepanela: ['Carne de panela', 210, 27.0, 1.5, 10.5, null, null],
+  picanha:     ['Picanha grelhada', 290, 25.0, 0, 21.0, null, null],
+  costela:     ['Costela bovina assada', 373, 28.0, 0, 28.9, null, null],
+  carneseca:   ['Carne-seca refogada', 240, 32.0, 0, 12.0, null, null],
+  hamburgcasa: ['Hambúrguer caseiro grelhado', 240, 22.0, 1.0, 16.0, 120, null],
+  almondega:   ['Almôndega ao molho', 200, 14.0, 7.0, 13.0, null, null],
+  frangofrito: ['Frango frito (coxa ou sobrecoxa)', 245, 25.0, 3.0, 14.5, null, null],
+  frangoempan: ['Frango empanado (milanesa)', 260, 20.0, 12.0, 15.0, null, null],
+  frangomolho: ['Frango desfiado ao molho', 150, 22.0, 3.0, 5.5, null, null],
+  strogonoff:  ['Strogonoff de frango', 160, 13.0, 4.0, 10.0, null, null],
+  linguica:    ['Linguiça toscana grelhada', 300, 18.0, 1.0, 25.0, 60, null],
+  feijoada:    ['Feijoada', 140, 9.0, 8.0, 8.0, null, {g:200,nome:'concha grande'}],
+  peixefrito:  ['Peixe frito (merluza ou pescada)', 230, 24.0, 6.0, 12.0, null, null],
+  salmao:      ['Salmão grelhado', 230, 24.0, 0, 15.0, null, null],
+  camarao:     ['Camarão cozido', 90, 19.0, 0, 1.0, null, null],
+  // acompanhamentos
+  farofa:      ['Farofa pronta', 406, 2.1, 80.3, 9.1, null, {g:15,nome:'col. de sopa'}],
+  farinha:     ['Farinha de mandioca', 361, 1.6, 87.9, 0.3, null, {g:15,nome:'col. de sopa'}],
+  pure:        ['Purê de batata', 90, 2.0, 13.0, 3.5, null, null],
+  macarraomolho:['Macarrão ao molho de tomate', 120, 4.0, 22.0, 2.0, null, null],
+  polenta:     ['Polenta cozida', 70, 1.5, 15.0, 0.5, null, null],
+  mandiocafrita:['Mandioca frita', 300, 1.5, 40.0, 15.0, null, null],
+  vinagrete:   ['Vinagrete', 30, 0.8, 5.0, 1.0, null, {g:30,nome:'col. de sopa'}, true],
+  maionese:    ['Salada de maionese (com batata)', 180, 3.0, 12.0, 13.0, null, {g:60,nome:'col. de servir'}],
+  queijocoalho:['Queijo coalho', 300, 22.0, 2.0, 22.0, 40, null],
+  docedeleite: ['Doce de leite', 315, 7.0, 55.0, 7.5, null, {g:20,nome:'col. de sopa'}],
+  goiabada:    ['Goiabada', 280, 0.4, 70.0, 0.1, null, {g:30,nome:'fatia'}],
+  acucar:      ['Açúcar', 387, 0, 99.5, 0, null, {g:5,nome:'col. de chá'}],
+  // bebidas (unidade = copo/lata/taça/dose)
+  sucolaranja: ['Suco de laranja natural (copo 200 ml)', 45, 0.7, 10.4, 0.1, 200, null],
+  sucouva:     ['Suco de uva integral (copo 200 ml)', 60, 0.3, 15.0, 0, 200, null],
+  sucoverde:   ['Suco verde (couve, limão e maçã, 200 ml)', 25, 0.5, 6.0, 0.1, 200, null],
+  refrizero:   ['Refrigerante zero (lata 350 ml)', 1, 0, 0.1, 0, 350, null],
+  aguacoco:    ['Água de coco (copo 200 ml)', 22, 0, 5.3, 0, 200, null],
+  caldocana:   ['Caldo de cana (copo 300 ml)', 67, 0.2, 17.0, 0, 300, null],
+  cafe:        ['Café sem açúcar (xícara 50 ml)', 2, 0.1, 0.3, 0, 50, null],
+  cafeacucar:  ['Café com açúcar (xícara 50 ml)', 42, 0.1, 10.3, 0, 50, null],
+  cafeleite:   ['Café com leite (copo 200 ml)', 42, 2.2, 3.3, 2.2, 200, null],
+  achocolatado:['Achocolatado com leite (copo 200 ml)', 75, 3.0, 11.0, 2.2, 200, null],
+  cha:         ['Chá sem açúcar (xícara 200 ml)', 1, 0, 0.2, 0, 200, null],
+  isotonico:   ['Isotônico (garrafa 500 ml)', 24, 0, 6.0, 0, 500, null],
+  energetico:  ['Energético (lata 250 ml)', 45, 0, 11.0, 0, 250, null],
+  energzero:   ['Energético zero (lata 250 ml)', 2, 0, 0.3, 0, 250, null],
+  cervejazero: ['Cerveja sem álcool (lata 350 ml)', 20, 0.3, 4.4, 0, 350, null],
+  chopp:       ['Chope (copo 300 ml)', 43, 0.4, 3.6, 0, 300, null],
+  vinhobranco: ['Vinho branco (taça 150 ml)', 82, 0.1, 2.6, 0, 150, null],
+  caipirinha:  ['Caipirinha (copo 200 ml)', 135, 0, 17.0, 0, 200, null],
+  destilado:   ['Destilado: cachaça, vodca ou uísque (dose 50 ml)', 231, 0, 0, 0, 50, null]
+};
+(function(){ try{ Object.entries(NUTRI_MAIS).forEach(([id, v])=>{ if(!NUTRI_ALIMENTOS[id]) NUTRI_ALIMENTOS[id] = v; });
+  const add = (k, ids)=>{ if(NUTRI_CATEG[k]) ids.forEach(id=>{ if(!NUTRI_CATEG[k][1].includes(id)) NUTRI_CATEG[k][1].push(id); }); };
+  add('proteinas', ['ovocozido','ovofrito','ovomexido','omelete','clara','codorna']);
+  add('carbo', ['farinha','pure','polenta','macarraomolho']);
+  add('lat', ['queijocoalho']);
+  add('outros', ['acucar','docedeleite','goiabada']);
+  add('verduras', ['vinagrete']);
+  if(!NUTRI_CATEG.pratos) NUTRI_CATEG.pratos = ['🍲 Pratos e misturas', ['bifeacebolado','carnepanela','picanha','costela','carneseca','hamburgcasa','almondega','frangofrito','frangoempan','frangomolho','strogonoff','linguica','feijoada','peixefrito','salmao','camarao','farofa','mandiocafrita','maionese']];
+  if(!NUTRI_CATEG.bebidas) NUTRI_CATEG.bebidas = ['🥤 Bebidas', ['sucolaranja','sucouva','sucoverde','refrizero','refri','suco','aguacoco','caldocana','cafe','cafeacucar','cafeleite','achocolatado','cha','isotonico','energetico','energzero','cerveja','cervejazero','chopp','vinho','vinhobranco','caipirinha','destilado'].filter(id=>NUTRI_ALIMENTOS[id])];
+  // lactose / glúten: o filtro do plano continua valendo para o que o app sugere
+  ['cafeleite','achocolatado','queijocoalho','docedeleite','strogonoff','pure'].forEach(id=>{ if(!NUTRI_LACTOSE.includes(id)) NUTRI_LACTOSE.push(id); });
+  ['frangoempan','macarraomolho','hamburgcasa','almondega'].forEach(id=>{ if(!NUTRI_GLUTEN.includes(id)) NUTRI_GLUTEN.push(id); });
+}catch(e){ console.log('alimentos 64:', e); } })();
+
+// apelidos para a busca
+const NUTRI_APELIDOS = {
+  refrizero:'refri coca zero guarana zero diet light', refri:'refri coca guarana soda', cerveja:'breja', chopp:'chopp chope', destilado:'pinga cachaca vodka vodca whisky uisque gin tequila',
+  caipirinha:'caipiroska drink', caldocana:'garapa', sucolaranja:'suco natural', cafe:'cafezinho expresso', isotonico:'gatorade powerade', energetico:'red bull monster',
+  ovocozido:'ovo', ovofrito:'ovo', ovomexido:'ovo', omelete:'ovo omelete', clara:'ovo clara', codorna:'ovo', feijoada:'feijao', farofa:'farinha', bifeacebolado:'bife carne',
+  picanha:'carne churrasco', costela:'carne churrasco', linguica:'churrasco calabresa', frangofrito:'frango', frangoempan:'frango', frangomolho:'frango', strogonoff:'estrogonofe frango',
+  pure:'batata', mandiocafrita:'aipim macaxeira', mandioca:'aipim macaxeira', mandioquinha:'batata baroa', aguacoco:'coco', achocolatado:'nescau toddy', acem:'carne moida', patinho:'carne'
+};
+const _nbSemAcento = t=>String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+window.nutriAddFiltra = function(){
+  const q = _nbSemAcento((window.__nutriAddBusca||'').trim());
+  const cat = window.__nutriAddCat || 'todos';
+  const termos = q.split(/\s+/).filter(Boolean);
+  const pont = id=>{ const f = NUTRI_ALIMENTOS[id]; const nome = _nbSemAcento(f[0]); const ap = _nbSemAcento(NUTRI_APELIDOS[id]||'');
+    if(!termos.length) return 1;
+    if(!termos.every(t=>nome.includes(t) || ap.includes(t))) return 0;
+    return nome.startsWith(termos[0]) ? 3 : nome.split(/\s|\(/).some(w=>w.startsWith(termos[0])) ? 2 : 1; };
+  const ids = Object.keys(NUTRI_ALIMENTOS).filter(id=>cat==='todos' || (NUTRI_CATEG[cat] && NUTRI_CATEG[cat][1].includes(id)))
+    .map(id=>[id, pont(id)]).filter(([,p])=>p>0).sort((a,b)=>b[1]-a[1] || NUTRI_ALIMENTOS[a[0]][0].localeCompare(NUTRI_ALIMENTOS[b[0]][0],'pt')).map(([id])=>id);
+  const el = $('nadd-lista'); if(!el) return;
+  el.innerHTML = ids.length ? ids.map(id=>{ const f = NUTRI_ALIMENTOS[id]; const ref = f[5] ? `${Math.round(f[1]*f[5]/100)} kcal por unid.` : `${f[1]} kcal por 100 g`;
+    return `<div class="mrow" style="cursor:pointer" onclick="nutriAddEscolher('${window.__nutriAddMid}','${id}')"><span class="n">${escHtml(f[0])}<br><small style="color:var(--text-mute)">${ref}</small></span><span class="q" style="color:var(--primary-2)">+</span></div>`; }).join('')
+    : `<div style="padding:14px 4px;color:var(--text-dim);font-size:13px">Nada encontrado. Use "Outro alimento" para digitar as calorias.</div>`;
+};
+
+// ---------- Perfil › Minha casa ----------
+function openMinhaCasa(){ window.__casaDoPerfil = true; if(typeof openFamilia === 'function') openFamilia(); }
+function mtPerfilCasa(){
+  try{
+    const lista = document.querySelector('#pf-sentado-row'); if(!lista || $('pf-casa-row')) return;
+    lista.insertAdjacentHTML('afterend', `<div class="list-row" onclick="openMinhaCasa()" id="pf-casa-row">👥 <span>Minha casa</span><span id="pf-casa-val" style="margin-left:auto;color:var(--text-mute);font-size:12px"></span></div>`);
+  }catch(e){}
+}
+function mtPerfilCasaVal(){
+  try{ const v = $('pf-casa-val'); if(!v) return;
+    v.textContent = (typeof famAtiva === 'function' && famAtiva()) ? (n=>`${n} ${n===1?"pessoa":"pessoas"} ›`)(famMembros().length) : 'cardápio e treino em dupla ›'; }catch(e){}
+}
+mtPerfilCasa();
+mtGancho('goTab', { depois(t){ if(t === 'profile'){ mtPerfilCasa(); mtPerfilCasaVal(); } } });
+
+(function(){ if(document.getElementById('b64-css')) return; const s = document.createElement('style'); s.id = 'b64-css';
+  s.textContent = `
+.fam-bloco{ border:1px solid var(--border); border-radius:12px; padding:2px 12px 8px; margin:10px 0; }
+.fam-bloco > summary{ display:flex; align-items:center; gap:8px; cursor:pointer; padding:10px 0; list-style:none; }
+.fam-bloco > summary::-webkit-details-marker{ display:none; }
+.fam-bloco > summary small{ margin-left:auto; color:var(--text-dim); font-size:12px; text-align:right; }
+.fam-bloco > summary::after{ content:'›'; color:var(--text-dim); transition:transform .2s; }
+.fam-bloco[open] > summary::after{ transform:rotate(90deg); }
+.fam-2b{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.fam-2b .btn{ min-width:0; padding:11px 8px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fam-sair{ display:block; margin:16px auto 4px; background:none; border:0; color:var(--text-dim); font:600 12.5px inherit; text-decoration:underline; cursor:pointer; }
+.fam-dica-perfil{ margin:2px 2px 10px; font-size:12.5px; color:var(--text-dim); text-align:center; }
+.fam-dica-perfil a{ color:var(--primary-2, var(--primary)); font-weight:600; }
+.maclg small{ color:var(--text-mute, var(--text-dim)); font-size:11px; margin-left:1px; }
+`;
+  document.head.appendChild(s); })();
+Object.assign(window, { openMinhaCasa, NUTRI_MAIS });
+
+// ---------- Dor / TPM / modo leve: ao voltar ao normal, devolve o MESMO treino de antes ----------
+// Antes, "Estou sem dor" remontava o plano do zero: voltavam os grupos certos, mas com outros acessórios
+// (perdia a troca semanal). Agora o plano de antes da adaptação fica guardado e volta igual, desde que seja a
+// mesma semana e o plano não tenha sido refeito nesse meio-tempo. Trocas manuais feitas durante a dor continuam.
+function _adFp(s){ s = s || {}; return JSON.stringify([s.goal, s.days, s.equip, s.level, s.selectedDays, s.tempo, s.prioridades, s.equipList, s.modalidade]); }
+(function(){
+  const _orig = window.regenLiftExercises;
+  if(typeof _orig !== 'function') return;
+  window.regenLiftExercises = function(){
+    const mod = state.modules && state.modules.lift;
+    let a = null; try{ a = adaptMode(); }catch(e){}
+    if(mod && mod.plan && a && a.active && !mod.antesAdapt && !(mod.plan.workouts||[]).some(w=>w.adapted)){
+      try{ mod.antesAdapt = { sem: semanaLocalId(), fp: _adFp(mod.setup), w: (mod.plan.workouts||[]).map(w=>({ k:w.k, cali:!!w.cali, parts:[...(w.parts||[])], name:w.name, exercises: JSON.parse(JSON.stringify(w.exercises||[])) })) }; }catch(e){}
+    }
+    const r = _orig.apply(this, arguments);
+    try{
+      const S = mod && mod.antesAdapt;
+      if(S && a && !a.active){
+        delete mod.antesAdapt;
+        const W = mod.plan.workouts || [];
+        if(S.sem === semanaLocalId() && S.fp === _adFp(mod.setup) && S.w.length === W.length && S.w.every((x,i)=>x.k === W[i].k)){
+          W.forEach((w, i)=>{ const x = S.w[i]; if(w.cali || x.cali) return;
+            w.parts = x.parts; w.name = x.name; w.exercises = x.exercises; w.reforcoParts = []; w.adapted = false;
+            try{ applyPins(w, mod.setup); }catch(e){}
+            w.duration = estimateLiftDuration(w.exercises, mod.setup.goal); });
+        }
+      } else if(S && (S.fp !== _adFp(mod.setup) || S.sem !== semanaLocalId())) delete mod.antesAdapt;   // plano refeito: o guardado não vale mais
+    }catch(e){ console.log('voltar do modo adaptado:', e); }
+    return r;
+  };
+})();

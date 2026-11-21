@@ -102,7 +102,8 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `62-pdf-beta58.js` | Beta 58: cabeçalho discreto (`pdfArteCab` com ícone de linha, sem marca d'água), `pdfMontarTreino` (figura anatômica da semana via `mmCorpoSVG` + `_pdfCorpoSVG`, uma linha por exercício), `pdfListaCompras`/`pdfMontarCompras` (PDF próprio da lista; o botão da tela de compras chama este). |
 | `63-modalidades-beta60.js` | Beta 60: `mtMetricas` filtrada pela modalidade ativa (freq/tempo por modalidade); bloco Calistenia só na musculação; (o "Personalizar treinos" da Beta 60 foi retirado na Beta 61); bloco "Como fazer o circuito" (objetivo Resistência). Parte 54: `_pfCfg()` = personalização do Progresso por modalidade (`state.progressoMod`, Beta 59). |
 | `64-conquistas-revisao-beta61.js` | Beta 61: `mtRevisaConquistas()` — depois de excluir/editar um registro, recalcula e tira conquistas/desafios do mês ganhos nas últimas 48 h que deixaram de valer (só as recalculáveis por `checkTrophies`/`checkWeightTrophies`); limpa `conqPend` e `awardQueue`. Chamada por `deleteHistoryEntry`, edição do histórico e `atvExcluir`. |
-| `65-motor-individual-dupla.js` | Beta 63: `MM_ENFASE` (classificação muscular refinada em `mmMusculosDe`), `exEstacao` + `MT_ESTACOES`, `liftEscolheIndividual` (chamada por `buildLiftExercises`), treino em dupla (`mtDuplaPublica` → `perfis.{uid}.tr`, `mtDuplaConflitos`, `mtDuplaOrganizar`/`Desfazer`, `openTreinoDupla`), aviso de tempo (`plan.avisoTempo`), conquistas de calistenia/híbrido/dupla (`mtChecaConquistas63`), glifos novos. |
+| `65-motor-individual-dupla.js` | Beta 63: `MM_ENFASE` (classificação muscular refinada em `mmMusculosDe`), `exEstacao` + `MT_ESTACOES`, `liftEscolheIndividual` (chamada por `buildLiftExercises`), treino em dupla (`mtDuplaPublica` → `perfis.{uid}.tr`, `mtDuplaConflitos`, `mtDuplaOrganizar`/`Desfazer`, `openTreinoDupla`), aviso de tempo (`plan.avisoTempo`), conquistas de calistenia/híbrido/dupla (`mtChecaConquistas63`), glifos novos. Beta 64: quantidade 0/1/2+ (`_duplaQtd`, `_eqTenho`, `MT_EQ_GRUPOS`), pendência `falta` sem parceiro, link discreto `#dupla-linha` no fim de Treinos (`mtDuplaLinha`). |
+| `66-alimentos-casa-beta64.js` | Beta 64: `NUTRI_MAIS` (alimentos e bebidas novos, categorias `bebidas`/`pratos`), `NUTRI_APELIDOS` + `nutriAddFiltra` (busca sem acento/por apelido), `openMinhaCasa` + linha `#pf-casa-row` no Perfil, CSS da tela da casa (`.fam-bloco`, `.fam-2b`, `.fam-sair`), e o retorno do modo adaptado: wrapper de `regenLiftExercises` guarda `lift.antesAdapt` ao entrar em dor/TPM/leve e devolve o mesmo treino ao sair (mesma semana e mesmo setup). |
 
 Beta 56 também troca o azul fixo `#7dd3fc` por `var(--info-soft)` no núcleo (3 lugares) e torna `#sessions-chips` uma grade (parte 58).
 
@@ -148,6 +149,8 @@ Funções que já usam ganchos: `renderHome`, `renderHomeMetrics`, `renderMonthl
 Embrulhar a função inteira (`window.f = function(){...}`) só quando for preciso **mudar os argumentos ou o resultado** dela.
 
 ## Regras que evitam quebrar o app
+
+- **Nome de função é global para o app inteiro.** Duas `function x()` com o mesmo nome em partes diferentes: vale a ÚLTIMA (e para o arquivo todo). Foi assim que a rolagem da Beta 52 (`_mtRestaura`) apagou a restauração de backup até a Beta 64. Antes de criar uma função, procure o nome nas partes e no arquivo principal.
 
 1. Nunca declarar de novo um `let`/`const` que já existe no `app.js` (dá erro e o app não abre). Funções podem ser estendidas com ganchos.
 2. O estado do aluno é `state`. Depois de mudar algo, chamar `saveData()` (salva no aparelho e manda para a nuvem).
