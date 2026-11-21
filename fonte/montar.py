@@ -4,7 +4,7 @@ Monta o app-plus.js a partir das partes em fonte/app-plus/ e confere as versões
 
 Uso (na pasta do projeto, onde fica o index.html):
     python3 fonte/montar.py              → monta o app-plus.js e confere tudo
-    python3 fonte/montar.py --versao 25  → troca a versão para "2027.1 Beta 25" em todos os lugares e monta
+    python3 fonte/montar.py --versao 1   → troca a versão para "2027 RC 1" em todos os lugares e monta
 
 As partes entram em ordem alfabética (00-, 01-, 02-...). A ORDEM IMPORTA: uma parte
 pode usar o que as anteriores definiram. Parte nova → próximo número livre.
@@ -17,17 +17,26 @@ PARTES = os.path.join(RAIZ, 'fonte', 'app-plus')
 def ler(p): return open(os.path.join(RAIZ, p), encoding='utf-8').read()
 def gravar(p, s): open(os.path.join(RAIZ, p), 'w', encoding='utf-8').write(s)
 
+# 2027 RC 0: a versão deixou de ser "2027.1 Beta N" e passou a ser "2027 RC N" (Release Candidate).
+# Identificador (APP_VERSION, ?v=, service worker): "2027-rc.N". Texto (rodapé, cabeçalhos): "2027 RC N".
+SERIE = '2027'
+def ids(n): return f'{SERIE}-rc.{n}', f'{SERIE} RC {n}'
+def rotulo_para_id(t):
+    t = t.strip(); m = re.match(r'^(\S+) (Beta|RC) (\d+)$', t)
+    return f"{m.group(1)}-{m.group(2).lower()}.{m.group(3)}" if m else t
+
 def trocar_versao(n):
-    v_ponto, v_espaco = f'2027.1-beta.{n}', f'2027.1 Beta {n}'
+    v_ponto, v_espaco = ids(n)
     s = ler('app.js')
-    s = re.sub(r'^// ===== MetaTreino 2027\.1 Beta \d+ =====', f'// ===== MetaTreino {v_espaco} =====', s, count=1, flags=re.M)
-    s = re.sub(r"const APP_VERSION = '2027\.1-beta\.\d+';", f"const APP_VERSION = '{v_ponto}';", s, count=1)
+    s = re.sub(r'^// ===== MetaTreino .+? =====', f'// ===== MetaTreino {v_espaco} =====', s, count=1, flags=re.M)
+    s = re.sub(r"const APP_VERSION = '[^']+';", f"const APP_VERSION = '{v_ponto}';", s, count=1)
     gravar('app.js', s)
-    s = ler('service-worker.js'); s = re.sub(r"const APP_VERSION = '2027\.1-beta\.\d+';", f"const APP_VERSION = '{v_ponto}';", s, count=1); gravar('service-worker.js', s)
-    s = ler('index.html'); s = re.sub(r'\?v=2027\.1-beta\.\d+', f'?v={v_ponto}', s); s = re.sub(r'2027\.1 Beta \d+</span>', f'{v_espaco}</span>', s); gravar('index.html', s)
+    s = ler('service-worker.js'); s = re.sub(r"const APP_VERSION = '[^']+';", f"const APP_VERSION = '{v_ponto}';", s, count=1); gravar('service-worker.js', s)
+    s = ler('index.html'); s = re.sub(r'\?v=[0-9a-z.\-]+"', f'?v={v_ponto}"', s)
+    s = re.sub(r'(id="pf-version"[^>]*>)[^<]+(</span>)', lambda m: m.group(1) + v_espaco + m.group(2), s); gravar('index.html', s)
     p = os.path.join(PARTES, '00-base-utilitarios-ganchos.js'); s = open(p, encoding='utf-8').read()
-    s = re.sub(r'// MetaTreino 2027\.1 Beta \d+ — app-plus\.js', f'// MetaTreino {v_espaco} — app-plus.js', s, count=1)
-    s = re.sub(r"const MTP = \{ versao: '2027\.1-beta\.\d+' \};", f"const MTP = {{ versao: '{v_ponto}' }};", s, count=1)
+    s = re.sub(r'// MetaTreino .+? — app-plus\.js', f'// MetaTreino {v_espaco} — app-plus.js', s, count=1)
+    s = re.sub(r"const MTP = \{ versao: '[^']+' \};", f"const MTP = {{ versao: '{v_ponto}' }};", s, count=1)
     open(p, 'w', encoding='utf-8').write(s)
     print('versão trocada para', v_espaco)
 
@@ -38,8 +47,8 @@ def conferir():
         'app-plus (MTP.versao)': re.search(r"versao: '([^']+)'", ler('app-plus.js')).group(1),
     }
     for v in re.findall(r'\?v=([0-9a-z.\-]+)', ler('index.html')): achados['index.html (?v=)'] = v
-    rod = re.search(r'id="pf-version"[^>]*>2027\.1 Beta (\d+)<', ler('index.html'))
-    if rod: achados['index.html (rodapé)'] = '2027.1-beta.' + rod.group(1)
+    rod = re.search(r'id="pf-version"[^>]*>([^<]+)<', ler('index.html'))
+    if rod: achados['index.html (rodapé)'] = rotulo_para_id(rod.group(1))
     # Beta 33: o service worker guarda o Firebase da mesma versão usada no index.html (para abrir offline)
     fb_idx = set(re.findall(r'firebasejs/([0-9.]+)/', ler('index.html'))); fb_sw = set(re.findall(r'firebasejs/([0-9.]+)/', ler('service-worker.js')))
     if fb_idx != fb_sw: print(f'⚠️  Firebase do index.html {sorted(fb_idx)} ≠ service-worker.js {sorted(fb_sw)} — atualize os dois.'); return False
