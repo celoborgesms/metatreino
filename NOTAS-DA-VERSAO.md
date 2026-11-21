@@ -1,3 +1,20 @@
+# MetaTreino 2027.1 Beta 61 — Conquistas que somem ao apagar, menos emoji, sem personalização de Treinos
+
+**Não precisa publicar o `firestore.rules`.**
+
+1. **Apagar uma atividade tira o que ela liberou.**
+   - Vale para atividades importadas e manuais.
+   - Saem as conquistas e os desafios do mês ganhos nas **últimas 48 horas** que deixam de ser comprovados pelo que sobrou. Eles também saem da fila de "novas conquistas", e um aviso mostra o que saiu.
+   - Ganhos há mais de 48 horas continuam.
+   - Conquistas de evento (horário curioso, data especial, "A Volta por Cima") não são tocadas.
+   - Antes, a exclusão de importação não descontava nada dos totais, e a manual dependia da data do treino, então a caminhada importada apagada deixava "Primeira caminhada" e "Caminhada 3K".
+   - A exclusão de importação também passa a marcar a atividade como excluída, para ela não voltar pela sincronização.
+2. **"Personalizar treinos" retirado.** Os blocos da tela de Treinos são redesenhados em momentos diferentes, então esconder "pegava" às vezes. E poucos blocos davam para esconder, o que não justificava o botão. Fica só o "Como fazer o circuito" para o objetivo Resistência.
+3. **Menos emoji nos treinos:**
+   - as dicas por grupo muscular e os grupos da biblioteca não têm mais 🍑, 🧗, 🦵, 🦶, 🧱… (no estilo de ícones sóbrio, o glúteo virava garfo e faca e as costas viravam montanha);
+   - o 🔥 repetido em todos os grupos do treino virou um marcador discreto (o ✅ continua ao concluir);
+   - a linha "Aqueça 5-8 min, hidrate-se…" saiu, porque repetia o bloco Orientações do treino.
+
 # MetaTreino 2027.1 Beta 60 — Corrida é corrida, musculação é musculação
 
 **Não precisa publicar o `firestore.rules`.**

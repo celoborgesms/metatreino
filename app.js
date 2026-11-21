@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 60 =====
-const APP_VERSION = '2027.1-beta.60';
+// ===== MetaTreino 2027.1 Beta 61 =====
+const APP_VERSION = '2027.1-beta.61';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -2561,7 +2561,7 @@ function buildRunBlocks(kind, setup){
 // ---------- EXERCISE BANK ----------
 // equip tags: 'casa' (peso corporal / sem equipamento), 'halteres' (halteres/anilhas soltas), 'academia' (máquinas/barras/cabos)
 const EX_BANK = [
-  {name:'Peito',emo:'🫸',color:'',items:[
+  {name:'Peito',emo:'',color:'',items:[
     // ACADEMIA (máquinas, cabos, barra)
     {name:'Supino Reto com Barra',sub:'Peito (força)',equip:['academia']},
     {name:'Supino Inclinado com Barra',sub:'Peito Superior',equip:['academia']},
@@ -2582,7 +2582,7 @@ const EX_BANK = [
     {name:'Flexão Diamante',sub:'Peito Central / Tríceps',equip:['casa','halteres','academia']},
     {name:'Flexão Arqueiro',sub:'Peito (unilateral avançado)',equip:['casa','academia']}
   ]},
-  {name:'Costas',emo:'🧗',color:'',items:[
+  {name:'Costas',emo:'',color:'',items:[
     // ACADEMIA
     {name:'Puxada Frontal no Pulley',sub:'Dorsais (largura)',equip:['academia']},
     {name:'Puxada com Triângulo',sub:'Dorsais / Romboides',equip:['academia']},
@@ -2603,7 +2603,7 @@ const EX_BANK = [
     {name:'Remada com Toalha na Porta',sub:'Costas',equip:['casa'],improv:true},
     {name:'Superman',sub:'Lombar / Costas Baixa',equip:['casa','halteres','academia']}
   ]},
-  {name:'Ombro',emo:'🙆',color:'',items:[
+  {name:'Ombro',emo:'',color:'',items:[
     // ACADEMIA
     {name:'Desenvolvimento com Barra',sub:'Ombro (força)',equip:['academia']},
     {name:'Desenvolvimento na Máquina',sub:'Ombro',equip:['academia']},
@@ -2622,7 +2622,7 @@ const EX_BANK = [
     {name:'Elevação Frontal com Garrafas',sub:'Ombro Frontal',equip:['casa'],improv:true},
     {name:'Flexão Pike Elevada',sub:'Ombro (avançado)',equip:['casa','academia']}
   ]},
-  {name:'Bíceps',emo:'💪',color:'',items:[
+  {name:'Bíceps',emo:'',color:'',items:[
     // ACADEMIA
     {name:'Rosca Direta com Barra',sub:'Bíceps',equip:['academia']},
     {name:'Rosca Scott no Banco',sub:'Bíceps (pico)',equip:['academia']},
@@ -2639,7 +2639,7 @@ const EX_BANK = [
     {name:'Rosca Martelo com Garrafas',sub:'Braquial / Antebraço',equip:['casa'],improv:true},
     {name:'Rosca Isométrica com Toalha',sub:'Bíceps (isometria)',equip:['casa'],improv:true,iso:true}
   ]},
-  {name:'Tríceps',emo:'🦾',color:'orange',items:[
+  {name:'Tríceps',emo:'',color:'orange',items:[
     // ACADEMIA
     {name:'Tríceps na Polia com Barra',sub:'Tríceps',equip:['academia']},
     {name:'Tríceps Corda no Cabo',sub:'Tríceps (cabeça lateral)',equip:['academia']},
@@ -2656,7 +2656,7 @@ const EX_BANK = [
     {name:'Flexão Fechada (diamante)',sub:'Tríceps',equip:['casa','halteres','academia']},
     {name:'Tríceps Testa com Garrafa',sub:'Tríceps',equip:['casa'],improv:true}
   ]},
-  {name:'Pernas',emo:'🦵',color:'orange',items:[
+  {name:'Pernas',emo:'',color:'orange',items:[
     // ACADEMIA
     {name:'Agachamento Livre com Barra',sub:'Quadríceps / Glúteos (força)',equip:['academia']},
     {name:'Agachamento no Smith',sub:'Quadríceps / Glúteos',equip:['academia']},
@@ -2684,7 +2684,7 @@ const EX_BANK = [
     {name:'Cadeira contra parede (isométrico)',sub:'Quadríceps (resistência)',equip:['casa','halteres','academia'],iso:true},
     {name:'Agachamento Jump',sub:'Quadríceps (explosão)',equip:['casa','halteres','academia']}
   ]},
-  {name:'Glúteos',emo:'🍑',color:'pink',items:[
+  {name:'Glúteos',emo:'',color:'pink',items:[
     // ACADEMIA
     {name:'Elevação Pélvica (Hip Thrust)',sub:'Glúteos (força)',equip:['academia','halteres']},
     {name:'Coice na Polia (Glúteo no Cabo)',sub:'Glúteo Máximo',equip:['academia']},
@@ -2698,7 +2698,7 @@ const EX_BANK = [
     {name:'Abdução lateral de perna',sub:'Glúteo Médio',equip:['casa','halteres','academia']},
     {name:'Agachamento Sumô com Pausa',sub:'Glúteos / Adutores',equip:['casa','halteres','academia']}
   ]},
-  {name:'Panturrilha',emo:'🦶',color:'teal',items:[
+  {name:'Panturrilha',emo:'',color:'teal',items:[
     {name:'Panturrilha em Pé na Máquina',sub:'Panturrilha (gastrocnêmio)',equip:['academia']},
     {name:'Panturrilha Sentada',sub:'Panturrilha (sóleo)',equip:['academia']},
     {name:'Panturrilha no Leg Press',sub:'Panturrilha',equip:['academia']},
@@ -2706,12 +2706,12 @@ const EX_BANK = [
     {name:'Panturrilha em pé (peso corporal)',sub:'Panturrilha',equip:['casa','halteres','academia']},
     {name:'Panturrilha unilateral em degrau',sub:'Panturrilha (unilateral)',equip:['casa','halteres','academia']}
   ]},
-  {name:'Trapézio',emo:'🤷',color:'',items:[
+  {name:'Trapézio',emo:'',color:'',items:[
     {name:'Encolhimento com Barra',sub:'Trapézio',equip:['academia']},
     {name:'Encolhimento com Halteres',sub:'Trapézio',equip:['academia','halteres']},
     {name:'Encolhimento com Mochila/Bolsa',sub:'Trapézio',equip:['casa'],improv:true}
   ]},
-  {name:'Core',emo:'🧱',color:'',items:[
+  {name:'Core',emo:'',color:'',items:[
     {name:'Prancha (Plank)',sub:'Core (estabilidade)',equip:['casa','halteres','academia'],iso:true},
     {name:'Prancha Lateral',sub:'Oblíquos',equip:['casa','halteres','academia'],iso:true},
     {name:'Abdominal Crunch',sub:'Reto abdominal',equip:['casa','halteres','academia']},
@@ -3724,32 +3724,28 @@ function renderVacationToday(w, isLift){
   </div>`;
 }
 const PART_CUES = {
-  'Peito':'🏋️ No empurrar, desça controlado e não deixe o cotovelo abrir demais.',
-  'Costas':'🧗 Puxe com as costas, não com o braço: pense em levar o cotovelo para trás.',
-  'Ombro':'🙆 Ombro gosta de técnica: carga moderada e amplitude completa valem mais que peso.',
-  'Bíceps':'💪 Cotovelo colado no corpo — balançou o tronco, a carga está alta demais.',
-  'Tríceps':'🦾 Trave o cotovelo no lugar e estenda até o fim: a queima boa mora ali.',
-  'Pernas':'🦵 Joelho acompanhando a ponta do pé e desça até onde a técnica permitir.',
-  'Glúteos':'🍑 Aperte o glúteo no topo do movimento por 1 segundo — faz diferença real.',
-  'Panturrilha':'🦶 Pausa embaixo, subida completa: panturrilha responde a amplitude, não a pressa.',
-  'Core':'🧱 Qualidade > quantidade: prancha tremendo com postura vale mais que o dobro largado.',
-  'Trapézio':'🤷 Encolha reto para cima, sem rolar os ombros — rolar não ajuda e machuca.'
+  // Beta 61: sem emoji de parte do corpo (🍑, 🧗, 🙆…): no estilo sóbrio eles viravam ícones que não têm nada a ver
+  // (o glúteo virava garfo e faca) e, no colorido, não representavam bem o músculo. A frase basta.
+  'Peito':'No empurrar, desça controlado e não deixe o cotovelo abrir demais.',
+  'Costas':'Puxe com as costas, não com o braço: pense em levar o cotovelo para trás.',
+  'Ombro':'Ombro gosta de técnica: carga moderada e amplitude completa valem mais que peso.',
+  'Bíceps':'Cotovelo colado no corpo — balançou o tronco, a carga está alta demais.',
+  'Tríceps':'Trave o cotovelo no lugar e estenda até o fim: a queima boa mora ali.',
+  'Pernas':'Joelho acompanhando a ponta do pé e desça até onde a técnica permitir.',
+  'Glúteos':'Aperte o glúteo no topo do movimento por 1 segundo — faz diferença real.',
+  'Panturrilha':'Pausa embaixo, subida completa: panturrilha responde a amplitude, não a pressa.',
+  'Core':'Qualidade > quantidade: prancha tremendo com postura vale mais que o dobro largado.',
+  'Trapézio':'Encolha reto para cima, sem rolar os ombros — rolar não ajuda e machuca.'
 };
 function liftDesc(w){
-  const parts = w.parts.join(' + ');
-  const cue = PART_CUES[w.parts[0]] || '💡 Técnica primeiro, carga depois. Registre as séries para ver sua evolução.';
-  // A linha de aquecimento é orientação de quem está começando — depois de 8 treinos
-  // ela só ocupa espaço e empurra os exercícios para baixo.
-  const novato = ((((state.modules.lift||{}).history)||[]).length + (((state.modules.run||{}).history)||[]).length) < 8;
-  return novato
-    // "Foco em X" repetia o título do card ("Treino D — Ombro + Trapézio + Core"). Removido.
-    ? `${cue}\n\n💧 Aqueça 5-8 min, hidrate-se e respeite os intervalos de cada exercício.`
-    : cue;
+  // Beta 61: só a dica do grupo principal. A linha "Aqueça 5-8 min, hidrate-se…" saiu: era a mesma todos os dias
+  // e repetia o bloco "Orientações do treino" (Preparação · Sessão · Finalização), logo abaixo.
+  return PART_CUES[w.parts[0]] || 'Técnica primeiro, carga depois. Registre as séries para ver sua evolução.';
 }
 function runDesc(w){
   const main = (w.blocks||[]).find(b=>b.name==='Principal');
   const mainTxt = main && main.exs[0] ? `${main.exs[0].name} — ${main.exs[0].desc}` : 'Ritmo de conversa (você consegue falar frases completas sem ficar sem ar).';
-  return `🔥 Aquecimento: 5-7 min de caminhada leve + mobilidade\n\n${mainTxt}\n\n🏁 Desaquecimento: 5 min de caminhada leve para normalizar a FC`;
+  return `Aquecimento: 5-7 min de caminhada leve + mobilidade\n\n${mainTxt}\n\nDesaquecimento: 5 min de caminhada leve para normalizar a FC`;
 }
 
 function renderRestDay(mod){
@@ -4075,7 +4071,7 @@ function renderLiftBlocksBase(w){
   return entradas.map(([g,exs],i)=>`
     <div class="block ${aberto(g,i)?'open':''}">
       <div class="block-head main" onclick="toggleBloco(this,'${wk}|${g}')">
-        <span style="font-size:20px">${prontos[i]?'✅':'🔥'}</span>
+        ${prontos[i] ? '<span style="font-size:20px">✅</span>' : '<span class="bh-n" aria-hidden="true"></span>'}${''/* Beta 61: sem o 🔥 repetido em todos os grupos; um marcador discreto (o ✅ aparece ao concluir) */}
         <div class="block-head-txt"><div class="block-name">${g}${prontos[i]?' <span style="font-size:11px;color:var(--primary-2);font-weight:700">concluído</span>':''}</div><div class="block-sub">${exs.filter(ex=>exFeito(ex)||feitoAntes(ex)).length}/${exs.length} ${exs.length===1?'exercício':'exercícios'}</div></div>
         <div class="block-chev">▾</div>
       </div>
@@ -11046,7 +11042,7 @@ function saveHistoryEntry(idx){
   // corrigiu a distância? os contadores vitalícios precisam acompanhar,
   // senão um erro de digitação (50km em vez de 30km) fica inflando os km para sempre.
   if((x.distance||0) !== kmAntes) adjustKmStats(x, kmAntes, x.distance||0);
-  if(isRecentEntry(x.at)) recomputeAchievements(); // edição recente reajusta as conquistas
+  if(typeof mtRevisaConquistas === 'function') mtRevisaConquistas(); else if(isRecentEntry(x.at)) recomputeAchievements(); // Beta 61: mesma regra da exclusão
   saveData();
   toast('✅ Treino atualizado');
   closeModal();
@@ -11134,7 +11130,9 @@ function deleteHistoryEntry(idx){
     marcaExcluido(state.active, removido);   // Beta 33: não volta pela sincronização
     mod.history.splice(idx, 1);
     subtractFromStats(removido);
-    if(isRecentEntry(removido && removido.at)) recomputeAchievements();
+    // Beta 61: conquistas e desafios ganhos nas últimas 48 h que deixam de valer saem junto (mtRevisaConquistas, parte 64).
+    // Antes dependia da DATA do treino (3 dias), então apagar um registro antigo nunca tirava nada.
+    if(typeof mtRevisaConquistas === 'function') mtRevisaConquistas(); else if(isRecentEntry(removido && removido.at)) recomputeAchievements();
     saveData();
     toast('🗑️ Treino excluído');
     renderHistory();

@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 60 — app-plus.js
+// MetaTreino 2027.1 Beta 61 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.60' };
+const MTP = { versao: '2027.1-beta.61' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -18597,7 +18597,7 @@ function atvGraficoSerie(I){
 }
 function atvExcluir(mk, idx){
   const mod = state.modules[mk]; const x = mod && mod.history && mod.history[idx]; if(!x) return;
-  appConfirm('A atividade sai do histórico, dos gráficos e dos recordes, e o percurso e o arquivo guardados neste aparelho são apagados. As conquistas que você já desbloqueou continuam na sua coleção (elas registram um momento que aconteceu); os totais e as próximas conquistas passam a contar sem esta atividade.', async ()=>{
+  appConfirm('A atividade sai do histórico, dos gráficos e dos recordes, e o percurso e o arquivo guardados neste aparelho são apagados. Os totais passam a contar sem ela, e conquistas e desafios ganhos nas últimas 48 horas que dependiam dela também saem.', async ()=>{
     const id = x.imp && x.imp.id;
     if(x.module === 'lift'){
       Object.keys(state.progress||{}).forEach(k=>{
@@ -18610,8 +18610,13 @@ function atvExcluir(mk, idx){
         if(!state.progress[k].length) delete state.progress[k];
       });
     }
+    try{ if(typeof marcaExcluido === 'function') marcaExcluido(mk, x); }catch(e){}   // não volta pela sincronização
     mod.history.splice(idx, 1);
-    ensureStats(); saveData(); if(id) await atvLocalApaga(id);
+    // Beta 61: tira a contribuição dela dos contadores vitalícios (antes só ensureStats, que nunca desce)
+    // e revisa conquistas e desafios das últimas 48 h (parte 64)
+    try{ subtractFromStats(x); }catch(e){} ensureStats();
+    try{ if(typeof mtRevisaConquistas === 'function') mtRevisaConquistas(); }catch(e){}
+    saveData(); if(id) await atvLocalApaga(id);
     toast('Atividade excluída'); openIntegracoes();
   }, { title:'Excluir atividade?', okLabel:'Excluir' });
 }
@@ -20050,10 +20055,7 @@ Object.assign(window, { pdfListaCompras, pdfMontarCompras });
 //    Calistenia e Isometria; na musculação saem Corrida, Ritmo, Caminhada e Bike. Frequência e
 //    Tempo de treino contam só as sessões da modalidade ativa.
 //  • Personalizar progresso: "Calistenia" é bloco da musculação (não aparece na lista da corrida).
-//  • Treinos: "Personalizar treinos", por modalidade (state.treinosMod.lift / .run, independentes).
-//    Esconde só blocos de apoio — atalhos, programação semanal, frase de foco, resumo, andamento,
-//    orientações, "por que este treino", finalizador de cardio, ajuda. Exercícios, séries, cronômetro
-//    e os botões de salvar/pular NUNCA podem ser escondidos. É de graça: tirar o que não é útil não é recurso Premium.
+//  • (Beta 60 tinha "Personalizar treinos"; retirado na Beta 61 — ver abaixo.)
 //  • O cartão "Dicas para esta sessão" (mesma frase todos os dias) saiu do app.js. A única parte que
 //    mudava o treino — o formato em circuito do objetivo Resistência — virou o bloco "Como fazer o
 //    circuito", que só aparece para esse objetivo (e também pode ser escondido).
@@ -20078,82 +20080,85 @@ const EVO_SO = { lift:['peso','volume','cali_reps','cali_iso'], run:['run','pace
 })();
 try{ const b = PERF_BLOCOS.find(x=>x.k === 'calistenia'); if(b){ b.mod = 'lift'; b.desc = 'só na musculação, se você usa'; } }catch(e){}
 
-// ---------- Personalizar treinos (por modalidade) ----------
-const TREINO_BLOCOS = [
-  { k:'atalhos',     nome:'Atalhos do topo',            desc:'Meu plano, Biblioteca, Importar',          sel:()=>[$('sess-qlinks')] },
-  { k:'programacao', nome:'Programação semanal',        desc:'meta, semana do plano e treinos por semana', sel:()=>{ const w = $('weekly-info'); return [w && w.closest('.card')]; } },
-  { k:'foco',        nome:'Frase de foco do treino',    desc:'a frase abaixo do nome do treino',          sel:()=>[...document.querySelectorAll('#session-detail-slot .today-desc')] },
-  { k:'resumo',      nome:'Resumo do treino',           desc:'duração, exercícios ou distância e dia',    sel:()=>[...document.querySelectorAll('#session-detail-slot .info-grid')] },
-  { k:'andamento',   nome:'Andamento do treino',        desc:'quantos exercícios já foram registrados',   mod:'lift', sel:()=>[...document.querySelectorAll('#session-detail-slot .tr-anda')] },
-  { k:'circuito',    nome:'Como fazer o circuito',      desc:'só no objetivo Resistência',                mod:'lift', sel:()=>[$('tp-circuito')] },
-  { k:'orientacoes', nome:'Orientações do treino',      desc:'fases do treino e músculos trabalhados',    mod:'lift', sel:()=>[...document.querySelectorAll('#session-detail-slot .mg-card')] },
-  { k:'finalizador', nome:'Finalizador de cardio',      desc:'sugestão de cardio em treinos curtos',      mod:'lift', sel:()=>[...document.querySelectorAll('#session-detail-slot .hl-warn')] },
-  { k:'porque',      nome:'Por que este treino',        desc:'tipo, objetivo e intensidade',              mod:'run',  sel:()=>[...document.querySelectorAll('#session-detail-slot .run-why')] },
-  { k:'orientacoesr',nome:'Orientações da corrida',     desc:'lembretes de segurança e de ritmo',         mod:'run',  sel:()=>[...document.querySelectorAll('#session-detail-slot .run-orient')] },
-  { k:'ajuda',       nome:'"Dúvidas? Fale com o treinador"', desc:'atalho para o Meta Assistente',        sel:()=>[...document.querySelectorAll('#scr-sessions .help')] }
-];
-function _tpMod(){ return state && state.active === 'run' ? 'run' : 'lift'; }
-function _tpNomeMod(){ return _tpMod() === 'run' ? 'Corrida' : 'Musculação'; }
-function _tpCfg(mk){
-  mk = mk || _tpMod();
-  if(!state.treinosMod || typeof state.treinosMod !== 'object') state.treinosMod = {};
-  if(!state.treinosMod[mk]) state.treinosMod[mk] = { ocultos: [] };
-  if(!Array.isArray(state.treinosMod[mk].ocultos)) state.treinosMod[mk].ocultos = [];
-  return state.treinosMod[mk];
-}
-function _tpBlocos(){ const mk = _tpMod(); const res = ((state.modules.lift||{}).setup||{}).goal === 'resistencia';
-  return TREINO_BLOCOS.filter(b=>(!b.mod || b.mod === mk) && (b.k !== 'circuito' || res)); }
+// ---------- Formato em circuito (objetivo Resistência) ----------
+// Beta 61: o "Personalizar treinos" (Beta 60) foi retirado. Os blocos da tela de Treinos são redesenhados por várias
+// partes em momentos diferentes, então esconder um bloco "pegava" às vezes e às vezes não — e os poucos blocos
+// que dava para esconder não justificavam o botão. Fica só o que muda o treino: como fazer o circuito.
+// (state.treinosMod de quem chegou a usar fica parado na conta, sem efeito.)
 function _tpCircuito(){
   try{
-    if(_tpMod() !== 'lift' || ((state.modules.lift||{}).setup||{}).goal !== 'resistencia') return;
+    if(state.active !== 'lift' || ((state.modules.lift||{}).setup||{}).goal !== 'resistencia') return;
     const slot = $('session-detail-slot'); if(!slot || $('tp-circuito')) return;
     const bloco = slot.querySelector('.block'); if(!bloco) return;
     bloco.insertAdjacentHTML('beforebegin', `<div id="tp-circuito" class="card card-info card-row" style="margin:10px 0"><div class="card-icon">🔁</div><div><div class="card-title info">Como fazer o circuito</div><div class="card-sub">Faça um exercício depois do outro com pouco descanso; no fim de cada volta, descanse 60–90 s. Faça 2 a 3 voltas.</div></div></div>`);
   }catch(e){}
 }
-function treinosAplica(){
-  try{
-    if(!state || !state.user || !$('scr-sessions')) return;
-    _tpCircuito();
-    const oc = _tpCfg().ocultos;
-    TREINO_BLOCOS.forEach(b=>{ let els = []; try{ els = (b.sel()||[]).filter(Boolean); }catch(e){}
-      const esconde = oc.includes(b.k) && (!b.mod || b.mod === _tpMod());
-      els.forEach(el=>el.classList.toggle('tp-oculto', esconde)); });
-    const wrap = document.querySelector('#scr-sessions .wrap'); if(!wrap) return;
-    let a = $('treinos-personalizar');
-    if(!a){ a = document.createElement('div'); a.id = 'treinos-personalizar'; a.className = 'tp-link'; wrap.appendChild(a); }
-    else if(a !== wrap.lastElementChild) wrap.appendChild(a);
-    const n = _tpBlocos().filter(b=>oc.includes(b.k)).length;
-    const html = `<a href="#" onclick="openPersonalizarTreinos();return false">⚙️ Personalizar treinos · ${_tpNomeMod().toLowerCase()}</a>${n ? ` · ${n} ${n===1?'bloco oculto':'blocos ocultos'}` : ''}`;
-    if(a.innerHTML !== html) a.innerHTML = html;
-  }catch(e){ console.log('personalizar treinos:', e); }
-}
-function openPersonalizarTreinos(){
-  const mi = $('modal-inner'); mi.classList.remove('modal-video','modal-ex');
-  const oc = _tpCfg().ocultos;
-  mi.innerHTML = `<h3>⚙️ Personalizar treinos · ${_tpNomeMod()}</h3>
-    <p class="mt-muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">Desligue o que não ajuda no seu treino de <b>${_tpNomeMod().toLowerCase()}</b>. A outra modalidade tem a própria escolha. Exercícios, séries e os botões de salvar continuam sempre.</p>
-    <div class="card pi-lista">${_tpBlocos().map(b=>`<label class="pi-row"><span class="pi-txt"><b>${b.nome}</b><small>${b.desc}</small></span>
-      <input type="checkbox" class="pi-sw" data-k="${b.k}" ${oc.includes(b.k)?'':'checked'} onchange="tpAlterar(this)"></label>`).join('')}</div>
-    <button type="button" class="btn btn-ghost btn-block" style="margin-top:12px" onclick="tpPadrao()">Mostrar tudo de novo</button>
-    <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal();goTab('sessions')">Pronto</button>`;
-  $('modal-back').classList.add('on');
-}
-function tpAlterar(el){
-  const c = _tpCfg(); const k = el.dataset.k;
-  c.ocultos = el.checked ? c.ocultos.filter(x=>x!==k) : [...new Set([...c.ocultos, k])];
-  saveData(); treinosAplica();
-}
-function tpPadrao(){ _tpCfg().ocultos = []; saveData(); treinosAplica(); openPersonalizarTreinos(); toast(`Treinos de ${_tpNomeMod().toLowerCase()} com tudo à mostra`); }
-mtGancho('renderSessions', { depois(){ treinosAplica(); } });
-mtGancho('selectSession', { depois(){ treinosAplica(); } });
-mtGancho('goTab', { depois(t){ if(t === 'sessions') treinosAplica(); } });
-Object.assign(window, { openPersonalizarTreinos, tpAlterar, tpPadrao, treinosAplica });
+mtGancho('renderSessions', { depois(){ _tpCircuito(); } });
+mtGancho('selectSession', { depois(){ _tpCircuito(); } });
+mtGancho('goTab', { depois(t){ if(t === 'sessions') _tpCircuito(); } });
 
 (function(){ if(document.getElementById('b60-css')) return; const s = document.createElement('style'); s.id = 'b60-css';
   s.textContent = `
-.tp-oculto{ display:none !important; }
-.tp-link{ text-align:center; font-size:12.5px; color:var(--text-dim); margin:18px 0 6px; }
-.tp-link a{ color:var(--primary-2); font-weight:600; text-decoration:none; }
+.bh-n{ flex:none; width:10px; height:10px; margin:0 6px 0 4px; border-radius:50%; background:var(--primary); opacity:.85; }
 `;
   document.head.appendChild(s); })();
+// =====================================================================
+// 64. Beta 61 — apagar uma atividade tira as conquistas e desafios que ela tinha liberado
+// ---------------------------------------------------------------------
+// Regra: ao excluir (ou editar) um registro — manual ou importado —, as conquistas e os desafios do mês
+// ganhos nas ÚLTIMAS 48 HORAS que deixam de ser comprovados pelo que sobrou saem da coleção (e da fila de
+// "novas"). O que foi ganho há mais de 48 h fica: depois de dois dias a conquista já foi vista, comemorada
+// e compartilhada, e tirar de repente pareceria erro do app.
+// Só são revistas as conquistas que o app sabe recalcular pelos dados (checkTrophies, checkWeightTrophies,
+// desafios do mês). As de evento (horário curioso, data especial, "A Volta por Cima"…) não são tocadas.
+// Antes: a exclusão de importação só chamava ensureStats() (o contador nunca descia) e a exclusão manual
+// dependia da DATA do treino (3 dias), então apagar uma caminhada importada deixava "Primeira caminhada" e
+// "Caminhada 3K" na coleção.
+// =====================================================================
+const CONQ_REVOGA_H = 48;
+function _conqRecalculaveis(){
+  const ids = new Set();
+  [window.checkTrophies, window.checkWeightTrophies].forEach(f=>{
+    try{ String(f || '').replace(/unlockTrophy\('([^']+)'\)/g, (_, id)=>{ ids.add(id); return ''; }); }catch(e){}
+  });
+  return ids;
+}
+function mtRevisaConquistas(){
+  if(!state || typeof recomputeAchievements !== 'function') return [];
+  const limite = Date.now() - CONQ_REVOGA_H*3600000;
+  const antesT = (state.trophies||[]).slice(), datasT = Object.assign({}, state.trophyDates||{});
+  try{ ensureMonthly(); }catch(e){}
+  const antesM = ((state.monthly||{}).done||[]).slice(), datasM = Object.assign({}, (state.monthly||{}).doneAt||{});
+  const recalc = _conqRecalculaveis();
+  try{ recomputeAchievements(); }catch(e){ console.log('revisão de conquistas:', e); }
+  const saiT = [], saiM = [];
+  // conquistas: o que sumiu no recálculo volta, salvo se for recalculável E recente
+  antesT.forEach(id=>{
+    if(state.trophies.includes(id)) return;
+    const recente = (datasT[id]||0) >= limite;
+    if(recente && recalc.has(id)) saiT.push(id);
+    else { state.trophies.push(id); if(datasT[id]) state.trophyDates[id] = datasT[id]; }
+  });
+  // desafios do mês corrente: mesma regra (recomputeAchievements já os recalculou)
+  if(state.monthly){
+    antesM.forEach(id=>{
+      if(state.monthly.done.includes(id)) return;
+      const recente = (datasM[id]||0) >= limite;
+      if(recente) saiM.push(id);
+      else { state.monthly.done.push(id); if(datasM[id]) state.monthly.doneAt[id] = datasM[id]; }
+    });
+  }
+  if(saiT.length || saiM.length){
+    // some também da fila de "novas conquistas" e das celebrações ainda não mostradas
+    const tira = new Set([...saiT.map(id=>'t_'+id), ...saiT, ...saiM]);
+    const bate = k=>{ const b = String(k||'').split('@')[0]; return tira.has(b) || [...tira].some(t=>b.endsWith(':'+t) || b === 'm_'+t); };
+    try{ state.conqPend = (state.conqPend||[]).filter(p=>!bate(p.k) && !(p.tid && saiT.includes(p.tid))); }catch(e){}
+    try{ if(typeof awardQueue !== 'undefined' && Array.isArray(awardQueue)) awardQueue = awardQueue.filter(a=>!bate(a.id)); }catch(e){}
+    const nomes = saiT.map(id=>((TROPHIES||[]).find(t=>t.id===id)||{}).name).filter(Boolean);
+    const n = saiT.length + saiM.length;
+    setTimeout(()=>{ try{ toast(`${n === 1 ? 'Saiu 1 conquista' : `Saíram ${n} conquistas`} que dependiam deste registro${nomes.length ? `: ${nomes.slice(0,2).join(', ')}${nomes.length > 2 ? '…' : ''}` : ''}`); }catch(e){} }, 900);
+  }
+  try{ if(typeof cqIndicadores === 'function') cqIndicadores(); }catch(e){}
+  return saiT.concat(saiM);
+}
+window.mtRevisaConquistas = mtRevisaConquistas;
