@@ -192,7 +192,7 @@ function cqNovoItem(p, i){
     <div class="cq-novo-txt"><small>${mtEsc(tipo)}${nv!=='comum'?' · '+CQ_NV[nv]:''}</small><b>${mtEsc(t ? t.name : p.nome)}</b><span>${mtEsc(t ? t.desc : p.desc)}</span></div></div>`;
 }
 function cqGrade(){
-  const cats = ['streak','lift','run','walk','bike','body','geral'];
+  const cats = ['streak','lift','cali','hibrido','run','walk','bike','dupla','body','geral'];   // Beta 63: calistenia, híbrido e treinando juntos
   const filtro = t=>{ const st = cqStatus(t); return _cqFiltro==='todas' || (_cqFiltro==='ok'&&st==='ok') || (_cqFiltro==='and'&&st==='and') || (_cqFiltro==='blq'&&st==='blq'); };
   let i = 0, h = '';
   cats.forEach(c=>{

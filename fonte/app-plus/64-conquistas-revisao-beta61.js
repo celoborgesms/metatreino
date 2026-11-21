@@ -12,9 +12,11 @@
 // "Caminhada 3K" na coleção.
 // =====================================================================
 const CONQ_REVOGA_H = 48;
+// Beta 63: fontes guardadas AGORA (antes de outras partes embrulharem checkTrophies com mtGancho) + checadores extras
+const _CONQ_FONTES = [String(window.checkTrophies || ''), String(window.checkWeightTrophies || '')];
 function _conqRecalculaveis(){
   const ids = new Set();
-  [window.checkTrophies, window.checkWeightTrophies].forEach(f=>{
+  _CONQ_FONTES.concat((window.__conqChecadores || []).map(String)).forEach(f=>{
     try{ String(f || '').replace(/unlockTrophy\('([^']+)'\)/g, (_, id)=>{ ids.add(id); return ''; }); }catch(e){}
   });
   return ids;

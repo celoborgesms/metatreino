@@ -322,15 +322,22 @@ function _famMeuPerfil(){
       pl.refeicoes.forEach(m=>{ if(m.compartilhada){ fatores[d] = fatores[d] || {}; fatores[d][m.id] = Math.round(m.fator*1000)/1000; } }); }
   }catch(e){}
   let compras = {}; try{ compras = nutriComprasMinhas(); }catch(e){}
-  let semana = {}; try{ semana = famMinhaSemana(); }catch(e){}
-  return { veg:r.veg, lac:r.lac, glu:r.glu, fatores, compras:{ de: chaveDia(new Date()), dias: compras }, semana };
+  // Beta 62: o Firestore NÃO aceita lista dentro de lista. A semana usava [[id, g]] e, desde a Beta 55, isso fazia
+  // a gravação inteira do perfil falhar no celular — nem o cardápio nem a lista de compras chegavam à outra pessoa.
+  // Vai codificada (famSemanaCodifica) e volta ao formato normal ao ler (famSemanaDecodifica, parte 55).
+  let semana = {}; try{ semana = famSemanaCodifica(famMinhaSemana()); }catch(e){}
+  // Beta 63: treino em dupla (parte 65) — só aparece para quem ligou; texto curto, sem dados de saúde
+  let tr = null; try{ tr = (typeof mtDuplaPublica === 'function') ? mtDuplaPublica() : null; }catch(e){}
+  const out = { veg:r.veg, lac:r.lac, glu:r.glu, fatores, compras:{ de: chaveDia(new Date()), dias: compras }, semana };
+  if(tr) out.tr = tr;
+  return out;
 }
 function famEnviar(){
   try{
     if(!famAtiva()) return;
     const c = famCache(), uid = _famUid(); const campos = {};
     const meu = _famMeuPerfil(); const ant = (c.perfis||{})[uid] || null;
-    const sem = p=>p ? JSON.stringify({ veg:p.veg, lac:p.lac, glu:p.glu, fatores:p.fatores, compras:p.compras, semana:p.semana||null }) : '';
+    const sem = p=>p ? JSON.stringify({ veg:p.veg, lac:p.lac, glu:p.glu, fatores:p.fatores, compras:p.compras, semana:p.semana||null, tr:p.tr||null }) : '';
     if(sem(ant) !== sem(meu)){ meu.em = Date.now(); campos['perfis.' + uid] = meu; c.perfis = c.perfis || {}; c.perfis[uid] = meu; }
     const apelido = _famMeuApelido(); if((c.nomes||{})[uid] !== apelido){ campos['nomes.' + uid] = apelido; c.nomes = c.nomes || {}; c.nomes[uid] = apelido; }
     if(famSouAdm()){
@@ -340,7 +347,10 @@ function famEnviar(){
       if(c.registro){ campos.registro = firebase.firestore.FieldValue.delete(); delete c.registro; }
     }
     _famGuardaCache(c);
-    if(Object.keys(campos).length) _famAtualiza(campos);
+    // Beta 62: se a nuvem recusar, desfaz o "já enviado" no cache local — senão o app achava que tinha publicado
+    // e nunca mais tentava (era o que deixava o cardápio e as compras da outra pessoa sem chegar)
+    if(Object.keys(campos).length) _famAtualiza(campos).then(ok=>{ if(ok || !campos['perfis.' + uid]) return;
+      try{ const c2 = famCache(); if(c2 && c2.perfis){ if(ant) c2.perfis[uid] = ant; else delete c2.perfis[uid]; _famGuardaCache(c2); } }catch(e){} });
   }catch(e){ console.log('casa (enviar):', e); }
 }
 function famAgendaEnvio(ms){ clearTimeout(_famPushT); _famPushT = setTimeout(famEnviar, ms || 900); }

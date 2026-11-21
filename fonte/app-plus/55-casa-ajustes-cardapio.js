@@ -177,9 +177,31 @@ function _famQtdTxt(id, g){
   return `${Math.round(g)} g`;
 }
 function _famKcalItens(i){ return (i||[]).reduce((s,[id,g])=>{ const a = NUTRI_ALIMENTOS[id]; return s + (a ? a[1]*g/100 : 0); }, 0); }
+// Beta 62: formato seguro para o Firestore (sem lista dentro de lista):
+//   i: "id:g,id:g"   x: [{ n: nome, k: kcal }]
+function famSemanaCodifica(sem){
+  const out = {};
+  Object.keys(sem||{}).forEach(dk=>{ const d = sem[dk]; const m = {};
+    Object.keys(d.m||{}).forEach(mid=>{ const r = d.m[mid]; const o = { n: r.n || '', h: r.h || '', i: (r.i||[]).map(([id,g])=>`${id}:${Math.round(g)}`).join(',') };
+      if((r.x||[]).length) o.x = r.x.map(([n,k])=>({ n: String(n||'').slice(0,40), k: Math.round(k||0) }));
+      m[mid] = o; });
+    out[dk] = { r: d.r, c: d.c, k: d.k, m }; });
+  return out;
+}
+function famSemanaDecodifica(sem){
+  if(!sem || typeof sem !== 'object') return null;
+  const out = {};
+  Object.keys(sem).forEach(dk=>{ const d = sem[dk] || {}; const m = {};
+    Object.keys(d.m||{}).forEach(mid=>{ const r = d.m[mid] || {};
+      const i = Array.isArray(r.i) ? r.i : String(r.i||'').split(',').filter(Boolean).map(p=>{ const [id, g] = p.split(':'); return [id, +g || 0]; });
+      const x = (r.x||[]).map(v=>Array.isArray(v) ? v : [v.n, v.k]);
+      m[mid] = { n: r.n, h: r.h, i }; if(x.length) m[mid].x = x; });
+    out[dk] = { r: d.r, c: d.c, k: d.k, m }; });
+  return out;
+}
 function _famSemanaDe(uid){
   if(uid === _famUid()) return famMinhaSemana();
-  const pf = (famCache().perfis||{})[uid] || {}; return pf.semana || null;
+  const pf = (famCache().perfis||{})[uid] || {}; return famSemanaDecodifica(pf.semana);
 }
 function _famMotivoCasa(dk){
   const P = famParams(); const cp = (P.cardapio||{})[dk] || {};

@@ -241,7 +241,7 @@ window.mmFicha = function(){
 (function(){
   const st = document.createElement('style'); st.id = 'b55-css';
   st.textContent = `
-.cq-dot.cq-num{min-width:16px;height:16px;padding:0 4px;border-radius:99px;font-size:10px;font-weight:800;line-height:16px;text-align:center;color:#fff;box-sizing:border-box;top:2px!important}
+.cq-dot.cq-num{min-width:16px;height:16px;padding:0 4px;border-radius:99px;font-size:10px;font-weight:800;line-height:16px;text-align:center;color:#fff!important;background:#b4232b!important;box-sizing:border-box;top:2px!important}/* Beta 63: vermelho mais escuro — o número branco passa de 4,5:1 em todos os temas */
 #tab-dot-chal{display:none!important}
 .nov-box{margin:4px 0 16px;padding:12px 14px;border-radius:18px;background:var(--surface,var(--card));border:1px solid rgba(var(--primary-rgb),.35)}
 .nov-t{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-2);margin-bottom:6px}
