@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027.1 Beta 64 — app-plus.js
+// MetaTreino 2027 RC 0 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027.1-beta.64' };
+const MTP = { versao: '2027-rc.0' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -15170,21 +15170,21 @@ mtGancho('bootAfterAuth', { depois(){
 }});
 
 // =====================================================================
-// 49. Alimentação da casa (Beta 46, refeita na Beta 49), assistente sem corrida para quem só faz musculação
+// 49. Cardápio compartilhado (Beta 46, refeita na Beta 49), assistente sem corrida para quem só faz musculação
 //     e avisos do primeiro acesso sem um em cima do outro
 // =====================================================================
 // REGRA DA CASA (Beta 49): a COMIDA é compartilhada, a ALIMENTAÇÃO é individual.
 //  • Um cria o grupo e recebe um código de 6 letras; quem mora junto digita o código (até 6 pessoas).
 //  • O ADMINISTRADOR da casa (quem criou, ou quem recebeu a administração) decide o cardápio compartilhado:
 //    quais refeições são da casa, em quais dias e horários, o prato (trocar), tirar ou acrescentar alimentos
-//    no prato da casa e se cada pessoa pode trocar o prato só para si.
+//    no prato compartilhado e se cada pessoa pode trocar o prato só para si.
 //  • Todos veem o MESMO prato. A QUANTIDADE e as calorias são de cada um, calculadas pelo plano de cada pessoa
 //    (peso, objetivo, calorias). Nada é copiado de um celular para o outro: só a composição do prato.
 //  • "Comi", quantidade editada e alimento acrescentado "só para mim" são pessoais (não vão para o grupo).
 //  • Lista de compras e PDF: individual (só o seu) ou da casa (soma o que cada pessoa vai comer de verdade,
 //    agrupado por alimento, com unidade e período).
 //  • Na nuvem (familias/{código}): membros, administrador, apelidos, restrições (sim/não), a configuração e a
-//    composição do prato da casa, e o total de compras de cada pessoa nos próximos dias. Nada de peso, idade,
+//    composição do prato compartilhado, e o total de compras de cada pessoa nos próximos dias. Nada de peso, idade,
 //    altura ou e-mail. As regras do Firestore deixam cada pessoa alterar só o próprio apelido/perfil, e só o
 //    administrador alterar cardápio e configuração.
 
@@ -15208,7 +15208,7 @@ function _famGuardaCache(d){ d = d || {}; d.__id = famId(); window.__famCache = 
 function famAtiva(){ const c = famCache(); return !!(c && Array.isArray(c.membros) && c.membros.includes(_famUid())); }
 function famRefs(){ const c = famCache(); return (c && c.config && Array.isArray(c.config.refeicoes)) ? c.config.refeicoes : FAM_REF_PADRAO; }
 function famMembros(){ const c = famCache(); return (c && c.membros) || []; }
-function famNome(uid){ const c = famCache(); return (c && c.nomes && c.nomes[uid]) || 'Pessoa da casa'; }
+function famNome(uid){ const c = famCache(); return (c && c.nomes && c.nomes[uid]) || 'Pessoa do grupo'; }
 function famAdmUid(){ const c = famCache(); return (c && c.dono) || null; }
 function famSouAdm(){ return famAtiva() && famAdmUid() === _famUid(); }
 function _famCfg(){ const c = famCache(); return (c && c.config) || {}; }
@@ -15234,7 +15234,7 @@ function famParams(){
 }
 function _famForaKey(dk, mid){ return dk + '|' + mid; }
 function famFora(dk, mid){ try{ const f = nutriConfig().famFora || {}; const v = f[_famForaKey(dk, mid)]; return v ? +v : 0; }catch(e){ return 0; } }
-// a refeição é da casa NESTE dia? (refeição marcada, dia marcado e a pessoa não trocou só para ela)
+// a refeição é compartilhado NESTE dia? (refeição marcada, dia marcado e a pessoa não trocou só para ela)
 function famDaCasaNoDia(P, mid, diaIdx, dk){
   if(!P || !P.refeicoes.includes(mid)) return false;
   const d = (P.dias || {})[mid]; if(Array.isArray(d) && d.length && !d.includes(diaIdx)) return false;
@@ -15244,7 +15244,7 @@ function famDaCasaNoDia(P, mid, diaIdx, dk){
 function famCompartilhada(mid, diaIdx){ const P = famParams(); diaIdx = diaIdx || nutriDiaSel(); return !!(P && P.casa && famDaCasaNoDia(P, mid, diaIdx, nutriKeyDia(diaIdx))); }
 function _famComposicao(P, dk, mid){ const x = ((P && P.cardapio) || {})[dk]; const m = x && x[mid]; return { x:(m && Array.isArray(m.x)) ? m.x : [], add:(m && Array.isArray(m.add)) ? m.add : [] }; }
 
-// ---------- cardápio: o prato das refeições da casa sai dos parâmetros comuns ----------
+// ---------- cardápio: o prato das refeições compartilhadas sai dos parâmetros comuns ----------
 const _nutriMontarPlanoB46 = window.nutriMontarPlano;
 function famPrato(r, diaIdx, P, n, idxSlot, dk){
   dk = dk || nutriKeyDia(diaIdx);
@@ -15256,13 +15256,13 @@ function famPrato(r, diaIdx, P, n, idxSlot, dk){
   if(eco){ const barato = lista.filter(op=>!op.i.some(([id])=>NUTRI_CARO.includes(id))); if(barato.length>=2) lista = barato; }
   const chave = r.id + (veg?'v':'');
   const idxUse = comp ? NUTRI_REFEICOES.findIndex(x=>x.id===r.id) : idxSlot;
-  // quem saiu do prato da casa só neste dia segue o próprio cardápio, deslocado pelas trocas que fez
+  // quem saiu do prato compartilhado só neste dia segue o próprio cardápio, deslocado pelas trocas que fez
   const fora = (!comp && P && P.casa && P.refeicoes.includes(r.id)) ? famFora(dk, r.id) : 0;
   const seed = comp ? P.seed : n.seed, tr = comp ? ((P.trocas||{})[chave]||0) : ((n.trocas[chave]||0) + fora);
   const v = nutriVarIdx(diaIdx, idxUse, seed, tr, lista.length);
   const op = lista[v];
   const trocaId = id=>(eco && id==='azeite') ? 'oleo' : id;
-  // composição: o prato + o que o administrador acrescentou − o que ele tirou (só nas refeições da casa)
+  // composição: o prato + o que o administrador acrescentou − o que ele tirou (só nas refeições compartilhadas)
   let itens = op.i.map(([id,q])=>[trocaId(id), q]);
   const orig = itens.map(([id,q])=>[id,q]);
   const cp = (comp && P.casa) ? _famComposicao(P, dk, r.id) : { x:[], add:[] };
@@ -15321,7 +15321,7 @@ window.nutriMontarPlano = function(diaIdx, dkData){
   else dicas.push('Dia de descanso: calorias um pouco menores, mas mantenha a proteína. É nela que o músculo se recupera.');
   if(calc.objetivo==='emagrecer') dicas.push('Priorize proteína em toda refeição e legumes à vontade: ajudam a manter a saciedade e a massa muscular.');
   if(calc.objetivo==='massa') dicas.push('Não pule refeições: para ganhar massa, o difícil costuma ser comer o suficiente todo dia.');
-  if(P.casa && refeicoes.some(m=>m.compartilhada)) dicas.push('Nas refeições da casa o prato é o mesmo para todos; a quantidade e as calorias são as do seu plano.');
+  if(P.casa && refeicoes.some(m=>m.compartilhada)) dicas.push('Nas refeições compartilhadas o prato é o mesmo para todos; a quantidade e as calorias são as do seu plano.');
   dicas.push('Beba água ao longo do dia, não só nas refeições. Em dia de treino, some uns 500 ml.');
   const casaDelta = refeicoes.reduce((s,m)=>s + (m.casaDelta||0), 0);
   return { calc, refeicoes, dia, dicas, treino, diaIdx, casaDelta, diaRec: Math.round(dia.kcal - casaDelta) };
@@ -15334,7 +15334,7 @@ async function _famAtualiza(campos){
   try{ await _famTempo(db.collection('familias').doc(id).update(campos)); return true; }
   catch(e){
     console.log('casa (gravar):', e && (e.code || e.message));
-    if(e && e.code === 'permission-denied') toast('Não foi possível salvar no grupo da casa: só o administrador muda o cardápio compartilhado.');
+    if(e && e.code === 'permission-denied') toast('Não foi possível salvar no grupo: só o administrador muda o cardápio compartilhado.');
     return false;
   }
 }
@@ -15366,15 +15366,15 @@ window.nutriTrocar = function(chave){
     if(c.cardapio && c.cardapio[dk] && c.cardapio[dk][mid]){ delete c.cardapio[dk][mid]; campos['cardapio.' + dk + '.' + mid] = firebase.firestore.FieldValue.delete(); }
     _famGuardaCache(c); _famAtualiza(campos);
     try{ const dia = (state.nutriLog||{})[dk]; if(dia) delete dia[mid]; }catch(e){}
-    nutriAbrirRef(chave); saveData(); famAgendaEnvio(); toast('🏠 Prato da casa trocado para todos. Cada um continua com a própria porção.');
+    nutriAbrirRef(chave); saveData(); famAgendaEnvio(); toast('👥 Prato compartilhado trocado para todos. Cada um continua com a própria porção.');
     return openNutri();
   }
   if(famTrocaPropria()){
-    return famEscolha('Trocar o prato', `O ${FAM_NOMES_REF_MIN[mid]||'prato'} de ${NUTRI_DIAS[d-1].toLowerCase()} é da casa. Você pode comer outro prato só neste dia; para os outros nada muda.`, [
+    return famEscolha('Trocar o prato', `O ${FAM_NOMES_REF_MIN[mid]||'prato'} de ${NUTRI_DIAS[d-1].toLowerCase()} é compartilhado. Você pode comer outro prato só neste dia; para os outros nada muda.`, [
       { t:'Trocar só para mim neste dia', f:()=>{ n.famFora = n.famFora || {}; n.famFora[_famForaKey(dk, mid)] = 1; try{ const dia = (state.nutriLog||{})[dk]; if(dia) delete dia[mid]; }catch(e){} nutriAbrirRef(chave); saveData(); openNutri(); } }
     ]);
   }
-  toast(`Só ${famNome(famAdmUid())} (administrador da casa) troca o prato da casa. Você pode ajustar a sua quantidade ou usar as trocas equivalentes.`);
+  toast(`Só ${famNome(famAdmUid())} (administrador do grupo) troca o prato compartilhado. Você pode ajustar a sua quantidade ou usar as trocas equivalentes.`);
 };
 function famVoltarCasa(mid){
   const dk = nutriKeyDia(nutriDiaSel()); const n = nutriConfig();
@@ -15395,7 +15395,7 @@ function famEscolha(titulo, texto, opcoes){
 }
 function famEscolhaOk(i){ const o = (window.__famOpc||[])[i]; window.__famOpc = null; if(o && o.f) o.f(); }
 
-// ---------- administrador: tirar e acrescentar alimentos no prato da casa ----------
+// ---------- administrador: tirar e acrescentar alimentos no prato compartilhado ----------
 function _famComposicaoSalva(dk, mid, cp){
   const c = famCache(); c.cardapio = c.cardapio || {}; c.cardapio[dk] = c.cardapio[dk] || {};
   const vazio = !cp.x.length && !cp.add.length;
@@ -15411,7 +15411,7 @@ function famTirarDaCasa(mid, fid){
   if(cp2.add.length === cp.add.length && !cp2.x.includes(fid)) cp2.x.push(fid);
   try{ const m = nutriMealLog(mid, false); if(m && m.adj) delete m.adj[fid]; }catch(e){}
   _famComposicaoSalva(dk, mid, cp2); nutriAbrirRef(mid); saveData();
-  toast(famParams().compensa ? '🏠 Tirado do prato da casa. As porções foram recalculadas para manter as calorias de cada um.' : '🏠 Tirado do prato da casa. Cada pessoa vê no próprio plano quantas calorias a menos ficou.');
+  toast(famParams().compensa ? '👥 Tirado do prato compartilhado. As porções foram recalculadas para manter as calorias de cada um.' : '👥 Tirado do prato compartilhado. Cada pessoa vê no próprio plano quantas calorias a menos ficou.');
   openNutri();
 }
 function famVoltarNaCasa(mid, fid){
@@ -15424,8 +15424,8 @@ window.nutriRemover = function(mid, fid){
   const m = nutriMealLog(mid, false);
   if(m && m.adj && m.adj[fid] && m.adj[fid].x) return _nutriRemoverB49.apply(this, arguments);     // desfazer o "só eu"
   const nome = (NUTRI_ALIMENTOS[fid]||[''])[0];
-  famEscolha('Tirar ' + nome, 'Você administra a alimentação da casa. Isso vale para todos ou só para você?', [
-    { t:'Tirar do prato da casa (todos)', f:()=>famTirarDaCasa(mid, fid) },
+  famEscolha('Tirar ' + nome, 'Você administra a cardápio compartilhado. Isso vale para todos ou só para você?', [
+    { t:'Tirar do prato compartilhado (todos)', f:()=>famTirarDaCasa(mid, fid) },
     { t:'Só eu não vou comer', f:()=>_nutriRemoverB49(mid, fid) }
   ]);
 };
@@ -15433,8 +15433,8 @@ const _nutriAddAbrirB49 = window.nutriAddAbrir;
 window.nutriAddAbrir = function(mid){
   window.__famAddCasa = false;
   if(!famSouAdm() || !famCompartilhada(mid)) return _nutriAddAbrirB49.apply(this, arguments);
-  famEscolha('Acrescentar alimento', 'Acrescentar ao prato da casa (todos recebem, cada um na própria proporção) ou só para você?', [
-    { t:'Acrescentar ao prato da casa', f:()=>{ window.__famAddCasa = true; _nutriAddAbrirB49(mid); } },
+  famEscolha('Acrescentar alimento', 'Acrescentar ao prato compartilhado (todos recebem, cada um na própria proporção) ou só para você?', [
+    { t:'Acrescentar ao prato compartilhado', f:()=>{ window.__famAddCasa = true; _nutriAddAbrirB49(mid); } },
     { t:'Só para mim', f:()=>{ window.__famAddCasa = false; _nutriAddAbrirB49(mid); } }
   ]);
 };
@@ -15446,7 +15446,7 @@ window.nutriAddCustom = function(){
 const _nutriEdRenderB49 = window.nutriEdRender;
 window.nutriEdRender = function(){
   const r = _nutriEdRenderB49.apply(this, arguments);
-  try{ const e = window.__ned; if(e && e.mode === 'add' && window.__famAddCasa){ const p = document.querySelector('#modal-inner p'); if(p) p.innerHTML = 'Quanto <b>você</b> vai comer? Os outros recebem a quantidade proporcional à porção de cada um, e as porções da refeição são recalculadas para manter as calorias de todos.'; const b = document.querySelector('#modal-inner .btn-primary'); if(b) b.textContent = 'Acrescentar ao prato da casa'; } }catch(err){}
+  try{ const e = window.__ned; if(e && e.mode === 'add' && window.__famAddCasa){ const p = document.querySelector('#modal-inner p'); if(p) p.innerHTML = 'Quanto <b>você</b> vai comer? Os outros recebem a quantidade proporcional à porção de cada um, e as porções da refeição são recalculadas para manter as calorias de todos.'; const b = document.querySelector('#modal-inner .btn-primary'); if(b) b.textContent = 'Acrescentar ao prato compartilhado'; } }catch(err){}
   return r;
 };
 const _nutriEdSalvarB49 = window.nutriEdSalvar;
@@ -15460,7 +15460,7 @@ window.nutriEdSalvar = function(reset){
     const dk = nutriKeyDia(nutriDiaSel()); const cp = _famComposicao(famParams(), dk, e.mid);
     const add = cp.add.slice(); const ex = add.find(a=>a.id===e.fid); if(ex) ex.q = +ex.q + qBase; else add.push({ id:e.fid, q:qBase });
     _famComposicaoSalva(dk, e.mid, { x:cp.x.filter(x=>x!==e.fid), add });
-    nutriAbrirRef(e.mid); saveData(); toast('🏠 Acrescentado ao prato da casa.'); return openNutri();
+    nutriAbrirRef(e.mid); saveData(); toast('👥 Acrescentado ao prato compartilhado.'); return openNutri();
   }
   return _nutriEdSalvarB49.apply(this, arguments);
 };
@@ -15543,7 +15543,7 @@ function _famAplica(doc){
   if(mudou) _famRedesenha();
   else if(perfisMudaram){ try{ const mi = $('modal-inner'); if($('modal-back').classList.contains('on') && mi && mi.querySelector('#fam-compras') && window.__comprasModo === 'casa') nutriListaCompras(); }catch(e){} }
 }
-// restrições (vegetariano, sem lactose, sem glúten) de alguém mudaram → o prato da casa pode mudar
+// restrições (vegetariano, sem lactose, sem glúten) de alguém mudaram → o prato compartilhado pode mudar
 function _famRestricoesMudaram(doc, ant){
   const r = d=>Object.keys((d && d.perfis) || {}).sort().map(u=>{ const p = d.perfis[u] || {}; return u + ':' + (!!p.veg) + (!!p.lac) + (!!p.glu); }).join('|');
   return r(doc) !== r(ant);
@@ -15580,8 +15580,8 @@ function _famMeuApelido(){ const p = (state.user && state.user.profile) || {}; r
 // membro); se o código já existir, a gravação vira alteração, é negada, e o app tenta outro código.
 async function famCriar(){
   if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao');
-  const uid = _famUid(); if(!uid) return toast('Entre na sua conta para criar o grupo da casa.');
-  if(navigator.onLine === false) return toast('Sem internet agora. Conecte-se para criar o grupo da casa.');
+  const uid = _famUid(); if(!uid) return toast('Entre na sua conta para criar o grupo.');
+  if(navigator.onLine === false) return toast('Sem internet agora. Conecte-se para criar o grupo.');
   const n = nutriConfig();
   const msg = t=>{ const e = $('fam-msg'); if(e) e.textContent = t; };
   msg('Criando o grupo…');
@@ -15593,7 +15593,7 @@ async function famCriar(){
       await _famTempo(db.collection('familias').doc(id).set(doc));
       n.familia = { id, desde: Date.now() }; delete n.cardapioFixo; delete n.famFora;
       _famGuardaCache(doc); saveData(); famOuvir(); famAgendaEnvio(300);
-      toast('🏠 Grupo da casa criado. Você é o administrador. Mande o código para quem mora com você.');
+      toast('👥 Grupo criado. Você é o administrador. Mande o código para quem vai dividir as refeições com você.');
       return openFamilia();
     }catch(e){
       const code = e && e.code;
@@ -15620,7 +15620,7 @@ async function famEntrar(){
     if(!d || !(d.membros||[]).includes(uid)) return msg('Não consegui entrar. Confira o código.');
     const n = nutriConfig(); n.familia = { id, desde: Date.now() }; delete n.cardapioFixo; delete n.famFora;
     _famGuardaCache(d); saveData(); famOuvir(); famAgendaEnvio(300);
-    toast('🏠 Pronto! O prato das refeições da casa é o mesmo para todos; a sua porção continua a sua.');
+    toast('👥 Pronto! O prato das refeições compartilhadas é o mesmo para todos; a sua porção continua a sua.');
     openFamilia();
   }catch(e){
     const code = e && e.code;
@@ -15630,7 +15630,7 @@ async function famEntrar(){
       : 'Sem conexão agora. Tente de novo em instantes.');
   }
 }
-// sai mantendo o cardápio: o prato da casa vira o "cardápio guardado" desta pessoa
+// sai mantendo o cardápio: o prato compartilhado vira o "cardápio guardado" desta pessoa
 function _famCongela(){
   const P = famParams(); const n = nutriConfig();
   if(P && P.casa) n.cardapioFixo = { refeicoes:P.refeicoes.slice(), seed:P.seed, trocas:Object.assign({}, P.trocas), veg:P.veg, lac:P.lac, glu:P.glu, economico:P.economico, dias:Object.assign({}, P.dias) };
@@ -15642,19 +15642,19 @@ function famSaiuLocal(motivo){
   try{ localStorage.removeItem(_famCacheKey()); }catch(e){}
   const n = nutriConfig(); delete n.familia; delete n.famFora; window.__famCache = null;
   saveData();
-  if(motivo === 'removido' || motivo === 'apagado') toast('🏠 Você não faz mais parte do grupo da casa. Seu cardápio atual foi mantido.');
+  if(motivo === 'removido' || motivo === 'apagado') toast('👥 Você não faz mais parte do grupo. Seu cardápio atual foi mantido.');
   _famRedesenha();
 }
 function famSair(){
   const c = famCache() || {}, uid = _famUid();
   const outros = (c.membros||[]).filter(x=>x!==uid);
   if(c.dono === uid && outros.length > 1){
-    return famEscolha('Antes de sair, escolha o novo administrador', 'Quem fica cuidando do cardápio da casa?', outros.map(o=>({ t:famNome(o), f:()=>_famSairConfirma(o) })));
+    return famEscolha('Antes de sair, escolha o novo administrador', 'Quem fica cuidando do cardápio compartilhado?', outros.map(o=>({ t:famNome(o), f:()=>_famSairConfirma(o) })));
   }
   _famSairConfirma(outros[0] || null);
 }
 function _famSairConfirma(novoAdm){
-  appConfirm('Você sai do grupo da casa. O cardápio que está agora continua igual no seu app; as próximas mudanças deixam de aparecer para os outros.', async ()=>{
+  appConfirm('Você sai do grupo. O cardápio que está agora continua igual no seu app; as próximas mudanças deixam de aparecer para os outros.', async ()=>{
     const id = famId(), uid = _famUid(), c = famCache() || {};
     const outros = (c.membros||[]).filter(x=>x!==uid);
     try{
@@ -15664,42 +15664,42 @@ function _famSairConfirma(novoAdm){
         if(c.dono === uid) campos.dono = (novoAdm && outros.includes(novoAdm)) ? novoAdm : outros[0];
         await _famTempo(db.collection('familias').doc(id).update(campos));
       }
-      famSaiuLocal('saiu'); toast('Você saiu do grupo da casa. Seu cardápio foi mantido.'); openNutri();
+      famSaiuLocal('saiu'); toast('Você saiu do grupo. Seu cardápio foi mantido.'); openNutri();
     }catch(e){ console.log('casa (sair):', e); toast('Não consegui sair agora (sem conexão?). Tente de novo.'); }
-  }, { title:'Sair do grupo da casa?', emo:'🏠', okLabel:'Sair e manter meu cardápio' });
+  }, { title:'Sair do grupo?', emo:'👥', okLabel:'Sair e manter meu cardápio' });
 }
 function famPassarAdm(outro){
   if(!famSouAdm() || !famMembros().includes(outro) || outro === _famUid()) return;
-  appConfirm(`${famNome(outro)} passa a administrar o cardápio da casa (trocar pratos, tirar e acrescentar alimentos, dias e horários). Você continua no grupo com a sua porção.`, async ()=>{
+  appConfirm(`${famNome(outro)} passa a administrar o cardápio compartilhado (trocar pratos, tirar e acrescentar alimentos, dias e horários). Você continua no grupo com a sua porção.`, async ()=>{
     const ok = await _famAtualiza({ dono: outro });
     if(ok){ const c = famCache(); c.dono = outro; _famGuardaCache(c); toast('Administração passada para ' + famNome(outro) + '.'); }
     openFamilia();
-  }, { title:'Passar a administração?', emo:'🏠', okLabel:'Passar', onCancel:()=>openFamilia() });
+  }, { title:'Passar a administração?', emo:'👥', okLabel:'Passar', onCancel:()=>openFamilia() });
 }
 function famRemoverMembro(outro){
   if(!famSouAdm() || outro === _famUid()) return;
-  appConfirm(`${famNome(outro)} sai do grupo da casa. O cardápio atual continua no app dessa pessoa, só deixa de acompanhar a casa.`, async ()=>{
+  appConfirm(`${famNome(outro)} sai do grupo. O cardápio atual continua no app dessa pessoa, só deixa de acompanhar a casa.`, async ()=>{
     const ok = await _famAtualiza({ membros: firebase.firestore.FieldValue.arrayRemove(outro), ['nomes.' + outro]: firebase.firestore.FieldValue.delete(), ['perfis.' + outro]: firebase.firestore.FieldValue.delete() });
-    if(ok) toast(famNome(outro) + ' saiu do grupo da casa.');
+    if(ok) toast(famNome(outro) + ' saiu do grupo.');
     openFamilia();
-  }, { title:'Tirar do grupo da casa?', emo:'🏠', okLabel:'Tirar do grupo', onCancel:()=>openFamilia() });
+  }, { title:'Tirar do grupo?', emo:'👥', okLabel:'Tirar do grupo', onCancel:()=>openFamilia() });
 }
 // configuração (só o administrador)
 function _famCfgGrava(campo, valor){
-  if(!famSouAdm()) return toast('Só o administrador da casa muda essa configuração.');
+  if(!famSouAdm()) return toast('Só o administrador do grupo muda essa configuração.');
   const c = famCache(); c.config = c.config || {}; c.config[campo] = valor; _famGuardaCache(c);
   _famAtualiza({ ['config.' + campo]: valor }); famAgendaEnvio(); openFamilia();
 }
 function famAlternaRefeicao(mid){
   const refs = famRefs().slice(); const i = refs.indexOf(mid);
-  if(i >= 0){ if(refs.length === 1) return toast('Deixe pelo menos uma refeição da casa (ou saia do grupo).'); refs.splice(i,1); } else refs.push(mid);
+  if(i >= 0){ if(refs.length === 1) return toast('Deixe pelo menos uma refeição compartilhada (ou saia do grupo).'); refs.splice(i,1); } else refs.push(mid);
   _famCfgGrava('refeicoes', refs);
 }
 function famAlternaEconomico(){ _famCfgGrava('economico', !(_famCfg().economico !== false)); }
 function famAlternaTrocaPropria(){ _famCfgGrava('trocaPropria', !famTrocaPropria()); }
 function famAlternaDia(mid, d){
   const dias = famDiasRef(mid).slice(); const i = dias.indexOf(d);
-  if(i >= 0){ if(dias.length === 1) return toast('Deixe pelo menos um dia (ou tire a refeição da casa).'); dias.splice(i,1); } else dias.push(d);
+  if(i >= 0){ if(dias.length === 1) return toast('Deixe pelo menos um dia (ou tire a refeição compartilhada).'); dias.splice(i,1); } else dias.push(d);
   const todos = Object.assign({}, _famCfg().dias || {}); dias.sort((a,b)=>a-b);
   if(dias.length === 7) delete todos[mid]; else todos[mid] = dias;
   _famCfgGrava('dias', todos);
@@ -15711,7 +15711,7 @@ function famHora(mid, v){
 }
 function famCompartilharCodigo(){
   const id = famId(); if(!id) return;
-  const t = `Vamos usar o mesmo cardápio no MetaTreino? Em Plano alimentar › Alimentação da casa, digite o código: ${id}`;
+  const t = `Vamos usar o mesmo cardápio no MetaTreino? Em Plano alimentar › Cardápio compartilhado, digite o código: ${id}`;
   if(navigator.share){ navigator.share({ text:t }).catch(()=>{}); return; }
   try{ navigator.clipboard.writeText(id).then(()=>toast('📋 Código copiado')); }catch(e){ toast('Código: ' + id); }
 }
@@ -15721,19 +15721,19 @@ function openFamilia(){
   if(!mtTem('alimentacao')) return mtPremiumAviso('alimentacao');
   const mi = $('modal-inner'); if(mi.dataset.tela === 'nutri') mi.dataset.tela = 'nutri-sub';
   const n = nutriConfig();
-  // Beta 64: aberta pelo Perfil › Minha casa, o botão fecha; aberta do plano alimentar, volta para ele
+  // Beta 64: aberta pelo Perfil › Meu grupo, o botão fecha; aberta do plano alimentar, volta para ele
   const volta = window.__casaDoPerfil ? `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="window.__casaDoPerfil=false;closeModal()">Fechar</button>` : `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">← Voltar ao plano alimentar</button>`;
   if(!famAtiva()){
-    mi.innerHTML = `<div id="fam-tela"><h3>🏠 Minha casa</h3>
+    mi.innerHTML = `<div id="fam-tela"><h3>👥 Meu grupo</h3>
       <p class="fam-p">Para quem mora junto: o mesmo cardápio com a porção de cada um e, se quiserem, o treino organizado para não disputarem aparelho. <b>A comida é compartilhada, a alimentação é individual:</b> todos veem o mesmo prato, cada um com a <b>própria quantidade e calorias</b>, calculadas pelo plano de cada pessoa.</p>
-      <ul class="fam-ul"><li>Quem cria o grupo é o administrador: decide o prato, os dias e os horários das refeições da casa. Dá para passar a administração depois.</li><li>A lista de compras e o PDF da casa somam o que cada pessoa vai comer.</li><li>Até ${FAM_MAX} pessoas. Cada uma precisa do plano alimentar (Premium).</li></ul>
-      ${n.cardapioFixo ? '<p class="fam-mini">Você saiu de um grupo e manteve o cardápio daquela época nas refeições da casa.</p>' : ''}
-      <button class="btn btn-primary btn-block" onclick="famCriar()">Criar o grupo da casa</button>
+      <ul class="fam-ul"><li>Quem cria o grupo é o administrador: decide o prato, os dias e os horários das refeições compartilhadas. Dá para passar a administração depois.</li><li>A lista de compras e o PDF do grupo somam o que cada pessoa vai comer.</li><li>Até ${FAM_MAX} pessoas. Cada uma precisa do plano alimentar (Premium).</li></ul>
+      ${n.cardapioFixo ? '<p class="fam-mini">Você saiu de um grupo e manteve o cardápio daquela época nas refeições compartilhadas.</p>' : ''}
+      <button class="btn btn-primary btn-block" onclick="famCriar()">Criar o grupo</button>
       <div class="fam-entrar"><label for="fam-codigo">Já tem um código?</label>
         <div class="fam-linha"><input id="fam-codigo" class="input" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="Ex.: K7M2QX" oninput="this.value=this.value.toUpperCase()" data-teclado>
         <button class="btn btn-ghost" onclick="famEntrar()">Entrar</button></div></div>
       <div id="fam-msg" class="fam-msg" aria-live="polite"></div>
-      <p class="fam-mini">No grupo ficam só o apelido, as restrições alimentares (vegetariano, sem lactose, sem glúten), o cardápio da casa e o total de compras de cada um. Peso, idade, altura e e-mail não são compartilhados.</p>
+      <p class="fam-mini">No grupo ficam só o apelido, as restrições alimentares (vegetariano, sem lactose, sem glúten), o cardápio compartilhado e o total de compras de cada um. Peso, idade, altura e e-mail não são compartilhados.</p>
       ${volta}</div>`;
     $('modal-back').classList.add('on'); mi.scrollTop = 0; return;
   }
@@ -15744,23 +15744,23 @@ function openFamilia(){
   const refsCasa = famRefs();
   const blocoRef = refsCasa.map(mid=>{ const dias = famDiasRef(mid); const h = famHoraRef(mid) || (NUTRI_REFEICOES.find(r=>r.id===mid)||{}).hora || '';
     return `<div class="fam-ref"><div class="fam-ref-t"><b>${FAM_NOMES_REF[mid]}</b>${adm ? `<input type="time" class="input fam-hora" value="${h}" aria-label="Horário do ${FAM_NOMES_REF_MIN[mid]}" onchange="famHora('${mid}', this.value)">` : `<span class="fam-mini">${h}</span>`}</div>
-      <div class="fam-dias" role="group" aria-label="Dias em que o ${FAM_NOMES_REF_MIN[mid]} é da casa">${FAM_DIAS_CURTO.map((t,i)=>`<button class="fam-dia ${dias.includes(i+1)?'on':''}" ${dis} aria-pressed="${dias.includes(i+1)}" aria-label="${NUTRI_DIAS[i]}" onclick="famAlternaDia('${mid}',${i+1})">${t}</button>`).join('')}</div></div>`; }).join('');
-  // Beta 64: tela reorganizada em blocos — quem está na casa, refeições da casa (recolhido), compras/PDF lado a lado,
+      <div class="fam-dias" role="group" aria-label="Dias em que o ${FAM_NOMES_REF_MIN[mid]} é compartilhado">${FAM_DIAS_CURTO.map((t,i)=>`<button class="fam-dia ${dias.includes(i+1)?'on':''}" ${dis} aria-pressed="${dias.includes(i+1)}" aria-label="${NUTRI_DIAS[i]}" onclick="famAlternaDia('${mid}',${i+1})">${t}</button>`).join('')}</div></div>`; }).join('');
+  // Beta 64: tela reorganizada em blocos — quem está na casa, refeições compartilhadas (recolhido), compras/PDF lado a lado,
   // treino em dupla e "sair" discreto no fim. As funções são as mesmas de antes.
   const _ec = `<div class="mod-toggle" style="margin:8px 0 0"><button class="seg ${P.economico?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaEconomico()">💰 Pratos econômicos na casa</button><button class="seg ${famTrocaPropria()?'on':''}" ${dis} style="font-size:12px;padding:10px 4px" onclick="famAlternaTrocaPropria()">🔄 Cada um pode trocar só para si</button></div>`;
-  mi.innerHTML = `<div id="fam-tela"><h3>🏠 Minha casa</h3>
+  mi.innerHTML = `<div id="fam-tela"><h3>👥 Meu grupo</h3>
     <div class="fam-codigo-box"><small>Código do grupo</small><b>${mtEsc(famId())}</b><button class="btn btn-ghost" onclick="famCompartilharCodigo()">Convidar</button></div>
     <p class="fam-p"><b>A comida é compartilhada, a alimentação é individual.</b> O prato é o mesmo para todos; a quantidade e as calorias de cada um vêm do próprio plano.</p>
     <details class="fam-bloco" open><summary><b>Pessoas</b><small>${famMembros().length}/${FAM_MAX}</small></summary>
       <div class="fam-membros">${membros}</div>
-      <p class="fam-mini">${adm ? 'Você é o administrador do cardápio: troca o prato, tira ou acrescenta alimentos no prato da casa e define dias e horários.' : `${mtEsc(famNome(admUid))} administra o cardápio da casa. Você vê o prato da casa com a sua porção e pode ajustar a sua quantidade.`}</p>
+      <p class="fam-mini">${adm ? 'Você é o administrador do cardápio: troca o prato, tira ou acrescenta alimentos no prato compartilhado e define dias e horários.' : `${mtEsc(famNome(admUid))} administra o cardápio compartilhado. Você vê o prato compartilhado com a sua porção e pode ajustar a sua quantidade.`}</p>
     </details>
-    <details class="fam-bloco"><summary><b>Refeições da casa</b><small>${refsCasa.length ? refsCasa.map(k=>FAM_NOMES_REF_MIN[k]).join(' e ') : 'nenhuma'}</small></summary>
+    <details class="fam-bloco"><summary><b>Refeições compartilhadas</b><small>${refsCasa.length ? refsCasa.map(k=>FAM_NOMES_REF_MIN[k]).join(' e ') : 'nenhuma'}</small></summary>
       <div class="fam-chips">${Object.keys(FAM_NOMES_REF).map(k=>`<button class="rc-chip ${refsCasa.includes(k)?'on':''}" ${dis} aria-pressed="${refsCasa.includes(k)}" onclick="famAlternaRefeicao('${k}')">${FAM_NOMES_REF[k]}</button>`).join('')}</div>
       <div class="fam-refs">${blocoRef}</div>
       <p class="fam-mini">Quem usa menos refeições por dia (por exemplo 4) segue só as que existem no plano dele. Nos dias desmarcados, a refeição volta a ser individual.</p>
       ${_ec}
-      ${restr.length ? `<p class="fam-p" style="margin-top:10px">As refeições da casa respeitam as restrições de todos: <b>${restr.join(', ')}</b>.</p>` : ''}
+      ${restr.length ? `<p class="fam-p" style="margin-top:10px">As refeições compartilhadas respeitam as restrições de todos: <b>${restr.join(', ')}</b>.</p>` : ''}
     </details>
     <div class="fam-sec">Compras e cardápio</div>
     <div class="fam-2b"><button class="btn btn-primary" onclick="nutriListaCompras(null,'casa')">🛒 Lista de compras</button><button class="btn btn-ghost" onclick="pdfAlimentacaoCasa()">📄 Cardápio em PDF</button></div>
@@ -15778,40 +15778,40 @@ mtGancho('openNutri', { depois(){
     const bt = mi.querySelector('[onclick="nutriListaCompras()"]'); if(!bt) return;
     if(!mi.querySelector('#fam-entrada')){
       const ativo = famAtiva();
-      // Beta 64: conectar a casa agora fica em Perfil › Minha casa. Aqui: a entrada completa só para quem já está
+      // Beta 64: conectar a casa agora fica em Perfil › Meu grupo. Aqui: a entrada completa só para quem já está
       // num grupo; para os outros, uma linha discreta que leva ao mesmo lugar.
       if(ativo){
         const n = famMembros().length;
-        const sub = `${n} ${n===1?'pessoa':'pessoas'} · ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(' e ')} da casa${famSouAdm()?' · você administra':''}`;
-        bt.insertAdjacentHTML('afterend', `<button class="mealc rc-entrada" id="fam-entrada" onclick="window.__casaDoPerfil=false;openFamilia()"><span class="mi">🏠</span><span class="mt"><b>Alimentação da casa</b><small>${mtEsc(sub)}</small></span><span class="rc-seta">›</span></button>`);
+        const sub = `${n} ${n===1?'pessoa':'pessoas'} · ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(' e ')} em grupo${famSouAdm()?' · você administra':''}`;
+        bt.insertAdjacentHTML('afterend', `<button class="mealc rc-entrada" id="fam-entrada" onclick="window.__casaDoPerfil=false;openFamilia()"><span class="mi">👥</span><span class="mt"><b>Cardápio compartilhado</b><small>${mtEsc(sub)}</small></span><span class="rc-seta">›</span></button>`);
       } else {
-        bt.insertAdjacentHTML('afterend', `<div id="fam-entrada" class="fam-dica-perfil">Mora com alguém? Dá para dividir o cardápio em <a href="#" onclick="openMinhaCasa();return false">Perfil › Minha casa</a>.</div>`);
+        bt.insertAdjacentHTML('afterend', `<div id="fam-entrada" class="fam-dica-perfil">Divide as refeições com alguém? Dá para dividir o cardápio em <a href="#" onclick="openMinhaCasa();return false">Perfil › Meu grupo</a>.</div>`);
       }
     }
     if(!famAtiva()) return;
-    bt.textContent = `🛒 Lista de compras (só eu ou da casa)`;
+    bt.textContent = `🛒 Lista de compras (só eu ou do grupo)`;
     const pdf = mi.querySelector('#nutri-pdf');
-    if(pdf && !mi.querySelector('#nutri-pdf-casa')) pdf.insertAdjacentHTML('afterend', `<button class="btn btn-ghost btn-block" id="nutri-pdf-casa" style="margin:0 0 8px" onclick="pdfAlimentacaoCasa()">📄 Cardápio da casa em PDF</button>`);
+    if(pdf && !mi.querySelector('#nutri-pdf-casa')) pdf.insertAdjacentHTML('afterend', `<button class="btn btn-ghost btn-block" id="nutri-pdf-casa" style="margin:0 0 8px" onclick="pdfAlimentacaoCasa()">📄 Cardápio compartilhado em PDF</button>`);
     const pl = nutriMontarPlano(nutriDiaSel()); if(!pl || pl.erro) return;
     const adm = famSouAdm(), editavel = nutriDiaSel() >= getDayIdx();
     pl.refeicoes.forEach(m=>{
       const d = mi.querySelector(`details.mealc[ontoggle*="nutriTog('${m.chave}'"]`); if(!d) return;
       const t = d.querySelector('summary .mt b');
-      if(m.compartilhada && t && !t.querySelector('.fam-selo')) t.insertAdjacentHTML('beforeend', ' <span class="fam-selo">Casa</span>');
+      if(m.compartilhada && t && !t.querySelector('.fam-selo')) t.insertAdjacentHTML('beforeend', ' <span class="fam-selo">Compartilhada</span>');
       const mb = d.querySelector('.mb'); if(!mb || mb.querySelector('.fam-info')) return;
       if(m.compartilhada){
         const tir = (m.tiradosCasa||[]).filter(id=>NUTRI_ALIMENTOS[id]);
-        mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">🏠 Prato da casa${adm ? ' — você administra' : ` — decidido por ${mtEsc(famNome(famAdmUid()))}`}. A quantidade abaixo é a <b>sua</b>: ${Math.round(m.tot.kcal)} kcal.
+        mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">👥 Prato compartilhado${adm ? ' — você administra' : ` — decidido por ${mtEsc(famNome(famAdmUid()))}`}. A quantidade abaixo é a <b>sua</b>: ${Math.round(m.tot.kcal)} kcal.
           ${famAjusteHTML(m)}
-          ${tir.length ? `<div class="fam-tirados">Fora do prato da casa hoje: ${tir.map(id=>`${mtEsc(NUTRI_ALIMENTOS[id][0])}${adm && editavel ? ` <button class="fam-link" onclick="famVoltarNaCasa('${m.id}','${id}')">devolver</button>` : ''}`).join(' · ')}</div>` : ''}</div>`);
+          ${tir.length ? `<div class="fam-tirados">Fora do prato compartilhado hoje: ${tir.map(id=>`${mtEsc(NUTRI_ALIMENTOS[id][0])}${adm && editavel ? ` <button class="fam-link" onclick="famVoltarNaCasa('${m.id}','${id}')">devolver</button>` : ''}`).join(' · ')}</div>` : ''}</div>`);
       } else if(m.foraDaCasa){
-        mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">Neste dia você está com outro prato, só para você. ${editavel ? `<button class="fam-link" onclick="famVoltarCasa('${m.id}')">Voltar ao prato da casa</button>` : ''}</div>`);
+        mb.insertAdjacentHTML('afterbegin', `<div class="fam-info">Neste dia você está com outro prato, só para você. ${editavel ? `<button class="fam-link" onclick="famVoltarCasa('${m.id}')">Voltar ao prato compartilhado</button>` : ''}</div>`);
       }
     });
   }catch(e){ console.log('casa (tela):', e); }
 }});
 
-// Beta 52: o que mudou no prato da casa e quanto isso muda as calorias DESTA pessoa
+// Beta 52: o que mudou no prato compartilhado e quanto isso muda as calorias DESTA pessoa
 function famAjusteNomes(m){
   const tir = (m.tiradosCasa||[]).filter(id=>NUTRI_ALIMENTOS[id]).map(id=>'sem ' + NUTRI_ALIMENTOS[id][0].toLowerCase());
   const add = (m.acrescentadosCasa||[]).filter(id=>NUTRI_ALIMENTOS[id]).map(id=>'+ ' + NUTRI_ALIMENTOS[id][0].toLowerCase());
@@ -15820,9 +15820,9 @@ function famAjusteNomes(m){
 function famAjusteHTML(m){
   if(!m || !m.mudouCasa) return '';
   const o = famAjusteNomes(m).join(', ');
-  if(m.compensada) return `<div class="fam-ajuste">Ajuste da casa: ${mtEsc(o)}. As porções foram recalculadas para manter as suas ${Math.round(m.tot.kcal)} kcal.</div>`;
+  if(m.compensada) return `<div class="fam-ajuste">Ajuste do grupo: ${mtEsc(o)}. As porções foram recalculadas para manter as suas ${Math.round(m.tot.kcal)} kcal.</div>`;
   const d = m.casaDelta || 0; const sinal = d > 0 ? '+' : d < 0 ? '−' : '';
-  return `<div class="fam-ajuste ${d > 0 ? 'mais' : d < 0 ? 'menos' : ''}">Ajuste da casa: ${mtEsc(o)}.<br>Recomendado <b>${m.recKcal} kcal</b> → com o ajuste <b>${Math.round(m.tot.kcal)} kcal</b> (${d ? `${sinal}${Math.abs(d)} kcal` : 'igual'}).</div>`;
+  return `<div class="fam-ajuste ${d > 0 ? 'mais' : d < 0 ? 'menos' : ''}">Ajuste do grupo: ${mtEsc(o)}.<br>Recomendado <b>${m.recKcal} kcal</b> → com o ajuste <b>${Math.round(m.tot.kcal)} kcal</b> (${d ? `${sinal}${Math.abs(d)} kcal` : 'igual'}).</div>`;
 }
 
 // ---------- lista de compras (e PDF): individual ou da casa ----------
@@ -15877,8 +15877,8 @@ function nutriComprasTotais(escopo, modo){
         if(cobertos < diasOk) avisos.push(`${famNome(o)}: a lista dessa pessoa foi atualizada em ${pf.em ? mtFmtData(pf.em) : 'data desconhecida'} e cobre ${cobertos} de ${diasOk} dias. Abrir o app no celular dela atualiza.`);
         return;
       }
-      // versão antiga do app (sem "compras"): só o prato da casa, pela proporção da porção publicada
-      avisos.push(`${famNome(o)} está com uma versão antiga do app: só as refeições da casa dessa pessoa entram na conta.`);
+      // versão antiga do app (sem "compras"): só o prato compartilhado, pela proporção da porção publicada
+      avisos.push(`${famNome(o)} está com uma versão antiga do app: só as refeições compartilhadas dessa pessoa entram na conta.`);
       dias.forEach(({d,dk})=>{
         NUTRI_REFEICOES.forEach(r=>{
           const f = ((pf.fatores||{})[d]||{})[r.id]; if(!f || !famDaCasaNoDia(P, r.id, d, dk)) return;
@@ -15900,18 +15900,18 @@ window.nutriListaCompras = function(escopo, modo){
   const R = nutriComprasTotais(escopo, modo); const tot = R.tot;
   const semKey = chaveDia(nutriDataDia(1)) + (R.casa ? '-casa' : ''); state.comprasOk = state.comprasOk || {}; const ok = state.comprasOk[semKey] = state.comprasOk[semKey] || {};
   const fmt = id=>_nutriFmtCompra(id, tot[id]);
-  const porPessoa = id=>'';     // Beta 52: a lista mostra tudo junto; a parte de cada pessoa fica no PDF da casa
+  const porPessoa = id=>'';     // Beta 52: a lista mostra tudo junto; a parte de cada pessoa fica no PDF do grupo
   const blocos = Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
     const itens = ids.filter(id=>tot[id]).map(id=>`<div class="mrow ${ok[id]?'rm':''}" style="cursor:pointer" onclick="nutriCompraOk('${id}')"><span class="n">${ok[id]?'☑':'☐'} ${nutriNomeCompra(id)}${porPessoa(id)}</span><span class="q">${fmt(id)}</span></div>`).join('');
     return itens ? `<div class="section-lbl" style="margin:14px 0 2px">${titulo}</div>${itens}` : '';
   }).join('');
-  window.__nutriTextoCompras = `🛒 Lista de compras (MetaTreino)${R.casa ? ` — casa, ${R.pessoas} pessoas` : ''}\nPeríodo: ${_famPeriodoTxt(R.periodo)}\n\n` + Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
+  window.__nutriTextoCompras = `🛒 Lista de compras (MetaTreino)${R.casa ? ` — grupo, ${R.pessoas} pessoas` : ''}\nPeríodo: ${_famPeriodoTxt(R.periodo)}\n\n` + Object.values(NUTRI_CATEG).map(([titulo, ids])=>{
     const l = ids.filter(id=>tot[id] && !ok[id]).map(id=>`• ${nutriNomeCompra(id)}: ${fmt(id)}`); return l.length ? titulo+'\n'+l.join('\n') : '';
   }).filter(Boolean).join('\n\n');
-  $('modal-inner').innerHTML = `<div id="fam-compras"><h3>🛒 Lista de compras${R.casa ? ' da casa' : ''}</h3>
+  $('modal-inner').innerHTML = `<div id="fam-compras"><h3>🛒 Lista de compras${R.casa ? ' do grupo' : ''}</h3>
     ${famAtiva() ? `<div class="mod-toggle" style="margin:8px 0 0">
       <button class="seg ${modo==='eu'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras(null,'eu')">Só eu</button>
-      <button class="seg ${modo==='casa'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras(null,'casa')">Casa toda (${famMembros().length})</button></div>` : ''}
+      <button class="seg ${modo==='casa'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras(null,'casa')">Grupo todo (${famMembros().length})</button></div>` : ''}
     <div class="mod-toggle" style="margin:8px 0 6px">
       <button class="seg ${escopo==='semana'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('semana')">Até domingo</button>
       <button class="seg ${escopo==='7dias'?'on':''}" style="font-size:12px;padding:10px 4px" onclick="nutriListaCompras('7dias')">Próximos 7 dias</button>
@@ -15921,7 +15921,7 @@ window.nutriListaCompras = function(escopo, modo){
     <p style="color:var(--text-dim);font-size:12px;line-height:1.55;margin:4px 0 0">${R.editados?`Já com ${R.editados===1?'a sua 1 edição':'as suas '+R.editados+' edições'}. `:''}Dias que já passaram não entram. Toque num item para marcar “já tenho”. Grãos e carnes em peso cru; óleos e leite em ml/L; frutas e pães em unidades.</p>
     <div style="max-height:50vh;overflow-y:auto">${blocos || '<div class="text-dim" style="padding:14px 0;font-size:13px">Nada a comprar neste período.</div>'}</div>
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="nutriCopiarCompras()">📋 Copiar / compartilhar lista</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="${R.casa ? 'pdfAlimentacaoCasa()' : 'pdfAlimentacao()'}">📄 PDF ${R.casa ? 'da casa' : 'do meu plano'}</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="${R.casa ? 'pdfAlimentacaoCasa()' : 'pdfAlimentacao()'}">📄 PDF ${R.casa ? 'do grupo' : 'do meu plano'}</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openNutri()">‹ Voltar ao plano</button></div>`;
   $('modal-back').classList.add('on');
 };
@@ -15959,12 +15959,12 @@ function nutriPdfCompras(S, arte, modo){
       : 'Já com as suas edições. Grãos e carnes em peso cru; quantidades arredondadas para facilitar a compra.');
   }catch(e){ console.log('pdf compras:', e); }
 }
-// PDF da casa: cardápio compartilhado da semana (o prato, sem quantidades — elas são de cada um) + compras somadas
+// PDF do grupo: cardápio compartilhado da semana (o prato, sem quantidades — elas são de cada um) + compras somadas
 function pdfMontarCasa(jsPDF, arte){
-  if(!famAtiva()) throw new Error('Você não está num grupo da casa');
+  if(!famAtiva()) throw new Error('Você não está num grupo');
   const P = famParams(); const n = nutriConfig();
   const nomes = famMembros().map(u=>u===_famUid()?'você':famNome(u)).join(', ');
-  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio da casa', sub:`${famMembros().length} pessoas: ${nomes}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
+  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio compartilhado', sub:`${famMembros().length} pessoas: ${nomes}`, sub2:`Refeições compartilhadas: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
   S.nota('A comida é compartilhada, a alimentação é individual: o prato abaixo é o mesmo para todos, e cada pessoa vê no app a própria quantidade e calorias, calculadas pelo plano dela.', { caixa:true, cor:arte.C.ink });
   const DN = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
   const linhas = [];
@@ -15977,14 +15977,14 @@ function pdfMontarCasa(jsPDF, arte){
     });
   });
   if(linhas.length){
-    S.secao('Cardápio da casa — próximos 7 dias', 'quantidades individuais no app de cada pessoa');
+    S.secao('Cardápio compartilhado — próximos 7 dias', 'quantidades individuais no app de cada pessoa');
     S.tabela([{t:'Dia', w:24, negrito:true, quebra:true}, {t:'Refeição', w:24, quebra:true}, {t:'Prato', w:44, quebra:true, negrito:true}, {t:'Ingredientes e uso', w:84, quebra:true}], linhas, { t:7.6 });
   }
   // Beta 58: as compras somadas da casa estão no PDF da lista de compras (parte 62)
-  S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém da casa tem doença, alergia ou usa medicação, procure um profissional.');
+  S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém do grupo tem doença, alergia ou usa medicação, procure um profissional.');
   return S.fim(`metatreino-casa-${chaveDia(new Date())}.pdf`, _pdfAluno());
 }
-function pdfAlimentacaoCasa(){ if(!famAtiva()) return toast('Entre num grupo da casa para gerar o PDF da casa.'); return _pdfGerar('pdfAlimentacao', 'alimentacao', pdfMontarCasa, 'Alimentação da casa'); }
+function pdfAlimentacaoCasa(){ if(!famAtiva()) return toast('Entre num grupo para gerar o PDF do grupo.'); return _pdfGerar('pdfAlimentacao', 'alimentacao', pdfMontarCasa, 'Cardápio compartilhado'); }
 
 // ---------- assistente: perguntas de corrida só para quem tem plano de corrida ----------
 const _MA_RUN_GUARDADAS = [];
@@ -17599,12 +17599,12 @@ try{ DK_LAYOUT['scr-perf'].topo.push('#perf-mod'); DK_LAYOUT['scr-perf'].fim = (
 // =====================================================================
 // 55. Beta 52 — Ajustes da casa com calorias, PDF por pessoa, cardápio maior e "fora da rotina"
 // =====================================================================
-// • Prato da casa: o que o administrador tira ou acrescenta muda as calorias de cada pessoa (parte 49:
+// • Prato compartilhado: o que o administrador tira ou acrescenta muda as calorias de cada pessoa (parte 49:
 //   famPrato/nutriMontarPlano). Cada um vê "recomendado X → com o ajuste Y (±Z)" na refeição e no dia.
 //   O administrador pode ligar "Manter as calorias de cada um" (as porções são recalculadas, como antes).
 // • Cada pessoa publica no grupo a própria semana (o que vai comer em cada refeição, em gramas, e as
 //   calorias: recomendado, ajuste da casa e com os próprios ajustes). Nada de peso, idade, altura ou e-mail.
-// • PDF da casa: resumo por pessoa e por dia (recomendado × planejado e o motivo), o cardápio de CADA pessoa
+// • PDF do grupo: resumo por pessoa e por dia (recomendado × planejado e o motivo), o cardápio de CADA pessoa
 //   separado e a lista de compras somada. No app, a lista mostra tudo junto.
 // • Cardápio mais amplo: +45 pratos com os alimentos que já existem (cada refeição tem mais opções).
 // • "Fora da rotina": comidas comuns do dia a dia (pizza, hambúrguer, refrigerante, cerveja, doces…) para
@@ -17728,7 +17728,7 @@ mtGancho('openFamilia', { depois(){
     const eco = mi.querySelector('[onclick="famAlternaEconomico()"]'); const linha = eco && eco.closest('.mod-toggle'); if(!linha) return;
     const on = !!_famCfg().compensa, adm = famSouAdm();
     linha.insertAdjacentHTML('afterend', `<label class="fam-comp ${adm?'':'off'}" id="fam-compensa"><input type="checkbox" ${on?'checked':''} ${adm?'':'disabled'} onchange="famAlternaCompensa()">
-      <span><b>Manter as calorias de cada um</b><small>${on ? 'Ao tirar ou acrescentar um alimento no prato da casa, as porções do resto do prato são recalculadas para cada pessoa continuar na própria meta.' : 'Desligado: tirar ou acrescentar um alimento muda as calorias de cada pessoa, e cada uma vê no plano quanto ficou a mais ou a menos.'}</small></span></label>`);
+      <span><b>Manter as calorias de cada um</b><small>${on ? 'Ao tirar ou acrescentar um alimento no prato compartilhado, as porções do resto do prato são recalculadas para cada pessoa continuar na própria meta.' : 'Desligado: tirar ou acrescentar um alimento muda as calorias de cada pessoa, e cada uma vê no plano quanto ficou a mais ou a menos.'}</small></span></label>`);
   }catch(e){}
 }});
 
@@ -17741,12 +17741,12 @@ mtGancho('openNutri', { depois(){
     const primeira = mi.querySelector('details.mealc'); if(!primeira) return;
     const d = pl.casaDelta || 0, comp = ms.every(m=>m.compensada);
     const motivos = ms.map(m=>`${m.nome}: ${famAjusteNomes(m).join(', ')}`).join(' · ');
-    primeira.insertAdjacentHTML('beforebegin', `<div class="fam-ajuste-dia ${d>0?'mais':d<0?'menos':''}" id="fam-ajuste-dia">🏠 <b>Ajustes do prato da casa hoje</b><br>${mtEsc(motivos)}<br>
+    primeira.insertAdjacentHTML('beforebegin', `<div class="fam-ajuste-dia ${d>0?'mais':d<0?'menos':''}" id="fam-ajuste-dia">👥 <b>Ajustes do prato compartilhado hoje</b><br>${mtEsc(motivos)}<br>
       ${comp ? `Porções recalculadas: você continua com ~${Math.round(pl.dia.kcal)} kcal.` : `Recomendado <b>${pl.diaRec} kcal</b> → com os ajustes <b>${Math.round(pl.dia.kcal)} kcal</b> (${d>0?'+':d<0?'−':''}${Math.abs(d)} kcal).`}</div>`);
   }catch(e){ console.log('casa (dia):', e); }
 }});
 
-// ---------- 5. a minha semana, publicada no grupo (para o PDF da casa) ----------
+// ---------- 5. a minha semana, publicada no grupo (para o PDF do grupo) ----------
 // { dk: { r: recomendado, c: ajuste da casa, k: com os meus ajustes, m: { refeição: { n: prato, h: hora, i: [[id, g]], x: [[nome, kcal]] } } } }
 function famMinhaSemana(){
   const out = {}; const hojeIdx = getDayIdx();
@@ -17765,7 +17765,7 @@ function famMinhaSemana(){
   return out;
 }
 
-// ---------- 6. PDF da casa: por pessoa ----------
+// ---------- 6. PDF do grupo: por pessoa ----------
 function _famQtdTxt(id, g){
   const a = NUTRI_ALIMENTOS[id]; if(!a) return '';
   if(a[5]) return `${Math.max(1, Math.round(g/a[5]))} unid.`;
@@ -17808,12 +17808,12 @@ function _famMotivoCasa(dk){
 }
 const _pdfMontarCasaB49 = window.pdfMontarCasa;
 window.pdfMontarCasa = function(jsPDF, arte){
-  if(!famAtiva()) throw new Error('Você não está num grupo da casa');
+  if(!famAtiva()) throw new Error('Você não está num grupo');
   const P = famParams(); const eu = _famUid();
   const membros = [eu].concat(famMembros().filter(u=>u!==eu));
   const nomeDe = u=>u===eu ? `${_famMeuApelido()} (você)` : famNome(u);
-  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio da casa', sub:`${membros.length} pessoas: ${membros.map(nomeDe).join(', ')}`, sub2:`Refeições da casa: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
-  S.nota('A comida é compartilhada, a alimentação é individual: nas refeições da casa o prato é o mesmo para todos, e a quantidade de cada pessoa sai do plano dela. Abaixo, o que cada uma vai comer, separado.', { caixa:true, cor:arte.C.ink });
+  const S = pdfDoc(jsPDF, arte, { titulo:'Cardápio compartilhado', sub:`${membros.length} pessoas: ${membros.map(nomeDe).join(', ')}`, sub2:`Refeições compartilhadas: ${famRefs().map(k=>FAM_NOMES_REF_MIN[k]).join(', ')} · administrador: ${famSouAdm()?'você':famNome(famAdmUid())}` });
+  S.nota('A comida é compartilhada, a alimentação é individual: nas refeições compartilhadas o prato é o mesmo para todos, e a quantidade de cada pessoa sai do plano dela. Abaixo, o que cada uma vai comer, separado.', { caixa:true, cor:arte.C.ink });
   const DN = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   const fd = dk=>{ const dt = new Date(dk + 'T12:00:00'); return `${DN[dt.getDay()]} ${dk.slice(8,10)}/${dk.slice(5,7)}`; };
   const sem = {}; membros.forEach(u=>{ try{ sem[u] = _famSemanaDe(u); }catch(e){ sem[u] = null; } });
@@ -17848,14 +17848,14 @@ window.pdfMontarCasa = function(jsPDF, arte){
         const txt = (m.i||[]).map(([id,g])=>`${NUTRI_ALIMENTOS[id] ? NUTRI_ALIMENTOS[id][0] : id} ${_famQtdTxt(id,g)}`).concat((m.x||[]).map(([n,k])=>`${n} (${k} kcal)`)).join(' · ');
         const k = Math.round(_famKcalItens(m.i) + (m.x||[]).reduce((t,[,v])=>t+(+v||0),0));
         const casa = famDaCasaNoDia(P, r.id, new Date(dk + 'T12:00:00').getDay() || 7, dk);
-        linhas.push([fd(dk), `${r.nome}${casa ? ' · casa' : ''}\n${m.h || r.hora}`, `${m.n || ''}\n${txt}`, String(k)]);
+        linhas.push([fd(dk), `${r.nome}${casa ? ' · compartilhada' : ''}\n${m.h || r.hora}`, `${m.n || ''}\n${txt}`, String(k)]);
       });
       linhas.push(['', 'Total do dia', `recomendado ${dia.r} kcal${dia.k !== dia.r ? ` · planejado ${dia.k} kcal (${sinal(dia.k - dia.r)})` : ''}`, String(dia.k)]);
     });
     if(linhas.length) S.tabela([{t:'Dia', w:20, negrito:true}, {t:'Refeição', w:30, quebra:true}, {t:'Prato e quantidades', w:110, quebra:true}, {t:'kcal', w:16, dir:1, negrito:true}], linhas, { t:7.4 });
   });
   // Beta 58: as compras somadas (com a parte de cada um) estão no PDF da lista de compras (pdfListaCompras, parte 62)
-  S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém da casa tem doença, alergia ou usa medicação, procure um profissional.');
+  S.nota('Valores aproximados (tabelas brasileiras de composição de alimentos). É uma orientação geral e não substitui um nutricionista; se alguém do grupo tem doença, alergia ou usa medicação, procure um profissional.');
   return S.fim(`metatreino-casa-${chaveDia(new Date())}.pdf`, _pdfAluno());
 };
 
@@ -20051,7 +20051,7 @@ function pdfMontarCompras(jsPDF, arte){
   const escopo = window.__comprasEsc || '7dias'; const modo = (window.__comprasModo === 'casa' && famAtiva()) ? 'casa' : 'eu';
   const R = nutriComprasTotais(escopo, modo); const tot = R.tot;
   const semKey = chaveDia(nutriDataDia(1)) + (R.casa ? '-casa' : ''); const ok = ((state.comprasOk||{})[semKey]) || {};
-  const S = pdfDoc(jsPDF, arte, { titulo: R.casa ? 'Lista de compras da casa' : 'Lista de compras', sub:`Período: ${_famPeriodoTxt(R.periodo)}${R.casa ? ` · ${R.pessoas} pessoas` : ''}`,
+  const S = pdfDoc(jsPDF, arte, { titulo: R.casa ? 'Lista de compras do grupo' : 'Lista de compras', sub:`Período: ${_famPeriodoTxt(R.periodo)}${R.casa ? ` · ${R.pessoas} pessoas` : ''}`,
     sub2: R.casa ? 'Soma o que cada pessoa vai comer, na porção do próprio plano' : 'Pelo seu cardápio, já com as suas edições' });
   const { doc, M, W, C } = S;
   const ids = Object.keys(tot).filter(id=>!ok[id]); const jaTem = Object.keys(tot).filter(id=>ok[id]).length;
@@ -20083,7 +20083,7 @@ function pdfMontarCompras(jsPDF, arte){
   return S.fim(`metatreino-lista-de-compras-${chaveDia(new Date())}.pdf`, _pdfAluno());
 }
 function pdfListaCompras(){ return _pdfGerar('pdfAlimentacao', 'compras', pdfMontarCompras, R_ROT_COMPRAS()); }
-function R_ROT_COMPRAS(){ return (window.__comprasModo === 'casa' && famAtiva()) ? 'Lista de compras da casa' : 'Lista de compras'; }
+function R_ROT_COMPRAS(){ return (window.__comprasModo === 'casa' && famAtiva()) ? 'Lista de compras do grupo' : 'Lista de compras'; }
 
 // a tela da lista de compras: o botão de PDF gera a LISTA (antes gerava o plano alimentar inteiro)
 mtGancho('nutriListaCompras', { depois(){
@@ -20221,13 +20221,13 @@ window.mtRevisaConquistas = mtRevisaConquistas;
 //     favoritos primeiro; senão uma semente da própria conta. Duas pessoas com as mesmas respostas
 //     recebem fichas diferentes, mas com o mesmo papel em cada posição (mesmo estímulo).
 //  3. Estações de treino (exEstacao): qual aparelho cada exercício ocupa (polia, leg press, banco…).
-//  4. Treino em dupla (usa o grupo da Alimentação da casa SÓ para saber quem treina no mesmo lugar):
+//  4. Treino em dupla (usa o grupo da Cardápio compartilhado SÓ para saber quem treina no mesmo lugar):
 //     cada pessoa publica, no próprio perfil do grupo, quais estações usa em cada dia (texto curto) e,
 //     se quiser, as janelas dos treinos (para as conquistas em dupla). "Organizar meu plano" muda SÓ o
 //     plano de quem tocou: troca a ordem dos treinos entre os SEUS dias e, se um aparelho de unidade única
 //     está com a outra pessoa no mesmo dia, troca por um equivalente (mesmo grupo, mesmo papel, equipamento
 //     que você tem, sem conflito com limitações). Sem equivalente, mantém e avisa. Dá para desfazer.
-//     Corrida e Alimentação da casa não são tocadas.
+//     Corrida e Cardápio compartilhado não são tocadas.
 //  5. Conquistas novas: Calistenia, Híbrido e Treinando juntos (comuns, raras, especiais e secretas),
 //     todas por critério verificável no histórico; e o ícone das conquistas de corrida (o tênis
 //     parecia um ferro de passar).
@@ -20508,12 +20508,12 @@ function openTreinoDupla(){
   const eqAberto = window.__dpEqAberto ? ' open' : '';
   mi.dataset.tela = 'dupla';
   mi.innerHTML = `<div id="dupla-tela"><h3>Equipamentos e treino em dupla</h3>
-    <p class="fam-p">Diga o que você tem: o plano evita o que falta e, se outra pessoa da casa treina no mesmo lugar, evita que vocês precisem do <b>mesmo aparelho no mesmo dia</b>. Cada um continua com o próprio plano, histórico e cargas — organizar muda só o <b>seu</b> plano. Corrida e cardápio não mudam.</p>
+    <p class="fam-p">Diga o que você tem: o plano evita o que falta e, se outra pessoa do grupo treina no mesmo lugar, evita que vocês precisem do <b>mesmo aparelho no mesmo dia</b>. Cada um continua com o próprio plano, histórico e cargas — organizar muda só o <b>seu</b> plano. Corrida e cardápio não mudam.</p>
     <details class="dp-eq"${eqAberto} ontoggle="window.__dpEqAberto=this.open"><summary>Meus equipamentos</summary>
       <p class="fam-p">Quantos de cada você tem: <b>0</b> = não tenho, <b>1</b> = um só, <b>2+</b> = dois ou mais. Sem resposta, o app considera 1 de cada aparelho e halteres em vários pares. Elásticos e kettlebell não aparecem porque nenhum exercício da biblioteca usa.</p>
       ${MT_EQ_GRUPOS.map(([t, l])=>`<div class="dp-eqg">${t}</div>${l.map(eqLinha).join('')}`).join('')}
     </details>
-    ${P ? `<label class="pi-row" style="margin:12px 0 8px"><span class="pi-txt"><b>Treino com ${mtEsc(P.nome)} no mesmo lugar</b><small>${cfg.on ? 'Ligado' : 'Desligado'} · ${D ? `${mtEsc(P.nome)} também ligou` : `${mtEsc(P.nome)} ainda não ligou`}</small></span><input type="checkbox" class="pi-sw" ${cfg.on?'checked':''} onchange="duplaLiga(this.checked)"></label>` : `<p class="fam-mini" style="margin-top:10px">Treino em dupla: as duas pessoas precisam estar no mesmo grupo de Perfil › Minha casa.</p>`}
+    ${P ? `<label class="pi-row" style="margin:12px 0 8px"><span class="pi-txt"><b>Treino com ${mtEsc(P.nome)} no mesmo lugar</b><small>${cfg.on ? 'Ligado' : 'Desligado'} · ${D ? `${mtEsc(P.nome)} também ligou` : `${mtEsc(P.nome)} ainda não ligou`}</small></span><input type="checkbox" class="pi-sw" ${cfg.on?'checked':''} onchange="duplaLiga(this.checked)"></label>` : `<p class="fam-mini" style="margin-top:10px">Treino em dupla: as duas pessoas precisam estar no mesmo grupo de Perfil › Meu grupo.</p>`}
     ${P && cfg.on && D ? `<div class="section-lbl" style="margin:10px 0 4px">Semana</div><div class="dp-tab">${linhas || '<p class="fam-p">Nenhum dia de musculação em comum.</p>'}</div>` : ''}
     <p class="fam-p" style="margin-top:8px">${CD.length ? `<b>${CD.length} ${CD.length===1?'exercício precisa':'exercícios precisam'}</b> de um aparelho que ${mtEsc(P ? P.nome : '')} também usa no mesmo dia. ` : ''}${CF.length ? `<b>${CF.length} ${CF.length===1?'exercício usa':'exercícios usam'}</b> algo que você marcou que não tem.` : ''}${!C.length ? 'Tudo certo: nenhum exercício do seu plano depende de algo que falta ou que está com outra pessoa.' : ''}</p>
     ${C.length ? `<button class="btn btn-primary btn-block" style="margin-top:4px" onclick="duplaOrganizar()">Organizar o meu plano</button>` : ''}
@@ -20610,7 +20610,7 @@ const MT_TROFEUS_63 = [
   { id:'hib_4sem',    emoji:'🔀', name:'Híbrido de Verdade',   desc:'4 semanas híbridas seguidas',                                   cat:'hibrido', nv:'rara' },
   { id:'hib_12',      emoji:'🔀', name:'Atleta Completo',      desc:'12 semanas híbridas',                                           cat:'hibrido', nv:'especial' },
   // Treinando juntos (dupla) — exige os horários dos treinos se cruzarem, não só o mesmo dia
-  { id:'dupla_1',     emoji:'🤝', name:'Parceiros de Treino',  desc:'Treinou junto com quem é da sua casa (horários que se cruzam)', cat:'dupla', nv:'comum' },
+  { id:'dupla_1',     emoji:'🤝', name:'Parceiros de Treino',  desc:'Treinou junto com quem é do seu grupo (horários que se cruzam)', cat:'dupla', nv:'comum' },
   { id:'dupla_5',     emoji:'🤝', name:'Um Apoia o Outro',     desc:'Treinaram juntos em 5 dias diferentes',                         cat:'dupla', nv:'rara' },
   { id:'dupla_20',    emoji:'🤝', name:'Dupla de Ferro',       desc:'Treinaram juntos em 20 dias diferentes',                        cat:'dupla', nv:'especial' },
   // Secretas
@@ -20753,7 +20753,7 @@ try{
 Object.assign(window, { liftEscolheIndividual, exEstacao, mtDuplaPublica, mtDuplaConflitos, mtDuplaOrganizar, mtDuplaDesfazer, openTreinoDupla,
   duplaLiga, duplaConq, duplaQtd, duplaOrganizar, duplaDesfazer, mtChecaConquistas63, mtAvisoTempoHTML });
 // =====================================================================
-// 66. Beta 64 — mais alimentos e bebidas, busca melhor, "Minha casa" no Perfil
+// 66. Beta 64 — mais alimentos e bebidas, busca melhor, "Meu grupo" no Perfil
 // ---------------------------------------------------------------------
 //  • Alimentos novos (valores aproximados da TACO 4ª ed. / IBGE POF, por 100 g ou 100 ml, prontos para
 //    consumo). Bebidas vêm por unidade (copo, lata, taça, dose). Bebida alcoólica: as calorias do álcool
@@ -20761,7 +20761,7 @@ Object.assign(window, { liftEscolheIndividual, exEstacao, mtDuplaPublica, mtDupl
 //  • Tipos de ovo (cozido, frito, mexido, omelete, clara, codorna) e misturas do dia a dia.
 //  • Busca: sem acento, por qualquer palavra e por apelidos (refri, coca zero, pinga, chopp…), com o
 //    que começa pelo termo primeiro.
-//  • Perfil › Minha casa: o vínculo da casa (cardápio e treino em dupla) num lugar só.
+//  • Perfil › Meu grupo: o vínculo da casa (cardápio e treino em dupla) num lugar só.
 // =====================================================================
 const NUTRI_MAIS = {
   // ovos
@@ -20861,12 +20861,12 @@ window.nutriAddFiltra = function(){
     : `<div style="padding:14px 4px;color:var(--text-dim);font-size:13px">Nada encontrado. Use "Outro alimento" para digitar as calorias.</div>`;
 };
 
-// ---------- Perfil › Minha casa ----------
+// ---------- Perfil › Meu grupo ----------
 function openMinhaCasa(){ window.__casaDoPerfil = true; if(typeof openFamilia === 'function') openFamilia(); }
 function mtPerfilCasa(){
   try{
     const lista = document.querySelector('#pf-sentado-row'); if(!lista || $('pf-casa-row')) return;
-    lista.insertAdjacentHTML('afterend', `<div class="list-row" onclick="openMinhaCasa()" id="pf-casa-row">👥 <span>Minha casa</span><span id="pf-casa-val" style="margin-left:auto;color:var(--text-mute);font-size:12px"></span></div>`);
+    lista.insertAdjacentHTML('afterend', `<div class="list-row" onclick="openMinhaCasa()" id="pf-casa-row">👥 <span>Meu grupo</span><span id="pf-casa-val" style="margin-left:auto;color:var(--text-mute);font-size:12px"></span></div>`);
   }catch(e){}
 }
 function mtPerfilCasaVal(){
@@ -20925,3 +20925,757 @@ function _adFp(s){ s = s || {}; return JSON.stringify([s.goal, s.days, s.equip, 
     return r;
   };
 })();
+
+// =====================================================================
+// 67. 2027 RC 0 — mais alimentos: saudáveis (entram nas trocas) e "fora da rotina" (só registro)
+// ---------------------------------------------------------------------
+//  • Valores aproximados por 100 g ou 100 ml do alimento pronto (TACO 4ª ed., rótulos comuns e médias de
+//    preparo caseiro). Formato igual ao do NUTRI_ALIMENTOS: [nome, kcal, P, C, G, g da unidade, medida, livre].
+//  • Saudáveis: entram nas categorias normais (proteínas, grãos, pães/tubérculos, frutas, verduras,
+//    laticínios, outros, bebidas) → aparecem na busca do "Adicionar alimento", na troca por equivalente
+//    (parte 59) e nas equivalências. O cardápio sugerido NÃO ganhou pratos novos de propósito: o prato de
+//    cada dia é escolhido pela posição na lista (nutriVarIdx) e mudar a lista trocaria o cardápio e a lista
+//    de compras que as pessoas já estão seguindo nesta semana.
+//  • Ultraprocessados: categoria "fora da rotina" (NUTRI_FORA_IDS). Contam no dia quando registrados, mas
+//    nunca são sugeridos no cardápio, nas trocas nem na lista de compras (regras das partes 49, 55 e 59).
+// =====================================================================
+const NUTRI_RC0_SAUDAVEIS = {
+  // air fryer (com ~1 col. de chá de óleo para 200 g)
+  batataair:    ['Batata inglesa na air fryer', 110, 2.3, 20.0, 2.5, null, null],
+  batatadoceair:['Batata-doce na air fryer', 110, 1.4, 24.5, 1.0, null, null],
+  mandiocaair:  ['Mandioca na air fryer', 160, 1.0, 34.0, 2.5, null, null],
+  legumesair:   ['Legumes na air fryer (abobrinha, cenoura, cebola)', 45, 1.3, 7.0, 1.5, null, null, true],
+  frangoair:    ['Filé de frango na air fryer', 165, 31.0, 0, 4.5, null, null],
+  // proteínas
+  frangoassado: ['Frango assado (peito e coxa, sem pele)', 175, 28.0, 0, 7.0, null, null],
+  ovopoche:     ['Ovo pochê', 143, 12.6, 0.7, 9.5, 50, null],
+  // grãos, sementes e pães
+  quinoa:       ['Quinoa cozida', 120, 4.4, 21.3, 1.9, null, {g:45,nome:'col. de servir'}],
+  chia:         ['Chia (semente)', 486, 16.5, 42.0, 30.7, null, {g:10,nome:'col. de sopa'}],
+  linhaca:      ['Linhaça (semente ou farinha)', 495, 14.1, 43.3, 32.3, null, {g:10,nome:'col. de sopa'}],
+  paofermnat:   ['Pão de fermentação natural (fatia)', 260, 9.0, 51.0, 1.5, 40, null],
+  crepioca:     ['Crepioca (1 ovo + 2 col. de goma)', 180, 8.3, 22.9, 5.9, 80, null],
+  // laticínios e fermentados
+  iogurtegrego: ['Iogurte grego natural (sem açúcar)', 97, 9.0, 4.0, 5.0, null, {g:100,nome:'pote'}],
+  kefir:        ['Kefir de leite', 60, 3.4, 4.5, 3.2, null, {g:200,nome:'copo'}],
+  leitesemi:    ['Leite semidesnatado', 45, 3.2, 4.7, 1.5, null, {g:200,nome:'copo'}],
+  leitezero:    ['Leite sem lactose (semidesnatado)', 45, 3.2, 4.7, 1.5, null, {g:200,nome:'copo'}],
+  // verduras e legumes
+  abobrinha:    ['Abobrinha refogada ou cozida', 18, 1.1, 3.0, 0.4, null, null, true],
+  berinjela:    ['Berinjela cozida ou assada', 20, 0.7, 4.5, 0.1, null, null, true],
+  espinafre:    ['Espinafre refogado', 67, 2.7, 4.2, 5.4, null, null],
+  couve:        ['Couve refogada', 90, 1.7, 8.7, 6.6, null, {g:30,nome:'col. de servir'}],
+  beterraba:    ['Beterraba cozida', 32, 1.3, 7.2, 0.1, null, null, true],
+  pepino:       ['Pepino', 10, 0.9, 2.0, 0, null, null, true],
+  chuchu:       ['Chuchu cozido', 17, 0.4, 4.1, 0, null, null, true],
+  vagem:        ['Vagem cozida', 25, 1.5, 5.3, 0.3, null, null, true],
+  repolho:      ['Repolho cru (salada)', 17, 0.9, 3.9, 0.1, null, null, true],
+  // frutas
+  kiwi:         ['Kiwi', 51, 1.3, 11.5, 0.6, 76, null],
+  ameixa:       ['Ameixa fresca', 53, 0.8, 13.9, 0, 70, null],
+  melao:        ['Melão', 29, 0.7, 7.5, 0, null, null],
+  // bebidas
+  vitamina:     ['Vitamina de banana com leite (copo 300 ml)', 67, 2.5, 10.0, 2.2, 300, null],
+  bebamendoa:   ['Bebida de amêndoas sem açúcar (copo 200 ml)', 15, 0.5, 0.3, 1.2, 200, null],
+  bebaveia:     ['Bebida de aveia sem açúcar (copo 200 ml)', 45, 0.5, 7.0, 1.5, 200, null]
+};
+const NUTRI_RC0_FORA = {
+  miojo:        ['Miojo / macarrão instantâneo com tempero (pacote 85 g)', 450, 9.5, 60.0, 18.0, 85, null],
+  calabresa:    ['Linguiça calabresa frita ou grelhada', 310, 16.5, 1.5, 26.5, null, {g:30,nome:'rodelas (30 g)'}],
+  bacon:        ['Bacon frito (fatia)', 540, 37.0, 1.4, 42.0, 8, null],
+  salsicha:     ['Salsicha (unid.)', 257, 12.0, 5.0, 21.0, 50, null],
+  mortadela:    ['Mortadela (fatia)', 269, 12.0, 5.8, 21.9, 15, null],
+  nuggets:      ['Nuggets de frango (unid.)', 272, 14.0, 17.0, 16.5, 20, null],
+  hambcongelado:['Hambúrguer industrializado (unid.)', 252, 13.0, 6.0, 19.5, 56, null],
+  empada:       ['Empada de frango', 380, 8.0, 33.0, 24.0, 60, null],
+  esfiha:       ['Esfiha de carne (aberta)', 290, 11.0, 38.0, 10.5, 70, null],
+  pipocamicro:  ['Pipoca de micro-ondas (meio saquinho, 50 g)', 476, 7.6, 53.0, 26.0, 50, null],
+  batatapalha:  ['Batata palha', 541, 6.5, 50.0, 35.0, null, {g:15,nome:'col. de sopa'}],
+  picoleleite:  ['Sorvete de palito (cremoso ou com cobertura)', 261, 3.5, 28.0, 15.0, 60, null],
+  picolefruta:  ['Picolé de fruta', 120, 0.3, 30.0, 0, 60, null],
+  bala:         ['Bala (unid.)', 391, 0, 97.0, 0.3, 5, null],
+  pirulito:     ['Pirulito', 391, 0, 97.0, 0.3, 10, null],
+  chiclete:     ['Chiclete com açúcar (unid.)', 331, 0, 82.0, 0.3, 3, null],
+  pacoca:       ['Paçoca (unid.)', 480, 14.0, 52.0, 24.0, 20, null],
+  achocpo:      ['Achocolatado em pó', 390, 4.5, 85.0, 3.5, null, {g:15,nome:'col. de sopa'}],
+  achoccaixa:   ['Bebida láctea achocolatada (caixinha 200 ml)', 79, 2.3, 12.5, 2.2, 200, null],
+  bebidalactea: ['Iogurte de garrafinha / bebida láctea (170 g)', 77, 2.2, 13.0, 1.8, 170, null],
+  leitefermentado:['Leite fermentado (frasco 80 g)', 63, 1.3, 14.2, 0.1, 80, null],
+  leitecondensado:['Leite condensado', 319, 7.7, 57.0, 6.7, null, {g:20,nome:'col. de sopa'}]
+};
+(function(){
+  try{
+    const poe = (tab)=>Object.entries(tab).forEach(([id, v])=>{ if(!NUTRI_ALIMENTOS[id]) NUTRI_ALIMENTOS[id] = v; });
+    poe(NUTRI_RC0_SAUDAVEIS); poe(NUTRI_RC0_FORA);
+    const add = (k, ids)=>{ if(NUTRI_CATEG[k]) ids.forEach(id=>{ if(NUTRI_ALIMENTOS[id] && !NUTRI_CATEG[k][1].includes(id)) NUTRI_CATEG[k][1].push(id); }); };
+    add('proteinas', ['frangoassado','frangoair','ovopoche']);
+    add('graos', ['quinoa']);
+    add('carbo', ['batataair','batatadoceair','mandiocaair','paofermnat','crepioca']);
+    add('frutas', ['kiwi','ameixa','melao']);
+    add('verduras', ['abobrinha','berinjela','espinafre','couve','beterraba','pepino','chuchu','vagem','repolho','legumesair']);
+    add('lat', ['iogurtegrego','kefir','leitesemi','leitezero']);
+    add('outros', ['chia','linhaca']);
+    add('bebidas', ['vitamina','bebamendoa','bebaveia','achoccaixa','bebidalactea','leitefermentado']);
+    // fora da rotina: na categoria própria e no conjunto que as partes 49/55/59 consultam
+    add('fora', Object.keys(NUTRI_RC0_FORA));
+    if(window.NUTRI_FORA_IDS) Object.keys(NUTRI_RC0_FORA).forEach(id=>window.NUTRI_FORA_IDS.add(id));
+    // restrições (o que o app sugere continua respeitando; leite sem lactose fica fora da lista de lactose)
+    ['iogurtegrego','kefir','leitesemi','vitamina','achoccaixa','bebidalactea','leitefermentado','leitecondensado','picoleleite','achocpo','empada']
+      .forEach(id=>{ if(!NUTRI_LACTOSE.includes(id)) NUTRI_LACTOSE.push(id); });
+    ['paofermnat','miojo','nuggets','empada','esfiha','bebaveia','hambcongelado']
+      .forEach(id=>{ if(!NUTRI_GLUTEN.includes(id)) NUTRI_GLUTEN.push(id); });
+    if(typeof SUB_CARNES !== 'undefined') ['frangoassado','frangoair'].forEach(id=>{ if(!SUB_CARNES.includes(id)) SUB_CARNES.push(id); });
+    // em que refeição cada um combina na troca por equivalente (parte 59)
+    if(typeof SUB_REFEICAO !== 'undefined'){
+      const p = (tipo, cat, ids)=>{ const l = SUB_REFEICAO[tipo] && SUB_REFEICAO[tipo][cat]; if(l) ids.forEach(id=>{ if(!l.includes(id)) l.push(id); }); };
+      p('leve', 'proteinas', ['ovopoche']);
+      p('leve', 'carbo', ['paofermnat','crepioca','batatadoceair']);
+      p('prato', 'proteinas', ['frangoassado','frangoair','ovopoche']);
+      p('prato', 'carbo', ['batataair','batatadoceair','mandiocaair']);
+      p('prato', 'graos', ['quinoa']);
+    }
+    // quanto o pronto rende em relação ao cru (lista de compras em peso cru) e líquidos em ml
+    Object.assign(NUTRI_CRU, { quinoa:2.8, frangoassado:.7, frangoair:.75, batataair:.75, batatadoceair:.8, mandiocaair:.85 });
+    if(typeof NUTRI_LIQ !== 'undefined') ['leitesemi','leitezero','kefir'].forEach(id=>{ if(!NUTRI_LIQ.includes(id)) NUTRI_LIQ.push(id); });
+    Object.assign(NUTRI_USO, {
+      batataair:['Em cubos ou palitos, com 1 col. de chá de óleo, 15–20 min a 200 °C, mexendo na metade', 'air fryer'],
+      batatadoceair:['Em rodelas ou palitos, com 1 col. de chá de óleo, 15–20 min a 200 °C', 'air fryer'],
+      mandiocaair:['Cozida antes e depois dourada na air fryer, com pouco óleo', 'cozida e dourada'],
+      legumesair:['Em pedaços, temperados, com um fio de óleo, 12–15 min a 200 °C', 'air fryer'],
+      frangoair:['Temperado, 15–18 min a 200 °C, virando na metade; peso pronto', 'air fryer'],
+      frangoassado:['Assado sem a pele; peso do alimento pronto', 'assado, sem pele'],
+      ovopoche:['Cozido sem a casca em água quente (sem óleo)', 'pochê'],
+      quinoa:['Lavada e cozida como arroz; peso pronto', 'cozida'],
+      chia:['Por cima da fruta ou do iogurte; dá para hidratar antes', 'por cima'],
+      linhaca:['Triturada (em farinha) é mais bem aproveitada; por cima da fruta ou do iogurte', 'triturada'],
+      crepioca:['Ovo batido com a goma, na frigideira antiaderente', 'na frigideira'],
+      iogurtegrego:['Natural, sem açúcar; dá para adoçar com a fruta', 'natural'],
+      couve:['Refogada com alho e pouco óleo', 'refogada'], espinafre:['Refogado com alho e pouco óleo', 'refogado'],
+      beterraba:['Cozida ou crua ralada, na salada', 'cozida ou ralada']
+    });
+  }catch(e){ console.log('alimentos RC0:', e); }
+})();
+// busca: apelidos comuns
+Object.assign(NUTRI_APELIDOS, {
+  miojo:'macarrao instantaneo lamen nissin', calabresa:'linguica calabresa', salsicha:'hot dog cachorro', nuggets:'nugget empanado',
+  pipocamicro:'pipoca', bala:'doce', pirulito:'doce', chiclete:'goma de mascar', picoleleite:'sorvete picole', picolefruta:'sorvete picole',
+  achocpo:'achocolatado nescau toddy po', achoccaixa:'toddynho nescauzinho achocolatado', bebidalactea:'iogurte danone bebida lactea',
+  leitefermentado:'yakult leite fermentado', leitecondensado:'leite moca', hambcongelado:'hamburguer', mortadela:'frios',
+  batataair:'batata air fryer airfryer', batatadoceair:'batata doce air fryer airfryer', mandiocaair:'aipim macaxeira air fryer airfryer',
+  legumesair:'legumes air fryer airfryer', frangoair:'frango air fryer airfryer', frangoassado:'frango', ovopoche:'ovo poche',
+  iogurtegrego:'iogurte', kefir:'iogurte fermentado', leitesemi:'leite', leitezero:'leite zero lactose', vitamina:'vitamina banana leite batida',
+  bebamendoa:'leite de amendoa leite vegetal', bebaveia:'leite de aveia leite vegetal', paofermnat:'pao fermentacao natural levain',
+  crepioca:'tapioca ovo', couve:'couve manteiga', melao:'melao', ameixa:'ameixa'
+});
+// equivalências (Plano alimentar › Equivalências): acrescenta os novos que fazem sentido em cada grupo
+(function(){
+  const _eq = window.nutriEquivalencias; if(typeof _eq !== 'function') return;
+  window.nutriEquivalencias = function(){
+    const L = _eq.apply(this, arguments);
+    try{
+      const c = nutriConfig(); const proib = new Set([...(c.semLactose?NUTRI_LACTOSE:[]), ...(c.semGluten?NUTRI_GLUTEN:[])]);
+      const item = (id, mi, alvo)=>{ const a = NUTRI_ALIMENTOS[id]; if(!a || proib.has(id) || !(a[mi] > 0)) return null;
+        const g = alvo/a[mi]*100; if(a[5]) return `${a[0]}: ${Math.max(1, Math.round(g/a[5]))} unid.`; return `${a[0]}: ${Math.max(5, Math.round(g/5)*5)} g`; };
+      const mais = [ ['frangoassado','ovopoche','iogurtegrego'], ['quinoa','batataair','batatadoceair','paofermnat','crepioca'], ['chia','linhaca'], ['kiwi','ameixa','melao'] ];
+      const cfg = [[2,25],[3,30],[4,10],[3,15]];
+      L.forEach((g, i)=>{ if(!mais[i]) return; mais[i].forEach(id=>{ const t = item(id, cfg[i][0], cfg[i][1]); if(t && !g.l.includes(t)) g.l.push(t); }); });
+    }catch(e){}
+    return L;
+  };
+})();
+
+// =====================================================================
+// 68. 2027 RC 0 — cronômetro de descanso circular (expandido, minimizado e dentro do registro de séries)
+// ---------------------------------------------------------------------
+// O QUE NÃO MUDA (núcleo, app.js "TIMER DE DESCANSO"): a contagem continua pelo horário real de término
+// (restFimEm), com um único intervalo de desenho (restTimerInt), o som agendado no relógio do áudio
+// (restAgendaSom), a vibração e o som do fim (restTermina, um alarme só), a pausa (restPausaRestante),
+// ±15 s (restAjusta), a retomada ao reabrir o app (localStorage "mt_descanso") e as preferências de som
+// (restMuted / "mt_descanso_mudo") e vibração ("mt_descanso_vibrar").
+// O QUE ESTA PARTE FAZ: só o DESENHO.
+//  • Um elemento só (#rest-timer-banner, classe .rt2) com dois jeitos de aparecer:
+//    - cheio: anel com o tempo no centro, progresso contínuo e cor que muda no fim (normal → amarelo → vermelho),
+//      −15 s, pausar/continuar, +15 s, pular, som e vibração;
+//    - mini (pílula): anel pequeno + tempo, ao lado do botão do assistente. Tocar expande.
+//  • Com o registro de séries aberto, o cronômetro fica DENTRO dele (#rt-dock), sem cobrir "Salvar".
+//    Ao sair do registro, vira a pílula; o cartão expandido tem "Voltar ao treino".
+//  • Nada de intervalo novo: o desenho roda no mesmo tique de 250 ms do núcleo (restDesenha embrulhada).
+//  • O elemento é guardado em _rtEl: se uma tela redesenhar o modal (innerHTML), ele volta para o lugar
+//    certo no próximo tique, com o mesmo tempo (a contagem nunca dependeu do elemento).
+// LIMITE REAL: com o app fechado ou o celular suspenso, o navegador pode parar o JavaScript. O som
+// agendado no áudio costuma tocar se a página continuar viva (Android), mas não há garantia; no iPhone,
+// em segundo plano, não toca. Notificação agendada (Notification Triggers) não existe nos navegadores
+// atuais e push exigiria servidor; por isso, ao voltar, o app mostra o tempo certo ou avisa que terminou.
+// =====================================================================
+let _rtEl = null;             // o elemento do descanso (sobrevive a redesenhos do modal)
+let _rtModo = 'min';          // fora do registro: 'min' (pílula) ou 'exp' (cartão)
+let _rtEx = null;             // exercício do descanso, para "Voltar ao treino"
+const RT_R = 52, RT_C = +(2*Math.PI*RT_R).toFixed(2);
+const RT_ICO = {
+  min:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
+  pausa:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg>',
+  play:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>',
+  pular:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5l9 7-9 7zM18 5v14"/></svg>',
+  som:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10zM16.5 8.5a5 5 0 010 7"/></svg>',
+  mudo:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10zM17 9l4 6M21 9l-4 6"/></svg>',
+  vib:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4 9v6M20 9v6"/></svg>',
+  ampulheta:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8"/></svg>'
+};
+function _rtAnel(cls, r){ const c = +(2*Math.PI*r).toFixed(2); const s = (r+8)*2;
+  return `<svg class="${cls}" viewBox="0 0 ${s} ${s}" aria-hidden="true"><circle class="rt2-trilho" cx="${s/2}" cy="${s/2}" r="${r}"/><circle class="rt2-arco" cx="${s/2}" cy="${s/2}" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="0" data-c="${c}"/></svg>`; }
+function _rtMarkup(){
+  return `<div class="rt2-cheio">
+      <div class="rt2-topo"><span class="rt2-tit">${RT_ICO.ampulheta}<span>Descanso${restNomeEx ? ' · ' + escHtml(restNomeEx) : ''}</span></span>
+        <button type="button" class="rt2-ic rt2-btmin" onclick="rtMinimizar()" aria-label="Minimizar o cronômetro">${RT_ICO.min}</button></div>
+      <div class="rt2-corpo">
+        <div class="rt2-anel">${_rtAnel('rt2-svg', RT_R)}<div class="rt2-centro"><div class="rt-tempo mono" aria-label="Tempo restante"></div><div class="rt-sub"></div></div></div>
+        <div class="rt2-lado">
+          <div class="rt2-prox"></div>
+          <div class="rt2-botoes">
+            <button type="button" class="rt2-b" onclick="restAjusta(-15)" aria-label="Tirar 15 segundos">−15s</button>
+            <button type="button" class="rt2-b rt-pausa" onclick="restPausa()"></button>
+            <button type="button" class="rt2-b" onclick="restAjusta(15)" aria-label="Somar 15 segundos">+15s</button>
+            <button type="button" class="rt2-b rt2-pular" onclick="rtPular()" aria-label="Pular o descanso">${RT_ICO.pular}<span>Pular</span></button>
+          </div>
+          <div class="rt2-linha">
+            <button type="button" class="rt2-ic rt-som" onclick="toggleRestMute();restDesenha()"></button>
+            <button type="button" class="rt2-ic rt2-vib" onclick="rtVibrar()"></button>
+            <button type="button" class="rt2-voltar" onclick="rtVoltarTreino()">Voltar ao treino</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button type="button" class="rt2-mini" onclick="rtExpandir()" aria-label="Abrir o cronômetro do descanso">${_rtAnel('rt2-msvg', 13)}<span class="rt2-mt mono"></span></button>`;
+}
+// lugar do cronômetro: dentro do registro de séries (se aberto) ou flutuando
+function rtPosiciona(){
+  const el = _rtEl; if(!el || !restTimerInt) return;
+  const dock = document.getElementById('rt-dock');
+  const mb = $('modal-back'); const modalOn = !!(mb && mb.classList.contains('on'));
+  if(dock && modalOn){
+    if(el.parentNode !== dock) dock.appendChild(el);
+    el.classList.add('doca'); el.classList.remove('min', 'exp');
+    el.style.right = ''; el.style.bottom = '';
+    return;
+  }
+  if(el.parentNode !== document.body){
+    if(el.classList.contains('doca')) _rtModo = 'min';      // saiu do registro de séries: vira a pílula
+    document.body.appendChild(el);
+  }
+  el.classList.remove('doca');
+  el.classList.toggle('min', _rtModo === 'min'); el.classList.toggle('exp', _rtModo !== 'min');
+  // pílula ao lado do botão do assistente (sem cobrir), ou no canto quando ele não aparece
+  if(_rtModo === 'min'){
+    const fab = document.getElementById('ma-fab'); let r = null;
+    try{ if(fab){ const cs = getComputedStyle(fab); r = fab.getBoundingClientRect(); if(cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity < 0.1 || !(r.width > 0) || r.top > window.innerHeight) r = null; } }catch(e){ r = null; }
+    if(r){ el.style.right = Math.round(window.innerWidth - r.left + 10) + 'px'; el.style.bottom = Math.round(window.innerHeight - r.bottom + (r.height - 44)/2) + 'px'; }
+    else { el.style.right = ''; el.style.bottom = ''; }
+  } else { el.style.right = ''; el.style.bottom = ''; }
+}
+function _rtFase(left, total){
+  const aviso = Math.min(10, Math.max(3, Math.round(total*0.5)));
+  const fim = Math.min(3, Math.max(1, Math.round(total*0.2)));
+  return left <= fim ? 'fim' : left <= aviso ? 'aviso' : 'ok';
+}
+function _rtProx(){
+  try{
+    if(!_rtEx || !curLog || curLog.exId !== _rtEx.id) return _rtEx && _rtEx.name ? `Próximo: ${escHtml(_rtEx.name)}` : '';
+    const plan = seriesPlanejadas(curLog.exId); const feitas = (curLog.feitas||[]).filter(Boolean).length;
+    if(plan && feitas < plan) return `Próxima: série ${feitas + 1} de ${plan}`;
+    return 'Próxima série';
+  }catch(e){ return ''; }
+}
+function _rtDesenha(el){
+  const left = restRestante(), total = Math.max(1, restTotalSeg || left || 1);
+  const pausado = restPausaRestante != null;
+  const mm = Math.floor(left/60), ss = left % 60, txt = `${mm}:${String(ss).padStart(2,'0')}`;
+  const frac = Math.max(0, Math.min(1, left/total));
+  el.querySelectorAll('.rt2-arco').forEach(c=>{ const C = +c.dataset.c; c.style.strokeDashoffset = (C*(1-frac)).toFixed(2); });
+  const t = el.querySelector('.rt-tempo'); if(t && t.textContent !== txt) t.textContent = txt;
+  const mt = el.querySelector('.rt2-mt'); if(mt && mt.textContent !== txt) mt.textContent = txt;
+  const fase = pausado ? 'pausa' : _rtFase(left, total);
+  ['ok','aviso','fim','pausa'].forEach(f=>el.classList.toggle('f-' + f, f === fase));
+  const sub = el.querySelector('.rt-sub'); if(sub) sub.textContent = pausado ? 'Pausado' : 'Descanso';
+  const bp = el.querySelector('.rt-pausa'); if(bp){ const h = pausado ? `${RT_ICO.play}<span>Continuar</span>` : `${RT_ICO.pausa}<span>Pausar</span>`;
+    if(bp.dataset.h !== h){ bp.innerHTML = h; bp.dataset.h = h; } bp.setAttribute('aria-label', pausado ? 'Continuar o descanso' : 'Pausar o descanso'); }
+  const bm = el.querySelector('.rt-som'); if(bm){ const h = restMuted ? RT_ICO.mudo : RT_ICO.som; if(bm.dataset.h !== h){ bm.innerHTML = h; bm.dataset.h = h; }
+    bm.classList.toggle('off', !!restMuted); bm.setAttribute('aria-pressed', restMuted ? 'false' : 'true'); bm.setAttribute('aria-label', restMuted ? 'Som desligado: tocar para ligar' : 'Som ligado: tocar para desligar'); }
+  const bv = el.querySelector('.rt2-vib'); if(bv){ const on = restVibrarLigado(); if(bv.dataset.h !== String(on)){ bv.innerHTML = RT_ICO.vib; bv.dataset.h = String(on); }
+    bv.classList.toggle('off', !on); bv.setAttribute('aria-pressed', on ? 'true' : 'false'); bv.setAttribute('aria-label', on ? 'Vibração ligada: tocar para desligar' : 'Vibração desligada: tocar para ligar'); }
+  const px = el.querySelector('.rt2-prox'); if(px){ const h = _rtProx(); if(px.innerHTML !== h) px.innerHTML = h; }
+  const mini = el.querySelector('.rt2-mini'); if(mini) mini.setAttribute('aria-label', `Descanso: faltam ${mm ? mm + ' min ' : ''}${ss} s. Tocar para abrir o cronômetro`);
+  rtPosiciona();
+}
+// o desenho do núcleo continua valendo para qualquer elemento antigo; o novo (.rt2) é desenhado aqui
+(function(){
+  const _desenha = window.restDesenha;
+  window.restDesenha = function(){
+    const el = _rtEl || $('rest-timer-banner');
+    if(el && el.classList.contains('rt2')) return _rtDesenha(el);
+    return _desenha.apply(this, arguments);
+  };
+  const _inicia = window.startRestTimer;
+  window.startRestTimer = function(seconds, exName){
+    const r = _inicia.apply(this, arguments);
+    try{
+      const el = $('rest-timer-banner'); if(!el) return r;
+      _rtEl = el;
+      try{ _rtEx = (curLog && curLog.exId) ? { id:curLog.exId, name:curLog.exName || exName || '' } : (exName ? { id:null, name:exName } : null); }catch(e){ _rtEx = null; }
+      const noRegistro = !!document.getElementById('rt-dock');
+      if(!noRegistro) _rtModo = 'min';
+      el.className = 'rt2' + (noRegistro ? ' doca' : ' min');
+      el.innerHTML = _rtMarkup();
+      restDesenha();
+    }catch(e){ console.log('cronômetro (desenho):', e); }
+    return r;
+  };
+  const _para = window.stopRestTimer;
+  window.stopRestTimer = function(){
+    const el = _rtEl; _rtEl = null;
+    const r = _para.apply(this, arguments);
+    try{ if(el && el.parentNode) el.remove(); }catch(e){}
+    return r;
+  };
+})();
+function rtExpandir(){ _rtModo = 'exp'; restDesenha(); }
+function rtMinimizar(){ _rtModo = 'min'; restDesenha(); }
+function rtPular(){ if(!restTimerInt) return; stopRestTimer(); toast('Descanso encerrado. Bora para a próxima série!'); }
+function rtVibrar(){ setRestVibrar(!restVibrarLigado()); restDesenha(); }
+function rtVoltarTreino(){
+  const ex = _rtEx; _rtModo = 'min';
+  try{
+    goTab('sessions');
+    const ws = ((state.modules.lift||{}).plan||{}).workouts || [];
+    const existe = ex && ex.id && (ws.some(w=>(w.exercises||[]).some(e=>e.id === ex.id)) || (typeof extrasDeHoje === 'function' && extrasDeHoje().some(e=>e.id === ex.id)));
+    if(existe) openSetLog(ex.id, ex.name);
+  }catch(e){ console.log('voltar ao treino:', e); }
+  restDesenha();
+}
+// lugar do cronômetro dentro do registro de séries: logo abaixo das séries (sem cobrir "Salvar")
+mtGancho('renderSetLogModal', { depois(){
+  try{
+    const mi = $('modal-inner'); if(!mi || document.getElementById('rt-dock')) return;
+    const ref = mi.querySelector('.sl-auto') || mi.querySelector('.row:last-child');
+    const d = document.createElement('div'); d.id = 'rt-dock';
+    if(ref) ref.parentNode.insertBefore(d, ref); else mi.appendChild(d);
+    if(restTimerInt) restDesenha();
+  }catch(e){}
+}});
+mtGancho('closeModal', { depois(){ try{ if(restTimerInt) restDesenha(); }catch(e){} }});
+window.addEventListener('resize', ()=>{ try{ if(restTimerInt) rtPosiciona(); }catch(e){} }, { passive:true });
+
+(function(){ if(document.getElementById('rt2-css')) return; const s = document.createElement('style'); s.id = 'rt2-css';
+s.textContent = `
+.rt2{--rt-cor:var(--primary);color:var(--text);font-variant-numeric:tabular-nums}
+.rt2.f-aviso{--rt-cor:#f2b705}
+.rt2.f-fim{--rt-cor:var(--danger)}
+.rt2.f-pausa{--rt-cor:var(--text-mute)}
+[data-theme="claro"] .rt2.f-aviso,[data-theme="areia"] .rt2.f-aviso{--rt-cor:#b7791f}
+.rt2 svg{display:block}
+.rt2 .rt2-ic svg,.rt2 .rt2-b svg,.rt2-tit svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rt2-trilho{fill:none;stroke:var(--surface-2);stroke-width:8}
+.rt2-arco{fill:none;stroke:var(--rt-cor);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .26s linear,stroke .6s ease}
+.rt2-svg,.rt2-msvg{transform:rotate(-90deg)}
+.rt2-msvg .rt2-trilho,.rt2-msvg .rt2-arco{stroke-width:4}
+/* cartão (flutuando ou dentro do registro) */
+.rt2:not(.min){background:var(--bg-2);border:1.5px solid var(--rt-cor);border:1.5px solid color-mix(in srgb,var(--rt-cor) 70%,transparent);border-radius:var(--radius-card,18px);padding:12px 14px;box-shadow:var(--shadow-md);transition:border-color .6s ease}
+.rt2.exp{position:fixed;left:12px;right:12px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:350;max-width:520px;margin:0 auto}
+.rt2.doca{position:relative;margin:12px 0 4px;box-shadow:none}
+.rt2-topo{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rt2-tit{flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-weight:800;font-size:13.5px;color:var(--text-dim)}
+.rt2-tit span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt2-tit svg{color:var(--rt-cor);flex:none}
+.rt2.doca .rt2-btmin{display:none}
+.rt2-ic{width:40px;height:40px;flex:none;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rt2-ic.off{color:var(--text-mute)}
+.rt2-corpo{display:flex;align-items:center;gap:14px}
+.rt2-anel{position:relative;width:124px;height:124px;flex:none}
+.rt2-anel .rt2-svg{width:100%;height:100%}
+.rt2-centro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.rt2 .rt-tempo{font-weight:900;font-size:32px;line-height:1;color:var(--text-strong,var(--text));letter-spacing:-.5px}
+.rt2 .rt-sub{font-size:11.5px;color:var(--text-dim);margin-top:4px;font-weight:700}
+.rt2.f-fim .rt-tempo{color:var(--rt-cor);animation:rt2Pulso 1s ease-in-out infinite}
+@keyframes rt2Pulso{50%{transform:scale(1.07)}}
+.rt2-lado{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.rt2-prox{font-size:12.5px;color:var(--text-dim);min-height:16px}
+.rt2-prox:empty{display:none}
+.rt2-botoes{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.rt2-b{min-height:42px;padding:6px 4px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;-webkit-tap-highlight-color:transparent}
+.rt2-b:active,.rt2-ic:active,.rt2-mini:active{transform:scale(.96)}
+.rt2-b.rt-pausa{background:var(--surface-2);border-color:var(--rt-cor);background:color-mix(in srgb,var(--rt-cor) 16%,var(--surface));border-color:color-mix(in srgb,var(--rt-cor) 45%,transparent)}
+.rt2-linha{display:flex;gap:6px;align-items:center}
+.rt2-voltar{flex:1;min-height:40px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary,#000);font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+.rt2.doca .rt2-voltar{display:none}
+/* dentro do registro: anel maior, centralizado */
+.rt2.doca .rt2-corpo{flex-direction:column;gap:10px}
+.rt2.doca .rt2-anel{width:150px;height:150px}
+.rt2.doca .rt-tempo{font-size:38px}
+.rt2.doca .rt2-lado{width:100%}
+.rt2.doca .rt2-prox{text-align:center}
+.rt2.doca .rt2-botoes{grid-template-columns:repeat(4,1fr)}
+.rt2.doca .rt2-linha{justify-content:center}
+/* pílula */
+.rt2-mini{display:none}
+.rt2.min{position:fixed;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:350}
+.rt2.min .rt2-cheio{display:none}
+.rt2.min .rt2-mini{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px 0 8px;border-radius:99px;border:1.5px solid var(--rt-cor);border:1.5px solid color-mix(in srgb,var(--rt-cor) 65%,transparent);background:var(--bg-2);color:var(--text);box-shadow:var(--shadow-md);font:inherit;font-weight:900;font-size:16px;cursor:pointer;transition:border-color .6s ease;-webkit-tap-highlight-color:transparent}
+.rt2-msvg{width:30px;height:30px}
+.rt2.f-fim .rt2-mt{color:var(--rt-cor)}
+@media (max-width:360px){ .rt2-anel{width:104px;height:104px} .rt2 .rt-tempo{font-size:27px} .rt2-b{font-size:12px} .rt2.doca .rt2-botoes{grid-template-columns:1fr 1fr} }
+@media (prefers-reduced-motion:reduce){ .rt2-arco{transition:none} .rt2.f-fim .rt-tempo{animation:none} }
+body:has(#rest-timer-banner.min) #toast-wrap{bottom:calc(150px + env(safe-area-inset-bottom))}
+body:has(#modal-back.on):has(#rest-timer-banner) #toast-wrap{bottom:auto}
+html.mt-desk .rt2.exp{left:auto;right:24px;width:420px}
+`; document.head.appendChild(s); })();
+
+// =====================================================================
+// 69. 2027 RC 0 — Jornada do primeiro passo (corrida) e "por que o plano mudou"
+// ---------------------------------------------------------------------
+// O motor da corrida (parte 11) NÃO muda: a progressão do iniciante já depende de treinos feitos e do
+// esforço informado (2 treinos completos no estágio com esforço até 7/10 para avançar; semana pesada
+// repete ou volta um estágio; nada avança só porque passou uma semana). Esta parte só ENSINA e EXPLICA:
+//  • Jornada do primeiro passo: 9 lições curtas (começar, por que caminhar, aquecer, esforço, intercalar,
+//    respirar, sinais de excesso, evoluir aos poucos, não compensar). Todas ficam abertas (segurança não
+//    fica trancada); o app sugere a próxima pelo que aconteceu (esforço alto → sinais; treino perdido →
+//    não compensar; senão, a próxima da ordem). Lidas em state.runJornada.lidas (campo novo, opcional).
+//  • Cartão na aba Treinos (corrida) para os níveis Iniciante e Iniciante avançado: estágio/minutos
+//    contínuos de agora, o que falta para avançar (contado nos registros da semana) e a lição sugerida.
+//  • Em todos os níveis, o cartão de status ganha "Última mudança": avançou / manteve / aliviou, com o
+//    motivo real da avaliação semanal (motor.hist) e o que mudou.
+// Não é orientação médica: os sinais de alerta mandam parar e procurar atendimento.
+// =====================================================================
+const RUN_JORNADA = [
+  { id:'comecar', t:'Como começar', c:[
+    'Comece com 3 treinos por semana, com um dia de folga entre eles. O tênis que você já tem serve, desde que não machuque.',
+    'Escolha um lugar plano e seguro (pista, parque, rua tranquila ou esteira).',
+    'Nas primeiras semanas a meta é terminar o treino <b>bem</b>, não exausto. Sair querendo mais é o sinal certo.',
+    'Se você tem doença do coração, pressão alta sem controle, diabetes, está grávida ou já sentiu dor no peito ou tontura ao fazer esforço, converse com um médico antes de começar.' ] },
+  { id:'caminhar', t:'Por que começamos caminhando', c:[
+    'Coração e pulmão melhoram rápido, em poucas semanas. Ossos, tendões e articulações demoram mais: meses.',
+    'Correndo, cada passada recebe 2 a 3 vezes o peso do corpo. A caminhada prepara essas estruturas e cria o hábito com pouco risco.',
+    'Por isso o plano começa com caminhada e entra na corrida aos poucos, mesmo que o fôlego já pareça pronto.' ] },
+  { id:'aquecer', t:'Aquecer e desaquecer', c:[
+    '<b>Antes:</b> 5 minutos de caminhada aumentando o passo, mais alguns círculos de tornozelo e quadril. O corpo esquenta e a respiração se ajusta.',
+    '<b>Depois:</b> 3 a 5 minutos caminhando até a respiração voltar ao normal. Alongamento leve de panturrilha e coxa é opcional.',
+    'Pular o aquecimento faz os primeiros minutos parecerem muito mais difíceis do que são.' ] },
+  { id:'esforco', t:'Controle do esforço', c:[
+    '<b>Teste da conversa:</b> correndo, você deve conseguir falar frases curtas. Se não dá para falar, diminua ou caminhe. Isso não é falhar: é treinar certo.',
+    '<b>Escala de 1 a 10:</b> caminhada firme fica em 3–4; o trote destes estágios, em 5–6. Acima de 7, está forte demais para esta fase.',
+    'Ao registrar o treino, informe o esforço com sinceridade. É com ele que o plano decide se avança, mantém ou alivia.' ] },
+  { id:'intercalar', t:'Como intercalar caminhada e corrida', c:[
+    'Siga os blocos do estágio (por exemplo, 1 minuto correndo + 2 caminhando). Na caminhada, ande firme: não pare.',
+    'Corra num ritmo que pareça <b>lento demais</b>. Se no último bloco ainda sobra fôlego, o ritmo está certo.',
+    'Se não aguentar um bloco inteiro, caminhe e retome no próximo. Anote como "parcial": o plano usa isso para ajustar.' ] },
+  { id:'respirar', t:'Respiração', c:[
+    'Respire pelo nariz e pela boca juntos, sem tentar controlar demais. Muita gente acha um ritmo como 3 passos inspirando e 2 ou 3 expirando, mas o natural vale.',
+    'Pontada do lado: diminua o passo, respire fundo, solte o ar devagar e pressione o local. Costuma passar em alguns minutos.',
+    'Se a respiração fica ofegante a ponto de não falar, o ritmo está alto: volte a caminhar até recuperar.' ] },
+  { id:'sinais', t:'Sinais de que passou do ponto', c:[
+    '<b>Pare e procure atendimento</b> se sentir dor ou pressão no peito, falta de ar fora do normal, tontura, desmaio ou batimento muito irregular.',
+    '<b>Interrompa o treino</b> com dor que piora correndo, que faz mancar, dor num ponto do osso ou inchaço.',
+    'É normal um cansaço muscular leve no dia seguinte, que melhora em 1 a 2 dias. Dor que dura mais de 3 dias ou que piora precisa de avaliação de um profissional de saúde.',
+    'Sentiu dor? Informe em <b>Dor ou limitação</b>: o plano troca os treinos por versões com menos impacto.' ] },
+  { id:'evoluir', t:'Evoluir aos poucos', c:[
+    'O plano não avança porque o calendário virou. Você passa de estágio quando completa <b>2 treinos do estágio atual com esforço até 7/10</b>.',
+    'Semana pesada (esforço alto ou treino incompleto) faz o plano repetir ou voltar um estágio. Repetir é normal e faz parte.',
+    'Depois do último estágio, o próximo passo é correr sem parar: 12 minutos, aumentando aos poucos até 30.' ] },
+  { id:'compensar', t:'Perdeu um treino? Não compense', c:[
+    'Não faça dois treinos no mesmo dia nem um treino maior no dia seguinte. Siga o que está planejado para hoje.',
+    'Se a semana teve poucos treinos, o plano repete o estágio, sem pressa e sem culpa.',
+    'Consistência ao longo das semanas vale muito mais que um treino a mais.' ] }
+];
+function _rjEstado(){ state.runJornada = state.runJornada && typeof state.runJornada === 'object' ? state.runJornada : {}; state.runJornada.lidas = state.runJornada.lidas || {}; return state.runJornada; }
+function _rjLidas(){ const j = state.runJornada; return (j && j.lidas) ? j.lidas : {}; }
+// o que aconteceu de verdade nesta semana (só registros) — mesma regra do motor (parte 11, rAplicarDecisao)
+function rjSemana(ctx, M){
+  const a = rSem(), b = a + 7*DIA_MS; const hoje = getDayIdx();
+  const ativ = rAtividades(ctx).filter(r=>r.at>=a && r.at<b && r.activity!=='bike');
+  let validos = 0, alvo = 2, regra = '';
+  if(M.nivel === 0){
+    validos = ativ.filter(r=>(r.tipoSessao==='camcorre' || r.tipoSessao==='caminhada') && r.estagio===M.estagio && r.concluiu!=='nao' && r.concluiu!=='parcial' && (+r.rpe||5)<=7).length;
+    regra = 'treinos completos neste estágio com esforço até 7/10';
+  } else if(M.nivel === 1){
+    validos = ativ.filter(r=>_ehCorrida(r) && rContinua(r) && (+r.duration||0) >= (M.contMin||10)*0.95 && r.concluiu!=='nao' && (+r.rpe||5)<=6).length;
+    regra = `corridas de ${M.contMin} min sem parar com esforço até 6/10`;
+  }
+  const planejados = ((state.modules.run.plan||{}).workouts||[]).map(w=>+w.dayIdx).filter(d=>d < hoje);
+  const diasFeitos = new Set(ativ.map(r=>_rjDiaSemana(r.at)));
+  const perdidos = planejados.filter(d=>!diasFeitos.has(d)).length;
+  const ultimo = ativ.slice(-1)[0] || rAtividades(ctx).slice(-1)[0] || null;
+  return { validos, alvo, regra, perdidos, ultimo, nSem: ativ.length };
+}
+function _rjDiaSemana(t){ const d = new Date(t).getDay(); return d === 0 ? 7 : d; }
+function rjSugestao(S){
+  const lidas = _rjLidas();
+  const u = S && S.ultimo;
+  if(u && ((+u.rpe||0) >= 8 || u.concluiu === 'nao') && !lidas.sinais) return { id:'sinais', motivo:'Seu último treino foi bem puxado.' };
+  if(S && S.perdidos && !lidas.compensar) return { id:'compensar', motivo:'Ficou treino para trás nesta semana.' };
+  const prox = RUN_JORNADA.find(l=>!lidas[l.id]);
+  return prox ? { id:prox.id, motivo:'' } : null;
+}
+function rjMostra(){
+  const run = state.modules.run; const M = run && run.plan && run.plan.motor;
+  if(!M || state.active !== 'run') return false;
+  const j = state.runJornada || {};
+  if(j.oculta) return false;
+  return M.nivel <= 1;
+}
+function rjCartao(){
+  try{
+    const run = state.modules.run; const M = run.plan.motor; const ctx = runCtx();
+    const S = rjSemana(ctx, M); const lidas = _rjLidas(); const nLidas = RUN_JORNADA.filter(l=>lidas[l.id]).length;
+    const sug = rjSugestao(S);
+    let agora = '', falta = '';
+    if(M.nivel === 0){
+      const ultimoEst = RUN_EST.length - 1;
+      agora = M.estagio === 0 ? `<b>Estágio 0:</b> ${rEstagioTxt(0)}` : `<b>Estágio ${M.estagio} de ${ultimoEst}:</b> ${rEstagioTxt(M.estagio)}`;
+      falta = `Para avançar: 2 ${S.regra}. Nesta semana: <b>${Math.min(S.validos, 2)} de 2</b>.`;
+    } else {
+      agora = `<b>Corrida contínua:</b> ${M.contMin} min sem parar`;
+      falta = (M.contMin||0) >= 30 ? 'Você chegou aos 30 min: o próximo passo é o nível Intermediário, quando estiver pronto.' : `Para aumentar: 2 ${S.regra}. Nesta semana: <b>${Math.min(S.validos, 2)} de 2</b>.`;
+    }
+    const barra = `<div class="rj-barra" aria-hidden="true">${RUN_JORNADA.map(l=>`<i class="${lidas[l.id]?'ok':''}"></i>`).join('')}</div>`;
+    const L = sug && RUN_JORNADA.find(l=>l.id === sug.id);
+    return `<div class="rj-card" id="rj-card">
+      <div class="rj-topo"><div><div class="rj-k">Jornada do primeiro passo</div><div class="rj-n">${nLidas} de ${RUN_JORNADA.length} lições</div></div>
+        <button class="link-mais" onclick="rjOcultar()" aria-label="Ocultar a jornada">Ocultar</button></div>
+      ${barra}
+      <div class="rj-agora">${agora}</div>
+      <div class="rj-falta">${falta}</div>
+      ${L ? `<button class="rj-licao" onclick="rjAbrir('${L.id}')"><span><small>${sug.motivo ? mtEsc(sug.motivo) + ' Leia:' : 'Próxima lição'}</small><b>${mtEsc(L.t)}</b></span><span class="rc-seta">›</span></button>` : `<div class="rj-falta">Você leu todas as lições. Elas continuam aqui quando quiser rever.</div>`}
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="rjAbrir()">Ver todas as lições</button>
+    </div>`;
+  }catch(e){ console.log('jornada:', e); return ''; }
+}
+function rjAbrir(id){
+  const lidas = _rjLidas();
+  if(!id){
+    $('modal-inner').innerHTML = `<h3>Jornada do primeiro passo</h3>
+      <p class="mt-muted" style="margin:4px 0 10px">Lições curtas para começar a correr com segurança. Ler não muda o seu plano: quem decide o avanço são os treinos que você registra e o esforço que você informa.</p>
+      ${RUN_JORNADA.map((l,i)=>`<button class="rj-item ${lidas[l.id]?'ok':''}" onclick="rjAbrir('${l.id}')"><span class="rj-num">${lidas[l.id]?'✓':i+1}</span><span>${mtEsc(l.t)}</span><span class="rc-seta">›</span></button>`).join('')}
+      ${(state.runJornada||{}).oculta ? `<button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="rjMostrar()">Mostrar a jornada na aba Treinos</button>` : ''}
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+    $('modal-back').classList.add('on'); return;
+  }
+  const i = RUN_JORNADA.findIndex(l=>l.id === id); const L = RUN_JORNADA[i]; if(!L) return;
+  const prox = RUN_JORNADA[i+1];
+  $('modal-inner').innerHTML = `<h3>${mtEsc(L.t)}</h3><div class="rj-k" style="margin-top:2px">Lição ${i+1} de ${RUN_JORNADA.length}</div>
+    <ul class="rj-ul">${L.c.map(p=>`<li>${p}</li>`).join('')}</ul>
+    <div class="row" style="gap:8px;margin-top:14px">
+      <button class="btn btn-ghost btn-block" onclick="rjLida('${L.id}', null)">Todas as lições</button>
+      <button class="btn btn-primary btn-block" onclick="rjLida('${L.id}', ${prox ? `'${prox.id}'` : 'false'})">${prox ? 'Entendi · próxima' : 'Entendi'}</button>
+    </div>`;
+  $('modal-back').classList.add('on');
+}
+function rjLida(id, prox){
+  const j = _rjEstado(); if(!j.lidas[id]){ j.lidas[id] = Date.now(); saveData(); }
+  if(prox) return rjAbrir(prox);
+  if(prox === null) return rjAbrir();
+  closeModal(); try{ if(state.ui && state.ui.tab === 'sessions') renderSessions(); }catch(e){}
+}
+function rjOcultar(){ const j = _rjEstado(); j.oculta = true; saveData(); try{ renderSessions(); }catch(e){} toast('Jornada oculta. Dá para ver de novo em Evolução da corrida.'); }
+function rjMostrar(){ const j = _rjEstado(); j.oculta = false; saveData(); closeModal(); try{ goTab('sessions'); }catch(e){} }
+
+// "Última mudança" no cartão de status (todos os níveis), com o motivo real da avaliação da semana
+const RJ_DEC = {
+  avancar:['Avançou', 'você cumpriu o plano com esforço controlado'],
+  manter:['Manteve', 'o plano espera sinais claros nos registros antes de aumentar'],
+  recuar:['Aliviou', 'menos carga por segurança, para o corpo assimilar'],
+  retomada:['Retomada', 'volta gradual depois da pausa']
+};
+function rjUltimaDecisao(M){
+  const h = (M.hist||[]).filter(x=>x && x.decisao && x.decisao !== 'pausa').slice(-1)[0];
+  if(!h || !RJ_DEC[h.decisao]) return '';
+  const [nome, porque] = RJ_DEC[h.decisao];
+  const motivo = h.motivo ? h.motivo.charAt(0).toUpperCase() + h.motivo.slice(1) : '';
+  return `<div class="run-st-dec"><div class="rj-k">Última mudança · semana de ${mtFmtData(h.sem)}</div>
+    <div><b>${nome}</b>${h.mudou ? `: ${mtEsc(h.mudou)}` : ''}.</div>
+    <div class="mt-muted">${motivo ? mtEsc(motivo) + '.' : 'Por quê: ' + porque + '.'}${h.decisao === 'recuar' ? ' Aliviar é segurança, não castigo: o plano volta a crescer quando os registros mostrarem folga.' : ''}</div></div>`;
+}
+(function(){
+  const _st = window.runStatusCard; if(typeof _st !== 'function') return;
+  window.runStatusCard = function(){
+    let h = _st.apply(this, arguments);
+    try{
+      const M = state.modules.run && state.modules.run.plan && state.modules.run.plan.motor; if(!M || !h) return h;
+      const dec = rjUltimaDecisao(M);
+      if(dec) h = h.replace('<div class="run-st-a">', dec + '<div class="run-st-a">');
+    }catch(e){}
+    return h;
+  };
+})();
+mtGancho('renderSessions', { depois(){
+  try{
+    const velho = $('rj-card'); if(velho) velho.remove();
+    if(!rjMostra()) return;
+    const st = $('run-st'); if(st) st.insertAdjacentHTML('afterend', rjCartao());
+  }catch(e){}
+}});
+// atalho no painel de evolução (para quem ocultou ou já passou do nível iniciante)
+mtGancho('openRunPainel', { depois(dados){
+  try{
+    if(dados) return; const mi = $('modal-inner'); if(!mi || mi.querySelector('#rj-atalho')) return;
+    const f = [...mi.querySelectorAll('.btn')].pop(); if(!f) return;
+    f.insertAdjacentHTML('beforebegin', `<button class="btn btn-ghost btn-block" id="rj-atalho" style="margin-top:12px" onclick="rjAbrir()">Jornada do primeiro passo (lições)</button>`);
+  }catch(e){}
+}});
+(function(){ if(document.getElementById('rj-css')) return; const s = document.createElement('style'); s.id = 'rj-css';
+s.textContent = `
+.rj-card{margin:12px 0;padding:14px;border-radius:var(--radius-card,18px);border:1px solid var(--border);background:var(--surface)}
+.rj-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.rj-k{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--text-mute)}
+.rj-n{font-weight:800;font-size:15px;margin-top:2px}
+.rj-barra{display:flex;gap:4px;margin:10px 0}
+.rj-barra i{flex:1;height:5px;border-radius:5px;background:var(--surface-2)}
+.rj-barra i.ok{background:var(--primary)}
+.rj-agora{font-size:13.5px;line-height:1.5}
+.rj-falta{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:4px}
+.rj-licao{width:100%;margin-top:10px;display:flex;align-items:center;gap:10px;text-align:left;padding:12px;border-radius:14px;border:1px solid var(--border-strong);background:var(--bg-2);color:var(--text);font:inherit;cursor:pointer}
+.rj-licao span:first-child{flex:1;display:flex;flex-direction:column;gap:2px}
+.rj-licao small{font-size:11.5px;color:var(--text-dim)}
+.rj-item{width:100%;display:flex;align-items:center;gap:10px;padding:11px 4px;border:none;border-bottom:1px solid var(--border);background:none;color:var(--text);font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.rj-item span:nth-child(2){flex:1}
+.rj-num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:var(--surface-2);color:var(--text-dim);flex:none}
+.rj-item.ok .rj-num{background:var(--primary);color:var(--on-primary,#000)}
+.rj-ul{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:9px;font-size:14px;line-height:1.55}
+.run-st-dec{margin:10px 0 2px;padding:10px 12px;border-radius:12px;background:var(--bg-2);font-size:13px;line-height:1.5}
+.run-st-dec .mt-muted{font-size:12px}
+`; document.head.appendChild(s); })();
+
+// =====================================================================
+// 70. 2027 RC 0 — Musculação: progressão pelo desempenho real (subir, manter, aliviar ou rever)
+// ---------------------------------------------------------------------
+// O que JÁ existia e continua igual (app.js, smartProgressionHint): progressão dupla — fechou o topo da
+// faixa de repetições em todas as séries (2 sessões, ou 1 com esforço até 7/10) → próximo degrau de carga
+// (proxCarga); abaixo da faixa → mantém; duas sessões no limite (9–10) com reps caindo → −10%.
+// O que esta parte acrescenta:
+//  • "Rever o exercício": 4 sessões em 3+ semanas sem evolução (mesma carga e repetições paradas ou
+//    caindo, sem fechar a faixa) → explica o que conferir (sono, comida, intervalo) e as saídas (aliviar
+//    ~10% e reconstruir, ou trocar por uma variação pelo botão de troca). Só entra quando a dica de sempre
+//    não é "subir" nem "aliviar" (essas têm prioridade).
+//  • Painel "Progressão das cargas" (aba Treinos, musculação): cada exercício do plano com a situação
+//    (subir / manter / aliviar / rever / primeira vez), a última série de referência e a orientação do dia.
+//    É o mesmo texto que aparece no registro de séries — uma regra só.
+//  • Nada muda sozinho no plano: séries, exercícios e volume não aumentam automaticamente.
+// =====================================================================
+function _pgDia0(t){ const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); }
+function _pgSessoes(exId){
+  const hoje = _pgDia0(Date.now());
+  return (state.progress[exId]||[]).filter(p=>p && p.sets && p.sets.length && _pgDia0(p.date) < hoje).slice().sort((a,b)=>a.date-b.date);
+}
+function _pgTopo(sess){ // melhor série: maior carga; empate → mais repetições
+  return sess.sets.reduce((b,s)=>{ const kg = +s.peso||0, r = +s.reps||0; return (kg > b.kg || (kg === b.kg && r > b.reps)) ? { kg, reps:r } : b; }, { kg:0, reps:0 });
+}
+// platô: 4 sessões, 3+ semanas, a última nas 3 últimas semanas, sem subir carga nem repetições e sem fechar a faixa
+function mtPlato(exId){
+  try{
+    if(exUsaTempo(exId)) return null;
+    const L = _pgSessoes(exId); if(L.length < 4) return null;
+    const u = L.slice(-4);
+    const dias = (u[3].date - u[0].date)/DIA_MS;
+    if(dias < 20 || Date.now() - u[3].date > 21*DIA_MS) return null;
+    const range = repRangeFor(exId);
+    if(u[3].sets.every(s=>(+s.reps||0) >= range.hi)) return null;       // já no topo: é caso de subir, não de rever
+    const T = u.map(_pgTopo);
+    const corpo = T.every(t=>t.kg === 0);   // carga opcional (panturrilha, core) com carga registrada conta como carga
+    if(corpo){
+      const tot = u.map(s=>s.sets.reduce((t,x)=>t+(+x.reps||0),0));
+      if(Math.max(...tot.slice(1)) > tot[0] || Math.max(...T.slice(1).map(t=>t.reps)) > T[0].reps) return null;
+      return { sessoes:4, semanas:Math.round(dias/7), corpo:true, reps:T[3].reps };
+    }
+    if(T.some(t=>t.kg > T[0].kg)) return null;                              // subiu carga em algum momento
+    if(T[3].reps > T[0].reps) return null;                                  // ganhou repetição: está evoluindo
+    return { sessoes:4, semanas:Math.round(dias/7), corpo:false, kg:T[3].kg, reps:T[3].reps, caiu: T[3].kg < T[0].kg || T[3].reps < T[0].reps };
+  }catch(e){ return null; }
+}
+function _pgReverTxt(exId, P){
+  const nome = (typeof nomeDoEx === 'function' ? nomeDoEx(exId) : '') || 'este exercício';
+  const ref = P.corpo ? `${P.reps} repetições` : `${String(P.kg).replace('.',',')}kg × ${P.reps}`;
+  return `🔁 ${P.sessoes} sessões em cerca de ${P.semanas} semanas sem evoluir ${P.caiu ? '(e caindo um pouco) ' : ''}no ${mtEsc(nome)} — referência: ${ref}. `
+    + `Antes de forçar, confira sono, alimentação e se há pelo menos 48 h entre treinos do mesmo músculo. Saídas: `
+    + (P.corpo ? 'uma variação um pouco mais fácil para voltar a ganhar repetições, ou trocar o exercício pelo botão de troca por 4 a 6 semanas.'
+               : `hoje use ~${String(Math.max(0, Math.round(P.kg*0.9*2)/2)).replace('.',',')}kg (−10%) e volte a subir aos poucos, ou troque por uma variação pelo botão de troca por 4 a 6 semanas.`);
+}
+(function(){
+  const _hint = window.smartProgressionHint; if(typeof _hint !== 'function') return;
+  window.smartProgressionHint = function(exId){
+    const h = _hint.apply(this, arguments);
+    try{
+      if(!h || h.cls === 'card-ok' || /🔋|exaust/.test(h.txt || '')) return h;   // subir e aliviar têm prioridade
+      const P = mtPlato(exId);
+      if(P) return { cls:'card-warn', txt:_pgReverTxt(exId, P), rever:true };
+    }catch(e){}
+    return h;
+  };
+})();
+// situação de um exercício (usa a mesma dica do registro de séries)
+function mtProgSituacao(exId){
+  const L = _pgSessoes(exId);
+  if(!L.length) return { k:'novo', h: smartProgressionHint(exId), ult:null };
+  const h = smartProgressionHint(exId);
+  const k = h.rever ? 'rever' : h.cls === 'card-ok' ? 'subir' : /🔋|exaust/.test(h.txt||'') ? 'aliviar' : 'manter';
+  const ult = L[L.length-1]; const T = _pgTopo(ult);
+  return { k, h, ult: { quando: ult.date, txt: T.kg > 0 ? `${String(T.kg).replace('.',',')}kg × ${T.reps}` : (exUsaTempo(exId) ? fmtTempo(T.reps) : `${T.reps} reps`), n: L.length } };
+}
+const PG_K = { aliviar:['Aliviar','pg-aliviar'], rever:['Rever','pg-rever'], subir:['Subir','pg-subir'], manter:['Manter','pg-manter'], novo:['Primeira vez','pg-novo'] };
+function _pgExerciciosDoPlano(){
+  const ws = ((state.modules.lift||{}).plan||{}).workouts || []; const vistos = new Set(); const out = [];
+  ws.forEach(w=>(w.exercises||[]).forEach(e=>{ if(e && e.id && !vistos.has(e.id)){ vistos.add(e.id); out.push({ id:e.id, name:e.name, treino:w.name }); } }));
+  return out;
+}
+function mtProgResumo(){
+  const r = { aliviar:0, rever:0, subir:0, manter:0, novo:0, lista:[] };
+  _pgExerciciosDoPlano().forEach(e=>{ const s = mtProgSituacao(e.id); r[s.k]++; r.lista.push(Object.assign({}, e, s)); });
+  return r;
+}
+function openProgressaoCargas(){
+  const R = mtProgResumo();
+  const ordem = ['aliviar','rever','subir','manter','novo'];
+  const lista = R.lista.slice().sort((a,b)=>ordem.indexOf(a.k) - ordem.indexOf(b.k) || a.name.localeCompare(b.name,'pt'));
+  const linha = x=>`<div class="pg-item"><div class="pg-l1"><b>${mtEsc(x.name)}</b><span class="pg-pill ${PG_K[x.k][1]}">${PG_K[x.k][0]}</span></div>
+    ${x.ult ? `<div class="pg-ref">Última: ${x.ult.txt} · ${mtFmtData(x.ult.quando)} · ${x.ult.n} ${x.ult.n===1?'sessão':'sessões'} registradas</div>` : ''}
+    <div class="pg-txt">${x.h && x.h.txt ? x.h.txt : ''}</div></div>`;
+  $('modal-inner').innerHTML = `<h3>Progressão das cargas</h3>
+    <p class="mt-muted" style="margin:4px 0 10px">A orientação de cada exercício vem dos seus registros: carga, repetições e o esforço que você informou ao salvar o treino.</p>
+    <div class="pg-res">${ordem.filter(k=>R[k]).map(k=>`<span class="pg-pill ${PG_K[k][1]}">${R[k]} ${PG_K[k][0].toLowerCase()}</span>`).join('')}</div>
+    ${lista.length ? lista.map(linha).join('') : '<p class="mt-muted">Seu plano ainda não tem exercícios.</p>'}
+    <details class="pg-como"><summary><b>Como o app decide</b></summary><ul>
+      <li><b>Subir:</b> todas as séries no topo da faixa de repetições em 2 sessões (ou em 1, com esforço até 7/10). A carga sobe um degrau; é normal as repetições caírem um pouco na primeira vez.</li>
+      <li><b>Manter:</b> ainda buscando o topo da faixa. Tente +1 repetição por série com a mesma carga.</li>
+      <li><b>Aliviar:</b> duas sessões no limite (esforço 9–10) com repetições caindo: cerca de −10% por um treino, caprichando na técnica.</li>
+      <li><b>Rever:</b> 4 sessões em 3 semanas ou mais sem evolução. Confira sono, alimentação e descanso; depois alivie e reconstrua, ou troque por uma variação.</li>
+      <li>O app nunca aumenta séries ou exercícios sozinho. Mais volume só faz sentido se você estiver recuperando bem.</li>
+    </ul></details>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
+  $('modal-back').classList.add('on');
+}
+mtGancho('renderSessions', { depois(){
+  try{
+    const v = $('pg-entrada'); if(v) v.remove();
+    if(state.active !== 'lift' || !((state.modules.lift||{}).plan)) return;
+    const R = mtProgResumo(); if(!R.lista.some(x=>x.k !== 'novo')) return;   // sem histórico ainda: nada a mostrar
+    const partes = [R.subir ? `${R.subir} para subir` : '', R.aliviar ? `${R.aliviar} para aliviar` : '', R.rever ? `${R.rever} para rever` : ''].filter(Boolean);
+    const slot = $('sess-prestart'); if(!slot) return;
+    slot.insertAdjacentHTML('afterend', `<button class="pg-entrada" id="pg-entrada" onclick="openProgressaoCargas()"><span><b>Progressão das cargas</b><small>${partes.length ? partes.join(' · ') : 'tudo no ritmo: siga as orientações de cada exercício'}</small></span><span class="rc-seta">›</span></button>`);
+  }catch(e){ console.log('progressão:', e); }
+}});
+(function(){ if(document.getElementById('pg-css')) return; const s = document.createElement('style'); s.id = 'pg-css';
+s.textContent = `
+.pg-entrada{width:100%;display:flex;align-items:center;gap:10px;text-align:left;margin:10px 0;padding:12px 14px;border-radius:var(--radius-card,18px);border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
+.pg-entrada span:first-child{flex:1;display:flex;flex-direction:column;gap:2px}
+.pg-entrada small{font-size:12px;color:var(--text-dim)}
+.pg-res{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.pg-item{padding:11px 0;border-bottom:1px solid var(--border)}
+.pg-l1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pg-ref{font-size:12px;color:var(--text-mute);margin-top:2px}
+.pg-txt{font-size:12.5px;color:var(--text-dim);line-height:1.5;margin-top:4px}
+.pg-pill{flex:none;font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;border:1px solid var(--border);white-space:nowrap}
+.pg-subir{color:var(--prep-soft,#99f6e4);border-color:rgba(var(--prep-rgb,45,212,191),.45);background:rgba(var(--prep-rgb,45,212,191),.1)}
+.pg-aliviar{color:var(--danger-soft);border-color:var(--line-danger,rgba(244,63,94,.35));background:var(--tint-danger,rgba(244,63,94,.08))}
+.pg-rever{color:#f2b705;border-color:rgba(242,183,5,.45);background:rgba(242,183,5,.08)}
+[data-theme="claro"] .pg-rever,[data-theme="areia"] .pg-rever{color:#975a16}
+.pg-manter{color:var(--text-dim)}
+.pg-novo{color:var(--text-mute)}
+.pg-como{margin-top:12px;font-size:13px;line-height:1.55}
+.pg-como ul{padding-left:18px;display:flex;flex-direction:column;gap:6px;margin:8px 0 0}
+`; document.head.appendChild(s); })();

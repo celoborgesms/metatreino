@@ -1,4 +1,4 @@
-const APP_VERSION = '2027.1-beta.64';
+const APP_VERSION = '2027-rc.0';
 const CACHE = 'metatreino-' + APP_VERSION;
 // manifest.json entra aqui de propósito: é o arquivo que o Chrome consulta pra
 // detectar mudança de ícone/nome e reemitir o app instalado. Em cache-first ele
@@ -71,8 +71,12 @@ self.addEventListener('fetch', (e) => {
     e.waitUntil(rede.catch(() => {}));
   } else {
     // Cache-first for static assets
+    // RC 0: arquivos do próprio app guardados na instalação SEM "?v=" (jspdf, fit-parser) são pedidos COM
+    // "?v=versão". Sem o ignoreSearch não batiam e, sem internet, o primeiro PDF / arquivo .fit falhava.
+    // O cache é da versão (os antigos são apagados no activate), então a cópia sem "?v" é a desta versão.
+    const mesmo = url.origin === self.location.origin;
     e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+      caches.match(e.request).then(r => r || (mesmo ? caches.match(e.request, { ignoreSearch: true }) : undefined)).then(cached => cached || fetch(e.request).then(res => {
         if (guardavel(res)) { const clone = res.clone(); caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {}); }
         return res;
       }))

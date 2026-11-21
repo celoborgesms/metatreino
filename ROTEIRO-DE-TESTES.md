@@ -2,6 +2,17 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. 2027 RC 0 — cronômetro, cardápio compartilhado, jornada e progressão
+1. Registro de séries: conclua uma série → o cronômetro aparece DENTRO da tela, abaixo das séries, sem cobrir Salvar. Toque em Pausar, ±15 s e Pular.
+2. Com o descanso rodando, toque em Voltar → aparece a pílula ao lado do botão do assistente. Troque de aba: a pílula continua com o tempo certo. Toque nela → cartão com "Voltar ao treino"; a seta minimiza.
+3. Deixe acabar: nos últimos 10 s fica amarelo, nos últimos 3 s vermelho; toca e vibra uma vez só (confira com o som e a vibração desligados também).
+4. Bloqueie a tela no meio do descanso e volte depois do fim: o app avisa que terminou (no Android às vezes toca bloqueado; no iPhone não).
+5. Perfil › Meu grupo e Plano alimentar: nenhum texto fala em "casa". Lista de compras do grupo: botões "Só eu" e "Grupo todo".
+6. Adicionar alimento: busque "miojo", "air fryer", "toddynho", "kefir". Toque num alimento do cardápio › Trocar por outro: aparecem saudáveis novos (ex.: batata na air fryer, quinoa), nunca miojo/calabresa.
+7. Corrida no nível Iniciante: cartão "Jornada do primeiro passo" com o estágio e "Nesta semana: X de 2". Leia uma lição › Entendi · próxima. Ocultar e mostrar de novo (Evolução da corrida).
+8. Musculação: aba Treinos › Progressão das cargas. Confira um exercício parado há semanas ("Rever").
+9. Modo avião com o app instalado: gere o PDF do treino (antes falhava na 1ª vez).
+
 ## 00000. Beta 64 — equipamentos, Minha casa no Perfil, alimentos e backup
 1. Treinos (musculação): role até o fim. Deve haver só o link "Equipamentos da academia". Toque: abra "Meus equipamentos", marque **0** na Polia e **2+** em Halteres — a lista continua aberta e a tela não pula. Aparece "exercícios usam algo que você marcou que não tem" e "Organizar o meu plano" troca o exercício de polia. "Desfazer" volta.
 2. Perfil › **Minha casa**: crie o grupo (ou entre com o código). A tela mostra Pessoas aberto, Refeições da casa recolhido, Lista de compras e Cardápio em PDF lado a lado, Treino em dupla e "Sair do grupo" no fim. No segundo celular, entre com o código pelo Perfil.

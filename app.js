@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027.1 Beta 64 =====
-const APP_VERSION = '2027.1-beta.64';
+// ===== MetaTreino 2027 RC 0 =====
+const APP_VERSION = '2027-rc.0';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -12664,7 +12664,7 @@ function setSomFim(k){ try{ localStorage.setItem('metatreino_som', k); }catch(e)
 
 
 // ===== ATUALIZAÇÕES (cartão na Home + aviso discreto no assistente) =====
-function appVersaoLabel(){ return String(APP_VERSION).replace(/-beta\./,' Beta ').replace(/-/g,' '); }
+function appVersaoLabel(){ return String(APP_VERSION).replace(/-beta\./,' Beta ').replace(/-rc\./,' RC ').replace(/-/g,' '); }
 function renderUpdateCard(){
   const row = $('upd-row'); if(!row) return;
   const txt = $('upd-row-txt'), val = $('upd-row-val');

@@ -1,3 +1,27 @@
+# MetaTreino 2027 RC 0 — Release Candidate: cronômetro circular, cardápio compartilhado, jornada da corrida e progressão das cargas
+
+**Não precisa publicar o `firestore.rules`.** Nada mudou nas regras nem nas coleções. Detalhes técnicos e auditoria em `RELATORIO-RC0.md`.
+
+**Versão nova:** deixa de ser "2027.1 Beta 64" e passa a ser **2027 RC 0** (identificador `2027-rc.0`). As próximas: `python3 fonte/montar.py --versao 1` → "2027 RC 1". A atualização automática dos celulares continua funcionando (testada da Beta 64 para a RC 0).
+
+1. **Cronômetro de descanso novo (só o visual; a contagem é a mesma):**
+   - anel com o tempo no centro, que vai esvaziando; a cor muda no fim: normal → **amarelo** → **vermelho** (nos últimos segundos o número pulsa);
+   - **dentro do registro de séries**: o cronômetro aparece logo abaixo das séries, grande, sem cobrir o botão Salvar;
+   - **saiu do exercício**: vira uma **pílula pequena** ao lado do botão do assistente (anel + tempo). Tocar abre o cartão; a seta minimiza de novo;
+   - botões: −15 s, pausar/continuar, +15 s, **pular**, som e vibração (as mesmas preferências de antes) e **Voltar ao treino** (reabre o registro do exercício);
+   - continua contando pelo horário real: minimizar, trocar de aba ou fechar e abrir o app não reinicia nada, e o alarme toca uma vez só.
+   - Limite real do navegador: com o celular bloqueado ou o app fechado, o Android às vezes toca o som e o iPhone não toca. Ao voltar, o app mostra o tempo certo ou avisa que o descanso acabou. Notificação agendada não existe nos navegadores atuais.
+2. **"Alimentação da casa" agora é "Cardápio compartilhado"** e, no Perfil, **"Meu grupo"**. Os textos não falam mais em "casa" (prato compartilhado, refeições compartilhadas, lista de compras do grupo, "Grupo todo"). Nada mudou nos dados: quem já estava num grupo continua nele.
+3. **Alimentos novos (53):**
+   - **saudáveis** (entram nas categorias normais, na busca, nas **trocas por equivalente** e nas equivalências): batata, batata-doce, mandioca, legumes e frango **na air fryer**, quinoa, chia, linhaça, iogurte grego, kefir, frango assado, ovo pochê, abobrinha, berinjela, espinafre, couve refogada, beterraba, pepino, chuchu, vagem, repolho, kiwi, ameixa, melão, pão de fermentação natural, crepioca, leite semidesnatado, **leite sem lactose** (liberado para quem marcou "sem lactose"), vitamina de banana, bebidas de amêndoas e de aveia;
+   - **fora da rotina** (contam quando você registra, mas o app nunca sugere no cardápio, nas trocas nem na lista de compras): miojo, calabresa, bacon, salsicha, mortadela, nuggets, hambúrguer industrializado, empada, esfiha, pipoca de micro-ondas, batata palha, sorvete de palito, picolé de fruta, bala, pirulito, chiclete, paçoca, achocolatado em pó, achocolatado de caixinha, iogurte de garrafinha, leite fermentado, leite condensado;
+   - busca por apelidos (toddynho, nescau, yakult, air fryer, lamen, leite vegetal…);
+   - o cardápio sugerido **não** ganhou pratos novos de propósito: o prato de cada dia é escolhido pela posição na lista, e mudar a lista trocaria o cardápio e a lista de compras que vocês já estão seguindo nesta semana.
+4. **Corrida — Jornada do primeiro passo** (níveis Iniciante e Iniciante avançado): 9 lições curtas (como começar, por que caminhar primeiro, aquecer, controlar o esforço, intercalar, respirar, sinais de excesso, evoluir aos poucos, não compensar treino perdido). O cartão mostra o estágio atual, **o que falta para avançar** (contado nos registros da semana: 2 treinos completos com esforço até 7/10) e sugere a lição certa (esforço alto → sinais de excesso; treino perdido → não compensar). Dá para ocultar e ver de novo em Evolução da corrida. O motor da corrida não mudou.
+5. **Corrida — "Última mudança"** no cartão de status (todos os níveis): se o plano avançou, manteve ou aliviou na última semana avaliada, com o motivo real (treinos feitos, esforço médio) e o que mudou.
+6. **Musculação — Progressão das cargas:** novo painel na aba Treinos com cada exercício do plano: **subir, manter, aliviar, rever ou primeira vez**, a última série de referência e a orientação do dia. Novo caso **"rever o exercício"**: 4 sessões em 3 semanas ou mais sem evoluir → o app explica o que conferir (sono, alimentação, descanso) e as saídas (aliviar ~10% e reconstruir, ou trocar por uma variação). O app continua sem aumentar séries ou exercícios sozinho.
+7. **Correção:** sem internet, o primeiro PDF (e a leitura de arquivo .fit do relógio) falhava mesmo com o app instalado: o arquivo era guardado sem o "?v=" e pedido com ele. Corrigido no service worker.
+
 # MetaTreino 2027.1 Beta 64 — Equipamentos 0/1/2+, Minha casa no Perfil, mais alimentos e checkup
 
 **Não precisa publicar o `firestore.rules`.** Nada mudou nas regras nem nas coleções. Detalhes técnicos em `RELATORIO-BETA64.md`.

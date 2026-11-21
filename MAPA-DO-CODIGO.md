@@ -23,10 +23,10 @@ Na pasta do projeto:
 
 ```
 python3 fonte/montar.py              # junta as partes no app-plus.js e confere sintaxe e versões
-python3 fonte/montar.py --versao 33  # troca para "2027.1 Beta 33" em todos os lugares e monta
+python3 fonte/montar.py --versao 1   # troca para "2027 RC 1" (identificador 2027-rc.1) em todos os lugares e monta
 ```
 
-A versão aparece em 5 lugares (app.js, service-worker.js, index.html `?v=`, rodapé do Perfil e `MTP.versao`). Se ficarem diferentes, os celulares podem não atualizar sozinhos — o script avisa.
+A versão aparece em 5 lugares (app.js, service-worker.js, index.html `?v=`, rodapé do Perfil e `MTP.versao`). Desde a 2027 RC 0 o identificador é `2027-rc.N` e o texto é "2027 RC N" (antes `2027.1-beta.N` / "2027.1 Beta N"); `appVersaoLabel()` entende os dois. Se ficarem diferentes, os celulares podem não atualizar sozinhos — o script avisa.
 
 ## As partes do app-plus (`fonte/app-plus/`)
 
@@ -104,6 +104,10 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `64-conquistas-revisao-beta61.js` | Beta 61: `mtRevisaConquistas()` — depois de excluir/editar um registro, recalcula e tira conquistas/desafios do mês ganhos nas últimas 48 h que deixaram de valer (só as recalculáveis por `checkTrophies`/`checkWeightTrophies`); limpa `conqPend` e `awardQueue`. Chamada por `deleteHistoryEntry`, edição do histórico e `atvExcluir`. |
 | `65-motor-individual-dupla.js` | Beta 63: `MM_ENFASE` (classificação muscular refinada em `mmMusculosDe`), `exEstacao` + `MT_ESTACOES`, `liftEscolheIndividual` (chamada por `buildLiftExercises`), treino em dupla (`mtDuplaPublica` → `perfis.{uid}.tr`, `mtDuplaConflitos`, `mtDuplaOrganizar`/`Desfazer`, `openTreinoDupla`), aviso de tempo (`plan.avisoTempo`), conquistas de calistenia/híbrido/dupla (`mtChecaConquistas63`), glifos novos. Beta 64: quantidade 0/1/2+ (`_duplaQtd`, `_eqTenho`, `MT_EQ_GRUPOS`), pendência `falta` sem parceiro, link discreto `#dupla-linha` no fim de Treinos (`mtDuplaLinha`). |
 | `66-alimentos-casa-beta64.js` | Beta 64: `NUTRI_MAIS` (alimentos e bebidas novos, categorias `bebidas`/`pratos`), `NUTRI_APELIDOS` + `nutriAddFiltra` (busca sem acento/por apelido), `openMinhaCasa` + linha `#pf-casa-row` no Perfil, CSS da tela da casa (`.fam-bloco`, `.fam-2b`, `.fam-sair`), e o retorno do modo adaptado: wrapper de `regenLiftExercises` guarda `lift.antesAdapt` ao entrar em dor/TPM/leve e devolve o mesmo treino ao sair (mesma semana e mesmo setup). |
+| `67-alimentos-rc0.js` | RC 0: `NUTRI_RC0_SAUDAVEIS` (air fryer, quinoa, chia, linhaça, iogurte grego, kefir, frango assado, ovo pochê, verduras, kiwi, ameixa, melão, pão de fermentação natural, crepioca, leites e bebidas vegetais) nas categorias normais (trocas e equivalências); `NUTRI_RC0_FORA` (miojo, calabresa, bacon, salsicha, nuggets, empada, esfiha, pipoca de micro-ondas, picolés, balas, achocolatados prontos…) em "fora da rotina" (`NUTRI_FORA_IDS`). Restrições (`NUTRI_LACTOSE`/`NUTRI_GLUTEN`), `SUB_REFEICAO`, `NUTRI_CRU`, `NUTRI_LIQ`, `NUTRI_USO`, `NUTRI_APELIDOS`; `nutriEquivalencias` embrulhada. **Não** acrescenta pratos ao cardápio (mudaria o prato de cada dia pela posição em `nutriVarIdx`). |
+| `68-cronometro-circular.js` | RC 0: desenho do descanso. Elemento único `#rest-timer-banner.rt2` (guardado em `_rtEl`): `.doca` dentro do registro de séries (`#rt-dock`, gancho em `renderSetLogModal`), `.min` pílula ao lado do `#ma-fab`, `.exp` cartão. Embrulha `restDesenha` (desenho), `startRestTimer` (marcação nova) e `stopRestTimer`. Fases de cor `f-ok/f-aviso/f-fim/f-pausa` (`_rtFase`). Ações: `rtExpandir`, `rtMinimizar`, `rtPular`, `rtVibrar`, `rtVoltarTreino`. **Contagem, som, vibração, pausa e retomada continuam no núcleo** (app.js, "TIMER DE DESCANSO"). |
+| `69-jornada-corrida.js` | RC 0: `RUN_JORNADA` (9 lições), `rjSemana` (registros da semana pela mesma regra do motor), `rjSugestao`, cartão `#rj-card` (níveis 0 e 1, gancho em `renderSessions`), `rjAbrir`/`rjLida`/`rjOcultar`/`rjMostrar`, estado opcional `state.runJornada = {lidas, oculta}`. `runStatusCard` embrulhada: "Última mudança" (`rjUltimaDecisao`, de `motor.hist`). Atalho no `openRunPainel`. O motor (parte 11) não muda. |
+| `70-progressao-musculacao.js` | RC 0: `mtPlato(exId)` (4 sessões em 3+ semanas sem subir carga/repetições e sem fechar a faixa), `smartProgressionHint` embrulhada (acrescenta "rever" só quando a dica não é subir/aliviar; resultado ganha `rever:true`), `mtProgSituacao`, `mtProgResumo`, painel `openProgressaoCargas` e entrada `#pg-entrada` na aba Treinos (musculação). Nada muda sozinho no plano. |
 
 Beta 56 também troca o azul fixo `#7dd3fc` por `var(--info-soft)` no núcleo (3 lugares) e torna `#sessions-chips` uma grade (parte 58).
 
@@ -201,7 +205,7 @@ Nenhum elemento pode passar da borda da tela no celular (deixa a página mais la
 | Sistema | Onde | Como usar |
 |---|---|---|
 | Tipo de registro | app.js | `exTipoRegistro(id)`: carga · corpo · tempo · cardio · mobilidade (decide as colunas do registro de séries). Descanso do exercício: `descansoDoExercicio(id)`; regra em `liftDescanso(tier, objetivo, 50+, reps)`. |
-| Descanso | app.js, "TIMER DE DESCANSO" | `startRestTimer(seg, nome)`, `stopRestTimer()`, `restAjusta(±s)`, `restPausa()`. Conta pelo horário (`restFimEm`), não por `left--`. `restTimerInt` ≠ null = descanso rodando. |
+| Descanso | app.js, "TIMER DE DESCANSO" | `startRestTimer(seg, nome)`, `stopRestTimer()`, `restAjusta(±s)`, `restPausa()`. Conta pelo horário (`restFimEm`), não por `left--`. `restTimerInt` ≠ null = descanso rodando. RC 0: o desenho é da parte 68 (anel, pílula, dentro do registro); não crie outro intervalo. |
 | Tela ligada | app.js, "TELA LIGADA" | `telaLigadaPedir('motivo')` / `telaLigadaSoltar('motivo')`. Uma trava só para o app; volta sozinha ao reabrir. `requestWakeLock()`/`releaseWakeLock()` = motivo `'especial'`. |
 | Treino ativo | app.js | `treinoAtivoIniciar()`, `treinoAtivoEncerrar()`. Mantém a tela ligada na aba Treinos; termina ao salvar, sair, virar o dia ou 20 min parado. |
 | Som do fim | app.js | `tocaSomFim(id, atrasoSeg)`. Respeita `restMuted` (salvo em `mt_descanso_mudo`) e `restVibrarLigado()` (`mt_descanso_vibrar`). |
