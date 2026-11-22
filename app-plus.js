@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027 RC 1 — app-plus.js
+// MetaTreino 2027 RC 2 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027-rc.1' };
+const MTP = { versao: '2027-rc.2' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -15507,7 +15507,7 @@ function famEnviar(){
     if(!famAtiva()) return;
     const c = famCache(), uid = _famUid(); const campos = {};
     const meu = _famMeuPerfil(); const ant = (c.perfis||{})[uid] || null;
-    const sem = p=>p ? JSON.stringify({ veg:p.veg, lac:p.lac, glu:p.glu, fatores:p.fatores, compras:p.compras, semana:p.semana||null, tr:p.tr||null }) : '';
+    const sem = p=>p ? JSON.stringify({ veg:p.veg, lac:p.lac, glu:p.glu, fatores:p.fatores, compras:p.compras, semana:p.semana||null, tr:p.tr||null, dj:p.dj||null }) : '';   // RC 2: dj = desafio juntos (parte 77)
     if(sem(ant) !== sem(meu)){ meu.em = Date.now(); campos['perfis.' + uid] = meu; c.perfis = c.perfis || {}; c.perfis[uid] = meu; }
     const apelido = _famMeuApelido(); if((c.nomes||{})[uid] !== apelido){ campos['nomes.' + uid] = apelido; c.nomes = c.nomes || {}; c.nomes[uid] = apelido; }
     if(famSouAdm()){
@@ -21681,26 +21681,28 @@ s.textContent = `
 `; document.head.appendChild(s); })();
 
 // =====================================================================
-// 71. 2027 RC 1 — vibração que se sente de verdade + teste de vibração
+// 71. RC 1/RC 2 — vibração: pulsos que se sentem, diagnóstico e nenhum controle enganoso
 // ---------------------------------------------------------------------
-// Problema relatado: "a vibração nunca funcionou, em nenhum Android".
-// O que o código fazia:
-//  • os toques curtos pediam 3, 6 e 8 ms (partes 21, 28 e 34). A maioria dos motores de vibração dos
-//    celulares Android nem chega a girar com menos de ~20 ms: o pedido é aceito e nada se sente;
-//  • qualquer navigator.vibrate() novo CANCELA a vibração que está acontecendo. Um toque curto logo
-//    depois do fim do descanso (gesto, botão) cortava o alarme de 300+120+300+120+300 ms.
-// O que esta parte faz (um embrulho só em navigator.vibrate, sem mexer em quem chama):
-//  • pulsos de 1 a 19 ms viram 25 ms (sentidos, ainda discretos);
-//  • enquanto um alarme (padrão com mais de 250 ms) está vibrando, toques curtos são ignorados;
-//  • vibrate(0) / vibrate([]) (cancelar) continua passando sempre.
-// E acrescenta "Testar vibração" no Som do cronômetro: vibra 400 ms no toque e diz o que conferir
-// no aparelho se nada for sentido (o navegador não consegue saber se o motor girou).
-// Limites reais: o Chrome só vibra com a página VISÍVEL e depois de o aluno ter tocado na tela
-// pelo menos uma vez; com a tela bloqueada não há vibração (nem no APK, que usa o Chrome).
+// RC 1: pulsos de 1–19 ms viram 25 ms (motores de celular não giram com 3–8 ms) e toques curtos não
+// cortam mais o alarme do fim do descanso.
+// RC 2 (relato: "Testar vibração" não vibra no Android, com economia de bateria, Não perturbe e perfil de
+// som conferidos, e outros apps vibrando):
+//  • O app chama navigator.vibrate de verdade (teste: o cronômetro chama 1 vez no fim, com a página visível).
+//    Num toque direto do aluno (botão de teste) não há bloqueio do app. Se nada vibra, quem descarta é o
+//    navegador/sistema. Há relato de que o Chrome no Android ignora vibração de sites no modo silencioso.
+//  • O navegador NÃO diz se o motor girou: navigator.vibrate() devolve true mesmo sem efeito físico.
+//    Por isso o teste pergunta ao aluno "Sentiu?" e guarda a resposta NESTE aparelho (localStorage
+//    "mt_vib_ok": '1' sentiu, '0' não sentiu).
+//  • Diagnóstico separa: (1) API inexistente → sem opção de vibrar; (2/3) chamada recusada pelo navegador
+//    (retorno false ou sem interação ainda); (4) chamada aceita sem efeito físico (resposta "não senti");
+//    (5) integração do cronômetro: registro das últimas chamadas em __vibDiag (o teste automático confere).
+//  • Sem efeito físico confirmado ("não senti") ou sem API: os controles de vibração somem do Som do
+//    cronômetro e do cronômetro, e o fim do descanso fica no som e na tela. "Testar de novo" volta a oferecer.
+//  • O APK (TWA) usa o Chrome por dentro: tem o mesmo comportamento.
 // =====================================================================
 (function(){
   try{
-    if(!navigator.vibrate || navigator.__mtVibra) return;
+    if(!('vibrate' in navigator) || navigator.__mtVibra) return;
     const orig = navigator.vibrate.bind(navigator);
     let alarmeAte = 0;
     const total = p => Array.isArray(p) ? p.reduce((t,x)=>t+(+x||0),0) : (+p||0);
@@ -21708,38 +21710,1009 @@ s.textContent = `
       if(Array.isArray(p)) return p.map((x,i)=> (i % 2 === 0 && +x > 0 && +x < 20) ? 25 : x);
       return (+p > 0 && +p < 20) ? 25 : p;
     };
+    const anota = (p, r)=>{ try{ const d = window.__vibDiag = window.__vibDiag || [];
+      d.push({ em:Date.now(), p:JSON.stringify(p), ret:r, ativo: navigator.userActivation ? !!navigator.userActivation.hasBeenActive : null, vis:document.visibilityState });
+      if(d.length > 12) d.shift(); }catch(e){} };
     const novo = function(p){
       const t = total(p);
-      if(t <= 0) { alarmeAte = 0; return orig(p); }                 // cancelar sempre passa
+      if(t <= 0) { alarmeAte = 0; const r = orig(p); anota(p, r); return r; }      // cancelar sempre passa
       const agora = Date.now();
-      if(t < 120 && agora < alarmeAte) return true;                // não corta o alarme do descanso
+      if(t < 120 && agora < alarmeAte) return true;                                // não corta o alarme do descanso
       if(t > 250) alarmeAte = agora + t;
-      return orig(reforca(p));
+      let r = false; try{ r = orig(reforca(p)); }catch(e){ r = false; }
+      anota(p, r); return r;
     };
     navigator.vibrate = novo; navigator.__mtVibra = true;
   }catch(e){ console.log('vibração:', e); }
 })();
+// a vibração vale a pena oferecer NESTE aparelho?  'sem-api' | 'nao-sentiu' | 'ok' | 'nao-testado'
+function mtVibEstado(){
+  if(!('vibrate' in navigator)) return 'sem-api';
+  let v = null; try{ v = localStorage.getItem('mt_vib_ok'); }catch(e){}
+  return v === '0' ? 'nao-sentiu' : v === '1' ? 'ok' : 'nao-testado';
+}
+function mtVibOferecer(){ const e = mtVibEstado(); return e === 'ok' || e === 'nao-testado'; }
 function mtTestarVibracao(){
   const st = document.getElementById('mt-vib-status');
-  let ok = false;
-  try{ ok = !!(navigator.vibrate && navigator.vibrate(400)); }catch(e){ ok = false; }
-  if(!st) return ok;
-  if(!navigator.vibrate){
-    st.innerHTML = 'Este navegador não tem vibração (iPhone e alguns navegadores não oferecem). O som do fim do descanso continua valendo.';
-  } else if(!ok){
-    st.innerHTML = 'O navegador recusou a vibração. Toque em qualquer lugar do app e tente de novo; se continuar, abra o MetaTreino pelo Chrome.';
-  } else {
-    st.innerHTML = 'Pedido enviado: o celular deve ter vibrado agora. <b>Não sentiu?</b> No Android, confira em Configurações › Som e vibração: a <b>vibração / retorno tátil</b> precisa estar ligada, e o <b>modo de economia de bateria</b> (Xiaomi, Redmi, Motorola) e o <b>Não perturbe</b> costumam desligar a vibração dos apps.';
+  const est = mtVibEstado();
+  if(est === 'sem-api'){
+    if(st) st.innerHTML = 'Este navegador não oferece vibração (iPhone e alguns navegadores). O fim do descanso avisa pelo som e pela tela.';
+    return 'sem-api';
   }
-  return ok;
+  const ativo = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
+  let ret = false; try{ ret = !!navigator.vibrate(400); }catch(e){ ret = false; }
+  if(!st) return ret ? 'enviado' : 'recusado';
+  if(!ret){
+    st.innerHTML = ativo ? '<b>O navegador recusou a vibração</b> (a chamada voltou negada). Abra o MetaTreino pelo Chrome atualizado e tente de novo.'
+                         : '<b>O navegador ainda não liberou a vibração</b>: toque em qualquer lugar do app e tente de novo.';
+    return 'recusado';
+  }
+  st.innerHTML = `O pedido de 400 ms foi aceito pelo navegador. <b>Sentiu o celular vibrar?</b>
+    <span class="row" style="gap:8px;margin-top:8px;display:flex"><button type="button" class="btn btn-ghost btn-block" onclick="mtVibResposta(true)">Sim, vibrou</button>
+    <button type="button" class="btn btn-ghost btn-block" onclick="mtVibResposta(false)">Não senti</button></span>`;
+  return 'enviado';
 }
+function mtVibResposta(sentiu){
+  try{ localStorage.setItem('mt_vib_ok', sentiu ? '1' : '0'); }catch(e){}
+  if(!sentiu){ try{ localStorage.setItem('mt_descanso_vibrar', '0'); }catch(e){} }
+  try{ if(typeof restDesenha === 'function' && restTimerInt) restDesenha(); }catch(e){}
+  if(sentiu) toast('Vibração confirmada neste aparelho.');
+  else toast('Entendido: neste aparelho o fim do descanso avisa pelo som e pela tela.');
+  try{ openSomFim(); }catch(e){}
+}
+function mtVibTestarDeNovo(){ try{ localStorage.removeItem('mt_vib_ok'); }catch(e){} try{ openSomFim(); }catch(e){} }
 mtGancho('openSomFim', { depois(){
   try{
     const mi = $('modal-inner'); if(!mi || mi.querySelector('#mt-vib-teste')) return;
-    const ps = [...mi.querySelectorAll('p')]; const aviso = ps.find(p=>/vibração depende/.test(p.textContent)) || ps[ps.length-1];
+    const est = mtVibEstado();
+    // o par "Vibrar / Sem vibrar" (do núcleo): some quando a vibração não funciona neste aparelho
+    const bts = [...mi.querySelectorAll('button, .opt, .seg')].filter(b=>/^\s*(Vibrar|Sem vibrar)\s*$/.test(b.textContent));
+    const par = bts.length ? bts[0].parentElement : null;
+    const ps = [...mi.querySelectorAll('p')]; const aviso = ps.find(p=>/vibração depende/.test(p.textContent));
+    if(!mtVibOferecer()){
+      if(par) par.style.display = 'none';
+      if(aviso) aviso.textContent = 'No modo silencioso do celular o som pode não tocar.';
+      const txt = est === 'sem-api' ? 'Este navegador não oferece vibração. O fim do descanso avisa pelo som e pela tela.'
+        : 'Vibração: no teste, este aparelho não vibrou pelo navegador, então ela foi desligada aqui. O fim do descanso avisa pelo som e pela tela.';
+      const bloco = `<div id="mt-vib-teste" class="mt-vib-off"><p class="mt-muted" style="font-size:12.5px;line-height:1.5;margin:10px 0 4px">${txt}</p>
+        ${est === 'sem-api' ? '' : '<button type="button" class="link-mais" onclick="mtVibTestarDeNovo()">Testar de novo</button>'}</div>`;
+      (par || aviso || mi.lastElementChild).insertAdjacentHTML('afterend', bloco);
+      return;
+    }
     const bloco = `<div id="mt-vib-teste" style="margin:10px 0 4px">
+      ${est === 'nao-testado' ? '<p class="mt-muted" style="font-size:12.5px;margin:0 0 6px">A vibração depende do aparelho e do navegador. Teste uma vez para saber se ela funciona aqui.</p>' : ''}
       <button type="button" class="btn btn-ghost btn-block" onclick="mtTestarVibracao()">Testar vibração</button>
       <p id="mt-vib-status" class="mt-muted" style="font-size:12.5px;line-height:1.5;margin:8px 0 0"></p></div>`;
-    if(aviso) aviso.insertAdjacentHTML('afterend', bloco); else mi.insertAdjacentHTML('beforeend', bloco);
+    (aviso || par || mi.lastElementChild).insertAdjacentHTML('afterend', bloco);
   }catch(e){}
 }});
+// cronômetro (parte 68): sem botão de vibração quando ela não funciona neste aparelho
+(function(){
+  const _d = window.restDesenha; if(typeof _d !== 'function') return;
+  window.restDesenha = function(){
+    const r = _d.apply(this, arguments);
+    try{ const b = document.querySelector('#rest-timer-banner .rt2-vib'); if(b) b.style.display = mtVibOferecer() ? '' : 'none'; }catch(e){}
+    return r;
+  };
+})();
+// fim do descanso: só pede vibração quando ela é oferecida neste aparelho (senão o som e a tela bastam)
+(function(){
+  const _rv = window.restVibrarLigado; if(typeof _rv !== 'function') return;
+  window.restVibrarLigado = function(){ return mtVibOferecer() && _rv.apply(this, arguments); };
+})();
+
+// =====================================================================
+// 73. RC 2 — Importação: esforço percebido (RPE), treino do plano certo e fim da importação de musculação
+// ---------------------------------------------------------------------
+// O que foi encontrado (parte 57):
+//  • A atividade importada era salva SEM esforço. O motor da corrida usa (+r.rpe||5): toda importação
+//    entrava como 5/10, sem o aluno ter dito nada.
+//  • "Contar como o treino do plano deste dia" gravava o id do treino, mas não o tipo de sessão nem o
+//    estágio. Para o iniciante (estágios caminhada + corrida) a importação NUNCA contava para avançar.
+//  • Só dava para ligar ao treino do MESMO dia da semana: treino feito em outro dia virava avulso.
+//  • Arquivo FIT: o formato tem campos próprios para o esforço que o aluno responde no relógio
+//    (sessão, campos 192 "workout_feel" 0–100 e 193 "workout_rpe" 0–100 = RPE×10). O leitor usado
+//    (fit-file-parser) não os entrega, então esta parte lê os bytes da mensagem de sessão.
+//    O arquivo do Zepp (Amazfit T-Rex 3 Pro) enviado pelo aluno NÃO tem esses campos: traz "efeito de treino"
+//    (4,3) e "carga" (113), que são cálculos do relógio e NÃO são esforço percebido — não são usados.
+//    GPX e TCX não têm campo de esforço percebido.
+// O que muda:
+//  • Prévia da importação: se o arquivo trouxe workout_rpe válido (1–10), mostra "Esforço informado no relógio"
+//    e não pergunta. Se não trouxe, mostra a MESMA régua 1–10 do registro manual, SEM nada marcado; salvar sem
+//    responder continua valendo (fica sem esforço, como antes, sem valor inventado).
+//  • Ligar a um treino do plano: escolha entre os treinos da semana ainda não feitos (o do dia vem marcado).
+//    O registro leva tipo de sessão e estágio, como no registro manual.
+//  • Depois de importar, dá para informar o esforço no detalhe da atividade (se ainda não tiver).
+//  • Musculação: um arquivo de força não é mais importado (o relógio quase nunca grava séries/cargas e a
+//    correspondência de exercícios era pobre). Registro manual, histórico e as importações antigas continuam.
+// Registros antigos não são alterados.
+// =====================================================================
+
+// ---------- 1. FIT: esforço percebido na mensagem de sessão (global 18), campos 192/193 ----------
+function atvFitRpe(buf){
+  try{
+    const b = new Uint8Array(buf); const dv = new DataView(buf instanceof ArrayBuffer ? buf : b.buffer);
+    const hs = b[0]; if(hs !== 12 && hs !== 14) return null;
+    if(String.fromCharCode(b[8], b[9], b[10], b[11]) !== '.FIT') return null;
+    const tam = dv.getUint32(4, true); const fim = Math.min(b.length, hs + tam);
+    const defs = {}; let p = hs; let achou = null;
+    while(p < fim){
+      const h = b[p++];
+      if(h & 0x80){                                  // cabeçalho de horário comprimido: mensagem de dados
+        const d = defs[(h >> 5) & 0x3]; if(!d) return achou; p += d.tam; continue;
+      }
+      const local = h & 0x0F;
+      if(h & 0x40){                                  // definição
+        const temDev = !!(h & 0x20);
+        const le = b[p+1] === 0; const glob = le ? dv.getUint16(p+2, true) : dv.getUint16(p+2, false); const nf = b[p+4];
+        let q = p + 5; const campos = []; let t = 0;
+        for(let i=0; i<nf; i++){ campos.push({ n:b[q], s:b[q+1], off:t }); t += b[q+1]; q += 3; }
+        if(temDev){ const nd = b[q]; q++; for(let i=0; i<nd; i++){ t += b[q+1]; q += 3; } }
+        defs[local] = { glob, campos, tam:t }; p = q; continue;
+      }
+      const d = defs[local]; if(!d) return achou;
+      if(d.glob === 18){
+        const ler = n=>{ const c = d.campos.find(x=>x.n === n); if(!c || c.s !== 1) return null; const v = b[p + c.off]; return v === 0xFF ? null : v; };
+        const rpe = ler(193), feel = ler(192);
+        if(rpe != null || feel != null) achou = { rpe10: rpe, feel };
+      }
+      p += d.tam;
+    }
+    return achou;
+  }catch(e){ return null; }
+}
+// RPE do arquivo: só aceita 1..10 (workout_rpe vem ×10; 0 = não respondido)
+function atvRpeDoArquivo(info){
+  if(!info || info.rpe10 == null) return null;
+  const v = Math.round(info.rpe10 / 10);
+  return (v >= 1 && v <= 10) ? v : null;
+}
+
+// ---------- 2. processar: lê o esforço; recusa musculação ----------
+(function(){
+  const _proc = window.atvProcessaArquivo; if(typeof _proc !== 'function') return;
+  window.atvProcessaArquivo = async function(f){
+    const R = await _proc.apply(this, arguments);
+    if(R && R.A && R.A.esporte === 'musculacao'){
+      throw { usuario:'Este arquivo é de um treino de musculação/força. A importação de musculação foi retirada: os relógios quase nunca gravam as séries e as cargas, e os exercícios não batiam com a biblioteca. Registre o treino em Treinos (fica certinho na evolução de carga).' };
+    }
+    try{
+      R.rpe = null; R.rpeArq = null;
+      if(R.A && R.A.formato === 'fit'){ const buf = R.buf || await f.arrayBuffer(); const v = atvRpeDoArquivo(atvFitRpe(buf)); if(v){ R.rpeArq = v; R.rpe = v; } }
+    }catch(e){}
+    return R;
+  };
+})();
+// trocar a modalidade na prévia: musculação deixou de existir como opção
+(function(){
+  const _t = window.atvTrocaEsporte; if(typeof _t !== 'function') return;
+  window.atvTrocaEsporte = function(e){ if(e === 'musculacao') return; return _t.apply(this, arguments); };
+})();
+
+// ---------- 3. treinos do plano desta semana ainda não feitos ----------
+function atvTreinosAbertos(esporte, ts){
+  try{
+    if(esporte !== 'corrida' && esporte !== 'caminhada') return [];
+    const mod = state.modules.run; if(!mod || !mod.plan) return [];
+    const sem = (typeof rSem === 'function') ? rSem(ts) : null; if(sem == null || sem !== rSem()) return [];
+    const ini = (typeof planStartTs === 'function' && planStartTs(mod)) || mod.createdAt || 0; if(ini && ts < _atvDia(ini)) return [];
+    const feitos = new Set((mod.history||[]).filter(h=>h && h.at >= sem && h.at < sem + 7*86400000 && h.id).map(h=>h.id));
+    return (mod.plan.workouts||[]).filter(w=>w && w.k && !feitos.has(w.k) && !(w.motor && w.motor.tipo === 'prova'));
+  }catch(e){ return []; }
+}
+
+// ---------- 4. prévia: régua de esforço e escolha do treino ----------
+(function(){
+  const _prev = window.atvPrevia; if(typeof _prev !== 'function') return;
+  window.atvPrevia = function(){
+    const r = _prev.apply(this, arguments);
+    try{
+      const R = _atvAtual; const mi = $('modal-inner'); if(!R || !mi || !mi.querySelector('#integ-previa')) return r;
+      const sel = $('ip-esp'); if(sel){ const o = sel.querySelector('option[value="musculacao"]'); if(o) o.remove(); }
+      const A = R.A; const salvar = [...mi.querySelectorAll('.btn-primary')].find(b=>/Salvar atividade/.test(b.textContent));
+      if(!salvar) return r;
+      // treino do plano: lista os da semana ainda não feitos (o do dia, se houver, vem escolhido)
+      const ab = atvTreinosAbertos(A.esporte, A.inicio);
+      const doDia = (typeof _atvTreinoDoDia === 'function') ? _atvTreinoDoDia(A.esporte === 'caminhada' ? 'corrida' : A.esporte, A.inicio) : null;
+      const velho = mi.querySelector('.ip-plano'); if(velho) velho.remove();
+      if(ab.length){
+        const marcado = R.planoK !== undefined ? R.planoK : (doDia ? doDia.k : '');
+        salvar.insertAdjacentHTML('beforebegin', `<label class="ip-campo ip-plano2"><small>Este treino era do seu plano?</small>
+          <select id="ip-plano2" onchange="_atvAtual.planoK=this.value">
+            <option value="">Não: foi uma atividade extra</option>
+            ${ab.map(w=>`<option value="${w.k}" ${w.k===marcado?'selected':''}>${mtEsc((RUN_DIAS && RUN_DIAS[w.dayIdx-1]) || '')} · ${mtEsc(w.name)}</option>`).join('')}
+          </select></label>`);
+        if(R.planoK === undefined) R.planoK = marcado;
+      } else R.planoK = '';
+      // esforço percebido
+      let bloco;
+      if(R.rpeArq){
+        bloco = `<div class="ip-rpe"><small>Esforço percebido</small><div><b>${R.rpeArq}/10</b> · informado no relógio (${mtEsc(RPE_LBL[R.rpeArq] || '')})</div></div>`;
+      } else {
+        bloco = `<div class="ip-rpe" id="ip-rpe"><small>Quanto esforço você sentiu? <span class="mt-muted">(opcional — o arquivo não trouxe)</span></small>${rpeHtml(5)}
+          <button type="button" class="link-mais" id="ip-rpe-limpa" onclick="atvRpeLimpa()" style="margin-top:4px">Não informar</button></div>`;
+      }
+      salvar.insertAdjacentHTML('beforebegin', bloco);
+      if(!R.rpeArq){ if(R.rpe) rpeSet(R.rpe); else atvRpeLimpa(true); }
+    }catch(e){ console.log('prévia RPE:', e); }
+    return r;
+  };
+})();
+function atvRpeLimpa(silencio){
+  const R = _atvAtual; if(R) R.rpe = null; window.__rpe = null;
+  const box = $('ip-rpe'); if(!box) return;
+  box.querySelectorAll('.rpe2-c').forEach(b=>{ b.classList.remove('on','abaixo'); b.setAttribute('aria-checked','false'); });
+  const l = box.querySelector('#rpe-lbl'); if(l) l.innerHTML = '<span class="rpe2-txt"><small>Toque num número para informar. Sem resposta, a atividade fica sem esforço (o plano não inventa um valor).</small></span>';
+  const bt = $('ip-rpe-limpa'); if(bt) bt.style.display = 'none';
+}
+(function(){
+  const _set = window.rpeSet; if(typeof _set !== 'function') return;
+  window.rpeSet = function(n){
+    const r = _set.apply(this, arguments);
+    try{
+      if($('ip-rpe') && _atvAtual){ _atvAtual.rpe = Math.min(10, Math.max(1, Math.round(+n)||5)); const bt = $('ip-rpe-limpa'); if(bt) bt.style.display = ''; }
+      if($('rpe-depois') && window.__rpeDepois) window.__rpeDepois.v = Math.min(10, Math.max(1, Math.round(+n)||5));
+    }catch(e){}
+    return r;
+  };
+})();
+
+// ---------- 5. salvar: esforço, tipo de sessão e estágio no registro ----------
+(function(){
+  const _salvar = window.atvSalvar; if(typeof _salvar !== 'function') return;
+  window.atvSalvar = function(A, op){
+    op = op || {};
+    const R = _atvAtual;
+    try{
+      if(R && R.A === A && R.planoK !== undefined){
+        const w = R.planoK ? ((state.modules.run||{}).plan||{}).workouts.find(x=>x.k === R.planoK) : null;
+        op.plano = w || null;
+      }
+    }catch(e){}
+    const res = _salvar.apply(this, arguments);
+    try{
+      if(res && res.id && A.esporte !== 'musculacao'){
+        const e = ((state.modules.run||{}).history||[]).find(x=>x && x.imp && x.imp.id === res.id);
+        if(e){
+          const rpe = R && R.A === A ? R.rpe : null;
+          if(rpe && !e.rpe){ e.rpe = rpe; e.rpeFonte = (R && R.rpeArq) ? 'relogio' : 'aluno'; }
+          if(op.plano && op.plano.motor && !e.tipoSessao){
+            e.tipoSessao = op.plano.motor.tipo;
+            if(op.plano.motor.estagio !== undefined) e.estagio = op.plano.motor.estagio;
+            if(e.id !== op.plano.k) e.id = op.plano.k;
+          }
+          try{ if(typeof _rSyncAt !== 'undefined'){ _rSyncAt = 0; runSync(); } }catch(x){}
+        }
+      }
+    }catch(err){ console.log('importação (plano/RPE):', err); }
+    return res;
+  };
+})();
+
+// ---------- 6. detalhe: informar o esforço depois ----------
+(function(){
+  const _ab = window.openAtividade; if(typeof _ab !== 'function') return;
+  window.openAtividade = function(mk, idx){
+    const r = _ab.apply(this, arguments);
+    Promise.resolve(r).then(()=>{ try{ _atvRpeNoDetalhe(mk, idx); }catch(e){} });
+    return r;
+  };
+})();
+function _atvRpeNoDetalhe(mk, idx){
+    {
+      const x = (((state.modules[mk]||{}).history)||[])[idx]; const mi = $('modal-inner'); if(!x || !mi || mk !== 'run' || mi.querySelector('#atv-rpe-det')) return;
+      const alvo = [...mi.querySelectorAll('.btn')].pop(); if(!alvo) return;
+      const linha = x.rpe ? `<p class="integ-mini" style="margin-top:10px">Esforço percebido: <b>${x.rpe}/10</b>${x.rpeFonte === 'relogio' ? ' (informado no relógio)' : ''} · <a href="#" onclick="atvRpeDepois('${mk}',${idx});return false">alterar</a></p>`
+        : `<button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" onclick="atvRpeDepois('${mk}',${idx})">Informar o esforço percebido</button>`;
+      alvo.insertAdjacentHTML('beforebegin', '<div id="atv-rpe-det">' + linha + '</div>');
+    }
+}
+function atvRpeDepois(mk, idx){
+  const x = (((state.modules[mk]||{}).history)||[])[idx]; if(!x) return;
+  window.__rpeDepois = { mk, idx, v: x.rpe || null };
+  $('modal-inner').innerHTML = `<div id="rpe-depois"><h3>Esforço percebido</h3><p class="integ-mini">${mtEsc(String(x.name||'').replace(/^[^\wÀ-ú]+/,''))} · ${new Date(x.at).toLocaleDateString('pt-BR')}</p>
+    ${rpeHtml(x.rpe || 5)}
+    <div class="row" style="gap:8px;margin-top:14px"><button class="btn btn-ghost btn-block" onclick="openAtividade('${mk}',${idx})">Voltar</button>
+    <button class="btn btn-primary btn-block" onclick="atvRpeDepoisSalva()">Salvar</button></div></div>`;
+  window.__rpeDepois.v = window.__rpe;
+  $('modal-back').classList.add('on');
+}
+function atvRpeDepoisSalva(){
+  const d = window.__rpeDepois; if(!d) return;
+  const x = (((state.modules[d.mk]||{}).history)||[])[d.idx]; if(!x) return;
+  x.rpe = d.v || window.__rpe; x.rpeFonte = 'aluno'; window.__rpeDepois = null;
+  saveData(); try{ if(typeof _rSyncAt !== 'undefined'){ _rSyncAt = 0; runSync(); } }catch(e){}
+  toast('Esforço salvo. O plano passa a considerar esse treino.');
+  openAtividade(d.mk, d.idx);
+}
+// textos da tela de integrações: FIT não promete mais musculação
+mtGancho('openIntegracoes', { depois(){
+  try{ const mi = $('modal-inner'); mi.querySelectorAll('.integ-fmt span').forEach(s=>{ if(/musculação com séries/.test(s.textContent)) s.textContent = 'O mais completo: frequência cardíaca, ritmo, altitude, cadência, voltas e, quando o relógio grava, o esforço que você respondeu no fim. Treinos de musculação: registre em Treinos.'; }); }catch(e){}
+}});
+(function(){ if(document.getElementById('imp-rpe-css')) return; const s = document.createElement('style'); s.id = 'imp-rpe-css';
+s.textContent = `.ip-rpe{margin:12px 0 4px;padding:12px;border-radius:14px;border:1px solid var(--border);background:var(--surface)}
+.ip-rpe>small{display:block;font-size:12.5px;color:var(--text-dim);margin-bottom:8px}
+.ip-plano2{display:flex;flex-direction:column;gap:4px;margin:12px 0 0}
+.ip-plano2 select{width:100%}`; document.head.appendChild(s); })();
+
+// =====================================================================
+// 74. RC 2 — Corrida: atividades fora do plano (extras) e orientação do próximo treino
+// ---------------------------------------------------------------------
+// Como era (parte 11, rAvaliarSemana): a semana contava QUALQUER dia com corrida como "treino feito".
+// Uma corrida extra no sábado "cobria" um treino perdido na quarta, e o esforço dela entrava na média
+// (podendo até segurar ou recuar o plano). Corrida extra intensa na véspera de um intervalado não gerava
+// nenhuma orientação (só esforço 9+ disparava a fadiga existente).
+// O que muda (motor NÃO reconstruído — a avaliação original continua decidindo):
+//  • Planejado × extra: planejado = registro ligado a um treino do plano (tipo de sessão ou id "S1".."S7");
+//    extra = registro avulso ("livre", importado sem ligação, sem tipo de sessão).
+//  • Semana SEM extras: nada muda (mesma função, mesmos dados).
+//  • Semana COM extras: a avaliação original roda só com os planejados + "remanejados":
+//      remanejado = extra de corrida (ou caminhada/corrida para o nível iniciante) com duração de pelo menos
+//      60% do treino mais curto da semana, quando faltou treino planejado — "trocou o dia", conta e é explicado.
+//    Os outros extras não contam como treino feito e não entram na média de esforço (não punem), mas a CARGA
+//    deles (duração × esforço) é somada: se a decisão era avançar e a carga extra foi grande (≥ 35% da carga
+//    planejada) com esforço 7+, o plano MANTÉM e explica. Extras aparecem no motivo da semana.
+//  • Próximo treino: extra exigente (esforço 8+, ou 7+ com 45 min ou mais, ou bem mais longo que o habitual)
+//    nas últimas 36 h antes de um treino de qualidade ou longão → orientação de recuperação no cartão de status
+//    e no resumo do registro. Extra moderado na véspera de treino de qualidade → atenção à recuperação.
+//    Caminhada leve não gera aviso. Nada é cortado automaticamente por aqui (a fadiga original — esforço 9+
+//    num treino leve/extra — continua como era).
+//  • Sem esforço informado (importação antiga) não se inventa valor: a carga usa 5/10 só para o cálculo
+//    interno e o texto diz "sem esforço informado".
+// =====================================================================
+function rxEhExtra(r){
+  if(!r) return false;
+  if(r.tipoSessao) return false;
+  if(r.isRace) return false;
+  const id = String(r.id == null ? '' : r.id);
+  return !id || id === 'livre' || id === 'imp' || id === 'extra' || id === 'activity';
+}
+function _rxCarga(r){ return (+r.duration||0) * ((+r.rpe||0) || 5); }
+function _rxExigente(r, ref){
+  const rpe = +r.rpe || 0, dur = +r.duration || 0;
+  if(r.activity === 'bike') return rpe >= 8 && dur >= 45;
+  if(r.activity === 'caminhada') return rpe >= 8;
+  return rpe >= 8 || (rpe >= 7 && dur >= 45) || (ref && dur >= ref * 1.5 && dur >= 40);
+}
+// a semana separada em planejados, remanejados e extras
+function rxSemana(ctx, motor, semTs){
+  const a = semTs, b = semTs + 7*DIA_MS; const nv = motor.nivel;
+  const todas = rAtividades(ctx).filter(r=>r.at >= a && r.at < b);
+  const extras = todas.filter(rxEhExtra);
+  const plan = todas.filter(r=>!rxEhExtra(r) && r.activity !== 'bike' && (nv === 0 || _ehCorrida(r)));
+  const info = (motor.semanas||{})[semTs] || null; const planejado = info ? info.planejado : 0;
+  const diasPlan = new Set(plan.map(r=>mtDia0(r.at))).size;
+  let faltam = Math.max(0, planejado - diasPlan);
+  // duração de referência: o treino planejado mais curto da semana (se for a semana atual), senão 20 min
+  let ref = 20;
+  try{ if(semTs === rSem()){ const ds = ((state.modules.run||{}).plan||{}).workouts||[]; const v = ds.filter(w=>w.motor && w.motor.tipo !== 'prova').map(w=>+w.duration||0).filter(Boolean); if(v.length) ref = Math.min(...v); } }catch(e){}
+  const candidatos = extras.filter(r=>r.activity !== 'bike' && (nv === 0 ? true : _ehCorrida(r)) && (+r.duration||0) >= ref*0.6)
+    .sort((x,y)=>(+y.duration||0) - (+x.duration||0));
+  const diasUsados = new Set(plan.map(r=>mtDia0(r.at)));
+  const remanejados = [];
+  candidatos.forEach(r=>{ const d = mtDia0(r.at); if(faltam > 0 && !diasUsados.has(d)){ remanejados.push(r); diasUsados.add(d); faltam--; } });
+  const soExtras = extras.filter(r=>!remanejados.includes(r));
+  const cargaExtra = soExtras.reduce((t,r)=>t + _rxCarga(r), 0);
+  const cargaPlan = plan.concat(remanejados).reduce((t,r)=>t + _rxCarga(r), 0);
+  return { plan, remanejados, extras: soExtras, cargaExtra, cargaPlan, ref };
+}
+function _rxDescr(r){
+  const km = +r.distance > 0 ? `${String(Math.round(r.distance*10)/10).replace('.',',')} km` : `${Math.round(+r.duration||0)} min`;
+  const tipo = r.activity === 'caminhada' ? 'caminhada' : r.activity === 'bike' ? 'pedalada' : 'corrida';
+  return `${tipo} de ${km}${r.rpe ? ` com esforço ${r.rpe}/10` : ' (sem esforço informado)'}`;
+}
+// avaliação semanal: sem extras → igual; com extras → original com planejados + remanejados, e a carga extra explicada
+(function(){
+  const _av = window.rAvaliarSemana; if(typeof _av !== 'function') return;
+  window.rAvaliarSemana = function(ctx, motor, semTs){
+    let X = null; try{ X = rxSemana(ctx, motor, semTs); }catch(e){ X = null; }
+    if(!X || (!X.extras.length && !X.remanejados.length)) return _av.apply(this, arguments);
+    const tira = new Set(X.extras.filter(r=>r.activity !== 'bike' && !(r.activity === 'caminhada' && motor.nivel > 0)));
+    const ctx2 = Object.assign({}, ctx, { run: Object.assign({}, ctx.run, { history: ((ctx.run||{}).history||[]).filter(r=>!tira.has(r)) }) });
+    const res = _av.call(this, ctx2, motor, semTs);
+    try{
+      res.extras = { n:X.extras.length, min:Math.round(X.extras.reduce((t,r)=>t+(+r.duration||0),0)), km:Math.round(X.extras.reduce((t,r)=>t+(+r.distance||0),0)*10)/10,
+        rpeMax: Math.max(0, ...X.extras.map(r=>+r.rpe||0)) || null };
+      res.remanejados = X.remanejados.length;
+      if(X.remanejados.length) res.motivo += `; ${X.remanejados.length === 1 ? '1 treino feito em outro dia contou' : X.remanejados.length + ' treinos feitos em outros dias contaram'} no lugar do que faltou`;
+      const fortes = X.extras.filter(r=>(+r.rpe||0) >= 7);
+      if(res.decisao === 'avancar' && X.cargaPlan > 0 && X.cargaExtra >= 0.35*X.cargaPlan && fortes.length){
+        res.decisao = 'manter';
+        res.motivo += `; além do plano, ${_rxDescr(fortes[0])}${X.extras.length > 1 ? ` e mais ${X.extras.length-1} atividade(s)` : ''} somaram bastante carga — o plano mantém esta semana para você assimilar, sem cortar nada`;
+      } else if(X.extras.length){
+        res.motivo += `; + ${X.extras.length === 1 ? '1 atividade extra' : X.extras.length + ' atividades extras'} (${res.extras.min} min) entrou na carga, sem contar como treino do plano`;
+      }
+    }catch(e){}
+    return res;
+  };
+})();
+// orientação para o próximo treino planejado (não altera o plano)
+function rxOrientacao(agora){
+  try{
+    const run = state.modules.run; const M = run && run.plan && run.plan.motor; if(!M) return null;
+    agora = agora || Date.now();
+    const ctx = runCtx();
+    const recentes = rAtividades(ctx).filter(r=>rxEhExtra(r) && r.at <= agora && agora - r.at <= 36*3600000);
+    if(!recentes.length) return null;
+    const hoje = (d=>d === 0 ? 7 : d)(new Date(agora).getDay());
+    const feitosHoje = new Set((run.history||[]).filter(h=>mtDia0(h.at) === mtDia0(agora)).map(h=>h.id));
+    const prox = (run.plan.workouts||[]).filter(w=>w && w.motor && w.motor.tipo !== 'prova' && (w.dayIdx === hoje || w.dayIdx === hoje+1) && !feitosHoje.has(w.k)).sort((a,b)=>a.dayIdx-b.dayIdx)[0];
+    if(!prox) return null;
+    const t = prox.motor.tipo; const qual = !!((typeof RT !== 'undefined' && RT[t]) || {}).q; const longo = t === 'longao';
+    const ref = Math.max(20, ...((run.plan.workouts||[]).map(w=>+w.duration||0)).filter(Boolean)) || 30;
+    const e = recentes.sort((a,b)=>_rxCarga(b) - _rxCarga(a))[0];
+    const quando = mtDia0(e.at) === mtDia0(agora) ? 'hoje' : 'ontem';
+    const diaProx = prox.dayIdx === hoje ? 'de hoje' : 'de amanhã';
+    if(_rxExigente(e, ref * 0.6) && (qual || longo)){
+      return { nivel:'atencao', txt:`Você fez uma atividade mais exigente fora do plano ${quando} (${_rxDescr(e)}). Antes do treino ${diaProx} (${prox.name.toLowerCase()}), avalie como está: se as pernas estiverem pesadas, faça a versão leve ou troque pelo próximo dia leve. O plano não foi cortado — a decisão é sua.` };
+    }
+    if(e.activity !== 'caminhada' && (+e.rpe||0) >= 6 && qual){
+      return { nivel:'info', txt:`Percebemos uma corrida extra ${quando} (${_rxDescr(e)}). Considerando o treino ${diaProx}, vale atenção à recuperação: aquecimento mais longo e, se o corpo pedir, menos intensidade.` };
+    }
+    return null;
+  }catch(e){ return null; }
+}
+(function(){
+  const _st = window.runStatusCard; if(typeof _st !== 'function') return;
+  window.runStatusCard = function(){
+    let h = _st.apply(this, arguments);
+    try{ const o = rxOrientacao(); if(o && h) h = h.replace('<div class="run-st-a">', `<div class="run-st-dec rx-ori rx-${o.nivel}">${o.txt}</div><div class="run-st-a">`); }catch(e){}
+    return h;
+  };
+  const _fb = window.runFeedbackMotor; if(typeof _fb !== 'function') return;
+  window.runFeedbackMotor = function(e){
+    const out = _fb.apply(this, arguments);
+    try{
+      if(e && rxEhExtra(e) && e.activity !== 'bike'){
+        out.push(`Atividade extra: não conta como treino do plano, mas a carga dela entra na análise da semana${e.rpe ? '' : ' (informe o esforço para a análise ficar melhor)'}.`);
+        const o = rxOrientacao(); if(o) out.push((o.nivel === 'atencao' ? '🟡 ' : '') + o.txt);
+      }
+    }catch(er){}
+    return out;
+  };
+})();
+(function(){ if(document.getElementById('rx-css')) return; const s = document.createElement('style'); s.id = 'rx-css';
+s.textContent = `.rx-ori.rx-atencao{border-left:3px solid #f2b705}.rx-ori.rx-info{border-left:3px solid var(--primary)}`; document.head.appendChild(s); })();
+
+// =====================================================================
+// 75. RC 2 — Cardápio compartilhado: alcance das mudanças do administrador (sem perguntar toda vez)
+// ---------------------------------------------------------------------
+// Como era (parte 49): o administrador, ao TIRAR ou ACRESCENTAR alimento num prato compartilhado, respondia
+// "todos ou só eu?" a cada vez. Já ao TROCAR O PRATO, valia para todos direto, sem perguntar e sem desfazer.
+// O que muda:
+//  • Dentro de cada refeição compartilhada (só para o administrador, só em dia editável) aparece a linha
+//    "Suas mudanças valem para:  Perguntar | Só para mim | Grupo todo". A escolha fica guardada
+//    (nutriConfig().famAlcance) e muda com um toque, no lugar onde a mudança acontece.
+//  • Vale para: tirar alimento, acrescentar alimento e trocar o prato. "Perguntar" é o padrão (comportamento
+//    antigo) e a pergunta ganhou "lembrar esta escolha".
+//  • Toda mudança para o GRUPO mostra "Desfazer" por 7 segundos (tirar alimento e trocar prato). Tirar só para
+//    mim também pode ser desfeito.
+//  • Não mudam: quantidade/porção (sempre pessoal), "Comi" (pessoal), lista de compras (Só eu / Grupo todo já é
+//    uma visão, não uma exclusão), quem não é administrador (continua sem mexer no prato do grupo; a regra do
+//    Firestore também barra). Alimento digitado à mão continua só para quem acrescentou.
+// =====================================================================
+function famAlcance(){ const n = nutriConfig(); return n.famAlcance === 'eu' || n.famAlcance === 'grupo' ? n.famAlcance : null; }
+function famAlcanceDefine(v){ const n = nutriConfig(); if(v === 'eu' || v === 'grupo') n.famAlcance = v; else delete n.famAlcance; saveData(); }
+function famAlcanceToca(v){
+  famAlcanceDefine(v);
+  document.querySelectorAll('.fam-alc .fam-alc-b').forEach(b=>b.classList.toggle('on', b.dataset.v === (v || 'perguntar')));
+  toast(v === 'grupo' ? 'Suas mudanças nas refeições compartilhadas valem para o grupo todo (com Desfazer).' : v === 'eu' ? 'Suas mudanças nas refeições compartilhadas valem só para você.' : 'O app vai perguntar a cada mudança.');
+}
+// "Desfazer" discreto
+let _famDesfT = null;
+function famDesfazer(txt, fn){
+  let el = document.getElementById('mt-desfazer');
+  if(!el){ el = document.createElement('div'); el.id = 'mt-desfazer'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  window.__famDesfFn = fn;
+  el.innerHTML = `<span>${mtEsc(txt)}</span><button type="button" onclick="famDesfazerAgora()">Desfazer</button>`;
+  el.classList.add('on'); clearTimeout(_famDesfT);
+  _famDesfT = setTimeout(()=>{ el.classList.remove('on'); window.__famDesfFn = null; }, 7000);
+}
+function famDesfazerAgora(){
+  const fn = window.__famDesfFn; window.__famDesfFn = null; clearTimeout(_famDesfT);
+  const el = document.getElementById('mt-desfazer'); if(el) el.classList.remove('on');
+  if(fn) try{ fn(); toast('Desfeito.'); }catch(e){ console.log('desfazer:', e); }
+}
+// pergunta com "lembrar"
+function famPerguntaAlcance(titulo, texto, fGrupo, fEu, rotGrupo, rotEu){
+  window.__famLembrar = true;
+  famEscolha(titulo, texto + '<label class="fam-lembrar"><input type="checkbox" checked onchange="window.__famLembrar=this.checked"> Lembrar esta escolha (dá para mudar dentro da refeição)</label>', [
+    { t:rotGrupo, f:()=>{ if(window.__famLembrar) famAlcanceDefine('grupo'); fGrupo(); } },
+    { t:rotEu, f:()=>{ if(window.__famLembrar) famAlcanceDefine('eu'); fEu(); } }
+  ]);
+}
+// ---------- tirar alimento ----------
+function _famTiraGrupo(mid, fid){
+  famTirarDaCasa(mid, fid);
+  const nome = (NUTRI_ALIMENTOS[fid]||[''])[0];
+  famDesfazer(`${nome} tirado do prato do grupo.`, ()=>famVoltarNaCasa(mid, fid));
+}
+function _famTiraEu(mid, fid){
+  _nutriRemoverB49(mid, fid);
+  const nome = (NUTRI_ALIMENTOS[fid]||[''])[0];
+  famDesfazer(`${nome} tirado só do seu prato.`, ()=>{ _nutriRemoverB49(mid, fid); });
+}
+window.nutriRemover = function(mid, fid){
+  if(!famSouAdm() || !famCompartilhada(mid)) return _nutriRemoverB49.apply(this, arguments);
+  const m = nutriMealLog(mid, false);
+  if(m && m.adj && m.adj[fid] && m.adj[fid].x) return _nutriRemoverB49.apply(this, arguments);     // desfazer o "só eu"
+  const a = famAlcance();
+  if(a === 'grupo') return _famTiraGrupo(mid, fid);
+  if(a === 'eu') return _famTiraEu(mid, fid);
+  const nome = (NUTRI_ALIMENTOS[fid]||[''])[0];
+  famPerguntaAlcance('Tirar ' + nome, 'Você administra o cardápio compartilhado. Isso vale para todos ou só para você?',
+    ()=>_famTiraGrupo(mid, fid), ()=>_famTiraEu(mid, fid), 'Tirar do prato do grupo (todos)', 'Só eu não vou comer');
+};
+// ---------- acrescentar alimento ----------
+window.nutriAddAbrir = function(mid){
+  window.__famAddCasa = false;
+  if(!famSouAdm() || !famCompartilhada(mid)) return _nutriAddAbrirB49.apply(this, arguments);
+  const a = famAlcance();
+  if(a){ window.__famAddCasa = a === 'grupo'; return _nutriAddAbrirB49(mid); }
+  famPerguntaAlcance('Acrescentar alimento', 'Acrescentar ao prato compartilhado (todos recebem, cada um na própria proporção) ou só para você?',
+    ()=>{ window.__famAddCasa = true; _nutriAddAbrirB49(mid); }, ()=>{ window.__famAddCasa = false; _nutriAddAbrirB49(mid); },
+    'Acrescentar ao prato do grupo', 'Só para mim');
+};
+// ---------- trocar o prato ----------
+(function(){
+  const _troca = window.nutriTrocar; if(typeof _troca !== 'function') return;
+  window.nutriTrocar = function(chave){
+    try{
+      const mid = String(chave).replace(/v$/,''); const P = famParams(); const d = nutriDiaSel(), dk = nutriKeyDia(d);
+      const grupoDoDia = P && P.casa && famSouAdm() && famDaCasaNoDia(P, mid, d, dk) && !famFora(dk, mid);
+      if(grupoDoDia){
+        const a = famAlcance();
+        const soEu = ()=>{ const n = nutriConfig(); n.famFora = n.famFora || {}; n.famFora[_famForaKey(dk, mid)] = 1;
+          try{ const dia = (state.nutriLog||{})[dk]; if(dia) delete dia[mid]; }catch(e){}
+          nutriAbrirRef(chave); saveData(); openNutri(); famDesfazer('Prato trocado só para você neste dia.', ()=>famVoltarCasa(mid)); };
+        const grupo = ()=>{
+          const c = famCache() || {}; const antT = ((c.config||{}).trocas||{})[chave]; const antC = c.cardapio && c.cardapio[dk] ? c.cardapio[dk][mid] : undefined;
+          _troca.call(this, chave);
+          famDesfazer('Prato do grupo trocado para todos.', ()=>{
+            const c2 = famCache(); c2.config = c2.config || {}; c2.config.trocas = c2.config.trocas || {};
+            const campos = {};
+            if(antT == null){ delete c2.config.trocas[chave]; campos['config.trocas.' + chave] = firebase.firestore.FieldValue.delete(); }
+            else { c2.config.trocas[chave] = antT; campos['config.trocas.' + chave] = antT; }
+            if(antC !== undefined){ c2.cardapio = c2.cardapio || {}; c2.cardapio[dk] = c2.cardapio[dk] || {}; c2.cardapio[dk][mid] = antC; campos['cardapio.' + dk + '.' + mid] = antC; }
+            _famGuardaCache(c2); _famAtualiza(campos); famAgendaEnvio(); saveData(); openNutri();
+          });
+        };
+        if(a === 'eu') return soEu();
+        if(a === 'grupo') return grupo();
+        return famPerguntaAlcance('Trocar o prato', `Você administra o cardápio compartilhado. Trocar o prato de ${NUTRI_DIAS[d-1].toLowerCase()} para todos ou só para você neste dia?`,
+          grupo, soEu, 'Trocar para o grupo todo', 'Só para mim neste dia');
+      }
+    }catch(e){ console.log('trocar prato (alcance):', e); }
+    return _troca.apply(this, arguments);
+  };
+})();
+// ---------- a linha de alcance dentro das refeições compartilhadas ----------
+mtGancho('openNutri', { depois(){
+  try{
+    if(typeof famAtiva !== 'function' || !famAtiva() || !famSouAdm()) return;
+    if(nutriDiaSel() < getDayIdx()) return;
+    const mi = $('modal-inner'); if(!mi) return;
+    const a = famAlcance() || 'perguntar';
+    mi.querySelectorAll('.fam-info').forEach(fi=>{
+      if(fi.querySelector('.fam-alc') || !/Prato compartilhado/.test(fi.textContent)) return;
+      fi.insertAdjacentHTML('beforeend', `<div class="fam-alc" role="group" aria-label="Suas mudanças valem para"><span>Suas mudanças valem para:</span>
+        ${[['perguntar','Perguntar'],['eu','Só para mim'],['grupo','Grupo todo']].map(([v,t])=>`<button type="button" class="fam-alc-b ${v===a?'on':''}" data-v="${v}" onclick="famAlcanceToca(${v==='perguntar'?'null':`'${v}'`})">${t}</button>`).join('')}</div>`);
+    });
+  }catch(e){}
+}});
+(function(){ if(document.getElementById('fam-alc-css')) return; const s = document.createElement('style'); s.id = 'fam-alc-css';
+s.textContent = `.fam-alc{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text-dim)}
+.fam-alc>span{width:100%}
+.fam-alc-b{flex:1;min-height:34px;padding:4px 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);font:inherit;font-weight:700;font-size:12px;cursor:pointer}
+.fam-alc-b.on{border-color:var(--primary);color:var(--text);background:rgba(var(--primary-rgb),.14)}
+.fam-lembrar{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+#mt-desfazer{position:fixed;left:12px;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:500;max-width:480px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:14px;background:var(--text-strong,#fff);color:var(--bg,#000);font-size:13.5px;box-shadow:var(--shadow-md);transform:translateY(20px);opacity:0;pointer-events:none;transition:all .25s ease}
+#mt-desfazer.on{transform:none;opacity:1;pointer-events:auto}
+#mt-desfazer span{flex:1}
+#mt-desfazer button{border:none;background:none;color:var(--primary-2,var(--primary));font:inherit;font-weight:900;cursor:pointer;padding:6px}`; document.head.appendChild(s); })();
+
+// =====================================================================
+// 76. RC 2 — Sono e recuperação (opcional, desligado por padrão)
+// ---------------------------------------------------------------------
+// Por que assim: um registro que pede atenção várias vezes ao dia (como a água) acaba abandonado.
+// O sono pede UMA resposta por dia, de manhã, e só para quem ligou.
+//  • Ligar/desligar e ver tudo em Progresso › "Sono e recuperação" (gráfico de 30 noites: horas por noite,
+//    cor pela qualidade, faixa de 7–9 h; média, regularidade do horário de dormir e qualidade).
+//  • Ligado: na Home, de manhã (4h–14h), uma linha "Como você dormiu?" com Mal / Ok / Bem num toque,
+//    "detalhes" (horas OU horários de dormir/acordar, disposição ao acordar) e ✕ para pular o dia.
+//    Some depois de responder ou pular. Dias sem registro não contam nada (nem para o bem nem para o mal).
+//  • Qualquer campo é opcional: só horas, só horários, só qualidade.
+//  • Na recuperação (sem mudar treino por uma noite):
+//      - uma noite ruim (qualidade "mal", menos de 6 h ou acordou cansado) → aviso discreto no treino do dia;
+//      - 2 das últimas 3 noites ruins → sugestão de priorizar recuperação (versão leve se o corpo pedir);
+//      - na avaliação semanal da corrida: 3+ noites ruins na semana (com 4+ registradas) seguram um AVANÇO
+//        (mantém, explicando). Nunca recua o plano por causa do sono;
+//      - musculação: com 2+ noites ruins, a orientação "subir carga" ganha "se o aquecimento pesar, mantenha".
+//  • Horas de sono não são garantia de recuperação nem diagnóstico: o texto diz isso.
+// Dados: state.sono = { on, n:{ 'AAAA-MM-DD':{ h, dor, aco, q, d } }, pulou } (campo novo e opcional;
+// passa pela limpeza da nuvem). Guarda 180 noites.
+// =====================================================================
+const SONO_Q = { 1:['Mal','#e07a6a'], 2:['Ok','#e2b13c'], 3:['Bem','#3fbfa6'] };
+const SONO_D = { 1:'Cansado(a)', 2:'Normal', 3:'Disposto(a)' };
+function sonoEst(){ state.sono = state.sono && typeof state.sono === 'object' ? state.sono : { on:false, n:{} }; state.sono.n = state.sono.n || {}; return state.sono; }
+function sonoLigado(){ return !!(state.sono && state.sono.on); }
+function _sonoHoje(){ return chaveDia(new Date()); }
+function _sonoMin(hhmm){ const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm||'')); return m ? (+m[1])*60 + (+m[2]) : null; }
+function sonoHorasDe(dor, aco){ const a = _sonoMin(dor), b = _sonoMin(aco); if(a == null || b == null) return null; let d = b - a; if(d <= 0) d += 1440; return Math.round(d/6)/10; }
+function sonoNoite(dk){ return ((state.sono||{}).n||{})[dk] || null; }
+function sonoRuim(x){ return !!x && (x.q === 1 || (x.h != null && x.h < 6) || x.d === 1); }
+function _sonoUltimas(dias){ const out = []; for(let i=0; i<dias; i++){ const dk = chaveDia(new Date(Date.now() - i*86400000)); out.push({ dk, x:sonoNoite(dk) }); } return out; }
+// sinal de recuperação (null quando não há registro suficiente)
+function sonoSinal(){
+  if(!sonoLigado()) return null;
+  const u3 = _sonoUltimas(3); const hoje = u3[0].x;
+  const ruins3 = u3.filter(o=>sonoRuim(o.x)).length;
+  if(ruins3 >= 2) return { k:'varias', txt:'Duas ou mais noites ruins nos últimos dias. Priorize a recuperação: se o treino de hoje for intenso e o corpo pedir, faça a versão leve. Isso é orientação, não regra.' };
+  if(sonoRuim(hoje)) return { k:'noite', txt:`Noite ${hoje.h != null && hoje.h < 6 ? `curta (${String(hoje.h).replace('.',',')} h)` : 'ruim'}. Uma noite só não muda o plano: faça o treino de hoje no esforço mais baixo da faixa e aqueça com calma.` };
+  return null;
+}
+function sonoSemanaRuins(semTs){
+  if(!sonoLigado()) return null; let reg = 0, ruins = 0;
+  for(let i=0; i<7; i++){ const dk = chaveDia(new Date(semTs + i*86400000 + 12*3600000)); const x = sonoNoite(dk); if(x){ reg++; if(sonoRuim(x)) ruins++; } }
+  return { reg, ruins };
+}
+// ---------- registrar ----------
+function sonoSalvar(dk, dados){
+  const S = sonoEst(); const ant = S.n[dk] || {};
+  const x = Object.assign({}, ant, dados);
+  if(x.dor && x.aco){ const h = sonoHorasDe(x.dor, x.aco); if(h) x.h = h; }
+  Object.keys(x).forEach(k=>{ if(x[k] == null || x[k] === '') delete x[k]; });
+  if(!Object.keys(x).length) delete S.n[dk]; else S.n[dk] = x;
+  const lim = chaveDia(new Date(Date.now() - 180*86400000)); Object.keys(S.n).forEach(k=>{ if(k < lim) delete S.n[k]; });
+  saveData();
+}
+function sonoRapido(q){ sonoSalvar(_sonoHoje(), { q }); toast(`Anotado: dormiu ${SONO_Q[q][0].toLowerCase()}.`); _sonoHomeDesenha(); }
+function sonoPular(){ const S = sonoEst(); S.pulou = _sonoHoje(); saveData(); _sonoHomeDesenha(); }
+function sonoRegistrar(dk){
+  dk = dk || _sonoHoje(); const x = sonoNoite(dk) || {}; window.__sonoDk = dk; window.__sonoQ = x.q || null; window.__sonoD = x.d || null;
+  const modo = x.dor || x.aco ? 'hor' : 'h';
+  const hh = x.h != null && !x.dor ? Math.floor(x.h) : '', mm = x.h != null && !x.dor ? Math.round((x.h % 1)*60) : '';
+  const dt = new Date(dk + 'T12:00:00');
+  $('modal-inner').innerHTML = `<div id="sono-reg"><h3>Como você dormiu?</h3>
+    <p class="mt-muted" style="margin:2px 0 12px">Noite que terminou em ${dt.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit' })}. Tudo é opcional.</p>
+    <div class="sono-lbl">Qualidade</div>
+    <div class="sono-tri" id="sono-q">${[1,2,3].map(q=>`<button type="button" class="${x.q===q?'on':''}" data-v="${q}" onclick="_sonoMarca('q',${q})">${SONO_Q[q][0]}</button>`).join('')}</div>
+    <div class="sono-lbl">Quanto dormiu</div>
+    <div class="sono-tri sono-modo"><button type="button" class="${modo==='h'?'on':''}" onclick="_sonoModo('h')">Horas</button><button type="button" class="${modo==='hor'?'on':''}" onclick="_sonoModo('hor')">Horários</button></div>
+    <div id="sono-h" ${modo==='h'?'':'hidden'} class="sono-campos"><label>Horas<input class="input mono" type="number" min="0" max="16" inputmode="numeric" id="sono-hh" value="${hh}" placeholder="7"></label><label>Minutos<input class="input mono" type="number" min="0" max="59" step="5" inputmode="numeric" id="sono-mm" value="${mm}" placeholder="30"></label></div>
+    <div id="sono-hor" ${modo==='hor'?'':'hidden'} class="sono-campos"><label>Dormi<input class="input mono" type="time" id="sono-dor" value="${x.dor||''}"></label><label>Acordei<input class="input mono" type="time" id="sono-aco" value="${x.aco||''}"></label></div>
+    <div class="sono-lbl">Ao acordar</div>
+    <div class="sono-tri" id="sono-d">${[1,2,3].map(v=>`<button type="button" class="${x.d===v?'on':''}" data-v="${v}" onclick="_sonoMarca('d',${v})">${SONO_D[v]}</button>`).join('')}</div>
+    <div class="row" style="gap:8px;margin-top:16px"><button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button><button class="btn btn-primary btn-block" onclick="sonoRegSalva()">Salvar</button></div>
+    ${sonoNoite(dk) ? `<button class="link-mais" style="margin-top:10px" onclick="sonoApaga('${dk}')">Apagar esta noite</button>` : ''}</div>`;
+  $('modal-back').classList.add('on');
+}
+function _sonoMarca(k, v){ const cur = k === 'q' ? window.__sonoQ : window.__sonoD; const nv = cur === v ? null : v; if(k === 'q') window.__sonoQ = nv; else window.__sonoD = nv;
+  document.querySelectorAll(`#sono-${k} button`).forEach(b=>b.classList.toggle('on', +b.dataset.v === nv)); }
+function _sonoModo(m){ $('sono-h').hidden = m !== 'h'; $('sono-hor').hidden = m !== 'hor'; document.querySelectorAll('.sono-modo button').forEach((b,i)=>b.classList.toggle('on', (i===0) === (m==='h'))); }
+function sonoRegSalva(){
+  const dk = window.__sonoDk || _sonoHoje(); const d = { q: window.__sonoQ || null, d: window.__sonoD || null, h:null, dor:null, aco:null };
+  if(!$('sono-hor').hidden){ d.dor = $('sono-dor').value || null; d.aco = $('sono-aco').value || null; if(d.dor && d.aco) d.h = sonoHorasDe(d.dor, d.aco); }
+  else { const h = +$('sono-hh').value || 0, m = +$('sono-mm').value || 0; if(h > 16 || m > 59 || h < 0 || m < 0){ toast('Confira as horas e os minutos'); return; } if(h || m) d.h = Math.round((h + m/60)*10)/10; }
+  if(d.h != null && (d.h < 0.5 || d.h > 16)){ toast('Confira o tempo de sono'); return; }
+  const S = sonoEst(); const ant = S.n[dk] || {}; const novo = Object.assign({}, ant);
+  ['q','d','h','dor','aco'].forEach(k=>{ if(d[k] == null) delete novo[k]; else novo[k] = d[k]; });
+  if(!Object.keys(novo).length){ closeModal(); return; }
+  S.n[dk] = novo; saveData(); closeModal(); toast('Noite registrada.'); _sonoHomeDesenha();
+  try{ if($('sono-tela')) openSono(); }catch(e){}
+}
+function sonoApaga(dk){ const S = sonoEst(); delete S.n[dk]; saveData(); openSono(); }
+function sonoLigar(on){ const S = sonoEst(); S.on = !!on; saveData(); _sonoHomeDesenha(); sonoEntrada(); if($('modal-back').classList.contains('on')) openSono(); toast(on ? 'Sono ligado: uma pergunta rápida de manhã, na Home.' : 'Sono desligado. Os registros ficam guardados.'); }
+// ---------- Home: uma linha de manhã ----------
+function _sonoHomeDesenha(){
+  try{
+    const v = $('sono-manha'); if(v) v.remove();
+    if(!sonoLigado()) return;
+    const S = sonoEst(); const dk = _sonoHoje(); const h = new Date().getHours();
+    if(S.n[dk] || S.pulou === dk || h < 4 || h >= 14) return;
+    const scr = $('scr-home'); const wrap = scr && scr.querySelector('.wrap'); if(!wrap) return;
+    // logo abaixo da saudação (antes dos blocos que a parte 28 reordena)
+    const ref = $('home-greet-row') ? $('home-greet-row').nextElementSibling : ($('home-quick') || wrap.querySelector('.week'));
+    const html = `<div class="sono-manha" id="sono-manha" role="group" aria-label="Como você dormiu?"><span class="sm-t">Como você dormiu?</span>
+      <span class="sm-b">${[1,2,3].map(q=>`<button type="button" onclick="sonoRapido(${q})">${SONO_Q[q][0]}</button>`).join('')}</span>
+      <button type="button" class="sm-det" onclick="sonoRegistrar()">detalhes</button><button type="button" class="sm-x" onclick="sonoPular()" aria-label="Pular hoje">✕</button></div>`;
+    if(ref) ref.insertAdjacentHTML('beforebegin', html); else wrap.insertAdjacentHTML('afterbegin', html);
+  }catch(e){}
+}
+mtGancho('renderHome', { depois(){ _sonoHomeDesenha(); } });
+try{ if(typeof INICIO_BLOCOS !== 'undefined' && !INICIO_BLOCOS.some(b=>b.k === 'sono')) INICIO_BLOCOS.splice(2, 0, { k:'sono', nome:'Sono (de manhã)', desc:'só para quem ligou em Progresso › Sono', sel:['#sono-manha'] }); }catch(e){}
+// ---------- Progresso: entrada e tela ----------
+function sonoEntrada(){
+  try{
+    const scr = $('scr-perf'); if(!scr) return; const wrap = scr.querySelector('.wrap'); if(!wrap) return;
+    const v = $('sono-entrada'); if(v) v.remove();
+    const S = state.sono || {}; const regs = Object.keys(S.n||{}).length;
+    const sub = sonoLigado() ? (regs ? `${_sonoResumo(14).txt}` : 'Ligado: responda de manhã na Home') : 'Opcional: registre como dormiu e veja a recuperação';
+    const html = `<button type="button" class="card integ-hist" id="sono-entrada" onclick="openSono()"><span class="ii-ico">🌙</span><span class="ii-tx"><b>Sono e recuperação</b><small>${mtEsc(sub)}</small></span><span class="ii-seta">›</span></button>`;
+    const cd = $('cd-entrada'); if(cd) cd.insertAdjacentHTML('afterend', html); else wrap.insertAdjacentHTML('beforeend', html);
+  }catch(e){}
+}
+mtGancho('renderPerf', { depois(){ sonoEntrada(); } });
+mtGancho('goTab', { depois(t){ if(t === 'perf') sonoEntrada(); } });
+try{ if(typeof PERF_BLOCOS !== 'undefined' && !PERF_BLOCOS.some(b=>b.k === 'sono')){ PERF_BLOCOS.push({ k:'sono', nome:'Sono e recuperação', desc:'opcional', sel:['#sono-entrada'] }); if(typeof PERF_PADRAO !== 'undefined') PERF_PADRAO.push('sono'); } }catch(e){}
+function _sonoResumo(dias){
+  const L = _sonoUltimas(dias).filter(o=>o.x);
+  const hs = L.filter(o=>o.x.h != null).map(o=>o.x.h); const med = hs.length ? hs.reduce((a,b)=>a+b,0)/hs.length : null;
+  const ruins = L.filter(o=>sonoRuim(o.x)).length;
+  const dor = L.filter(o=>o.x.dor).map(o=>{ let m = _sonoMin(o.x.dor); if(m < 12*60) m += 1440; return m; });
+  let dp = null; if(dor.length >= 3){ const md = dor.reduce((a,b)=>a+b,0)/dor.length; dp = Math.round(Math.sqrt(dor.reduce((t,v)=>t + (v-md)**2, 0)/dor.length)); }
+  const q = { 1:0, 2:0, 3:0 }; L.forEach(o=>{ if(o.x.q) q[o.x.q]++; });
+  const txt = L.length ? `${L.length} ${L.length===1?'noite':'noites'} em ${dias} dias${med ? ` · média ${String(Math.round(med*10)/10).replace('.',',')} h` : ''}` : 'Nenhuma noite registrada ainda';
+  return { n:L.length, med, ruins, dp, q, txt };
+}
+function sonoGrafico(dias){
+  const L = _sonoUltimas(dias).reverse();
+  const W = 330, H = 170, pl = 26, pb = 22, pt = 8; const max = 11;
+  const bw = (W - pl - 6) / dias; const Y = h=>pt + (1 - Math.min(h, max)/max) * (H - pt - pb);
+  let barras = '';
+  L.forEach((o,i)=>{ const x = pl + i*bw + bw*0.15, w = Math.max(2, bw*0.7);
+    if(!o.x) return;
+    const cor = o.x.q ? SONO_Q[o.x.q][1] : 'var(--text-mute)';
+    const dt = new Date(o.dk + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+    if(o.x.h != null) barras += `<rect x="${x.toFixed(1)}" y="${Y(o.x.h).toFixed(1)}" width="${w.toFixed(1)}" height="${(H - pb - Y(o.x.h)).toFixed(1)}" rx="2" fill="${cor}"><title>${dt}: ${String(o.x.h).replace('.',',')} h${o.x.q ? ' · ' + SONO_Q[o.x.q][0] : ''}</title></rect>`;
+    else barras += `<circle cx="${(x + w/2).toFixed(1)}" cy="${(H - pb - 6).toFixed(1)}" r="${Math.min(4, w/2+1).toFixed(1)}" fill="${cor}"><title>${dt}: ${o.x.q ? SONO_Q[o.x.q][0] : 'registrada'} (sem horas)</title></circle>`;
+  });
+  const faixa = `<rect x="${pl}" y="${Y(9).toFixed(1)}" width="${W-pl-6}" height="${(Y(7)-Y(9)).toFixed(1)}" fill="var(--primary)" opacity=".08"/><line x1="${pl}" x2="${W-6}" y1="${Y(7).toFixed(1)}" y2="${Y(7).toFixed(1)}" stroke="var(--text-mute)" stroke-dasharray="3 3" stroke-width="1"/>`;
+  const eixo = [0, 4, 7, 9].map(h=>`<text x="2" y="${(Y(h)+4).toFixed(1)}" class="cd-t">${h}h</text>`).join('')
+    + `<text x="${pl}" y="${H-4}" class="cd-t">${new Date(L[0].dk + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' })}</text><text x="${W-6}" y="${H-4}" class="cd-t" text-anchor="end">hoje</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="cd-svg" role="img" aria-label="Horas de sono nas últimas ${dias} noites">${faixa}${eixo}${barras}</svg>`;
+}
+let _sonoDias = 30;
+function openSono(){
+  const mi = $('modal-inner'); mi.classList.remove('modal-video','modal-ex');
+  const S = state.sono || {};
+  if(!sonoLigado()){
+    mi.innerHTML = `<div id="sono-tela"><h3>🌙 Sono e recuperação</h3>
+      <p class="integ-p">Opcional. Se ligar, o app pergunta de manhã, na Home, como você dormiu (um toque: Mal, Ok ou Bem). Horas, horários e disposição ao acordar são opcionais.</p>
+      <p class="integ-p">Com isso, o MetaTreino passa a <b>orientar</b> a recuperação: avisa depois de noites ruins e não acelera a progressão da corrida numa semana de sono ruim. Ele <b>nunca</b> corta um treino por causa de uma noite só.</p>
+      <p class="integ-mini">Horas de sono não garantem recuperação e o app não faz avaliação médica. Os dados ficam na sua conta e não são compartilhados com o grupo.</p>
+      ${Object.keys(S.n||{}).length ? `<p class="integ-mini">Você tem ${Object.keys(S.n).length} noite(s) guardada(s).</p>` : ''}
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="sonoLigar(true)">Ligar o acompanhamento do sono</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Agora não</button></div>`;
+    $('modal-back').classList.add('on'); return;
+  }
+  const R = _sonoResumo(_sonoDias); const sinal = sonoSinal();
+  const lista = _sonoUltimas(14).filter(o=>o.x);
+  const card = (r, v)=>`<div class="ip-c"><small>${r}</small><b>${v}</b></div>`;
+  mi.innerHTML = `<div id="sono-tela"><h3>🌙 Sono e recuperação</h3>
+    <div class="cd-chips cd-per">${[[7,'7 noites'],[30,'30 noites'],[90,'90 noites']].map(([d,n])=>`<button type="button" class="${_sonoDias===d?'on':''}" onclick="_sonoDias=${d};openSono()">${n}</button>`).join('')}</div>
+    <div class="ip-cards">${card('Registradas', `${R.n} de ${_sonoDias}`)}${card('Média', R.med ? `${String(Math.round(R.med*10)/10).replace('.',',')} h` : '—')}${card('Noites ruins', R.n ? `${R.ruins}` : '—')}${card('Horário de dormir', R.dp != null ? (R.dp <= 30 ? 'regular' : R.dp <= 60 ? 'varia um pouco' : 'irregular') : '—')}</div>
+    <div class="cd-graf">${sonoGrafico(_sonoDias)}</div>
+    <p class="integ-mini">Barras: horas da noite (cor = qualidade: <span style="color:${SONO_Q[3][1]}">bem</span>, <span style="color:${SONO_Q[2][1]}">ok</span>, <span style="color:${SONO_Q[1][1]}">mal</span>). Faixa clara: 7 a 9 h, a recomendação geral para adultos. Pontos: noite com qualidade, sem horas.</p>
+    ${sinal ? `<div class="run-st-dec rx-ori rx-atencao" style="margin-top:10px">${sinal.txt}</div>` : ''}
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="sonoRegistrar()">${sonoNoite(_sonoHoje()) ? 'Editar a noite de hoje' : 'Registrar a noite de hoje'}</button>
+    ${lista.length ? `<div class="section-lbl" style="margin:14px 0 4px">Últimas noites</div>${lista.map(o=>`<button type="button" class="integ-item" onclick="sonoRegistrar('${o.dk}')"><span class="ii-tx"><b>${new Date(o.dk+'T12:00:00').toLocaleDateString('pt-BR',{ weekday:'short', day:'2-digit', month:'2-digit' })}</b><small>${[o.x.h != null ? String(o.x.h).replace('.',',') + ' h' : '', o.x.dor && o.x.aco ? `${o.x.dor}–${o.x.aco}` : '', o.x.q ? SONO_Q[o.x.q][0] : '', o.x.d ? SONO_D[o.x.d] : ''].filter(Boolean).join(' · ')}</small></span><span class="ii-seta">›</span></button>`).join('')}` : ''}
+    <details class="integ-sec"><summary>Como o app usa o sono</summary>
+      <p class="integ-mini">Noite ruim = qualidade "mal", menos de 6 h ou acordou cansado(a). Uma noite ruim: aviso no treino do dia. Duas nas últimas três: sugestão de priorizar a recuperação. Três ou mais na semana (com pelo menos 4 registradas): a corrida não avança naquela semana, mantém. A musculação lembra de não forçar carga nova se o aquecimento pesar. Nada é alterado por uma noite só, e noites sem registro não contam.</p></details>
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>
+    <button class="link-mais" style="margin-top:8px" onclick="sonoLigar(false)">Desligar o acompanhamento</button></div>`;
+  $('modal-back').classList.add('on');
+}
+// ---------- influência na recuperação ----------
+(function(){
+  const _st = window.runStatusCard; if(typeof _st === 'function') window.runStatusCard = function(){
+    let h = _st.apply(this, arguments);
+    try{ const s = sonoSinal(); if(s && h) h = h.replace('<div class="run-st-a">', `<div class="run-st-dec rx-ori rx-info">🌙 ${s.txt}</div><div class="run-st-a">`); }catch(e){}
+    return h;
+  };
+  const _av = window.rAvaliarSemana; if(typeof _av === 'function') window.rAvaliarSemana = function(ctx, motor, semTs){
+    const res = _av.apply(this, arguments);
+    try{
+      const s = sonoSemanaRuins(semTs);
+      if(res && res.decisao === 'avancar' && s && s.reg >= 4 && s.ruins >= 3){ res.decisao = 'manter'; res.motivo += `; ${s.ruins} de ${s.reg} noites registradas foram ruins — o plano mantém esta semana para você recuperar (não é castigo)`; }
+    }catch(e){}
+    return res;
+  };
+  const _hint = window.smartProgressionHint; if(typeof _hint === 'function') window.smartProgressionHint = function(exId){
+    const h = _hint.apply(this, arguments);
+    try{ const s = sonoSinal(); if(h && h.cls === 'card-ok' && s && s.k === 'varias') return Object.assign({}, h, { txt: h.txt + ' 🌙 Seu sono andou ruim: se o aquecimento pesar, mantenha a carga de antes hoje.' }); }catch(e){}
+    return h;
+  };
+})();
+(function(){ if(document.getElementById('sono-css')) return; const s = document.createElement('style'); s.id = 'sono-css';
+s.textContent = `#scr-home .wrap > .sono-manha{order:11}
+.sono-manha{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin:10px 0;padding:10px 12px;border-radius:var(--radius-card,16px);border:1px solid var(--border);background:var(--surface)}
+.sono-manha .sm-t{font-weight:800;font-size:13.5px;flex:1 1 100%}
+.sono-manha .sm-b{display:flex;gap:6px;flex:1}
+.sono-manha .sm-b button,.sono-tri button{flex:1;min-height:38px;border-radius:12px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);font:inherit;font-weight:800;font-size:13px;cursor:pointer}
+.sono-manha .sm-det{border:none;background:none;color:var(--text-dim);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:6px}
+.sono-manha .sm-x{border:none;background:none;color:var(--text-mute);font-size:15px;cursor:pointer;padding:6px 4px}
+.sono-lbl{font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--text-mute);margin:12px 0 6px}
+.sono-tri{display:flex;gap:6px}
+.sono-tri button.on{border-color:var(--primary);background:rgba(var(--primary-rgb),.16)}
+.sono-campos{display:flex;gap:10px;margin-top:8px}
+.sono-campos label{flex:1;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-dim)}`; document.head.appendChild(s); })();
+
+// =====================================================================
+// 77. RC 2 — Desafio juntos (cooperativo) e conquistas compartilhadas
+// ---------------------------------------------------------------------
+// Usa o grupo que já existe (Perfil › Meu grupo). Nada de sistema novo de grupos e nenhuma regra nova no
+// Firestore: cada pessoa só escreve o PRÓPRIO perfil no documento do grupo (perfis.<uid>), o que a regra da
+// Beta 49 já permite.
+//  • Cada pessoa entra se quiser e escolhe a PRÓPRIA meta: quantos dias com treino por semana (qualquer
+//    modalidade: musculação, corrida, caminhada, bike, calistenia). Ninguém precisa fazer o mesmo treino.
+//  • O que vai para o grupo (só de quem entrou): meta e o NÚMERO de dias treinados nas últimas 6 semanas,
+//    e se concluiu uma prova (data). Nada de cargas, distâncias, peso, sono ou alimentação.
+//  • Semana "juntos" = todas as pessoas que estão no desafio (2 ou mais) bateram a própria meta. Não é
+//    competição: não há ranking, só "vocês".
+//  • Conquistas (categoria "Treinando juntos"): Primeira Semana Juntos, 10 Sessões no Desafio (suas),
+//    Quatro Semanas Juntos (seguidas) e, secreta, Prova no Grupo (alguém do desafio concluiu uma prova).
+// Dados locais: state.desafioJuntos = { on, meta, desde } (opcional). Publicado: perfis.<uid>.dj.
+// =====================================================================
+function djEst(){ state.desafioJuntos = state.desafioJuntos && typeof state.desafioJuntos === 'object' ? state.desafioJuntos : { on:false }; return state.desafioJuntos; }
+function djLigado(){ return !!(state.desafioJuntos && state.desafioJuntos.on); }
+function _djSem(ts){ return (typeof rSem === 'function') ? rSem(ts) : (()=>{ const d = new Date(ts); d.setHours(0,0,0,0); d.setDate(d.getDate() - ((d.getDay()+6)%7)); return d.getTime(); })(); }
+// dias com treino por semana (qualquer modalidade), a partir do histórico
+function djMinhasSemanas(){
+  const dias = new Set();
+  ['lift','run'].forEach(mk=>(((state.modules[mk]||{}).history)||[]).forEach(x=>{ if(x && x.at && (+x.duration||0) > 0) dias.add(mtDia0(x.at)); }));
+  const sem = {}; dias.forEach(d=>{ const s = _djSem(d); sem[s] = (sem[s]||0) + 1; });
+  return sem;
+}
+function _djMinhaProva(){
+  try{ const r = (((state.modules.run||{}).history)||[]).filter(x=>x && x.isRace).map(x=>x.at); return r.length ? Math.max(...r) : null; }catch(e){ return null; }
+}
+// o que publico (curto; o Firestore não aceita lista dentro de lista, então é um mapa)
+function djPublica(){
+  if(!djLigado()) return null;
+  const D = djEst(); const S = djMinhasSemanas(); const atual = _djSem(Date.now());
+  const s = {}; for(let i=0; i<6; i++){ const w = atual - i*7*86400000; if(w >= (D.desde||0)) s[String(w)] = S[w] || 0; }
+  const out = { on:1, m:D.meta || 3, d:D.desde || atual, s };
+  const p = _djMinhaProva(); if(p && p >= (D.desde||0)) out.p = p;
+  return out;
+}
+(function(){
+  const _mp = window._famMeuPerfil; if(typeof _mp !== 'function') return;
+  window._famMeuPerfil = function(){ const o = _mp.apply(this, arguments); try{ const dj = djPublica(); if(dj) o.dj = dj; }catch(e){} return o; };
+})();
+// participantes (eu + quem do grupo está no desafio)
+function djParticipantes(){
+  try{
+    if(typeof famAtiva !== 'function' || !famAtiva()) return [];
+    const c = famCache() || {}; const eu = _famUid(); const out = [];
+    famMembros().forEach(u=>{
+      const dj = u === eu ? djPublica() : ((c.perfis||{})[u]||{}).dj;
+      if(dj && dj.on) out.push({ uid:u, eu: u === eu, nome: u === eu ? 'Você' : famNome(u), meta: +dj.m || 3, desde: +dj.d || 0, s: dj.s || {}, prova: dj.p || null });
+    });
+    return out;
+  }catch(e){ return []; }
+}
+function djSemanas(){
+  const P = djParticipantes(); if(P.length < 2) return { P, juntas:[], seguidas:0, atual:null };
+  const atual = _djSem(Date.now()); const ini = Math.max(...P.map(p=>p.desde));
+  const juntas = [];
+  for(let w = ini; w < atual; w += 7*86400000){ if(P.every(p=>(+p.s[String(w)]||0) >= p.meta)) juntas.push(w); }
+  let seg = 0, best = 0, prev = null; juntas.forEach(w=>{ seg = (prev != null && w - prev === 7*86400000) ? seg+1 : 1; best = Math.max(best, seg); prev = w; });
+  return { P, juntas, seguidas:best, atual };
+}
+function djMinhasSessoes(){
+  const D = djEst(); if(!D.on && !D.desde) return 0; const S = djMinhasSemanas();
+  return Object.keys(S).filter(w=>+w >= (D.desde||0)).reduce((t,w)=>t + S[w], 0);
+}
+// ---------- tela (dentro de Meu grupo) ----------
+function djSecao(){
+  if(typeof famAtiva !== 'function' || !famAtiva() || famMembros().length < 2) return '';
+  const D = djEst();
+  if(!D.on){
+    return `<div class="dj-box" id="dj-box"><b>Desafio juntos</b>
+      <p class="fam-p">Cada pessoa escolhe a própria meta de dias com treino por semana, de qualquer modalidade. Quando todos que entraram batem a meta, a semana conta para vocês. Não tem ranking.</p>
+      <p class="integ-mini">O grupo vê só a sua meta e quantos dias você treinou em cada semana. Nada de cargas, distâncias, peso ou alimentação.</p>
+      <button class="btn btn-primary btn-block" onclick="djEntrar()">Entrar no desafio</button></div>`;
+  }
+  const W = djSemanas(); const atual = _djSem(Date.now());
+  const linhas = W.P.map(p=>{ const n = +p.s[String(atual)] || 0; const ok = n >= p.meta;
+    return `<div class="dj-p"><span>${mtEsc(p.nome)}</span><span class="dj-bar"><i style="width:${Math.min(100, Math.round(n/p.meta*100))}%"></i></span><b class="${ok?'ok':''}">${n}/${p.meta}</b></div>`; }).join('');
+  const sozinho = W.P.length < 2;
+  return `<div class="dj-box" id="dj-box"><b>Desafio juntos</b>
+    ${sozinho ? '<p class="fam-p">Você entrou. Assim que mais alguém do grupo entrar, as semanas de vocês começam a contar.</p>' : `<p class="fam-p">Esta semana:</p>${linhas}
+    <p class="integ-mini">${W.juntas.length ? `${W.juntas.length} ${W.juntas.length===1?'semana':'semanas'} juntos${W.seguidas >= 2 ? ` · melhor sequência: ${W.seguidas}` : ''}.` : 'A primeira semana juntos conta quando todos baterem a própria meta.'} Suas sessões no desafio: ${djMinhasSessoes()}.</p>`}
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn btn-ghost btn-block" onclick="djMeta()">Minha meta: ${D.meta||3}/semana</button><button class="btn btn-ghost btn-block" onclick="djSair()">Sair</button></div></div>`;
+}
+function djEntrar(){ const D = djEst(); D.on = true; D.desde = D.desde && D.on ? D.desde : _djSem(Date.now()); D.meta = D.meta || _djMetaSugerida(); saveData(); try{ famAgendaEnvio(300); }catch(e){} djMeta(true); }
+function _djMetaSugerida(){ try{ const n = ['lift','run'].reduce((t,mk)=>t + ((((state.modules[mk]||{}).plan)||{}).workouts||[]).length, 0); return Math.max(2, Math.min(6, n || 3)); }catch(e){ return 3; } }
+function djMeta(primeira){
+  const D = djEst();
+  famEscolha(primeira ? 'Sua meta no desafio' : 'Mudar minha meta', `Quantos dias com treino por semana? Escolha o que cabe na sua rotina (sugestão pelo seu plano: ${_djMetaSugerida()}).`,
+    [2,3,4,5,6].map(n=>({ t:`${n} dias por semana${n===(D.meta||3)?' (atual)':''}`, f:()=>{ D.meta = n; saveData(); try{ famAgendaEnvio(300); }catch(e){} toast(`Meta: ${n} dias por semana.`); openFamilia(); } })));
+}
+function djSair(){ appConfirm('Você sai do desafio. As conquistas já ganhas continuam.', ()=>{ const D = djEst(); D.on = false; D.desde = null; saveData(); try{ famAgendaEnvio(300); }catch(e){} openFamilia(); }, { title:'Sair do desafio juntos?', okLabel:'Sair' }); }
+mtGancho('openFamilia', { depois(){
+  try{
+    const mi = $('modal-inner'); if(!mi || mi.querySelector('#dj-box')) return;
+    const h = djSecao(); if(!h) return;
+    const bts = [...mi.querySelectorAll('.btn')]; const ultimo = bts[bts.length-1];
+    if(ultimo) ultimo.insertAdjacentHTML('beforebegin', h); else mi.insertAdjacentHTML('beforeend', h);
+  }catch(e){}
+}});
+// ---------- conquistas ----------
+const MT_TROFEUS_RC2 = [
+  { id:'jun_semana1', emoji:'🤝', name:'Primeira Semana Juntos', desc:'No desafio juntos, todos bateram a própria meta na mesma semana', cat:'dupla', nv:'comum' },
+  { id:'jun_10',      emoji:'🤝', name:'Dez no Desafio',         desc:'10 sessões suas dentro do desafio juntos',                         cat:'dupla', nv:'comum' },
+  { id:'jun_4sem',    emoji:'🤝', name:'Quatro Semanas Juntos',  desc:'4 semanas seguidas em que todos do desafio bateram a meta',         cat:'dupla', nv:'rara' },
+  { secret:true, id:'sec_provagrupo', emoji:'🏁', name:'Prova no Grupo', desc:'Alguém do desafio juntos concluiu uma prova', cat:'geral' }
+];
+(function(){ try{ const ids = new Set(TROPHIES.map(t=>t.id)); MT_TROFEUS_RC2.forEach(t=>{ if(!ids.has(t.id)) TROPHIES.push(t); }); }catch(e){} })();
+try{ Object.assign(TROPHY_ICO, { jun_semana1:['pair','1'], jun_10:['pair','10'], jun_4sem:['pair','4'], sec_provagrupo:['pair'] }); }catch(e){}
+function djChecaConquistas(){
+  try{
+    if(!djLigado()) return;
+    if(djMinhasSessoes() >= 10) unlockTrophy('jun_10');
+    const W = djSemanas(); if(W.P.length < 2) return;
+    if(W.juntas.length >= 1) unlockTrophy('jun_semana1');
+    if(W.seguidas >= 4) unlockTrophy('jun_4sem');
+    if(W.P.some(p=>p.prova && p.prova >= p.desde)) unlockTrophy('sec_provagrupo');
+  }catch(e){}
+}
+window.__conqChecadores = (window.__conqChecadores || []).concat([djChecaConquistas]);
+mtGancho('checkTrophies', { depois(){ djChecaConquistas(); } });
+(function(){ const _p = window.trophyProgress; if(typeof _p !== 'function') return;
+  window.trophyProgress = function(id){ try{ if(id === 'jun_10') return [Math.min(10, djMinhasSessoes()), 10]; if(id === 'jun_4sem') return [Math.min(4, djSemanas().seguidas), 4]; }catch(e){} return _p.apply(this, arguments); }; })();
+(function(){ if(document.getElementById('dj-css')) return; const s = document.createElement('style'); s.id = 'dj-css';
+s.textContent = `.dj-box{margin:14px 0;padding:14px;border-radius:var(--radius-card,16px);border:1px solid var(--border);background:var(--surface)}
+.dj-p{display:grid;grid-template-columns:minmax(70px,auto) 1fr auto;align-items:center;gap:10px;margin:6px 0;font-size:13.5px}
+.dj-bar{height:7px;border-radius:7px;background:var(--surface-2);overflow:hidden}.dj-bar i{display:block;height:100%;background:var(--primary);border-radius:7px}
+.dj-p b.ok{color:var(--primary-2,var(--primary))}`; document.head.appendChild(s); })();
+
+// =====================================================================
+// 78. RC 2 — Início enxuto para contas novas (Gratuito e Premium iguais)
+// ---------------------------------------------------------------------
+// Antes: conta nova via TODOS os blocos da Home (indicadores, água, frase, fase do plano…), e quem não usa
+// precisava descobrir "Personalizar início" para limpar. Agora a conta NOVA começa com o essencial:
+// treino de hoje, semana, atividade da semana, sugestão, desafio do mês, peso, alimentação e conquistas.
+// Ficam desligados (um toque em "Personalizar início" liga): Água, Frase do dia e Fase do plano.
+// Contas que já têm histórico ou que já mexeram na personalização NÃO mudam (e só roda ao concluir o cadastro).
+// O que o plano Gratuito não tem continua sendo tratado pelas regras de cada bloco (parte 36).
+// =====================================================================
+const INICIO_PADRAO_NOVO = ['agua', 'frase', 'plano'];
+function mtInicioPadraoNovo(){
+  try{
+    if(!state || state.inicioPadraoRC2) return false;
+    const temHist = ['lift','run'].some(mk=>(((state.modules[mk]||{}).history)||[]).length > 0);
+    if(Array.isArray(state.inicioOcultos) || temHist || state.inicioEnxuto){ state.inicioPadraoRC2 = 1; return false; }
+    state.inicioOcultos = INICIO_PADRAO_NOVO.slice(); state.inicioPadraoRC2 = 1;
+    try{ aplicaInicio(); }catch(e){}
+    saveData(); return true;
+  }catch(e){ return false; }
+}
+// só no CADASTRO de uma conta nova (fim do questionário inicial). Antes estava na abertura do app, mas a
+// cópia da nuvem pode chegar depois da abertura: uma conta antiga pareceria "nova" por um instante.
+mtGancho('saveQuiz', { depois(){ setTimeout(mtInicioPadraoNovo, 200); } });
+// Plano Gratuito: o Início só tem "Completo" e "Só o essencial" (parte 36) e ignora a escolha bloco a bloco.
+// Sem isto, a conta nova voltaria a ver TUDO quando o Teste Premium acabasse. Agora existe o modo "Padrão"
+// (o mesmo enxuto da conta nova) também no Gratuito, e a conta nova começa nele.
+(function(){
+  const _oc = window.inicioOcultos;
+  window.inicioOcultos = function(){
+    try{
+      const gratis = typeof _planoConhecido === 'function' && _planoConhecido() && typeof mtTem === 'function' && !mtTem('inicioCompleto');
+      if(gratis && state.inicioBasico === 'padrao'){
+        let oc = INICIO_PADRAO_NOVO.slice();
+        if(!mtTem('alimentacao') && !oc.includes('alimentacao')) oc = oc.concat('alimentacao');
+        return oc;
+      }
+    }catch(e){}
+    return _oc.apply(this, arguments);
+  };
+  const _ab = window.openPersonalizarInicio;
+  window.openPersonalizarInicio = function(){
+    const r = _ab.apply(this, arguments);
+    try{
+      if(typeof mtTem === 'function' && mtTem('inicioCompleto')) return r;
+      const ops = document.querySelector('#modal-inner .pl-opcoes'); if(!ops || ops.querySelector('[data-pd]')) return r;
+      const pd = state.inicioBasico === 'padrao';
+      if(pd) ops.querySelectorAll('.pl-op').forEach(b=>b.classList.remove('on'));
+      ops.insertAdjacentHTML('afterbegin', `<button type="button" data-pd="1" class="pl-op ${pd?'on':''}" onclick="piBasicoPadrao()"><b>Padrão</b><small>treino, semana, indicadores e desafios (sem água, frase e fase do plano)</small></button>`);
+    }catch(e){}
+    return r;
+  };
+})();
+function piBasicoPadrao(){ state.inicioBasico = 'padrao'; saveData(); aplicaInicio(); openPersonalizarInicio(); }
+(function(){
+  const _novo = window.mtInicioPadraoNovo;
+  window.mtInicioPadraoNovo = function(){ const r = _novo.apply(this, arguments); try{ if(r && !state.inicioBasico){ state.inicioBasico = 'padrao'; saveData(); } }catch(e){} return r; };
+})();

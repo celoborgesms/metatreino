@@ -2,6 +2,16 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. 2027 RC 2 — rotina real
+1. Som do cronômetro › Testar vibração › "Não senti": as opções de vibrar somem; "Testar de novo" devolve.
+2. Importe um .fit do relógio: aparece a régua de esforço sem nada marcado (ou "informado no relógio"). Salve sem responder; depois abra a atividade › Informar o esforço.
+3. Importe e escolha "Este treino era do seu plano?": o dia do plano fica feito. Com "atividade extra", ele não fica feito.
+4. Faça uma corrida extra puxada na véspera de um treino intenso: o cartão da corrida mostra a orientação de recuperação. Caminhada leve: nada.
+5. Progresso › Sono e recuperação › Ligar. Na manhã seguinte, responda na Home com um toque. Veja o gráfico.
+6. Cardápio compartilhado (administrador): escolha "Grupo todo", tire um alimento, toque em Desfazer. Troque para "Só para mim" e troque o prato.
+7. Meu grupo › Desafio juntos: as duas pessoas entram com metas diferentes; confira o "x/meta" de cada uma.
+8. Conta nova: a Home começa sem Água, Frase e Fase do plano.
+
 ## 00000. 2027 RC 1 — APK e vibração
 1. Som do cronômetro › Testar vibração: o celular vibra? Se não, siga o texto que aparece (vibração do sistema, economia de bateria, Não perturbe).
 2. Toque nos botões de esforço (fim do treino) e deslize no início: agora dá para sentir o toque.

@@ -1,3 +1,47 @@
+# MetaTreino 2027 RC 2 — rotina real: corridas extras, esforço na importação, sono, alcance no cardápio e desafio juntos
+
+**Não precisa publicar o `firestore.rules`.** Nada mudou nas regras. Os campos novos são opcionais (`sono`, `desafioJuntos`, `inicioPadraoRC2`, `inicioBasico: 'padrao'`, `rpe`/`rpeFonte` em atividades importadas, `famAlcance` no cardápio). Detalhes em `RELATORIO-RC2.md`.
+
+1. **Vibração honesta.** O navegador não informa se o motor vibrou de verdade (ele responde "ok" mesmo sem efeito). Agora:
+   - o **Testar vibração** pergunta "Sentiu?";
+   - se a resposta for "não", a opção de vibrar **some neste aparelho** (Som do cronômetro e cronômetro), e o fim do descanso fica no som e na tela;
+   - "Testar de novo" volta a oferecer, e um navegador sem vibração nem mostra a opção.
+   - Não dá para garantir a vibração pelo Chrome (nem no APK, que usa o Chrome). Há relato de que o Chrome ignora a vibração de sites no modo silencioso.
+2. **Esforço (RPE) na importação:**
+   - se o arquivo FIT trouxer o esforço que você respondeu no relógio, ele é usado ("7/10 · informado no relógio");
+   - se não trouxer (é o caso do Zepp/Amazfit, conferido no seu arquivo), aparece a **mesma régua 1–10** do registro manual, sem nada marcado, e dá para salvar sem responder;
+   - depois, no detalhe da atividade, dá para "Informar o esforço percebido";
+   - o "efeito de treino" e a "carga" do relógio não são confundidos com esforço.
+3. **Importação ligada ao plano de verdade:**
+   - escolha qual treino da semana a atividade foi, ou marque "foi uma atividade extra";
+   - o registro leva o tipo de sessão e o estágio. **Correção:** antes, a caminhada/corrida importada do iniciante nunca contava para avançar de estágio.
+4. **Importação de musculação retirada:** os relógios quase nunca gravam séries e cargas. Registro manual, histórico e importações antigas continuam; corrida, caminhada e bike não mudam.
+5. **Corridas fora do plano:**
+   - **o que muda na semana:**
+     - uma atividade extra **não conta** como treino do plano e **não pune** (fica fora da média de esforço);
+     - a **carga** dela (tempo × esforço) entra na análise: se foi grande e puxada, o plano mantém em vez de avançar e explica;
+     - extra parecido com um treino que faltou na semana conta como **treino feito em outro dia**;
+   - **antes do próximo treino:**
+     - extra exigente na véspera de um treino intenso ou longão → orientação de recuperação no cartão da corrida (sem cortar nada);
+     - caminhada leve → nenhum aviso.
+6. **Sono e recuperação (opcional, desligado por padrão):**
+   - ligue em Progresso › Sono e recuperação;
+   - de manhã, na Home, uma linha "Como você dormiu? Mal / Ok / Bem" (detalhes e pular opcionais);
+   - gráfico de 30/90 noites, com média, noites ruins e regularidade do horário de dormir;
+   - uma noite ruim gera um aviso; duas em três, uma sugestão de priorizar a recuperação;
+   - uma semana de sono ruim segura o avanço da corrida, sem recuar;
+   - nunca muda treino por uma noite.
+7. **Cardápio compartilhado: alcance das mudanças:**
+   - dentro de cada refeição compartilhada, o administrador escolhe "Suas mudanças valem para: Perguntar | Só para mim | Grupo todo";
+   - a escolha fica lembrada e vale para tirar, acrescentar e trocar o prato;
+   - mudança para o grupo tem **Desfazer**;
+   - trocar o prato não vale mais para todos sem perguntar.
+8. **Desafio juntos (Meu grupo):**
+   - cada pessoa entra se quiser, com a própria meta de dias por semana, em qualquer modalidade;
+   - o grupo vê só "2/3 nesta semana";
+   - conquistas novas: Primeira Semana Juntos, Dez no Desafio, Quatro Semanas Juntos e Prova no Grupo (secreta).
+9. **Início enxuto para contas novas** (Gratuito e Premium): Água, Frase do dia e Fase do plano começam desligados. Novo modo **"Padrão"** no Gratuito. Quem já usa o app não muda nada.
+
 # MetaTreino 2027 RC 1 — APK para Android e vibração corrigida
 
 **Não precisa publicar o `firestore.rules`.** Passo a passo do APK em `INSTALAR-APK.md`.
