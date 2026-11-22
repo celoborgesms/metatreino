@@ -337,7 +337,7 @@ function famEnviar(){
     if(!famAtiva()) return;
     const c = famCache(), uid = _famUid(); const campos = {};
     const meu = _famMeuPerfil(); const ant = (c.perfis||{})[uid] || null;
-    const sem = p=>p ? JSON.stringify({ veg:p.veg, lac:p.lac, glu:p.glu, fatores:p.fatores, compras:p.compras, semana:p.semana||null, tr:p.tr||null }) : '';
+    const sem = p=>p ? JSON.stringify({ veg:p.veg, lac:p.lac, glu:p.glu, fatores:p.fatores, compras:p.compras, semana:p.semana||null, tr:p.tr||null, dj:p.dj||null }) : '';   // RC 2: dj = desafio juntos (parte 77)
     if(sem(ant) !== sem(meu)){ meu.em = Date.now(); campos['perfis.' + uid] = meu; c.perfis = c.perfis || {}; c.perfis[uid] = meu; }
     const apelido = _famMeuApelido(); if((c.nomes||{})[uid] !== apelido){ campos['nomes.' + uid] = apelido; c.nomes = c.nomes || {}; c.nomes[uid] = apelido; }
     if(famSouAdm()){
