@@ -108,6 +108,7 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `68-cronometro-circular.js` | RC 0: desenho do descanso. Elemento único `#rest-timer-banner.rt2` (guardado em `_rtEl`): `.doca` dentro do registro de séries (`#rt-dock`, gancho em `renderSetLogModal`), `.min` pílula ao lado do `#ma-fab`, `.exp` cartão. Embrulha `restDesenha` (desenho), `startRestTimer` (marcação nova) e `stopRestTimer`. Fases de cor `f-ok/f-aviso/f-fim/f-pausa` (`_rtFase`). Ações: `rtExpandir`, `rtMinimizar`, `rtPular`, `rtVibrar`, `rtVoltarTreino`. **Contagem, som, vibração, pausa e retomada continuam no núcleo** (app.js, "TIMER DE DESCANSO"). |
 | `69-jornada-corrida.js` | RC 0: `RUN_JORNADA` (9 lições), `rjSemana` (registros da semana pela mesma regra do motor), `rjSugestao`, cartão `#rj-card` (níveis 0 e 1, gancho em `renderSessions`), `rjAbrir`/`rjLida`/`rjOcultar`/`rjMostrar`, estado opcional `state.runJornada = {lidas, oculta}`. `runStatusCard` embrulhada: "Última mudança" (`rjUltimaDecisao`, de `motor.hist`). Atalho no `openRunPainel`. O motor (parte 11) não muda. |
 | `70-progressao-musculacao.js` | RC 0: `mtPlato(exId)` (4 sessões em 3+ semanas sem subir carga/repetições e sem fechar a faixa), `smartProgressionHint` embrulhada (acrescenta "rever" só quando a dica não é subir/aliviar; resultado ganha `rever:true`), `mtProgSituacao`, `mtProgResumo`, painel `openProgressaoCargas` e entrada `#pg-entrada` na aba Treinos (musculação). Nada muda sozinho no plano. |
+| `71-vibracao.js` | RC 1: embrulho único de `navigator.vibrate` (pulsos 1–19 ms → 25 ms; durante um alarme > 250 ms ignora toques curtos; 0/[] sempre passa) e `mtTestarVibracao()` + botão "Testar vibração" no `openSomFim` (gancho). |
 
 Beta 56 também troca o azul fixo `#7dd3fc` por `var(--info-soft)` no núcleo (3 lugares) e torna `#sessions-chips` uma grade (parte 58).
 
@@ -250,3 +251,10 @@ python3 testes/beta40.py URL [PASTA]  # planos, teste de 30 dias, temas, assiste
 Os testes de navegador usam `testes/mock-firebase.js` (Firebase simulado, sem conta real) e `testes/semente.js` (aluno de exemplo). Para servir o site de teste: copie o projeto, troque os `<script>` do Firebase do `index.html` por `mock-firebase.js` e rode `python3 -m http.server`.
 
 Escala de esforço: `rpeHtml(nota, 'musc')` usa as frases de musculação (`RPE_DESC_MUSC`); sem o segundo argumento, as de corrida, caminhada e bike (`RPE_DESC`).
+
+
+## APK Android (RC 1)
+- `android-twa/`: projeto Gradle de um Trusted Web Activity (androidbrowserhelper 2.5.0, pacote `app.metatreino`, abre `https://metatreino.app/`). Ícones gerados do `icon-512.png`.
+- `.github/workflows/apk.yml`: monta e assina com os secrets `KEYSTORE_BASE64`/`KEYSTORE_PASSWORD`; versionCode = número da execução; versionName = `APP_VERSION`; publica `MetaTreino.apk` em Releases.
+- `.well-known/assetlinks.json`: impressão SHA-256 da chave (precisa ficar publicada em metatreino.app). `.nojekyll` para o Pages publicar a pasta com ponto.
+- Trocar a chave = trocar a impressão no assetlinks.json. Não dá para atualizar por cima um APK assinado com outra chave.

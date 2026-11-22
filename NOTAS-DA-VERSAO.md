@@ -1,3 +1,16 @@
+# MetaTreino 2027 RC 1 — APK para Android e vibração corrigida
+
+**Não precisa publicar o `firestore.rules`.** Passo a passo do APK em `INSTALAR-APK.md`.
+
+1. **APK instalável sem a Play Store** (Trusted Web Activity): abre o metatreino.app em tela cheia, com ícone próprio. Offline, login com Google, Firebase e atualização funcionam como no site. Quem monta é o GitHub (`.github/workflows/apk.yml`), e o APK aparece em Releases.
+   - Novos na raiz: `.well-known/assetlinks.json` (tira a barra de endereço), `.nojekyll`, `android-twa/` (projeto Android).
+   - A chave de assinatura vai num pacote separado e entra no GitHub como "secret", nunca no repositório.
+2. **Vibração:**
+   - Os toques curtos pediam 3 a 8 ms, e a maioria dos celulares Android nem sente menos de ~20 ms. Agora são 25 ms.
+   - Um toque logo depois do fim do descanso cancelava o alarme de vibração. Agora o alarme não é cortado.
+   - Novo botão **Testar vibração** em Som do cronômetro: vibra 400 ms e diz o que conferir no aparelho (vibração/retorno tátil, economia de bateria, Não perturbe).
+   - Continua valendo: o Chrome só vibra com o app visível.
+
 # MetaTreino 2027 RC 0 — Release Candidate: cronômetro circular, cardápio compartilhado, jornada da corrida e progressão das cargas
 
 **Não precisa publicar o `firestore.rules`.** Nada mudou nas regras nem nas coleções. Detalhes técnicos e auditoria em `RELATORIO-RC0.md`.

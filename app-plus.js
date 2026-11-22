@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027 RC 0 — app-plus.js
+// MetaTreino 2027 RC 1 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027-rc.0' };
+const MTP = { versao: '2027-rc.1' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -21679,3 +21679,67 @@ s.textContent = `
 .pg-como{margin-top:12px;font-size:13px;line-height:1.55}
 .pg-como ul{padding-left:18px;display:flex;flex-direction:column;gap:6px;margin:8px 0 0}
 `; document.head.appendChild(s); })();
+
+// =====================================================================
+// 71. 2027 RC 1 — vibração que se sente de verdade + teste de vibração
+// ---------------------------------------------------------------------
+// Problema relatado: "a vibração nunca funcionou, em nenhum Android".
+// O que o código fazia:
+//  • os toques curtos pediam 3, 6 e 8 ms (partes 21, 28 e 34). A maioria dos motores de vibração dos
+//    celulares Android nem chega a girar com menos de ~20 ms: o pedido é aceito e nada se sente;
+//  • qualquer navigator.vibrate() novo CANCELA a vibração que está acontecendo. Um toque curto logo
+//    depois do fim do descanso (gesto, botão) cortava o alarme de 300+120+300+120+300 ms.
+// O que esta parte faz (um embrulho só em navigator.vibrate, sem mexer em quem chama):
+//  • pulsos de 1 a 19 ms viram 25 ms (sentidos, ainda discretos);
+//  • enquanto um alarme (padrão com mais de 250 ms) está vibrando, toques curtos são ignorados;
+//  • vibrate(0) / vibrate([]) (cancelar) continua passando sempre.
+// E acrescenta "Testar vibração" no Som do cronômetro: vibra 400 ms no toque e diz o que conferir
+// no aparelho se nada for sentido (o navegador não consegue saber se o motor girou).
+// Limites reais: o Chrome só vibra com a página VISÍVEL e depois de o aluno ter tocado na tela
+// pelo menos uma vez; com a tela bloqueada não há vibração (nem no APK, que usa o Chrome).
+// =====================================================================
+(function(){
+  try{
+    if(!navigator.vibrate || navigator.__mtVibra) return;
+    const orig = navigator.vibrate.bind(navigator);
+    let alarmeAte = 0;
+    const total = p => Array.isArray(p) ? p.reduce((t,x)=>t+(+x||0),0) : (+p||0);
+    const reforca = p => {
+      if(Array.isArray(p)) return p.map((x,i)=> (i % 2 === 0 && +x > 0 && +x < 20) ? 25 : x);
+      return (+p > 0 && +p < 20) ? 25 : p;
+    };
+    const novo = function(p){
+      const t = total(p);
+      if(t <= 0) { alarmeAte = 0; return orig(p); }                 // cancelar sempre passa
+      const agora = Date.now();
+      if(t < 120 && agora < alarmeAte) return true;                // não corta o alarme do descanso
+      if(t > 250) alarmeAte = agora + t;
+      return orig(reforca(p));
+    };
+    navigator.vibrate = novo; navigator.__mtVibra = true;
+  }catch(e){ console.log('vibração:', e); }
+})();
+function mtTestarVibracao(){
+  const st = document.getElementById('mt-vib-status');
+  let ok = false;
+  try{ ok = !!(navigator.vibrate && navigator.vibrate(400)); }catch(e){ ok = false; }
+  if(!st) return ok;
+  if(!navigator.vibrate){
+    st.innerHTML = 'Este navegador não tem vibração (iPhone e alguns navegadores não oferecem). O som do fim do descanso continua valendo.';
+  } else if(!ok){
+    st.innerHTML = 'O navegador recusou a vibração. Toque em qualquer lugar do app e tente de novo; se continuar, abra o MetaTreino pelo Chrome.';
+  } else {
+    st.innerHTML = 'Pedido enviado: o celular deve ter vibrado agora. <b>Não sentiu?</b> No Android, confira em Configurações › Som e vibração: a <b>vibração / retorno tátil</b> precisa estar ligada, e o <b>modo de economia de bateria</b> (Xiaomi, Redmi, Motorola) e o <b>Não perturbe</b> costumam desligar a vibração dos apps.';
+  }
+  return ok;
+}
+mtGancho('openSomFim', { depois(){
+  try{
+    const mi = $('modal-inner'); if(!mi || mi.querySelector('#mt-vib-teste')) return;
+    const ps = [...mi.querySelectorAll('p')]; const aviso = ps.find(p=>/vibração depende/.test(p.textContent)) || ps[ps.length-1];
+    const bloco = `<div id="mt-vib-teste" style="margin:10px 0 4px">
+      <button type="button" class="btn btn-ghost btn-block" onclick="mtTestarVibracao()">Testar vibração</button>
+      <p id="mt-vib-status" class="mt-muted" style="font-size:12.5px;line-height:1.5;margin:8px 0 0"></p></div>`;
+    if(aviso) aviso.insertAdjacentHTML('afterend', bloco); else mi.insertAdjacentHTML('beforeend', bloco);
+  }catch(e){}
+}});

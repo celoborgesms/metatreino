@@ -2,6 +2,12 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. 2027 RC 1 — APK e vibração
+1. Som do cronômetro › Testar vibração: o celular vibra? Se não, siga o texto que aparece (vibração do sistema, economia de bateria, Não perturbe).
+2. Toque nos botões de esforço (fim do treino) e deslize no início: agora dá para sentir o toque.
+3. Deixe um descanso acabar com o app aberto e toque na tela logo em seguida: a vibração do alarme não é cortada.
+4. APK: instale pelo Releases, abra pelo ícone; sem barra de endereço; faça login com Google; modo avião → o app abre; publique uma versão nova do site e confira que o app atualiza sem reinstalar.
+
 ## 00000. 2027 RC 0 — cronômetro, cardápio compartilhado, jornada e progressão
 1. Registro de séries: conclua uma série → o cronômetro aparece DENTRO da tela, abaixo das séries, sem cobrir Salvar. Toque em Pausar, ±15 s e Pular.
 2. Com o descanso rodando, toque em Voltar → aparece a pílula ao lado do botão do assistente. Troque de aba: a pílula continua com o tempo certo. Toque nela → cartão com "Voltar ao treino"; a seta minimiza.
