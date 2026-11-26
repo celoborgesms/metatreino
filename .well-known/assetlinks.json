@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.metatreino",
+      "sha256_cert_fingerprints": ["86:46:4C:08:1E:45:33:2A:91:3E:13:6B:D1:A3:4F:FD:68:4C:C7:9A:8E:51:7B:42:BA:61:F9:98:22:0E:8D:44"]
+    }
+  }
+]
