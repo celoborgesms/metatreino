@@ -70,7 +70,7 @@ function _enFeitas(dk){
 }
 function _enPulada(dk, mod, k, diaIdx){
   const ini = _enInicioDia(dk);
-  return (state.skips || []).some(s=>s.at === ini && s.module === mod && (s.k === k || s.dayIdx === diaIdx));
+  return (state.skips || []).some(s=>s.at === ini && s.module === mod && skipEDoTreino(s, { k, dayIdx:diaIdx }));
 }
 // sessões que contam para o dia (previsto × feito)
 function enSessoesDoDia(diaIdx, dk){

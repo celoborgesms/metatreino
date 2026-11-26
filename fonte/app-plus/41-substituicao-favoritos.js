@@ -161,6 +161,9 @@ function mtCandidatosTroca(w, cur, motivo, setup){
     const id = slug(ex.name);
     if(id === cur.id || repete(ex)) return;
     if(!okEquip(ex)) return;                                   // equipamento que o aluno não tem
+    // RC 3: o aparelho marcado como "0 / não tenho" em Equipamentos também vale aqui (antes a troca por
+    // "equipamento ocupado" podia escolher um aparelho que a pessoa não tem e gerar uma pendência falsa)
+    try{ if(typeof _eqTenho === 'function' && typeof exEstacao === 'function' && !_eqTenho(exEstacao(ex))) return; }catch(e){}
     if(limBloq(ex)) return;                                    // força a região marcada nas limitações
     if(iniciante && (MT_AVANCADOS.test(mtNorm(ex.name)) || /avancado/.test(mtNorm(ex.sub)))) return;
     const p = mtPadrao(ex), eq = mtEquipClasse(ex), enf = mtEnfase(ex);

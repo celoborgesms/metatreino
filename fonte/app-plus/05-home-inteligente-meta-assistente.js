@@ -13,7 +13,8 @@ function mtAdesao(a, b){
   const corridaCaminha = runWs.some(w=>w.motor && ['caminhada','camcorre'].includes(w.motor.tipo));
   const modDe = x => x._t==='musculacao' ? (planos.lift ? 'lift' : null) : (x._t==='corrida' || (x._t==='caminhada' && corridaCaminha)) ? (planos.run ? 'run' : null) : null;
   const feitos = new Set(); let extras = 0;
-  h.forEach(x=>{ const m = modDe(x); const k = m + '|' + mtDia0(x.at); if(m && !feitos.has(k)) feitos.add(k); else if(!m) extras++; });
+  h.forEach(x=>{ if(x.adicional){ extras++; return; }   // RC 3: treino adicional é atividade real, mas não é sessão do plano
+    const m = modDe(x); const k = m + '|' + mtDia0(x.at); if(m && !feitos.has(k)) feitos.add(k); else if(!m) extras++; });
   const porSem = ['lift','run'].reduce((t,m)=>t + (planos[m] ? (state.modules[m].plan.workouts||[]).filter(w=>!(w.motor && w.motor.tipo==='prova')).length : 0), 0);
   const semanas = Math.max(1/7, (Math.min(b, Date.now()+1) - a)/(7*DIA_MS));
   const planejados = Math.max(porSem ? 1 : 0, Math.round(porSem*Math.min(semanas, 1e6)));
@@ -35,7 +36,7 @@ function contextoAluno(){
   let prova = null; try{ prova = daysToRace(); }catch(e){}
   const dor = !!(state.user && state.user.pain && state.user.pain.length);
   const ferias = (typeof vacationActive==='function') && vacationActive();
-  const prs14 = Object.values(state.prs||{}).filter(p=>p && p.at >= Date.now()-14*DIA_MS).length;
+  const prs14 = (typeof mtPrsReais==='function' ? mtPrsReais() : []).filter(p=>p.at >= Date.now()-14*DIA_MS).length;   // RC 3: a referência do 1º registro não é recorde
   const hora = new Date().getHours();
   const nome = (typeof maName==='function') ? maName() : 'atleta';
   const sem = mtAdesao(semIni, Date.now()+1);
@@ -46,7 +47,9 @@ function _proxTreinoTxt(){
   try{
     const dias = ['segunda','terça','quarta','quinta','sexta','sábado','domingo'];
     const hoje = getDayIdx(); const set = new Set();
-    ['lift','run'].forEach(m=>{ const mod = state.modules[m]; (mod&&mod.plan&&mod.plan.workouts||[]).forEach(w=>set.add(w.dayIdx)); });
+    // RC 3: treino já feito nesta semana (antecipado) não é "próximo treino" nem "treino de hoje em aberto"
+    const feitoSem = (m, w)=>{ try{ return m==='lift' && w.k!=null && !!entradaConcluidaSemana(w, 'lift'); }catch(e){ return false; } };
+    ['lift','run'].forEach(m=>{ const mod = state.modules[m]; (mod&&mod.plan&&mod.plan.workouts||[]).forEach(w=>{ if(!(w.dayIdx >= hoje && feitoSem(m, w))) set.add(w.dayIdx); }); });
     const ord = [...set].sort((a,b)=>a-b); if(!ord.length) return '';
     // Beta 33: o treino de hoje ainda não feito é o próximo (antes dizia "amanhã")
     const feitoHoje = mtHist().some(x=>mtDia0(x.at)===mtDia0());
@@ -97,7 +100,9 @@ function renderHomeSmart(){
   } else if(c.prs14 > 0){
     k = 'Evolução'; t = `${c.prs14} ${c.prs14===1?'recorde pessoal':'recordes pessoais'} nas últimas duas semanas`;
     p = 'O trabalho está aparecendo. Mantenha a técnica e a progressão gradual — é ela que sustenta os próximos recordes.';
-    a = `<button class="btn btn-ghost" onclick="mtPergunta('cargas')">Ver minhas cargas</button>`;
+    // RC 3: o botão só aparece quando a análise de cargas tem o que mostrar (3+ sessões de um exercício nas
+    // últimas 7 semanas). Antes ele aparecia já no 1º treino e a resposta era "ainda não tenho séries suficientes".
+    a = mtCargasTemDados() ? `<button class="btn btn-ghost" onclick="mtPergunta('cargas')">Ver minhas cargas</button>` : '';
   } else if(c.semDias >= Math.min(c.planejados, c.diaSemana) || c.streak >= 3){
     k = 'Consistência'; t = c.streak>=3 ? `${c.streak} dias seguidos ativos` : c.semPlanejados ? `Semana em dia: ${c.semTreinos} de ${c.semPlanejados} treinos do plano` : `Semana em dia: ${c.semDias} de ${c.planejados}`;
     p = `Disciplina é isso: aparecer mesmo sem vontade.${prox&&!c.hojeFeito?` Seu próximo treino é ${prox}.`:''}`;
@@ -243,9 +248,9 @@ function _resumoPeriodo(a, b){
   const h = mtHist().filter(x=>x.at>=a && x.at<b);
   const km = t=>h.filter(x=>x._t===t).reduce((s,x)=>s+(+x.distance||0),0);
   return { sessoes:h.length, dias:new Set(h.map(x=>mtDia0(x.at))).size, min:Math.round(h.reduce((s,x)=>s+(+x.duration||0),0)), lift:h.filter(x=>x._t==='musculacao').length,
-    kmRun:km('corrida'), kmWalk:km('caminhada'), kmBike:km('bike'), prs:Object.values(state.prs||{}).filter(p=>p&&p.at>=a&&p.at<b).length };
+    kmRun:km('corrida'), kmWalk:km('caminhada'), kmBike:km('bike'), prs:(typeof mtPrsReais==='function' ? mtPrsReais() : []).filter(p=>p.at>=a&&p.at<b).length };
 }
-function _seta(a, b, un){ if(!b && !a) return ''; const d = a-b; if(Math.abs(d) < 0.05) return ' <span style="color:var(--text-mute)">(igual)</span>'; const ad = Math.abs(d); const v = un==='km' ? mtFmtKm(ad)+' km' : un==='min' ? (ad>=60 ? Math.floor(ad/60)+'h'+String(Math.round(ad%60)).padStart(2,'0') : Math.round(ad)+' min') : Math.round(ad); return ` <span style="color:${d>0?'var(--accent)':'var(--text-mute)'}">(${d>0?'+':'−'}${v})</span>`; }
+function _seta(a, b, un){ if(!b && !a) return ''; const d = a-b; if(Math.abs(d) < 0.05) return ' <span style="color:var(--text-mute)">(igual)</span>'; const ad = Math.abs(d); const v = un==='km' ? mtFmtKm(ad)+' km' : un==='min' ? fmtDur(Math.round(ad), true) : Math.round(ad); return ` <span style="color:${d>0?'var(--accent)':'var(--text-mute)'}">(${d>0?'+':'−'}${v})</span>`; }
 function analiseMes(){
   const now = new Date(); const ini = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const iniAnt = new Date(now.getFullYear(), now.getMonth()-1, 1).getTime();
@@ -273,6 +278,9 @@ function analiseMes(){
 }
 // --- cargas: evolução, manutenção e estagnação por exercício (dados reais das séries) ---
 function _e1rm(peso, reps){ peso=+peso||0; reps=+reps||0; if(!peso||!reps) return 0; return peso*(1+Math.min(reps,12)/30); }
+function mtCargasTemDados(){
+  try{ const desde = Date.now() - 49*DIA_MS; return Object.keys(state.progress||{}).some(id=>(state.progress[id]||[]).filter(p=>p.date>=desde && p.sets && p.sets.some(s=>+s.reps>0)).length >= 3); }catch(e){ return false; }
+}
 function analiseCargas(){
   const desde = Date.now() - 49*DIA_MS;
   const res = [], corpo = [];

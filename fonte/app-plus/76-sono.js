@@ -26,7 +26,7 @@ function sonoEst(){ state.sono = state.sono && typeof state.sono === 'object' ? 
 function sonoLigado(){ return !!(state.sono && state.sono.on); }
 function _sonoHoje(){ return chaveDia(new Date()); }
 function _sonoMin(hhmm){ const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm||'')); return m ? (+m[1])*60 + (+m[2]) : null; }
-function sonoHorasDe(dor, aco){ const a = _sonoMin(dor), b = _sonoMin(aco); if(a == null || b == null) return null; let d = b - a; if(d <= 0) d += 1440; return Math.round(d/6)/10; }
+function sonoHorasDe(dor, aco){ const a = _sonoMin(dor), b = _sonoMin(aco); if(a == null || b == null) return null; let d = b - a; if(d <= 0) d += 1440; return Math.round(d/60*100)/100; }   // RC 3: em minutos exatos (antes 0,1 h)
 function sonoNoite(dk){ return ((state.sono||{}).n||{})[dk] || null; }
 function sonoRuim(x){ return !!x && (x.q === 1 || (x.h != null && x.h < 6) || x.d === 1); }
 function _sonoUltimas(dias){ const out = []; for(let i=0; i<dias; i++){ const dk = chaveDia(new Date(Date.now() - i*86400000)); out.push({ dk, x:sonoNoite(dk) }); } return out; }

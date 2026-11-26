@@ -38,7 +38,7 @@ function _mtsPrimeiroNome(){
   const n = String(p.nickname || (state.user && state.user.name) || '').trim().split(/\s+/)[0] || '';
   return n.slice(0, 20);
 }
-function _mtsDur(min){ min = Math.round(+min||0); if(min < 60) return {v:String(min), u:'min'}; const h = Math.floor(min/60), m = min%60; return {v:`${h}h${m?String(m).padStart(2,'0'):''}`, u:''}; }
+function _mtsDur(min){ min = Math.round(+min||0); if(min < 60) return {v:String(min), u:'min'}; const h = Math.floor(min/60), m = min%60; return {v:`${h} h ${String(m).padStart(2,'0')}`, u:'min'}; }   // RC 3: "3 h 03 min", como no app
 function _mtsPace(dur, km){ if(!(km > 0 && dur > 0)) return null; const p = dur/km; const mm = Math.floor(p), ss = Math.round((p-mm)*60); return `${mm}:${String(ss===60?0:ss).padStart(2,'0')}`; }
 function _mtsCatCor(cat){ return { streak:'#ff8a3d', run:'#5ac8fa', walk:'#34d399', bike:'#a78bfa', body:'#e5e7eb', secret:'#f5c451', geral:'#f5c451', lift:'#ff7a3d' }[cat] || '#f5c451'; }
 function _mtsCssCor(v){ try{ const el = document.createElement('span'); el.style.color = v; document.body.appendChild(el); const c = getComputedStyle(el).color; el.remove(); return c; }catch(e){ return v; } }
@@ -297,6 +297,16 @@ async function mtsDesenhar(cv, d, o){
       y += gh + W*0.01;
     }
     if(linDesc.length){ y += W*0.02; x.font = `400 ${tamDesc}px ${FF}`; x.fillStyle = P.dim; linDesc.forEach(l=>{ y += tamDesc*1.35; x.fillText(l, ax, y); }); }
+    // RC 3: lista de atividades (card da semana) — cada uma com o seu dia, para não parecer uma sessão só
+    if(d.lista && d.lista.length){
+      const tl = W*(o.fmt==='quadrado' ? 0.027 : 0.03), max = o.fmt==='story' ? 7 : 5; y += W*0.025;
+      const col = W*0.15; x.textAlign = 'left';
+      d.lista.slice(0, max).forEach(it=>{ y += tl*1.6;
+        x.font = `800 ${tl}px ${FF}`; x.fillStyle = P.acc; x.fillText(it.dia, pad, y);
+        x.font = `500 ${tl}px ${FF}`; x.fillStyle = P.txt; let t = it.txt; while(t.length > 4 && x.measureText(t).width > maxW - col) t = t.slice(0, -2); if(t !== it.txt) t = t.replace(/\s*\S?$/, '') + '…'; x.fillText(t, pad + col, y); });
+      if(d.lista.length > max){ y += tl*1.5; x.font = `500 ${tl*0.9}px ${FF}`; x.fillStyle = P.dim; x.fillText(`+ ${d.lista.length - max} ${d.lista.length - max === 1 ? 'atividade' : 'atividades'}`, pad + col, y); }
+      x.textAlign = alinh;
+    }
     // números
     if(nums.length){
       y += W*0.05;

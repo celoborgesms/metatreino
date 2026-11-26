@@ -258,7 +258,7 @@ function arqCartaoHistorico(){
     </div></div>`;
 }
 function _anoDe(t){ return new Date(t).getFullYear(); }
-function _fmtHoras(min){ min = Math.round(min||0); if(min < 60) return min + ' min'; const h = Math.floor(min/60), m = min%60; return h + 'h' + (m ? String(m).padStart(2,'0') : ''); }
+function _fmtHoras(min){ return fmtDur(Math.round(+min||0), true); }   // RC 3: mesmo formato do app inteiro
 function _fmtN(v, dec){ return (+v||0).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:dec||0}); }
 function _ehCorr(r){ return r && (!r.activity || r.activity==='corrida'); }
 function arqResumoAnos(D){
@@ -622,14 +622,20 @@ function arqMontarPDF(jsPDF, opt, aviso, arte){
       cols.forEach((c, i)=>txt(c.t, c.dir ? xs[i] + c.w*k - 1.5 : xs[i] + 1.5, y + 4.4, c.dir ? {align:'right'} : undefined)); y += 7.5; };
     cab();
     linhas.forEach(l=>{
-      if(y + 6 > PH - 16){ nova(); cab(); }
+      // RC 3: coluna com "quebra" mostra o texto inteiro em várias linhas (as séries não podem ser cortadas)
+      fonte(7.8);
+      const partes = l.map((v, i)=>cols[i].quebra ? doc.splitTextToSize(_T(v), cols[i].w*k - 3) : null);
+      const nl = Math.max(1, ...partes.map(p=>p ? p.length : 1)); const alt = 5.8 + (nl-1)*3.4;
+      if(y + alt > PH - 16){ nova(); cab(); }
       fonte(7.8); cor(C.ink);
-      l.forEach((v, i)=>{ const c = cols[i]; let s = _T(v); const maxW = c.w*k - 3;
+      l.forEach((v, i)=>{ const c = cols[i];
+        if(partes[i]){ doc.text(partes[i], xs[i] + 1.5, y + 3.6); return; }
+        let s = _T(v); const maxW = c.w*k - 3;
         while(s.length > 3 && doc.getTextWidth(s) > maxW) s = s.slice(0, -2);
         if(s !== _T(v)) s = s.replace(/.$/, '.');
         doc.text(s, c.dir ? xs[i] + c.w*k - 1.5 : xs[i] + 1.5, y + 3.6, c.dir ? {align:'right'} : undefined); });
-      doc.setDrawColor(...C.linha); doc.setLineWidth(0.15); doc.line(M, y + 5.4, M + W, y + 5.4);
-      y += 5.8;
+      doc.setDrawColor(...C.linha); doc.setLineWidth(0.15); doc.line(M, y + alt - 0.4, M + W, y + alt - 0.4);
+      y += alt;
     });
     y += 4;
   }
@@ -672,7 +678,7 @@ function arqMontarPDF(jsPDF, opt, aviso, arte){
   if(opt.lift){
     secao('Musculação', C.lift);
     const volTotal = _volumeArq(D, ini, agora + DIA_MS);
-    const prsPer = Object.values(state.prs||{}).filter(p=>p && p.at >= ini).length;
+    const prsPer = (typeof mtPrsReais==='function' ? mtPrsReais() : []).filter(p=>p.at >= ini).length;
     const exsPer = Object.keys(D.prog).filter(ex=>D.prog[ex].some(p=>p.date >= ini)).length || Object.keys(D.resumo).filter(ex=>D.resumo[ex].some(r=>r.d >= ini)).length;
     tiles([
       { v:_fmtN(L.length), l:'treinos' },
@@ -692,7 +698,9 @@ function arqMontarPDF(jsPDF, opt, aviso, arte){
       if(evo.length){
         precisa(30);
         fonte(9.5, 'bold'); cor(C.ink); txt('Evolução de carga por exercício', M, y + 4); y += 7;
-        tabela([{t:'Exercício', w:62}, {t:'Sessões', w:16, dir:1}, {t:'Primeira', w:20, dir:1}, {t:'Última', w:20, dir:1}, {t:'Melhor', w:20, dir:1}, {t:'Variação', w:20, dir:1}],
+        // RC 3: cada coluna é a MAIOR carga da sessão (não a 1ª/última série) — o nome agora diz isso
+        nota('Maior carga registrada em cada sessão do exercício. As séries uma por uma estão em "Séries registradas", mais abaixo.');
+        tabela([{t:'Exercício', w:58}, {t:'Sessões', w:15, dir:1}, {t:'Maior na 1ª sessão', w:23, dir:1}, {t:'Maior na última', w:21, dir:1}, {t:'Recorde', w:18, dir:1}, {t:'Variação', w:18, dir:1}],
           evo.slice(0, 15).map(e=>{ const a = e.pts[0].peso, b = e.pts[e.pts.length-1].peso, m = Math.max(...e.pts.map(p=>p.peso)); const pct = a > 0 ? Math.round((b - a)/a*100) : 0;
             return [e.nome, e.pts.length, _fmtN(a,1) + ' kg', _fmtN(b,1) + ' kg', _fmtN(m,1) + ' kg', (pct > 0 ? '+' : '') + pct + '%']; }));
         const graf = evo.filter(e=>e.pts.length >= 2).slice(0, 4);
@@ -703,6 +711,16 @@ function arqMontarPDF(jsPDF, opt, aviso, arte){
           y = yy + hh + 17;
         }
       }
+      // RC 3: séries registradas, uma por uma (carga × repetições exatamente como foram salvas)
+      try{
+        const linhas = (typeof mtPdfSessoesSeries === 'function') ? mtPdfSessoesSeries(ini, agora + DIA_MS) : [];
+        if(linhas.length){
+          precisa(30); fonte(9.5, 'bold'); cor(C.ink); txt('Séries registradas', M, y + 4); y += 7;
+          const lim = 80;
+          tabela([{t:'Data', w:16}, {t:'Exercício', w:58}, {t:'Séries (carga × repetições)', w:110, quebra:true}], linhas.slice(-lim));
+          if(linhas.length > lim) nota(`Mostrando as ${lim} mais recentes de ${linhas.length} (o histórico completo fica no app).`);
+        }
+      }catch(e){ console.log('pdf séries:', e); }
     } else nota('Nenhum treino de musculação neste período.');
   }
 

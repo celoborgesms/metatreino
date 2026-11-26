@@ -170,8 +170,15 @@ async function admSetAdmin(email, ativo){
 //  • quando o aluno sai do app (aba oculta) — nunca no meio de um treino ou de um formulário.
 // Quando assume, o index.html recarrega a página uma vez (controllerchange).
 const MT_UPD = { pendente:false, desde:0, avisou:false, abriuEm: Date.now() };
+// RC 3: aplicar a versão nova com o app na tela recarregava a página no meio do uso (a pessoa via o app
+// "reiniciar" e passar pela tela de entrada). Agora só aplica com o app em segundo plano ou ANTES de a
+// entrada terminar (ainda na tela de carregamento) — nunca com o aluno já usando o app.
 function _podeAtualizarAgora(){
-  if(document.visibilityState === 'hidden') return true;
+  // em segundo plano, mas no meio de um treino (descanso contando ou série aberta): espera — recarregar
+  // apagaria o cronômetro e a série que está sendo preenchida
+  const emTreino = (typeof restTimerInt !== 'undefined' && !!restTimerInt) || (typeof curLog !== 'undefined' && !!curLog) || !!window.__mtCronEx;
+  if(document.visibilityState === 'hidden') return !emTreino;
+  if(window.__mtOk) return false;
   const modal = document.getElementById('modal-back');
   const ocupado = (modal && modal.classList.contains('on')) || (state && state.ui && state.ui.tab==='sessions') ||
     (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) || !!document.getElementById('rest-timer-banner') || !!document.getElementById('rest-timer-on');   // Beta 33: o id certo do descanso

@@ -179,7 +179,7 @@ mtGancho('finishLiftWorkout', { antes(k){
   try{ const mod = state.modules.lift; const w = mod && mod.plan && (mod.plan.workouts||[]).find(x=>String(x.k)===String(k));
     if(_mtTreinoPulado(w)){ const d = new Date(); d.setHours(0,0,0,0);
       // salvou mesmo assim (ex.: série registrada antes de pular): o registro vale, então o "pulado" sai
-      state.skips = (state.skips||[]).filter(s=>!(s.at===d.getTime() && s.module==='lift' && (s.k===w.k || s.dayIdx===w.dayIdx))); } }catch(e){}
+      state.skips = (state.skips||[]).filter(s=>!(s.at===d.getTime() && s.module==='lift' && skipEDoTreino(s, w))); } }catch(e){}
 }});
 
 (function(){ if(document.getElementById('b44-css')) return; const s = document.createElement('style'); s.id = 'b44-css';

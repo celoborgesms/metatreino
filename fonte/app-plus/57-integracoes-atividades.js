@@ -52,7 +52,7 @@ function _atvHav(a, b){
   return 2*R*Math.asin(Math.min(1, Math.sqrt(s)));
 }
 function _atvNum(v){ const n = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(',', '.')); return isFinite(n) ? n : null; }
-function _atvFmtDur(s){ s = Math.round(s || 0); const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60; return h ? `${h}h${String(m).padStart(2,'0')}` : `${m}:${String(ss).padStart(2,'0')}`; }
+function _atvFmtDur(s){ return fmtDur(Math.round(s || 0)/60); }   // RC 3: mesmo formato de duração do app inteiro
 function _atvFmtPace(sKm){ if(!sKm || !isFinite(sKm)) return '—'; const m = Math.floor(sKm/60), s = Math.round(sKm%60); return s === 60 ? `${m+1}:00` : `${m}:${String(s).padStart(2,'0')}`; }
 function _atvBr(v, d){ return (Math.round(v * 10**(d||0)) / 10**(d||0)).toFixed(d||0).replace('.', ','); }
 async function _atvHash(buf){
@@ -318,7 +318,7 @@ function openIntegracoes(){
     <details class="integ-sec"><summary>O que cada formato traz</summary>
       <div class="integ-fmt"><b>GPX — percurso e GPS</b><span>Trajeto, distância, coordenadas e, quando houver, altitude e horário. Bom para corrida, caminhada e bike.</span></div>
       <div class="integ-fmt"><b>TCX — dados de treino</b><span>Duração, distância, ritmo/velocidade, frequência cardíaca, voltas e, às vezes, cadência.</span></div>
-      <div class="integ-fmt"><b>FIT — dados esportivos completos</b><span>O mais completo: frequência cardíaca, ritmo, altitude, cadência, voltas e, em alguns relógios, os exercícios de musculação com séries, repetições e cargas.</span></div>
+      <div class="integ-fmt"><b>FIT — dados esportivos completos</b><span>O mais completo: frequência cardíaca, ritmo, altitude, cadência e voltas.</span></div>
       <p class="integ-mini">O que vem em cada arquivo depende do relógio, da modalidade e das configurações. O app mostra só o que encontrar, sem inventar nada.</p></details>
     <details class="integ-sec"><summary>Como exportar do seu relógio ou app</summary>${ATV_FONTES.map(f=>`<div class="integ-fmt"><b>${f.nome}</b><span>${f.arq}</span></div>`).join('')}</details>
     <details class="integ-sec"><summary>Sincronização automática (futuro)</summary>
@@ -524,7 +524,7 @@ function _atvSalvaMusc(A, imp, op){
     logs.push({ date:A.inicio, sets, imp:imp.id });
     logs.sort((a,b)=>a.date - b.date);
     const semCarga = (typeof exTipoRegistro === 'function') && exTipoRegistro(g.exId) !== 'carga';
-    sets.filter(s=>s.peso > 0 || semCarga).forEach(s=>{ const pr = state.prs[g.exId]; if(!pr || s.peso > pr.peso || (s.peso === pr.peso && s.reps > pr.reps)) state.prs[g.exId] = { peso:s.peso, reps:s.reps, at:A.inicio }; });
+    try{ void semCarga; mtPrRecalcularEx(g.exId); }catch(e){}   // RC 3: mesmo motor de recordes do registro manual
     const ex = _mmExDoBanco ? _mmExDoBanco(g.exId) : null; const top = sets.reduce((b,s)=>(s.peso*s.reps > b.peso*b.reps ? s : b), sets[0]);
     feitos.push({ id:g.exId, name: ex ? ex.name : g.nomeArq, part: ex ? ex.part : '', sets:sets.length, best: top.peso > 0 ? `${top.peso}kg×${top.reps}` : `${top.reps} reps` });
   });
@@ -605,8 +605,7 @@ function atvExcluir(mk, idx){
         const antes = state.progress[k].length; state.progress[k] = state.progress[k].filter(p=>p.imp !== id);
         if(state.progress[k].length !== antes){
           // o recorde volta a ser o melhor que sobrou (mesma regra do registro)
-          let pr = null; state.progress[k].forEach(p=>(p.sets||[]).forEach(st=>{ if(!pr || st.peso > pr.peso || (st.peso === pr.peso && st.reps > pr.reps)) pr = { peso:st.peso, reps:st.reps, at:p.date }; }));
-          if(pr) state.prs[k] = pr; else delete state.prs[k];
+          try{ mtPrRecalcularEx(k); }catch(e){}   // RC 3: mesmo motor de recordes do registro manual
         }
         if(!state.progress[k].length) delete state.progress[k];
       });
@@ -631,7 +630,9 @@ mtGancho('renderHistory', { depois(){
       const i = +((c.getAttribute('onclick').match(/\d+/)||[])[0]); const x = h[i]; if(!x || !x.imp || c.querySelector('.hist-orig')) return;
       const meta = c.querySelector('.hist-meta'); if(meta) meta.insertAdjacentHTML('beforeend', `<span class="hist-orig">⌚ ${String(x.imp.fmt||'').toUpperCase()}</span>`);
     });
-    const lista = $('history-list'); if(lista && !$('integ-hist')){
+    // RC 3: a importação do relógio não vale para musculação (desde a RC 2): o atalho só aparece no histórico de corrida/caminhada/bike
+    if(state.active === 'lift'){ const v = $('integ-hist'); if(v) v.remove(); }
+    const lista = $('history-list'); if(lista && !$('integ-hist') && state.active !== 'lift'){
       lista.insertAdjacentHTML('beforebegin', `<button type="button" class="card integ-hist" id="integ-hist" onclick="openIntegracoes()"><span class="ii-ico">⌚</span><span class="ii-tx"><b>Integrações e atividades</b><small>Importar do relógio ou de outro app (GPX, TCX, FIT)</small></span><span class="ii-seta">›</span></button>`);
     }
   }catch(e){}

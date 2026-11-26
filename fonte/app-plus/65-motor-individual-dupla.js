@@ -113,7 +113,49 @@ function exEstacao(ex){
 // quantas unidades: o que a pessoa informou; sem informação, 1 de cada aparelho e halteres como vários pares
 // Beta 64: 0 = não tenho (o plano evita), 1 = um só (evita disputa na dupla), 2 = dois ou mais
 function _duplaQtd(st, q){ q = q || {}; if(q[st] != null) return +q[st] === 0 ? 0 : (+q[st] || 1); return st === 'halteres' ? 2 : 1; }
-function _eqTenho(st){ return !st || _duplaQtd(st, _duplaCfg().q) > 0; }
+// ---------- RC 3: UM catálogo de equipamentos ----------
+// CAUSA dos "equipamentos repetidos": o cadastro/Perfil/troca usam EQUIP_LISTA (app.js: banco, barra, barrafixa,
+// maquina…) e a tela de dupla usava outra lista (MT_ESTACOES: banco_supino, barra_livre, barra_fixa, maq_peito…),
+// com nomes diferentes para o mesmo aparelho e respostas guardadas em lugares diferentes (setup.equipList ×
+// setup.dupla.q). A pessoa respondia o mesmo aparelho duas vezes e as respostas podiam se contradizer.
+// AGORA: a tela de dupla mostra a MESMA lista do cadastro (EQUIP_LISTA, mesmos nomes) e "tenho / não tenho"
+// é uma resposta só (setup.equipList no personalizado). A quantidade (1 ou 2+) é o único detalhe a mais
+// (setup.dupla.qe). As estações (aparelho que o exercício ocupa) continuam internas e derivam daqui.
+const MT_ESTACAO_EQUIP = { halteres:['halteres'], barra_livre:['barra'], banco:['banco'], banco_supino:['banco','barra'], rack:['barra'],
+  barra_fixa:['barrafixa'], paralelas:['paralelas'], polia:['polia'], legpress:['legpress'], hack:['hack'], extensora:['extensora'],
+  flexora:['flexora'], smith:['smith'], adut_abdut:['adutora'], maq_gluteo:['gluteo'], maq_panturrilha:['panturrilha'],
+  maq_peito:['maquina'], maq_remada:['maquina'], maq_ombro:['maquina'], maq_braco:['maquina'] };
+function _liftSetup(){ return (state.modules.lift && state.modules.lift.setup) || null; }
+// o plano (cadastro/Perfil) diz se a pessoa tem o equipamento
+function mtSetupTemEquip(e){
+  const su = _liftSetup(); if(!su) return true;
+  const eq = su.equip || 'academia';
+  if(eq === 'custom') return (su.equipList || []).includes(e);
+  if(eq === 'academia') return true;
+  if(eq === 'halteres' || eq === 'basico') return e === 'halteres' || e === 'banco';
+  return false;   // peso do corpo
+}
+// migração única: respostas antigas da dupla (por estação) viram respostas por equipamento
+function _duplaQe(){
+  const c = _duplaCfg(); if(c.qe) return c.qe;
+  c.qe = {};
+  Object.keys(c.q || {}).forEach(st=>{ const es = MT_ESTACAO_EQUIP[st]; if(!es || es.length !== 1) return; const v = +c.q[st];
+    if(c.qe[es[0]] == null || v > c.qe[es[0]]) c.qe[es[0]] = v; });
+  return c.qe;
+}
+function mtEquipQtd(e){
+  const qe = _duplaQe();
+  if(!mtSetupTemEquip(e)) return 0;
+  if(qe[e] === 0) return 0;
+  return +qe[e] || (e === 'halteres' ? 2 : 1);
+}
+function _duplaQtdMinha(st){ const es = MT_ESTACAO_EQUIP[st]; if(!es) return _duplaQtd(st, _duplaCfg().q); return Math.min(...es.map(mtEquipQtd)); }
+function _eqTenho(st){ return !st || _duplaQtdMinha(st) > 0; }
+// o que publico para a outra pessoa continua por estação (compatível com versões anteriores do app)
+function _duplaQPublica(){ const o = {}; Object.keys(MT_ESTACOES).forEach(st=>{ o[st] = Math.min(2, _duplaQtdMinha(st)); }); return o; }
+// RC 3: troca feita "só neste treino" (equipamento ocupado, preferência) não muda o PLANO: a organização da
+// dupla, o que é publicado para a outra pessoa e as pendências olham o exercício planejado.
+function _exPlano(e){ return (e && e.troca && e.troca.orig) ? e.troca.orig : e; }
 
 // ---------- 2. escolha individual entre equivalentes ----------
 function _mtHash(s){ let h = 2166136261; s = String(s||''); for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -163,10 +205,10 @@ function mtDuplaPublica(){
     const m = state.modules.lift; const d = {};
     ((m && m.plan && m.plan.workouts) || []).forEach(w=>{
       const ex = w.exercises || []; const n = ex.length || 1;
-      d[String(w.dayIdx)] = ex.map((e,i)=>{ const st = exEstacao(e); return st ? `${st}@${(i/n).toFixed(2)}` : ''; }).filter(Boolean).join('|');
+      d[String(w.dayIdx)] = ex.map((e,i)=>{ const st = exEstacao(_exPlano(e)); return st ? `${st}@${(i/n).toFixed(2)}` : ''; }).filter(Boolean).join('|');
       if(w.parts) d['g' + w.dayIdx] = (w.parts||[]).join('+');
     });
-    const out = { on:true, d, q: Object.assign({}, cfg.q || {}) };
+    const out = { on:true, d, q: _duplaQPublica() };
     // janelas dos treinos das últimas 8 semanas (para as conquistas em dupla): "AAAAMMDD:HHMM:min:m|r"
     if(cfg.conq !== false){
       const ini = Date.now() - 56*DIA_MS; const s = [];
@@ -193,7 +235,7 @@ function _duplaEstacaoLivre(st, dia){
     if(!dia || !_duplaCfg().on) return true;
     const D = _duplaDiasParceiro(); if(!D) return true;
     const usos = (D.dias[String(dia)]||[]).filter(u=>u.st === st).length; if(!usos) return true;
-    return Math.min(_duplaQtd(st, _duplaCfg().q), _duplaQtd(st, D.P.tr.q)) >= 2;
+    return Math.min(_duplaQtdMinha(st), _duplaQtd(st, D.P.tr.q)) >= 2;
   }catch(e){ return true; }
 }
 // conflitos do MEU plano com o da outra pessoa
@@ -203,13 +245,15 @@ function mtDuplaConflitos(workouts){
   (workouts || ((state.modules.lift && state.modules.lift.plan && state.modules.lift.plan.workouts) || [])).forEach(w=>{
     const dela = D ? (D.dias[String(w.dayIdx)] || []) : [];
     const n = (w.exercises||[]).length || 1;
-    (w.exercises||[]).forEach((e,i)=>{ const st = exEstacao(e); if(!st) return;
+    (w.exercises||[]).forEach((e0,i)=>{ const e = _exPlano(e0); const st = exEstacao(e); if(!st) return;
       // Beta 64: aparelho que a pessoa marcou que NÃO tem também entra (com ou sem dupla)
-      if(!_eqTenho(st)){ out.push({ dia:w.dayIdx, w, e, st, falta:true, meuPos:i/n, delaPos:0 }); return; }
+      if(!_eqTenho(st)){ out.push({ dia:w.dayIdx, w, e:e0, st, falta:true, meuPos:i/n, delaPos:0 }); return; }
       if(!D) return;
-      const u = dela.find(x=>x.st === st); if(!u) return;
-      if(Math.min(_duplaQtd(st, cfg.q), _duplaQtd(st, D.P.tr.q)) >= 2) return;
-      out.push({ dia:w.dayIdx, w, e, st, meuPos:i/n, delaPos:u.pos }); });
+      // RC 3: só é disputa se as duas pessoas precisam do aparelho NA MESMA FASE do treino (posição parecida).
+      // Um no começo e o outro no fim do treino revezam sem esperar — antes isso também virava pendência.
+      const u = dela.find(x=>x.st === st && Math.abs(x.pos - i/n) < 0.34); if(!u) return;
+      if(Math.min(_duplaQtdMinha(st), _duplaQtd(st, D.P.tr.q)) >= 2) return;
+      out.push({ dia:w.dayIdx, w, e:e0, st, meuPos:i/n, delaPos:u.pos }); });
   });
   return out;
 }
@@ -255,12 +299,14 @@ function mtDuplaOrganizar(){
   // 2) aparelho de unidade única com a outra pessoa no mesmo dia: troca por equivalente; sem equivalente, mantém
   const trocas = [], mantidos = [];
   (mtDuplaConflitos()||[]).forEach(c=>{
-    const alt = _duplaEquivalente(c.e, c.w, mod.setup);
+    const ep = _exPlano(c.e);
+    const alt = _duplaEquivalente(ep, c.w, mod.setup);
     if(alt){
       const i = c.w.exercises.indexOf(c.e); if(i < 0) return;
-      const novo = Object.assign({}, c.e, { id:slug(alt.name), name:alt.name, sub:alt.sub, equip:alt.equip, unit: alt.iso ? 'tempo' : c.e.unit, duplaDe:c.e.name });
-      c.w.exercises[i] = novo; trocas.push({ de:c.e.name, para:alt.name, dia:c.w.dayName });
-    } else mantidos.push({ ex:c.e.name, st:MT_ESTACOES[c.st]||c.st, dia:c.w.dayName, dica: c.falta ? 'não há substituto equivalente com o que você tem — mantido' : (c.delaPos < 0.5 ? 'faça este no fim do treino' : 'faça este logo no começo') });
+      const novo = Object.assign({}, ep, { id:slug(alt.name), name:alt.name, sub:alt.sub, equip:alt.equip, unit: alt.iso ? 'tempo' : ep.unit, duplaDe:ep.name });
+      delete novo.troca;
+      c.w.exercises[i] = novo; trocas.push({ de:ep.name, para:alt.name, dia:c.w.dayName });
+    } else mantidos.push({ ex:ep.name, st:MT_ESTACOES[c.st]||c.st, dia:c.w.dayName, dica: c.falta ? 'não há substituto equivalente com o que você tem — mantido' : (c.delaPos < 0.5 ? 'faça este no fim do treino' : 'faça este logo no começo') });
   });
   ws.forEach(w=>{ try{ w.duration = estimateLiftDuration(w.exercises, mod.setup.goal); }catch(e){} });
   mod.plan.workouts.sort((a,b)=>(a.dayIdx||9)-(b.dayIdx||9));
@@ -277,10 +323,12 @@ function mtDuplaDesfazer(){
 // --- tela ---
 // Beta 64: a lista de aparelhos inclui TODO equipamento que algum exercício usa (não só os do plano atual),
 // com 0 / 1 / 2+. Marcar não fecha a lista nem pula a tela para o topo.
+// RC 3: os mesmos itens e nomes do cadastro (EQUIP_LISTA). Kettlebell e elástico: só tenho/não tenho.
 const MT_EQ_GRUPOS = [
-  ['Pesos livres e banco', ['halteres','barra_livre','banco','banco_supino','rack','barra_fixa','paralelas']],
-  ['Máquinas e cabos', ['polia','legpress','extensora','flexora','smith','hack','maq_peito','maq_remada','maq_ombro','adut_abdut','maq_gluteo','maq_panturrilha','maq_braco']]
+  ['Pesos livres e banco', ['halteres','barra','barraw','banco','barrafixa','paralelas','kettlebell','elastico']],
+  ['Máquinas e cabos', ['polia','maquina','smith','legpress','hack','extensora','flexora','adutora','panturrilha','gluteo']]
 ];
+function _eqNome(e){ const x = (typeof EQUIP_LISTA !== 'undefined') ? EQUIP_LISTA.find(i=>i.id === e) : null; return x ? x.nome : e; }
 function openTreinoDupla(){
   const cfg = _duplaCfg(); const P = _duplaParceiro(); const mi = $('modal-inner');
   const rolagem = mi.dataset.tela === 'dupla' ? mi.scrollTop : 0;
@@ -292,13 +340,14 @@ function openTreinoDupla(){
     if(!w && !g) return ''; const cf = CD.filter(c=>c.dia === d);
     return `<div class="dp-l ${cf.length?'conf':''}"><b>${DN[d-1]}</b><span>Você: ${w ? mtEsc(String(w.name||'').replace(/^Treino \w — /,'')) : '—'}</span><span>${mtEsc(P.nome)}: ${g ? mtEsc(g.replace(/\+/g,' + ')) : '—'}</span>${cf.length ? `<i>${cf.map(c=>MT_ESTACOES[c.st]||c.st).filter((v,i,a)=>a.indexOf(v)===i).join(', ')}</i>` : ''}</div>`; }).join('') : '';
   const U = state.modules.lift && state.modules.lift.duplaUlt;
-  const eqLinha = s=>{ const q = _duplaQtd(s, cfg.q); return `<div class="dp-q"><span>${mtEsc(MT_ESTACOES[s]||s)}</span><div class="mod-toggle dp-q3">${[[0,'0'],[1,'1'],[2,'2+']].map(([v,t])=>`<button type="button" class="seg ${(v===2 ? q>=2 : q===v)?'on':''}" onclick="duplaQtd('${s}',${v})">${t}</button>`).join('')}</div></div>`; };
+  const eqLinha = s=>{ const q = mtEquipQtd(s); const so01 = s === 'kettlebell' || s === 'elastico';
+    return `<div class="dp-q"><span>${mtEsc(_eqNome(s))}</span><div class="mod-toggle dp-q3${so01?' dp-q2':''}">${(so01 ? [[0,'Não'],[1,'Tenho']] : [[0,'0'],[1,'1'],[2,'2+']]).map(([v,t])=>`<button type="button" class="seg ${(v===2 ? q>=2 : (so01 && v===1 ? q>=1 : q===v))?'on':''}" aria-pressed="${(v===2 ? q>=2 : (so01 && v===1 ? q>=1 : q===v))}" onclick="duplaQtd('${s}',${v})">${t}</button>`).join('')}</div></div>`; };
   const eqAberto = window.__dpEqAberto ? ' open' : '';
   mi.dataset.tela = 'dupla';
   mi.innerHTML = `<div id="dupla-tela"><h3>Equipamentos e treino em dupla</h3>
     <p class="fam-p">Diga o que você tem: o plano evita o que falta e, se outra pessoa do grupo treina no mesmo lugar, evita que vocês precisem do <b>mesmo aparelho no mesmo dia</b>. Cada um continua com o próprio plano, histórico e cargas — organizar muda só o <b>seu</b> plano. Corrida e cardápio não mudam.</p>
     <details class="dp-eq"${eqAberto} ontoggle="window.__dpEqAberto=this.open"><summary>Meus equipamentos</summary>
-      <p class="fam-p">Quantos de cada você tem: <b>0</b> = não tenho, <b>1</b> = um só, <b>2+</b> = dois ou mais. Sem resposta, o app considera 1 de cada aparelho e halteres em vários pares. Elásticos e kettlebell não aparecem porque nenhum exercício da biblioteca usa.</p>
+      <p class="fam-p">É a mesma lista do seu plano (Perfil › Equipamentos): mudar aqui muda lá. <b>0</b> = não tenho, <b>1</b> = um só, <b>2+</b> = dois ou mais (só importa quando outra pessoa treina no mesmo lugar).</p>
       ${MT_EQ_GRUPOS.map(([t, l])=>`<div class="dp-eqg">${t}</div>${l.map(eqLinha).join('')}`).join('')}
     </details>
     ${P ? `<label class="pi-row" style="margin:12px 0 8px"><span class="pi-txt"><b>Treino com ${mtEsc(P.nome)} no mesmo lugar</b><small>${cfg.on ? 'Ligado' : 'Desligado'} · ${D ? `${mtEsc(P.nome)} também ligou` : `${mtEsc(P.nome)} ainda não ligou`}</small></span><input type="checkbox" class="pi-sw" ${cfg.on?'checked':''} onchange="duplaLiga(this.checked)"></label>` : `<p class="fam-mini" style="margin-top:10px">Treino em dupla: as duas pessoas precisam estar no mesmo grupo de Perfil › Meu grupo.</p>`}
@@ -314,7 +363,25 @@ function openTreinoDupla(){
 function _duplaPublicaJa(){ try{ if(typeof famAgendaEnvio === 'function' && typeof famAtiva === 'function' && famAtiva()) famAgendaEnvio(200); }catch(e){} }
 function duplaLiga(on){ _duplaCfg().on = !!on; saveData(); _duplaPublicaJa(); openTreinoDupla(); try{ mtDuplaLinha(); }catch(e){} }
 function duplaConq(on){ _duplaCfg().conq = !!on; saveData(); _duplaPublicaJa(); }
-function duplaQtd(st, n){ const c = _duplaCfg(); c.q = c.q || {}; c.q[st] = n; window.__dpEqAberto = true; saveData(); _duplaPublicaJa(); openTreinoDupla(); try{ mtDuplaLinha(); }catch(e){} }
+// RC 3: uma resposta só. "0" tira o equipamento do plano (personalizado); 1/2+ põe de volta e guarda a quantidade.
+// Plano com equipamento pronto (academia, halteres, peso do corpo) que contradiz a resposta vira personalizado,
+// partindo do que o modelo pronto já incluía.
+function duplaQtd(e, n){
+  const c = _duplaCfg(); const qe = _duplaQe(); const su = _liftSetup();
+  if(MT_ESTACAO_EQUIP[e] && !(typeof EQUIP_LISTA !== 'undefined' && EQUIP_LISTA.some(i=>i.id === e))) e = MT_ESTACAO_EQUIP[e][0];   // chamada antiga, por estação
+  n = +n || 0; qe[e] = n;
+  if(su){
+    const tem = mtSetupTemEquip(e);
+    if((n > 0 && !tem) || (n === 0 && tem)){
+      if(su.equip !== 'custom'){ su.equipList = (typeof EQUIP_LISTA !== 'undefined' ? EQUIP_LISTA.map(i=>i.id) : []).filter(mtSetupTemEquip); su.equip = 'custom'; toast('Seu equipamento passou a ser personalizado (o que você marcou aqui).'); }
+      const L = new Set(su.equipList || []); if(n > 0) L.add(e); else L.delete(e); su.equipList = [...L];
+    }
+    if(n > 0 && qe[e] === 1 && e !== 'halteres') delete qe[e];   // 1 é o padrão: não precisa guardar
+  }
+  window.__dpEqAberto = true; saveData(); _duplaPublicaJa(); openTreinoDupla(); try{ mtDuplaLinha(); }catch(err){}
+}
+// cadastro/Perfil mudou a lista personalizada: a resposta "0" antiga não pode contradizer o que foi marcado lá
+mtGancho('finishSetup', { depois(m){ try{ if(m !== 'lift') return; const su = _liftSetup(); const qe = _duplaQe(); if(su && su.equip === 'custom') (su.equipList||[]).forEach(e=>{ if(qe[e] === 0) delete qe[e]; }); }catch(e){} } });
 function duplaOrganizar(){ const r = mtDuplaOrganizar(); if(!r.ok){ toast(r.msg); return; } toast(r.depois < r.antes ? `Pronto: de ${r.antes} para ${r.depois} ${r.depois===1?'pendência':'pendências'} de aparelho` : 'Não deu para reduzir sem prejudicar o treino — veja as dicas'); _duplaPublicaJa(); openTreinoDupla(); try{ renderSessions(); }catch(e){} }
 function duplaDesfazer(){ if(mtDuplaDesfazer()){ toast('Plano de volta como estava'); _duplaPublicaJa(); openTreinoDupla(); try{ renderSessions(); }catch(e){} } }
 // Beta 64: entrada discreta no FIM da tela de Treinos (antes ficava no topo, entre os atalhos e os dias)
@@ -323,7 +390,8 @@ function mtDuplaLinha(){
     const old = $('dupla-linha'); if(old) old.remove();
     if(state.active !== 'lift' || !state.modules.lift || !state.modules.lift.plan) return;
     const P = _duplaParceiro(); const cfg = _duplaCfg(); const C = mtDuplaConflitos() || [];
-    const txt = C.length ? `· ${C.length} ${C.length===1?'pendência':'pendências'} de aparelho` : (P && cfg.on ? `· com ${P.nome}` : '');
+    const CF = C.filter(c=>c.falta).length, CD = C.length - CF;
+    const txt = [CD ? `· ${CD} ${CD===1?'aparelho disputado':'aparelhos disputados'} com ${P ? P.nome : 'a dupla'}` : '', CF ? `· ${CF} ${CF===1?'exercício usa':'exercícios usam'} aparelho que você não tem` : ''].filter(Boolean).join(' ') || (P && cfg.on ? `· com ${P.nome}` : '');
     const wrap = document.querySelector('#scr-sessions .wrap'); if(!wrap) return;
     wrap.insertAdjacentHTML('beforeend', `<div id="dupla-linha" class="dupla-linha ${C.length ? 'conf' : ''}"><a href="#" onclick="openTreinoDupla();return false">⚙️ Equipamentos${P ? ' e treino em dupla' : ' da academia'}</a>${txt ? `<small>${mtEsc(txt)}</small>` : ''}</div>`);
   }catch(e){}

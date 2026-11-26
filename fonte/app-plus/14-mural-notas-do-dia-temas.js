@@ -227,7 +227,7 @@ function dayAutoNotes(ts){
   // Beta 58: recorde só conta quando havia registro anterior do exercício (o primeiro registro não é recorde)
   // e vários viram UMA linha — o calendário mostra o essencial, o resto está no histórico.
   const recs = [];
-  Object.keys(prs).forEach(id=>{ const p = prs[id]; if(!(p && p.at && noDia(p.at))) return; prHoje.add(id);
+  Object.keys(prs).forEach(id=>{ const p = prs[id]; if(!(p && p.at && noDia(p.at)) || p.ref) return; prHoje.add(id);
     const antes = (state.progress[id]||[]).some(q=>q && q.date && q.date < ini && q.sets && q.sets.length);
     if(antes) recs.push({ id, p }); });
   const _rTxt = r=>`${_nomeEx(r.id)} (${r.p.peso>0 ? String(r.p.peso).replace('.',',')+' kg × '+r.p.reps : r.p.reps+' rep.'})`;

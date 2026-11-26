@@ -400,7 +400,7 @@ window.openAssistant = function(){
   try{
     if(!(typeof cadBloqueado === 'function' && cadBloqueado()) && maPrecisaBoasVindas()){
       state.maBoasVindas = maJornada(); saveData();
-      try{ localStorage.removeItem('mt_ma_thread'); }catch(e){}
+      try{ localStorage.removeItem('mt_ma_thread'); if(typeof maThreadChave==='function' && maThreadChave()) localStorage.removeItem(maThreadChave()); }catch(e){}
       maNudgeAtivo = { text:'', tone:'curio', dica:{ completa: maBoasVindasTexto() } };
     }
   }catch(e){}
