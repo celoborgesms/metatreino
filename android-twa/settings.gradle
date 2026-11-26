@@ -1,0 +1,13 @@
+// MetaTreino para Android (APK instalável sem a Play Store).
+// É um Trusted Web Activity (TWA): abre https://metatreino.app no motor do Chrome, em tela cheia,
+// sem barra de endereço. Offline, login com Google, Firebase e atualização automática funcionam
+// exatamente como no site, porque É o site. Montado pelo GitHub Actions (.github/workflows/apk.yml).
+pluginManagement {
+    repositories { google(); mavenCentral(); gradlePluginPortal() }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories { google(); mavenCentral() }
+}
+rootProject.name = 'MetaTreino'
+include ':app'

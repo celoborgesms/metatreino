@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appName">MetaTreino</string>
+    <!-- o site confirma este app em https://metatreino.app/.well-known/assetlinks.json -->
+    <string name="assetStatements" translatable="false">[{\"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": {\"namespace\": \"web\", \"site\": \"https://metatreino.app\"}}]</string>
+</resources>

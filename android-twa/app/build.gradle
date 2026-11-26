@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'app.metatreino'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'app.metatreino'
+        minSdk 21
+        targetSdk 34
+        // o GitHub Actions passa um número que sempre cresce (o Android só instala por cima se for maior)
+        versionCode((System.getenv('VERSION_CODE') ?: '1') as int)
+        versionName(System.getenv('VERSION_NAME') ?: 'local')
+        manifestPlaceholders = [
+            hostName  : 'metatreino.app',
+            defaultUrl: 'https://metatreino.app/'
+        ]
+    }
+
+    signingConfigs {
+        release {
+            // a chave vem dos "secrets" do repositório (nunca fica no código)
+            storeFile file(System.getenv('KEYSTORE_FILE') ?: 'sem-chave.jks')
+            storePassword System.getenv('KEYSTORE_PASSWORD')
+            keyAlias 'metatreino'
+            keyPassword System.getenv('KEYSTORE_PASSWORD')
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}
