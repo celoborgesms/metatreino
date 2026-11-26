@@ -77,7 +77,7 @@ async def casa(b):
     # trocar o prato da casa troca para todos
     ch = await pg.evaluate("nutriMontarPlano(3).refeicoes.find(m=>m.id==='almoco').chave")
     p0 = await pg.evaluate("nutriMontarPlano(3).refeicoes.find(m=>m.id==='almoco').prato")
-    await pg.evaluate(f"nutriTrocar('{ch}')"); await pg.wait_for_timeout(500)
+    await pg.evaluate(f"famAlcanceDefine('grupo'); nutriTrocar('{ch}')"); await pg.wait_for_timeout(500)   # RC 2: o administrador escolheu "Grupo todo"
     r = await pg.evaluate(f"({{ tr: window.__mockFS[{FAM}].config.trocas, prato: nutriMontarPlano(3).refeicoes.find(m=>m.id==='almoco').prato }})")
     confere('"Outro prato" numa refeição da casa troca para todos', (r['tr'] or {}).get(ch) == 1 and r['prato'] != p0, [p0, r])
     # quantidade é pessoal (não sincroniza)

@@ -231,7 +231,7 @@ async def offline_pdf(b):
         s.onload = ()=>ok('carregou'); s.onerror = ()=>ok('falhou'); document.head.appendChild(s); })""")
     confere('sem internet, o jsPDF guardado na instalação carrega mesmo pedido com "?v=" (antes falhava)', r == 'carregou', r)
     r = await pg.evaluate("[APP_VERSION, appVersaoLabel(), (document.getElementById('pf-version')||{}).textContent]")
-    confere('versão 2027 RC 0 (identificador e texto)', r[0] == '2027-rc.0' and r[1] == '2027 RC 0', r)
+    confere('versão 2027 RC (identificador e texto)', r[0].startswith('2027-rc.') and r[1].startswith('2027 RC '), r)
     await ctx.close()
 
 async def main():

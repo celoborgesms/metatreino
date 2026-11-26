@@ -131,6 +131,8 @@
     currentUser: null,
     onAuthStateChanged(cb){ authListeners.push(cb); setTimeout(()=>{ auth.currentUser = window.__MOCK_LOGGED_OUT ? null : MOCK_USER; cb(auth.currentUser); }, 30); return ()=>{}; },
     signOut(){ auth.currentUser = null; authListeners.forEach(f=>f(null)); return Promise.resolve(); },
+    // RC 3: o Firebase pode avisar de novo o MESMO login (renovação, volta do segundo plano) — o teste simula isso
+    __reemitir(){ authListeners.forEach(f=>f(auth.currentUser)); },
     signInWithPopup(){ if(window.__MOCK_GOOGLE_CONFLITO){ window.__MOCK_GOOGLE_CONFLITO = false; return Promise.reject({ code:'auth/account-exists-with-different-credential', email: MOCK_USER.email, credential:{ providerId:'google.com' } }); } return Promise.resolve({ user: MOCK_USER }); },
     signInWithEmailAndPassword(em, pass){ if(window.__MOCK_SENHA && pass !== window.__MOCK_SENHA) return Promise.reject({ code:'auth/invalid-credential' }); if(!auth.currentUser){ auth.currentUser = MOCK_USER; authListeners.forEach(f=>setTimeout(()=>f(MOCK_USER), 0)); } return Promise.resolve({ user: MOCK_USER }); },
     createUserWithEmailAndPassword(){ return Promise.resolve({ user: MOCK_USER }); },

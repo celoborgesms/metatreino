@@ -110,7 +110,7 @@ async def main():
             r5 = await tenta(pb, f"db.collection('familias').doc('{cod}').update({{ 'nomes.uB': 'Emi' }})")
             confere('regras deixam alterar o próprio apelido', r5 == 'ok', r5)
             antes = la['prato']
-            await pa.evaluate("nutriTrocar('almoco')"); await pa.wait_for_timeout(300)
+            await pa.evaluate("famAlcanceDefine('grupo'); nutriTrocar('almoco')"); await pa.wait_for_timeout(300)   # RC 2: o administrador escolheu "Grupo todo"
             okT = await espera(pb, f"(()=>{{ const m = nutriMontarPlano(getDayIdx()).refeicoes.find(x=>x.id==='almoco'); return m && m.prato !== {json.dumps(antes)}; }})()")
             la, lb = await pa.evaluate(ALMOCO), await pb.evaluate(ALMOCO)
             confere('o administrador troca o prato e ele muda no outro celular', okT and la['prato'] == lb['prato'] and la['prato'] != antes, [antes, la, lb])
@@ -222,7 +222,7 @@ async def main():
             confere('administração passada para a outra pessoa', d and d['dono'] == 'uB', d and d.get('dono'))
             okAdm = await espera(pb, "famSouAdm()")
             antes = (await pb.evaluate(ALMOCO))['prato']
-            await pb.evaluate("nutriTrocar('almoco')"); await pb.wait_for_timeout(300)
+            await pb.evaluate("famAlcanceDefine('grupo'); nutriTrocar('almoco')"); await pb.wait_for_timeout(300)
             okT2 = await espera(pa, f"nutriMontarPlano(getDayIdx()).refeicoes.find(x=>x.id==='almoco').prato !== {json.dumps(antes)}")
             confere('a nova administradora troca o prato e o outro celular acompanha', okAdm and okT2)
             await pa.evaluate("closeModal(); famSair()"); await pa.wait_for_timeout(300)

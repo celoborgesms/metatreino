@@ -30,7 +30,7 @@ async def main():
         r = await pg.evaluate("[...document.querySelector('.dp-q3').querySelectorAll('.seg')].map(b=>b.textContent)")
         confere('cada aparelho tem 0, 1 e 2+', r == ['0','1','2+'], r)
         await pg.evaluate("document.querySelector('#modal-inner').scrollTop = 300; duplaQtd('polia',0)"); await pg.wait_for_timeout(200)
-        r = await pg.evaluate("({aberto: document.querySelector('.dp-eq').open, rol: document.querySelector('#modal-inner').scrollTop, q: state.modules.lift.setup.dupla.q.polia})")
+        r = await pg.evaluate("({aberto: document.querySelector('.dp-eq').open, rol: document.querySelector('#modal-inner').scrollTop, q: mtEquipQtd('polia')})")   # RC 3: a resposta é a mesma do plano (equipList/qe), não mais dupla.q
         confere('escolher a quantidade não fecha a lista nem pula a tela', r['aberto'] and r['rol'] >= 250 and r['q'] == 0, r)
         r = await pg.evaluate("(mtDuplaConflitos()||[]).filter(c=>c.falta).length")
         confere('"0" vira pendência mesmo sem parceiro', r > 0, r)
@@ -54,7 +54,7 @@ async def main():
         print('3. Barra de macros e alimentos')
         await pg.evaluate("openNutri()"); await pg.wait_for_timeout(400)
         a = await pg.evaluate("document.querySelector('.maclg').innerText")
-        await pg.evaluate("nutriTrocar(nutriMontarPlano(nutriDiaSel()).refeicoes[2].chave)"); await pg.wait_for_timeout(400)
+        await pg.evaluate("famAlcanceDefine('grupo'); nutriTrocar(nutriMontarPlano(nutriDiaSel()).refeicoes[2].chave)"); await pg.wait_for_timeout(400)
         b2 = await pg.evaluate("document.querySelector('.maclg').innerText")
         confere('barra de proteína/carbo/gordura muda quando o prato muda', a != b2, (a, b2))
         await pg.evaluate("nutriAddAbrir('almoco')"); await pg.wait_for_timeout(200)

@@ -118,10 +118,11 @@ async def main():
         confere('calendário mostra só a musculação (sem pontos de corrida)', r == 0, r)
         await pg.evaluate("goTab('sessions')"); await pg.wait_for_timeout(300)
         r = await pg.evaluate("[...document.querySelectorAll('#sess-qlinks .qlink')].map(b=>b.textContent.trim()+'|'+b.getAttribute('onclick'))")
-        confere('Treinos (musculação): "Importar do relógio" no lugar do registro de corrida', any('Importar do relógio|openIntegracoes()' in x for x in r) and not any('Registrar atividade' in x for x in r), r)
+        # RC 3: o registro saiu do topo de Treinos e a musculação não importa do relógio (ver rc3.py, item 10)
+        confere('Treinos (musculação): sem registro nem importação do relógio no topo', not any('relógio' in x or 'Registrar' in x for x in r), r)
         await pg.evaluate("state.active='run'; goTab('sessions')"); await pg.wait_for_timeout(300)
         r = await pg.evaluate("[...document.querySelectorAll('#sess-qlinks .qlink')].map(b=>b.textContent.trim())")
-        confere('Treinos (corrida): o registro de atividade continua', any('Registrar atividade' in x for x in r), r)
+        confere('Treinos (corrida): o registro fica embaixo, no treino (não no topo)', not any('Registrar' in x for x in r), r)   # RC 3
 
         print('6. Substituição inteligente de alimentos')
         await pg.evaluate("state.active='lift'; state.nutri = state.nutri || {}; state.nutri.vegetariano=false; state.nutri.semLactose=false; state.nutri.semGluten=false; openNutri()"); await pg.wait_for_timeout(400)

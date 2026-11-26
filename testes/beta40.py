@@ -47,7 +47,9 @@ async def cadastro(b):
     p = await pg.evaluate("planoAtual()")
     confere('plano atual: teste, Premium liberado, 30 dias', p['tipo'] == 'teste' and p['premium'] and 29 <= await pg.evaluate("accessDaysLeft()") <= 30, p)
     # criar conta nova sem e-mail real (usuário) foi bloqueado na tela
-    await pg.evaluate("doLogout()"); await pg.wait_for_timeout(300)
+    # RC 3: sair recarrega a página (limpa a memória da conta anterior); o teste mantém a sessão fechada depois da recarga
+    await pg.add_init_script("if(sessionStorage.getItem('t_saiu')) window.__MOCK_LOGGED_OUT = true;")
+    await pg.evaluate("sessionStorage.setItem('t_saiu','1'); doLogout()"); await pg.wait_for_timeout(3500)
     r = await pg.evaluate("(()=>{ toggleAuthMode(); document.getElementById('auth-email').value='joao123'; document.getElementById('auth-pass').value='123456'; document.getElementById('auth-name').value='Joao'; doEmailAuth(); return document.getElementById('auth-err').textContent; })()")
     confere('conta nova de "usuário" (sem e-mail) não é criada: pede e-mail real ou Google', 'e-mail real' in r, r)
     confere('sem erros de JavaScript', not erros, erros[:3])

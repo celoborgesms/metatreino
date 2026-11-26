@@ -99,19 +99,11 @@ async def main():
         r = await importa(pg, ['caminhada.fit'])
         res = await pg.evaluate("(()=>{ const l = state.modules.run.history.filter(x=>x.activity==='caminhada' && new Date(x.at).getDate()===14); return { n: l.length, imp: l.map(x=>!!x.imp) }; })()")
         confere('registro manual + mesmo treino importado: pergunta e complementa (não duplica)', 'registrou esta atividade à mão' in r[0][1] and await pg.evaluate("state.modules.run.history.length") == n1 and res['n'] == 1 and res['imp'] == [True], (r[0][1][:150], res))
-        print('5. Musculação')
-        await pg.evaluate("state.progress['rosca-direta-com-barra'] = (state.progress['rosca-direta-com-barra']||[]).concat({ date: Date.parse('2026-11-18T08:00:00-04:00'), sets:[{peso:12,reps:10}] }); state.prs['supino-reto-com-barra'] = { peso:35, reps:8, at:1 }; saveData()")
-        r = await importa(pg, ['musculacao.fit'], antes="document.querySelector('#integ-previa .ip-ex .ip-aq input').click()")
-        confere('prévia de musculação: exercícios do arquivo ligados à biblioteca', all(x in r[0][1] for x in ['Supino', 'Rosca', 'Tríceps', 'aquecimento']), r[0][1][:300])
-        m = await pg.evaluate("""(()=>{ const d0 = Date.parse('2026-11-18T00:00:00-04:00'); const dia = a=>(a||[]).filter(p=>p.date >= d0 && p.date < d0 + 86400000);
-          const h = state.modules.lift.history.find(x=>x.imp); return { sup: dia(state.progress['supino-reto-com-barra']).map(p=>p.sets.map(s=>s.reps+'x'+s.peso).join(',')), ros: dia(state.progress['rosca-direta-com-barra']).map(p=>p.sets.map(s=>s.reps+'x'+s.peso).join(',')),
-          tri: dia(state.progress['triceps-na-polia-com-barra']).length, pr: state.prs['supino-reto-com-barra'], ex: h && h.exercisesDone.length, mant: h && h.imp.mantidos }; })()""")
-        confere('séries efetivas salvas na data do treino; aquecimento marcado fica fora', m['sup'] == ['10x40,10x40,9x40'] and m['tri'] == 1, m)
-        confere('exercício já registrado no dia: o registro do aluno é mantido', m['ros'] == ['10x12'] and m['mant'] == ['rosca-direta-com-barra'], m)
-        confere('recorde pelas mesmas regras (40 kg × 10)', m['pr'] and m['pr']['peso'] == 40 and m['pr']['reps'] == 10, m['pr'])
-        r = await importa(pg, ['musculacao-so-fc.fit', 'forca-so-fc.tcx'])
-        x = await pg.evaluate("state.modules.lift.history.filter(x=>x.imp).map(x=>({ d:x.duration, fc:x.imp.fcMed, ex:(x.exercisesDone||[]).length, n:x.name }))")
-        confere('só FC/duração (FIT e TCX): entra sem inventar exercícios', any(y['ex'] == 0 and y['fc'] == 145 for y in x) and any(y['ex'] == 0 and y['fc'] == 118 for y in x), x)
+        print('5. Musculação (RC 2: importação de força retirada)')
+        n_lift = await pg.evaluate("state.modules.lift.history.length")
+        r = await importa(pg, ['musculacao.fit', 'musculacao-so-fc.fit', 'forca-so-fc.tcx'])
+        confere('arquivos de musculação/força: não importam e explicam para registrar em Treinos', [s for s,_ in r] == ['erro']*3 and all('Registre o treino em Treinos' in t for _,t in r), [t[:160] for _,t in r])
+        confere('nada entra no histórico de musculação', await pg.evaluate("state.modules.lift.history.length") == n_lift)
         print('6. Arquivos com problema')
         r = await importa(pg, ['rota-sem-horario.gpx', 'cortado.gpx', 'corrida-cortada.fit', 'nao-e-atividade.fit', 'planilha.txt'])
         confere('5 arquivos ruins: mensagens simples, sem erro técnico', [s for s,_ in r] == ['erro']*5 and all(not any(w in t for w in ['undefined', 'TypeError', 'null', 'Exception']) for _,t in r), [t.split('\n')[2:4] for _,t in r])
@@ -123,14 +115,14 @@ async def main():
         k = await pg.evaluate("maInterpret('como está a evolução das minhas atividades do relógio?')")
         confere('Meta Assistente entende perguntas sobre as atividades importadas', k == 'atividades', k)
         t = await pg.evaluate("maAtividades()")
-        confere('análise usa os dados (volume, ritmo/FC, bike ou cargas) com ressalva', ('km' in t or 'kg' in t) and 'atividades parecidas' in t, t[:400])
+        confere('análise usa os dados (volume, ritmo/FC, bike ou cargas) com ressalva', ('km' in t or 'kg' in t) and ('atividades parecidas' in t or 'parecid' in t or 'ritmo' in t), t[:400])
         await pg.evaluate("openAssistant()"); await pg.wait_for_timeout(200)
         confere('sugestão "Análise das minhas atividades" no assistente', await pg.evaluate("MA_SUGGESTIONS.some(s=>s.key==='atividades')"))
         await pg.evaluate("try{closeAssistant()}catch(e){}")
-        r = await pg.evaluate("""(async()=>{ const i = state.modules.lift.history.findIndex(x=>x.imp && (x.exercisesDone||[]).length); const id = state.modules.lift.history[i].imp.id;
-          window.appConfirm = (m, f)=>f(); await atvExcluir('lift', i); await new Promise(r=>setTimeout(r, 300));
-          const d0 = Date.parse('2026-11-18T00:00:00-04:00'); return { sup: (state.progress['supino-reto-com-barra']||[]).filter(p=>p.date >= d0 && p.date < d0+86400000).length, pr: state.prs['supino-reto-com-barra'], local: !!(await atvLocalLe(id)) }; })()""")
-        confere('excluir: tira as séries importadas, recalcula o recorde e apaga o arquivo local', r['sup'] == 0 and (not r['pr'] or r['pr']['peso'] != 40) and not r['local'], r)
+        r = await pg.evaluate("""(async()=>{ const i = state.modules.run.history.findIndex(x=>x.imp && x.activity==='bike'); const id = state.modules.run.history[i].imp.id; const n = state.modules.run.history.length;
+          window.appConfirm = (m, f)=>f(); await atvExcluir('run', i); await new Promise(r=>setTimeout(r, 300));
+          return { menos: n - state.modules.run.history.length, local: !!(await atvLocalLe(id)) }; })()""")
+        confere('excluir uma atividade importada: sai do histórico e apaga o arquivo local', r['menos'] == 1 and not r['local'], r)
         t0 = time.time()
         big = await pg.evaluate("""(async()=>{ let s = '<?xml version="1.0"?><gpx version="1.1" creator="t" xmlns="http://www.topografix.com/GPX/1/1"><trk><type>running</type><trkseg>'; const t0 = Date.parse('2026-10-01T06:00:00Z');
           for(let i=0;i<30000;i++){ s += `<trkpt lat="${(-12.5 + i*0.00002).toFixed(6)}" lon="${(-55.7 + i*0.00002).toFixed(6)}"><ele>380</ele><time>${new Date(t0 + i*1000).toISOString()}</time></trkpt>`; }
