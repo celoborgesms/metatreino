@@ -115,6 +115,9 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `76-sono.js` | RC 2: `state.sono = {on, n:{dia:{h,dor,aco,q,d}}, pulou}`; Home `#sono-manha` (de manhã, só ligado); `sonoRegistrar`, `openSono` (gráfico `sonoGrafico`), entrada `#sono-entrada` em Progresso; `sonoSinal()` e influência em `runStatusCard`, `rAvaliarSemana` (segura avanço com 3+ noites ruins) e `smartProgressionHint`. |
 | `77-desafio-juntos.js` | RC 2: `state.desafioJuntos = {on, meta, desde}`; publica `perfis.<uid>.dj` (embrulha `_famMeuPerfil`; parte 49 compara `dj` no envio); `djParticipantes`, `djSemanas`, seção `#dj-box` em `openFamilia`; conquistas `jun_semana1`, `jun_10`, `jun_4sem`, `sec_provagrupo`. |
 | `78-inicio-enxuto.js` | RC 2: `mtInicioPadraoNovo()` (só ao concluir o cadastro, gancho `saveQuiz`): conta nova sem histórico começa sem Água, Frase e Fase do plano; modo Gratuito "Padrão" (`state.inicioBasico = 'padrao'`). |
+| `79-rc3-contas-estabilidade.js` | RC 3 (Etapa 1): isolamento de contas no aparelho (`mt_conta_local`, `metatreino_theme_uid`, `mtLimpaLocalPessoal`, `mtContaLocalSaiu` chamado pelo `doLogout`; o tema da conta sempre vale); esforço × cansaço (`mtRelatosCansaco`, `mtNemAPreguica`; relato = `state.relatosCansaco` gravado pelo `maTired`, "acordei cansado" no sono ou "cansado" escolhido no registro antigo sem rpe); correção única (`mtCorrecaoRC3`: refaz recordes com `mtPrRecalcularTudo` a cada entrada e retira uma vez `first_pr`/`pr_5`/`pr_20`/`rain_check` que não se sustentam → `state.conqRevogadas`, respeitado pelo `mesclaEstado`); conquistas em dupla conferidas quando o grupo publica horários novos (`mtDuplaRecheca`, gancho em `_famAplica`). |
+| `80-rc3-calculos-registro.js` | RC 3 (Etapa 2): **motor único do volume** `mtVolumeEntradas` / `mtVolumeTreino` (carga registrada × reps; sem dobrar halter; peso do corpo fora; carga extra em `kgExtra`; tempo fora); cards (`mtsDeHistorico` musculação = séries concluídas; `mtsDeSemana` com `periodo` e `lista` por dia — desenhados em `mtsDesenhar`, parte 26); registro de atividade (atalho de importar em `openRunLog`; `#home-registrar` só sem plano de corrida; nada de importar na musculação); cronômetro de exercício por tempo (`MT_CRON`, `mtCronIniciar/Pausar/Retomar/Concluir/Descartar`; `mt_cron_ex` detecta interrupção); carga extra (`state.prefs.ocultarCargaExtra`, `mtCargaExtraOcultar`, linha `#pf-cargaextra-row`); PDF série por série (`mtPdfSessoesSeries`; coluna de tabela com `quebra:true`); CSS das conquistas. |
+| `81-rc3-sono-agua-semana.js` | RC 3 (Etapa 3): sono em 5 níveis (`q5`, `d5`; `q`/`d` de 1–3 continuam derivados para o resto do app), horários com total exato (`sonoHorasExatas`), `sonoAnalise`/`sonoAnaliseHTML` (médias da semana e do mês, regularidade, sono × treinos), média de 7 dias no `sonoGrafico`; Início: atalho `.met-sono` no lugar da Água (bloco `sono` em `INICIO_BLOCOS`; `agua` saiu); Alimentação: `#nutri-agua`; Atividade da semana nova (`mtSemanaAtiv`; `renderQuickStats` e `openAtividadeDetalhes` substituídos). |
 
 Beta 56 também troca o azul fixo `#7dd3fc` por `var(--info-soft)` no núcleo (3 lugares) e torna `#sessions-chips` uma grade (parte 58).
 
@@ -208,6 +211,15 @@ Acesso offline: `acessoCacheValido` e `acessoConfereDepois` (app.js). O app entr
 Nenhum elemento pode passar da borda da tela no celular (deixa a página mais larga e o celular abre com zoom). Para conferir: `document.documentElement.scrollWidth` tem que ser igual à largura da tela.
 
 ## Sistemas centrais (Beta 33) — use estes, não crie outro
+
+**RC 3 — use estes também:**
+- **Recorde pessoal:** `mtPrRecalcularEx(exId)` / `mtPrAvaliaSessao` / `mtPrsReais()` / `mtPrTotal()` (app.js). O 1º registro é referência (`ref:true`), não recorde. Não escreva em `state.prs` direto.
+- **Volume de carga:** `mtVolumeEntradas` / `mtVolumeTreino` (parte 80). Não some carga × repetições por conta própria.
+- **Duração:** `fmtDur(min, semSegundos)` (app.js) — "52 min", "3 h 03 min". Não monte "3h03" nem "183 min" à mão.
+- **Pulo de treino:** `skipEDoTreino(s, w)` (app.js). `s.dayIdx` = dia real do descanso; `s.planDay` = dia do plano.
+- **Equipamento:** `mtSetupTemEquip(e)` / `mtEquipQtd(e)` / `_eqTenho(estação)` (parte 65). "Tenho / não tenho" é uma resposta só (lista do plano); a dupla só acrescenta a quantidade.
+- **Exercício trocado "só neste treino":** `_exPlano(e)` devolve o planejado (dupla e pendências olham o plano, não a troca do dia).
+- **Conversa do assistente:** `maThreadChave()` (por conta). **Preferência local pessoal nova:** acrescente a chave em `MT_LOCAL_PESSOAL` (parte 79), senão ela vaza para outro login no mesmo aparelho.
 
 | Sistema | Onde | Como usar |
 |---|---|---|

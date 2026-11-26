@@ -2,6 +2,31 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. 2027 RC 3 — em aparelho real (Android, iPhone e computador)
+**Contas e sessão**
+1. Entre com a conta A, escolha um tema e converse com o Meta Assistente. Saia. A tela de entrada volta no tema padrão.
+2. No mesmo celular, entre com a conta B: o tema é o padrão (ou o da conta B), a conversa da A não aparece e o nome, o histórico e os dados são da B. Saia e entre com a A de novo: o tema da A volta.
+3. Deixe o app aberto no Início por 20 a 30 minutos. Use outros apps e volte algumas vezes. Ele **não** pode reiniciar nem passar pela tela de login. Anote se acontecer, com o horário e o que estava aberto.
+
+**Musculação**
+4. Treino do dia, com cargas diferentes por série (ex.: 21, 27, 27 kg). Salve com esforço 8. O cartão mostra "Esforço 8/10" e a etiqueta "Ref." no exercício (o 1º registro não é PR).
+5. No dia seguinte, abra o mesmo treino, registre e toque em "Salvar treino adicional". Ele aparece no Histórico como "(adicional)".
+6. Dois dias depois: a semana não mostra "faltou" no dia do treino feito; o treino continua "concluído".
+7. Num treino com prancha, toque em ▶ numa série. Bloqueie a tela por uns 20 s e volte: o tempo continua certo. Toque em Concluir série e confira o tempo gravado. Faça outra contagem e feche o registro no meio: nada pode ser gravado.
+8. Num exercício com o peso do corpo (flexão, barra fixa): toque em "+ Usei carga extra", registre 10 kg. Depois toque em "Ocultar" e confira em Perfil › Treino que dá para mostrar de novo.
+9. Gere o PDF (Seus dados › Relatório): na seção "Séries registradas", cada série aparece com a carga dela.
+10. Compartilhe o treino: o card mostra as séries concluídas (sem "toneladas"). Compartilhe a semana: aparece o período e cada atividade com o dia.
+
+**Dupla**
+11. As duas pessoas abrem Treinos › Equipamentos: a lista é a mesma do Perfil, sem repetição. Marque 0 em um aparelho e confira que o Perfil mostra "personalizado" sem ele.
+12. Uma pessoa troca um exercício com "Equipamento ocupado": a outra não pode ganhar pendência nova por isso.
+13. Treinem no mesmo horário e salvem (cada um no seu celular). A conquista "Parceiros de Treino" precisa aparecer nos **dois** aparelhos, mesmo para quem salvou primeiro.
+
+**Descanso, sono e Início**
+14. No dia do treino, toque em "Não vou treinar hoje": a semana mostra "desc." nesse dia. No dia seguinte, o treino daquele dia não aparece como pulado. Em dia sem treino no plano, o botão nem aparece.
+15. No Início, o atalho "Sono" fica no lugar da Água. Registre dormir 23:40 e acordar 06:55: o total aparece na hora (7 h 15). Em Alimentação, use +250/+500 da água.
+16. Confira a "Atividade da semana" nova em tema claro e escuro, em 360 px e no computador.
+
 ## 00000. 2027 RC 2 — rotina real
 1. Som do cronômetro › Testar vibração › "Não senti": as opções de vibrar somem; "Testar de novo" devolve.
 2. Importe um .fit do relógio: aparece a régua de esforço sem nada marcado (ou "informado no relógio"). Salve sem responder; depois abra a atividade › Informar o esforço.

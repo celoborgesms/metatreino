@@ -3558,8 +3558,9 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
     <div class="qlinks" id="sess-qlinks">
       <button type="button" class="qlink" onclick="goTab('plan')"><span>📋</span>Meu plano</button>
       <button type="button" class="qlink" id="ql-lib" onclick="goTab('library')"><span>📚</span>Biblioteca</button>
-      <button type="button" class="qlink" onclick="openActivityLog()"><span>➕</span>Registrar atividade</button>
     </div>
+    <!-- RC 3: o registro de atividade saiu do topo de Treinos. Fica embaixo, no treino do dia (corrida), com
+         a importação do relógio dentro dele; quem não tem plano de corrida registra pelo Início. -->
 
     <div class="hs" id="sessions-chips"></div>
     <div class="card card-alert card-row" style="margin-top:12px"><div class="card-icon" id="sess-mod-icon">🏃</div><div style="flex:1"><div class="card-title acc">Programação semanal</div><div class="card-sub" id="weekly-info">Meta: — · Semana 1 · 4× por semana</div></div></div>
@@ -3815,7 +3816,7 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
       <div class="help-links"><a href="#" onclick="openModal('faq');return false">FAQ / Sobre</a>·<a href="#" onclick="openModal('privacy');return false">Privacidade</a>·<a href="#" onclick="openModal('terms');return false">Termos</a></div>
     </div>
     <div style="text-align:center;margin:26px 0 10px;color:var(--text-mute);font-size:11.5px">
-      MetaTreino <span id="pf-version" style="font-weight:700">2027 RC 2</span>
+      MetaTreino <span id="pf-version" style="font-weight:700">2027 RC 3</span>
     </div>
   </div>
 </div>
@@ -3910,8 +3911,8 @@ html[data-theme="coral"]{--t-rc:20px;--t-rb:999px;--card-bg:#ffffff;--shadow-sm:
   }, 1000);
 })();
 </script>
-<script src="./app.js?v=2027-rc.2"></script>
-<script src="./app-plus.js?v=2027-rc.2"></script>
+<script src="./app.js?v=2027-rc.3"></script>
+<script src="./app-plus.js?v=2027-rc.3"></script>
 <script>
 // Beta 36: app.js e app-plus.js precisam ser da MESMA versão. Se um deles não carregou ou veio de outra
 // versão (cache no meio de uma atualização), recarrega uma vez — senão partes antigas (como a tela antiga

@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027 RC 2 =====
-const APP_VERSION = '2027-rc.2';
+// ===== MetaTreino 2027 RC 3 =====
+const APP_VERSION = '2027-rc.3';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -353,6 +353,7 @@ function syncToCloud(){
       atualizadoEm: state._savedAt || Date.now(),
       estadoApp: limpo
     });
+    window.__mtUltimoEnvio = p;   // RC 3: o "Sair" espera este envio (com limite) antes de desconectar
     if(p && p.then) p.then(()=>{ _assinaturaNuvem = assinatura; try{ localStorage.removeItem('mt_syncerr'); localStorage.setItem('mt_nuvem_ok_'+uidEnvio, String(enviadoEm)); }catch(_){} }, e=>{ console.log('Erro ao salvar na nuvem:', e); try{ localStorage.setItem('mt_syncerr', String(e&&e.message||e).slice(0,200)); }catch(_){} });
   }catch(e){
     console.log('Falha ao preparar o salvamento na nuvem:', e);
@@ -549,7 +550,13 @@ function mesclaEstado(base, outra, opts){
   // recordes: fica o melhor; conquistas e pesos: junta
   if(outra.prs){ base.prs = base.prs || {}; Object.keys(outra.prs).forEach(id=>{ const a = base.prs[id], b = outra.prs[id]; if(!b) return;
     if(!a || (+b.peso||0) > (+a.peso||0) || ((+b.peso||0)===(+a.peso||0) && (+b.reps||0) > (+a.reps||0))){ base.prs[id] = b; r.daOutra++; } }); }
-  if(Array.isArray(outra.trophies)){ base.trophies = Array.isArray(base.trophies) ? base.trophies : []; outra.trophies.forEach(t=>{ if(!base.trophies.includes(t)){ base.trophies.push(t); r.daOutra++; } }); }
+  // RC 3: conquista retirada por correção (conqRevogadas) não volta de uma cópia antiga de outro aparelho
+  const revog = Object.assign({}, outra.conqRevogadas||{}, base.conqRevogadas||{});
+  if(Object.keys(revog).length) base.conqRevogadas = revog;
+  if(Array.isArray(outra.trophies)){ base.trophies = Array.isArray(base.trophies) ? base.trophies : []; outra.trophies.forEach(t=>{
+    if(revog[t] && !(((outra.trophyDates||{})[t]||0) > revog[t])) return;
+    if(!base.trophies.includes(t)){ base.trophies.push(t); r.daOutra++; } }); }
+  if(Array.isArray(base.trophies) && Object.keys(revog).length){ const bd = base.trophyDates || {}; base.trophies = base.trophies.filter(t=>!(revog[t] && !((bd[t]||0) > revog[t]))); }
   if(Array.isArray(outra.weights)){ base.weights = Array.isArray(base.weights) ? base.weights : []; const ds = new Set(base.weights.map(w=>w.date));
     outra.weights.forEach(w=>{ if(w && !ds.has(w.date) && w.date >= limite && w.date > desde){ base.weights.push(w); ds.add(w.date); r.daOutra++; } }); base.weights.sort((a,b)=>a.date-b.date); }
   return r;
@@ -805,17 +812,27 @@ function doGoogleSignIn(){
     if(err && e.code!=='auth/popup-closed-by-user') err.innerHTML='<div class="err">Não foi possível entrar com o Google. Tente novamente.</div>';
   });
 }
+// RC 3: sair limpa a MEMÓRIA da página. Antes o estado era zerado, mas variáveis da página (conversa do
+// assistente aberta, telas desenhadas, caches de cartões, tema aplicado) continuavam e apareciam para quem
+// entrasse em seguida com outro login no mesmo aparelho. Agora: envia o pendente (até 3 s), desconecta,
+// devolve o aparelho ao tema padrão e recarrega a página do zero.
 function doLogout(){
+  if(window.__mtSaindo) return; window.__mtSaindo = true;
   try{ localStorage.removeItem('metatreino_sessao'); }catch(e){}
   try{ stopRestTimer(); treinoAtivoEncerrar(); }catch(e){}   // Beta 33: nada de cronômetro, tela ligada ou escuta da nuvem depois de sair
   try{ syncToCloud(); }catch(e){}   // envia qualquer alteração pendente (ex: foto removida) ANTES de sair
-  try{ paraDeOuvirNuvem(); _assinaturaNuvem = ''; _carimboEnviado = 0; dadosUid = null; }catch(e){}   // depois do último envio
-  try{ const so = fbAuth.signOut(); if(so && so.catch) so.catch(()=>{}); }catch(e){}
-  fbUser = null;
-  state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
-  showScreen('scr-auth');
-  $('tabbar').classList.add('hidden');
-  try{ resetAuthUI(); }catch(e){}
+  const envio = window.__mtUltimoEnvio;
+  const espera = (envio && envio.then) ? Promise.race([envio.catch(()=>{}), new Promise(r=>setTimeout(r, 3000))]) : Promise.resolve();
+  try{ showScreen('scr-auth'); $('tabbar').classList.add('hidden'); const l = $('google-btn-lbl'); if(l) l.textContent = 'Saindo…'; }catch(e){}
+  espera.then(()=>{
+    try{ paraDeOuvirNuvem(); _assinaturaNuvem = ''; _carimboEnviado = 0; dadosUid = null; }catch(e){}   // depois do último envio
+    try{ if(typeof mtContaLocalSaiu === 'function') mtContaLocalSaiu(); }catch(e){}
+    let so = null; try{ so = fbAuth.signOut(); }catch(e){}
+    fbUser = null;
+    state = { user:null, active:'lift', modules:{lift:null,run:null}, progress:{}, prs:{}, weights:[], trophies:[], stats:{liftTotal:0,runTotal:0,runKmTotal:0,walkTotal:0,walkKmTotal:0,bikeTotal:0,bikeKmTotal:0}, ui:{tab:'home',selectedSession:null} };
+    const recarrega = ()=>{ try{ sessionStorage.removeItem('mt_ico_reload'); sessionStorage.removeItem('mt_versao_recarga'); }catch(e){} try{ location.reload(); }catch(e){ try{ resetAuthUI(); }catch(_){} } };
+    if(so && so.then) so.then(recarrega, recarrega); else setTimeout(recarrega, 200);
+  });
 }
 function appConfirm(msg, onOk, opts){
   opts = opts||{};
@@ -856,7 +873,7 @@ function doRestart(){
     // nada além do que "Começar do zero" já apagava). Em outro aparelho, maLoadThread descarta pela marca zeradoEm.
     try{
       clearTimeout(maTypingT); maThread = []; maNudgeAtivo = null;
-      ['mt_ma_thread','mt_fab_vistos','mt_motiva_hist','mt_smart_fechado'].forEach(k=>localStorage.removeItem(k));
+      ['mt_ma_thread','mt_fab_vistos','mt_motiva_hist','mt_smart_fechado', maThreadChave()].filter(Boolean).forEach(k=>localStorage.removeItem(k));
       const b = document.getElementById('fab-bubble'); if(b) b.style.display = 'none';
     }catch(e){}
     const fim = ()=>{ toast('Recomeçando: responda o cadastro de novo.'); showScreen('scr-quiz'); bindOpts('scr-quiz'); };
@@ -1137,11 +1154,21 @@ async function afterGoogleSignIn(user){
   bootAfterAuth();
 }
 
-setTimeout(()=>{ document.documentElement.classList.remove('restaurando'); }, 7000);   // segurança: nunca deixa o login escondido para sempre
+// RC 3 ("o app volta para o login depois de alguns minutos"): a trava de segurança de 7 s mostrava o
+// formulário de login mesmo quando a sessão JÁ tinha sido encontrada e o app só estava conferindo o acesso
+// ou baixando os dados (internet lenta, app reaberto pelo sistema). Parecia que a pessoa tinha sido
+// desconectada. Agora o formulário só aparece se o Firebase disser que NÃO há sessão; enquanto houver
+// sessão, fica o "Entrando…" (e o vigia do index.html oferece o reparo se travar de verdade).
+window.__mtAuthUid = null;
+setTimeout(()=>{ if(!window.__mtAuthUid) document.documentElement.classList.remove('restaurando'); }, 7000);
 fbAuth.onAuthStateChanged(function(user){
   if(user){
+    // RC 3: o mesmo login já carregado não refaz a entrada (refazer passava pela tela de login de novo)
+    if(window.__mtAuthUid === user.uid && window.__mtOk && state && state.user && !state.user.blocked){ fbUser = user; return; }
+    window.__mtAuthUid = user.uid;
     afterGoogleSignIn(user);
   } else {
+    window.__mtAuthUid = null;
     document.documentElement.classList.remove('restaurando');
     try{ localStorage.removeItem('metatreino_sessao'); }catch(e){}
     fbUser = null;
@@ -2952,7 +2979,7 @@ function missedWorkoutsThisWeek(mod){
     const endOfThatDay = dayDate + 86400000; // fim do dia
     if(endOfThatDay <= created) return false; // o dia terminou antes de a conta/plano existir
     // pulou de propósito esse treino nesta semana? então não é "falta"
-    if(skips.some(s=>s.k===w.k || s.dayIdx===w.dayIdx)) return false;
+    if(skips.some(s=>skipEDoTreino(s, w))) return false;
     // registrou algo desse treino nesta semana?
     const did = hist.some(h=>{ if(h.at<t0) return false; return h.id===w.k || (h.dayIdx===w.dayIdx); });
     return !did;
@@ -3664,6 +3691,9 @@ function renderHome(){
     slot.innerHTML = renderRestDay(mod); // aguardando a data de início: sem cobrança
   } else if(todayWk && treinouHoje(mod)){
     slot.innerHTML = renderDoneToday(todayWk, mod, isLift);
+  } else if(todayWk && isLift && entradaConcluidaSemana(todayWk, 'lift')){
+    // RC 3: o treino de hoje já foi feito em outro dia desta semana (antecipado) — não é "treino de hoje" pendente
+    slot.innerHTML = renderFeitoNaSemana(todayWk, entradaConcluidaSemana(todayWk, 'lift'));
   } else {
     slot.innerHTML = todayWk ? renderTodayWorkout(todayWk,isLift) : renderRestDay(mod);
   }
@@ -3721,12 +3751,27 @@ function renderTodayWorkout(w, isLift){
   </div>`;
 }
 // Estado PÓS-TREINO: resumo + recuperação adaptada à avaliação + próximo treino
+// RC 3: treino do dia que já foi feito antes, na mesma semana
+function renderFeitoNaSemana(w, h){
+  const d = new Date(h.at); const dias = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  return `<div class="today" style="border-color:var(--line-primary)">
+    <div class="today-label" style="color:var(--primary-2)">✅ TREINO DA SEMANA FEITO</div>
+    <div class="today-title">Treino ${w.k} — ${w.name}</div>
+    <div class="today-desc">Você já fez este treino na ${dias[d.getDay()]} (${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}). Hoje fica livre: descanso, ou um treino adicional se quiser — ele entra no histórico como treino extra, sem mudar o plano.</div>
+    <div class="today-actions">
+      <button class="btn btn-ghost" onclick="openSession('${w.k}')">Ver treino</button>
+    </div>
+  </div>`;
+}
 function renderDoneToday(w, mod, isLift){
   const es = entriesHoje(mod); const h = es[es.length-1] || {};
   const feel = h.feel || (h.rating!=null ? (h.rating>=5?'otimo':(h.rating<=1?'exausto':'bem')) : 'bem');
-  const feelLbl = ({otimo:'🚀 Ótimo', bem:'😊 Bem', cansado:'😮‍💨 Cansado', exausto:'😩 Exausto'})[feel] || '😊 Bem';
+  // RC 3: a régua do fim do treino mede o ESFORÇO da sessão (1–10), não cansaço. Antes o 7–8 virava o rótulo
+  // "Cansado" na tela e nas conquistas ("após relatar cansaço"), atribuindo ao aluno algo que ele não disse.
+  const feelLbl = (+h.rpe > 0) ? `💪 Esforço ${+h.rpe}/10${(typeof RPE_LBL!=='undefined' && RPE_LBL[+h.rpe]) ? ' · ' + RPE_LBL[+h.rpe] : ''}`
+    : (({otimo:'🚀 Ótimo', bem:'😊 Bem', cansado:'😮‍💨 Cansado', exausto:'😩 Exausto'})[feel] || '😊 Bem');
   const rec = feel==='exausto' ? '😴 Foi pesado hoje. Prioriza um sono de qualidade, hidratação e uma refeição com proteína. Se amanhã ainda estiver moído, um dia extra de descanso vale ouro.'
-    : feel==='cansado' ? '💧 Hidrate-se bem nas próximas horas e capriche na proteína. O músculo cresce agora, na recuperação — não no espelho da academia.'
+    : feel==='cansado' ? '💧 Treino exigente. Hidrate-se bem nas próximas horas e capriche na proteína. O músculo cresce agora, na recuperação — não no espelho da academia.'
     : feel==='otimo' ? '🔥 Sobrou energia! Bom sinal: dá para progredir um pouco a carga na próxima sessão. Por hoje: descanso e boa alimentação.'
     : '👏 Bom trabalho. Hidrate-se, coma bem e deixa o corpo fazer a parte dele.';
   const hoje = getDayIdx(); const ord=[...((mod.plan&&mod.plan.workouts)||[])].sort((a,b)=>a.dayIdx-b.dayIdx);
@@ -3739,7 +3784,7 @@ function renderDoneToday(w, mod, isLift){
     <div class="today-label" style="color:var(--primary-2)">✅ TREINO CONCLUÍDO</div>
     <div class="today-title">${isLift?`Treino ${w.k} — ${w.name}`:(h.name||w.name)}</div>
     <div class="today-meta" style="margin-top:10px">
-      <span class="chip mono">⏱️ ${fmtDur(totMin)}</span>
+      <span class="chip mono">⏱️ ${fmtDur(totMin, isLift)}</span>
       ${exN?`<span class="chip">💪 ${exN} exercícios</span>`:''}
       ${h.distance?`<span class="chip mono">📍 ${h.distance}km</span>`:''}
       <span class="chip">${feelLbl}</span>
@@ -3814,21 +3859,29 @@ function renderWeekGrid(mod){
       dayInfo[idx] = dayInfo[idx] || {emos:[], planned:0, done:0};
       dayInfo[idx].done++;
     });
+    // RC 3: treino do plano feito em OUTRO dia desta semana (antecipado ou remanejado) cobre o dia em que estava
+    // planejado. Antes o dia original aparecia como "faltou" (–) dois dias depois, mesmo com o treino feito.
+    if(emo==='💪') (m.plan.workouts||[]).forEach(w=>{
+      if(!w || w.k==null) return;
+      const feito = (m.history||[]).some(h=>h.id===w.k && h.at>=startWk.getTime() && !h.adicional && ((new Date(h.at).getDay()||7) !== w.dayIdx));
+      if(feito){ dayInfo[w.dayIdx] = dayInfo[w.dayIdx] || {emos:[], planned:0, done:0}; dayInfo[w.dayIdx].movido = (dayInfo[w.dayIdx].movido||0) + 1; }
+    });
   });
   $('week-grid').innerHTML = days.map((n,i)=>{
     const idx=i+1, info=dayInfo[idx], has=!!(info&&info.emos.length), isT=idx===today;
-    const planned=info?info.planned:0, doneN=info?info.done:0;
-    const fullDone = doneN>0 && doneN>=planned;       // tudo que estava planejado foi feito
+    const planned=info?info.planned:0, doneN=(info?info.done:0) + (info&&info.movido?info.movido:0);
+    const fullDone = doneN>0 && doneN>=planned;       // tudo que estava planejado foi feito (no dia ou em outro dia da semana)
     const partial  = doneN>0 && !fullDone;            // fez parte (ex: correu mas falta a musculação)
     const cd=new Date(startWk); cd.setDate(startWk.getDate()+i);
     const dateStr=String(cd.getDate()).padStart(2,'0')+'/'+String(cd.getMonth()+1).padStart(2,'0');
     const isPast = idx < today;
-    const daySkipped = (state.skips||[]).some(s=>s.dayIdx===idx && s.at>=startWk.getTime());
+    const daySkipped = (state.skips||[]).some(s=>s.at===cd.getTime());   // RC 3: pelo DIA real em que a pessoa escolheu descansar
     const dayVac = (typeof isVacationDay==='function') && isVacationDay(cd);
     // prioridade: tudo feito > parcial > hoje > faltou (passado planejado e não feito) > planejado
     let status;
     if(fullDone) status='✅';
     else if(partial) status='🟢';
+    else if(daySkipped && planned>0 && idx<=today) status='<span title="Descanso escolhido" style="font-size:10px;color:var(--text-dim);font-weight:700">desc.</span>';   // RC 3: descanso ≠ falta
     else if(isT) status='🟡';
     else if(isPast && planned>0 && !daySkipped && !dayVac && !(typeof isBirthday==='function' && isBirthday(cd)) && cd.getTime() >= new Date(new Date(planStartTs()).setHours(0,0,0,0)).getTime()) status='<span style="color:var(--text-mute);font-weight:700">–</span>';
     else if(has) status='⚪';
@@ -4034,14 +4087,14 @@ function renderSessionDetail(w){
     ${''/* Beta 60: o cartão "Dicas para esta sessão" saiu (era a mesma frase todos os dias, nos dois módulos) */}
     ${isLift ? renderLiftBlocks(w) : renderRunBlocks(w)}
     ${isLift && (w.exercises||[]).length <= 3 ? cardioFinisherCard() : ''}
-    ${concluidoAnterior ? cardConcluidoAnterior(_entSem) : isSkippedToday(w)
+    ${concluidoAnterior ? cardConcluidoAnterior(_entSem, w, done, isLift) : isSkippedToday(w)
       ? `<div class="card card-alert card-row" style="margin-top:14px;border-color:rgba(148,163,184,0.45)"><div class="card-icon">😴</div><div style="flex:1"><div class="card-title">Treino pulado hoje</div><div class="card-sub">Você escolheu descansar hoje — sem cobrança. Mudou de ideia?</div><button class="btn btn-primary" style="margin-top:10px;padding:8px 16px;font-size:13px" onclick="unskipWorkout('${isLift?w.k:w.dayIdx}')">💪 Voltar atrás (quero treinar)</button></div></div>`
       : `${isLift ? (lockedToday
       ? `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído hoje</div><div class="card-sub">Para ajustar algo, edite pelo Histórico. Amanhã a sessão libera de novo.</div></div>`
       : `<button class="btn ${done?'btn-primary':'btn-ghost'} btn-block" style="margin-top:14px" onclick="finishLiftWorkout('${w.k}')" ${done?'':'disabled style="opacity:.5"'}>✅ Salvar treino${done?'':' (registre ao menos 1 série)'}</button>`) : (runDoneToday(w)
       ? `<div class="card card-ok" style="margin-top:14px;text-align:center;padding:12px"><div style="color:var(--primary-2);font-weight:800">✅ Atividade registrada hoje</div><button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar outra atividade</button></div>`
       : `<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar atividade (km + tempo)</button>`)}
-    ${(!concluidoAnterior && ((isLift && !lockedToday) || (!isLift && !runDoneToday(w)))) ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--text-dim);font-weight:600" onclick="skipWorkout('${isLift?w.k:w.dayIdx}')">😴 Não vou treinar hoje (pular)</button>` : ''}`}
+    ${(!concluidoAnterior && w.dayIdx===getDayIdx() && ((isLift && !lockedToday) || (!isLift && !runDoneToday(w)))) ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--text-dim);font-weight:600" onclick="skipWorkout('${isLift?w.k:w.dayIdx}')">😴 Não vou treinar hoje (pular)</button>` : ''}`}
   `;
   $('session-detail-slot').innerHTML = html;
 }
@@ -4130,11 +4183,20 @@ function entradaConcluidaSemana(w, modKey){
     return arr.length ? arr[arr.length-1] : null;
   }catch(e){ return null; }
 }
-function cardConcluidoAnterior(h){
+// RC 3: treino feito em outro dia da semana. Antes a tela deixava registrar séries de novo, mas não tinha
+// "Salvar treino": o treino adicional nunca entrava no histórico (as séries ficavam soltas). Agora, com
+// séries registradas hoje, aparece "Salvar treino adicional" — ele vira uma atividade real (histórico,
+// estatísticas, assistente), marcada como adicional, sem contar como sessão do plano em dobro.
+function cardConcluidoAnterior(h, w, temSeriesHoje, isLift){
   const d = new Date(h.at);
   const dias = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
   const dt = dias[d.getDay()]+', '+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
-  return `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído</div><div class="card-sub">Feito ${dt}. Para ajustar algo, edite pelo Histórico.</div></div>`;
+  // corrida/caminhada/bike: o registro fica aqui embaixo também depois de feito (outra atividade, treino extra)
+  if(isLift === false) return `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído</div><div class="card-sub">Feito ${dt}. Para ajustar algo, edite pelo Histórico.</div>${w ? `<button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="openRunLog('${w.dayIdx}')">📝 Registrar outra atividade</button>` : ''}</div>`;
+  const salvar = (w && temSeriesHoje)
+    ? `<button class="btn btn-primary btn-block" style="margin-top:12px" onclick="finishLiftWorkout('${w.k}')">✅ Salvar treino adicional</button>`
+    : (w ? `<div class="card-sub" style="margin-top:8px">Quer treinar de novo hoje? Registre as séries normalmente: no fim aparece <b>Salvar treino adicional</b>.</div>` : '');
+  return `<div class="card card-ok" style="margin-top:14px;text-align:center"><div class="card-title" style="color:var(--primary-2)">✅ Treino concluído</div><div class="card-sub">Feito ${dt}. Para ajustar algo, edite pelo Histórico.</div>${salvar}</div>`;
 }
 function extrasDeHoje(){ return (((state.extras||{})[chaveDia(new Date())])||[]).map(e=>({...e})); }
 function renderLiftBlocks(w){
@@ -4157,7 +4219,7 @@ function renderExerciseCard(ex, idx){
     <div class="ex" style="${doneToday_?'border-left:3px solid var(--primary);padding-left:10px':''}">
       <div class="ex-num ${doneToday?'anim-check':''}" style="${doneToday_?'background:var(--primary);color:var(--on-primary)':''}">${doneToday_?'✓':idx+1}</div>
       <div style="flex:1">
-        <div class="ex-name">${ex.name} ${ex.pinned?`<span class="pr-badge" style="background:var(--tint-info);color:var(--info)">📌 fixado</span>`:''} ${pr?`<span class="pr-badge">🏆 PR ${ex.unit==='tempo'?fmtTempo(pr.reps):(pr.peso+'kg×'+pr.reps)}</span>`:''}</div>
+        <div class="ex-name">${ex.name} ${ex.pinned?`<span class="pr-badge" style="background:var(--tint-info);color:var(--info)">📌 fixado</span>`:''} ${pr?(pr.ref?`<span class="pr-badge pr-ref" title="Primeiro registro: é a referência para os próximos recordes">Ref. ${ex.unit==='tempo'?fmtTempo(pr.reps):(pr.peso>0?pr.peso+'kg×'+pr.reps:pr.reps+' reps')}</span>`:`<span class="pr-badge">🏆 PR ${ex.unit==='tempo'?fmtTempo(pr.reps):(pr.peso>0?pr.peso+'kg×'+pr.reps:pr.reps+' reps')}</span>`):''}</div>
         <div class="ex-desc">${ex.sub} · Alvo: <b>${ex.sets}× ${ex.reps}</b> · Descanso ${ex.rest}</div>
         ${last?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px">📊 Última: ${last.sets.map(s=>ex.unit==='tempo'?(s.peso>0?s.peso+'kg · ':'')+fmtTempo(s.reps):`${s.peso>0?s.peso+'kg×':''}${s.reps}`).join(', ')}</div>`:''}
         ${_fa?`<div class="ex-desc" style="color:var(--primary-2);margin-top:4px;font-weight:700">✅ Feito: ${_fa.best}</div>`:''}
@@ -4447,7 +4509,8 @@ function renderSetLogModal(){
       </div>
       ${rows}
     </div>
-    ${!comPeso && tipoReg !== 'mobilidade' && tipoReg !== 'cardio' ? `<div style="text-align:right;margin-top:6px"><a href="#" style="font-size:12px;color:var(--text-mute)" onclick="curLog.cargaExtra=true;renderSetLogModal();return false">+ Usei carga extra (colete, anilha, halter)</a></div>` : ''}
+    ${!comPeso && tipoReg !== 'mobilidade' && tipoReg !== 'cardio' && !(state.prefs && state.prefs.ocultarCargaExtra) ? `<div class="sl-extra"><button type="button" class="btn btn-ghost sl-extra-btn" onclick="curLog.cargaExtra=true;renderSetLogModal()">+ Usei carga extra</button><span class="sl-extra-ex">colete, anilha, halter</span><button type="button" class="sl-extra-ocultar" onclick="mtCargaExtraOcultar(true)" aria-label="Ocultar o botão de carga extra">Ocultar</button></div>` : ''}
+    ${comPeso && tipoReg !== 'carga' ? `<p class="sl-extra-nota">Carga extra = o peso que você ACRESCENTOU (colete, anilha, halter). O peso do corpo não entra na conta.</p>` : ''}
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="addSet()">${entry.sets.length ? '+ Nova série' : '+ Registrar a 1ª série'}</button>
     ${acaoDescanso}
     ${entry.sets.length ? `<label class="sl-auto"><input type="checkbox" class="pi-sw" ${autoDesc?'checked':''} onchange="setDescansoAutomatico(this.checked)"><span>Iniciar o descanso sozinho ao concluir a série</span></label>` : ''}
@@ -4537,18 +4600,15 @@ function closeSetLog(save){
     const isTempo = exUsaTempo(curLog.exId);
     // Isométricos: o recorde é o TEMPO segurado, com ou sem peso extra —
     // senão a Prancha sem peso nunca teria PR registrado.
-    const semCarga = exTipoRegistro(curLog.exId) !== 'carga';   // Beta 34: sem carga, o recorde é de repetições
-    curLog.entry.sets.filter(s=>isTempo || s.peso>0 || semCarga).forEach(s=>{
-      const pr = state.prs[curLog.exId];
-      const bateu = isTempo
-        ? (!pr || s.reps > pr.reps || (s.reps===pr.reps && s.peso > pr.peso))
-        : (!pr || s.peso > pr.peso || (s.peso===pr.peso && s.reps > pr.reps));
-      if(bateu){
-        state.prs[curLog.exId] = { peso:s.peso, reps:s.reps, at:Date.now() };
-        // registra o recorde agora, mas o TROFÉU só é celebrado ao salvar o treino completo
-        if(pr) toast(`🏆 Novo recorde em ${curLog.exName}!`);
-      }
-    });
+    // RC 3: recorde pessoal = superar o MELHOR resultado de antes desta sessão. O primeiro registro de um
+    // exercício é só a REFERÊNCIA (não é recorde). Antes, o 1º registro já contava como PR (as conquistas
+    // "Primeiro PR" e "5 PRs" saíam no primeiro treino) e uma série mais pesada dentro da mesma sessão também.
+    try{
+      const antes = (state.prs||{})[curLog.exId];
+      const r = mtPrAvaliaSessao(curLog.exId, curLog.entry);
+      if(r && r.novo && !(antes && !antes.ref && mtDia0Ts(antes.at) === mtDia0Ts(curLog.entry.date) && antes.peso === r.novo.peso && antes.reps === r.novo.reps))
+        toast(`🏆 Novo recorde em ${curLog.exName}!`);
+    }catch(e){ console.log('recorde:', e); }
     // clean empty entries
     const arr = state.progress[curLog.exId];
     state.progress[curLog.exId] = arr.filter(p=>p.sets.length>0);
@@ -4629,8 +4689,11 @@ function confirmLiftWorkout(k){
   mod.history = mod.history || [];
   const adaptInfo = adaptMode();
   const _antecipou = adjustStartIfEarly(mod);
-  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name, at:Date.now(), duration:realDuration, plannedDuration:w.duration, module:'lift', feel, rpe, parts:[...(w.parts||[])], exercisesDone,
-    adaptedWith: adaptInfo.active ? adaptReasonText() : null });
+  // RC 3: o mesmo treino já feito em outro dia desta semana = treino ADICIONAL (atividade real, fora do plano)
+  const _jaNaSemana = entradaConcluidaSemana(w, 'lift');
+  const _adicional = !!(_jaNaSemana && mtDia0Ts(_jaNaSemana.at) !== mtDia0Ts(Date.now()));
+  mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name+(_adicional?' (adicional)':''), at:Date.now(), duration:realDuration, plannedDuration:w.duration, module:'lift', feel, rpe, parts:[...(w.parts||[])], exercisesDone,
+    adaptedWith: adaptInfo.active ? adaptReasonText() : null, adicional: _adicional || undefined });
   ensureStats(); // deriva liftTotal do histórico — NÃO somar manualmente (contava em dobro)
   checkTrophies();
   saveData();
@@ -4783,7 +4846,7 @@ function renderHistory(){
         const nExs = (x.exercisesDone||[]).length;
         const meta = isRunEntry
           ? `<span>⏱️ <b>${fmtDur(x.duration)}</b></span>${x.distance?`<span>📍 <b>${x.distance}km</b></span>`:''}${x.pace?`<span>⚡ <b>${x.pace}</b></span>`:''}`
-          : `<span>⏱️ <b>${x.duration}min</b></span>${nExs?`<span>🏋️ <b>${nExs} exercícios</b></span>`:''}${x.rpe?`<span>💢 RPE <b>${x.rpe}</b></span>`:(feelEmo?`<span>${feelEmo}</span>`:'')}`;
+          : `<span>⏱️ <b>${fmtDur(x.duration, x.module==='lift')}</b></span>${nExs?`<span>🏋️ <b>${nExs} exercícios</b></span>`:''}${x.rpe?`<span>💢 RPE <b>${x.rpe}</b></span>`:(feelEmo?`<span>${feelEmo}</span>`:'')}`;
         return `<div class="hist-card ${isRunEntry?'run':''}" onclick="openHistoryEntry(${x._idx})">
           <div class="hist-emo">${emo}</div>
           <div style="flex:1;min-width:0">
@@ -5077,7 +5140,7 @@ function renderPerf(){
   ensureStats();
   if(isLift){
     $('s3-lbl').textContent = 'Recordes (PRs)';
-    $('s3-val').textContent = Object.keys(state.prs||{}).length;
+    $('s3-val').textContent = mtPrTotal();
     $('s3-note').textContent = 'exercícios com PR';
   } else {
     $('s3-lbl').textContent = 'Km de corrida';
@@ -5086,7 +5149,7 @@ function renderPerf(){
   }
   $('m-streak').textContent = calcStreak(h);
   const totalMin = Math.round(h.reduce((s,x)=>s+(x.duration||0),0));
-  $('m-total').textContent = totalMin<60?totalMin+'min':(totalMin/60).toFixed(1)+'h';
+  $('m-total').textContent = fmtDur(totalMin, true);
   // melhor sequência REAL (calculada do histórico + memória vitalícia)
   const best = calcBestStreak(h);
   if(!state.stats.bestStreak || best > state.stats.bestStreak){ state.stats.bestStreak = best; saveData(); }
@@ -5950,7 +6013,7 @@ function checkTrophies(){
   if(liftDone>=50) unlockTrophy('lift_50');
   if(liftDone>=100) unlockTrophy('lift_100');
   // PRs count
-  const prCount = Object.keys(state.prs||{}).length;
+  const prCount = mtPrTotal();   // RC 3: só recordes de verdade (a referência do 1º registro não conta)
   if(prCount>=5) unlockTrophy('pr_5');
   if(prCount>=20) unlockTrophy('pr_20');
   // Corrida
@@ -5988,7 +6051,7 @@ function checkTrophies(){
   if(bestKm>=42) unlockTrophy('run_42k_run');
   // Troféus que antes só eram dados no momento do evento — agora derivados do histórico,
   // para sobreviverem a um recálculo (apagar/editar registro).
-  if(Object.keys(state.prs||{}).length > 0) unlockTrophy('first_pr');
+  if(mtPrTotal() > 0) unlockTrophy('first_pr');
   const runH = state.modules.run?.history || [];
   const maxDe = tipo => Math.max(0, ...runH.filter(r=>r.activity===tipo).map(r=>r.distance||0));
   const maxWalk = maxDe('caminhada'), maxBike = maxDe('bike');
@@ -6046,8 +6109,11 @@ function checkTrophies(){
   const diaDe = x => { const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime(); };
   const diasLift = new Set((state.modules.lift?.history||[]).map(diaDe));
   if((state.modules.run?.history||[]).some(x=>diasLift.has(diaDe(x)))) unlockTrophy('double');
-  // nem a preguiça: treinou 3 dias seguidos tendo terminado algum deles exausto/cansado
-  if(s>=3 && allHist.some(x=>x.feel==='cansado' || x.feel==='exausto')) unlockTrophy('rain_check');
+  // nem a preguiça: treinou 3 dias seguidos DEPOIS de o aluno relatar cansaço.
+  // RC 3: antes bastava a sequência atual ter 3 dias e QUALQUER treino do histórico ter esforço 7+ (o esforço
+  // da régua virava "cansado"). Agora só conta cansaço que a pessoa relatou de fato (mtRelatosCansaco, parte 79)
+  // e os 3 dias seguidos precisam vir depois do relato.
+  if(typeof mtNemAPreguica === 'function' ? mtNemAPreguica(allHist) : false) unlockTrophy('rain_check');
   // sem drama: 12 treinos e nenhuma semana vazia nas últimas 12
   if(total>=12){
     const semanaTem = new Set(allHist.map(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); d.setDate(d.getDate()-((d.getDay()||7)-1)); return d.getTime(); }));
@@ -6113,7 +6179,7 @@ function trophyProgress(id){
   const s = state.stats, h = state.modules[state.active]?.history||[];
   const allH = [...(state.modules.lift?.history||[]), ...(state.modules.run?.history||[])];
   const streak = calcStreak(allH);
-  const prN = Object.keys(state.prs||{}).length;
+  const prN = mtPrTotal();
   const map = {
     lift_10:[s.liftTotal,10], lift_25:[s.liftTotal,25], lift_50:[s.liftTotal,50], lift_100:[s.liftTotal,100],
     pr_5:[prN,5], pr_20:[prN,20],
@@ -7655,6 +7721,9 @@ function maChestPain(){
   return {done:true, msg:'⚠️ Dor no peito não é coisa para adaptar treino. <b>Pare a atividade física agora</b> e procure atendimento médico — principalmente se vier com falta de ar, tontura, suor frio ou dor no braço/mandíbula. Em emergência, ligue <b>192 (SAMU)</b>. Sua segurança vem antes de qualquer plano de treino. 🤍'};
 }
 function maTired(){
+  // RC 3: o aluno DISSE que está cansado — é o único relato de cansaço que conta (junto com "acordei cansado"
+  // no sono e o "cansado" escolhido no registro antigo). A régua de esforço do fim do treino não é relato.
+  try{ state.relatosCansaco = (state.relatosCansaco || []).filter(t=>Date.now() - t < 120*86400000).concat([Date.now()]).slice(-30); saveData(); }catch(e){}
   const mod = state.modules[state.active];
   const restToday = mod && mod.plan && !mod.plan.workouts.find(w=>w.dayIdx===getDayIdx());
   if(restToday){
@@ -7991,7 +8060,7 @@ function maInsight(){
   // grupo que sempre termina pesado
   try{
     const hg = (typeof hardGroupInsight==='function') ? hardGroupInsight() : null;
-    if(hg) ins.push(`💪 Seus treinos de <b>${hg.parte}</b> terminam como "cansado" ou "exausto" em <b>${hg.pct}%</b> das vezes. Isso é normal em grupos grandes — só vale garantir um dia leve depois dele, e capricho no sono e na comida nesse dia.`);
+    if(hg) ins.push(`💪 Seus treinos de <b>${hg.parte}</b> terminam com esforço alto (7 ou mais na régua) em <b>${hg.pct}%</b> das vezes. Isso é normal em grupos grandes — só vale garantir um dia leve depois dele, e capricho no sono e na comida nesse dia.`);
   }catch(e){}
   // quanto descanso ESTE corpo precisa (descoberto, não presumido)
   try{
@@ -8292,28 +8361,35 @@ function updateFabNudge(){
 // A conversa fica guardada por algumas horas (no aparelho, não na nuvem).
 // Assim você fecha, confere algo no app e volta sem perder o fio da meada.
 const MA_THREAD_TTL = 3*3600000;   // 3 horas
+// RC 3: a conversa é DA CONTA. Antes a chave era única no aparelho ('mt_ma_thread') e, ao entrar com outro
+// login no mesmo celular, a conversa da pessoa anterior aparecia. Agora a chave leva o identificador da conta
+// e a conversa guarda o dono; a chave antiga (sem dono conhecido) é descartada sem ser mostrada.
+function maThreadChave(){ const u = (typeof uidDados==='function' && uidDados()) || ''; return u ? 'mt_ma_thread_' + u : ''; }
 function maSaveThread(){
   try{
+    const k = maThreadChave(); if(!k) return;
     const limpo = maThread.filter(m=>!m.typing && !m.working).slice(-40);   // sem indicadores, últimas 40
-    if(!limpo.length){ localStorage.removeItem('mt_ma_thread'); return; }
-    localStorage.setItem('mt_ma_thread', JSON.stringify({ at: Date.now(), thread: limpo }));
+    if(!limpo.length){ localStorage.removeItem(k); return; }
+    localStorage.setItem(k, JSON.stringify({ at: Date.now(), dono: k.slice(13), thread: limpo }));
   }catch(e){}
 }
 function maLoadThread(){
   try{
-    const raw = localStorage.getItem('mt_ma_thread'); if(!raw) return null;
+    try{ localStorage.removeItem('mt_ma_thread'); }catch(e){}   // RC 3: formato antigo, sem dono
+    const k = maThreadChave(); if(!k) return null;
+    const raw = localStorage.getItem(k); if(!raw) return null;
     const o = JSON.parse(raw);
-    if(!o || !o.thread || !o.thread.length) return null;
-    if(Date.now() - (o.at||0) > MA_THREAD_TTL){ localStorage.removeItem('mt_ma_thread'); return null; }
+    if(!o || !o.thread || !o.thread.length || (o.dono && o.dono !== k.slice(13))) return null;
+    if(Date.now() - (o.at||0) > MA_THREAD_TTL){ localStorage.removeItem(k); return null; }
     // Beta 39: conversa de antes de um "Começar do zero" (feito aqui ou em outro aparelho) não volta
-    if((+state.zeradoEm||0) && (o.at||0) < +state.zeradoEm){ localStorage.removeItem('mt_ma_thread'); return null; }
+    if((+state.zeradoEm||0) && (o.at||0) < +state.zeradoEm){ localStorage.removeItem(k); return null; }
     return o.thread;
   }catch(e){ return null; }
 }
 function maClearThread(confirmado){
   // Beta 35: limpar a conversa pede confirmação
   if(!confirmado && maThread && maThread.length > 1){ appConfirm('A conversa com o assistente começa do zero neste aparelho. Seus dados e treinos não mudam.', ()=>{ maClearThread(true); setTimeout(openAssistant, 80); }, { title:'Limpar a conversa?', emo:'🧹', okLabel:'Sim, limpar', onCancel:()=>setTimeout(openAssistant, 80) }); return; }
-  try{ localStorage.removeItem('mt_ma_thread'); }catch(e){}
+  try{ localStorage.removeItem('mt_ma_thread'); const k = maThreadChave(); if(k) localStorage.removeItem(k); }catch(e){}
   clearTimeout(maTypingT);
   maThread = [];
   renderAssistant();
@@ -8421,6 +8497,16 @@ function maSugsHTML(){
     ? [{lbl:'💚 Voltar treinos ao normal', key:'_normal'}, ...MA_SUGGESTIONS]
     : MA_SUGGESTIONS;
   if(maPending) sugs = [{lbl:'✅ Sim, por favor', key:'_yes'}, {lbl:'🙂 Não, deixa assim', key:'_no'}];
+  // RC 3: atalho que ainda não tem resposta útil não é oferecido (ex.: "Minhas cargas estagnaram?" sem 3 sessões
+  // de nenhum exercício; "Análise da corrida" sem corrida). A pergunta digitada continua sendo respondida.
+  else sugs = sugs.filter(s=>{
+    try{
+      if(s.key==='cargas') return typeof mtCargasTemDados!=='function' || mtCargasTemDados();
+      if(s.key==='corrida_analise') return !!state.modules.run || (((state.modules.run||{}).history)||[]).length > 0;
+      if(s.key==='retomada') return typeof contextoAluno!=='function' || (contextoAluno().diasSem||0) >= 4;
+    }catch(e){}
+    return true;
+  });
   return sugs.map(s=>`<button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;white-space:nowrap;flex-shrink:0" onclick="maAsk('${s.key}')">${s.lbl}</button>`).join('');
 }
 // Atualiza SÓ a conversa e os atalhos — o campo de texto continua vivo,
@@ -8975,6 +9061,16 @@ function fatigueInsight(){
     const alta = Object.keys(map).filter(k=>map[k]>=70).sort((a,b)=>map[b]-map[a]);
     if(alta.length){
       const g = concordaGrupo(alta[0]);
+      // RC 3: a orientação depende do MOMENTO. "Se notar queda de força hoje, priorize a execução" é conselho
+      // de ANTES do treino; aparecia também depois de o treino terminar (no resumo e no assistente).
+      const feitoHoje = ['lift','run'].some(m=>{ const mod = state.modules[m]; return mod && (mod.history||[]).some(x=>mtDia0Ts(x.at) === mtDia0Ts(Date.now())); });
+      if(feitoHoje){
+        const hj = (((state.modules.lift||{}).history)||[]).filter(x=>mtDia0Ts(x.at) === mtDia0Ts(Date.now())).pop();
+        const treinouOGrupo = hj && (hj.parts||[]).some(p=>String(p).toLowerCase() === alta[0].toLowerCase());
+        return treinouOGrupo
+          ? `✅ Treino de hoje concluído. ${g.posse} <b>${alta[0].toLowerCase()}</b> ${g.verbo === 'estão' ? 'trabalharam' : 'trabalhou'} bastante — agora é recuperação: proteína nas próximas refeições, hidratação e uma boa noite de sono. Dê cerca de 48 h antes de treinar esse grupo pesado de novo.`
+          : `✅ Treino de hoje concluído. ${g.posse} <b>${alta[0].toLowerCase()}</b> ainda ${g.verbo} se recuperando de um treino anterior; no próximo treino que usar esse grupo, só suba a carga se a força tiver voltado.`;
+      }
       return `💪 ${g.posse} <b>${alta[0].toLowerCase()}</b> ainda ${g.verbo} se recuperando do treino intenso recente. Se notar queda de força hoje, priorize uma boa execução em vez de aumentar a carga — recuperação também é treino.`;
     }
     // grupo esquecido há tempo
@@ -9368,7 +9464,7 @@ function openLastWeekDetail(){
   const delta = treinos - H2.length;
   const cmp = H2.length ? (delta>0?`📈 ${delta} a mais que na semana anterior`:delta<0?`📉 ${Math.abs(delta)} a menos que na semana anterior`:'➡️ Igual à semana anterior') : '';
   const linhas = [`<div class="mrow"><span>💪 Treinos</span><span><b>${treinos}</b></span></div>`,
-    `<div class="mrow"><span>⏱️ Tempo total</span><span><b>${min} min</b></span></div>`];
+    `<div class="mrow"><span>⏱️ Tempo total</span><span><b>${fmtDur(min, true)}</b></span></div>`];
   if(exs) linhas.push(`<div class="mrow"><span>🏋️ Exercícios feitos</span><span><b>${exs}</b></span></div>`);
   if(vol) linhas.push(`<div class="mrow"><span>📦 Volume levantado</span><span><b>${vol.toLocaleString('pt-BR')} kg</b></span></div>`);
   if(km>0) linhas.push(`<div class="mrow"><span>📍 Distância</span><span><b>${km.toFixed(1).replace('.',',')} km</b></span></div>`);
@@ -9391,7 +9487,7 @@ function openWeekSummary(){
   if(s.walks) rows.push(`🚶 ${s.walks} caminhada${s.walks>1?'s':''} · ${s.kmWalk.toFixed(1)}km`);
   if(s.bikes) rows.push(`🚴 ${s.bikes} pedal${s.bikes>1?'is':''} · ${s.kmBike.toFixed(1)}km`);
   const body = s.total
-    ? `<div style="font-size:15px;line-height:2">${rows.join('<br>')}</div><p style="color:var(--text-dim);font-size:13px;margin-top:10px">⏱️ ${s.totalMin} minutos em movimento essa semana. Continue assim!</p>`
+    ? `<div style="font-size:15px;line-height:2">${rows.join('<br>')}</div><p style="color:var(--text-dim);font-size:13px;margin-top:10px">⏱️ ${fmtDur(s.totalMin, true)} em movimento essa semana. Continue assim!</p>`
     : `<p style="color:var(--text-dim);font-size:14px">Nenhum treino registrado essa semana ainda — mas a semana não acabou! 😉</p>`;
   $('modal-inner').innerHTML = `<h3>📊 Resumo da semana</h3>${body}
     ${s.total?`<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="shareWeekImage()">📤 Compartilhar resumo</button>`:''}
@@ -9802,7 +9898,7 @@ function shareWeekImage(){
     subtitle:'Semana de '+new Date().toLocaleDateString('pt-BR'),
     stats:[
       {rotulo:'Atividades', valor:String(s.total)},
-      {rotulo:'Em movimento', valor:s.totalMin+' min'},
+      {rotulo:'Em movimento', valor:fmtDur(s.totalMin, true)},
       {rotulo:'Musculação', valor:String(s.lift)},
       {rotulo:'Km na semana', valor:(s.kmRun+s.kmWalk+s.kmBike).toFixed(1)+' km'}
     ],
@@ -9840,7 +9936,7 @@ function offerShareAfterWorkout(histIdx){
     <div style="text-align:center">
       <div class="anim-check" style="font-size:60px;line-height:1">✅</div>
       <h3 style="margin-top:6px">Treino concluído!</h3>
-      <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5">${h.name}<br>${h.duration} min${(h.exercisesDone||[]).length?` · ${h.exercisesDone.length} exercícios`:''}</p>
+      <p style="color:var(--text-dim);font-size:13.5px;line-height:1.5">${h.name}<br>${fmtDur(h.duration, h.module==='lift')}${(h.exercisesDone||[]).length?` · ${h.exercisesDone.length} exercícios`:''}</p>
     </div>
     <button class="btn btn-primary btn-block anim-glow" style="margin-top:12px" onclick="shareWorkoutImage(${histIdx})">📸 Compartilhar meu treino</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Agora não</button>`;
@@ -10070,16 +10166,26 @@ function toggleVacation(){
   const vc = document.getElementById('card-vacation'); if(vc) vc.classList.toggle('hidden', !vacationActive());
 }
 // Pular o treino do dia de propósito (não conta como falta, não cobra).
+// RC 3: um "pulo" é de UM treino num dia. O registro antigo guardava em dayIdx o dia PLANEJADO do treino
+// (que podia não ser o dia em que a pessoa decidiu descansar) e a comparação "k OU dayIdx" marcava como
+// pulado outro treino do mesmo dia da semana. Agora: dayIdx = dia real do descanso, planDay = dia do plano,
+// e a identificação é pelo treino (k); sem k (corrida), pelo dia do plano.
+function skipEDoTreino(s, w){
+  if(!s || !w) return false;
+  if(s.k != null && w.k != null) return s.k === w.k;
+  const pd = s.planDay != null ? s.planDay : s.dayIdx;
+  return pd === w.dayIdx;
+}
 function isSkippedToday(w){
   const d=new Date(); d.setHours(0,0,0,0);
-  return (state.skips||[]).some(s=>s.at===d.getTime() && s.module===state.active && (s.k===(w&&w.k) || s.dayIdx===(w&&w.dayIdx)));
+  return (state.skips||[]).some(s=>s.at===d.getTime() && s.module===state.active && skipEDoTreino(s, w));
 }
 function unskipWorkout(k){
   const mod = state.modules[state.active];
   const w = (mod && mod.plan && mod.plan.workouts||[]).find(x=>String(x.k)===String(k) || String(x.dayIdx)===String(k));
   const d = new Date(); d.setHours(0,0,0,0);
   const kk = w?w.k:k, di = w?w.dayIdx:getDayIdx();
-  state.skips = (state.skips||[]).filter(s=>!(s.at===d.getTime() && s.module===state.active && (s.k===kk || s.dayIdx===di)));
+  state.skips = (state.skips||[]).filter(s=>!(s.at===d.getTime() && s.module===state.active && skipEDoTreino(s, w || {k:kk, dayIdx:di})));
   saveData();
   toast('💪 Treino reativado! Vamos treinar.');
   if(state.ui.tab==='sessions') renderSessions();
@@ -10091,8 +10197,8 @@ function skipWorkout(k){
   const d = new Date(); d.setHours(0,0,0,0);
   state.skips = state.skips || [];
   const kk = w ? w.k : k, di = w ? w.dayIdx : getDayIdx();
-  if(!state.skips.some(s=>s.at===d.getTime() && s.module===state.active && s.k===kk)){
-    state.skips.push({ at:d.getTime(), module:state.active, k:kk, dayIdx:di });
+  if(!state.skips.some(s=>s.at===d.getTime() && s.module===state.active && skipEDoTreino(s, w || {k:kk, dayIdx:di}))){
+    state.skips.push({ at:d.getTime(), module:state.active, k:kk, dayIdx:getDayIdx(), planDay:di });
     if(state.skips.length>120) state.skips = state.skips.slice(-120);
     saveData();
   }
@@ -11135,21 +11241,62 @@ function recomputeAchievements(){
 
   silentAwards = false;
 }
-function recomputePR(exId, diaRemovidoTs){
-  const pr = (state.prs||{})[exId];
-  if(!pr) return;
-  const prDia = new Date(pr.at || 0); prDia.setHours(0,0,0,0);
-  if(prDia.getTime() !== diaRemovidoTs) return; // o PR é de outro dia: não toca
-  const logs = state.progress[exId] || [];
-  let melhor = null;
-  logs.forEach(p=>(p.sets||[]).forEach(s=>{
-    if(!melhor || s.peso > melhor.peso || (s.peso === melhor.peso && s.reps > melhor.reps)){
-      melhor = { peso:s.peso, reps:s.reps, at:p.date };
-    }
-  }));
-  if(melhor) state.prs[exId] = melhor;
-  else delete state.prs[exId];
+// ===== RC 3: MOTOR DE RECORDES PESSOAIS (um só, usado em todo o app) =====
+// state.prs[exId] = { peso, reps, at, ref?, quebras? }
+//   ref:true   → só a referência (1º registro do exercício): NÃO é recorde, não conta em conquistas.
+//   quebras: N → quantas sessões (dias) superaram o melhor resultado anterior.
+// Comparação ("melhor série"): carga → maior carga; empate na carga → mais repetições.
+//   tempo (isométrico) → mais segundos; empate → mais carga extra.
+//   sem carga (peso do corpo) → mais repetições; empate → mais carga extra.
+// O melhor da sessão é comparado com o melhor de ANTES da sessão (as séries da própria sessão não
+// competem entre si: 21 kg na 1ª série e 27 kg na 2ª no primeiro treino = referência de 27 kg, não PR).
+function mtDia0Ts(t){ const d = new Date(+t||0); d.setHours(0,0,0,0); return d.getTime(); }
+function _mtPrModo(exId){ try{ if(exUsaTempo(exId)) return 'tempo'; return exTipoRegistro(exId) === 'carga' ? 'carga' : 'reps'; }catch(e){ return 'carga'; } }
+function _mtPrMelhor(a, b, modo){   // true se a > b
+  if(!b) return !!a; if(!a) return false;
+  const ap = +a.peso||0, bp = +b.peso||0, ar = +a.reps||0, br = +b.reps||0;
+  if(modo === 'carga') return ap > bp || (ap === bp && ar > br);
+  return ar > br || (ar === br && ap > bp);
 }
+function _mtPrDaSessao(sets, modo){
+  let m = null;
+  (sets||[]).forEach(s=>{ if(!(+s.reps > 0)) return; if(modo === 'carga' && !(+s.peso > 0)) return; const c = { peso:+s.peso||0, reps:+s.reps||0 }; if(_mtPrMelhor(c, m, modo)) m = c; });
+  return m;
+}
+// todas as sessões do exercício em ordem (séries guardadas + resumo das antigas, que só tem a carga máxima)
+function _mtPrSessoes(exId){
+  const out = [];
+  const vistos = new Set();
+  (state.progress[exId]||[]).forEach(p=>{ if(p && p.sets && p.sets.length){ vistos.add(mtDia0Ts(p.date)); out.push({ at:+p.date, sets:p.sets }); } });
+  ((state.progResumo||{})[exId]||[]).forEach(r=>{ if(r && r.d && !vistos.has(mtDia0Ts(r.d)) && +r.p > 0) out.push({ at:+r.d, sets:[{ peso:+r.p, reps:0, resumo:true }] }); });
+  return out.sort((a,b)=>a.at-b.at);
+}
+// refaz o recorde de UM exercício a partir de tudo o que está registrado
+function mtPrRecalcularEx(exId){
+  const modo = _mtPrModo(exId); let atual = null;
+  _mtPrSessoes(exId).forEach(S=>{
+    // sessão resumida (sem repetições): só vale na carga
+    const sets = S.sets.map(s=>s.resumo ? { peso:s.peso, reps: modo==='carga' ? 1 : 0 } : s);
+    const m = _mtPrDaSessao(sets, modo); if(!m) return;
+    if(!atual){ atual = { peso:m.peso, reps:m.reps, at:S.at, ref:true, quebras:0 }; return; }
+    if(_mtPrMelhor(m, atual, modo)) atual = { peso:m.peso, reps:m.reps, at:S.at, quebras:(atual.quebras||0)+1 };
+  });
+  state.prs = state.prs || {};
+  if(atual){ if(atual.ref) delete atual.quebras; state.prs[exId] = atual; } else delete state.prs[exId];
+  return atual;
+}
+// avalia a sessão que acabou de ser salva/editada; devolve { novo } quando é recorde de verdade
+function mtPrAvaliaSessao(exId){
+  const antes = (state.prs||{})[exId] ? Object.assign({}, state.prs[exId]) : null;
+  const depois = mtPrRecalcularEx(exId);
+  if(!depois || depois.ref) return { novo:null };
+  const ehNovo = !antes || antes.ref || (depois.quebras||0) > (antes.quebras||0) || _mtPrMelhor(depois, antes, _mtPrModo(exId));
+  return { novo: ehNovo && mtDia0Ts(depois.at) === mtDia0Ts(Date.now()) ? depois : null };
+}
+function mtPrsReais(){ return Object.keys(state.prs||{}).map(k=>Object.assign({ ex:k }, state.prs[k])).filter(p=>p && !p.ref && (p.quebras||0) > 0); }
+function mtPrTotal(){ return mtPrsReais().reduce((t,p)=>t+(p.quebras||0), 0); }
+// compatível com quem já chamava: apagar séries de um dia refaz o recorde do exercício inteiro
+function recomputePR(exId){ try{ mtPrRecalcularEx(exId); }catch(e){} }
 function deleteHistoryEntry(idx){
   const mod = state.modules[state.active];
   const x = mod.history[idx];
@@ -11358,12 +11505,15 @@ function toLocalDT(d){
   const dt = new Date(d); const p = n => String(n).padStart(2,'0');
   return dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+'T'+p(dt.getHours())+':'+p(dt.getMinutes());
 }
-function fmtDur(min){
-  const totalSec = Math.round((min||0)*60);
+// RC 3: UM formato de duração no app inteiro (antes havia "3h03m", "3h03", "183 min" e "3.1h" para a mesma
+// duração, conforme a tela). Regra: menos de 1 hora → "52 min" (com segundos só quando existem: "36 min 20 s");
+// 1 hora ou mais → "3 h 03 min" (segundos só quando existem). Nunca horas decimais.
+function fmtDur(min, semSeg){
+  let totalSec = Math.round((+min||0)*60); if(semSeg) totalSec = Math.round(totalSec/60)*60;
   const h=Math.floor(totalSec/3600), m=Math.floor((totalSec%3600)/60), sec=totalSec%60;
-  if(h>0) return h+'h'+String(m).padStart(2,'0')+(sec?'m'+String(sec).padStart(2,'0')+'s':'m');
-  if(sec>0) return m+'min '+String(sec).padStart(2,'0')+'s';
-  return m+' min';
+  const s = sec ? ' '+String(sec).padStart(2,'0')+' s' : '';
+  if(h>0) return h+' h '+String(m).padStart(2,'0')+' min'+s;
+  return m+' min'+s;
 }
 // formato editável (mm:ss ou h:mm:ss) que o parseTimeToMin consegue reler
 function durToEdit(min){
