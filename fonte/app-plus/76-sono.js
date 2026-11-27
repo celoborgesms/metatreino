@@ -17,7 +17,7 @@
 //        (mantém, explicando). Nunca recua o plano por causa do sono;
 //      - musculação: com 2+ noites ruins, a orientação "subir carga" ganha "se o aquecimento pesar, mantenha".
 //  • Horas de sono não são garantia de recuperação nem diagnóstico: o texto diz isso.
-// Dados: state.sono = { on, n:{ 'AAAA-MM-DD':{ min, h, dor, aco, q, d, q5, d5 } }  (RC 4: min = minutos inteiros), pulou } (campo novo e opcional;
+// Dados: state.sono = { on, n:{ 'AAAA-MM-DD':{ min, h, dor, aco, acor, q, d, q5, d5, em } }, c:{ 'AAAA-MM-DD':{ l:[{min, ini}], em } } (RC 8: acor = min acordado na noite; c = cochilos),  (RC 4: min = minutos inteiros), pulou } (campo novo e opcional;
 // passa pela limpeza da nuvem). Guarda 180 noites.
 // =====================================================================
 const SONO_Q = { 1:['Mal','#d64545'], 2:['Ok','#d4b62c'], 3:['Bem','#2fa86e'] };   // mesmas cores da escala de 5 (parte 81)
@@ -34,11 +34,18 @@ function sonoMinutosDe(dor, aco){ const a = _sonoMin(dor), b = _sonoMin(aco); if
 function sonoHorasDe(dor, aco){ const m = sonoMinutosDe(dor, aco); return m == null ? null : m/60; }   // compatibilidade (horas sem arredondar)
 function sonoMinDe(x){
   if(!x) return null;
-  if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m != null) return m; }
+  // RC 8: com os dois horários, desconta o tempo acordado no meio da noite (x.acor, minutos). Sem acor: igual a antes.
+  if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m != null) return Math.max(0, m - sonoAcordado(x)); }
   if(x.min != null && isFinite(+x.min)) return Math.round(+x.min);
   if(x.h != null && isFinite(+x.h)) return Math.round(+x.h*60);
   return null;
 }
+function sonoAcordado(x){ const v = x && +x.acor; return v > 0 && isFinite(v) ? Math.round(v) : 0; }
+// RC 8: cochilos ficam fora da noite, em state.sono.c = { 'AAAA-MM-DD': { l:[{ min, ini }], em } } (dia do cochilo).
+// Separados de propósito: médias, "noite ruim" e a análise continuam medindo a NOITE; o cochilo aparece ao lado.
+// Lista vazia com 'em' = cochilos apagados (não voltam de outra cópia na junção).
+function sonoCochilos(dk){ const c = ((state.sono||{}).c||{})[dk]; return c && Array.isArray(c.l) ? c.l.filter(o=>o && +o.min > 0) : []; }
+function sonoCochiloMin(dk){ return sonoCochilos(dk).reduce((t,o)=>t + Math.round(+o.min), 0); }
 function sonoFmtMin(m){ if(m == null) return '—'; m = Math.round(m); const hh = Math.floor(m/60), mm = m % 60; return mm ? `${hh} h ${String(mm).padStart(2,'0')}` : `${hh} h`; }
 function sonoNoite(dk){ return ((state.sono||{}).n||{})[dk] || null; }
 function sonoRuim(x){ const m = sonoMinDe(x); return !!x && (x.q === 1 || (m != null && m < 360) || x.d === 1); }
@@ -61,7 +68,7 @@ function sonoSemanaRuins(semTs){
 function sonoSalvar(dk, dados){
   const S = sonoEst(); const ant = S.n[dk] || {};
   const x = Object.assign({}, ant, dados);
-  if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m){ x.min = m; x.h = m/60; } }
+  if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m){ const r = Math.max(0, m - sonoAcordado(x)); x.min = r; x.h = r/60; } }
   Object.keys(x).forEach(k=>{ if(x[k] == null || x[k] === '') delete x[k]; });
   if(!Object.keys(x).length) delete S.n[dk]; else { x.em = Date.now(); S.n[dk] = x; }   // RC 6: 'em' = quando foi gravada (junção entre aparelhos)
   const lim = chaveDia(new Date(Date.now() - 180*86400000)); Object.keys(S.n).forEach(k=>{ if(k < lim) delete S.n[k]; });
@@ -224,6 +231,9 @@ function mtSonoMescla(base, outra){
       if(!b || (+o.em||0) > (+b.em||0)) B.n[dk] = JSON.parse(JSON.stringify(o)); });
     Object.keys(B.n).forEach(dk=>{ if(!vale(B.n[dk], dk)) delete B.n[dk]; });
     if(B.on == null && O.on != null) B.on = O.on;
+    // RC 8: cochilos por dia; vale a lista gravada por último (lista vazia = apagados)
+    const Oc = O.c || {}; if(Object.keys(Oc).length){ B.c = B.c || {};
+      Object.keys(Oc).forEach(dk=>{ const o = Oc[dk], b = B.c[dk]; if(!o || !Array.isArray(o.l)) return; if(!b || (+o.em||0) > (+b.em||0)) B.c[dk] = JSON.parse(JSON.stringify(o)); }); }
   }catch(e){ console.log('sono (junção):', e); }
 }
 mtGancho('mesclaEstado', { depois(base, outra){ mtSonoMescla(base, outra); } });

@@ -130,7 +130,11 @@ const DECO_FAIXA = {
   'scr-challenges':{ fim:'#chal-root' },
   'scr-profile':   { fim:'.profile-head', fimBase:true },
   'scr-history':   { ini:'.seg-nav', fim:'.stat-grid' },
-  'scr-perf':      { ini:'.seg-nav', fim:'#perf-resumo' },
+  // RC 7: os blocos do Desempenho podem ser reordenados (parte 54); o desenho termina antes do PRIMEIRO bloco visível
+  // (antes terminava no resumo, que fica abaixo das Metas: o desenho invadia o cartão das Metas)
+  'scr-perf':      { ini:'.seg-nav', fim: tela=>{ const w = tela.querySelector('.wrap'); if(!w) return null; const t = w.querySelector('h1'); const tb = t ? t.getBoundingClientRect().bottom : 0;
+    return [...w.children].filter(e=>e.offsetHeight > 40 && !e.contains(t) && !e.classList.contains('seg-nav') && e.getBoundingClientRect().top >= tb - 1)
+      .sort((a,b)=>a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0] || null; } },
   'scr-setup-lift':{ fim:'.sub' },
   'scr-setup-run': { fim:'.sub' },
   'scr-admin':     { fim:'.row' },
@@ -150,7 +154,7 @@ function decoPosiciona(){
   const tela = document.querySelector('.screen.active'); const f = tela ? DECO_FAIXA[tela.id] : null;
   if(!f || !tela || !el.innerHTML){ el.style.removeProperty('--deco-top'); el.style.removeProperty('--deco-h'); return; }
   const sy = window.scrollY || 0;
-  const fimEl = tela.querySelector(f.fim), iniEl = f.ini ? tela.querySelector(f.ini) : null;
+  const fimEl = typeof f.fim === 'function' ? f.fim(tela) : tela.querySelector(f.fim), iniEl = f.ini ? tela.querySelector(f.ini) : null;
   if(!fimEl || !fimEl.offsetHeight){ el.style.removeProperty('--deco-top'); el.style.removeProperty('--deco-h'); return; }
   const rf = fimEl.getBoundingClientRect();
   const topo = iniEl && iniEl.offsetHeight ? iniEl.getBoundingClientRect().bottom + sy + 2 : 4;

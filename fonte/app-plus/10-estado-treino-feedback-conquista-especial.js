@@ -590,8 +590,11 @@ window.saveSpecialAward = async function(){
 // Mesmo botão (chevron discreto ao lado do título), mesma direção (o conteúdo fecha
 // para cima, em direção ao título) e mesma animação nas duas seções.
 // =====================================================================
+window.MT_SEM_RECOLHER = true;   // RC 7: blocos do Início sempre abertos (ver _colBotao)
 const CHEV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>';
 function _colBotao(k, aberto, rotulo){
+  // RC 7: sem botão de recolher no Início ("Ocultar" e a seta saíram): quem não quer o bloco o esconde em Personalizar início.
+  if(window.MT_SEM_RECOLHER) return '';
   // Atividade da semana: texto "Ocultar"/"Mostrar" discreto ao lado do título. Seus treinos: seta.
   if(k === 'semana') return `<button type="button" class="col-txt" data-col="${k}" aria-expanded="${aberto}" aria-label="${aberto?'Ocultar':'Mostrar'} ${rotulo}" onclick="event.stopPropagation();mtColAnimar('${k}')">${aberto?'Ocultar':'Mostrar'}</button>`;
   return `<button type="button" class="col-chev ${aberto?'':'fechado'}" data-col="${k}" aria-expanded="${aberto}" aria-label="${aberto?'Recolher':'Mostrar'} ${rotulo}" title="${aberto?'Recolher':'Mostrar'}" onclick="event.stopPropagation();mtColAnimar('${k}')">${CHEV}</button>`;
@@ -629,7 +632,7 @@ _mtAplicaColapsos = function(){
   // Seus treinos
   const head = wrap.querySelector(':scope > .section-head'); const lista = $('your-list');
   if(head && lista){
-    const aberto = mtColAberto('treinos', false);
+    const aberto = window.MT_SEM_RECOLHER ? true : mtColAberto('treinos', false);
     head.querySelectorAll('.col-btn, .col-chev').forEach(b=>b.remove());
     const tit = head.firstElementChild; if(tit) tit.insertAdjacentHTML('afterend', _colBotao('treinos', aberto, 'Seus treinos'));
     let resumo = $('home-tr-resumo');
@@ -653,7 +656,7 @@ _mtAplicaColapsos = function(){
     const header = q.firstElementChild;
     header.querySelectorAll('.col-chev, .col-txt').forEach(b=>b.remove());
     header.classList.add('col-head');
-    const aberto = mtColAberto('semana', true);
+    const aberto = window.MT_SEM_RECOLHER ? true : mtColAberto('semana', true);
     const h3 = header.querySelector('h3');
     if(h3) h3.insertAdjacentHTML('afterend', _colBotao('semana', aberto, 'Atividade da semana'));
     else header.insertAdjacentHTML('beforeend', _colBotao('semana', aberto, 'Atividade da semana'));

@@ -51,7 +51,8 @@ async function openAdminEventos(){
   const princ = mtAdmin();
   $('modal-inner').innerHTML = `<h3>Desafios temáticos</h3>
     <p class="mt-muted" style="margin:0 0 10px">O calendário anual é automático (inclusive Carnaval e Páscoa, que mudam de data). ${princ?'Você pode personalizar qualquer desafio, desativá-lo ou criar um novo — sem mexer no código.':'Somente administradores podem criar ou editar desafios.'}</p>
-    ${princ?`<button class="btn btn-primary btn-block" onclick="openAdminEventoForm()">➕ Criar desafio</button>`:''}
+    ${princ?`<button class="btn btn-primary btn-block" onclick="openAdminEventoForm()">➕ Criar desafio</button>
+    <p class="mt-muted" style="font-size:12px;margin:8px 2px 0">• <b>Criar</b>: um desafio novo, com as datas que você escolher.<br>• <b>Personalizar</b> (calendário automático): faz uma cópia editável que substitui o original; apagando a cópia, o original volta.<br>• <b>Participação</b>: quem entrou e quem concluiu.</p>`:''}
     ${custom.length?`<div class="mt-sec">Criados ou personalizados</div><div class="card" style="padding:6px 12px">${custom.map(e=>linha(e, e.ativo?'':' · <b>desativado</b>')).join('')}</div>`:''}
     <div class="mt-sec">Calendário automático</div><div class="card" style="padding:6px 12px">${lista.map(e=>subst.has(e.key)?'':linha(e)).join('')}</div>
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
@@ -74,18 +75,36 @@ function openAdminEventoForm(key){
     <div class="adm-form">
       <label>Nome</label><input class="input" id="ef-nome" maxlength="40" value="${mtEsc(v.nome)}">
       <label>Descrição / objetivo</label><textarea class="input" id="ef-desc" maxlength="220">${mtEsc(v.descricao||'')}</textarea>
-      <div style="display:flex;gap:8px"><div style="flex:1"><label>Início</label><input class="input" type="date" id="ef-ini" value="${v.inicio}"></div><div style="flex:1"><label>Fim (inclusive)</label><input class="input" type="date" id="ef-fim" value="${v.fim}"></div></div>
-      <label>Arte e cor</label><select class="input" id="ef-arte">${Object.keys(EV_ARTE).map(k=>`<option value="${k}" ${k===v.arte?'selected':''}>${k}</option>`).join('')}</select>
+      <div style="display:flex;gap:8px"><div style="flex:1"><label>Início</label><input class="input" type="date" id="ef-ini" value="${v.inicio}" onchange="_efArtePrev()"></div><div style="flex:1"><label>Fim (inclusive)</label><input class="input" type="date" id="ef-fim" value="${v.fim}"></div></div>
+      <label>Arte e cor da medalha</label><div style="display:flex;gap:10px;align-items:center"><span id="ef-arte-prev">${eventoMedalha({ arte:v.arte, nome:v.nome||'', ini:new Date((v.inicio||'2026-01-01')+'T12:00:00').getTime() }, 44)}</span><select class="input" id="ef-arte" style="flex:1" onchange="_efArtePrev()">${Object.keys(EV_ARTE).map(k=>`<option value="${k}" ${k===v.arte?'selected':''}>${EV_ARTE_NOME[k]||k}</option>`).join('')}</select></div>
       <label>Intensidade da meta</label><select class="input" id="ef-fator">${[[0.8,'Leve (80% da frequência habitual)'],[0.9,'Moderada (90%)'],[1,'Padrão (100%)'],[1.1,'Puxada (110%)']].map(([f,l])=>`<option value="${f}" ${(+v.fator||1)===f?'selected':''}>${l}</option>`).join('')}</select>
-      <label>Meta fixa de dias ativos (opcional)</label><input class="input" type="number" min="1" max="60" id="ef-alvo" placeholder="em branco = meta personalizada por aluno" value="${v.alvoFixo||''}">
+      <label>Meta fixa de dias ativos (opcional)</label><p class="mt-muted" style="font-size:11.5px;margin:-2px 0 4px">Em branco, cada aluno recebe uma meta pela frequência dele. Preenchida, vale o mesmo número para todos.</p><input class="input" type="number" min="1" max="60" id="ef-alvo" placeholder="em branco = meta personalizada por aluno" value="${v.alvoFixo||''}">
       <label>Missões extras</label>${Object.entries(EV_MISSOES).map(([k,m])=>`<label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);font-weight:600;margin:6px 0"><input type="checkbox" class="ef-m" value="${k}" ${tiposM.includes(k)?'checked':''}> ${m.titulo} <span style="color:var(--text-mute);font-weight:500">— ${m.desc}</span></label>`).join('')}
       <label>Recompensa (texto exibido)</label><input class="input" id="ef-rec" maxlength="80" value="${mtEsc(v.recompensa||'')}" placeholder="Ex.: medalha exclusiva + destaque no mural">
       <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--text)"><input type="checkbox" id="ef-ativo" ${v.ativo!==false?'checked':''}> Desafio ativo</label>
     </div>
     <p class="mt-muted" style="font-size:11.5px;margin-top:8px">A meta de cada aluno é calculada pela frequência real dele nas 6 semanas anteriores e não passa de 1 dia além do plano por semana. Participações e conclusões só existem quando o aluno entra e cumpre de verdade.</p>
     <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="salvarEventoAdmin('${doc?doc.id:''}','${mtJsStr(v.substitui||'')}')">Salvar</button>
+    ${doc ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--danger,#ef4444)" onclick="apagarEventoAdmin('${doc.id}', ${doc.substitui ? 'true' : 'false'})">${doc.substitui ? 'Apagar a personalização (volta o automático)' : 'Apagar desafio'}</button>` : ''}
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openAdminEventos()">Voltar</button>`;
   $('modal-back').classList.add('on');
+}
+// RC 7: nomes legíveis das artes (antes a lista mostrava a chave interna, ex.: "natal") e prévia da medalha
+const EV_ARTE_NOME = { anonovo:'Ano Novo (fogos)', carnaval:'Carnaval (máscara)', consistencia:'Consistência (calendário)', pascoa:'Páscoa (ovo)',
+  equilibrio:'Equilíbrio (balança)', evolucao:'Evolução (gráfico)', arraia:'Arraiá (fogueira)', inverno:'Inverno (floco)', superacao:'Superação (montanha)',
+  independencia:'Independência (bandeira)', primavera:'Primavera (flor)', halloween:'Halloween (abóbora)', retafinal:'Reta final (bandeira quadriculada)', natal:'Natal (árvore)' };
+function _efArtePrev(){ try{ const a = $('ef-arte').value, ini = $('ef-ini').value; $('ef-arte-prev').innerHTML = eventoMedalha({ arte:a, nome:'', ini:new Date((ini||'2026-01-01')+'T12:00:00').getTime() }, 44); }catch(e){} }
+// RC 7: apagar um desafio criado (ou a personalização de um automático). Quem já concluiu mantém a medalha:
+// ela fica guardada no estado de cada aluno, não no documento do desafio.
+function apagarEventoAdmin(id, personalizacao){
+  if(!mtAdmin()){ toast('🔒 Somente administradores.'); return; }
+  appConfirm(personalizacao
+      ? 'A personalização sai e o desafio automático do calendário volta, com o texto e as datas originais.\nQuem já concluiu mantém a medalha.'
+      : 'O desafio sai da lista e deixa de aparecer para os alunos.\nQuem já concluiu mantém a medalha. Não dá para desfazer.',
+    async ()=>{
+      try{ await db.collection('desafiosTematicos').doc(id).delete(); toast(personalizacao ? 'Personalização apagada' : 'Desafio apagado'); await loadEventosCustom(); openAdminEventos(); }
+      catch(e){ console.log(e); toast('⚠️ Não foi possível apagar. Confira a conexão e as regras do Firestore (desafiosTematicos).'); openAdminEventos(); }
+    }, { title: personalizacao ? 'Voltar ao automático?' : 'Apagar este desafio?', okLabel:'Apagar', danger:true, emo:'🗑️' });
 }
 async function salvarEventoAdmin(idDoc, substitui){
   if(!mtAdmin()){ toast('🔒 Somente administradores.'); return; }
@@ -215,5 +234,5 @@ bootAfterAuth = function(){
   setTimeout(()=>{ loadEventosCustom().then(()=>{ try{ checkEventos(); if(state.ui.tab==='challenges') renderChallenges(); else if(state.ui.tab==='home') renderMonthlyCard(); }catch(e){} }); }, 1800);
   return r;
 };
-Object.assign(window, { renderLibrary, setLibEquip, openExercise, openExerciseSheet, exTelaCheia, exVideoOk, openAparencia, setPacote, setTheme, openFotos, fotoToggleSel, fotoApagarSelConfirma, fotoApagarConfirma, fotoApagarTudoConfirma, fotoApagarTudoAgora, fotoVer,
+Object.assign(window, { apagarEventoAdmin, _efArtePrev, renderLibrary, setLibEquip, openExercise, openExerciseSheet, exTelaCheia, exVideoOk, openAparencia, setPacote, setTheme, openFotos, fotoToggleSel, fotoApagarSelConfirma, fotoApagarConfirma, fotoApagarTudoConfirma, fotoApagarTudoAgora, fotoVer,
   renderChallenges, participaEvento, sairDoEvento, shareEventoImagem, openHistoricoEventos, mtEvFoco, renderHomeSmart, mtPergunta, openAdminEventos, openAdminEventoForm, salvarEventoAdmin, openAdminEventoPart, openAdminPermissoes, admSetAdmin, trophyIco, trophyIcoLocked, mtLS, mtDia0 });

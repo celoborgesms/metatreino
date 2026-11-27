@@ -16,15 +16,17 @@ const INICIO_BLOCOS = [
   // RC 4: 'conquistas' saiu do Início (fica só na aba Desafios)
   { k:'plano',       nome:'Fase do plano',       desc:'semana do ciclo e fase atual', sel:['#scr-home .plan-card'] },
   { k:'sugestao',    nome:'Sugestão inteligente', desc:'dica do dia e plano de retomada', sel:['#home-smart'] },
-  { k:'desafio',     nome:'Desafio do mês',      sel:['#card-monthly'] },
-  { k:'evento',      nome:'Desafio temático',    desc:'quando houver um ativo', sel:['#home-event'] },
+  { k:'desafio',     nome:'Desafio do mês',      desc:'o desafio em andamento, em uma linha', sel:['#card-monthly'] },
+  // RC 7: 'evento' (Desafio temático) saiu da lista: o bloco #home-event não existe mais no Início; o desafio
+  // temático em andamento aparece na linha do "Desafio do mês". A chave continua em INICIO_MOVEIS (parte 28)
+  // só para não mexer na ordem que o aluno já salvou.
   { k:'treinos',     nome:'Seus treinos',        desc:'lista do plano (também na aba Treinos)', sel:['#scr-home .wrap > .section-head', '#your-list', '#home-tr-resumo'] },
   { k:'calistenia',  nome:'Calistenia',          desc:'nível e progressões, se você usa', sel:['#home-cali'] },
   { k:'frase',       nome:'Frase do dia',        sel:['#scr-home .quote'] },
   // 'ajuda' saiu na Beta 25: ajuda, FAQ, privacidade e termos agora ficam no Perfil
   { k:'acesso',      nome:'Aviso de acesso',     desc:'volta sozinho quando faltar 7 dias ou menos', sel:['#card-access-info.ac-ok'] }
 ];
-const INICIO_ESSENCIAL = ['sugestao','desafio','evento','treinos','frase','acesso'];
+const INICIO_ESSENCIAL = ['sugestao','desafio','treinos','frase','acesso'];
 
 function inicioOcultos(){
   if(!state) return [];

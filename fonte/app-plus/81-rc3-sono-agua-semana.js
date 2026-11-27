@@ -32,28 +32,63 @@ window.sonoRegistrar = function(dk){
     <div class="sono-lbl">Horário</div>
     <div class="sono-tri sono-modo"><button type="button" class="${modo==='hor'?'on':''}" onclick="_sonoModo('hor')">Dormi / acordei</button><button type="button" class="${modo==='h'?'on':''}" onclick="_sonoModo('h')">Só o total</button></div>
     <div id="sono-hor" ${modo==='hor'?'':'hidden'} class="sono-campos"><label>Fui dormir<input class="input mono" type="time" aria-label="Fui dormir" id="sono-dor" value="${x.dor||''}" oninput="_sonoTotal()"></label><label>Acordei<input class="input mono" type="time" aria-label="Acordei" id="sono-aco" value="${x.aco||''}" oninput="_sonoTotal()"></label></div>
+    <div id="sono-acor-box" ${modo==='hor'?'':'hidden'} class="sono-campos sono-acor"><label>Acordado no meio da noite (min)<input class="input mono" type="number" min="0" max="300" step="1" inputmode="numeric" id="sono-acor" value="${sonoAcordado(x) || ''}" placeholder="0" oninput="_sonoTotal()"></label></div>
     <div id="sono-h" ${modo==='h'?'':'hidden'} class="sono-campos"><label>Horas<input class="input mono" type="number" min="0" max="16" inputmode="numeric" id="sono-hh" value="${hh}" placeholder="7" oninput="_sonoTotal()"></label><label>Minutos<input class="input mono" type="number" min="0" max="59" step="1" inputmode="numeric" id="sono-mm" value="${mm}" placeholder="30" oninput="_sonoTotal()"></label></div>
     <div class="sono-total" id="sono-total"></div>
+    <div class="sono-lbl">Cochilos <span class="sono-opc">opcional · no dia ${dt.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' })}</span></div>
+    <div id="sono-coch">${sonoCochilos(dk).map(o=>_sonoCochLinha(o)).join('')}</div>
+    <button type="button" class="link-mais" id="sono-coch-add" onclick="_sonoCochAdd()">+ Adicionar cochilo</button>
     <div class="sono-lbl">Qualidade do sono</div>
     <div class="sono-5" id="sono-q5">${[1,2,3,4,5].map(v=>`<button type="button" class="${window.__sonoQ5===v?'on':''}" data-v="${v}" aria-pressed="${window.__sonoQ5===v}" onclick="_sonoMarca5('q5',${v})"><i style="background:${SONO_Q5[v][1]}"></i>${SONO_Q5[v][0]}</button>`).join('')}</div>
     <div class="sono-lbl">Disposição ao acordar</div>
     <div class="sono-5" id="sono-d5">${[1,2,3,4,5].map(v=>`<button type="button" class="${window.__sonoD5===v?'on':''}" data-v="${v}" aria-pressed="${window.__sonoD5===v}" onclick="_sonoMarca5('d5',${v})">${SONO_D5[v]}</button>`).join('')}</div>
     <div class="row" style="gap:8px;margin-top:16px"><button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button><button class="btn btn-primary btn-block" onclick="sonoRegSalva()">Salvar</button></div>
     ${sonoNoite(dk) ? `<button class="link-mais" style="margin-top:10px" onclick="sonoApaga('${dk}')">Apagar esta noite</button>` : ''}</div>`;
-  $('modal-back').classList.add('on'); _sonoTotal();
+  $('modal-back').classList.add('on'); _sonoCochBotao(); _sonoTotal();
 };
+const _sonoMinTxt = m=>m < 60 ? `${m} min` : sonoFmtMin(m);
+// RC 8: resumo dos cochilos (30 dias), separado da noite. Não entra nas médias nem na regra de "noite ruim".
+function _sonoCochResumo(){
+  const L = []; for(let i=0; i<30; i++){ const dk = chaveDia(new Date(Date.now() - i*86400000)); const c = sonoCochilos(dk); if(c.length) L.push({ dk, c }); }
+  if(!L.length) return '';
+  const tot = L.reduce((t,o)=>t + o.c.reduce((a,b)=>a + +b.min, 0), 0); const n = L.reduce((t,o)=>t + o.c.length, 0);
+  const ult = L.slice(0, 5).map(o=>`<div class="aw-li"><b>${new Date(o.dk + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' })}</b><span>${o.c.map(z=>_sonoMinTxt(+z.min) + (z.ini ? ' às ' + z.ini : '')).join(' + ')}</span></div>`).join('');
+  return `<div class="section-lbl" style="margin:14px 0 4px">Cochilos (30 dias)</div>
+    <p class="integ-mini">${n} ${n===1?'cochilo':'cochilos'} em ${L.length} ${L.length===1?'dia':'dias'} · média de ${_sonoMinTxt(Math.round(tot/n))}. Ficam separados da noite: não entram na média nem na conta de noite ruim.</p><div class="aw-lista">${ult}</div>`;
+}
+// RC 8: cochilos — duração (min) e, se quiser, a hora em que começou; até 3 por dia
+function _sonoCochLinha(o){ o = o || {}; return `<div class="sono-campos sono-coch-l"><label>Duração (min)<input class="input mono sc-min" type="number" min="5" max="240" step="1" inputmode="numeric" value="${o.min||''}" placeholder="20" oninput="_sonoTotal()"></label><label>Começou (opcional)<input class="input mono sc-ini" type="time" aria-label="Cochilo: começou" value="${o.ini||''}"></label><button type="button" class="sc-x" aria-label="Tirar este cochilo" onclick="this.parentNode.remove();_sonoCochBotao();_sonoTotal()">✕</button></div>`; }
+function _sonoCochBotao(){ const b = $('sono-coch-add'); if(b) b.hidden = document.querySelectorAll('#sono-coch .sono-coch-l').length >= 3; }
+function _sonoCochAdd(){ const box = $('sono-coch'); if(!box || box.children.length >= 3) return; box.insertAdjacentHTML('beforeend', _sonoCochLinha()); _sonoCochBotao(); try{ if(typeof nrVarre === 'function') nrVarre(box.lastElementChild); }catch(e){} const i = box.lastElementChild.querySelector('.sc-min'); if(i) try{ i.focus(); }catch(e){} }
+function _sonoCochLe(){   // { l:[...] } ou { erro }
+  const l = []; let erro = null;
+  document.querySelectorAll('#sono-coch .sono-coch-l').forEach(r=>{ const v = String(r.querySelector('.sc-min').value||'').trim(); const ini = r.querySelector('.sc-ini').value || null; if(!v) return;
+    const m = +v; if(!Number.isInteger(m) || m < 5 || m > 240){ erro = 'Cochilo: de 5 a 240 minutos (número inteiro).'; return; } l.push(ini ? { min:m, ini } : { min:m }); });
+  return erro ? { erro } : { l };
+}
 // total exato em minutos (o cálculo antigo arredondava a 0,1 h: 7 h 15 aparecia como 7 h 18)
 function sonoHorasExatas(dor, aco){ return sonoHorasDe(dor, aco); }   // compatibilidade; a conta é sonoMinutosDe (parte 76)
 function _sonoLeTotal(){   // { min } do que está na tela, ou { erro }
-  if($('sono-hor') && !$('sono-hor').hidden){ const a = $('sono-dor') && $('sono-dor').value, b = $('sono-aco') && $('sono-aco').value; return { min: (a && b) ? sonoMinutosDe(a, b) : null }; }
+  if($('sono-hor') && !$('sono-hor').hidden){ const a = $('sono-dor') && $('sono-dor').value, b = $('sono-aco') && $('sono-aco').value;
+    // RC 8: tempo acordado no meio da noite sai do total (a cama não é o sono)
+    const av = String(($('sono-acor')||{}).value||'').trim(); const ac = av ? +av : 0;
+    if(av && (!Number.isInteger(ac) || ac < 0 || ac > 300)) return { erro:'Tempo acordado: de 0 a 300 minutos (número inteiro).' };
+    if(!(a && b)) return { min:null, acor:ac };
+    const cama = sonoMinutosDe(a, b); if(ac && ac >= cama) return { erro:'O tempo acordado ficou maior que o tempo entre dormir e acordar.' };
+    return { min: cama - ac, cama, acor:ac }; }
   const hv = String(($('sono-hh')||{}).value||'').trim(), mv = String(($('sono-mm')||{}).value||'').trim(); if(!hv && !mv) return { min:null };
   const h = +hv || 0, m = +mv || 0; if(!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || h > 16 || m < 0 || m > 59) return { erro:'Horas de 0 a 16 e minutos de 0 a 59 (números inteiros).' };
   return { min: h*60 + m };
 }
-function _sonoTotal(){ const el = $('sono-total'); if(!el) return; const T = _sonoLeTotal(); el.textContent = T.erro ? T.erro : (T.min != null ? `Total: ${sonoFmtMin(T.min)} de sono` : ''); }
+function _sonoTotal(){ const el = $('sono-total'); if(!el) return; const T = _sonoLeTotal(); if(T.erro){ el.textContent = T.erro; return; }
+  const C = $('sono-coch') ? _sonoCochLe() : { l:[] }; const cm = C.erro ? 0 : C.l.reduce((t,o)=>t + o.min, 0);
+  const partes = [];
+  if(T.min != null) partes.push(T.acor ? `Dormiu ${sonoFmtMin(T.min)} (${sonoFmtMin(T.cama)} na cama − ${T.acor} min acordado)` : `Total: ${sonoFmtMin(T.min)} de sono`);
+  if(cm) partes.push(`cochilos ${sonoFmtMin(cm).replace(/^0 h (\d+)$/, '$1 min')}` + (T.min != null ? ` · ${sonoFmtMin(T.min + cm)} no dia` : ''));
+  el.textContent = C.erro || partes.join(' · '); }
 function _sonoMarca5(k, v){ const cur = window['__sono' + (k==='q5'?'Q5':'D5')]; const nv = cur === v ? null : v; window['__sono' + (k==='q5'?'Q5':'D5')] = nv;
   document.querySelectorAll(`#sono-${k} button`).forEach(b=>{ const on = +b.dataset.v === nv; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); }
-window._sonoModo = function(m){ $('sono-h').hidden = m !== 'h'; $('sono-hor').hidden = m !== 'hor'; document.querySelectorAll('.sono-modo button').forEach((b,i)=>b.classList.toggle('on', (i===0) === (m==='hor'))); _sonoTotal(); };
+window._sonoModo = function(m){ $('sono-h').hidden = m !== 'h'; $('sono-hor').hidden = m !== 'hor'; if($('sono-acor-box')) $('sono-acor-box').hidden = m !== 'hor'; document.querySelectorAll('.sono-modo button').forEach((b,i)=>b.classList.toggle('on', (i===0) === (m==='hor'))); _sonoTotal(); };
 window.sonoRegSalva = function(){
   const dk = window.__sonoDk || _sonoHoje();
   const q5 = window.__sonoQ5 || null, d5 = window.__sonoD5 || null;
@@ -61,11 +96,17 @@ window.sonoRegSalva = function(){
   // os dois modos usam a mesma base: minutos inteiros (só um horário: guarda, sem inventar o total)
   if(!$('sono-hor').hidden){ d.dor = $('sono-dor').value || null; d.aco = $('sono-aco').value || null; }
   const T = _sonoLeTotal(); if(T.erro){ toast(T.erro); return; }
+  d.acor = (!$('sono-hor').hidden && T.acor) ? T.acor : null;   // RC 8: só no modo horários (no "só o total" a pessoa já informa o que dormiu)
+  const C = _sonoCochLe(); if(C.erro){ toast(C.erro); return; }
   if(T.min != null && T.min > 0){ d.min = T.min; d.h = T.min/60; }
   if(d.min != null && (d.min < 30 || d.min > 960)){ toast('Confira o horário: o total ficou em ' + sonoFmtMin(d.min)); return; }
   const S = sonoEst(); const ant = S.n[dk] || {}; const novo = Object.assign({}, ant);
-  ['q5','d5','q','d','min','h','dor','aco'].forEach(k=>{ if(d[k] == null) delete novo[k]; else novo[k] = d[k]; });
-  if(!Object.keys(novo).length){ closeModal(); return; }
+  ['q5','d5','q','d','min','h','dor','aco','acor'].forEach(k=>{ if(d[k] == null) delete novo[k]; else novo[k] = d[k]; });
+  delete novo.em;
+  // cochilos do dia (separados da noite): grava só se mudou; lista vazia com data = apagados
+  const antC = sonoCochilos(dk); const mudouC = JSON.stringify(antC) !== JSON.stringify(C.l);
+  if(mudouC){ S.c = S.c || {}; S.c[dk] = { l:C.l, em:Date.now() }; const lim = chaveDia(new Date(Date.now() - 180*86400000)); Object.keys(S.c).forEach(k=>{ if(k < lim) delete S.c[k]; }); }
+  if(!Object.keys(novo).length){ if(mudouC){ saveData(); toast(C.l.length ? 'Cochilo registrado.' : 'Cochilos apagados.'); try{ renderHomeMetrics(); }catch(e){} } closeModal(); try{ if(mudouC && $('sono-tela')) openSono(); }catch(e){} return; }
   novo.em = Date.now(); S.n[dk] = novo; if(!S.on) S.on = true;   // registrar uma noite liga o acompanhamento
   saveData(); closeModal(); toast('Noite registrada.'); try{ _sonoHomeDesenha(); renderHomeMetrics(); }catch(e){}
   try{ if($('sono-tela')) openSono(); }catch(e){}
@@ -158,10 +199,10 @@ window.openSono = function(){
   try{
     if(!sonoLigado() && !Object.keys((state.sono||{}).n||{}).length) return;
     const tela = $('sono-tela'); if(!tela) return;
-    const det = tela.querySelector('details.integ-sec'); if(det) det.insertAdjacentHTML('beforebegin', sonoAnaliseHTML());
+    const det = tela.querySelector('details.integ-sec'); if(det) det.insertAdjacentHTML('beforebegin', sonoAnaliseHTML() + _sonoCochResumo());
     // lista: mostra a qualidade e a disposição de 5 níveis
     tela.querySelectorAll('.integ-item').forEach(b=>{ const m = /sonoRegistrar\('([\d-]+)'\)/.exec(b.getAttribute('onclick')||''); if(!m) return; const x = sonoNoite(m[1]); const sm = b.querySelector('small'); if(!x || !sm) return;
-      sm.textContent = [sonoMinDe(x) != null ? sonoFmtMin(sonoMinDe(x)) : '', x.dor && x.aco ? `${x.dor}–${x.aco}` : (x.dor ? `dormiu ${x.dor}` : x.aco ? `acordou ${x.aco}` : ''), _sonoQ5(x) ? SONO_Q5[_sonoQ5(x)][0] : '', _sonoD5(x) ? 'disposição ' + SONO_D5[_sonoD5(x)].toLowerCase() : ''].filter(Boolean).join(' · '); });
+      sm.textContent = [sonoMinDe(x) != null ? sonoFmtMin(sonoMinDe(x)) : '', x.dor && x.aco ? `${x.dor}–${x.aco}` : (x.dor ? `dormiu ${x.dor}` : x.aco ? `acordou ${x.aco}` : ''), sonoAcordado(x) ? `${sonoAcordado(x)} min acordado` : '', sonoCochiloMin(m[1]) ? `+ cochilo ${_sonoMinTxt(sonoCochiloMin(m[1]))}` : '', _sonoQ5(x) ? SONO_Q5[_sonoQ5(x)][0] : '', _sonoD5(x) ? 'disposição ' + SONO_D5[_sonoD5(x)].toLowerCase() : ''].filter(Boolean).join(' · '); });
     const leg = [...tela.querySelectorAll('.integ-mini')].find(p=>/Barras: horas da noite/.test(p.textContent));
     if(leg) leg.innerHTML = `<span class="sono-leg">${[5,4,3,2,1].map(v=>`<span><i style="background:${SONO_Q5[v][1]}"></i>${SONO_Q5[v][0]}</span>`).join('')}<span><i class="sl-sem"></i>sem qualidade</span></span>Barras: duração de cada noite; a cor é a qualidade. Faixa clara: 7 a 9 h (recomendação geral para adultos). Linha: média dos últimos 7 dias registrados.`;
     const int = `<details class="integ-sec"><summary>Relógio e outros apps</summary><p class="integ-mini">O MetaTreino funciona no navegador e o navegador não tem acesso aos dados de sono do relógio (Health Connect, Apple Saúde, Zepp). Por isso o registro é manual e leva poucos segundos. Nenhum valor é estimado pelo app.</p></details>`;
@@ -192,7 +233,8 @@ function _sonoTile(){
   const temHist = !!(R && R.n);
   const v = x && xm != null ? `${sonoFmtMin(xm).replace(' h', '<small>h</small>').replace(/ (\d\d)$/, '<small>$1</small>')}` : (x && q5 ? `<span style="font-size:20px">${SONO_Q5[q5][0]}</span>` : '–');
   const media = R && R.medMin != null && R.n >= 2 ? `média 7 dias ${sonoFmtMin(R.medMin)}` : '';
-  const sub = x ? [q5 && xm != null ? SONO_Q5[q5][0] : '', media].filter(Boolean).join(' · ') || 'Noite registrada'
+  const cochHoje = sonoCochiloMin(_sonoHoje());
+  const sub = x ? [q5 && xm != null ? SONO_Q5[q5][0] : '', cochHoje ? `+ cochilo ${_sonoMinTxt(cochHoje)}` : '', media].filter(Boolean).join(' · ') || 'Noite registrada'
     : temHist ? ['Hoje: toque para registrar', media].filter(Boolean).join(' · ')
     : (S.on ? 'Toque para registrar a noite' : 'Registre seu sono');
   return `<div class="met met-sono" onclick="${x || temHist ? 'openSono()' : 'sonoRegistrar()'}"><div class="met-sono-a"><div class="met-h"><i>🌙</i>Sono</div><div class="met-v">${v}</div><div class="met-s">${mtEsc(sub)}</div></div>${_sonoMini()}</div>`;
@@ -424,6 +466,11 @@ s.textContent = `
 .nutri-agua .na-link{border:0;background:none;color:var(--text-dim);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:6px 2px}
 .nutri-agua .na-link:disabled{opacity:.4;cursor:default}
 .nutri-agua .na-link:last-child{margin-left:auto}
+/* Sono (RC 8): tempo acordado e cochilos */
+.sono-opc{font-weight:600;text-transform:none;letter-spacing:0;color:var(--text-mute)}
+.sono-coch-l{align-items:flex-end}
+.sono-coch-l .sc-x{flex:0 0 auto;width:36px;height:42px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:15px;cursor:pointer}
+#sono-coch-add{margin-top:6px}
 /* Sono no Início (RC 5): 7 noites ao lado quando o cartão ocupa a linha inteira */
 .met-sono .sm7{display:none}
 .met-sono-a{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
