@@ -33,7 +33,7 @@ const NR_CAMPOS = {
   'nc-g':{ tit:'Gorduras', min:0, max:400, step:1, un:'g', def:60 },
   'ef-alvo':{ tit:'Meta de dias ativos', min:1, max:60, step:1, un:'dias', def:8 },
   'rl-km':{ tipo:'dist', tit:'Distância' }, 'he-km':{ tipo:'dist', tit:'Distância' }, 'act-km':{ tipo:'dist', tit:'Distância' },
-  'rl-min':{ tipo:'dur', tit:'Tempo total', h:true }, 'he-dur':{ tipo:'dur', tit:'Duração', h:false, maxMin:300 }   // he-dur é "min:seg"
+  'rl-min':{ tipo:'dur', tit:'Tempo total', h:true }   // RC 4: he-dur e act-min viraram o grupo h:m:s (.tempo-hms) — usam o controle 'hms'
 };
 function _nrNum(v){ const n = parseFloat(String(v==null?'':v).replace(',','.')); return isFinite(n) ? n : null; }
 function _nrFmt(v, step){ const dec = step < 1 ? (String(step).split('.')[1]||'').length : 0; return Number(v).toFixed(dec).replace('.',','); }

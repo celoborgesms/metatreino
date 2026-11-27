@@ -146,39 +146,9 @@ function cqCelCartaoGrupo(c, i){
   if(c.extras && c.extras.length) h = h.replace(/<\/div>\s*$/, `<span class="cel-extra">${c.primeira ? 'Junto com' : c.meta ? 'Inclui os níveis' : 'Inclui'}: ${c.extras.map(mtEsc).join(c.meta ? ' e ' : ' · ')}</span></div>`);
   return h;
 }
-window._cqCelTenta = function(){
-  const back = document.getElementById('modal-back');
-  const ocupado = back && back.classList.contains('on');
-  if(ocupado || !_cqTelaApp()){
-    if(Date.now() - _cqCelDesde > 4*60000){ _cqCelFila = []; _cqCelDesde = 0; return; }
-    _cqCelT = setTimeout(window._cqCelTenta, 700); return;
-  }
-  const pend = (state.conqPend||[]).filter(p=>_cqCelFila.includes(p.k) && !p.cel);
-  _cqCelFila = []; _cqCelDesde = 0;
-  if(!pend.length) return;
-  pend.forEach(p=>{ p.cel = true; });
-  try{ salvarLocal(); }catch(e){}
-  const cartoes = cqAgrupar(pend);
-  _cqCelLista = cartoes;
-  const n = cartoes.length, total = pend.length;
-  $('modal-inner').innerHTML = `<div class="cq cq-cel">
-    <div class="cq-topo"><h3>🏆 ${total === 1 ? 'Nova conquista!' : n === 1 ? 'Conquista desbloqueada' : 'Suas conquistas deste registro'}</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
-    <div class="cel-trilho" id="cel-trilho" role="listbox" aria-label="Conquistas desbloqueadas — deslize para os lados">
-      ${cartoes.map((c,i)=>cqCelCartaoGrupo(c, i)).join('')}
-    </div>
-    ${n > 1 ? `<div class="cel-nav"><button type="button" class="cel-seta" aria-label="Anterior" onclick="cqCelPasso(-1)">‹</button>
-      <span class="cel-pos" id="cel-pos" aria-live="polite">1 de ${n}</span>
-      <button type="button" class="cel-seta" aria-label="Próxima" onclick="cqCelPasso(1)">›</button></div>
-      <div class="cel-pontos">${cartoes.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>` : ''}
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();openTrophies()">Ver todas as conquistas</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
-  $('modal-back').classList.add('on');
-  const tr = document.getElementById('cel-trilho');
-  let parou = 0;
-  tr.addEventListener('scroll', ()=>{ clearTimeout(parou); parou = setTimeout(_cqCelAtual, 120); }, { passive:true });
-  _cqCelIdx = 0; _cqCelVer(0);
-  try{ if(typeof mtVibrar === 'function') mtVibrar([20,40,20]); }catch(e){}
-};
+// RC 4: a janela de conquistas do fim do registro (que esta parte redesenhava por cima da versão da parte 48)
+// saiu. Há uma implementação só: _cqCelTenta, na parte 48, que mostra o aviso pequeno (mtAvisoConquista).
+// cqAgrupar e cqCelCartaoGrupo continuam disponíveis para quem quiser montar o resumo agrupado.
 // cartão visto = todas as conquistas que ele representa saem das "novas"
 window._cqCelVer = function(i){
   const c = _cqCelLista[i];

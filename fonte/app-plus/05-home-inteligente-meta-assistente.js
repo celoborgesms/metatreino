@@ -15,10 +15,30 @@ function mtAdesao(a, b){
   const feitos = new Set(); let extras = 0;
   h.forEach(x=>{ if(x.adicional){ extras++; return; }   // RC 3: treino adicional é atividade real, mas não é sessão do plano
     const m = modDe(x); const k = m + '|' + mtDia0(x.at); if(m && !feitos.has(k)) feitos.add(k); else if(!m) extras++; });
-  const porSem = ['lift','run'].reduce((t,m)=>t + (planos[m] ? (state.modules[m].plan.workouts||[]).filter(w=>!(w.motor && w.motor.tipo==='prova')).length : 0), 0);
-  const semanas = Math.max(1/7, (Math.min(b, Date.now()+1) - a)/(7*DIA_MS));
-  const planejados = Math.max(porSem ? 1 : 0, Math.round(porSem*Math.min(semanas, 1e6)));
-  return { dias: new Set(h.map(x=>mtDia0(x.at))).size, concluidos: Math.min(feitos.size, planejados || feitos.size), feitos: feitos.size, planejados, extras, porSem };
+  const wsDe = m=>planos[m] ? (state.modules[m].plan.workouts||[]).filter(w=>!(w.motor && w.motor.tipo==='prova')) : [];
+  const porSem = ['lift','run'].reduce((t,m)=>t + wsDe(m).length, 0);
+  // RC 4: "planejados" conta só os dias em que o aluno TINHA o plano: do início de cada plano (planStartTs) até hoje,
+  // dia a dia, pelos dias da semana do plano. Antes multiplicava treinos/semana × semanas do intervalo inteiro, e
+  // quem começou no fim do mês era comparado com um mês inteiro de treinos que nem existiam para ele.
+  // Hoje só conta se o treino de hoje já foi feito (o dia ainda não terminou). Dias de férias não contam.
+  const hoje0 = mtDia0(); const fim = Math.min(b, Date.now()+1);
+  let planejados = 0, inicio = null, diasComPlano = 0;
+  ['lift','run'].forEach(m=>{
+    const ws = wsDe(m); if(!ws.length) return;
+    const st = (typeof planStartTs==='function' && planStartTs(state.modules[m])) || 0;
+    const d0 = Math.max(mtDia0(a), st ? mtDia0(st) : mtDia0(a), mtDia0(Date.now() - 800*DIA_MS)); if(inicio == null || d0 < inicio) inicio = d0;   // no máximo ~2 anos para trás
+    const porDia = {}; ws.forEach(w=>{ const d = +w.dayIdx; if(d) porDia[d] = (porDia[d]||0) + 1; });
+    let dias = 0;
+    for(let t = d0; t < fim; t += DIA_MS){
+      const t0 = mtDia0(t + 3*3600000); if(t0 > hoje0) break; dias++;   // +3 h: atravessa a troca de horário sem pular dia
+      try{ if(typeof isVacationDay === 'function' && isVacationDay(new Date(t0 + 12*3600000))) continue; }catch(e){}
+      const n = porDia[new Date(t0).getDay() || 7] || 0; if(!n) continue;
+      if(t0 === hoje0 && !feitos.has(m + '|' + t0)) continue;
+      planejados += n;
+    }
+    diasComPlano = Math.max(diasComPlano, dias);
+  });
+  return { dias: new Set(h.map(x=>mtDia0(x.at))).size, concluidos: Math.min(feitos.size, planejados || feitos.size), feitos: feitos.size, planejados, extras, porSem, inicio, diasComPlano };
 }
 function contextoAluno(){
   const h = mtHist();
@@ -105,7 +125,7 @@ function renderHomeSmart(){
     a = mtCargasTemDados() ? `<button class="btn btn-ghost" onclick="mtPergunta('cargas')">Ver minhas cargas</button>` : '';
   } else if(c.semDias >= Math.min(c.planejados, c.diaSemana) || c.streak >= 3){
     k = 'Consistência'; t = c.streak>=3 ? `${c.streak} dias seguidos ativos` : c.semPlanejados ? `Semana em dia: ${c.semTreinos} de ${c.semPlanejados} treinos do plano` : `Semana em dia: ${c.semDias} de ${c.planejados}`;
-    p = `Disciplina é isso: aparecer mesmo sem vontade.${prox&&!c.hojeFeito?` Seu próximo treino é ${prox}.`:''}`;
+    p = `Constância é o que sustenta a evolução.${prox&&!c.hojeFeito?` Seu próximo treino é ${prox}.`:''}`;   // RC 4: sem presumir falta de vontade
     a = `<button class="btn btn-ghost" onclick="mtPergunta('consistencia')">Ver minha consistência</button>`;
   } else {
     k = 'Para você hoje'; t = c.semDias ? `${c.semDias} ${c.semDias===1?'dia ativo':'dias ativos'} nesta semana` : 'Semana nova, página em branco';
@@ -258,22 +278,36 @@ function analiseMes(){
   const A = _resumoPeriodo(ini, Date.now()+1), B = _resumoPeriodo(iniAnt, Math.min(ini, iniAnt+decorrido));
   if(!A.sessoes && !B.sessoes) return 'Ainda não tenho treinos suficientes neste mês ou no anterior para comparar. Registre alguns treinos e me pergunte de novo. 📆';
   const mes = now.toLocaleDateString('pt-BR',{month:'long'});
-  const planejados = contextoAluno().planejados;
-  const semanas = Math.max(1, (Date.now()-ini)/(7*DIA_MS));
   const AD = mtAdesao(ini, Date.now()+1);
-  // adesão = treinos do PLANO concluídos ÷ planejados até hoje (caminhada/bike avulsas não contam como treino do plano)
-  const adesao = AD.porSem ? Math.min(100, Math.round(AD.concluidos/Math.max(1, AD.planejados)*100)) : Math.min(100, Math.round(A.dias/(planejados*semanas)*100));
-  let t = `<b>Análise de ${mes} até hoje</b> (comparando com o mesmo período do mês passado):<br><br>`;
-  t += `• Dias ativos: <b>${A.dias}</b>${_seta(A.dias,B.dias)}<br>• Sessões: <b>${A.sessoes}</b>${_seta(A.sessoes,B.sessoes)}<br>• Tempo de treino: <b>${Math.floor(A.min/60)}h${String(A.min%60).padStart(2,'0')}</b>${_seta(A.min,B.min,'min')}<br>`;
-  if(state.modules.lift) t += `• Musculação: <b>${A.lift}</b> treinos${_seta(A.lift,B.lift)} · recordes: <b>${A.prs}</b><br>`;
-  if(A.kmRun||B.kmRun) t += `• Corrida: <b>${mtFmtKm(A.kmRun)} km</b>${_seta(A.kmRun,B.kmRun,'km')}<br>`;
-  if(A.kmWalk||B.kmWalk) t += `• Caminhada: <b>${mtFmtKm(A.kmWalk)} km</b>${_seta(A.kmWalk,B.kmWalk,'km')}<br>`;
-  if(A.kmBike||B.kmBike) t += `• Bike: <b>${mtFmtKm(A.kmBike)} km</b>${_seta(A.kmBike,B.kmBike,'km')}<br>`;
-  t += AD.porSem ? `<br>Você esteve ativo em <b>${A.dias}</b> ${A.dias===1?'dia':'dias'}, concluiu <b>${AD.concluidos} de ${AD.planejados}</b> treinos planejados${AD.extras?` e fez <b>${AD.extras}</b> ${AD.extras===1?'atividade extra':'atividades extras'} (fora do plano)`:''}.<br>Adesão ao plano: <b>${adesao}%</b>.`
-    : `<br>Adesão ao plano: <b>${adesao}%</b> dos dias planejados (${planejados} por semana).`;
+  // RC 4: a análise respeita a data em que o plano começou. Se o plano começou neste mês, a comparação com o
+  // mês passado não é justa (as oportunidades foram diferentes) e o texto diz isso em vez de comparar.
+  const fmtDia = t=>new Date(t).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  const comecouNoMes = AD.inicio != null && AD.inicio > ini;
+  const ADant = mtAdesao(iniAnt, Math.min(ini, iniAnt+decorrido));
+  const antSemPlano = !ADant.planejados || (ADant.inicio != null && ADant.inicio >= ini);
+  const compara = !comecouNoMes && !antSemPlano;
+  let t = `<b>Análise de ${mes} até hoje</b>${compara ? ' (comparando com o mesmo período do mês passado)' : ''}:<br>`;
+  if(comecouNoMes) t += `<span style="color:var(--text-dim)">Seu plano começou em <b>${fmtDia(AD.inicio)}</b>: a análise conta a partir dessa data, sem os dias anteriores.</span><br>`;
+  else if(antSemPlano && B.sessoes) t += `<span style="color:var(--text-dim)">No mesmo período do mês passado você ainda não tinha plano ativo, então os números não são comparados.</span><br>`;
+  const s = (a, b, un)=>compara ? _seta(a, b, un) : '';
+  t += `<br>• Dias ativos: <b>${A.dias}</b>${s(A.dias,B.dias)}<br>• Sessões: <b>${A.sessoes}</b>${s(A.sessoes,B.sessoes)}<br>• Tempo de treino: <b>${fmtDur(A.min, true)}</b>${s(A.min,B.min,'min')}<br>`;
+  if(state.modules.lift) t += `• Musculação: <b>${A.lift}</b> treinos${s(A.lift,B.lift)} · recordes: <b>${A.prs}</b><br>`;
+  if(A.kmRun||B.kmRun) t += `• Corrida: <b>${mtFmtKm(A.kmRun)} km</b>${s(A.kmRun,B.kmRun,'km')}<br>`;
+  if(A.kmWalk||B.kmWalk) t += `• Caminhada: <b>${mtFmtKm(A.kmWalk)} km</b>${s(A.kmWalk,B.kmWalk,'km')}<br>`;
+  if(A.kmBike||B.kmBike) t += `• Bike: <b>${mtFmtKm(A.kmBike)} km</b>${s(A.kmBike,B.kmBike,'km')}<br>`;
+  if(!AD.porSem){ t += `<br>Sem plano ativo: aqui entram só as atividades registradas.`; return t; }
+  const desde = AD.inicio != null && AD.inicio > ini ? ` desde ${fmtDia(AD.inicio)}` : ' neste mês';
+  t += `<br>Treinos do plano${desde}: <b>${AD.concluidos} de ${AD.planejados}</b> programados até agora${AD.extras?`, mais <b>${AD.extras}</b> ${AD.extras===1?'atividade extra':'atividades extras'} (fora do plano)`:''}.`;
+  // poucos dados: mensagem neutra, sem conclusão sobre "planejar demais" ou "treinar pouco"
+  if(AD.diasComPlano < 14 || AD.planejados < 4){
+    t += '<br><br>Ainda são poucos dias de plano para tirar conclusões sobre a frequência. Por enquanto, o que vale é encaixar os treinos na rotina; com duas semanas completas eu consigo comparar de verdade.';
+    return t;
+  }
+  const adesao = Math.min(100, Math.round(AD.concluidos/Math.max(1, AD.planejados)*100));
+  t += `<br>Cumprimento do plano: <b>${adesao}%</b> dos treinos programados nos dias em que o plano estava ativo.`;
   t += '<br><br>' + (adesao>=85 ? 'Mês muito consistente. Se quiser evoluir mais, o caminho agora é qualidade: técnica, progressão de carga e sono.'
     : adesao>=60 ? 'Boa base. O próximo passo é proteger os dias de treino na agenda — os que mais falham costumam ser sempre os mesmos.'
-    : 'A frequência está abaixo do planejado. Vale ajustar o plano para menos dias por semana e cumprir 100% deles, em vez de planejar muito e fazer pouco.');
+    : `Foram ${AD.concluidos} de ${AD.planejados} treinos programados. Se a rotina apertou, vale ver se os dias do plano ainda cabem na sua semana: em Treinos, "Semana com menos tempo" ajusta só esta semana, e no Perfil dá para mudar os dias do plano.`);
   return t;
 }
 // --- cargas: evolução, manutenção e estagnação por exercício (dados reais das séries) ---

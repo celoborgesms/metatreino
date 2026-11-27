@@ -25,7 +25,16 @@ const MTS_KICKER = { musculacao:'Treino de musculação', corrida:'Corrida', bik
   especial:'Conquista especial', desafio:'Desafio concluído', recorde:'Recorde pessoal', evolucao:'Evolução de carga', semana:'Minha semana' };
 
 // estado da Central (só na memória; a escolha de formato/estilo fica lembrada no aparelho)
-const MTS = { d:null, foto:null, zoom:1, px:0, py:0, escurecer:.45, nome:false, classico:null };
+const MTS = { d:null, foto:null, zoom:1, px:0, py:0, escurecer:.45, nome:false, classico:null, vol:false, logo:'app', pos:'baixo' };
+// RC 4: a marca do card usa a MESMA logo cadastrada no painel do administrador (mural › logo — a mesma da barra
+// do app). Sem logo cadastrada, continua o ícone "M". Proporção e transparência preservadas (desenho "contido").
+let _mtsLogoCache = { src:null, img:null };
+function _mtsLogoSrc(){ try{ return (typeof _murAtuais === 'function' ? _murAtuais().logo : (coachMural && coachMural.foto)) || null; }catch(e){ return null; } }
+async function _mtsLogo(){
+  const src = _mtsLogoSrc(); if(!src) return null; if(_mtsLogoCache.src === src) return _mtsLogoCache.img;
+  const img = await new Promise(r=>{ const i = new Image(); if(!/^data:/.test(src)) i.crossOrigin = 'anonymous'; i.onload = ()=>r(i); i.onerror = ()=>r(null); i.src = src; });
+  _mtsLogoCache = { src, img }; return img;
+}
 function _mtsPref(k, padrao){ try{ return localStorage.getItem('mt_share_'+k) || padrao; }catch(e){ return padrao; } }
 function _mtsSalvaPref(k, v){ try{ localStorage.setItem('mt_share_'+k, v); }catch(e){} }
 
@@ -82,7 +91,7 @@ function mtsDeHistorico(x){
   const ids = (x.exercisesDone||[]).map(e=>e.id);
   let series = 0, vol = 0;
   const dia = mtDia0(x.at);
-  ids.forEach(id=>{ (state.progress[id]||[]).forEach(p=>{ if(mtDia0(p.date) === dia){ (p.sets||[]).forEach(s=>{ series++; vol += (+s.peso||0)*(+s.reps||0); }); } }); });
+  void dia; (typeof mtEntradasDaSessao === 'function' ? mtEntradasDaSessao(x) : []).forEach(en=>(en.sets||[]).forEach(s=>{ series++; vol += (+s.peso||0)*(+s.reps||0); }));   // RC 4: séries DESTE treino (sid)
   let partes = []; try{ partes = (typeof partsFromEntry==='function' ? partsFromEntry(x) : []).map(_mtsSemEmoji).filter(Boolean); }catch(e){}
   const d = _mtsDur(x.duration);
   const nums = [{ l:'Duração', v:d.v, u:d.u }];
@@ -209,6 +218,7 @@ function _mtsPadrao(x, W, H, tipo, cor){
   x.restore();
 }
 async function mtsDesenhar(cv, d, o){
+  if(d && d._volTxt !== undefined) d.desc = [d._descBase, (o.vol && d._volTxt) ? d._volTxt : ''].filter(Boolean).join('. ');   // RC 4: volume opcional
   const F = MTS_FORMATOS[o.fmt] || MTS_FORMATOS.story; const W = F.w, H = F.h;
   cv.width = W; cv.height = H; const x = cv.getContext('2d');
   try{ await document.fonts.load('800 80px Outfit'); await document.fonts.load('300 80px Outfit'); }catch(e){}
@@ -225,6 +235,7 @@ async function mtsDesenhar(cv, d, o){
     x.fillStyle = `rgba(0,0,0,${k*0.45})`; x.fillRect(0,0,W,H);
     let g = x.createLinearGradient(0,0,0,H*0.22); g.addColorStop(0,`rgba(0,0,0,${Math.min(.75,.35+k*.4)})`); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0,0,W,H*0.22);
     g = x.createLinearGradient(0,H*0.42,0,H); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,`rgba(0,0,0,${Math.min(.92,.5+k*.5)})`); x.fillStyle = g; x.fillRect(0,H*0.42,W,H*0.58);
+    if(o.pos === 'topo' && _mtsPosLivre(d)){ g = x.createLinearGradient(0,0,0,H*0.62); g.addColorStop(0,`rgba(0,0,0,${Math.min(.9,.45+k*.5)})`); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0,0,W,H*0.62); }   // dados no alto: o alto escurece para ficar legível
   } else {
     const g = x.createLinearGradient(0,0,W,H); g.addColorStop(0,P.bg1); g.addColorStop(1,P.bg2); x.fillStyle = g; x.fillRect(0,0,W,H);
     const rg = x.createRadialGradient(W*0.85, H*0.12, 0, W*0.85, H*0.12, W*0.9); rg.addColorStop(0, _mtsRgba(P.acc, o.estilo==='claro'?.14:.22)); rg.addColorStop(1, _mtsRgba(P.acc, 0));
@@ -233,8 +244,10 @@ async function mtsDesenhar(cv, d, o){
   }
   // cabeçalho: marca + data
   const ms = W*0.075, my = pad*0.9;
-  x.fillStyle = P.acc; _mtsRet(x, pad, my, ms, ms, ms*0.26); x.fill();
-  x.fillStyle = P.marcaTxt; x.font = `800 ${ms*0.56}px ${FF}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('M', pad+ms/2, my+ms/2+ms*0.02);
+  const logo = o.logo !== 'm' ? await _mtsLogo() : null;
+  if(logo){ x.save(); _mtsRet(x, pad, my, ms, ms, ms*0.26); x.clip(); const k = Math.min(ms/logo.width, ms/logo.height); const lw = logo.width*k, lh = logo.height*k; x.drawImage(logo, pad + (ms-lw)/2, my + (ms-lh)/2, lw, lh); x.restore(); x.textBaseline = 'middle'; }
+  else { x.fillStyle = P.acc; _mtsRet(x, pad, my, ms, ms, ms*0.26); x.fill();
+  x.fillStyle = P.marcaTxt; x.font = `800 ${ms*0.56}px ${FF}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('M', pad+ms/2, my+ms/2+ms*0.02); }
   x.fillStyle = P.txt; x.textAlign = 'left'; x.font = `800 ${W*0.026}px ${FF}`;
   if(x.letterSpacing !== undefined) x.letterSpacing = `${W*0.006}px`;
   x.fillText('METATREINO', pad+ms+W*0.025, my+ms/2);
@@ -355,6 +368,8 @@ async function mtsDesenhar(cv, d, o){
   let y;
   if(disp === 'grade' && !foto) y = Math.min(rodapeY - W*0.07 - alturaBloco, Math.max(my+ms+W*0.08 + medTam, (H - alturaBloco)/2 + medTam*0.4));
   else y = rodapeY - W*0.06 - padBaixo - alturaBloco;
+  // RC 4: com foto, o aluno pode pôr os dados no alto (posições prontas; nunca fora da imagem)
+  if(foto && o.pos === 'topo' && _mtsPosLivre(d)) y = Math.min(y, my + ms + W*0.1);
   // faixa (compacto): painel atrás do bloco
   if(disp === 'compacto'){
     x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, faixaX, y - W*0.045, faixaW, alturaBloco + W*0.045 + padBaixo, W*0.04); x.fill();
@@ -399,7 +414,8 @@ function mtsAbrir(d, classico){
   // Trocar formato/estilo/disposição reabre com o mesmo item (MTS.d) e mantém tudo.
   if(d !== MTS.d){ MTS.foto = null; MTS.zoom = 1; MTS.px = 0; MTS.py = 0; }
   MTS.d = d; MTS.classico = classico || null;
-  MTS.fmt = _mtsPref('fmt', 'story'); MTS.estilo = _mtsPref('estilo', 'escuro'); MTS.disp = _mtsPref('disp', 'destaque');
+  MTS.fmt = _mtsPref('fmt', 'story'); MTS.estilo = _mtsPref('estilo', 'escuro'); MTS.disp = _mtsPref('disp', 'destaque'); MTS.vol = _mtsPref('vol', '0') === '1';
+  MTS.logo = _mtsPref('logo', 'app'); MTS.pos = _mtsPref('pos', 'baixo');
   if(!MTS_FORMATOS[MTS.fmt]) MTS.fmt = 'story';
   const chips = (grupo, obj, atual, fn)=>`<div class="mts-chips" role="radiogroup" aria-label="${grupo}">${Object.entries(obj).map(([k,v])=>`<button type="button" role="radio" aria-checked="${k===atual}" class="${k===atual?'on':''}" onclick="${fn}('${k}')">${typeof v==='string'?v:`${v.nome} <small>${v.sub}</small>`}</button>`).join('')}</div>`;
   const video = d.tipo === 'especial' && typeof saFormatoVideo==='function' && saFormatoVideo();
@@ -417,8 +433,11 @@ function mtsAbrir(d, classico){
     ${MTS.foto ? `<label class="mts-sl">Zoom <input type="range" min="1" max="3" step="0.01" value="${MTS.zoom}" oninput="MTS.zoom=+this.value;mtsDesenhaPrev()"></label>
       <label class="mts-sl">Escurecer <input type="range" min="0" max="0.9" step="0.01" value="${MTS.escurecer}" oninput="MTS.escurecer=+this.value;mtsDesenhaPrev()"></label>`
       : `${chips('Estilo', MTS_ESTILOS, MTS.estilo, 'mtsEstilo')}`}
+    ${MTS.foto && _mtsPosLivre(d) ? `<div class="mts-sec">Posição dos dados</div>${chips('Posição dos dados', { baixo:'Embaixo', topo:'Em cima' }, MTS.pos, 'mtsPos')}` : ''}
     <div class="mts-sec">Disposição</div>${chips('Disposição', MTS_DISP, MTS.disp, 'mtsDisp')}
+    ${_mtsLogoSrc() ? `<div class="mts-sec">Marca</div>${chips('Marca', { app:'Logo do MetaTreino', m:'Só o ícone M' }, MTS.logo, 'mtsLogo')}` : ''}
     <label class="mts-nome"><input type="checkbox" ${MTS.nome?'checked':''} onchange="MTS.nome=this.checked;mtsDesenhaPrev()"> Mostrar meu primeiro nome</label>
+    ${d._volTxt ? `<label class="mts-nome"><input type="checkbox" ${MTS.vol?'checked':''} onchange="MTS.vol=this.checked;_mtsSalvaPref('vol', this.checked?'1':'0');mtsDesenhaPrev()"> Mostrar volume registrado (kg)</label><div class="mts-nota">Soma de carga × repetições das séries, como foram digitadas. Não é o peso total levantado: halteres e exercícios de um lado só contam pelo número registrado.</div>` : ''}
     <div class="mts-acoes">
       <button class="btn btn-primary" id="mts-comp" onclick="mtsCompartilhar()">Compartilhar</button>
       <button class="btn btn-outline" onclick="mtsSalvar()">Salvar imagem</button>
@@ -439,6 +458,10 @@ async function mtsDesenhaPrev(){
 function mtsFmt(k){ MTS.fmt = k; _mtsSalvaPref('fmt', k); mtsAbrir(MTS.d, MTS.classico); }
 function mtsEstilo(k){ MTS.estilo = k; _mtsSalvaPref('estilo', k); mtsAbrir(MTS.d, MTS.classico); }
 function mtsDisp(k){ MTS.disp = k; _mtsSalvaPref('disp', k); mtsAbrir(MTS.d, MTS.classico); }
+function mtsLogo(k){ MTS.logo = k; _mtsSalvaPref('logo', k); mtsAbrir(MTS.d, MTS.classico); }
+function mtsPos(k){ MTS.pos = k; _mtsSalvaPref('pos', k); mtsAbrir(MTS.d, MTS.classico); }
+// a posição só muda em cards sem medalha nem percurso (esses desenhos ocupam o alto do card)
+function _mtsPosLivre(d){ return !!d && !d.medalha && !(d.medalhas && d.medalhas.length) && !(d.rota && d.rota.length > 1) && !d.emoji; }
 function mtsSemFoto(){ MTS.foto = null; MTS.zoom = 1; MTS.px = 0; MTS.py = 0; mtsAbrir(MTS.d, MTS.classico); }
 function mtsFoto(ev){
   const f = ev.target.files && ev.target.files[0]; if(!f) return;
@@ -553,5 +576,5 @@ mtGancho('openExProgress', { depois(exId){
   if(fechar) fechar.before(b); else mi.appendChild(b);
 }});
 
-Object.assign(window, { MTS, mtsAbrir, mtsDesenhar, mtsDesenhaPrev, mtsFmt, mtsEstilo, mtsDisp, mtsFoto, mtsSemFoto, mtsCompartilhar, mtsSalvar, mtsClassico,
+Object.assign(window, { MTS, mtsAbrir, mtsDesenhar, mtsDesenhaPrev, mtsFmt, mtsEstilo, mtsDisp, mtsLogo, mtsPos, mtsFoto, mtsSemFoto, mtsCompartilhar, mtsSalvar, mtsClassico,
   mtsDeHistorico, mtsDeConquista, mtsDeColecao, mtsDeEspecial, mtsDeDesafio, mtsDeSemana, mtsDeRecorde, mtsDeEvolucao });

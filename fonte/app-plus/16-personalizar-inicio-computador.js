@@ -13,7 +13,7 @@ const INICIO_BLOCOS = [
   { k:'peso',        nome:'Peso',                grupo:'ind', sel:['#home-metrics .met[onclick*="add-weight"]'] },
   { k:'alimentacao', nome:'Alimentação',         grupo:'ind', sel:['#home-metrics .met-nutri', '#home-metrics .met[onclick*="openNutri"]'] },
   { k:'agua',        nome:'Água',                grupo:'ind', sel:['#home-metrics .met[onclick*="openAgua"]'] },
-  { k:'conquistas',  nome:'Conquistas',          grupo:'ind', sel:['#home-metrics .met[onclick*="openTrophies"]', '#home-trofeus'] },
+  // RC 4: 'conquistas' saiu do Início (fica só na aba Desafios)
   { k:'plano',       nome:'Fase do plano',       desc:'semana do ciclo e fase atual', sel:['#scr-home .plan-card'] },
   { k:'sugestao',    nome:'Sugestão inteligente', desc:'dica do dia e plano de retomada', sel:['#home-smart'] },
   { k:'desafio',     nome:'Desafio do mês',      sel:['#card-monthly'] },
@@ -40,16 +40,7 @@ function aplicaInicio(){
   const sels = INICIO_BLOCOS.filter(b=>oc.includes(b.k)).flatMap(b=>b.sel);
   st.textContent = sels.length ? sels.join(',\n') + '{display:none!important}' : '';
   try{ const c = $('card-access-info'); if(c) c.classList.toggle('ac-ok', accessDaysLeft() > 7); }catch(e){}
-  // indicadores: com número ímpar visível, o último ocupa a linha inteira; sem nenhum, some o bloco
-  try{
-    const m = $('home-metrics');
-    if(m){
-      const tiles = [...m.children]; tiles.forEach(t=>t.classList.remove('met-full'));
-      const vis = tiles.filter(t=>getComputedStyle(t).display !== 'none');
-      if(vis.length % 2 === 1 && vis.length > 1) vis[vis.length-1].classList.add('met-full');
-      m.classList.toggle('met-vazio', tiles.length > 0 && !vis.length);
-    }
-  }catch(e){}
+  // indicadores (último ímpar ocupa a linha, bloco vazio some): RC 4 — uma regra só, mtIndicadoresAjusta (parte 83)
   // rodapé da Home: atalho discreto para personalizar
   try{
     const wrap = document.querySelector('#scr-home .wrap');

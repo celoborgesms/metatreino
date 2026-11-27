@@ -232,15 +232,7 @@ function inicioAplicaOrdem(){
     inicioOrdemInd().forEach((k, i)=>{ const b = INICIO_BLOCOS.find(x=>x.k===k); if(b) regras.push(b.sel.filter(s=>s.startsWith('#home-metrics')).join(',') + `{order:${i+1}!important}`); });
   }
   st.textContent = regras.join('\n');
-  // indicador que fica sozinho na última linha ocupa a largura toda (agora pela ordem que aparece)
-  try{
-    const m = $('home-metrics');
-    if(m){
-      const tiles = [...m.children]; tiles.forEach(t=>t.classList.remove('met-full'));
-      const vis = tiles.filter(t=>getComputedStyle(t).display !== 'none').map((t,i)=>({t, o:parseInt(getComputedStyle(t).order,10)||0, i})).sort((a,b)=>(a.o-b.o)||(a.i-b.i)).map(x=>x.t);
-      if(vis.length % 2 === 1 && vis.length > 1) vis[vis.length-1].classList.add('met-full');
-    }
-  }catch(e){}
+  // indicador sozinho na última linha: RC 4 — uma regra só, mtIndicadoresAjusta (parte 83), que roda depois daqui
   try{ mtDeskOrdenaHome(); }catch(e){}
 }
 mtGancho('aplicaInicio', { depois(){ try{ inicioAplicaOrdem(); }catch(e){ console.log('ordem do início', e); } }});

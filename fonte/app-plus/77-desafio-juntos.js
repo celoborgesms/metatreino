@@ -108,7 +108,7 @@ const MT_TROFEUS_RC2 = [
   { secret:true, id:'sec_provagrupo', emoji:'🏁', name:'Prova no Grupo', desc:'Alguém do desafio juntos concluiu uma prova', cat:'geral' }
 ];
 (function(){ try{ const ids = new Set(TROPHIES.map(t=>t.id)); MT_TROFEUS_RC2.forEach(t=>{ if(!ids.has(t.id)) TROPHIES.push(t); }); }catch(e){} })();
-try{ Object.assign(TROPHY_ICO, { jun_semana1:['pair','1'], jun_10:['pair','10'], jun_4sem:['pair','4'], sec_provagrupo:['pair'] }); }catch(e){}
+try{ Object.assign(TROPHY_ICO, { jun_semana1:['calcheck','1'], jun_10:['target','10'], jun_4sem:['calcheck','4'], sec_provagrupo:['flag'] }); }catch(e){}   // RC 4: semana cumprida = calendário; prova = bandeira (antes todos eram 'pair', iguais aos da dupla)
 function djChecaConquistas(){
   try{
     if(!djLigado()) return;

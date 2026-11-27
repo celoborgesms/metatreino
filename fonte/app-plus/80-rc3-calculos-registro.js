@@ -39,11 +39,9 @@ function mtVolumeEntradas(entradas){
   return R;
 }
 // séries de um treino do histórico (mesmo dia, exercícios do treino)
-function mtEntradasDoTreino(x){
-  const dia = mtDia0Ts(x.at); const out = [];
-  (x.exercisesDone||[]).forEach(e=>{ const p = (state.progress[e.id]||[]).find(q=>q && mtDia0Ts(q.date) === dia); if(p && p.sets && p.sets.length) out.push({ exId:e.id, sets:p.sets }); });
-  return out;
-}
+// RC 4: pelo identificador da sessão (sid) — dois treinos no mesmo dia com o mesmo exercício não se misturam.
+// A busca é a de app.js (mtEntradasDaSessao); registro antigo sem sid continua pelo dia.
+function mtEntradasDoTreino(x){ return mtEntradasDaSessao(x).map(e=>({ exId:e.exId, sets:e.sets })); }
 function mtVolumeTreino(x){ return mtVolumeEntradas(mtEntradasDoTreino(x)); }
 
 // ---------- 2. Cards de compartilhamento ----------
@@ -61,6 +59,11 @@ window.mtsDeHistorico = function(x){
     d.hero = V.series ? { v:String(V.series), u: V.series===1 ? 'série concluída' : 'séries concluídas' } : { v:dur.v, u:dur.u||'de treino' };
     d.nums = nums.slice(0,3);
     if(V.maior){ let nome = ''; try{ nome = nomeDoEx(V.maior.ex) || ''; }catch(e){} d.desc = `Maior carga: ${_mtsN(V.maior.kg, V.maior.kg % 1 ? 1 : 0)} kg${nome ? ' · ' + nome : ''}`; }
+    // RC 4: volume em kg como dado SECUNDÁRIO e opcional (o aluno liga em "Mostrar volume registrado" no card).
+    // É a soma de carga × repetições exatamente como foram registradas — não "peso total levantado": halteres,
+    // unilaterais e peso do corpo não são multiplicados nem somados (o registro não permite confirmar).
+    d._descBase = d.desc || '';
+    d._volTxt = V.kg > 0 ? `Volume registrado: ${_mtsN(V.kg)} kg (soma de carga × repetições)${V.kgExtra ? ` + ${_mtsN(V.kgExtra)} kg de carga extra` : ''}` : '';
     if(x.adicional) d.kick = 'Treino adicional';
   }catch(e){ console.log('card musculação:', e); }
   return d;

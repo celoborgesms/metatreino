@@ -300,7 +300,7 @@ mtGancho('openHistoryEntry', { depois(idx){
     const dia = mtDia0(x.at);
     linhas.forEach((ln, i)=>{
       const e = x.exercisesDone[i];
-      const reg = ((state.progress||{})[e.id]||[]).find(p=>p && p.date && mtDia0(p.date) === dia && (p.sets||[]).length);
+      const arrP = ((state.progress||{})[e.id]||[]); const reg = x.sid ? arrP.find(p=>p && p.sid === x.sid && (p.sets||[]).length) : arrP.find(p=>p && p.date && !p.sid && mtDia0(p.date) === dia && (p.sets||[]).length);   // RC 4: séries DESTE treino (sid)
       const iso = (typeof exUsaTempo === 'function') && exUsaTempo(e.id);
       const series = reg ? reg.sets.map((s,j)=>`<span class="hd-s"><i>${j+1}</i>${+s.peso > 0 ? `${_fmtKg(s.peso)} kg × ${+s.reps||0}` : `${+s.reps||0} ${iso ? 's' : 'rep.'}`}</span>`).join('')
         : `<span class="hd-s">${e.sets}× · ${mtEsc(e.best||'')}</span>`;

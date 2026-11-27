@@ -2,7 +2,7 @@
 // =====================================================================
 // 48. Beta 44 — Conquistas no fim do registro, aviso na aba Desafios e "não vou treinar hoje" coerente
 // =====================================================================
-// 1) Conquistas ao concluir um registro (treino, corrida ou atividade): depois que a tela de resumo do
+// 1) [RC 4: a janela virou um aviso pequeno no rodapé — mtAvisoConquista] Conquistas ao concluir um registro (treino, corrida ou atividade): depois que a tela de resumo do
 //    registro fecha, aparece UMA janela com o que foi desbloqueado agora ("Ver todas" / "Continuar").
 //    Fora do fim de um registro (abrir o app, sincronizar de outro aparelho) nada pula na tela — continua
 //    só o selo "Novidade" e o ponto na aba Desafios, como na Beta 41.
@@ -48,28 +48,28 @@ function _cqCelTenta(){
   if(!pend.length) return;
   pend.forEach(p=>{ p.cel = true; });
   try{ salvarLocal(); }catch(e){}
-  const lista = pend.slice().reverse();
-  _cqCelLista = lista;
-  const n = lista.length;
-  $('modal-inner').innerHTML = `<div class="cq cq-cel">
-    <div class="cq-topo"><h3>🏆 ${n === 1 ? 'Nova conquista!' : n + ' novas conquistas!'}</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
-    <div class="cel-trilho" id="cel-trilho" role="listbox" aria-label="Conquistas desbloqueadas — deslize para os lados">
-      ${lista.map((p,i)=>cqCelCartao(p, i)).join('')}
-    </div>
-    ${n > 1 ? `<div class="cel-nav"><button type="button" class="cel-seta" aria-label="Anterior" onclick="cqCelPasso(-1)">‹</button>
-      <span class="cel-pos" id="cel-pos" aria-live="polite">1 de ${n}</span>
-      <button type="button" class="cel-seta" aria-label="Próxima" onclick="cqCelPasso(1)">›</button></div>
-      <div class="cel-pontos">${lista.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>` : ''}
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();openTrophies()">Ver todas as conquistas</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
-  $('modal-back').classList.add('on');
-  const tr = document.getElementById('cel-trilho');
-  let parou = 0;
-  tr.addEventListener('scroll', ()=>{ clearTimeout(parou); parou = setTimeout(_cqCelAtual, 120); }, { passive:true });
-  _cqCelIdx = 0; _cqCelVer(0);
+  // RC 4: nada de janela grande por cima do fluxo de registro. Um aviso pequeno no rodapé ("Nova conquista
+  // desbloqueada"), que some sozinho; tocar leva à aba Desafios, onde ficam a conquista, a descrição e o progresso.
+  // A conquista continua "nova" (não é marcada como vista) até a pessoa abrir Conquistas.
+  mtAvisoConquista(pend.slice().reverse());
   try{ if(typeof mtVibrar === 'function') mtVibrar([20,40,20]); }catch(e){}
 }
 let _cqCelLista = [], _cqCelIdx = 0;
+function mtAvisoConquista(lista){
+  try{
+    const n = lista.length; if(!n) return; const p = lista[0];
+    const t = p.tid ? TROPHIES.find(x=>x.id===p.tid) : null; const nome = t ? t.name : (p.nome || '');
+    let el = document.getElementById('cq-aviso'); if(el) el.remove();
+    el = document.createElement('button'); el.type = 'button'; el.id = 'cq-aviso'; el.className = 'cq-aviso';
+    el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    el.innerHTML = `<span class="cqa-ico" aria-hidden="true">${t && typeof trophyIco === 'function' ? trophyIco(t) : '🏆'}</span><span class="cqa-tx"><b>${n === 1 ? 'Nova conquista desbloqueada' : n + ' novas conquistas desbloqueadas'}</b>${n === 1 && nome ? `<small>${mtEsc(nome)}</small>` : '<small>Veja na aba Desafios</small>'}</span><span class="cqa-ver">Ver</span>`;
+    el.onclick = ()=>{ el.remove(); goTab('challenges'); };
+    document.body.appendChild(el);
+    requestAnimationFrame(()=>el.classList.add('on'));
+    setTimeout(()=>{ el.classList.remove('on'); setTimeout(()=>el.remove(), 400); }, 5200);
+    try{ if(typeof mtVibrar === 'function') mtVibrar([20]); }catch(e){}
+  }catch(e){ console.log('aviso de conquista:', e); }
+}
 function cqCelCartao(p, i){
   const t = p.tid ? TROPHIES.find(x=>x.id===p.tid) : null;
   const nv = t ? medalNivel(t) : (p.kind==='medalha' || p.kind==='marco' ? 'rara' : p.kind==='secreto' ? 'especial' : 'comum');
@@ -205,7 +205,7 @@ mtGancho('finishLiftWorkout', { antes(k){
 #session-detail-slot.mt-pulado .ex,#session-detail-slot.mt-pulado .blk,#session-detail-slot.mt-pulado .block{opacity:.55}
 `; document.head.appendChild(s); })();
 
-Object.assign(window, { cqCelebrar, cqCelPasso });
+Object.assign(window, { cqCelebrar, cqCelPasso, mtAvisoConquista });
 
 // ---------- 4. fichas técnicas que estavam erradas ----------
 // A ficha era escolhida pela primeira palavra que casava no nome: "Remada na Máquina (Hammer)" caía no supino,

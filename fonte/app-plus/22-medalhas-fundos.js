@@ -32,7 +32,7 @@ window.medalSvg = function(glyph, label, extra, nivel){
   return `<svg viewBox="0 0 48 48">${extra||''}${aro}<circle class="tb-in" cx="24" cy="24" r="18.5"/>`
     + `<path class="tb-luz" d="M8.2 21.5A16 16 0 0 1 39.8 21.5A19 14 0 0 0 8.2 21.5Z"/><circle class="tb-sombra" cx="24" cy="24" r="18"/>`
     + `<g class="tb-g" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)}) scale(${esc})">${g}</g>`
-    + `${label?`<text x="24" y="41.6" class="tb-l">${mtEsc(label)}</text>`:''}</svg>`;
+    + `${label?`<text x="24" y="41.6" class="tb-l"${String(label).length >= 4 ? ' textLength="21" lengthAdjust="spacingAndGlyphs"' : ''}>${mtEsc(label)}</text>`:''}</svg>`;
 };
 window.trophyIco = function(t, dim){
   if(!t) return '';

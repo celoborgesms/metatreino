@@ -100,10 +100,9 @@ function dkKpis(){
     { l: lift ? 'Treinos na semana' : 'Atividades na semana', v: `${feitos}<small>/${meta}</small>`, s: meta ? `${Math.min(100, Math.round(feitos/meta*100))}% da meta` : '', go:"goTab('perf')", bar: meta ? Math.min(1, feitos/meta) : 0 },
     { l:'Sequência', v:`${seq}<small>${seq===1?'dia':'dias'}</small>`, s:'dias seguidos com atividade', go:"goTab('perf')" },
     { l:'Tempo na semana', v: dur, s:`${ws.total} ${ws.total===1?'registro':'registros'} desde segunda`, go:"goTab('history')" },
-    lift ? { l:'Volume na semana', v: vol >= 1000 ? `${(vol/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})}<small>t</small>` : `${vol}<small>kg</small>`, s:'peso × repetições registradas', go:"goTab('history')" }
-         : { l:'Distância na semana', v:`${km.toLocaleString('pt-BR',{maximumFractionDigits:1})}<small>km</small>`, s:'corrida, caminhada e bike', go:"goTab('history')" },
-    { l:'Conquistas', v:`${(state.trophies||[]).length}<small>/${TROPHIES.length}</small>`, s:'medalhas e selos', go:'openTrophies()' }
-  ];
+    lift ? { l:'Volume registrado', v: `${Math.round(vol).toLocaleString('pt-BR')}<small>kg</small>`, s:'soma de carga × repetições na semana', go:"goTab('history')" }
+         : { l:'Distância na semana', v:`${km.toLocaleString('pt-BR',{maximumFractionDigits:1})}<small>km</small>`, s:'corrida, caminhada e bike', go:"goTab('history')" }
+  ];   // RC 4: conquistas ficam na aba Desafios
   el.innerHTML = tiles.map(t=>`<button type="button" class="dk-kpi" onclick="${t.go}"><span class="dk-kpi-l">${t.l}</span><span class="dk-kpi-v">${t.v}</span>${t.bar!=null && t.bar!==undefined && t.l.includes('semana') && t.s.includes('meta') ? `<span class="dk-kpi-bar"><i style="width:${Math.round(t.bar*100)}%"></i></span>` : ''}<span class="dk-kpi-s">${t.s}</span></button>`).join('');
 }
 

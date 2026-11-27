@@ -573,7 +573,7 @@ try{
     pair: '<circle cx="8.5" cy="7" r="2.6"/><circle cx="15.8" cy="8" r="2.3"/><path d="M3.5 19.5c.3-3.6 2.3-5.8 5-5.8s4.7 2.2 5 5.8M13.2 13.9c.8-.6 1.7-.9 2.6-.9 2.4 0 4.2 2 4.5 5.4"/>'
   });
   Object.assign(TROPHY_ICO, {
-    cali_1:['rings','1º'], cali_10:['rings','10'], cali_prancha:['stopwatch','60s'], cali_degrau:['prup'], cali_barra5:['pullbar','5'], cali_skill:['star'], cali_mestre:['crown'],
+    cali_1:['rings','1º'], cali_10:['rings','10'], cali_prancha:['stopwatch','60s'], cali_degrau:['steps'], cali_barra5:['pullbar','5'], cali_skill:['star'], cali_mestre:['crown'],
     hib_semana:['hybrid','1'], hib_forte:['hybrid','2+2'], hib_4sem:['hybrid','4'], hib_12:['hybrid','12'],
     dupla_1:['pair','1º'], dupla_5:['pair','5'], dupla_20:['pair','20'],
     sec_diacompleto:['hybrid'], sec_cali4sem:['rings'], sec_dupla4sem:['pair'], sec_duplamix:['pair']
