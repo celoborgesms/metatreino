@@ -2,6 +2,16 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. 2027 RC 6 — em aparelho real
+Perfil deve mostrar "2027 RC 6".
+1. **Meta do mês:** Desafios → Conquistas → toque numa meta do mês nova. A medalha aparece desenhada, com o nível.
+2. **Dois treinos no dia** (musculação e corrida no plano no mesmo dia): registre só um. O cartão do topo diz "Ainda falta …" e o botão leva à outra modalidade. Registre o outro: aí aparece "Feito por hoje".
+3. **Antes de treinar** nesse dia, a dica "Corrida + musculação hoje" fica logo abaixo do seletor, antes do treino de hoje.
+4. **Aniversário** (ponha a data de nascimento de hoje no perfil, de teste): bolo desenhado, nenhuma estrela, nenhum emoji no texto.
+5. **Sono, sem registrar hoje:** o atalho mostra "Hoje: toque para registrar · média 7 dias …" e abre o histórico com as noites anteriores.
+6. **Sono em linha inteira** (número ímpar de indicadores): as 7 noites em barras ao lado.
+7. **Dados do navegador limpos:** limpe, entre de novo e abra o Sono. As noites anteriores aparecem sem precisar registrar a de hoje.
+
 ## 00000. 2027 RC 5 — em aparelho real (pequenas correções)
 Faça no celular, com o app atualizado (Perfil mostra "2027 RC 5").
 1. **Sono, arrastando:** Início → Sono → Dormi/acordei → toque em "Acordei" → arraste os minutos até 52. Confirme. O campo mostra 11:52 (não 11:50).

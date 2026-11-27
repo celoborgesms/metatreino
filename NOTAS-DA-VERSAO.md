@@ -1,3 +1,19 @@
+# MetaTreino 2027 RC 6 — ajustes do teste no celular
+
+**Não precisa publicar o `firestore.rules`.** Nada mudou nas regras. Nenhum dado é apagado. Detalhes em `RELATORIO-RC6.md`. Testes no celular em `ROTEIRO-DE-TESTES.md`, seção 2027 RC 6.
+
+1. **Meta do mês com a medalha desenhada.** A tela que abre ao tocar mostra a medalha, com a cor do nível (bronze, prata ou ouro). Antes ficava vazia.
+2. **Dia com musculação e corrida.** Depois do primeiro treino, o cartão diz o que ainda falta (ex.: "Ainda falta a corrida hoje"), com um atalho. "Feito por hoje. Agora é recuperação." só aparece com os dois feitos.
+3. **Dica "Corrida + musculação hoje"** logo abaixo do seletor, antes do treino de hoje. Some quando um dos dois é feito, como antes.
+4. **Aniversário:** um bolo desenhado no lugar das três estrelas, sem emoji no texto, e cinco frases diferentes (uma por ano).
+5. **Sono no Início:**
+   - com noites anteriores registradas, o atalho mostra a média dos 7 dias e abre o histórico, mesmo antes de registrar a noite de hoje;
+   - quando o Sono ocupa a linha inteira, mostra as últimas 7 noites em barras ao lado;
+   - o histórico abre mesmo com a pergunta da manhã desligada.
+6. **Sono entre aparelhos.** As noites entram na junção com a nuvem, como o histórico de treinos: noite que só um lado tem é mantida, a edição mais recente vale e noite apagada não volta.
+
+---
+
 # MetaTreino 2027 RC 5 — pequenas correções
 
 **Não precisa publicar o `firestore.rules`.** Nada mudou nas regras nem nos dados guardados. Detalhes em `RELATORIO-RC5.md`. Testes no celular em `ROTEIRO-DE-TESTES.md`, seção 2027 RC 5.

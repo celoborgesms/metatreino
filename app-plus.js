@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027 RC 5 — app-plus.js
+// MetaTreino 2027 RC 6 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027-rc.5' };
+const MTP = { versao: '2027-rc.6' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -986,6 +986,14 @@ function _proxTreinoTxt(){
     return dif===1 ? 'amanhã' : (dif<7 ? (prox===6||prox===7?'no ':'na ')+dias[prox-1] : 'na próxima semana');
   }catch(e){ return ''; }
 }
+// RC 5: a outra modalidade ainda tem treino hoje (planejado, não feito, não pulado)?
+function _pendenteHoje(){
+  try{
+    if(typeof mtHojeModalidade !== 'function') return null;
+    for(const m of ['lift','run']){ const o = mtHojeModalidade(m); if(o && o.st === 'hoje') return { m, nome: m === 'lift' ? `a musculação (${o.txt})` : `a corrida (${o.txt})` }; }
+  }catch(e){}
+  return null;
+}
 function renderHomeSmart(){
   const wrap = document.querySelector('#scr-home .wrap'); if(!wrap) return;
   let el = $('home-smart');
@@ -1004,6 +1012,13 @@ function renderHomeSmart(){
     k = 'Primeiros passos'; t = 'Seu primeiro treino é o mais importante';
     p = 'Comece com cargas leves e foque na técnica. Registre as séries: é com elas que o MetaTreino aprende o seu ritmo e ajusta as próximas sugestões.';
     a = '';   // Beta 44: sem "Ver treino"/"Como executar" — o treino de hoje e o "Ver como fazer" de cada exercício já estão logo abaixo
+  } else if(c.hojeFeito && _pendenteHoje()){
+    // RC 5: dia com musculação E corrida — feito um, ainda falta o outro. Nada de "agora é recuperação".
+    const P = _pendenteHoje();
+    k = 'Um treino feito'; t = `Ainda falta ${P.nome} hoje`;
+    p = 'Entre um treino e outro: água, um lanche leve e, se der, algumas horas de intervalo. Se o corpo pedir, pode fazer o segundo mais leve.';
+    a = `<button class="btn btn-ghost" onclick="switchModule('${P.m}')">Ver ${P.m === 'lift' ? 'musculação' : 'corrida'}</button>`;
+    cls = 'info';
   } else if(c.hojeFeito){
     k = 'Treino concluído'; t = c.streak>=3 ? `Feito! São ${c.streak} dias seguidos.` : 'Feito por hoje. Agora é recuperação.';
     p = `Hidratação, uma refeição com proteína e uma boa noite de sono completam o treino.${prox?` Próxima sessão ${prox}.`:''}`;
@@ -13575,16 +13590,26 @@ function cqVerNova(k){
 function cqVerItem(p){
   try{ window._trophyScroll = ($('modal-inner')||{}).scrollTop || 0; }catch(e){}
   const nv = p.kind==='medalha' || p.kind==='marco' ? 'rara' : p.kind==='secreto' ? 'especial' : 'comum';
-  const tipo = { secreto:'Segredo revelado', medalha:'Medalha do mês', marco:'Marco alcançado', evento:'Desafio concluído' }[p.kind] || p.tipo || 'Conquista';
-  const ico = p.emo && /<svg|<span|<img/.test(p.emo) ? p.emo : `<span class="cq-emo">${mtEsc(p.emo||'🏅')}</span>`;
+  const metaMes = p.kind === 'medalha' && !/^ev_/.test(String(p.k||''));   // mesmo nome dos cartões (parte 51): meta automática do mês
+  const tipo = (metaMes ? 'Meta do mês' : { secreto:'Segredo revelado', medalha:'Medalha do mês', marco:'Marco alcançado', evento:'Desafio concluído' }[p.kind]) || p.tipo || 'Conquista';
+  // RC 5: a medalha aparece desenhada como as conquistas (antes o emoji virava um ícone sem tamanho e a tela ficava vazia)
+  const id = String(p.k||'').replace(/@.*$/, '');
+  const nivelMes = (id.match(/_(bronze|prata|ouro)$/)||[])[1] || '';
+  const GLIFO = { '⏱️':'stopwatch', '⏱':'stopwatch', '🔥':'flame', '🎯':'target', '🏃':'shoe', '🏃‍♂️':'shoe', '🏃‍♀️':'shoe', '🚴':'bike', '🏋️':'dumbbell', '💪':'dumbbell',
+    '📅':'calcheck', '🗓️':'calcheck', '🛣️':'road', '⛰️':'mountain', '👣':'feet', '📈':'prup', '⭐':'star', '🏆':'medal', '🎖️':'medal', '🏅':'medal', '🧘':'lotus', '⚡':'bolt', '🏁':'flag', '👑':'crown', '💯':'hundred' };
+  const emoTxt = String(p.emo||'').trim();
+  let ico;
+  if(/<svg|<img/.test(emoTxt)) ico = emoTxt;
+  else { const g = GLIFO[emoTxt] || GLIFO[emoTxt.replace(/\uFE0F/g,'')] || (p.kind === 'evento' ? 'flag' : 'medal');
+    ico = `<span class="tbadge geral nv-${nv}${nivelMes ? ' cq-nv-' + nivelMes : ''}" role="img" aria-label="${mtEsc(p.nome||'')}">${medalSvg(g, '', '', nv)}</span>`; }
   const quando = p.at ? new Date(p.at).toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' }) : '';
   const ir = p.kind==='evento' ? `<button class="btn btn-primary btn-block" onclick="closeModal();goTab('challenges')">Ver desafios</button>`
     : `<button class="btn btn-primary btn-block" onclick="closeModal();openMedals()">Ver medalhas e selos</button>`;
   $('modal-inner').innerHTML = `<div class="cq-item nv-${nv}">
     <div style="display:flex;justify-content:flex-end;margin:-4px -4px 0 0"><button class="cq-x" onclick="cqVoltarLista()" aria-label="Voltar às conquistas">✕</button></div>
     <div class="cq-item-med tr-medal"><span class="tr-glow" aria-hidden="true"></span><span class="tr-ring" aria-hidden="true"></span><div class="tr-ico">${ico}</div></div>
-    <div class="cq-item-tipo">${mtEsc(tipo)}${nv!=='comum' ? ' · ' + CQ_NV[nv] : ''}</div>
-    <h3 class="tr-nome">${mtEsc(p.nome || '')}</h3>
+    <div class="cq-item-tipo">${mtEsc(tipo)}${nivelMes ? ' · ' + { bronze:'Bronze', prata:'Prata', ouro:'Ouro' }[nivelMes] : nv!=='comum' ? ' · ' + CQ_NV[nv] : ''}</div>
+    <h3 class="tr-nome">${mtEsc(nivelMes ? String(p.nome || '').replace(/\s*[🥉🥈🥇]\s*$/u, '') : (p.nome || ''))}</h3>
     ${p.desc ? `<p class="cq-item-desc">${mtEsc(p.desc)}</p>` : ''}
     ${quando ? `<div class="cq-item-data">Conquistada em ${quando}</div>` : ''}
     <div style="display:grid;gap:8px;margin-top:16px">${ir}<button class="btn btn-ghost btn-block" onclick="cqVoltarLista()">← Voltar às conquistas</button></div></div>`;
@@ -22569,7 +22594,7 @@ function sonoSalvar(dk, dados){
   const x = Object.assign({}, ant, dados);
   if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m){ x.min = m; x.h = m/60; } }
   Object.keys(x).forEach(k=>{ if(x[k] == null || x[k] === '') delete x[k]; });
-  if(!Object.keys(x).length) delete S.n[dk]; else S.n[dk] = x;
+  if(!Object.keys(x).length) delete S.n[dk]; else { x.em = Date.now(); S.n[dk] = x; }   // RC 6: 'em' = quando foi gravada (junção entre aparelhos)
   const lim = chaveDia(new Date(Date.now() - 180*86400000)); Object.keys(S.n).forEach(k=>{ if(k < lim) delete S.n[k]; });
   saveData();
 }
@@ -22578,7 +22603,11 @@ function sonoPular(){ const S = sonoEst(); S.pulou = _sonoHoje(); saveData(); _s
 // RC 4: o formulário de registro (sonoRegistrar / sonoRegSalva / _sonoModo) existe SÓ na parte 81.
 // O formulário antigo desta parte (3 níveis, minutos de 5 em 5, total em décimos de hora) era sobrescrito
 // pela 81 e foi retirado, para não existirem duas lógicas de gravação do sono.
-function sonoApaga(dk){ const S = sonoEst(); delete S.n[dk]; saveData(); openSono(); }
+function sonoApaga(dk){ const S = sonoEst(); delete S.n[dk];
+  // RC 6: lembra a exclusão para a noite não voltar de uma cópia antiga de outro aparelho
+  S.apagadas = S.apagadas || {}; S.apagadas[dk] = Date.now();
+  const ks = Object.keys(S.apagadas).sort(); if(ks.length > 120) ks.slice(0, ks.length - 120).forEach(k=>delete S.apagadas[k]);
+  saveData(); openSono(); }
 function sonoLigar(on){ const S = sonoEst(); S.on = !!on; saveData(); _sonoHomeDesenha(); sonoEntrada(); if($('modal-back').classList.contains('on')) openSono(); toast(on ? 'Sono ligado: uma pergunta rápida de manhã, na Home.' : 'Sono desligado. Os registros ficam guardados.'); }
 // ---------- Home: uma linha de manhã ----------
 function _sonoHomeDesenha(){
@@ -22644,7 +22673,7 @@ let _sonoDias = 30;
 function openSono(){
   const mi = $('modal-inner'); mi.classList.remove('modal-video','modal-ex');
   const S = state.sono || {};
-  if(!sonoLigado()){
+  if(!sonoLigado() && !Object.keys(S.n||{}).length){   // RC 6: com noites guardadas, o histórico abre mesmo com a pergunta da manhã desligada
     mi.innerHTML = `<div id="sono-tela"><h3>🌙 Sono e recuperação</h3>
       <p class="integ-p">Opcional. Se ligar, o app pergunta de manhã, na Home, como você dormiu (um toque: Mal, Ok ou Bem). Horas, horários e disposição ao acordar são opcionais.</p>
       <p class="integ-p">Com isso, o MetaTreino passa a <b>orientar</b> a recuperação: avisa depois de noites ruins e não acelera a progressão da corrida numa semana de sono ruim. Ele <b>nunca</b> corta um treino por causa de uma noite só.</p>
@@ -22668,7 +22697,7 @@ function openSono(){
     <details class="integ-sec"><summary>Como o app usa o sono</summary>
       <p class="integ-mini">Noite ruim = qualidade "mal", menos de 6 h ou acordou cansado(a). Uma noite ruim: aviso no treino do dia. Duas nas últimas três: sugestão de priorizar a recuperação. Três ou mais na semana (com pelo menos 4 registradas): a corrida não avança naquela semana, mantém. A musculação lembra de não forçar carga nova se o aquecimento pesar. Nada é alterado por uma noite só, e noites sem registro não contam.</p></details>
     <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>
-    <button class="link-mais" style="margin-top:8px" onclick="sonoLigar(false)">Desligar o acompanhamento</button></div>`;
+    ${sonoLigado() ? `<button class="link-mais" style="margin-top:8px" onclick="sonoLigar(false)">Desligar o acompanhamento</button>` : `<button class="link-mais" style="margin-top:8px" onclick="sonoLigar(true)">Ligar a pergunta da manhã no Início</button>`}</div>`;
   $('modal-back').classList.add('on');
 }
 // ---------- influência na recuperação ----------
@@ -22705,6 +22734,31 @@ s.textContent = `#scr-home .wrap > .sono-manha{order:11}
 .sono-tri button.on{border-color:var(--primary);background:rgba(var(--primary-rgb),.16)}
 .sono-campos{display:flex;gap:10px;margin-top:8px}
 .sono-campos label{flex:1;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-dim)}`; document.head.appendChild(s); })();
+
+
+// ---------- RC 6: o sono entra na junção das cópias (aparelho × nuvem) ----------
+// mesclaEstado (app.js) junta histórico, pesos, recordes e conquistas, mas não o sono: a cópia que ficava como base
+// mantinha só as noites dela. Ex.: com os dados do navegador limpos, as noites da nuvem podiam ficar de fora até a
+// próxima gravação. Agora: noite que só uma cópia tem entra; nas duas, vale a gravada por último ('em');
+// noite apagada (S.apagadas) não volta, a não ser que tenha sido registrada de novo depois da exclusão.
+function mtSonoMescla(base, outra){
+  try{
+    if(!base || !outra || !outra.sono || typeof outra.sono !== 'object') return;
+    if((+base.zeradoEm||0) > (+outra.zeradoEm||0)) return;          // "começar do zero" nesta cópia: nada de antes volta
+    const B = base.sono = base.sono || {}; B.n = B.n || {};
+    const O = outra.sono; const On = O.n || {};
+    const apag = Object.assign({}, O.apagadas||{}, B.apagadas||{}); Object.keys(O.apagadas||{}).forEach(k=>{ apag[k] = Math.max(apag[k]||0, O.apagadas[k]); });
+    if(Object.keys(apag).length) B.apagadas = apag;
+    const vale = (x, dk)=>x && !(apag[dk] && !((+x.em||0) > apag[dk]));
+    Object.keys(On).forEach(dk=>{ const o = On[dk], b = B.n[dk];
+      if(!vale(o, dk)) return;
+      if(!b || (+o.em||0) > (+b.em||0)) B.n[dk] = JSON.parse(JSON.stringify(o)); });
+    Object.keys(B.n).forEach(dk=>{ if(!vale(B.n[dk], dk)) delete B.n[dk]; });
+    if(B.on == null && O.on != null) B.on = O.on;
+  }catch(e){ console.log('sono (junção):', e); }
+}
+mtGancho('mesclaEstado', { depois(base, outra){ mtSonoMescla(base, outra); } });
+window.mtSonoMescla = mtSonoMescla;
 
 // =====================================================================
 // 77. RC 2 — Desafio juntos (cooperativo) e conquistas compartilhadas
@@ -23415,7 +23469,7 @@ window.sonoRegSalva = function(){
   const S = sonoEst(); const ant = S.n[dk] || {}; const novo = Object.assign({}, ant);
   ['q5','d5','q','d','min','h','dor','aco'].forEach(k=>{ if(d[k] == null) delete novo[k]; else novo[k] = d[k]; });
   if(!Object.keys(novo).length){ closeModal(); return; }
-  S.n[dk] = novo; if(!S.on) S.on = true;   // registrar uma noite liga o acompanhamento
+  novo.em = Date.now(); S.n[dk] = novo; if(!S.on) S.on = true;   // registrar uma noite liga o acompanhamento
   saveData(); closeModal(); toast('Noite registrada.'); try{ _sonoHomeDesenha(); renderHomeMetrics(); }catch(e){}
   try{ if($('sono-tela')) openSono(); }catch(e){}
 };
@@ -23505,7 +23559,7 @@ const _openSonoRC2 = window.openSono;
 window.openSono = function(){
   _openSonoRC2.apply(this, arguments);
   try{
-    if(!sonoLigado()) return;
+    if(!sonoLigado() && !Object.keys((state.sono||{}).n||{}).length) return;
     const tela = $('sono-tela'); if(!tela) return;
     const det = tela.querySelector('details.integ-sec'); if(det) det.insertAdjacentHTML('beforebegin', sonoAnaliseHTML());
     // lista: mostra a qualidade e a disposição de 5 níveis
@@ -23536,10 +23590,27 @@ function _sonoTile(){
   const S = state.sono || {}; const x = sonoNoite(_sonoHoje()); const R = (typeof _sonoResumo === 'function') ? _sonoResumo(7) : null;
   const q5 = _sonoQ5(x);
   const xm = sonoMinDe(x);
+  // RC 5: com noites anteriores registradas, o atalho mostra a média e abre o histórico mesmo antes de registrar
+  // a noite de hoje (antes só abria o formulário, e o histórico parecia sumido até registrar hoje).
+  const temHist = !!(R && R.n);
   const v = x && xm != null ? `${sonoFmtMin(xm).replace(' h', '<small>h</small>').replace(/ (\d\d)$/, '<small>$1</small>')}` : (x && q5 ? `<span style="font-size:20px">${SONO_Q5[q5][0]}</span>` : '–');
-  const sub = x ? [q5 && xm != null ? SONO_Q5[q5][0] : '', R && R.medMin != null && R.n >= 2 ? `média 7 dias ${sonoFmtMin(R.medMin)}` : ''].filter(Boolean).join(' · ') || 'Noite registrada'
+  const media = R && R.medMin != null && R.n >= 2 ? `média 7 dias ${sonoFmtMin(R.medMin)}` : '';
+  const sub = x ? [q5 && xm != null ? SONO_Q5[q5][0] : '', media].filter(Boolean).join(' · ') || 'Noite registrada'
+    : temHist ? ['Hoje: toque para registrar', media].filter(Boolean).join(' · ')
     : (S.on ? 'Toque para registrar a noite' : 'Registre seu sono');
-  return `<div class="met met-sono" onclick="${x ? 'openSono()' : 'sonoRegistrar()'}"><div class="met-h"><i>🌙</i>Sono</div><div class="met-v">${v}</div><div class="met-s">${mtEsc(sub)}</div></div>`;
+  return `<div class="met met-sono" onclick="${x || temHist ? 'openSono()' : 'sonoRegistrar()'}"><div class="met-sono-a"><div class="met-h"><i>🌙</i>Sono</div><div class="met-v">${v}</div><div class="met-s">${mtEsc(sub)}</div></div>${_sonoMini()}</div>`;
+}
+// RC 5: as 7 últimas noites em barras, ao lado dos números. Só aparece quando o Sono ocupa a linha inteira
+// dos indicadores (número ímpar de indicadores): antes sobrava meio cartão vazio.
+function _sonoMini(){
+  const L = _sonoUltimas(7).reverse(); const DN = ['D','S','T','Q','Q','S','S'];
+  if(!L.some(o=>o.x && sonoMinDe(o.x) != null)) return '';
+  const barras = L.map(o=>{ const m = o.x ? sonoMinDe(o.x) : null; const q = o.x ? _sonoQ5(o.x) : null;
+    const h = m != null ? Math.max(8, Math.min(100, Math.round(m/600*100))) : 0;
+    const cor = q ? SONO_Q5[q][1] : 'var(--primary)';
+    const dia = new Date(o.dk + 'T12:00:00');
+    return `<span class="sm7-c" title="${dia.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' })}: ${m != null ? sonoFmtMin(m) : 'sem registro'}"><span class="sm7-b">${m != null ? `<i style="height:${h}%;background:${cor}"></i>` : '<em></em>'}</span><small>${DN[dia.getDay()]}</small></span>`; }).join('');
+  return `<div class="sm7" aria-label="Últimas 7 noites">${barras}</div>`;
 }
 const _renderHomeMetricsRC3 = window.renderHomeMetrics;
 window.renderHomeMetrics = function(){
@@ -23756,6 +23827,16 @@ s.textContent = `
 .nutri-agua .na-link{border:0;background:none;color:var(--text-dim);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:6px 2px}
 .nutri-agua .na-link:disabled{opacity:.4;cursor:default}
 .nutri-agua .na-link:last-child{margin-left:auto}
+/* Sono no Início (RC 5): 7 noites ao lado quando o cartão ocupa a linha inteira */
+.met-sono .sm7{display:none}
+.met-sono-a{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.met-sono.met-full{flex-direction:row!important;align-items:stretch;gap:14px}
+.met-sono.met-full .met-sono-a{flex:1;min-width:0}
+.met-sono.met-full .sm7{display:flex;align-items:flex-end;gap:6px;flex:0 0 auto;width:46%;max-width:210px}
+.sm7-c{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.sm7-b{position:relative;display:block;width:100%;max-width:16px;height:64px;border-radius:6px;background:var(--surface-2);overflow:hidden}
+.sm7-b i{position:absolute;left:0;right:0;bottom:0;border-radius:6px}
+.sm7-c small{font-size:10px;color:var(--text-mute);font-weight:600}
 /* Atividade da semana (RC 5: anéis; cada linha abre o seu detalhe) */
 .act-card.aw-anel::after{content:none}
 .aw-anel button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
@@ -24025,6 +24106,8 @@ details.note-clima .nc-obs{color:var(--text-mute);font-size:11.5px;margin-top:4p
 .cq-item .cq-item-med{width:150px;height:150px}
 .cq-item .tr-ico{display:grid;place-items:center;width:112px;height:112px}
 .cq-item .tr-ico svg,.cq-item .tr-ico img{width:100%;height:100%}
+.cq-item .tr-ico .tbadge{display:block;width:112px!important;height:112px!important}
+.tbadge.cq-nv-bronze{--c:#c98a4f}.tbadge.cq-nv-prata{--c:#b9c2cc}.tbadge.cq-nv-ouro{--c:#e2b93b}
 .cq-item .tr-ico .cq-emo{font-size:72px;line-height:1}
 .cq-item-tipo{margin-top:6px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:800;color:var(--primary-2)}
 .cq-item h3.tr-nome{margin:6px 0 2px}
@@ -24033,3 +24116,49 @@ details.note-clima .nc-obs{color:var(--text-mute);font-size:11.5px;margin-top:4p
 `; document.head.appendChild(s); })();
 
 Object.assign(window, { mtDesafiosOrganiza, mtIndicadoresAjusta });
+// =====================================================================
+// 84. RC 6 — Cartão de aniversário do Início
+// Antes: o emoji 🎂 do título, o 🎉 do fim da frase e o ícone do cartão viravam a mesma estrela (três estrelas
+// no mesmo cartão) e a frase era sempre a mesma. Agora: um bolo desenhado no traço dos outros ícones (sem emoji),
+// título e frase sem emoji, e cinco frases diferentes — cada ano de aniversário usa uma (o ano escolhe, então a
+// frase não muda ao reabrir o app no mesmo dia e muda no ano seguinte).
+// Nada muda em quando o cartão aparece (isBirthdayToday, no app.js).
+// =====================================================================
+const BDAY_FRASES_COM = [
+  n=>`Mais um ano, e ${n} no MetaTreino. Que o novo ciclo venha com saúde e disposição. Hoje o treino é opcional; comemorar, não.`,
+  n=>`Um ano novo começa hoje. Você já tem ${n} no app: a constância que trouxe você até aqui segue com você. Aproveite o dia.`,
+  n=>`Parabéns! ${n.charAt(0).toUpperCase() + n.slice(1)} até aqui. Que este ano traga bons treinos, boas noites de sono e tempo para quem importa.`,
+  n=>`Feliz aniversário! Foram ${n} no MetaTreino. Hoje vale celebrar sem culpa; o plano continua amanhã, no seu ritmo.`,
+  n=>`Mais um ano de vida e ${n} registrados. Que o próximo ciclo seja de evolução tranquila e de muita saúde.`
+];
+const BDAY_FRASES_SEM = [
+  ()=>'Que este novo ciclo venha com saúde e disposição. Seja qual for o seu objetivo, estamos juntos nessa.',
+  ()=>'Um ano novo começa hoje. Que ele traga energia para cuidar de você, um treino de cada vez.',
+  ()=>'Parabéns! Que este ano seja de saúde, bons treinos e tempo para o que importa.',
+  ()=>'Feliz aniversário! Hoje é dia de comemorar. Quando quiser começar, o seu plano está pronto.',
+  ()=>'Mais um ano de vida. Que o próximo ciclo seja leve, saudável e cheio de conquistas.'
+];
+const BDAY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<path d="M4 20.5h16"/><path d="M5.5 20.5v-6a1.5 1.5 0 0 1 1.5-1.5h10a1.5 1.5 0 0 1 1.5 1.5v6"/>'
+  + '<path d="M5.5 16.2c1.1.9 2.2.9 3.3 0s2.2-.9 3.2 0 2.2.9 3.2 0 2.2-.9 3.3 0"/>'
+  + '<path d="M12 13V9.6"/><path d="M12 7.6c-.9-.8-.9-1.9 0-3.1.9 1.2.9 2.3 0 3.1z"/></svg>';
+function mtAniversarioDesenha(){
+  try{
+    const card = $('card-birthday'); if(!card || card.classList.contains('hidden')) return;
+    const prof = state.user && state.user.profile;
+    const nome = (prof && prof.nickname) || (state.user && state.user.name) || 'atleta';
+    const total = [...((state.modules.lift && state.modules.lift.history) || []), ...((state.modules.run && state.modules.run.history) || [])].length;
+    const i = new Date().getFullYear() % 5;
+    const n = `${total} ${total === 1 ? 'treino registrado' : 'treinos registrados'}`;
+    const msg = total > 0 ? BDAY_FRASES_COM[i](n) : BDAY_FRASES_SEM[i]();
+    const ic = card.querySelector('.card-icon'); if(ic && !ic.querySelector('.bday-bolo')) ic.innerHTML = `<span class="bday-bolo">${BDAY_SVG}</span>`;
+    const t = $('bday-title'); if(t) t.textContent = `Feliz aniversário, ${nome}!`;
+    const m = $('bday-msg'); if(m) m.textContent = msg;
+  }catch(e){ console.log('aniversário:', e); }
+}
+mtGancho('renderHome', { depois(){ mtAniversarioDesenha(); } });
+(function(){ if(document.getElementById('rc5-bday-css')) return; const s = document.createElement('style'); s.id = 'rc5-bday-css';
+  s.textContent = `#card-birthday .bday-bolo{display:grid;place-items:center;width:100%;height:100%;color:var(--accent-2,var(--accent))}
+#card-birthday .bday-bolo svg{width:28px;height:28px}`;
+  document.head.appendChild(s); })();
+Object.assign(window, { mtAniversarioDesenha });
