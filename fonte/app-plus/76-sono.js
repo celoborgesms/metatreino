@@ -63,7 +63,7 @@ function sonoSalvar(dk, dados){
   const x = Object.assign({}, ant, dados);
   if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m){ x.min = m; x.h = m/60; } }
   Object.keys(x).forEach(k=>{ if(x[k] == null || x[k] === '') delete x[k]; });
-  if(!Object.keys(x).length) delete S.n[dk]; else S.n[dk] = x;
+  if(!Object.keys(x).length) delete S.n[dk]; else { x.em = Date.now(); S.n[dk] = x; }   // RC 6: 'em' = quando foi gravada (junção entre aparelhos)
   const lim = chaveDia(new Date(Date.now() - 180*86400000)); Object.keys(S.n).forEach(k=>{ if(k < lim) delete S.n[k]; });
   saveData();
 }
@@ -72,7 +72,11 @@ function sonoPular(){ const S = sonoEst(); S.pulou = _sonoHoje(); saveData(); _s
 // RC 4: o formulário de registro (sonoRegistrar / sonoRegSalva / _sonoModo) existe SÓ na parte 81.
 // O formulário antigo desta parte (3 níveis, minutos de 5 em 5, total em décimos de hora) era sobrescrito
 // pela 81 e foi retirado, para não existirem duas lógicas de gravação do sono.
-function sonoApaga(dk){ const S = sonoEst(); delete S.n[dk]; saveData(); openSono(); }
+function sonoApaga(dk){ const S = sonoEst(); delete S.n[dk];
+  // RC 6: lembra a exclusão para a noite não voltar de uma cópia antiga de outro aparelho
+  S.apagadas = S.apagadas || {}; S.apagadas[dk] = Date.now();
+  const ks = Object.keys(S.apagadas).sort(); if(ks.length > 120) ks.slice(0, ks.length - 120).forEach(k=>delete S.apagadas[k]);
+  saveData(); openSono(); }
 function sonoLigar(on){ const S = sonoEst(); S.on = !!on; saveData(); _sonoHomeDesenha(); sonoEntrada(); if($('modal-back').classList.contains('on')) openSono(); toast(on ? 'Sono ligado: uma pergunta rápida de manhã, na Home.' : 'Sono desligado. Os registros ficam guardados.'); }
 // ---------- Home: uma linha de manhã ----------
 function _sonoHomeDesenha(){
@@ -138,7 +142,7 @@ let _sonoDias = 30;
 function openSono(){
   const mi = $('modal-inner'); mi.classList.remove('modal-video','modal-ex');
   const S = state.sono || {};
-  if(!sonoLigado()){
+  if(!sonoLigado() && !Object.keys(S.n||{}).length){   // RC 6: com noites guardadas, o histórico abre mesmo com a pergunta da manhã desligada
     mi.innerHTML = `<div id="sono-tela"><h3>🌙 Sono e recuperação</h3>
       <p class="integ-p">Opcional. Se ligar, o app pergunta de manhã, na Home, como você dormiu (um toque: Mal, Ok ou Bem). Horas, horários e disposição ao acordar são opcionais.</p>
       <p class="integ-p">Com isso, o MetaTreino passa a <b>orientar</b> a recuperação: avisa depois de noites ruins e não acelera a progressão da corrida numa semana de sono ruim. Ele <b>nunca</b> corta um treino por causa de uma noite só.</p>
@@ -162,7 +166,7 @@ function openSono(){
     <details class="integ-sec"><summary>Como o app usa o sono</summary>
       <p class="integ-mini">Noite ruim = qualidade "mal", menos de 6 h ou acordou cansado(a). Uma noite ruim: aviso no treino do dia. Duas nas últimas três: sugestão de priorizar a recuperação. Três ou mais na semana (com pelo menos 4 registradas): a corrida não avança naquela semana, mantém. A musculação lembra de não forçar carga nova se o aquecimento pesar. Nada é alterado por uma noite só, e noites sem registro não contam.</p></details>
     <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>
-    <button class="link-mais" style="margin-top:8px" onclick="sonoLigar(false)">Desligar o acompanhamento</button></div>`;
+    ${sonoLigado() ? `<button class="link-mais" style="margin-top:8px" onclick="sonoLigar(false)">Desligar o acompanhamento</button>` : `<button class="link-mais" style="margin-top:8px" onclick="sonoLigar(true)">Ligar a pergunta da manhã no Início</button>`}</div>`;
   $('modal-back').classList.add('on');
 }
 // ---------- influência na recuperação ----------
@@ -199,3 +203,28 @@ s.textContent = `#scr-home .wrap > .sono-manha{order:11}
 .sono-tri button.on{border-color:var(--primary);background:rgba(var(--primary-rgb),.16)}
 .sono-campos{display:flex;gap:10px;margin-top:8px}
 .sono-campos label{flex:1;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-dim)}`; document.head.appendChild(s); })();
+
+
+// ---------- RC 6: o sono entra na junção das cópias (aparelho × nuvem) ----------
+// mesclaEstado (app.js) junta histórico, pesos, recordes e conquistas, mas não o sono: a cópia que ficava como base
+// mantinha só as noites dela. Ex.: com os dados do navegador limpos, as noites da nuvem podiam ficar de fora até a
+// próxima gravação. Agora: noite que só uma cópia tem entra; nas duas, vale a gravada por último ('em');
+// noite apagada (S.apagadas) não volta, a não ser que tenha sido registrada de novo depois da exclusão.
+function mtSonoMescla(base, outra){
+  try{
+    if(!base || !outra || !outra.sono || typeof outra.sono !== 'object') return;
+    if((+base.zeradoEm||0) > (+outra.zeradoEm||0)) return;          // "começar do zero" nesta cópia: nada de antes volta
+    const B = base.sono = base.sono || {}; B.n = B.n || {};
+    const O = outra.sono; const On = O.n || {};
+    const apag = Object.assign({}, O.apagadas||{}, B.apagadas||{}); Object.keys(O.apagadas||{}).forEach(k=>{ apag[k] = Math.max(apag[k]||0, O.apagadas[k]); });
+    if(Object.keys(apag).length) B.apagadas = apag;
+    const vale = (x, dk)=>x && !(apag[dk] && !((+x.em||0) > apag[dk]));
+    Object.keys(On).forEach(dk=>{ const o = On[dk], b = B.n[dk];
+      if(!vale(o, dk)) return;
+      if(!b || (+o.em||0) > (+b.em||0)) B.n[dk] = JSON.parse(JSON.stringify(o)); });
+    Object.keys(B.n).forEach(dk=>{ if(!vale(B.n[dk], dk)) delete B.n[dk]; });
+    if(B.on == null && O.on != null) B.on = O.on;
+  }catch(e){ console.log('sono (junção):', e); }
+}
+mtGancho('mesclaEstado', { depois(base, outra){ mtSonoMescla(base, outra); } });
+window.mtSonoMescla = mtSonoMescla;

@@ -66,7 +66,7 @@ window.sonoRegSalva = function(){
   const S = sonoEst(); const ant = S.n[dk] || {}; const novo = Object.assign({}, ant);
   ['q5','d5','q','d','min','h','dor','aco'].forEach(k=>{ if(d[k] == null) delete novo[k]; else novo[k] = d[k]; });
   if(!Object.keys(novo).length){ closeModal(); return; }
-  S.n[dk] = novo; if(!S.on) S.on = true;   // registrar uma noite liga o acompanhamento
+  novo.em = Date.now(); S.n[dk] = novo; if(!S.on) S.on = true;   // registrar uma noite liga o acompanhamento
   saveData(); closeModal(); toast('Noite registrada.'); try{ _sonoHomeDesenha(); renderHomeMetrics(); }catch(e){}
   try{ if($('sono-tela')) openSono(); }catch(e){}
 };
@@ -156,7 +156,7 @@ const _openSonoRC2 = window.openSono;
 window.openSono = function(){
   _openSonoRC2.apply(this, arguments);
   try{
-    if(!sonoLigado()) return;
+    if(!sonoLigado() && !Object.keys((state.sono||{}).n||{}).length) return;
     const tela = $('sono-tela'); if(!tela) return;
     const det = tela.querySelector('details.integ-sec'); if(det) det.insertAdjacentHTML('beforebegin', sonoAnaliseHTML());
     // lista: mostra a qualidade e a disposição de 5 níveis
@@ -187,10 +187,27 @@ function _sonoTile(){
   const S = state.sono || {}; const x = sonoNoite(_sonoHoje()); const R = (typeof _sonoResumo === 'function') ? _sonoResumo(7) : null;
   const q5 = _sonoQ5(x);
   const xm = sonoMinDe(x);
+  // RC 5: com noites anteriores registradas, o atalho mostra a média e abre o histórico mesmo antes de registrar
+  // a noite de hoje (antes só abria o formulário, e o histórico parecia sumido até registrar hoje).
+  const temHist = !!(R && R.n);
   const v = x && xm != null ? `${sonoFmtMin(xm).replace(' h', '<small>h</small>').replace(/ (\d\d)$/, '<small>$1</small>')}` : (x && q5 ? `<span style="font-size:20px">${SONO_Q5[q5][0]}</span>` : '–');
-  const sub = x ? [q5 && xm != null ? SONO_Q5[q5][0] : '', R && R.medMin != null && R.n >= 2 ? `média 7 dias ${sonoFmtMin(R.medMin)}` : ''].filter(Boolean).join(' · ') || 'Noite registrada'
+  const media = R && R.medMin != null && R.n >= 2 ? `média 7 dias ${sonoFmtMin(R.medMin)}` : '';
+  const sub = x ? [q5 && xm != null ? SONO_Q5[q5][0] : '', media].filter(Boolean).join(' · ') || 'Noite registrada'
+    : temHist ? ['Hoje: toque para registrar', media].filter(Boolean).join(' · ')
     : (S.on ? 'Toque para registrar a noite' : 'Registre seu sono');
-  return `<div class="met met-sono" onclick="${x ? 'openSono()' : 'sonoRegistrar()'}"><div class="met-h"><i>🌙</i>Sono</div><div class="met-v">${v}</div><div class="met-s">${mtEsc(sub)}</div></div>`;
+  return `<div class="met met-sono" onclick="${x || temHist ? 'openSono()' : 'sonoRegistrar()'}"><div class="met-sono-a"><div class="met-h"><i>🌙</i>Sono</div><div class="met-v">${v}</div><div class="met-s">${mtEsc(sub)}</div></div>${_sonoMini()}</div>`;
+}
+// RC 5: as 7 últimas noites em barras, ao lado dos números. Só aparece quando o Sono ocupa a linha inteira
+// dos indicadores (número ímpar de indicadores): antes sobrava meio cartão vazio.
+function _sonoMini(){
+  const L = _sonoUltimas(7).reverse(); const DN = ['D','S','T','Q','Q','S','S'];
+  if(!L.some(o=>o.x && sonoMinDe(o.x) != null)) return '';
+  const barras = L.map(o=>{ const m = o.x ? sonoMinDe(o.x) : null; const q = o.x ? _sonoQ5(o.x) : null;
+    const h = m != null ? Math.max(8, Math.min(100, Math.round(m/600*100))) : 0;
+    const cor = q ? SONO_Q5[q][1] : 'var(--primary)';
+    const dia = new Date(o.dk + 'T12:00:00');
+    return `<span class="sm7-c" title="${dia.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' })}: ${m != null ? sonoFmtMin(m) : 'sem registro'}"><span class="sm7-b">${m != null ? `<i style="height:${h}%;background:${cor}"></i>` : '<em></em>'}</span><small>${DN[dia.getDay()]}</small></span>`; }).join('');
+  return `<div class="sm7" aria-label="Últimas 7 noites">${barras}</div>`;
 }
 const _renderHomeMetricsRC3 = window.renderHomeMetrics;
 window.renderHomeMetrics = function(){
@@ -407,6 +424,16 @@ s.textContent = `
 .nutri-agua .na-link{border:0;background:none;color:var(--text-dim);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:6px 2px}
 .nutri-agua .na-link:disabled{opacity:.4;cursor:default}
 .nutri-agua .na-link:last-child{margin-left:auto}
+/* Sono no Início (RC 5): 7 noites ao lado quando o cartão ocupa a linha inteira */
+.met-sono .sm7{display:none}
+.met-sono-a{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.met-sono.met-full{flex-direction:row!important;align-items:stretch;gap:14px}
+.met-sono.met-full .met-sono-a{flex:1;min-width:0}
+.met-sono.met-full .sm7{display:flex;align-items:flex-end;gap:6px;flex:0 0 auto;width:46%;max-width:210px}
+.sm7-c{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.sm7-b{position:relative;display:block;width:100%;max-width:16px;height:64px;border-radius:6px;background:var(--surface-2);overflow:hidden}
+.sm7-b i{position:absolute;left:0;right:0;bottom:0;border-radius:6px}
+.sm7-c small{font-size:10px;color:var(--text-mute);font-weight:600}
 /* Atividade da semana (RC 5: anéis; cada linha abre o seu detalhe) */
 .act-card.aw-anel::after{content:none}
 .aw-anel button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}

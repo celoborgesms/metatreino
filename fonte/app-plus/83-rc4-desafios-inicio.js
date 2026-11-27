@@ -177,6 +177,8 @@ details.note-clima .nc-obs{color:var(--text-mute);font-size:11.5px;margin-top:4p
 .cq-item .cq-item-med{width:150px;height:150px}
 .cq-item .tr-ico{display:grid;place-items:center;width:112px;height:112px}
 .cq-item .tr-ico svg,.cq-item .tr-ico img{width:100%;height:100%}
+.cq-item .tr-ico .tbadge{display:block;width:112px!important;height:112px!important}
+.tbadge.cq-nv-bronze{--c:#c98a4f}.tbadge.cq-nv-prata{--c:#b9c2cc}.tbadge.cq-nv-ouro{--c:#e2b93b}
 .cq-item .tr-ico .cq-emo{font-size:72px;line-height:1}
 .cq-item-tipo{margin-top:6px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:800;color:var(--primary-2)}
 .cq-item h3.tr-nome{margin:6px 0 2px}

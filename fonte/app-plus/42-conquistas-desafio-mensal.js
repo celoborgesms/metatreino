@@ -297,16 +297,26 @@ function cqVerNova(k){
 function cqVerItem(p){
   try{ window._trophyScroll = ($('modal-inner')||{}).scrollTop || 0; }catch(e){}
   const nv = p.kind==='medalha' || p.kind==='marco' ? 'rara' : p.kind==='secreto' ? 'especial' : 'comum';
-  const tipo = { secreto:'Segredo revelado', medalha:'Medalha do mês', marco:'Marco alcançado', evento:'Desafio concluído' }[p.kind] || p.tipo || 'Conquista';
-  const ico = p.emo && /<svg|<span|<img/.test(p.emo) ? p.emo : `<span class="cq-emo">${mtEsc(p.emo||'🏅')}</span>`;
+  const metaMes = p.kind === 'medalha' && !/^ev_/.test(String(p.k||''));   // mesmo nome dos cartões (parte 51): meta automática do mês
+  const tipo = (metaMes ? 'Meta do mês' : { secreto:'Segredo revelado', medalha:'Medalha do mês', marco:'Marco alcançado', evento:'Desafio concluído' }[p.kind]) || p.tipo || 'Conquista';
+  // RC 5: a medalha aparece desenhada como as conquistas (antes o emoji virava um ícone sem tamanho e a tela ficava vazia)
+  const id = String(p.k||'').replace(/@.*$/, '');
+  const nivelMes = (id.match(/_(bronze|prata|ouro)$/)||[])[1] || '';
+  const GLIFO = { '⏱️':'stopwatch', '⏱':'stopwatch', '🔥':'flame', '🎯':'target', '🏃':'shoe', '🏃‍♂️':'shoe', '🏃‍♀️':'shoe', '🚴':'bike', '🏋️':'dumbbell', '💪':'dumbbell',
+    '📅':'calcheck', '🗓️':'calcheck', '🛣️':'road', '⛰️':'mountain', '👣':'feet', '📈':'prup', '⭐':'star', '🏆':'medal', '🎖️':'medal', '🏅':'medal', '🧘':'lotus', '⚡':'bolt', '🏁':'flag', '👑':'crown', '💯':'hundred' };
+  const emoTxt = String(p.emo||'').trim();
+  let ico;
+  if(/<svg|<img/.test(emoTxt)) ico = emoTxt;
+  else { const g = GLIFO[emoTxt] || GLIFO[emoTxt.replace(/\uFE0F/g,'')] || (p.kind === 'evento' ? 'flag' : 'medal');
+    ico = `<span class="tbadge geral nv-${nv}${nivelMes ? ' cq-nv-' + nivelMes : ''}" role="img" aria-label="${mtEsc(p.nome||'')}">${medalSvg(g, '', '', nv)}</span>`; }
   const quando = p.at ? new Date(p.at).toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' }) : '';
   const ir = p.kind==='evento' ? `<button class="btn btn-primary btn-block" onclick="closeModal();goTab('challenges')">Ver desafios</button>`
     : `<button class="btn btn-primary btn-block" onclick="closeModal();openMedals()">Ver medalhas e selos</button>`;
   $('modal-inner').innerHTML = `<div class="cq-item nv-${nv}">
     <div style="display:flex;justify-content:flex-end;margin:-4px -4px 0 0"><button class="cq-x" onclick="cqVoltarLista()" aria-label="Voltar às conquistas">✕</button></div>
     <div class="cq-item-med tr-medal"><span class="tr-glow" aria-hidden="true"></span><span class="tr-ring" aria-hidden="true"></span><div class="tr-ico">${ico}</div></div>
-    <div class="cq-item-tipo">${mtEsc(tipo)}${nv!=='comum' ? ' · ' + CQ_NV[nv] : ''}</div>
-    <h3 class="tr-nome">${mtEsc(p.nome || '')}</h3>
+    <div class="cq-item-tipo">${mtEsc(tipo)}${nivelMes ? ' · ' + { bronze:'Bronze', prata:'Prata', ouro:'Ouro' }[nivelMes] : nv!=='comum' ? ' · ' + CQ_NV[nv] : ''}</div>
+    <h3 class="tr-nome">${mtEsc(nivelMes ? String(p.nome || '').replace(/\s*[🥉🥈🥇]\s*$/u, '') : (p.nome || ''))}</h3>
     ${p.desc ? `<p class="cq-item-desc">${mtEsc(p.desc)}</p>` : ''}
     ${quando ? `<div class="cq-item-data">Conquistada em ${quando}</div>` : ''}
     <div style="display:grid;gap:8px;margin-top:16px">${ir}<button class="btn btn-ghost btn-block" onclick="cqVoltarLista()">← Voltar às conquistas</button></div></div>`;

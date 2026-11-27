@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027 RC 5 — app-plus.js
+// MetaTreino 2027 RC 6 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027-rc.5' };
+const MTP = { versao: '2027-rc.6' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem

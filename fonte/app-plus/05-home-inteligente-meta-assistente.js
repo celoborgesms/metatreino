@@ -79,6 +79,14 @@ function _proxTreinoTxt(){
     return dif===1 ? 'amanhã' : (dif<7 ? (prox===6||prox===7?'no ':'na ')+dias[prox-1] : 'na próxima semana');
   }catch(e){ return ''; }
 }
+// RC 5: a outra modalidade ainda tem treino hoje (planejado, não feito, não pulado)?
+function _pendenteHoje(){
+  try{
+    if(typeof mtHojeModalidade !== 'function') return null;
+    for(const m of ['lift','run']){ const o = mtHojeModalidade(m); if(o && o.st === 'hoje') return { m, nome: m === 'lift' ? `a musculação (${o.txt})` : `a corrida (${o.txt})` }; }
+  }catch(e){}
+  return null;
+}
 function renderHomeSmart(){
   const wrap = document.querySelector('#scr-home .wrap'); if(!wrap) return;
   let el = $('home-smart');
@@ -97,6 +105,13 @@ function renderHomeSmart(){
     k = 'Primeiros passos'; t = 'Seu primeiro treino é o mais importante';
     p = 'Comece com cargas leves e foque na técnica. Registre as séries: é com elas que o MetaTreino aprende o seu ritmo e ajusta as próximas sugestões.';
     a = '';   // Beta 44: sem "Ver treino"/"Como executar" — o treino de hoje e o "Ver como fazer" de cada exercício já estão logo abaixo
+  } else if(c.hojeFeito && _pendenteHoje()){
+    // RC 5: dia com musculação E corrida — feito um, ainda falta o outro. Nada de "agora é recuperação".
+    const P = _pendenteHoje();
+    k = 'Um treino feito'; t = `Ainda falta ${P.nome} hoje`;
+    p = 'Entre um treino e outro: água, um lanche leve e, se der, algumas horas de intervalo. Se o corpo pedir, pode fazer o segundo mais leve.';
+    a = `<button class="btn btn-ghost" onclick="switchModule('${P.m}')">Ver ${P.m === 'lift' ? 'musculação' : 'corrida'}</button>`;
+    cls = 'info';
   } else if(c.hojeFeito){
     k = 'Treino concluído'; t = c.streak>=3 ? `Feito! São ${c.streak} dias seguidos.` : 'Feito por hoje. Agora é recuperação.';
     p = `Hidratação, uma refeição com proteína e uma boa noite de sono completam o treino.${prox?` Próxima sessão ${prox}.`:''}`;
