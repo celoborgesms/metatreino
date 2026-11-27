@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027 RC 6 — app-plus.js
+// MetaTreino 2027 RC 8 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027-rc.6' };
+const MTP = { versao: '2027-rc.8' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -1442,7 +1442,8 @@ async function openAdminEventos(){
   const princ = mtAdmin();
   $('modal-inner').innerHTML = `<h3>Desafios temáticos</h3>
     <p class="mt-muted" style="margin:0 0 10px">O calendário anual é automático (inclusive Carnaval e Páscoa, que mudam de data). ${princ?'Você pode personalizar qualquer desafio, desativá-lo ou criar um novo — sem mexer no código.':'Somente administradores podem criar ou editar desafios.'}</p>
-    ${princ?`<button class="btn btn-primary btn-block" onclick="openAdminEventoForm()">➕ Criar desafio</button>`:''}
+    ${princ?`<button class="btn btn-primary btn-block" onclick="openAdminEventoForm()">➕ Criar desafio</button>
+    <p class="mt-muted" style="font-size:12px;margin:8px 2px 0">• <b>Criar</b>: um desafio novo, com as datas que você escolher.<br>• <b>Personalizar</b> (calendário automático): faz uma cópia editável que substitui o original; apagando a cópia, o original volta.<br>• <b>Participação</b>: quem entrou e quem concluiu.</p>`:''}
     ${custom.length?`<div class="mt-sec">Criados ou personalizados</div><div class="card" style="padding:6px 12px">${custom.map(e=>linha(e, e.ativo?'':' · <b>desativado</b>')).join('')}</div>`:''}
     <div class="mt-sec">Calendário automático</div><div class="card" style="padding:6px 12px">${lista.map(e=>subst.has(e.key)?'':linha(e)).join('')}</div>
     <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
@@ -1465,18 +1466,36 @@ function openAdminEventoForm(key){
     <div class="adm-form">
       <label>Nome</label><input class="input" id="ef-nome" maxlength="40" value="${mtEsc(v.nome)}">
       <label>Descrição / objetivo</label><textarea class="input" id="ef-desc" maxlength="220">${mtEsc(v.descricao||'')}</textarea>
-      <div style="display:flex;gap:8px"><div style="flex:1"><label>Início</label><input class="input" type="date" id="ef-ini" value="${v.inicio}"></div><div style="flex:1"><label>Fim (inclusive)</label><input class="input" type="date" id="ef-fim" value="${v.fim}"></div></div>
-      <label>Arte e cor</label><select class="input" id="ef-arte">${Object.keys(EV_ARTE).map(k=>`<option value="${k}" ${k===v.arte?'selected':''}>${k}</option>`).join('')}</select>
+      <div style="display:flex;gap:8px"><div style="flex:1"><label>Início</label><input class="input" type="date" id="ef-ini" value="${v.inicio}" onchange="_efArtePrev()"></div><div style="flex:1"><label>Fim (inclusive)</label><input class="input" type="date" id="ef-fim" value="${v.fim}"></div></div>
+      <label>Arte e cor da medalha</label><div style="display:flex;gap:10px;align-items:center"><span id="ef-arte-prev">${eventoMedalha({ arte:v.arte, nome:v.nome||'', ini:new Date((v.inicio||'2026-01-01')+'T12:00:00').getTime() }, 44)}</span><select class="input" id="ef-arte" style="flex:1" onchange="_efArtePrev()">${Object.keys(EV_ARTE).map(k=>`<option value="${k}" ${k===v.arte?'selected':''}>${EV_ARTE_NOME[k]||k}</option>`).join('')}</select></div>
       <label>Intensidade da meta</label><select class="input" id="ef-fator">${[[0.8,'Leve (80% da frequência habitual)'],[0.9,'Moderada (90%)'],[1,'Padrão (100%)'],[1.1,'Puxada (110%)']].map(([f,l])=>`<option value="${f}" ${(+v.fator||1)===f?'selected':''}>${l}</option>`).join('')}</select>
-      <label>Meta fixa de dias ativos (opcional)</label><input class="input" type="number" min="1" max="60" id="ef-alvo" placeholder="em branco = meta personalizada por aluno" value="${v.alvoFixo||''}">
+      <label>Meta fixa de dias ativos (opcional)</label><p class="mt-muted" style="font-size:11.5px;margin:-2px 0 4px">Em branco, cada aluno recebe uma meta pela frequência dele. Preenchida, vale o mesmo número para todos.</p><input class="input" type="number" min="1" max="60" id="ef-alvo" placeholder="em branco = meta personalizada por aluno" value="${v.alvoFixo||''}">
       <label>Missões extras</label>${Object.entries(EV_MISSOES).map(([k,m])=>`<label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);font-weight:600;margin:6px 0"><input type="checkbox" class="ef-m" value="${k}" ${tiposM.includes(k)?'checked':''}> ${m.titulo} <span style="color:var(--text-mute);font-weight:500">— ${m.desc}</span></label>`).join('')}
       <label>Recompensa (texto exibido)</label><input class="input" id="ef-rec" maxlength="80" value="${mtEsc(v.recompensa||'')}" placeholder="Ex.: medalha exclusiva + destaque no mural">
       <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--text)"><input type="checkbox" id="ef-ativo" ${v.ativo!==false?'checked':''}> Desafio ativo</label>
     </div>
     <p class="mt-muted" style="font-size:11.5px;margin-top:8px">A meta de cada aluno é calculada pela frequência real dele nas 6 semanas anteriores e não passa de 1 dia além do plano por semana. Participações e conclusões só existem quando o aluno entra e cumpre de verdade.</p>
     <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="salvarEventoAdmin('${doc?doc.id:''}','${mtJsStr(v.substitui||'')}')">Salvar</button>
+    ${doc ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--danger,#ef4444)" onclick="apagarEventoAdmin('${doc.id}', ${doc.substitui ? 'true' : 'false'})">${doc.substitui ? 'Apagar a personalização (volta o automático)' : 'Apagar desafio'}</button>` : ''}
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openAdminEventos()">Voltar</button>`;
   $('modal-back').classList.add('on');
+}
+// RC 7: nomes legíveis das artes (antes a lista mostrava a chave interna, ex.: "natal") e prévia da medalha
+const EV_ARTE_NOME = { anonovo:'Ano Novo (fogos)', carnaval:'Carnaval (máscara)', consistencia:'Consistência (calendário)', pascoa:'Páscoa (ovo)',
+  equilibrio:'Equilíbrio (balança)', evolucao:'Evolução (gráfico)', arraia:'Arraiá (fogueira)', inverno:'Inverno (floco)', superacao:'Superação (montanha)',
+  independencia:'Independência (bandeira)', primavera:'Primavera (flor)', halloween:'Halloween (abóbora)', retafinal:'Reta final (bandeira quadriculada)', natal:'Natal (árvore)' };
+function _efArtePrev(){ try{ const a = $('ef-arte').value, ini = $('ef-ini').value; $('ef-arte-prev').innerHTML = eventoMedalha({ arte:a, nome:'', ini:new Date((ini||'2026-01-01')+'T12:00:00').getTime() }, 44); }catch(e){} }
+// RC 7: apagar um desafio criado (ou a personalização de um automático). Quem já concluiu mantém a medalha:
+// ela fica guardada no estado de cada aluno, não no documento do desafio.
+function apagarEventoAdmin(id, personalizacao){
+  if(!mtAdmin()){ toast('🔒 Somente administradores.'); return; }
+  appConfirm(personalizacao
+      ? 'A personalização sai e o desafio automático do calendário volta, com o texto e as datas originais.\nQuem já concluiu mantém a medalha.'
+      : 'O desafio sai da lista e deixa de aparecer para os alunos.\nQuem já concluiu mantém a medalha. Não dá para desfazer.',
+    async ()=>{
+      try{ await db.collection('desafiosTematicos').doc(id).delete(); toast(personalizacao ? 'Personalização apagada' : 'Desafio apagado'); await loadEventosCustom(); openAdminEventos(); }
+      catch(e){ console.log(e); toast('⚠️ Não foi possível apagar. Confira a conexão e as regras do Firestore (desafiosTematicos).'); openAdminEventos(); }
+    }, { title: personalizacao ? 'Voltar ao automático?' : 'Apagar este desafio?', okLabel:'Apagar', danger:true, emo:'🗑️' });
 }
 async function salvarEventoAdmin(idDoc, substitui){
   if(!mtAdmin()){ toast('🔒 Somente administradores.'); return; }
@@ -1606,7 +1625,7 @@ bootAfterAuth = function(){
   setTimeout(()=>{ loadEventosCustom().then(()=>{ try{ checkEventos(); if(state.ui.tab==='challenges') renderChallenges(); else if(state.ui.tab==='home') renderMonthlyCard(); }catch(e){} }); }, 1800);
   return r;
 };
-Object.assign(window, { renderLibrary, setLibEquip, openExercise, openExerciseSheet, exTelaCheia, exVideoOk, openAparencia, setPacote, setTheme, openFotos, fotoToggleSel, fotoApagarSelConfirma, fotoApagarConfirma, fotoApagarTudoConfirma, fotoApagarTudoAgora, fotoVer,
+Object.assign(window, { apagarEventoAdmin, _efArtePrev, renderLibrary, setLibEquip, openExercise, openExerciseSheet, exTelaCheia, exVideoOk, openAparencia, setPacote, setTheme, openFotos, fotoToggleSel, fotoApagarSelConfirma, fotoApagarConfirma, fotoApagarTudoConfirma, fotoApagarTudoAgora, fotoVer,
   renderChallenges, participaEvento, sairDoEvento, shareEventoImagem, openHistoricoEventos, mtEvFoco, renderHomeSmart, mtPergunta, openAdminEventos, openAdminEventoForm, salvarEventoAdmin, openAdminEventoPart, openAdminPermissoes, admSetAdmin, trophyIco, trophyIcoLocked, mtLS, mtDia0 });
 
 // =====================================================================
@@ -3878,8 +3897,11 @@ window.saveSpecialAward = async function(){
 // Mesmo botão (chevron discreto ao lado do título), mesma direção (o conteúdo fecha
 // para cima, em direção ao título) e mesma animação nas duas seções.
 // =====================================================================
+window.MT_SEM_RECOLHER = true;   // RC 7: blocos do Início sempre abertos (ver _colBotao)
 const CHEV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>';
 function _colBotao(k, aberto, rotulo){
+  // RC 7: sem botão de recolher no Início ("Ocultar" e a seta saíram): quem não quer o bloco o esconde em Personalizar início.
+  if(window.MT_SEM_RECOLHER) return '';
   // Atividade da semana: texto "Ocultar"/"Mostrar" discreto ao lado do título. Seus treinos: seta.
   if(k === 'semana') return `<button type="button" class="col-txt" data-col="${k}" aria-expanded="${aberto}" aria-label="${aberto?'Ocultar':'Mostrar'} ${rotulo}" onclick="event.stopPropagation();mtColAnimar('${k}')">${aberto?'Ocultar':'Mostrar'}</button>`;
   return `<button type="button" class="col-chev ${aberto?'':'fechado'}" data-col="${k}" aria-expanded="${aberto}" aria-label="${aberto?'Recolher':'Mostrar'} ${rotulo}" title="${aberto?'Recolher':'Mostrar'}" onclick="event.stopPropagation();mtColAnimar('${k}')">${CHEV}</button>`;
@@ -3917,7 +3939,7 @@ _mtAplicaColapsos = function(){
   // Seus treinos
   const head = wrap.querySelector(':scope > .section-head'); const lista = $('your-list');
   if(head && lista){
-    const aberto = mtColAberto('treinos', false);
+    const aberto = window.MT_SEM_RECOLHER ? true : mtColAberto('treinos', false);
     head.querySelectorAll('.col-btn, .col-chev').forEach(b=>b.remove());
     const tit = head.firstElementChild; if(tit) tit.insertAdjacentHTML('afterend', _colBotao('treinos', aberto, 'Seus treinos'));
     let resumo = $('home-tr-resumo');
@@ -3941,7 +3963,7 @@ _mtAplicaColapsos = function(){
     const header = q.firstElementChild;
     header.querySelectorAll('.col-chev, .col-txt').forEach(b=>b.remove());
     header.classList.add('col-head');
-    const aberto = mtColAberto('semana', true);
+    const aberto = window.MT_SEM_RECOLHER ? true : mtColAberto('semana', true);
     const h3 = header.querySelector('h3');
     if(h3) h3.insertAdjacentHTML('afterend', _colBotao('semana', aberto, 'Atividade da semana'));
     else header.insertAdjacentHTML('beforeend', _colBotao('semana', aberto, 'Atividade da semana'));
@@ -7036,15 +7058,17 @@ const INICIO_BLOCOS = [
   // RC 4: 'conquistas' saiu do Início (fica só na aba Desafios)
   { k:'plano',       nome:'Fase do plano',       desc:'semana do ciclo e fase atual', sel:['#scr-home .plan-card'] },
   { k:'sugestao',    nome:'Sugestão inteligente', desc:'dica do dia e plano de retomada', sel:['#home-smart'] },
-  { k:'desafio',     nome:'Desafio do mês',      sel:['#card-monthly'] },
-  { k:'evento',      nome:'Desafio temático',    desc:'quando houver um ativo', sel:['#home-event'] },
+  { k:'desafio',     nome:'Desafio do mês',      desc:'o desafio em andamento, em uma linha', sel:['#card-monthly'] },
+  // RC 7: 'evento' (Desafio temático) saiu da lista: o bloco #home-event não existe mais no Início; o desafio
+  // temático em andamento aparece na linha do "Desafio do mês". A chave continua em INICIO_MOVEIS (parte 28)
+  // só para não mexer na ordem que o aluno já salvou.
   { k:'treinos',     nome:'Seus treinos',        desc:'lista do plano (também na aba Treinos)', sel:['#scr-home .wrap > .section-head', '#your-list', '#home-tr-resumo'] },
   { k:'calistenia',  nome:'Calistenia',          desc:'nível e progressões, se você usa', sel:['#home-cali'] },
   { k:'frase',       nome:'Frase do dia',        sel:['#scr-home .quote'] },
   // 'ajuda' saiu na Beta 25: ajuda, FAQ, privacidade e termos agora ficam no Perfil
   { k:'acesso',      nome:'Aviso de acesso',     desc:'volta sozinho quando faltar 7 dias ou menos', sel:['#card-access-info.ac-ok'] }
 ];
-const INICIO_ESSENCIAL = ['sugestao','desafio','evento','treinos','frase','acesso'];
+const INICIO_ESSENCIAL = ['sugestao','desafio','treinos','frase','acesso'];
 
 function inicioOcultos(){
   if(!state) return [];
@@ -7694,7 +7718,11 @@ const DECO_FAIXA = {
   'scr-challenges':{ fim:'#chal-root' },
   'scr-profile':   { fim:'.profile-head', fimBase:true },
   'scr-history':   { ini:'.seg-nav', fim:'.stat-grid' },
-  'scr-perf':      { ini:'.seg-nav', fim:'#perf-resumo' },
+  // RC 7: os blocos do Desempenho podem ser reordenados (parte 54); o desenho termina antes do PRIMEIRO bloco visível
+  // (antes terminava no resumo, que fica abaixo das Metas: o desenho invadia o cartão das Metas)
+  'scr-perf':      { ini:'.seg-nav', fim: tela=>{ const w = tela.querySelector('.wrap'); if(!w) return null; const t = w.querySelector('h1'); const tb = t ? t.getBoundingClientRect().bottom : 0;
+    return [...w.children].filter(e=>e.offsetHeight > 40 && !e.contains(t) && !e.classList.contains('seg-nav') && e.getBoundingClientRect().top >= tb - 1)
+      .sort((a,b)=>a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0] || null; } },
   'scr-setup-lift':{ fim:'.sub' },
   'scr-setup-run': { fim:'.sub' },
   'scr-admin':     { fim:'.row' },
@@ -7714,7 +7742,7 @@ function decoPosiciona(){
   const tela = document.querySelector('.screen.active'); const f = tela ? DECO_FAIXA[tela.id] : null;
   if(!f || !tela || !el.innerHTML){ el.style.removeProperty('--deco-top'); el.style.removeProperty('--deco-h'); return; }
   const sy = window.scrollY || 0;
-  const fimEl = tela.querySelector(f.fim), iniEl = f.ini ? tela.querySelector(f.ini) : null;
+  const fimEl = typeof f.fim === 'function' ? f.fim(tela) : tela.querySelector(f.fim), iniEl = f.ini ? tela.querySelector(f.ini) : null;
   if(!fimEl || !fimEl.offsetHeight){ el.style.removeProperty('--deco-top'); el.style.removeProperty('--deco-h'); return; }
   const rf = fimEl.getBoundingClientRect();
   const topo = iniEl && iniEl.offsetHeight ? iniEl.getBoundingClientRect().bottom + sy + 2 : 4;
@@ -22548,7 +22576,7 @@ s.textContent = `.fam-alc{display:flex;flex-wrap:wrap;align-items:center;gap:6px
 //        (mantém, explicando). Nunca recua o plano por causa do sono;
 //      - musculação: com 2+ noites ruins, a orientação "subir carga" ganha "se o aquecimento pesar, mantenha".
 //  • Horas de sono não são garantia de recuperação nem diagnóstico: o texto diz isso.
-// Dados: state.sono = { on, n:{ 'AAAA-MM-DD':{ min, h, dor, aco, q, d, q5, d5 } }  (RC 4: min = minutos inteiros), pulou } (campo novo e opcional;
+// Dados: state.sono = { on, n:{ 'AAAA-MM-DD':{ min, h, dor, aco, acor, q, d, q5, d5, em } }, c:{ 'AAAA-MM-DD':{ l:[{min, ini}], em } } (RC 8: acor = min acordado na noite; c = cochilos),  (RC 4: min = minutos inteiros), pulou } (campo novo e opcional;
 // passa pela limpeza da nuvem). Guarda 180 noites.
 // =====================================================================
 const SONO_Q = { 1:['Mal','#d64545'], 2:['Ok','#d4b62c'], 3:['Bem','#2fa86e'] };   // mesmas cores da escala de 5 (parte 81)
@@ -22565,11 +22593,18 @@ function sonoMinutosDe(dor, aco){ const a = _sonoMin(dor), b = _sonoMin(aco); if
 function sonoHorasDe(dor, aco){ const m = sonoMinutosDe(dor, aco); return m == null ? null : m/60; }   // compatibilidade (horas sem arredondar)
 function sonoMinDe(x){
   if(!x) return null;
-  if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m != null) return m; }
+  // RC 8: com os dois horários, desconta o tempo acordado no meio da noite (x.acor, minutos). Sem acor: igual a antes.
+  if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m != null) return Math.max(0, m - sonoAcordado(x)); }
   if(x.min != null && isFinite(+x.min)) return Math.round(+x.min);
   if(x.h != null && isFinite(+x.h)) return Math.round(+x.h*60);
   return null;
 }
+function sonoAcordado(x){ const v = x && +x.acor; return v > 0 && isFinite(v) ? Math.round(v) : 0; }
+// RC 8: cochilos ficam fora da noite, em state.sono.c = { 'AAAA-MM-DD': { l:[{ min, ini }], em } } (dia do cochilo).
+// Separados de propósito: médias, "noite ruim" e a análise continuam medindo a NOITE; o cochilo aparece ao lado.
+// Lista vazia com 'em' = cochilos apagados (não voltam de outra cópia na junção).
+function sonoCochilos(dk){ const c = ((state.sono||{}).c||{})[dk]; return c && Array.isArray(c.l) ? c.l.filter(o=>o && +o.min > 0) : []; }
+function sonoCochiloMin(dk){ return sonoCochilos(dk).reduce((t,o)=>t + Math.round(+o.min), 0); }
 function sonoFmtMin(m){ if(m == null) return '—'; m = Math.round(m); const hh = Math.floor(m/60), mm = m % 60; return mm ? `${hh} h ${String(mm).padStart(2,'0')}` : `${hh} h`; }
 function sonoNoite(dk){ return ((state.sono||{}).n||{})[dk] || null; }
 function sonoRuim(x){ const m = sonoMinDe(x); return !!x && (x.q === 1 || (m != null && m < 360) || x.d === 1); }
@@ -22592,7 +22627,7 @@ function sonoSemanaRuins(semTs){
 function sonoSalvar(dk, dados){
   const S = sonoEst(); const ant = S.n[dk] || {};
   const x = Object.assign({}, ant, dados);
-  if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m){ x.min = m; x.h = m/60; } }
+  if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m){ const r = Math.max(0, m - sonoAcordado(x)); x.min = r; x.h = r/60; } }
   Object.keys(x).forEach(k=>{ if(x[k] == null || x[k] === '') delete x[k]; });
   if(!Object.keys(x).length) delete S.n[dk]; else { x.em = Date.now(); S.n[dk] = x; }   // RC 6: 'em' = quando foi gravada (junção entre aparelhos)
   const lim = chaveDia(new Date(Date.now() - 180*86400000)); Object.keys(S.n).forEach(k=>{ if(k < lim) delete S.n[k]; });
@@ -22755,6 +22790,9 @@ function mtSonoMescla(base, outra){
       if(!b || (+o.em||0) > (+b.em||0)) B.n[dk] = JSON.parse(JSON.stringify(o)); });
     Object.keys(B.n).forEach(dk=>{ if(!vale(B.n[dk], dk)) delete B.n[dk]; });
     if(B.on == null && O.on != null) B.on = O.on;
+    // RC 8: cochilos por dia; vale a lista gravada por último (lista vazia = apagados)
+    const Oc = O.c || {}; if(Object.keys(Oc).length){ B.c = B.c || {};
+      Object.keys(Oc).forEach(dk=>{ const o = Oc[dk], b = B.c[dk]; if(!o || !Array.isArray(o.l)) return; if(!b || (+o.em||0) > (+b.em||0)) B.c[dk] = JSON.parse(JSON.stringify(o)); }); }
   }catch(e){ console.log('sono (junção):', e); }
 }
 mtGancho('mesclaEstado', { depois(base, outra){ mtSonoMescla(base, outra); } });
@@ -23435,28 +23473,63 @@ window.sonoRegistrar = function(dk){
     <div class="sono-lbl">Horário</div>
     <div class="sono-tri sono-modo"><button type="button" class="${modo==='hor'?'on':''}" onclick="_sonoModo('hor')">Dormi / acordei</button><button type="button" class="${modo==='h'?'on':''}" onclick="_sonoModo('h')">Só o total</button></div>
     <div id="sono-hor" ${modo==='hor'?'':'hidden'} class="sono-campos"><label>Fui dormir<input class="input mono" type="time" aria-label="Fui dormir" id="sono-dor" value="${x.dor||''}" oninput="_sonoTotal()"></label><label>Acordei<input class="input mono" type="time" aria-label="Acordei" id="sono-aco" value="${x.aco||''}" oninput="_sonoTotal()"></label></div>
+    <div id="sono-acor-box" ${modo==='hor'?'':'hidden'} class="sono-campos sono-acor"><label>Acordado no meio da noite (min)<input class="input mono" type="number" min="0" max="300" step="1" inputmode="numeric" id="sono-acor" value="${sonoAcordado(x) || ''}" placeholder="0" oninput="_sonoTotal()"></label></div>
     <div id="sono-h" ${modo==='h'?'':'hidden'} class="sono-campos"><label>Horas<input class="input mono" type="number" min="0" max="16" inputmode="numeric" id="sono-hh" value="${hh}" placeholder="7" oninput="_sonoTotal()"></label><label>Minutos<input class="input mono" type="number" min="0" max="59" step="1" inputmode="numeric" id="sono-mm" value="${mm}" placeholder="30" oninput="_sonoTotal()"></label></div>
     <div class="sono-total" id="sono-total"></div>
+    <div class="sono-lbl">Cochilos <span class="sono-opc">opcional · no dia ${dt.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' })}</span></div>
+    <div id="sono-coch">${sonoCochilos(dk).map(o=>_sonoCochLinha(o)).join('')}</div>
+    <button type="button" class="link-mais" id="sono-coch-add" onclick="_sonoCochAdd()">+ Adicionar cochilo</button>
     <div class="sono-lbl">Qualidade do sono</div>
     <div class="sono-5" id="sono-q5">${[1,2,3,4,5].map(v=>`<button type="button" class="${window.__sonoQ5===v?'on':''}" data-v="${v}" aria-pressed="${window.__sonoQ5===v}" onclick="_sonoMarca5('q5',${v})"><i style="background:${SONO_Q5[v][1]}"></i>${SONO_Q5[v][0]}</button>`).join('')}</div>
     <div class="sono-lbl">Disposição ao acordar</div>
     <div class="sono-5" id="sono-d5">${[1,2,3,4,5].map(v=>`<button type="button" class="${window.__sonoD5===v?'on':''}" data-v="${v}" aria-pressed="${window.__sonoD5===v}" onclick="_sonoMarca5('d5',${v})">${SONO_D5[v]}</button>`).join('')}</div>
     <div class="row" style="gap:8px;margin-top:16px"><button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button><button class="btn btn-primary btn-block" onclick="sonoRegSalva()">Salvar</button></div>
     ${sonoNoite(dk) ? `<button class="link-mais" style="margin-top:10px" onclick="sonoApaga('${dk}')">Apagar esta noite</button>` : ''}</div>`;
-  $('modal-back').classList.add('on'); _sonoTotal();
+  $('modal-back').classList.add('on'); _sonoCochBotao(); _sonoTotal();
 };
+const _sonoMinTxt = m=>m < 60 ? `${m} min` : sonoFmtMin(m);
+// RC 8: resumo dos cochilos (30 dias), separado da noite. Não entra nas médias nem na regra de "noite ruim".
+function _sonoCochResumo(){
+  const L = []; for(let i=0; i<30; i++){ const dk = chaveDia(new Date(Date.now() - i*86400000)); const c = sonoCochilos(dk); if(c.length) L.push({ dk, c }); }
+  if(!L.length) return '';
+  const tot = L.reduce((t,o)=>t + o.c.reduce((a,b)=>a + +b.min, 0), 0); const n = L.reduce((t,o)=>t + o.c.length, 0);
+  const ult = L.slice(0, 5).map(o=>`<div class="aw-li"><b>${new Date(o.dk + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' })}</b><span>${o.c.map(z=>_sonoMinTxt(+z.min) + (z.ini ? ' às ' + z.ini : '')).join(' + ')}</span></div>`).join('');
+  return `<div class="section-lbl" style="margin:14px 0 4px">Cochilos (30 dias)</div>
+    <p class="integ-mini">${n} ${n===1?'cochilo':'cochilos'} em ${L.length} ${L.length===1?'dia':'dias'} · média de ${_sonoMinTxt(Math.round(tot/n))}. Ficam separados da noite: não entram na média nem na conta de noite ruim.</p><div class="aw-lista">${ult}</div>`;
+}
+// RC 8: cochilos — duração (min) e, se quiser, a hora em que começou; até 3 por dia
+function _sonoCochLinha(o){ o = o || {}; return `<div class="sono-campos sono-coch-l"><label>Duração (min)<input class="input mono sc-min" type="number" min="5" max="240" step="1" inputmode="numeric" value="${o.min||''}" placeholder="20" oninput="_sonoTotal()"></label><label>Começou (opcional)<input class="input mono sc-ini" type="time" aria-label="Cochilo: começou" value="${o.ini||''}"></label><button type="button" class="sc-x" aria-label="Tirar este cochilo" onclick="this.parentNode.remove();_sonoCochBotao();_sonoTotal()">✕</button></div>`; }
+function _sonoCochBotao(){ const b = $('sono-coch-add'); if(b) b.hidden = document.querySelectorAll('#sono-coch .sono-coch-l').length >= 3; }
+function _sonoCochAdd(){ const box = $('sono-coch'); if(!box || box.children.length >= 3) return; box.insertAdjacentHTML('beforeend', _sonoCochLinha()); _sonoCochBotao(); try{ if(typeof nrVarre === 'function') nrVarre(box.lastElementChild); }catch(e){} const i = box.lastElementChild.querySelector('.sc-min'); if(i) try{ i.focus(); }catch(e){} }
+function _sonoCochLe(){   // { l:[...] } ou { erro }
+  const l = []; let erro = null;
+  document.querySelectorAll('#sono-coch .sono-coch-l').forEach(r=>{ const v = String(r.querySelector('.sc-min').value||'').trim(); const ini = r.querySelector('.sc-ini').value || null; if(!v) return;
+    const m = +v; if(!Number.isInteger(m) || m < 5 || m > 240){ erro = 'Cochilo: de 5 a 240 minutos (número inteiro).'; return; } l.push(ini ? { min:m, ini } : { min:m }); });
+  return erro ? { erro } : { l };
+}
 // total exato em minutos (o cálculo antigo arredondava a 0,1 h: 7 h 15 aparecia como 7 h 18)
 function sonoHorasExatas(dor, aco){ return sonoHorasDe(dor, aco); }   // compatibilidade; a conta é sonoMinutosDe (parte 76)
 function _sonoLeTotal(){   // { min } do que está na tela, ou { erro }
-  if($('sono-hor') && !$('sono-hor').hidden){ const a = $('sono-dor') && $('sono-dor').value, b = $('sono-aco') && $('sono-aco').value; return { min: (a && b) ? sonoMinutosDe(a, b) : null }; }
+  if($('sono-hor') && !$('sono-hor').hidden){ const a = $('sono-dor') && $('sono-dor').value, b = $('sono-aco') && $('sono-aco').value;
+    // RC 8: tempo acordado no meio da noite sai do total (a cama não é o sono)
+    const av = String(($('sono-acor')||{}).value||'').trim(); const ac = av ? +av : 0;
+    if(av && (!Number.isInteger(ac) || ac < 0 || ac > 300)) return { erro:'Tempo acordado: de 0 a 300 minutos (número inteiro).' };
+    if(!(a && b)) return { min:null, acor:ac };
+    const cama = sonoMinutosDe(a, b); if(ac && ac >= cama) return { erro:'O tempo acordado ficou maior que o tempo entre dormir e acordar.' };
+    return { min: cama - ac, cama, acor:ac }; }
   const hv = String(($('sono-hh')||{}).value||'').trim(), mv = String(($('sono-mm')||{}).value||'').trim(); if(!hv && !mv) return { min:null };
   const h = +hv || 0, m = +mv || 0; if(!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || h > 16 || m < 0 || m > 59) return { erro:'Horas de 0 a 16 e minutos de 0 a 59 (números inteiros).' };
   return { min: h*60 + m };
 }
-function _sonoTotal(){ const el = $('sono-total'); if(!el) return; const T = _sonoLeTotal(); el.textContent = T.erro ? T.erro : (T.min != null ? `Total: ${sonoFmtMin(T.min)} de sono` : ''); }
+function _sonoTotal(){ const el = $('sono-total'); if(!el) return; const T = _sonoLeTotal(); if(T.erro){ el.textContent = T.erro; return; }
+  const C = $('sono-coch') ? _sonoCochLe() : { l:[] }; const cm = C.erro ? 0 : C.l.reduce((t,o)=>t + o.min, 0);
+  const partes = [];
+  if(T.min != null) partes.push(T.acor ? `Dormiu ${sonoFmtMin(T.min)} (${sonoFmtMin(T.cama)} na cama − ${T.acor} min acordado)` : `Total: ${sonoFmtMin(T.min)} de sono`);
+  if(cm) partes.push(`cochilos ${sonoFmtMin(cm).replace(/^0 h (\d+)$/, '$1 min')}` + (T.min != null ? ` · ${sonoFmtMin(T.min + cm)} no dia` : ''));
+  el.textContent = C.erro || partes.join(' · '); }
 function _sonoMarca5(k, v){ const cur = window['__sono' + (k==='q5'?'Q5':'D5')]; const nv = cur === v ? null : v; window['__sono' + (k==='q5'?'Q5':'D5')] = nv;
   document.querySelectorAll(`#sono-${k} button`).forEach(b=>{ const on = +b.dataset.v === nv; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); }
-window._sonoModo = function(m){ $('sono-h').hidden = m !== 'h'; $('sono-hor').hidden = m !== 'hor'; document.querySelectorAll('.sono-modo button').forEach((b,i)=>b.classList.toggle('on', (i===0) === (m==='hor'))); _sonoTotal(); };
+window._sonoModo = function(m){ $('sono-h').hidden = m !== 'h'; $('sono-hor').hidden = m !== 'hor'; if($('sono-acor-box')) $('sono-acor-box').hidden = m !== 'hor'; document.querySelectorAll('.sono-modo button').forEach((b,i)=>b.classList.toggle('on', (i===0) === (m==='hor'))); _sonoTotal(); };
 window.sonoRegSalva = function(){
   const dk = window.__sonoDk || _sonoHoje();
   const q5 = window.__sonoQ5 || null, d5 = window.__sonoD5 || null;
@@ -23464,11 +23537,17 @@ window.sonoRegSalva = function(){
   // os dois modos usam a mesma base: minutos inteiros (só um horário: guarda, sem inventar o total)
   if(!$('sono-hor').hidden){ d.dor = $('sono-dor').value || null; d.aco = $('sono-aco').value || null; }
   const T = _sonoLeTotal(); if(T.erro){ toast(T.erro); return; }
+  d.acor = (!$('sono-hor').hidden && T.acor) ? T.acor : null;   // RC 8: só no modo horários (no "só o total" a pessoa já informa o que dormiu)
+  const C = _sonoCochLe(); if(C.erro){ toast(C.erro); return; }
   if(T.min != null && T.min > 0){ d.min = T.min; d.h = T.min/60; }
   if(d.min != null && (d.min < 30 || d.min > 960)){ toast('Confira o horário: o total ficou em ' + sonoFmtMin(d.min)); return; }
   const S = sonoEst(); const ant = S.n[dk] || {}; const novo = Object.assign({}, ant);
-  ['q5','d5','q','d','min','h','dor','aco'].forEach(k=>{ if(d[k] == null) delete novo[k]; else novo[k] = d[k]; });
-  if(!Object.keys(novo).length){ closeModal(); return; }
+  ['q5','d5','q','d','min','h','dor','aco','acor'].forEach(k=>{ if(d[k] == null) delete novo[k]; else novo[k] = d[k]; });
+  delete novo.em;
+  // cochilos do dia (separados da noite): grava só se mudou; lista vazia com data = apagados
+  const antC = sonoCochilos(dk); const mudouC = JSON.stringify(antC) !== JSON.stringify(C.l);
+  if(mudouC){ S.c = S.c || {}; S.c[dk] = { l:C.l, em:Date.now() }; const lim = chaveDia(new Date(Date.now() - 180*86400000)); Object.keys(S.c).forEach(k=>{ if(k < lim) delete S.c[k]; }); }
+  if(!Object.keys(novo).length){ if(mudouC){ saveData(); toast(C.l.length ? 'Cochilo registrado.' : 'Cochilos apagados.'); try{ renderHomeMetrics(); }catch(e){} } closeModal(); try{ if(mudouC && $('sono-tela')) openSono(); }catch(e){} return; }
   novo.em = Date.now(); S.n[dk] = novo; if(!S.on) S.on = true;   // registrar uma noite liga o acompanhamento
   saveData(); closeModal(); toast('Noite registrada.'); try{ _sonoHomeDesenha(); renderHomeMetrics(); }catch(e){}
   try{ if($('sono-tela')) openSono(); }catch(e){}
@@ -23561,10 +23640,10 @@ window.openSono = function(){
   try{
     if(!sonoLigado() && !Object.keys((state.sono||{}).n||{}).length) return;
     const tela = $('sono-tela'); if(!tela) return;
-    const det = tela.querySelector('details.integ-sec'); if(det) det.insertAdjacentHTML('beforebegin', sonoAnaliseHTML());
+    const det = tela.querySelector('details.integ-sec'); if(det) det.insertAdjacentHTML('beforebegin', sonoAnaliseHTML() + _sonoCochResumo());
     // lista: mostra a qualidade e a disposição de 5 níveis
     tela.querySelectorAll('.integ-item').forEach(b=>{ const m = /sonoRegistrar\('([\d-]+)'\)/.exec(b.getAttribute('onclick')||''); if(!m) return; const x = sonoNoite(m[1]); const sm = b.querySelector('small'); if(!x || !sm) return;
-      sm.textContent = [sonoMinDe(x) != null ? sonoFmtMin(sonoMinDe(x)) : '', x.dor && x.aco ? `${x.dor}–${x.aco}` : (x.dor ? `dormiu ${x.dor}` : x.aco ? `acordou ${x.aco}` : ''), _sonoQ5(x) ? SONO_Q5[_sonoQ5(x)][0] : '', _sonoD5(x) ? 'disposição ' + SONO_D5[_sonoD5(x)].toLowerCase() : ''].filter(Boolean).join(' · '); });
+      sm.textContent = [sonoMinDe(x) != null ? sonoFmtMin(sonoMinDe(x)) : '', x.dor && x.aco ? `${x.dor}–${x.aco}` : (x.dor ? `dormiu ${x.dor}` : x.aco ? `acordou ${x.aco}` : ''), sonoAcordado(x) ? `${sonoAcordado(x)} min acordado` : '', sonoCochiloMin(m[1]) ? `+ cochilo ${_sonoMinTxt(sonoCochiloMin(m[1]))}` : '', _sonoQ5(x) ? SONO_Q5[_sonoQ5(x)][0] : '', _sonoD5(x) ? 'disposição ' + SONO_D5[_sonoD5(x)].toLowerCase() : ''].filter(Boolean).join(' · '); });
     const leg = [...tela.querySelectorAll('.integ-mini')].find(p=>/Barras: horas da noite/.test(p.textContent));
     if(leg) leg.innerHTML = `<span class="sono-leg">${[5,4,3,2,1].map(v=>`<span><i style="background:${SONO_Q5[v][1]}"></i>${SONO_Q5[v][0]}</span>`).join('')}<span><i class="sl-sem"></i>sem qualidade</span></span>Barras: duração de cada noite; a cor é a qualidade. Faixa clara: 7 a 9 h (recomendação geral para adultos). Linha: média dos últimos 7 dias registrados.`;
     const int = `<details class="integ-sec"><summary>Relógio e outros apps</summary><p class="integ-mini">O MetaTreino funciona no navegador e o navegador não tem acesso aos dados de sono do relógio (Health Connect, Apple Saúde, Zepp). Por isso o registro é manual e leva poucos segundos. Nenhum valor é estimado pelo app.</p></details>`;
@@ -23595,7 +23674,8 @@ function _sonoTile(){
   const temHist = !!(R && R.n);
   const v = x && xm != null ? `${sonoFmtMin(xm).replace(' h', '<small>h</small>').replace(/ (\d\d)$/, '<small>$1</small>')}` : (x && q5 ? `<span style="font-size:20px">${SONO_Q5[q5][0]}</span>` : '–');
   const media = R && R.medMin != null && R.n >= 2 ? `média 7 dias ${sonoFmtMin(R.medMin)}` : '';
-  const sub = x ? [q5 && xm != null ? SONO_Q5[q5][0] : '', media].filter(Boolean).join(' · ') || 'Noite registrada'
+  const cochHoje = sonoCochiloMin(_sonoHoje());
+  const sub = x ? [q5 && xm != null ? SONO_Q5[q5][0] : '', cochHoje ? `+ cochilo ${_sonoMinTxt(cochHoje)}` : '', media].filter(Boolean).join(' · ') || 'Noite registrada'
     : temHist ? ['Hoje: toque para registrar', media].filter(Boolean).join(' · ')
     : (S.on ? 'Toque para registrar a noite' : 'Registre seu sono');
   return `<div class="met met-sono" onclick="${x || temHist ? 'openSono()' : 'sonoRegistrar()'}"><div class="met-sono-a"><div class="met-h"><i>🌙</i>Sono</div><div class="met-v">${v}</div><div class="met-s">${mtEsc(sub)}</div></div>${_sonoMini()}</div>`;
@@ -23827,6 +23907,11 @@ s.textContent = `
 .nutri-agua .na-link{border:0;background:none;color:var(--text-dim);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:6px 2px}
 .nutri-agua .na-link:disabled{opacity:.4;cursor:default}
 .nutri-agua .na-link:last-child{margin-left:auto}
+/* Sono (RC 8): tempo acordado e cochilos */
+.sono-opc{font-weight:600;text-transform:none;letter-spacing:0;color:var(--text-mute)}
+.sono-coch-l{align-items:flex-end}
+.sono-coch-l .sc-x{flex:0 0 auto;width:36px;height:42px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:15px;cursor:pointer}
+#sono-coch-add{margin-top:6px}
 /* Sono no Início (RC 5): 7 noites ao lado quando o cartão ocupa a linha inteira */
 .met-sono .sm7{display:none}
 .met-sono-a{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}

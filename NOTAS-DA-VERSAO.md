@@ -1,3 +1,32 @@
+# MetaTreino 2027 RC 8 — sono: tempo acordado e cochilos
+
+**Não precisa publicar o `firestore.rules`.** Os campos novos ficam no estado do próprio aluno. Noites já registradas não mudam. Detalhes em `RELATORIO-RC8.md`. Testes no celular em `ROTEIRO-DE-TESTES.md`, seção 2027 RC 8.
+
+1. **Acordado no meio da noite.** No modo "Dormi / acordei" há o campo "Acordado no meio da noite (min)", opcional. O total desconta esse tempo, por exemplo: "Dormiu 7 h 35 (8 h na cama − 25 min acordado)". No modo "Só o total" o campo não aparece, porque ali a pessoa já informa o que dormiu.
+2. **Cochilos.** No mesmo formulário: até 3 por dia, com a duração e, se quiser, a hora em que começou.
+   - Ficam separados da noite: médias, "noite ruim" e análise continuam medindo a noite.
+   - Aparecem ao lado: no total do formulário (com o total do dia), no atalho do Início ("+ cochilo 30 min"), em cada noite do histórico e num resumo "Cochilos (30 dias)".
+   - Um dia só com cochilo não conta como noite registrada.
+3. **Entre aparelhos:** tempo acordado e cochilos entram na junção com a nuvem. Cochilo apagado não volta.
+
+---
+
+# MetaTreino 2027 RC 7 — Início mais simples, Desempenho e painel de desafios
+
+**Não precisa publicar o `firestore.rules`.** As regras já permitiam o administrador apagar desafios. Nenhum dado de aluno é apagado. Detalhes em `RELATORIO-RC7.md`. Testes no celular em `ROTEIRO-DE-TESTES.md`, seção 2027 RC 7.
+
+1. **Personalizar início sem "Desafio temático".** Esse bloco não existia mais no Início. O desafio temático em andamento aparece na linha do "Desafio do mês".
+2. **Desempenho:** o desenho de fundo termina antes do primeiro cartão, qualquer que seja a ordem dos blocos.
+3. **Painel → Desafios temáticos:**
+   - botão **Apagar desafio** nos desafios criados;
+   - nas personalizações, **Apagar a personalização**, e o desafio automático volta;
+   - confirmação antes de apagar; quem já concluiu mantém a medalha;
+   - as artes aparecem com nome (ex.: "Natal (árvore)") e com prévia da medalha;
+   - uma explicação curta de Criar, Personalizar e Participação.
+4. **Início sem "Ocultar" e sem a seta de Seus treinos.** Os dois blocos ficam sempre abertos, inclusive para quem tinha recolhido. Para esconder, use Personalizar início.
+
+---
+
 # MetaTreino 2027 RC 6 — ajustes do teste no celular
 
 **Não precisa publicar o `firestore.rules`.** Nada mudou nas regras. Nenhum dado é apagado. Detalhes em `RELATORIO-RC6.md`. Testes no celular em `ROTEIRO-DE-TESTES.md`, seção 2027 RC 6.

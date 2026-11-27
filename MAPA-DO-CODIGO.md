@@ -122,6 +122,16 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `84-rc6-aniversario.js` | RC 6: cartão de aniversário do Início (bolo em SVG, sem emoji, 5 frases por ano), gancho do `renderHome`. |
 | `83-rc4-desafios-inicio.js` | RC 4 (Etapa 2): **aba Desafios** reorganizada (`mtDesafiosOrganiza`, último gancho do `renderChallenges`: move os blocos das outras partes para as seções Desafio atual, Em grupo, Conquistas, Histórico e Em breve); desafio do mês no Início em uma linha (gancho do `renderMonthlyCard`; os elementos antigos ficam escondidos porque outras partes os atualizam); **indicadores do Início** com regra única `mtIndicadoresAjusta` (as cópias das partes 16 e 28 saíram); CSS do aviso de conquista, das dicas de clima recolhidas e das metas do mês. |
 
+### RC 8 — sono: tempo acordado e cochilos
+- Duração com o tempo acordado (`acor`): parte 76 (`sonoMinDe`, `sonoAcordado`, `sonoSalvar`).
+- Cochilos (`state.sono.c`): parte 76 (`sonoCochilos`, `sonoCochiloMin`, junção em `mtSonoMescla`); formulário, total, atalho, histórico e resumo: parte 81 (`_sonoCochLinha`, `_sonoCochLe`, `_sonoCochResumo`).
+
+### RC 7 — onde ficou cada correção
+- Lista do Personalizar início sem "Desafio temático": parte 16 (`INICIO_BLOCOS`).
+- Faixa do desenho de fundo no Desempenho (primeiro bloco visível): parte 22 (`DECO_FAIXA['scr-perf']`, `decoPosiciona`).
+- Apagar desafio / personalização, nomes das artes e prévia: parte 06 (`apagarEventoAdmin`, `EV_ARTE_NOME`, `_efArtePrev`).
+- Início sem botões de recolher: parte 10 (`MT_SEM_RECOLHER`, `_colBotao`).
+
 ### RC 6 — onde ficou cada correção
 - Tela da meta do mês / marco / desafio em "Novas" (medalha desenhada): parte 42 (`cqVerItem`).
 - "Ainda falta …" no cartão do topo quando a outra modalidade tem treino hoje: parte 05 (`_pendenteHoje`).

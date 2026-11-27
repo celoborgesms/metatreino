@@ -2,6 +2,22 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. 2027 RC 8 — em aparelho real
+Perfil deve mostrar "2027 RC 8".
+1. **Sono → Dormi / acordei:** 23:00 e 07:00, e 25 em "Acordado no meio da noite". O total mostra "Dormiu 7 h 35 (8 h na cama − 25 min acordado)". Salve e reabra: continua 25.
+2. **"Só o total":** o campo de tempo acordado não aparece.
+3. **Cochilos:** "+ Adicionar cochilo", 30 min. O total mostra o cochilo e o total do dia. Salve: o atalho do Início mostra "+ cochilo 30 min".
+4. **Histórico do sono:** a noite mostra "25 min acordado · + cochilo 30 min", e aparece "Cochilos (30 dias)". A média das noites não muda por causa do cochilo.
+5. **Apagar:** tire o cochilo (✕) e salve. Ele some, inclusive no outro aparelho depois de sincronizar.
+
+## 00000. 2027 RC 7 — em aparelho real
+Perfil deve mostrar "2027 RC 7".
+1. **Personalizar início:** não há mais "Desafio temático"; "Desafio do mês" continua.
+2. **Progresso → Desempenho:** o desenho do canto não encosta no cartão das Metas. Mude a ordem dos blocos e confira de novo.
+3. **Painel → Desafios temáticos → Editar** um desafio criado: "Apagar desafio" pede confirmação e o desafio some da lista e dos alunos.
+4. **Painel → Personalizar** um automático, salvar e depois "Apagar a personalização": o automático volta.
+5. **Início:** sem "Ocultar" na Atividade da semana e sem a seta em Seus treinos; os dois abertos.
+
 ## 00000. 2027 RC 6 — em aparelho real
 Perfil deve mostrar "2027 RC 6".
 1. **Meta do mês:** Desafios → Conquistas → toque numa meta do mês nova. A medalha aparece desenhada, com o nível.
