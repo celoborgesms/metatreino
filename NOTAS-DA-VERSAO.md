@@ -1,3 +1,16 @@
+# MetaTreino 2027 RC 5 — pequenas correções
+
+**Não precisa publicar o `firestore.rules`.** Nada mudou nas regras nem nos dados guardados. Detalhes em `RELATORIO-RC5.md`. Testes no celular em `ROTEIRO-DE-TESTES.md`, seção 2027 RC 5.
+
+1. **Horário com qualquer minuto.** A régua de minutos (sono, lembretes e outros horários) anda de 1 em 1, não mais de 5 em 5. No "Digitar", o teclado numérico do celular não tem ":"; agora vale 11.52, 11,52, 1152 ou 11h52.
+2. **Compartilhar no Quadrado** sem texto por cima da logo. Quando o conteúdo não cabe, o bloco inteiro diminui um pouco. O desenho de fundo (barras) só aparece onde há espaço livre e não passa mais por trás do texto.
+3. **Início com um seletor só.** Saiu a linha extra "Musculação / Corrida" embaixo do seletor.
+4. **Conquistas novas:** medalha do mês, marco e desafio concluído abrem a sua própria tela ao tocar, como as outras. Antes só sumiam da lista.
+5. **Clima do Início** atualizado assim que a previsão chega, sem precisar trocar de aba.
+6. **Atividade da semana em anéis de novo.** Os dias da semana ficam só no quadro "Semana". O centro mostra o placar real (ex.: 3/5 treinos), e cada linha abre o seu detalhe.
+
+---
+
 # MetaTreino 2027 RC 4 — dados certos e um app mais organizado
 
 **Não precisa publicar o `firestore.rules`.** Nada mudou nas regras. Os campos novos ficam no estado do próprio aluno e nada foi apagado. Detalhes técnicos em `RELATORIO-RC4.md`. Testes no celular em `ROTEIRO-DE-TESTES.md`, seção 2027 RC 4.

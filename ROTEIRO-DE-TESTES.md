@@ -2,6 +2,16 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. 2027 RC 5 — em aparelho real (pequenas correções)
+Faça no celular, com o app atualizado (Perfil mostra "2027 RC 5").
+1. **Sono, arrastando:** Início → Sono → Dormi/acordei → toque em "Acordei" → arraste os minutos até 52. Confirme. O campo mostra 11:52 (não 11:50).
+2. **Sono, digitando:** abra de novo → "Digitar" → digite 1152 ou 11.52 → Confirmar. O campo fica 11:52 e o total do sono usa esse minuto.
+3. **Compartilhar → Quadrado:** em Destaque, Números e Faixa (com e sem "Mostrar meu primeiro nome"), nenhum texto encosta na logo ou no "METATREINO". Repita em Feed e Stories.
+4. **Início:** embaixo do seletor Musculação/Corrida não existe mais a segunda linha com os dois nomes.
+5. **Conquistas novas:** Desafios → Conquistas → toque numa "Medalha do mês" em Novas. Abre a tela dela, com "Voltar às conquistas"; ao voltar, só ela saiu das novas.
+6. **Clima:** feche o app de vez, abra no Início com a localização ligada e espere alguns segundos sem tocar em nada. O desenho do céu acompanha o clima mostrado no selo (ex.: nublado), sem trocar de aba.
+7. **Atividade da semana:** aparece em anéis. O centro mostra "x/y treinos". Tocar em "Treinos do plano", "Séries" e "Semanas na meta" abre detalhes diferentes.
+
 ## 00000. 2027 RC 4 — em aparelho real (Android, iPhone e computador)
 Leva uns 40 minutos. Anote o modelo do celular e mande print do que parecer estranho. **As regras do Firestore não mudaram.**
 

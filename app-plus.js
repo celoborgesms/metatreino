@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027 RC 4 — app-plus.js
+// MetaTreino 2027 RC 5 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027-rc.4' };
+const MTP = { versao: '2027-rc.5' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -8253,7 +8253,6 @@ async function mtsDesenhar(cv, d, o){
     const g = x.createLinearGradient(0,0,W,H); g.addColorStop(0,P.bg1); g.addColorStop(1,P.bg2); x.fillStyle = g; x.fillRect(0,0,W,H);
     const rg = x.createRadialGradient(W*0.85, H*0.12, 0, W*0.85, H*0.12, W*0.9); rg.addColorStop(0, _mtsRgba(P.acc, o.estilo==='claro'?.14:.22)); rg.addColorStop(1, _mtsRgba(P.acc, 0));
     x.fillStyle = rg; x.fillRect(0,0,W,H);
-    _mtsPadrao(x, W, H, d.tipo, P.acc);
   }
   // cabeçalho: marca + data
   const ms = W*0.075, my = pad*0.9;
@@ -8383,9 +8382,24 @@ async function mtsDesenhar(cv, d, o){
   else y = rodapeY - W*0.06 - padBaixo - alturaBloco;
   // RC 4: com foto, o aluno pode pôr os dados no alto (posições prontas; nunca fora da imagem)
   if(foto && o.pos === 'topo' && _mtsPosLivre(d)) y = Math.min(y, my + ms + W*0.1);
+  // RC 5: no Quadrado (e em qualquer formato com muito conteúdo) o bloco subia por cima da logo e do cabeçalho.
+  // Agora ele nunca passa do cabeçalho: se não couber, é reduzido por inteiro (mesma proporção), sem cortar linhas.
+  const altMedalha = medRow.length ? rowTam + (disp==='compacto' ? W*0.08 : W*0.03) : medImg ? medTam + W*0.03 : 0;
+  const topoMin = my + ms + W*0.06 + altMedalha + (disp==='compacto' ? W*0.045 : 0);
+  const baseMax = rodapeY - W*0.06 - padBaixo;
+  let kBloco = 1;
+  if(y < topoMin){ const caber = baseMax - topoMin; if(alturaBloco > caber && caber > 0) kBloco = Math.max(0.55, caber/alturaBloco); y = topoMin; }
+  const altBloco = alturaBloco*kBloco;
+  // desenho de fundo (sem foto): só no espaço livre acima do conteúdo; se não houver espaço, fica de fora em vez de passar por trás do texto
+  if(!foto){
+    const topoConteudo = y - altMedalha - (disp==='compacto' ? W*0.045 : 0) - W*0.03;
+    const fundoPadrao = { evolucao:H*0.30, semana:H*0.30, recorde:H*0.30, musculacao:H*0.17 + W*0.09, bike:H*0.16 + W*0.17 }[d.tipo];
+    if(fundoPadrao == null) _mtsPadrao(x, W, H, d.tipo, P.acc);
+    else if(fundoPadrao <= topoConteudo){ x.save(); x.beginPath(); x.rect(0, 0, W, topoConteudo); x.clip(); _mtsPadrao(x, W, H, d.tipo, P.acc); x.restore(); }
+  }
   // faixa (compacto): painel atrás do bloco
   if(disp === 'compacto'){
-    x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, faixaX, y - W*0.045, faixaW, alturaBloco + W*0.045 + padBaixo, W*0.04); x.fill();
+    x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, faixaX, y - W*0.045, faixaW, altBloco + W*0.045 + padBaixo, W*0.04); x.fill();
   }
   if(medRow.length){
     const tot = medRow.length*rowTam + rowGap*(medRow.length-1);
@@ -8414,7 +8428,8 @@ async function mtsDesenhar(cv, d, o){
     x.save(); x.globalAlpha = 1; x.fillStyle = '#000'; x.font = `${W*0.16}px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif`; x.textAlign = disp==='grade' ? 'center' : 'left';
     x.fillText(d.emoji, disp==='grade' ? W/2 : pad, y - (disp==='compacto' ? W*0.08 : W*0.04)); x.restore();
   }
-  desenhaBloco(x, y);
+  if(kBloco < 1){ const ax0 = disp==='grade' ? W/2 : pad; x.save(); x.translate(ax0, y); x.scale(kBloco, kBloco); x.translate(-ax0, 0); desenhaBloco(x, 0); x.restore(); }
+  else desenhaBloco(x, y);
   // assinatura
   x.textAlign = 'right'; x.font = `600 ${W*0.026}px ${FF}`; x.fillStyle = P.dim; x.fillText('metatreino.app', W - pad, rodapeY);
   return cv;
@@ -8865,6 +8880,22 @@ window.updateDeco = function(tab){
 };
 // o clima chega depois (internet) e a hora passa: confere de vez em quando, só redesenha se mudou
 setInterval(()=>{ try{ if(state && state.ui && (state.ui.tab||'home')==='home' && document.visibilityState==='visible'){ updateDeco('home'); climaChip(); } }catch(e){} }, 60000);
+// RC 5: o clima chega da internet segundos depois do Início aparecer. Antes a cena só era redesenhada
+// no ciclo de 1 minuto ou ao trocar de aba (o primeiro desenho ficava com o tempo errado). Agora, depois de
+// cada busca, o app confere a cada segundo por até 30 s e redesenha assim que os dados mudam.
+function _climaAssinatura(){ try{ const w = (typeof weatherData!=='undefined') ? weatherData : null; return w ? `${w.at||''}|${w.code}|${w.temp}` : ''; }catch(e){ return ''; } }
+let _climaVisto = _climaAssinatura();
+function _climaRedesenha(){
+  const a = _climaAssinatura(); if(a === _climaVisto) return false;   // só quando o clima de fato mudou
+  if(!a){ _climaVisto = a; return false; }                              // clima removido (ex.: plano Gratuito): o ciclo normal cuida
+  const mb = document.getElementById('modal-back'); if(mb && mb.classList.contains('on')) return false;   // janela aberta: espera fechar
+  _climaVisto = a;
+  try{ if(state && state.ui && (state.ui.tab||'home')==='home'){ updateDeco('home'); climaChip(); } }catch(e){}
+  return true;
+}
+function _climaVigia(){ _climaVisto = _climaAssinatura(); let n = 0; const t = setInterval(()=>{ n++; if(_climaRedesenha() || n >= 30) clearInterval(t); }, 1000); }
+if(typeof window.loadWeather === 'function') mtGancho('loadWeather', { depois(){ _climaVigia(); } });
+_climaVigia();
 
 // ---------- 2. Clima sem repetir ----------
 // A temperatura sai da frase e vira um selo discreto no topo (ao lado do METATREINO),
@@ -10350,7 +10381,7 @@ function _nrDiasMes(a, m){ return new Date(a, m, 0).getDate(); }
 function _nrDataTxt(a, m, d){ const dt = new Date(a, m-1, d, 12); return { num:`${d} de ${NR_MESES_LONGO[m-1]} de ${a}`, sub: dt.toLocaleDateString('pt-BR', { weekday:'long' }) }; }
 function _nrHms(s){ s = Math.max(0, Math.round(s)); return { h:Math.floor(s/3600), m:Math.floor(s%3600/60), s:s%60 }; }
 function _nrLerDur(txt){
-  const p = String(txt||'').trim().split(/[:.]/).map(x=>parseInt(x,10));
+  const p = String(txt||'').trim().split(/[:.,]/).map(x=>parseInt(x,10));
   if(!p.length || p.some(isNaN)) return null;
   if(p.length === 3) return p[0]*3600 + p[1]*60 + p[2];
   if(p.length === 2) return p[0]*60 + p[1];
@@ -10421,10 +10452,10 @@ function nrAbrir(el){
     up();
     lim.textContent = 'Sem data'; lim.hidden = !c.opcional;
   } else if(c.tipo === 'hora'){
-    let [h, mi] = (el.value || '07:00').split(':').map(Number); mi = Math.round(mi/5)*5 % 60;
+    let [h, mi] = (el.value || '07:00').split(':').map(Number); h = (h|0) % 24; mi = Math.min(59, Math.max(0, mi|0));   // RC5: qualquer minuto (antes arredondava de 5 em 5)
     const up = ()=>{ NR.val = `${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`; nrMostra(NR.val, ''); };
     add(nrRegua({ min:0, max:23, step:1, valor:h, fmt:v=>String(v).padStart(2,'0'), rotulo:'hora', nome:'Hora', compacta:true, maior:1, tk:44, onChange:v=>{ h = v; up(); } }));
-    add(nrRegua({ min:0, max:55, step:5, valor:mi, fmt:v=>String(v).padStart(2,'0'), rotulo:'min', nome:'Minutos', compacta:true, maior:1, tk:44, onChange:v=>{ mi = v; up(); } }));
+    add(nrRegua({ min:0, max:59, step:1, valor:mi, fmt:v=>String(v).padStart(2,'0'), rotulo:'min', nome:'Minutos', compacta:true, maior:5, tk:20, onChange:v=>{ mi = v; up(); } }));
     up(); lim.textContent = 'Sem hora'; lim.hidden = !c.opcional;
   }
   f.classList.add('on'); document.documentElement.classList.add('nr-aberta');
@@ -10462,20 +10493,31 @@ function nrLimpar(){ if(!NR) return; nrGravar(''); nrFechar(); }
 function nrDigitar(primeiro){
   if(!NR) return;
   const f = nrFolha(); const d = f.querySelector('.nr-dig'); const inp = f.querySelector('#nr-dig-in'); const c = NR.c;
-  const dica = { num:`Entre ${_nrFmt(c.min, c.step||1)} e ${_nrFmt(c.max, c.step||1)}${c.un?' '+c.un:''}`, dist:'Ex.: 5,25 (km)', dur: c.h ? 'Ex.: 44:30 ou 1:05:00' : 'Ex.: 1:30 (min:seg)', hms:'Ex.: 44:30 ou 1:05:00', data:'dd/mm/aaaa', hora:'hh:mm' }[c.tipo];
+  const dica = { num:`Entre ${_nrFmt(c.min, c.step||1)} e ${_nrFmt(c.max, c.step||1)}${c.un?' '+c.un:''}`, dist:'Ex.: 5,25 (km)', dur: c.h ? 'Ex.: 44:30 ou 1:05:00' : 'Ex.: 1:30 (min:seg)', hms:'Ex.: 44:30 ou 1:05:00', data:'dd/mm/aaaa', hora:'Ex.: 11.52 ou 1152' }[c.tipo];
   inp.setAttribute('inputmode', ['num','dist'].includes(c.tipo) ? 'decimal' : 'numeric');
   inp.placeholder = dica; d.querySelector('.nr-dig-dica').textContent = dica;
   inp.value = primeiro != null ? primeiro : '';
   d.hidden = false; f.querySelector('.nr-reguas').hidden = true;
   setTimeout(()=>{ inp.focus(); try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(e){} }, 30);
 }
+// RC5: o teclado numérico do celular não tem ':'; aceita 11:52, 11.52, 11,52, 11h52, 11 52 e 1152
+function _nrLerHora(t){
+  t = String(t||'').trim().toLowerCase().replace(/\s*h\s*$/,'');
+  let m = /^(\d{1,2})\s*[:.,h\- ]\s*(\d{1,2})$/.exec(t);
+  if(!m){ const d = /^(\d{3,4})$/.exec(t); if(d) m = [t, d[1].slice(0, -2), d[1].slice(-2)]; }
+  if(!m){ const s = /^(\d{1,2})$/.exec(t); if(s) m = [t, s[1], '0']; }
+  if(!m) return null;
+  const h = +m[1], mi = +m[2];
+  if(!(h >= 0 && h < 24 && mi >= 0 && mi < 60)) return null;
+  return `${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`;
+}
 function nrDigitado(soMostrar){
   const inp = document.getElementById('nr-dig-in'); const c = NR && NR.c; if(!c) return false;
   const t = inp.value.trim(); let v = null;
   if(c.tipo === 'num' || c.tipo === 'dist'){ const n = _nrNum(t); if(n != null){ const lo = c.tipo === 'dist' ? 0 : c.min, hi = c.tipo === 'dist' ? 200 : c.max; if(n >= lo && n <= hi) v = n; } }
   else if(c.tipo === 'dur' || c.tipo === 'hms'){ const s = _nrLerDur(t); if(s != null && s >= 0) v = s; }
-  else if(c.tipo === 'data'){ const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t); if(m){ const iso = `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; const dt = new Date(iso+'T12:00:00'); if(!isNaN(dt) && dt.getDate() === +m[1] && iso >= c.min && iso <= c.max) v = iso; } }
-  else if(c.tipo === 'hora'){ const m = /^(\d{1,2}):(\d{2})$/.exec(t); if(m && +m[1] < 24 && +m[2] < 60) v = `${m[1].padStart(2,'0')}:${m[2]}`; }
+  else if(c.tipo === 'data'){ const m = /^(\d{1,2})[\/.,\- ](\d{1,2})[\/.,\- ](\d{4})$/.exec(t) || /^(\d{2})(\d{2})(\d{4})$/.exec(t); if(m){ const iso = `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; const dt = new Date(iso+'T12:00:00'); if(!isNaN(dt) && dt.getDate() === +m[1] && iso >= c.min && iso <= c.max) v = iso; } }
+  else if(c.tipo === 'hora'){ v = _nrLerHora(t); }
   inp.classList.toggle('nr-ruim', !!t && v == null);
   if(v == null) return false;
   NR.val = v;
@@ -13525,13 +13567,34 @@ function cqVerNova(k){
   const p = ((state && state.conqPend) || []).find(x=>x.k === k);
   cqMarcaVista(x=>x.k === k);
   if(p && p.tid && TROPHIES.some(t=>t.id === p.tid)){ try{ window._trophyScroll = ($('modal-inner')||{}).scrollTop || 0; }catch(e){} openTrophyDetail(p.tid); return; }
+  // RC 5: medalha do mês, marco e desafio concluído também abrem a sua tela (antes só sumiam da lista ao tocar)
+  if(p){ cqVerItem(p); return; }
   const c = document.querySelector(`.cq-novo[data-k="${CSS.escape(k)}"]`);
   if(c){ c.classList.add('cq-saindo'); setTimeout(()=>{ try{ window.__cqSemAnim = true; const sc = $('modal-inner').scrollTop; openTrophies(); $('modal-inner').scrollTop = sc; }catch(e){} }, 220); }
 }
+function cqVerItem(p){
+  try{ window._trophyScroll = ($('modal-inner')||{}).scrollTop || 0; }catch(e){}
+  const nv = p.kind==='medalha' || p.kind==='marco' ? 'rara' : p.kind==='secreto' ? 'especial' : 'comum';
+  const tipo = { secreto:'Segredo revelado', medalha:'Medalha do mês', marco:'Marco alcançado', evento:'Desafio concluído' }[p.kind] || p.tipo || 'Conquista';
+  const ico = p.emo && /<svg|<span|<img/.test(p.emo) ? p.emo : `<span class="cq-emo">${mtEsc(p.emo||'🏅')}</span>`;
+  const quando = p.at ? new Date(p.at).toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' }) : '';
+  const ir = p.kind==='evento' ? `<button class="btn btn-primary btn-block" onclick="closeModal();goTab('challenges')">Ver desafios</button>`
+    : `<button class="btn btn-primary btn-block" onclick="closeModal();openMedals()">Ver medalhas e selos</button>`;
+  $('modal-inner').innerHTML = `<div class="cq-item nv-${nv}">
+    <div style="display:flex;justify-content:flex-end;margin:-4px -4px 0 0"><button class="cq-x" onclick="cqVoltarLista()" aria-label="Voltar às conquistas">✕</button></div>
+    <div class="cq-item-med tr-medal"><span class="tr-glow" aria-hidden="true"></span><span class="tr-ring" aria-hidden="true"></span><div class="tr-ico">${ico}</div></div>
+    <div class="cq-item-tipo">${mtEsc(tipo)}${nv!=='comum' ? ' · ' + CQ_NV[nv] : ''}</div>
+    <h3 class="tr-nome">${mtEsc(p.nome || '')}</h3>
+    ${p.desc ? `<p class="cq-item-desc">${mtEsc(p.desc)}</p>` : ''}
+    ${quando ? `<div class="cq-item-data">Conquistada em ${quando}</div>` : ''}
+    <div style="display:grid;gap:8px;margin-top:16px">${ir}<button class="btn btn-ghost btn-block" onclick="cqVoltarLista()">← Voltar às conquistas</button></div></div>`;
+  $('modal-back').classList.add('on');
+}
+function cqVoltarLista(){ window.__cqSemAnim = true; openTrophies(); try{ $('modal-inner').scrollTop = window._trophyScroll || 0; }catch(e){} }
 function cqTodasVistas(){ cqMarcaVista(()=>true); window.__cqSemAnim = true; const sc = $('modal-inner').scrollTop; openTrophies(); try{ $('modal-inner').scrollTop = sc; }catch(e){} }
 // tocar na medalha "Nova" da coleção também conta como vista (só aquela)
 mtGancho('openTrophyDetail', { antes(id){ try{ if(((state && state.conqPend)||[]).some(x=>x.tid === id)) cqMarcaVista(x=>x.tid === id); }catch(e){} } });
-Object.assign(window, { cqVerNova, cqTodasVistas, cqFiltrar, cqTemNovidade, cqPendentes, cqIndicadores, cqFotoDoMes });
+Object.assign(window, { cqVerNova, cqVerItem, cqVoltarLista, cqTodasVistas, cqFiltrar, cqTemNovidade, cqPendentes, cqIndicadores, cqFotoDoMes });
 
 // =====================================================================
 // 43. Beta 41 — Transições, montagem do plano, fundos decorativos novos e desempenho
@@ -23317,7 +23380,7 @@ window.sonoRegistrar = function(dk){
     <p class="mt-muted" style="margin:2px 0 6px">Noite que terminou em ${dt.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit' })}. Preencha só o que quiser.</p>
     <div class="sono-lbl">Horário</div>
     <div class="sono-tri sono-modo"><button type="button" class="${modo==='hor'?'on':''}" onclick="_sonoModo('hor')">Dormi / acordei</button><button type="button" class="${modo==='h'?'on':''}" onclick="_sonoModo('h')">Só o total</button></div>
-    <div id="sono-hor" ${modo==='hor'?'':'hidden'} class="sono-campos"><label>Fui dormir<input class="input mono" type="time" id="sono-dor" value="${x.dor||''}" oninput="_sonoTotal()"></label><label>Acordei<input class="input mono" type="time" id="sono-aco" value="${x.aco||''}" oninput="_sonoTotal()"></label></div>
+    <div id="sono-hor" ${modo==='hor'?'':'hidden'} class="sono-campos"><label>Fui dormir<input class="input mono" type="time" aria-label="Fui dormir" id="sono-dor" value="${x.dor||''}" oninput="_sonoTotal()"></label><label>Acordei<input class="input mono" type="time" aria-label="Acordei" id="sono-aco" value="${x.aco||''}" oninput="_sonoTotal()"></label></div>
     <div id="sono-h" ${modo==='h'?'':'hidden'} class="sono-campos"><label>Horas<input class="input mono" type="number" min="0" max="16" inputmode="numeric" id="sono-hh" value="${hh}" placeholder="7" oninput="_sonoTotal()"></label><label>Minutos<input class="input mono" type="number" min="0" max="59" step="1" inputmode="numeric" id="sono-mm" value="${mm}" placeholder="30" oninput="_sonoTotal()"></label></div>
     <div class="sono-total" id="sono-total"></div>
     <div class="sono-lbl">Qualidade do sono</div>
@@ -23577,30 +23640,40 @@ function _awExtras(){
 }
 const _awNomeAtv = x=>x._t === 'musculacao' ? String(x.name||'Musculação') : ({ corrida:'Corrida', caminhada:'Caminhada', bike:'Bike' }[x._t] || 'Atividade');
 const _awDetAtv = x=>[x.duration ? fmtDur(x.duration) : '', x.distance ? `${mtFmtKm(x.distance)} km` : '', +x.rpe > 0 ? `esforço ${x.rpe}/10` : ''].filter(Boolean).join(' · ');
+// RC 5: volta o visual em anéis (o dos dias da semana repetia o quadro "Semana", logo abaixo).
+// Os números continuam os corrigidos no RC 4: treinos do PLANO (mtAdesao), extras à parte, séries da semana e
+// semanas seguidas na meta. O centro mostra o placar real (3/5 treinos), não mais a média dos três anéis.
+// Cada linha abre o seu detalhe (openAwDetalhe), como no RC 4.
+function _awMinutos(){
+  const ini = mtSemanaIni(Date.now()); const R = state.modules.run;
+  const min = Math.round(mtHist().filter(x=>x.at >= ini && x._t !== 'musculacao').reduce((t,x)=>t + (+x.duration||0), 0));
+  const plan = R && R.plan ? Math.round((R.plan.workouts||[]).reduce((t,w)=>t + (+w.duration||0), 0)) : 0;
+  return { min, plan };
+}
 window.renderQuickStats = function(){
   const el = $('home-quick'); if(!el) return;
   try{
-    const S = mtSemanaAtiv(); const DN = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
-    const pct = S.plan ? Math.min(100, Math.round(S.feitos/S.plan*100)) : 0;
-    const titSt = { feito:'feito', movido:'treino feito em outro dia', desc:'descanso escolhido', hoje:'hoje, a fazer', 'livre-hoje':'hoje, sem treino', faltou:'faltou', plan:'planejado', livre:'sem treino' };
-    const marca = { feito:'✓', movido:'✓', faltou:'–' };
-    const col = o=>`<button type="button" class="aw-d st-${o.st}${o.d===S.hoje?' hj':''}" onclick="event.stopPropagation();openAwDetalhe('dia',${o.d})" aria-label="${DN[o.d-1]}: ${titSt[o.st]}${o.f > 1 ? `, ${o.f} atividades` : ''}"><span class="aw-cap">${marca[o.st] ? `<i>${marca[o.st]}</i>` : ''}${o.f > 1 ? `<em>${o.f}</em>` : ''}</span><span class="aw-dn">${DN[o.d-1]}</span></button>`;
-    const kpi = (tipo, lbl, val, sub, p)=>`<button type="button" class="aw-k" onclick="event.stopPropagation();openAwDetalhe('${tipo}')"><small>${lbl}</small><b>${val}</b>${sub ? `<span>${sub}</span>` : ''}${p != null ? `<span class="aw-bar"><i style="width:${Math.min(100, Math.round(p*100))}%"></i></span>` : ''}</button>`;
+    const S = mtSemanaAtiv();
     const ativos = S.dias.filter(o=>o.f).length;
+    const pT = S.plan ? S.feitos/S.plan : (ativos ? 1 : 0);
+    const usaSeries = S.temLift && S.setsPlan > 0;
+    const M = usaSeries ? null : _awMinutos();
+    const n2 = usaSeries ? S.setsFeitas : M.min, m2 = usaSeries ? S.setsPlan : M.plan;
+    const pM = m2 ? n2/m2 : 0;
+    const pS = S.metaSem ? Math.min(1, S.semanas/4) : 0;
+    const pc = v=>Math.round(Math.min(1, v)*100);
+    const linha = (tipo, cor, lbl, val, sub, p)=>`<button type="button" class="act-row aw-row" onclick="event.stopPropagation();openAwDetalhe('${tipo}')"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:${cor}"></i>${lbl}</div>${p != null ? `<span class="act-pct">${pc(p)}%</span>` : ''}</div><div class="act-val">${val}<small>${sub}</small></div>${p != null ? `<div class="act-bar"><i style="width:${pc(p)}%;background:${cor}"></i></div>` : ''}</button>`;
+    const centro = S.plan ? `<b>${S.feitos}<small>/${S.plan}</small></b><span>treinos</span>` : `<b>${ativos}</b><span>${ativos === 1 ? 'dia ativo' : 'dias ativos'}</span>`;
     el.innerHTML = `
       <div class="act-head"><h3>Atividade da semana</h3><span>${S.plan ? `${S.feitos} de ${S.plan} treinos` : `${ativos} ${ativos===1?'dia ativo':'dias ativos'}`}</span></div>
-      <div class="aw">
-        <button type="button" class="aw-top" onclick="event.stopPropagation();openAwDetalhe('${S.plan ? 'plano' : 'extras'}')" aria-label="Ver os treinos da semana">
-          <span class="aw-placar"><b>${S.plan ? S.feitos : S.dias.reduce((t,o)=>t+o.f,0)}</b><span>${S.plan ? `/${S.plan} treinos do plano` : ' atividades'}</span></span>
-          ${S.plan ? `<span class="aw-pct">${pct}%</span>` : ''}
-          ${S.plan ? `<span class="aw-meter" role="progressbar" aria-valuemin="0" aria-valuemax="${S.plan}" aria-valuenow="${S.feitos}"><i style="width:${pct}%"></i></span>` : ''}
-        </button>
-        <div class="aw-dias">${S.dias.map(col).join('')}</div>
-        <div class="aw-leg"><span><i class="lg-f"></i>feito</span><span><i class="lg-m"></i>outro dia</span><span><i class="lg-p"></i>planejado</span><span><i class="lg-x"></i>faltou</span><span><i class="lg-d"></i>descanso</span></div>
-        <div class="aw-ks">
-          ${S.temLift && S.setsPlan ? kpi('series', 'Séries', `${S.setsFeitas}<small>/${S.setsPlan}</small>`, 'na semana', S.setsFeitas/S.setsPlan) : ''}
-          ${S.plan ? kpi('semanas', 'Semanas na meta', `${S.semanas}`, `seguidas · ${S.metaSem}+ treinos`, null) : ''}
-          ${S.extras ? kpi('extras', 'Extras', `${S.extras}`, S.extras===1 ? 'fora do plano' : 'fora do plano', null) : ''}
+      <div class="act-card aw-anel">
+        <button type="button" class="act-rings" onclick="event.stopPropagation();openAwDetalhe('${S.plan ? 'plano' : 'extras'}')" aria-label="Ver os treinos da semana"><svg viewBox="0 0 120 120">${_anel(52, pT, 'var(--primary)')}${m2 ? _anel(40, pM, 'var(--accent)') : ''}${S.metaSem ? _anel(28, pS, 'var(--prep)') : ''}</svg>
+          <div class="act-center">${centro}</div></button>
+        <div class="act-legend">
+          ${S.plan ? linha('plano', 'var(--primary)', 'Treinos do plano', S.feitos, ` / ${S.plan}`, pT) : linha('extras', 'var(--primary)', 'Atividades', S.dias.reduce((t,o)=>t+o.f,0), ' na semana', null)}
+          ${m2 ? (usaSeries ? linha('series', 'var(--accent)', 'Séries', n2, ` / ${m2}`, pM) : linha('plano', 'var(--accent)', 'Minutos', n2, ` / ${m2} min`, pM)) : ''}
+          ${S.metaSem ? linha('semanas', 'var(--prep)', 'Semanas na meta', S.semanas, ` ${S.semanas === 1 ? 'semana' : 'semanas'} · meta 4`, pS) : ''}
+          ${S.extras && S.plan ? `<button type="button" class="aw-extra" onclick="event.stopPropagation();openAwDetalhe('extras')">+ ${S.extras} ${S.extras === 1 ? 'atividade' : 'atividades'} fora do plano ›</button>` : ''}
         </div>
       </div>`;
     el.onclick = null;
@@ -23683,44 +23756,20 @@ s.textContent = `
 .nutri-agua .na-link{border:0;background:none;color:var(--text-dim);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:6px 2px}
 .nutri-agua .na-link:disabled{opacity:.4;cursor:default}
 .nutri-agua .na-link:last-child{margin-left:auto}
-/* Atividade da semana (RC 4) */
-.aw{padding:14px 14px 12px;border-radius:var(--radius-card,18px);border:1px solid var(--border);background:var(--surface)}
-.aw button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
-.aw-top{display:grid!important;grid-template-columns:1fr auto;align-items:end;gap:6px 10px;width:100%}
-.aw-placar b{font-size:36px;line-height:1;font-weight:800;letter-spacing:-1px}.aw-placar span{font-size:13px;color:var(--text-dim);font-weight:600;margin-left:3px}
-.aw-pct{font-size:13px;font-weight:800;color:var(--primary-2);padding:4px 10px;border-radius:99px;background:var(--tint-primary)}
-.aw-meter{grid-column:1/-1;display:block;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin:6px 0 12px}.aw-meter i{display:block;height:100%;border-radius:inherit;background:var(--primary);transition:width .5s var(--mt-ease,ease)}
-.aw-dias{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end}
-.aw-d{display:flex!important;flex-direction:column;align-items:center;gap:5px;min-width:0;min-height:44px}
-.aw-dn{font-size:11px;color:var(--text-dim);font-weight:600}
-.aw-d.hj .aw-dn{color:var(--primary-2);font-weight:800}
-.aw-cap{position:relative;display:flex;align-items:center;justify-content:center;width:100%;max-width:34px;height:40px;border-radius:10px;background:var(--surface-2);box-sizing:border-box}
-.aw-cap i{font-style:normal;font-size:15px;font-weight:800;line-height:1}
-.aw-cap em{position:absolute;top:-6px;right:-4px;min-width:16px;height:16px;padding:0 3px;border-radius:99px;font-style:normal;font-size:10px;font-weight:800;line-height:16px;text-align:center;background:var(--text);color:var(--bg)}
-.aw-d.st-feito .aw-cap{background:var(--primary);color:var(--on-primary)}
-.aw-d.st-movido .aw-cap{background:transparent;border:2px solid var(--primary);color:var(--primary-2)}
-.aw-d.st-plan .aw-cap{background:transparent;border:1.5px dashed var(--text-mute)}
-.aw-d.st-hoje .aw-cap{background:transparent;border:2px solid var(--primary);box-shadow:0 0 0 3px rgba(var(--primary-rgb),.16)}
-.aw-d.st-faltou .aw-cap{background:transparent;border:1.5px solid var(--border);color:var(--text-mute)}
-.aw-d.st-desc .aw-cap{background:var(--surface-2);opacity:.75}
-.aw-d.st-livre .aw-cap,.aw-d.st-livre-hoje .aw-cap{background:var(--surface-2);opacity:.45}
-.aw-d.st-livre-hoje .aw-cap{opacity:.7;box-shadow:inset 0 0 0 1.5px var(--text-mute)}
-.aw-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin:10px 0 2px;font-size:11px;color:var(--text-mute)}
-.aw-leg span{display:flex;align-items:center;gap:5px}.aw-leg i{width:10px;height:10px;border-radius:3px;display:block;box-sizing:border-box}
-.aw-leg .lg-f{background:var(--primary)}.aw-leg .lg-m{border:2px solid var(--primary)}.aw-leg .lg-p{border:1.5px dashed var(--text-mute)}.aw-leg .lg-x{border:1.5px solid var(--text-mute)}.aw-leg .lg-d{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
-.aw-ks{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:12px}
-.aw-k{display:block!important;padding:9px 10px!important;border-radius:12px;background:var(--bg-2,var(--surface-2))!important;min-width:0}
-.aw-k small{display:block;font-size:10.5px;color:var(--text-mute);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
-.aw-k b{display:block;font-size:19px;font-weight:800;margin-top:2px}.aw-k b small{display:inline;font-size:12px;text-transform:none;letter-spacing:0}
-.aw-k span{display:block;font-size:11px;color:var(--text-dim);margin-top:1px;line-height:1.3}
-.aw-bar{height:4px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:6px}.aw-bar i{display:block;height:100%;background:var(--primary)}
-.aw-d:focus-visible,.aw-k:focus-visible,.aw-top:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:12px}
+/* Atividade da semana (RC 5: anéis; cada linha abre o seu detalhe) */
+.act-card.aw-anel::after{content:none}
+.aw-anel button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.aw-anel .act-legend{display:flex;flex-direction:column;gap:10px;min-width:0;flex:1}
+.aw-anel .aw-row{display:block;width:100%;border-radius:10px}
+.aw-anel .aw-row:active,.aw-anel .act-rings:active{transform:scale(.985)}
+.act-center b small{font-size:15px;color:var(--text-dim);font-weight:400}
+.aw-extra{font-size:12px!important;font-weight:700!important;color:var(--primary-2)!important;margin-top:-2px}
+.aw-anel .act-rings:focus-visible,.aw-anel .aw-row:focus-visible,.aw-extra:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:12px}
+@media (max-width:370px){.aw-anel{gap:12px;padding:14px}.aw-anel .act-rings{flex-basis:108px;width:108px;height:108px}}
 .aw-lista{display:flex;flex-direction:column;gap:2px;margin-top:6px}
 .aw-li{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border);font-size:13.5px}.aw-li b{font-weight:700;min-width:0}.aw-li span{color:var(--text-dim);text-align:right;flex:none;max-width:55%}
 .aw-li span small{color:var(--text-mute);font-size:11.5px}
 .aw-li.st-faltou span{color:var(--text-mute)}.aw-li.st-feito span,.aw-li.st-movido span{color:var(--primary-2)}
-@media (max-width:370px){.aw-cap{height:36px}.aw-dias{gap:4px}.aw-leg{gap:3px 9px}}
-@media (prefers-reduced-motion:reduce){.aw-meter i{transition:none}}
 `; document.head.appendChild(s); })();
 
 Object.assign(window, { sonoAnalise, sonoAnaliseHTML, mtSemanaAtiv, _sonoTotal, _sonoMarca5, _sonoTile, _awPlanoSemana, _awExtras });
@@ -23756,19 +23805,9 @@ function mtHojeModalidade(m){
   else { st = 'livre'; txt = 'sem treino hoje'; }
   return { m, w, st, txt };
 }
-function mtHojeDuoDesenha(){
-  try{
-    const velho = $('hoje-duo'); if(velho) velho.remove();
-    const tg = $('mod-toggle'); if(!tg) return;
-    const L = mtHojeModalidade('lift'), R = mtHojeModalidade('run'); if(!L || !R) return;   // só com as duas modalidades
-    const item = (o, nome)=>`<button type="button" class="hd-m st-${o.st}${state.active === o.m ? ' on' : ''}" onclick="${state.active === o.m ? `goTab('sessions')` : `switchModule('${o.m}')`}" aria-label="${nome}: ${mtEsc(o.txt)}">
-      <b>${nome}</b><small>${o.st === 'feito' ? '✓ ' : ''}${mtEsc(o.txt)}</small></button>`;
-    tg.insertAdjacentHTML('afterend', `<div class="hoje-duo" id="hoje-duo" role="group" aria-label="Hoje nas duas modalidades">${item(L, 'Musculação')}${item(R, 'Corrida')}</div>`);
-    // o Início ordena os blocos com CSS (parte 28): a linha fica na mesma posição do seletor, logo depois dele
-    const el = $('hoje-duo'); const o = getComputedStyle(tg).order; if(el && o) el.style.order = o;
-  }catch(e){ console.log('hoje (duas modalidades):', e); }
-}
-mtGancho('renderHome', { depois(){ mtHojeDuoDesenha(); } });
+// RC5: a linha extra com Musculação/Corrida embaixo do seletor saiu (ficava repetida com o próprio seletor).
+// O estado das duas modalidades continua na saudação e no card de descanso; mtHojeModalidade segue disponível.
+function mtHojeDuoDesenha(){ const velho = $('hoje-duo'); if(velho) velho.remove(); }
 
 // ---------- 3. Aba Treinos: volta previsível ----------
 // Antes, o treino escolhido ficava gravado sem data: dias depois a aba abria num treino de outro dia. Regra nova,
@@ -23801,13 +23840,6 @@ mtGancho('goTab', { antes(tab){
 
 (function(){ if(document.getElementById('rc4-e1-css')) return; const s = document.createElement('style'); s.id = 'rc4-e1-css';
 s.textContent = `
-.hoje-duo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 4px}
-.hoje-duo .hd-m{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;padding:8px 12px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer}
-.hoje-duo .hd-m b{font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-mute);font-weight:800}
-.hoje-duo .hd-m small{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.hoje-duo .hd-m.on{border-color:var(--line-primary,var(--primary))}
-.hoje-duo .hd-m.st-feito small{color:var(--primary-2)}
-.hoje-duo .hd-m.st-livre small,.hoje-duo .hd-m.st-desc small{color:var(--text-dim);font-weight:600}
 .rest-outro{margin:10px auto 0;max-width:320px;font-size:13px;line-height:1.45;color:var(--text-dim)}
 .rest-outro b{color:var(--text)}
 .rest-outro .link-mais{display:inline;margin-left:4px;padding:0;border:0;background:none;color:var(--primary-2);font:inherit;font-weight:700;cursor:pointer}
@@ -23989,6 +24021,15 @@ details.note-clima[open] .nc-mais{display:none}
 details.note-clima .nc-obs{color:var(--text-mute);font-size:11.5px;margin-top:4px}
 .mes-mais{margin-top:4px}.mes-mais > summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--text-dim);padding:6px 2px}
 .mts-nota{font-size:11.5px;color:var(--text-mute);line-height:1.4;margin:-2px 0 8px 28px}
+.cq-item{text-align:center}
+.cq-item .cq-item-med{width:150px;height:150px}
+.cq-item .tr-ico{display:grid;place-items:center;width:112px;height:112px}
+.cq-item .tr-ico svg,.cq-item .tr-ico img{width:100%;height:100%}
+.cq-item .tr-ico .cq-emo{font-size:72px;line-height:1}
+.cq-item-tipo{margin-top:6px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:800;color:var(--primary-2)}
+.cq-item h3.tr-nome{margin:6px 0 2px}
+.cq-item-desc{color:var(--text-dim);font-size:14px;line-height:1.45;margin:4px 8px 0}
+.cq-item-data{margin-top:10px;font-size:12.5px;color:var(--text-mute)}
 `; document.head.appendChild(s); })();
 
 Object.assign(window, { mtDesafiosOrganiza, mtIndicadoresAjusta });
