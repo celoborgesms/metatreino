@@ -60,16 +60,16 @@ async def conquistas(b):
     await pg.evaluate(ZERA)
     await pg.evaluate("""(()=>{ const run = state.modules.run; run.setup.aval = Object.assign(run.setup.aval||{}, { exp:'experiente', marca:{ km:21.0975, seg:5100 }, kmSemana:60, continuo:'90' }); run.plan.motor.nivel = 5; delete state.modules.lift; saveData(); })()""")
     await pg.evaluate("window.__mtRegEm = Date.now(); maLogActivity('corrida', 21.1, 105, 6); 0"); await pg.wait_for_timeout(3500)
-    r = await pg.evaluate("""({ cartoes: [...document.querySelectorAll('#modal-inner .cel-cartao')].map(c=>c.innerText.replace(/\\n+/g,' | ')), exp: Object.keys(state.trophyExp||{}), trof: state.trophies.length, metas: (state.monthly.done||[]).length })""")
+    # RC 4: a janela grande de conquistas saiu; o registro mostra um aviso pequeno. O agrupamento (cqAgrupar) continua.
+    r = await pg.evaluate("""({ aviso: (document.getElementById('cq-aviso')||{}).innerText||'', janela: !!document.querySelector('#modal-inner .cel-cartao'),
+        cartoes: cqAgrupar((state.conqPend||[]).filter(p=>p.cel)).map(c=>String(c.nome || (c.p && (c.p.nome || c.p.tid)) || '') + ' ' + (c.extras||[]).join(' ')), exp: Object.keys(state.trophyExp||{}), trof: state.trophies.length, metas: (state.monthly.done||[]).length, pend: (state.conqPend||[]).length })""")
     total = r['trof'] + r['metas']
-    confere(f'corredor experiente: {total} desbloqueios no primeiro registro viram no máximo 5 cartões', 1 <= len(r['cartoes']) <= 5 and total > len(r['cartoes']), r)
-    confere('o primeiro cartão valoriza a primeira atividade no MetaTreino', r['cartoes'] and 'Primeira' in r['cartoes'][0] and 'MetaTreino' in r['cartoes'][0], r['cartoes'][:1])
+    confere(f'corredor experiente: {total} desbloqueios no primeiro registro, sem janela grande, com aviso pequeno', not r['janela'] and 'desbloqueada' in r['aviso'], r)
+    confere('agrupamento das conquistas continua (no máximo 5 grupos)', 1 <= len(r['cartoes']) <= 5 and total > len(r['cartoes']), r)
     confere('5K, 10K e meia (que ele já tinha) entram como experiência reconhecida', sorted(r['exp']) == ['run_10k_run','run_21k_run','run_5k_run'] and any('Experiência reconhecida' in c for c in r['cartoes']), r)
-    confere('metas do mês: bronze/prata/ouro da mesma meta num cartão só', not any(c.count('Longão do Mês') > 1 for c in r['cartoes']), r['cartoes'])
+    confere('metas do mês: bronze/prata/ouro da mesma meta num grupo só', not any(c.count('Longão do Mês') > 1 for c in r['cartoes']), r['cartoes'])
     await foto(pg, 'b49-02-celebracao-experiente')
-    for _ in range(6): await pg.evaluate("cqCelPasso(1)"); await pg.wait_for_timeout(250)
-    await pg.evaluate("closeModal()"); await pg.wait_for_timeout(400)
-    confere('cartão visto = todas as conquistas que ele representa saem das novas', await pg.evaluate("state.conqPend.length") == 0)
+    confere('as conquistas continuam "novas" até serem vistas em Desafios', r['pend'] > 0, r)
     await pg.evaluate("openTrophies()"); await pg.wait_for_timeout(800)
     # textContent: os grupos usam content-visibility:auto e o que está fora da tela não entra no innerText
     confere('na coleção: "Experiência anterior"', 'Experiência anterior' in await pg.evaluate("document.getElementById('modal-inner').textContent"))
@@ -82,8 +82,8 @@ async def conquistas(b):
     await pg.evaluate(ZERA)
     await pg.evaluate("""(()=>{ const run = state.modules.run; run.setup.aval = { exp:'nunca', continuo:'0', lim:[] }; run.plan.motor.nivel = 1; delete state.modules.lift; saveData(); })()""")
     await pg.evaluate("window.__mtRegEm = Date.now(); maLogActivity('corrida', 5.1, 38, 6); 0"); await pg.wait_for_timeout(3500)
-    r = await pg.evaluate("""({ cartoes: [...document.querySelectorAll('#modal-inner .cel-cartao')].map(c=>c.innerText.replace(/\\n+/g,' | ')), exp: Object.keys(state.trophyExp||{}) })""")
-    confere('iniciante: 5K comemorado como conquista nova (não como experiência)', not r['exp'] and any('5K' in c for c in r['cartoes']), r)
+    r = await pg.evaluate("""({ exp: Object.keys(state.trophyExp||{}), tem: state.trophies.includes('run_5k_run'), aviso: (document.getElementById('cq-aviso')||{}).innerText||'' })""")
+    confere('iniciante: 5K comemorado como conquista nova (não como experiência)', not r['exp'] and r['tem'] and 'desbloqueada' in r['aviso'], r)
     await foto(pg, 'b49-03-celebracao-iniciante')
     confere('sem erros', not erros and not erros2, (erros + erros2)[:3]); await ctx.close()
 
@@ -93,8 +93,8 @@ async def desafio(b):
     k = await pg.evaluate("(()=>{ state.eventos = {}; state.eventosRecusados = {}; checkEventos(); const e = eventoPrincipal(); return e && e.key; })()")
     confere('quem tem cadastro pronto já participa do desafio do período (sem botão "Participar")', k and await pg.evaluate(f"!!state.eventos['{k}'] && state.eventos['{k}'].auto === true"), k)
     await pg.evaluate("goTab('challenges')"); await pg.wait_for_timeout(400)
-    t = await pg.evaluate("document.getElementById('chal-root').innerText")
-    confere('tela: "você está participando", "Metas do mês" e "Medalhas e metas"', 'participando' in t and 'Participar do desafio' not in t and 'metas do mês' in t.lower() and 'medalhas e metas' in t.lower(), t[:300])
+    t = await pg.evaluate("document.getElementById('chal-root').textContent")
+    confere('tela: "você está participando", "Metas do mês" e "Medalhas e metas"', 'participando' in t and 'Participar do desafio' not in t and 'metas do mês' in t.lower() and 'medalhas e metas' in t.lower(), ['participando' in t, 'Participar do desafio' not in t, 'metas do mês' in t.lower(), 'medalhas e metas' in t.lower()])
     await foto(pg, 'b49-04-desafios')
     await pg.evaluate(f"sairDoEvento('{k}')"); await pg.wait_for_timeout(200)
     await pg.evaluate("document.getElementById('appconfirm-ok').click()"); await pg.wait_for_timeout(300)
@@ -121,7 +121,7 @@ async def outros(b):
     t = await pg.evaluate("""(()=>{ const run = state.modules.run; const ini = new Date(); ini.setDate(1); ini.setHours(8,0,0,0);
         for(let i=0;i<3;i++) run.history.push({ at: Math.min(Date.now()-3600000, ini.getTime() + i*86400000), duration:40, distance:3, activity:'caminhada', rpe:3 });
         saveData(); return analiseMes(); })()""")
-    confere('análise do mês: dias ativos, treinos do plano e atividades extras separados', 'treinos planejados' in t and 'atividades extras' in t and 'Adesão ao plano' in t, re.sub('<[^>]+>','',t)[-260:])
+    confere('análise do mês: dias ativos, treinos do plano e atividades extras separados', 'treinos programados' in t and 'atividades extras' in t and 'Cumprimento do plano' in t, re.sub('<[^>]+>','',t)[-260:])
     c = await pg.evaluate("(()=>{ const c = contextoAluno(); return { semTreinos:c.semTreinos, semPlanejados:c.semPlanejados, semExtras:c.semExtras, semDias:c.semDias }; })()")
     confere('contexto do assistente tem treinos do plano e extras da semana', isinstance(c.get('semPlanejados'), int) and c['semTreinos'] <= max(c['semPlanejados'], c['semTreinos']), c)
     r = await pg.evaluate("""(()=>{ const w = state.modules.lift.plan.workouts[0]; const cur = w.exercises[0]; mtTrocaAbrir(cur.id, 'ocupado');

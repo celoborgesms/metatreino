@@ -172,7 +172,7 @@ async def conquistas(b):
         await pg.evaluate(f"goTab('{aba}')"); await pg.wait_for_timeout(250)
     confere('navegar pelas outras abas não apresenta nada (continua pendente)', not await pg.evaluate(MODAL_ON) and await pg.evaluate("state.conqPend.length===3"))
     await pg.evaluate("goTab('challenges')"); await pg.wait_for_timeout(200)
-    confere('dentro de Desafios, o cartão Conquistas diz "3 novas" (sem outro selo)', await pg.evaluate("(document.querySelector('.chal-tile[onclick^=\"openTrophies\"] .cq-novas-txt')||{}).textContent==='3 novas' && !document.querySelector('.chal-tile .cq-badge')"))
+    confere('dentro de Desafios, o cartão Conquistas diz "3 novas" (sem outro selo)', await pg.evaluate("(document.querySelector('#chal-root .chal-cq .cq-novas-txt')||{}).textContent==='3 novas para ver' && !document.querySelector('#chal-root .cq-badge')"))   # RC 4: cartão único de Conquistas
     await pg.evaluate("openTrophies()"); await pg.wait_for_timeout(1500)
     r = await pg.evaluate("""(()=>({ novos: document.querySelectorAll('.cq-novo').length, rara: !!document.querySelector('.cq-novo.nv-rara .cq-novo-luz'), especial: !!document.querySelector('.cq-novo.nv-especial'),
        anim: getComputedStyle(document.querySelector('.cq-novo')).animationName, recente: document.querySelectorAll('.cq-tile.cq-recente').length,

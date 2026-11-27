@@ -53,19 +53,20 @@ async def ajustes(b):
     await pg.evaluate(f"unlockTrophy('{tid}')"); await pg.wait_for_timeout(500)
     n1 = await pg.evaluate("(document.querySelector('#home-metrics .met[onclick=\"openTrophies()\"] .met-v')||{}).textContent")
     tot = await pg.evaluate("state.trophies.length")
-    confere('cartão Conquistas do Início atualiza na hora', n1 and n1.startswith(str(tot)) and n1 != n0, [n0, n1, tot])
+    # RC 4: conquistas saíram do Início (ficam só na aba Desafios)
+    confere('Início sem o atalho de Conquistas (fica na aba Desafios)', n0 is None and n1 is None and tot > 0, [n0, n1, tot])
     h = await pg.evaluate("""(()=>{ const og = Date.prototype.getHours; const r = {}; [6,12,17,18,19,23].forEach(x=>{ Date.prototype.getHours = ()=>x; r[x] = _cenaHora() + '/' + greetTime(); }); Date.prototype.getHours = og; return r; })()""")
     confere('ilustração segue a saudação: 18h já é noite (lua), 17h pôr do sol', h['18'].startswith('noite') and h['19'].startswith('noite') and h['17'].startswith('tarde') and h['12'].startswith('dia'), h)
     await pg.evaluate("openActivityLog ? openActivityLog() : 0; 0") if await pg.evaluate("typeof openActivityLog === 'function'") else None
     if not await pg.evaluate("!!document.getElementById('act-min')"):
         await pg.evaluate("(()=>{ const f = Object.keys(window).find(k=>/^open.*Activ/i.test(k) && typeof window[k]==='function'); if(f) window[f](); })()"); await pg.wait_for_timeout(300)
-    cfg = await pg.evaluate("(()=>{ const el = document.getElementById('act-min'); return el ? nrConfig(el) : null; })()")
-    confere('tempo da atividade avulsa usa o seletor numérico do app', cfg and cfg.get('tipo') == 'dur', cfg)
+    cfg = await pg.evaluate("(()=>{ const el = document.getElementById('act-h'); return el ? nrConfig(el) : null; })()")
+    confere('tempo da atividade avulsa usa o seletor numérico do app (h:m:s, RC 4)', cfg and cfg.get('tipo') == 'hms', cfg)
     # celebração também pelo registro avulso de atividade
     await pg.evaluate("closeModal(); state.conqPend = []; 0")
     await pg.evaluate("maLogActivity('caminhada', 6, 60, 4); 0"); await pg.wait_for_timeout(2600)
-    r = await pg.evaluate("({ cel: !!document.querySelector('#modal-inner .cq-cel'), n: document.querySelectorAll('#modal-inner .cel-cartao').length })")
-    confere('registro avulso (caminhada) também mostra as conquistas novas', r['cel'] and r['n'] >= 1, r)
+    r = await pg.evaluate("({ cel: !!document.querySelector('#modal-inner .cq-cel'), aviso: (document.getElementById('cq-aviso')||{}).innerText||'' })")
+    confere('registro avulso (caminhada) também avisa as conquistas novas (aviso pequeno, sem janela)', not r['cel'] and 'desbloqueada' in r['aviso'], r)
     confere('sem erros', not erros, erros[:3]); await ctx.close()
 
 async def cupons(b):
