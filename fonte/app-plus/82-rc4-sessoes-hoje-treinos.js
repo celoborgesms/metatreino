@@ -30,19 +30,9 @@ function mtHojeModalidade(m){
   else { st = 'livre'; txt = 'sem treino hoje'; }
   return { m, w, st, txt };
 }
-function mtHojeDuoDesenha(){
-  try{
-    const velho = $('hoje-duo'); if(velho) velho.remove();
-    const tg = $('mod-toggle'); if(!tg) return;
-    const L = mtHojeModalidade('lift'), R = mtHojeModalidade('run'); if(!L || !R) return;   // só com as duas modalidades
-    const item = (o, nome)=>`<button type="button" class="hd-m st-${o.st}${state.active === o.m ? ' on' : ''}" onclick="${state.active === o.m ? `goTab('sessions')` : `switchModule('${o.m}')`}" aria-label="${nome}: ${mtEsc(o.txt)}">
-      <b>${nome}</b><small>${o.st === 'feito' ? '✓ ' : ''}${mtEsc(o.txt)}</small></button>`;
-    tg.insertAdjacentHTML('afterend', `<div class="hoje-duo" id="hoje-duo" role="group" aria-label="Hoje nas duas modalidades">${item(L, 'Musculação')}${item(R, 'Corrida')}</div>`);
-    // o Início ordena os blocos com CSS (parte 28): a linha fica na mesma posição do seletor, logo depois dele
-    const el = $('hoje-duo'); const o = getComputedStyle(tg).order; if(el && o) el.style.order = o;
-  }catch(e){ console.log('hoje (duas modalidades):', e); }
-}
-mtGancho('renderHome', { depois(){ mtHojeDuoDesenha(); } });
+// RC5: a linha extra com Musculação/Corrida embaixo do seletor saiu (ficava repetida com o próprio seletor).
+// O estado das duas modalidades continua na saudação e no card de descanso; mtHojeModalidade segue disponível.
+function mtHojeDuoDesenha(){ const velho = $('hoje-duo'); if(velho) velho.remove(); }
 
 // ---------- 3. Aba Treinos: volta previsível ----------
 // Antes, o treino escolhido ficava gravado sem data: dias depois a aba abria num treino de outro dia. Regra nova,
@@ -75,13 +65,6 @@ mtGancho('goTab', { antes(tab){
 
 (function(){ if(document.getElementById('rc4-e1-css')) return; const s = document.createElement('style'); s.id = 'rc4-e1-css';
 s.textContent = `
-.hoje-duo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 4px}
-.hoje-duo .hd-m{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;padding:8px 12px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer}
-.hoje-duo .hd-m b{font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-mute);font-weight:800}
-.hoje-duo .hd-m small{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.hoje-duo .hd-m.on{border-color:var(--line-primary,var(--primary))}
-.hoje-duo .hd-m.st-feito small{color:var(--primary-2)}
-.hoje-duo .hd-m.st-livre small,.hoje-duo .hd-m.st-desc small{color:var(--text-dim);font-weight:600}
 .rest-outro{margin:10px auto 0;max-width:320px;font-size:13px;line-height:1.45;color:var(--text-dim)}
 .rest-outro b{color:var(--text)}
 .rest-outro .link-mais{display:inline;margin-left:4px;padding:0;border:0;background:none;color:var(--primary-2);font:inherit;font-weight:700;cursor:pointer}

@@ -173,6 +173,15 @@ details.note-clima[open] .nc-mais{display:none}
 details.note-clima .nc-obs{color:var(--text-mute);font-size:11.5px;margin-top:4px}
 .mes-mais{margin-top:4px}.mes-mais > summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--text-dim);padding:6px 2px}
 .mts-nota{font-size:11.5px;color:var(--text-mute);line-height:1.4;margin:-2px 0 8px 28px}
+.cq-item{text-align:center}
+.cq-item .cq-item-med{width:150px;height:150px}
+.cq-item .tr-ico{display:grid;place-items:center;width:112px;height:112px}
+.cq-item .tr-ico svg,.cq-item .tr-ico img{width:100%;height:100%}
+.cq-item .tr-ico .cq-emo{font-size:72px;line-height:1}
+.cq-item-tipo{margin-top:6px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:800;color:var(--primary-2)}
+.cq-item h3.tr-nome{margin:6px 0 2px}
+.cq-item-desc{color:var(--text-dim);font-size:14px;line-height:1.45;margin:4px 8px 0}
+.cq-item-data{margin-top:10px;font-size:12.5px;color:var(--text-mute)}
 `; document.head.appendChild(s); })();
 
 Object.assign(window, { mtDesafiosOrganiza, mtIndicadoresAjusta });

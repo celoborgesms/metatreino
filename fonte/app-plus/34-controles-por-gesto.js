@@ -195,7 +195,7 @@ function _nrDiasMes(a, m){ return new Date(a, m, 0).getDate(); }
 function _nrDataTxt(a, m, d){ const dt = new Date(a, m-1, d, 12); return { num:`${d} de ${NR_MESES_LONGO[m-1]} de ${a}`, sub: dt.toLocaleDateString('pt-BR', { weekday:'long' }) }; }
 function _nrHms(s){ s = Math.max(0, Math.round(s)); return { h:Math.floor(s/3600), m:Math.floor(s%3600/60), s:s%60 }; }
 function _nrLerDur(txt){
-  const p = String(txt||'').trim().split(/[:.]/).map(x=>parseInt(x,10));
+  const p = String(txt||'').trim().split(/[:.,]/).map(x=>parseInt(x,10));
   if(!p.length || p.some(isNaN)) return null;
   if(p.length === 3) return p[0]*3600 + p[1]*60 + p[2];
   if(p.length === 2) return p[0]*60 + p[1];
@@ -266,10 +266,10 @@ function nrAbrir(el){
     up();
     lim.textContent = 'Sem data'; lim.hidden = !c.opcional;
   } else if(c.tipo === 'hora'){
-    let [h, mi] = (el.value || '07:00').split(':').map(Number); mi = Math.round(mi/5)*5 % 60;
+    let [h, mi] = (el.value || '07:00').split(':').map(Number); h = (h|0) % 24; mi = Math.min(59, Math.max(0, mi|0));   // RC5: qualquer minuto (antes arredondava de 5 em 5)
     const up = ()=>{ NR.val = `${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`; nrMostra(NR.val, ''); };
     add(nrRegua({ min:0, max:23, step:1, valor:h, fmt:v=>String(v).padStart(2,'0'), rotulo:'hora', nome:'Hora', compacta:true, maior:1, tk:44, onChange:v=>{ h = v; up(); } }));
-    add(nrRegua({ min:0, max:55, step:5, valor:mi, fmt:v=>String(v).padStart(2,'0'), rotulo:'min', nome:'Minutos', compacta:true, maior:1, tk:44, onChange:v=>{ mi = v; up(); } }));
+    add(nrRegua({ min:0, max:59, step:1, valor:mi, fmt:v=>String(v).padStart(2,'0'), rotulo:'min', nome:'Minutos', compacta:true, maior:5, tk:20, onChange:v=>{ mi = v; up(); } }));
     up(); lim.textContent = 'Sem hora'; lim.hidden = !c.opcional;
   }
   f.classList.add('on'); document.documentElement.classList.add('nr-aberta');
@@ -307,20 +307,31 @@ function nrLimpar(){ if(!NR) return; nrGravar(''); nrFechar(); }
 function nrDigitar(primeiro){
   if(!NR) return;
   const f = nrFolha(); const d = f.querySelector('.nr-dig'); const inp = f.querySelector('#nr-dig-in'); const c = NR.c;
-  const dica = { num:`Entre ${_nrFmt(c.min, c.step||1)} e ${_nrFmt(c.max, c.step||1)}${c.un?' '+c.un:''}`, dist:'Ex.: 5,25 (km)', dur: c.h ? 'Ex.: 44:30 ou 1:05:00' : 'Ex.: 1:30 (min:seg)', hms:'Ex.: 44:30 ou 1:05:00', data:'dd/mm/aaaa', hora:'hh:mm' }[c.tipo];
+  const dica = { num:`Entre ${_nrFmt(c.min, c.step||1)} e ${_nrFmt(c.max, c.step||1)}${c.un?' '+c.un:''}`, dist:'Ex.: 5,25 (km)', dur: c.h ? 'Ex.: 44:30 ou 1:05:00' : 'Ex.: 1:30 (min:seg)', hms:'Ex.: 44:30 ou 1:05:00', data:'dd/mm/aaaa', hora:'Ex.: 11.52 ou 1152' }[c.tipo];
   inp.setAttribute('inputmode', ['num','dist'].includes(c.tipo) ? 'decimal' : 'numeric');
   inp.placeholder = dica; d.querySelector('.nr-dig-dica').textContent = dica;
   inp.value = primeiro != null ? primeiro : '';
   d.hidden = false; f.querySelector('.nr-reguas').hidden = true;
   setTimeout(()=>{ inp.focus(); try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(e){} }, 30);
 }
+// RC5: o teclado numérico do celular não tem ':'; aceita 11:52, 11.52, 11,52, 11h52, 11 52 e 1152
+function _nrLerHora(t){
+  t = String(t||'').trim().toLowerCase().replace(/\s*h\s*$/,'');
+  let m = /^(\d{1,2})\s*[:.,h\- ]\s*(\d{1,2})$/.exec(t);
+  if(!m){ const d = /^(\d{3,4})$/.exec(t); if(d) m = [t, d[1].slice(0, -2), d[1].slice(-2)]; }
+  if(!m){ const s = /^(\d{1,2})$/.exec(t); if(s) m = [t, s[1], '0']; }
+  if(!m) return null;
+  const h = +m[1], mi = +m[2];
+  if(!(h >= 0 && h < 24 && mi >= 0 && mi < 60)) return null;
+  return `${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`;
+}
 function nrDigitado(soMostrar){
   const inp = document.getElementById('nr-dig-in'); const c = NR && NR.c; if(!c) return false;
   const t = inp.value.trim(); let v = null;
   if(c.tipo === 'num' || c.tipo === 'dist'){ const n = _nrNum(t); if(n != null){ const lo = c.tipo === 'dist' ? 0 : c.min, hi = c.tipo === 'dist' ? 200 : c.max; if(n >= lo && n <= hi) v = n; } }
   else if(c.tipo === 'dur' || c.tipo === 'hms'){ const s = _nrLerDur(t); if(s != null && s >= 0) v = s; }
-  else if(c.tipo === 'data'){ const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t); if(m){ const iso = `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; const dt = new Date(iso+'T12:00:00'); if(!isNaN(dt) && dt.getDate() === +m[1] && iso >= c.min && iso <= c.max) v = iso; } }
-  else if(c.tipo === 'hora'){ const m = /^(\d{1,2}):(\d{2})$/.exec(t); if(m && +m[1] < 24 && +m[2] < 60) v = `${m[1].padStart(2,'0')}:${m[2]}`; }
+  else if(c.tipo === 'data'){ const m = /^(\d{1,2})[\/.,\- ](\d{1,2})[\/.,\- ](\d{4})$/.exec(t) || /^(\d{2})(\d{2})(\d{4})$/.exec(t); if(m){ const iso = `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; const dt = new Date(iso+'T12:00:00'); if(!isNaN(dt) && dt.getDate() === +m[1] && iso >= c.min && iso <= c.max) v = iso; } }
+  else if(c.tipo === 'hora'){ v = _nrLerHora(t); }
   inp.classList.toggle('nr-ruim', !!t && v == null);
   if(v == null) return false;
   NR.val = v;

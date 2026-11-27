@@ -135,6 +135,22 @@ window.updateDeco = function(tab){
 };
 // o clima chega depois (internet) e a hora passa: confere de vez em quando, só redesenha se mudou
 setInterval(()=>{ try{ if(state && state.ui && (state.ui.tab||'home')==='home' && document.visibilityState==='visible'){ updateDeco('home'); climaChip(); } }catch(e){} }, 60000);
+// RC 5: o clima chega da internet segundos depois do Início aparecer. Antes a cena só era redesenhada
+// no ciclo de 1 minuto ou ao trocar de aba (o primeiro desenho ficava com o tempo errado). Agora, depois de
+// cada busca, o app confere a cada segundo por até 30 s e redesenha assim que os dados mudam.
+function _climaAssinatura(){ try{ const w = (typeof weatherData!=='undefined') ? weatherData : null; return w ? `${w.at||''}|${w.code}|${w.temp}` : ''; }catch(e){ return ''; } }
+let _climaVisto = _climaAssinatura();
+function _climaRedesenha(){
+  const a = _climaAssinatura(); if(a === _climaVisto) return false;   // só quando o clima de fato mudou
+  if(!a){ _climaVisto = a; return false; }                              // clima removido (ex.: plano Gratuito): o ciclo normal cuida
+  const mb = document.getElementById('modal-back'); if(mb && mb.classList.contains('on')) return false;   // janela aberta: espera fechar
+  _climaVisto = a;
+  try{ if(state && state.ui && (state.ui.tab||'home')==='home'){ updateDeco('home'); climaChip(); } }catch(e){}
+  return true;
+}
+function _climaVigia(){ _climaVisto = _climaAssinatura(); let n = 0; const t = setInterval(()=>{ n++; if(_climaRedesenha() || n >= 30) clearInterval(t); }, 1000); }
+if(typeof window.loadWeather === 'function') mtGancho('loadWeather', { depois(){ _climaVigia(); } });
+_climaVigia();
 
 // ---------- 2. Clima sem repetir ----------
 // A temperatura sai da frase e vira um selo discreto no topo (ao lado do METATREINO),

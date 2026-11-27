@@ -31,7 +31,7 @@ window.sonoRegistrar = function(dk){
     <p class="mt-muted" style="margin:2px 0 6px">Noite que terminou em ${dt.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit' })}. Preencha só o que quiser.</p>
     <div class="sono-lbl">Horário</div>
     <div class="sono-tri sono-modo"><button type="button" class="${modo==='hor'?'on':''}" onclick="_sonoModo('hor')">Dormi / acordei</button><button type="button" class="${modo==='h'?'on':''}" onclick="_sonoModo('h')">Só o total</button></div>
-    <div id="sono-hor" ${modo==='hor'?'':'hidden'} class="sono-campos"><label>Fui dormir<input class="input mono" type="time" id="sono-dor" value="${x.dor||''}" oninput="_sonoTotal()"></label><label>Acordei<input class="input mono" type="time" id="sono-aco" value="${x.aco||''}" oninput="_sonoTotal()"></label></div>
+    <div id="sono-hor" ${modo==='hor'?'':'hidden'} class="sono-campos"><label>Fui dormir<input class="input mono" type="time" aria-label="Fui dormir" id="sono-dor" value="${x.dor||''}" oninput="_sonoTotal()"></label><label>Acordei<input class="input mono" type="time" aria-label="Acordei" id="sono-aco" value="${x.aco||''}" oninput="_sonoTotal()"></label></div>
     <div id="sono-h" ${modo==='h'?'':'hidden'} class="sono-campos"><label>Horas<input class="input mono" type="number" min="0" max="16" inputmode="numeric" id="sono-hh" value="${hh}" placeholder="7" oninput="_sonoTotal()"></label><label>Minutos<input class="input mono" type="number" min="0" max="59" step="1" inputmode="numeric" id="sono-mm" value="${mm}" placeholder="30" oninput="_sonoTotal()"></label></div>
     <div class="sono-total" id="sono-total"></div>
     <div class="sono-lbl">Qualidade do sono</div>
@@ -291,30 +291,40 @@ function _awExtras(){
 }
 const _awNomeAtv = x=>x._t === 'musculacao' ? String(x.name||'Musculação') : ({ corrida:'Corrida', caminhada:'Caminhada', bike:'Bike' }[x._t] || 'Atividade');
 const _awDetAtv = x=>[x.duration ? fmtDur(x.duration) : '', x.distance ? `${mtFmtKm(x.distance)} km` : '', +x.rpe > 0 ? `esforço ${x.rpe}/10` : ''].filter(Boolean).join(' · ');
+// RC 5: volta o visual em anéis (o dos dias da semana repetia o quadro "Semana", logo abaixo).
+// Os números continuam os corrigidos no RC 4: treinos do PLANO (mtAdesao), extras à parte, séries da semana e
+// semanas seguidas na meta. O centro mostra o placar real (3/5 treinos), não mais a média dos três anéis.
+// Cada linha abre o seu detalhe (openAwDetalhe), como no RC 4.
+function _awMinutos(){
+  const ini = mtSemanaIni(Date.now()); const R = state.modules.run;
+  const min = Math.round(mtHist().filter(x=>x.at >= ini && x._t !== 'musculacao').reduce((t,x)=>t + (+x.duration||0), 0));
+  const plan = R && R.plan ? Math.round((R.plan.workouts||[]).reduce((t,w)=>t + (+w.duration||0), 0)) : 0;
+  return { min, plan };
+}
 window.renderQuickStats = function(){
   const el = $('home-quick'); if(!el) return;
   try{
-    const S = mtSemanaAtiv(); const DN = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
-    const pct = S.plan ? Math.min(100, Math.round(S.feitos/S.plan*100)) : 0;
-    const titSt = { feito:'feito', movido:'treino feito em outro dia', desc:'descanso escolhido', hoje:'hoje, a fazer', 'livre-hoje':'hoje, sem treino', faltou:'faltou', plan:'planejado', livre:'sem treino' };
-    const marca = { feito:'✓', movido:'✓', faltou:'–' };
-    const col = o=>`<button type="button" class="aw-d st-${o.st}${o.d===S.hoje?' hj':''}" onclick="event.stopPropagation();openAwDetalhe('dia',${o.d})" aria-label="${DN[o.d-1]}: ${titSt[o.st]}${o.f > 1 ? `, ${o.f} atividades` : ''}"><span class="aw-cap">${marca[o.st] ? `<i>${marca[o.st]}</i>` : ''}${o.f > 1 ? `<em>${o.f}</em>` : ''}</span><span class="aw-dn">${DN[o.d-1]}</span></button>`;
-    const kpi = (tipo, lbl, val, sub, p)=>`<button type="button" class="aw-k" onclick="event.stopPropagation();openAwDetalhe('${tipo}')"><small>${lbl}</small><b>${val}</b>${sub ? `<span>${sub}</span>` : ''}${p != null ? `<span class="aw-bar"><i style="width:${Math.min(100, Math.round(p*100))}%"></i></span>` : ''}</button>`;
+    const S = mtSemanaAtiv();
     const ativos = S.dias.filter(o=>o.f).length;
+    const pT = S.plan ? S.feitos/S.plan : (ativos ? 1 : 0);
+    const usaSeries = S.temLift && S.setsPlan > 0;
+    const M = usaSeries ? null : _awMinutos();
+    const n2 = usaSeries ? S.setsFeitas : M.min, m2 = usaSeries ? S.setsPlan : M.plan;
+    const pM = m2 ? n2/m2 : 0;
+    const pS = S.metaSem ? Math.min(1, S.semanas/4) : 0;
+    const pc = v=>Math.round(Math.min(1, v)*100);
+    const linha = (tipo, cor, lbl, val, sub, p)=>`<button type="button" class="act-row aw-row" onclick="event.stopPropagation();openAwDetalhe('${tipo}')"><div class="act-line"><div class="act-lbl"><i class="act-dot" style="background:${cor}"></i>${lbl}</div>${p != null ? `<span class="act-pct">${pc(p)}%</span>` : ''}</div><div class="act-val">${val}<small>${sub}</small></div>${p != null ? `<div class="act-bar"><i style="width:${pc(p)}%;background:${cor}"></i></div>` : ''}</button>`;
+    const centro = S.plan ? `<b>${S.feitos}<small>/${S.plan}</small></b><span>treinos</span>` : `<b>${ativos}</b><span>${ativos === 1 ? 'dia ativo' : 'dias ativos'}</span>`;
     el.innerHTML = `
       <div class="act-head"><h3>Atividade da semana</h3><span>${S.plan ? `${S.feitos} de ${S.plan} treinos` : `${ativos} ${ativos===1?'dia ativo':'dias ativos'}`}</span></div>
-      <div class="aw">
-        <button type="button" class="aw-top" onclick="event.stopPropagation();openAwDetalhe('${S.plan ? 'plano' : 'extras'}')" aria-label="Ver os treinos da semana">
-          <span class="aw-placar"><b>${S.plan ? S.feitos : S.dias.reduce((t,o)=>t+o.f,0)}</b><span>${S.plan ? `/${S.plan} treinos do plano` : ' atividades'}</span></span>
-          ${S.plan ? `<span class="aw-pct">${pct}%</span>` : ''}
-          ${S.plan ? `<span class="aw-meter" role="progressbar" aria-valuemin="0" aria-valuemax="${S.plan}" aria-valuenow="${S.feitos}"><i style="width:${pct}%"></i></span>` : ''}
-        </button>
-        <div class="aw-dias">${S.dias.map(col).join('')}</div>
-        <div class="aw-leg"><span><i class="lg-f"></i>feito</span><span><i class="lg-m"></i>outro dia</span><span><i class="lg-p"></i>planejado</span><span><i class="lg-x"></i>faltou</span><span><i class="lg-d"></i>descanso</span></div>
-        <div class="aw-ks">
-          ${S.temLift && S.setsPlan ? kpi('series', 'Séries', `${S.setsFeitas}<small>/${S.setsPlan}</small>`, 'na semana', S.setsFeitas/S.setsPlan) : ''}
-          ${S.plan ? kpi('semanas', 'Semanas na meta', `${S.semanas}`, `seguidas · ${S.metaSem}+ treinos`, null) : ''}
-          ${S.extras ? kpi('extras', 'Extras', `${S.extras}`, S.extras===1 ? 'fora do plano' : 'fora do plano', null) : ''}
+      <div class="act-card aw-anel">
+        <button type="button" class="act-rings" onclick="event.stopPropagation();openAwDetalhe('${S.plan ? 'plano' : 'extras'}')" aria-label="Ver os treinos da semana"><svg viewBox="0 0 120 120">${_anel(52, pT, 'var(--primary)')}${m2 ? _anel(40, pM, 'var(--accent)') : ''}${S.metaSem ? _anel(28, pS, 'var(--prep)') : ''}</svg>
+          <div class="act-center">${centro}</div></button>
+        <div class="act-legend">
+          ${S.plan ? linha('plano', 'var(--primary)', 'Treinos do plano', S.feitos, ` / ${S.plan}`, pT) : linha('extras', 'var(--primary)', 'Atividades', S.dias.reduce((t,o)=>t+o.f,0), ' na semana', null)}
+          ${m2 ? (usaSeries ? linha('series', 'var(--accent)', 'Séries', n2, ` / ${m2}`, pM) : linha('plano', 'var(--accent)', 'Minutos', n2, ` / ${m2} min`, pM)) : ''}
+          ${S.metaSem ? linha('semanas', 'var(--prep)', 'Semanas na meta', S.semanas, ` ${S.semanas === 1 ? 'semana' : 'semanas'} · meta 4`, pS) : ''}
+          ${S.extras && S.plan ? `<button type="button" class="aw-extra" onclick="event.stopPropagation();openAwDetalhe('extras')">+ ${S.extras} ${S.extras === 1 ? 'atividade' : 'atividades'} fora do plano ›</button>` : ''}
         </div>
       </div>`;
     el.onclick = null;
@@ -397,44 +407,20 @@ s.textContent = `
 .nutri-agua .na-link{border:0;background:none;color:var(--text-dim);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:6px 2px}
 .nutri-agua .na-link:disabled{opacity:.4;cursor:default}
 .nutri-agua .na-link:last-child{margin-left:auto}
-/* Atividade da semana (RC 4) */
-.aw{padding:14px 14px 12px;border-radius:var(--radius-card,18px);border:1px solid var(--border);background:var(--surface)}
-.aw button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
-.aw-top{display:grid!important;grid-template-columns:1fr auto;align-items:end;gap:6px 10px;width:100%}
-.aw-placar b{font-size:36px;line-height:1;font-weight:800;letter-spacing:-1px}.aw-placar span{font-size:13px;color:var(--text-dim);font-weight:600;margin-left:3px}
-.aw-pct{font-size:13px;font-weight:800;color:var(--primary-2);padding:4px 10px;border-radius:99px;background:var(--tint-primary)}
-.aw-meter{grid-column:1/-1;display:block;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin:6px 0 12px}.aw-meter i{display:block;height:100%;border-radius:inherit;background:var(--primary);transition:width .5s var(--mt-ease,ease)}
-.aw-dias{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end}
-.aw-d{display:flex!important;flex-direction:column;align-items:center;gap:5px;min-width:0;min-height:44px}
-.aw-dn{font-size:11px;color:var(--text-dim);font-weight:600}
-.aw-d.hj .aw-dn{color:var(--primary-2);font-weight:800}
-.aw-cap{position:relative;display:flex;align-items:center;justify-content:center;width:100%;max-width:34px;height:40px;border-radius:10px;background:var(--surface-2);box-sizing:border-box}
-.aw-cap i{font-style:normal;font-size:15px;font-weight:800;line-height:1}
-.aw-cap em{position:absolute;top:-6px;right:-4px;min-width:16px;height:16px;padding:0 3px;border-radius:99px;font-style:normal;font-size:10px;font-weight:800;line-height:16px;text-align:center;background:var(--text);color:var(--bg)}
-.aw-d.st-feito .aw-cap{background:var(--primary);color:var(--on-primary)}
-.aw-d.st-movido .aw-cap{background:transparent;border:2px solid var(--primary);color:var(--primary-2)}
-.aw-d.st-plan .aw-cap{background:transparent;border:1.5px dashed var(--text-mute)}
-.aw-d.st-hoje .aw-cap{background:transparent;border:2px solid var(--primary);box-shadow:0 0 0 3px rgba(var(--primary-rgb),.16)}
-.aw-d.st-faltou .aw-cap{background:transparent;border:1.5px solid var(--border);color:var(--text-mute)}
-.aw-d.st-desc .aw-cap{background:var(--surface-2);opacity:.75}
-.aw-d.st-livre .aw-cap,.aw-d.st-livre-hoje .aw-cap{background:var(--surface-2);opacity:.45}
-.aw-d.st-livre-hoje .aw-cap{opacity:.7;box-shadow:inset 0 0 0 1.5px var(--text-mute)}
-.aw-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin:10px 0 2px;font-size:11px;color:var(--text-mute)}
-.aw-leg span{display:flex;align-items:center;gap:5px}.aw-leg i{width:10px;height:10px;border-radius:3px;display:block;box-sizing:border-box}
-.aw-leg .lg-f{background:var(--primary)}.aw-leg .lg-m{border:2px solid var(--primary)}.aw-leg .lg-p{border:1.5px dashed var(--text-mute)}.aw-leg .lg-x{border:1.5px solid var(--text-mute)}.aw-leg .lg-d{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
-.aw-ks{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:12px}
-.aw-k{display:block!important;padding:9px 10px!important;border-radius:12px;background:var(--bg-2,var(--surface-2))!important;min-width:0}
-.aw-k small{display:block;font-size:10.5px;color:var(--text-mute);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
-.aw-k b{display:block;font-size:19px;font-weight:800;margin-top:2px}.aw-k b small{display:inline;font-size:12px;text-transform:none;letter-spacing:0}
-.aw-k span{display:block;font-size:11px;color:var(--text-dim);margin-top:1px;line-height:1.3}
-.aw-bar{height:4px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:6px}.aw-bar i{display:block;height:100%;background:var(--primary)}
-.aw-d:focus-visible,.aw-k:focus-visible,.aw-top:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:12px}
+/* Atividade da semana (RC 5: anéis; cada linha abre o seu detalhe) */
+.act-card.aw-anel::after{content:none}
+.aw-anel button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.aw-anel .act-legend{display:flex;flex-direction:column;gap:10px;min-width:0;flex:1}
+.aw-anel .aw-row{display:block;width:100%;border-radius:10px}
+.aw-anel .aw-row:active,.aw-anel .act-rings:active{transform:scale(.985)}
+.act-center b small{font-size:15px;color:var(--text-dim);font-weight:400}
+.aw-extra{font-size:12px!important;font-weight:700!important;color:var(--primary-2)!important;margin-top:-2px}
+.aw-anel .act-rings:focus-visible,.aw-anel .aw-row:focus-visible,.aw-extra:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:12px}
+@media (max-width:370px){.aw-anel{gap:12px;padding:14px}.aw-anel .act-rings{flex-basis:108px;width:108px;height:108px}}
 .aw-lista{display:flex;flex-direction:column;gap:2px;margin-top:6px}
 .aw-li{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border);font-size:13.5px}.aw-li b{font-weight:700;min-width:0}.aw-li span{color:var(--text-dim);text-align:right;flex:none;max-width:55%}
 .aw-li span small{color:var(--text-mute);font-size:11.5px}
 .aw-li.st-faltou span{color:var(--text-mute)}.aw-li.st-feito span,.aw-li.st-movido span{color:var(--primary-2)}
-@media (max-width:370px){.aw-cap{height:36px}.aw-dias{gap:4px}.aw-leg{gap:3px 9px}}
-@media (prefers-reduced-motion:reduce){.aw-meter i{transition:none}}
 `; document.head.appendChild(s); })();
 
 Object.assign(window, { sonoAnalise, sonoAnaliseHTML, mtSemanaAtiv, _sonoTotal, _sonoMarca5, _sonoTile, _awPlanoSemana, _awExtras });

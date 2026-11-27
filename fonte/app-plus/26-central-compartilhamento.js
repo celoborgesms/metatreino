@@ -240,7 +240,6 @@ async function mtsDesenhar(cv, d, o){
     const g = x.createLinearGradient(0,0,W,H); g.addColorStop(0,P.bg1); g.addColorStop(1,P.bg2); x.fillStyle = g; x.fillRect(0,0,W,H);
     const rg = x.createRadialGradient(W*0.85, H*0.12, 0, W*0.85, H*0.12, W*0.9); rg.addColorStop(0, _mtsRgba(P.acc, o.estilo==='claro'?.14:.22)); rg.addColorStop(1, _mtsRgba(P.acc, 0));
     x.fillStyle = rg; x.fillRect(0,0,W,H);
-    _mtsPadrao(x, W, H, d.tipo, P.acc);
   }
   // cabeçalho: marca + data
   const ms = W*0.075, my = pad*0.9;
@@ -370,9 +369,24 @@ async function mtsDesenhar(cv, d, o){
   else y = rodapeY - W*0.06 - padBaixo - alturaBloco;
   // RC 4: com foto, o aluno pode pôr os dados no alto (posições prontas; nunca fora da imagem)
   if(foto && o.pos === 'topo' && _mtsPosLivre(d)) y = Math.min(y, my + ms + W*0.1);
+  // RC 5: no Quadrado (e em qualquer formato com muito conteúdo) o bloco subia por cima da logo e do cabeçalho.
+  // Agora ele nunca passa do cabeçalho: se não couber, é reduzido por inteiro (mesma proporção), sem cortar linhas.
+  const altMedalha = medRow.length ? rowTam + (disp==='compacto' ? W*0.08 : W*0.03) : medImg ? medTam + W*0.03 : 0;
+  const topoMin = my + ms + W*0.06 + altMedalha + (disp==='compacto' ? W*0.045 : 0);
+  const baseMax = rodapeY - W*0.06 - padBaixo;
+  let kBloco = 1;
+  if(y < topoMin){ const caber = baseMax - topoMin; if(alturaBloco > caber && caber > 0) kBloco = Math.max(0.55, caber/alturaBloco); y = topoMin; }
+  const altBloco = alturaBloco*kBloco;
+  // desenho de fundo (sem foto): só no espaço livre acima do conteúdo; se não houver espaço, fica de fora em vez de passar por trás do texto
+  if(!foto){
+    const topoConteudo = y - altMedalha - (disp==='compacto' ? W*0.045 : 0) - W*0.03;
+    const fundoPadrao = { evolucao:H*0.30, semana:H*0.30, recorde:H*0.30, musculacao:H*0.17 + W*0.09, bike:H*0.16 + W*0.17 }[d.tipo];
+    if(fundoPadrao == null) _mtsPadrao(x, W, H, d.tipo, P.acc);
+    else if(fundoPadrao <= topoConteudo){ x.save(); x.beginPath(); x.rect(0, 0, W, topoConteudo); x.clip(); _mtsPadrao(x, W, H, d.tipo, P.acc); x.restore(); }
+  }
   // faixa (compacto): painel atrás do bloco
   if(disp === 'compacto'){
-    x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, faixaX, y - W*0.045, faixaW, alturaBloco + W*0.045 + padBaixo, W*0.04); x.fill();
+    x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, faixaX, y - W*0.045, faixaW, altBloco + W*0.045 + padBaixo, W*0.04); x.fill();
   }
   if(medRow.length){
     const tot = medRow.length*rowTam + rowGap*(medRow.length-1);
@@ -401,7 +415,8 @@ async function mtsDesenhar(cv, d, o){
     x.save(); x.globalAlpha = 1; x.fillStyle = '#000'; x.font = `${W*0.16}px system-ui, "Apple Color Emoji", "Noto Color Emoji", sans-serif`; x.textAlign = disp==='grade' ? 'center' : 'left';
     x.fillText(d.emoji, disp==='grade' ? W/2 : pad, y - (disp==='compacto' ? W*0.08 : W*0.04)); x.restore();
   }
-  desenhaBloco(x, y);
+  if(kBloco < 1){ const ax0 = disp==='grade' ? W/2 : pad; x.save(); x.translate(ax0, y); x.scale(kBloco, kBloco); x.translate(-ax0, 0); desenhaBloco(x, 0); x.restore(); }
+  else desenhaBloco(x, y);
   // assinatura
   x.textAlign = 'right'; x.font = `600 ${W*0.026}px ${FF}`; x.fillStyle = P.dim; x.fillText('metatreino.app', W - pad, rodapeY);
   return cv;
