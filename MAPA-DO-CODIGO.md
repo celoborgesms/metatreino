@@ -117,7 +117,37 @@ Entram em ordem alfabética. **A ordem importa**: uma parte usa o que as anterio
 | `78-inicio-enxuto.js` | RC 2: `mtInicioPadraoNovo()` (só ao concluir o cadastro, gancho `saveQuiz`): conta nova sem histórico começa sem Água, Frase e Fase do plano; modo Gratuito "Padrão" (`state.inicioBasico = 'padrao'`). |
 | `79-rc3-contas-estabilidade.js` | RC 3 (Etapa 1): isolamento de contas no aparelho (`mt_conta_local`, `metatreino_theme_uid`, `mtLimpaLocalPessoal`, `mtContaLocalSaiu` chamado pelo `doLogout`; o tema da conta sempre vale); esforço × cansaço (`mtRelatosCansaco`, `mtNemAPreguica`; relato = `state.relatosCansaco` gravado pelo `maTired`, "acordei cansado" no sono ou "cansado" escolhido no registro antigo sem rpe); correção única (`mtCorrecaoRC3`: refaz recordes com `mtPrRecalcularTudo` a cada entrada e retira uma vez `first_pr`/`pr_5`/`pr_20`/`rain_check` que não se sustentam → `state.conqRevogadas`, respeitado pelo `mesclaEstado`); conquistas em dupla conferidas quando o grupo publica horários novos (`mtDuplaRecheca`, gancho em `_famAplica`). |
 | `80-rc3-calculos-registro.js` | RC 3 (Etapa 2): **motor único do volume** `mtVolumeEntradas` / `mtVolumeTreino` (carga registrada × reps; sem dobrar halter; peso do corpo fora; carga extra em `kgExtra`; tempo fora); cards (`mtsDeHistorico` musculação = séries concluídas; `mtsDeSemana` com `periodo` e `lista` por dia — desenhados em `mtsDesenhar`, parte 26); registro de atividade (atalho de importar em `openRunLog`; `#home-registrar` só sem plano de corrida; nada de importar na musculação); cronômetro de exercício por tempo (`MT_CRON`, `mtCronIniciar/Pausar/Retomar/Concluir/Descartar`; `mt_cron_ex` detecta interrupção); carga extra (`state.prefs.ocultarCargaExtra`, `mtCargaExtraOcultar`, linha `#pf-cargaextra-row`); PDF série por série (`mtPdfSessoesSeries`; coluna de tabela com `quebra:true`); CSS das conquistas. |
-| `81-rc3-sono-agua-semana.js` | RC 3 (Etapa 3): sono em 5 níveis (`q5`, `d5`; `q`/`d` de 1–3 continuam derivados para o resto do app), horários com total exato (`sonoHorasExatas`), `sonoAnalise`/`sonoAnaliseHTML` (médias da semana e do mês, regularidade, sono × treinos), média de 7 dias no `sonoGrafico`; Início: atalho `.met-sono` no lugar da Água (bloco `sono` em `INICIO_BLOCOS`; `agua` saiu); Alimentação: `#nutri-agua`; Atividade da semana nova (`mtSemanaAtiv`; `renderQuickStats` e `openAtividadeDetalhes` substituídos). |
+| `81-rc3-sono-agua-semana.js` | RC 3 (Etapa 3): sono em 5 níveis (`q5`, `d5`; `q`/`d` de 1–3 continuam derivados para o resto do app), horários com total exato (`sonoHorasExatas`), `sonoAnalise`/`sonoAnaliseHTML` (médias da semana e do mês, regularidade, sono × treinos), média de 7 dias no `sonoGrafico`; Início: atalho `.met-sono` no lugar da Água (bloco `sono` em `INICIO_BLOCOS`; `agua` saiu); Alimentação: `#nutri-agua`; Atividade da semana nova (`mtSemanaAtiv`; `renderQuickStats` e `openAtividadeDetalhes` substituídos). RC 4: formulário único do sono (minutos inteiros, `_sonoLeTotal`), `sonoAnalise` com sono × musculação/corrida/caminhada/bike, paleta de 5 cores distintas, `renderQuickStats` com um detalhe por parte (`openAwDetalhe('plano'|'dia'|'series'|'semanas'|'extras')`). |
+| `82-rc4-sessoes-hoje-treinos.js` | RC 4 (Etapa 1): migração única das **sessões** (`mtSessaoMigrar`, chamada no `ensureStateShape`); linha **"Hoje"** com as duas modalidades abaixo do seletor (`mtHojeModalidade`, `mtHojeDuoDesenha`); **volta à aba Treinos** (`mtSessaoPadrao` no `goTab('sessions')` vindo de outra aba: treino em andamento → treino de hoje → próximo da semana; a escolha feita na hora é respeitada). |
+| `83-rc4-desafios-inicio.js` | RC 4 (Etapa 2): **aba Desafios** reorganizada (`mtDesafiosOrganiza`, último gancho do `renderChallenges`: move os blocos das outras partes para as seções Desafio atual, Em grupo, Conquistas, Histórico e Em breve); desafio do mês no Início em uma linha (gancho do `renderMonthlyCard`; os elementos antigos ficam escondidos porque outras partes os atualizam); **indicadores do Início** com regra única `mtIndicadoresAjusta` (as cópias das partes 16 e 28 saíram); CSS do aviso de conquista, das dicas de clima recolhidas e das metas do mês. |
+
+### RC 4 — onde ficou cada regra (para não duplicar)
+- **Sono:**
+  - a conta em minutos fica só na parte 76 (`sonoMinutosDe`, `sonoMinDe`, `sonoFmtMin`);
+  - o formulário e a gravação (`sonoRegistrar`, `sonoRegSalva`, `_sonoModo`, `sonoRapido`) ficam só na parte 81;
+  - formato da noite: `{ min, h, dor, aco, q, d, q5, d5 }`. `min` é a verdade; `h` existe só por compatibilidade.
+- **Tempo h:m:s:**
+  - funções `mtTempoHmsHtml` / `mtTempoHmsLer` / `mtTempoHmsSync`, no app.js;
+  - usadas no registro avulso (`act-*`) e na edição do histórico (`he-*`);
+  - o campo oculto antigo (`act-min`, `he-dur`) continua recebendo "h:mm:ss", para as validações que já o liam.
+- **Sessões de musculação:**
+  - `sid` no histórico e em cada entrada de séries (`state.progress[ex][i].sid`);
+  - entrada sem `sid` = treino em andamento hoje;
+  - funções no app.js: `mtSidNovo`, `mtEntradaAbertaHoje`, `mtTemSeriesAbertasHoje`, `mtEntradasDaSessao`, `mtSessaoMigrar`;
+  - `mtEntradasDoTreino` (parte 80) usa `mtEntradasDaSessao`.
+- **Adesão ao plano:** `mtAdesao` (parte 05) conta os dias com plano ativo (`planStartTs`), sem férias, e devolve `inicio` e `diasComPlano`.
+- **Conquistas ao registrar:** uma implementação só, `_cqCelTenta` → `mtAvisoConquista` (parte 48). A sobrescrita da parte 51 saiu.
+- **Metas do mês:** `_fatorInicioMes` e `mkDesafio(base, nível, fator)`, no app.js. As metas ficam proporcionais no mês em que o plano começou.
+- **Ícones das conquistas:**
+  - `TROPHY_ICO`/`TROPHY_GLYPH` na parte 01, com os desenhos novos `batt`, `calcheck`, `shieldheart` e `calfds`;
+  - os de "juntos" na parte 77 e os de calistenia na 65;
+  - o rótulo longo é ajustado no `medalSvg` da parte 22.
+- **Compartilhar** (parte 26):
+  - logo do painel (`_mtsLogo` / `_mtsLogoSrc`), a mesma do mural;
+  - `MTS.logo` ('app' | 'm');
+  - `MTS.pos` ('baixo' | 'topo'), só com foto e sem medalha ou percurso;
+  - `MTS.vol`: volume em kg, opcional.
+- **Testes:** `testes/rc4.py` cobre as Etapas 1 e 2. Uso: `python3 testes/rc4.py URL [1,2]`.
 
 Beta 56 também troca o azul fixo `#7dd3fc` por `var(--info-soft)` no núcleo (3 lugares) e torna `#sessions-chips` uma grade (parte 58).
 

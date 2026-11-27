@@ -1,5 +1,5 @@
 // =====================================================================
-// MetaTreino 2027 RC 3 — app-plus.js
+// MetaTreino 2027 RC 4 — app-plus.js
 // Camada de evolução carregada DEPOIS do app.js. Não recria nada que já funciona:
 // estende, corrige e acrescenta. Todas as funções do app.js continuam valendo.
 //
@@ -8,7 +8,7 @@
 // =====================================================================
 'use strict';
 
-const MTP = { versao: '2027-rc.3' };
+const MTP = { versao: '2027-rc.4' };
 
 // ---------- GANCHOS ----------
 // Jeito único de acrescentar comportamento às funções de tela do app.js, sem
@@ -114,7 +114,14 @@ const TROPHY_GLYPH = {
 "medal": "<circle cx=\"12\" cy=\"14.5\" r=\"5.5\"/><path d=\"M8.5 3.5l3.5 5.5 3.5-5.5M12 12l.9 1.8 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2-1.4-1.4 2-.3z\"/>",
 "hundred": "<text x=\"12\" y=\"15.4\" class=\"tg-t\" font-size=\"10\">100</text><path d=\"M4 18.5h16\"/>"
 };
-const TROPHY_ICO = {"comeback":["uturn"],"monday":["calseg"],"early_bird":["sunrise"],"night_owl":["owl"],"weekend":["sofa"],"rain_check":["rain"],"consistent":["steps"],"century":["hundred"],"humble":["lotus"],"marathon_time":["hourglass"],"turbo":["bolt","15′"],"capicua":["digital"],"halloween":["pumpkin"],"newyear":["fireworks"],"bday_active":["cake"],"first_day":["cal1"],"double":["double"],"friday13":["clover"],"christmas":["tree"],"versatile":["juggle"],"first_workout":["star","1º"],"week_goal":["target"],"streak_3":["flame","3"],"streak_7":["flame","7"],"streak_14":["flame","14"],"streak_30":["flame","30"],"lift_10":["dumbbell","10"],"lift_25":["dumbbell","25"],"lift_50":["dumbbell","50"],"lift_100":["crown","100"],"first_pr":["prup","PR"],"pr_5":["prup","5"],"pr_20":["prup","20"],"run_1":["shoe","1º"],"run_10":["shoe","10"],"run_25":["shoe","25"],"run_50":["shoe","50"],"run_km_10":["road","10"],"run_km_50":["road","50"],"run_km_100":["road","100"],"run_km_500":["road","500"],"run_5k_run":["flag","5K"],"run_10k_run":["flag","10K"],"run_21k_run":["flag","21K"],"run_42k_run":["crown","42K"],"run_pr_distance":["ruler"],"run_pr_pace":["stopwatch"],"walk_1":["feet","1º"],"walk_10":["feet","10"],"walk_25":["feet","25"],"walk_km_10":["road","10"],"walk_km_50":["road","50"],"walk_km_100":["road","100"],"walk_3k":["flag","3K"],"walk_5k":["flag","5K"],"bike_1":["bike","1º"],"bike_10":["bike","10"],"bike_25":["mountain","25"],"bike_km_50":["road","50"],"bike_km_100":["road","100"],"bike_km_500":["road","500"],"bike_20k":["flag","20K"],"bike_50k":["flag","50K"],"weight_down_1":["scaledn","1"],"weight_down_3":["scaledn","3"],"weight_down_5":["scaledn","5"],"weight_down_10":["scaledn","10"],"weight_up_2":["scaleup","2"],"weight_up_5":["scaleup","5"],"weight_up_10":["scaleup","10"]};
+// RC 4: desenhos que faltavam para os ícones representarem a própria conquista
+Object.assign(TROPHY_GLYPH, {
+"batt": "<rect x=\"3.5\" y=\"7\" width=\"15\" height=\"10\" rx=\"2\"/><path d=\"M20.5 10.5v3\"/><path d=\"M11.6 8.6l-2.4 3.7h3.5l-2.4 3.7\"/>",
+"calcheck": "<rect x=\"4\" y=\"5.5\" width=\"16\" height=\"14.5\" rx=\"2\"/><path d=\"M4 10h16M8.5 3.5v4M15.5 3.5v4\"/><path d=\"M8.6 14.8l2.3 2.3 4.6-4.6\"/>",
+"shieldheart": "<path d=\"M12 3.5l7 2.6v5.2c0 4.4-3 7.6-7 9.2-4-1.6-7-4.8-7-9.2V6.1z\"/><path d=\"M12 15.4s-3.1-1.8-3.1-4a1.65 1.65 0 0 1 3.1-.8 1.65 1.65 0 0 1 3.1.8c0 2.2-3.1 4-3.1 4z\"/>",
+"calfds": "<rect x=\"4\" y=\"5.5\" width=\"16\" height=\"14.5\" rx=\"2\"/><path d=\"M4 10h16M8.5 3.5v4M15.5 3.5v4\"/><text x=\"12\" y=\"17.6\" class=\"tg-t\" font-size=\"5.6\">S·D</text>"
+});
+const TROPHY_ICO = {"comeback":["uturn"],"monday":["calseg"],"early_bird":["sunrise"],"night_owl":["owl"],"weekend":["calfds"],"rain_check":["batt"],"consistent":["calcheck","12"],"century":["hundred"],"humble":["shieldheart"],"marathon_time":["hourglass"],"turbo":["bolt","15′"],"capicua":["digital"],"halloween":["pumpkin"],"newyear":["fireworks"],"bday_active":["cake"],"first_day":["cal1"],"double":["double"],"friday13":["clover"],"christmas":["tree"],"versatile":["juggle"],"first_workout":["star","1º"],"week_goal":["target"],"streak_3":["flame","3"],"streak_7":["flame","7"],"streak_14":["flame","14"],"streak_30":["flame","30"],"lift_10":["dumbbell","10"],"lift_25":["dumbbell","25"],"lift_50":["dumbbell","50"],"lift_100":["dumbbell","100"],"first_pr":["prup","PR"],"pr_5":["prup","5"],"pr_20":["prup","20"],"run_1":["shoe","1º"],"run_10":["shoe","10"],"run_25":["shoe","25"],"run_50":["shoe","50"],"run_km_10":["road","10km"],"run_km_50":["road","50km"],"run_km_100":["road","100km"],"run_km_500":["road","500km"],"run_5k_run":["flag","5K"],"run_10k_run":["flag","10K"],"run_21k_run":["flag","21K"],"run_42k_run":["flag","42K"],"run_pr_distance":["ruler"],"run_pr_pace":["stopwatch"],"walk_1":["feet","1º"],"walk_10":["feet","10"],"walk_25":["feet","25"],"walk_km_10":["feet","10km"],"walk_km_50":["feet","50km"],"walk_km_100":["feet","100km"],"walk_3k":["flag","3K"],"walk_5k":["flag","5K"],"bike_1":["bike","1º"],"bike_10":["bike","10"],"bike_25":["bike","25"],"bike_km_50":["bike","50km"],"bike_km_100":["bike","100km"],"bike_km_500":["bike","500km"],"bike_20k":["flag","20K"],"bike_50k":["flag","50K"],"weight_down_1":["scaledn","1"],"weight_down_3":["scaledn","3"],"weight_down_5":["scaledn","5"],"weight_down_10":["scaledn","10"],"weight_up_2":["scaleup","2"],"weight_up_5":["scaleup","5"],"weight_up_10":["scaleup","10"]};
 
 // ---------- 1. ÍCONES ----------
 const GRUPO_MUSCULO = { 'Peito':'peito', 'Costas':'costas', 'Ombro':'ombros', 'Ombros':'ombros', 'Bíceps':'biceps', 'Tríceps':'triceps', 'Pernas':'quadriceps', 'Quadríceps':'quadriceps', 'Posteriores':'posteriores', 'Glúteos':'gluteos', 'Panturrilha':'panturrilhas', 'Panturrilhas':'panturrilhas', 'Trapézio':'trapezio', 'Core':'abdomen', 'Abdômen':'abdomen', 'Antebraço':'antebracos', 'Antebraços':'antebracos' };
@@ -915,10 +922,30 @@ function mtAdesao(a, b){
   const feitos = new Set(); let extras = 0;
   h.forEach(x=>{ if(x.adicional){ extras++; return; }   // RC 3: treino adicional é atividade real, mas não é sessão do plano
     const m = modDe(x); const k = m + '|' + mtDia0(x.at); if(m && !feitos.has(k)) feitos.add(k); else if(!m) extras++; });
-  const porSem = ['lift','run'].reduce((t,m)=>t + (planos[m] ? (state.modules[m].plan.workouts||[]).filter(w=>!(w.motor && w.motor.tipo==='prova')).length : 0), 0);
-  const semanas = Math.max(1/7, (Math.min(b, Date.now()+1) - a)/(7*DIA_MS));
-  const planejados = Math.max(porSem ? 1 : 0, Math.round(porSem*Math.min(semanas, 1e6)));
-  return { dias: new Set(h.map(x=>mtDia0(x.at))).size, concluidos: Math.min(feitos.size, planejados || feitos.size), feitos: feitos.size, planejados, extras, porSem };
+  const wsDe = m=>planos[m] ? (state.modules[m].plan.workouts||[]).filter(w=>!(w.motor && w.motor.tipo==='prova')) : [];
+  const porSem = ['lift','run'].reduce((t,m)=>t + wsDe(m).length, 0);
+  // RC 4: "planejados" conta só os dias em que o aluno TINHA o plano: do início de cada plano (planStartTs) até hoje,
+  // dia a dia, pelos dias da semana do plano. Antes multiplicava treinos/semana × semanas do intervalo inteiro, e
+  // quem começou no fim do mês era comparado com um mês inteiro de treinos que nem existiam para ele.
+  // Hoje só conta se o treino de hoje já foi feito (o dia ainda não terminou). Dias de férias não contam.
+  const hoje0 = mtDia0(); const fim = Math.min(b, Date.now()+1);
+  let planejados = 0, inicio = null, diasComPlano = 0;
+  ['lift','run'].forEach(m=>{
+    const ws = wsDe(m); if(!ws.length) return;
+    const st = (typeof planStartTs==='function' && planStartTs(state.modules[m])) || 0;
+    const d0 = Math.max(mtDia0(a), st ? mtDia0(st) : mtDia0(a), mtDia0(Date.now() - 800*DIA_MS)); if(inicio == null || d0 < inicio) inicio = d0;   // no máximo ~2 anos para trás
+    const porDia = {}; ws.forEach(w=>{ const d = +w.dayIdx; if(d) porDia[d] = (porDia[d]||0) + 1; });
+    let dias = 0;
+    for(let t = d0; t < fim; t += DIA_MS){
+      const t0 = mtDia0(t + 3*3600000); if(t0 > hoje0) break; dias++;   // +3 h: atravessa a troca de horário sem pular dia
+      try{ if(typeof isVacationDay === 'function' && isVacationDay(new Date(t0 + 12*3600000))) continue; }catch(e){}
+      const n = porDia[new Date(t0).getDay() || 7] || 0; if(!n) continue;
+      if(t0 === hoje0 && !feitos.has(m + '|' + t0)) continue;
+      planejados += n;
+    }
+    diasComPlano = Math.max(diasComPlano, dias);
+  });
+  return { dias: new Set(h.map(x=>mtDia0(x.at))).size, concluidos: Math.min(feitos.size, planejados || feitos.size), feitos: feitos.size, planejados, extras, porSem, inicio, diasComPlano };
 }
 function contextoAluno(){
   const h = mtHist();
@@ -1005,7 +1032,7 @@ function renderHomeSmart(){
     a = mtCargasTemDados() ? `<button class="btn btn-ghost" onclick="mtPergunta('cargas')">Ver minhas cargas</button>` : '';
   } else if(c.semDias >= Math.min(c.planejados, c.diaSemana) || c.streak >= 3){
     k = 'Consistência'; t = c.streak>=3 ? `${c.streak} dias seguidos ativos` : c.semPlanejados ? `Semana em dia: ${c.semTreinos} de ${c.semPlanejados} treinos do plano` : `Semana em dia: ${c.semDias} de ${c.planejados}`;
-    p = `Disciplina é isso: aparecer mesmo sem vontade.${prox&&!c.hojeFeito?` Seu próximo treino é ${prox}.`:''}`;
+    p = `Constância é o que sustenta a evolução.${prox&&!c.hojeFeito?` Seu próximo treino é ${prox}.`:''}`;   // RC 4: sem presumir falta de vontade
     a = `<button class="btn btn-ghost" onclick="mtPergunta('consistencia')">Ver minha consistência</button>`;
   } else {
     k = 'Para você hoje'; t = c.semDias ? `${c.semDias} ${c.semDias===1?'dia ativo':'dias ativos'} nesta semana` : 'Semana nova, página em branco';
@@ -1158,22 +1185,36 @@ function analiseMes(){
   const A = _resumoPeriodo(ini, Date.now()+1), B = _resumoPeriodo(iniAnt, Math.min(ini, iniAnt+decorrido));
   if(!A.sessoes && !B.sessoes) return 'Ainda não tenho treinos suficientes neste mês ou no anterior para comparar. Registre alguns treinos e me pergunte de novo. 📆';
   const mes = now.toLocaleDateString('pt-BR',{month:'long'});
-  const planejados = contextoAluno().planejados;
-  const semanas = Math.max(1, (Date.now()-ini)/(7*DIA_MS));
   const AD = mtAdesao(ini, Date.now()+1);
-  // adesão = treinos do PLANO concluídos ÷ planejados até hoje (caminhada/bike avulsas não contam como treino do plano)
-  const adesao = AD.porSem ? Math.min(100, Math.round(AD.concluidos/Math.max(1, AD.planejados)*100)) : Math.min(100, Math.round(A.dias/(planejados*semanas)*100));
-  let t = `<b>Análise de ${mes} até hoje</b> (comparando com o mesmo período do mês passado):<br><br>`;
-  t += `• Dias ativos: <b>${A.dias}</b>${_seta(A.dias,B.dias)}<br>• Sessões: <b>${A.sessoes}</b>${_seta(A.sessoes,B.sessoes)}<br>• Tempo de treino: <b>${Math.floor(A.min/60)}h${String(A.min%60).padStart(2,'0')}</b>${_seta(A.min,B.min,'min')}<br>`;
-  if(state.modules.lift) t += `• Musculação: <b>${A.lift}</b> treinos${_seta(A.lift,B.lift)} · recordes: <b>${A.prs}</b><br>`;
-  if(A.kmRun||B.kmRun) t += `• Corrida: <b>${mtFmtKm(A.kmRun)} km</b>${_seta(A.kmRun,B.kmRun,'km')}<br>`;
-  if(A.kmWalk||B.kmWalk) t += `• Caminhada: <b>${mtFmtKm(A.kmWalk)} km</b>${_seta(A.kmWalk,B.kmWalk,'km')}<br>`;
-  if(A.kmBike||B.kmBike) t += `• Bike: <b>${mtFmtKm(A.kmBike)} km</b>${_seta(A.kmBike,B.kmBike,'km')}<br>`;
-  t += AD.porSem ? `<br>Você esteve ativo em <b>${A.dias}</b> ${A.dias===1?'dia':'dias'}, concluiu <b>${AD.concluidos} de ${AD.planejados}</b> treinos planejados${AD.extras?` e fez <b>${AD.extras}</b> ${AD.extras===1?'atividade extra':'atividades extras'} (fora do plano)`:''}.<br>Adesão ao plano: <b>${adesao}%</b>.`
-    : `<br>Adesão ao plano: <b>${adesao}%</b> dos dias planejados (${planejados} por semana).`;
+  // RC 4: a análise respeita a data em que o plano começou. Se o plano começou neste mês, a comparação com o
+  // mês passado não é justa (as oportunidades foram diferentes) e o texto diz isso em vez de comparar.
+  const fmtDia = t=>new Date(t).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  const comecouNoMes = AD.inicio != null && AD.inicio > ini;
+  const ADant = mtAdesao(iniAnt, Math.min(ini, iniAnt+decorrido));
+  const antSemPlano = !ADant.planejados || (ADant.inicio != null && ADant.inicio >= ini);
+  const compara = !comecouNoMes && !antSemPlano;
+  let t = `<b>Análise de ${mes} até hoje</b>${compara ? ' (comparando com o mesmo período do mês passado)' : ''}:<br>`;
+  if(comecouNoMes) t += `<span style="color:var(--text-dim)">Seu plano começou em <b>${fmtDia(AD.inicio)}</b>: a análise conta a partir dessa data, sem os dias anteriores.</span><br>`;
+  else if(antSemPlano && B.sessoes) t += `<span style="color:var(--text-dim)">No mesmo período do mês passado você ainda não tinha plano ativo, então os números não são comparados.</span><br>`;
+  const s = (a, b, un)=>compara ? _seta(a, b, un) : '';
+  t += `<br>• Dias ativos: <b>${A.dias}</b>${s(A.dias,B.dias)}<br>• Sessões: <b>${A.sessoes}</b>${s(A.sessoes,B.sessoes)}<br>• Tempo de treino: <b>${fmtDur(A.min, true)}</b>${s(A.min,B.min,'min')}<br>`;
+  if(state.modules.lift) t += `• Musculação: <b>${A.lift}</b> treinos${s(A.lift,B.lift)} · recordes: <b>${A.prs}</b><br>`;
+  if(A.kmRun||B.kmRun) t += `• Corrida: <b>${mtFmtKm(A.kmRun)} km</b>${s(A.kmRun,B.kmRun,'km')}<br>`;
+  if(A.kmWalk||B.kmWalk) t += `• Caminhada: <b>${mtFmtKm(A.kmWalk)} km</b>${s(A.kmWalk,B.kmWalk,'km')}<br>`;
+  if(A.kmBike||B.kmBike) t += `• Bike: <b>${mtFmtKm(A.kmBike)} km</b>${s(A.kmBike,B.kmBike,'km')}<br>`;
+  if(!AD.porSem){ t += `<br>Sem plano ativo: aqui entram só as atividades registradas.`; return t; }
+  const desde = AD.inicio != null && AD.inicio > ini ? ` desde ${fmtDia(AD.inicio)}` : ' neste mês';
+  t += `<br>Treinos do plano${desde}: <b>${AD.concluidos} de ${AD.planejados}</b> programados até agora${AD.extras?`, mais <b>${AD.extras}</b> ${AD.extras===1?'atividade extra':'atividades extras'} (fora do plano)`:''}.`;
+  // poucos dados: mensagem neutra, sem conclusão sobre "planejar demais" ou "treinar pouco"
+  if(AD.diasComPlano < 14 || AD.planejados < 4){
+    t += '<br><br>Ainda são poucos dias de plano para tirar conclusões sobre a frequência. Por enquanto, o que vale é encaixar os treinos na rotina; com duas semanas completas eu consigo comparar de verdade.';
+    return t;
+  }
+  const adesao = Math.min(100, Math.round(AD.concluidos/Math.max(1, AD.planejados)*100));
+  t += `<br>Cumprimento do plano: <b>${adesao}%</b> dos treinos programados nos dias em que o plano estava ativo.`;
   t += '<br><br>' + (adesao>=85 ? 'Mês muito consistente. Se quiser evoluir mais, o caminho agora é qualidade: técnica, progressão de carga e sono.'
     : adesao>=60 ? 'Boa base. O próximo passo é proteger os dias de treino na agenda — os que mais falham costumam ser sempre os mesmos.'
-    : 'A frequência está abaixo do planejado. Vale ajustar o plano para menos dias por semana e cumprir 100% deles, em vez de planejar muito e fazer pouco.');
+    : `Foram ${AD.concluidos} de ${AD.planejados} treinos programados. Se a rotina apertou, vale ver se os dias do plano ainda cabem na sua semana: em Treinos, "Semana com menos tempo" ajusta só esta semana, e no Perfil dá para mudar os dias do plano.`);
   return t;
 }
 // --- cargas: evolução, manutenção e estagnação por exercício (dados reais das séries) ---
@@ -6977,7 +7018,7 @@ const INICIO_BLOCOS = [
   { k:'peso',        nome:'Peso',                grupo:'ind', sel:['#home-metrics .met[onclick*="add-weight"]'] },
   { k:'alimentacao', nome:'Alimentação',         grupo:'ind', sel:['#home-metrics .met-nutri', '#home-metrics .met[onclick*="openNutri"]'] },
   { k:'agua',        nome:'Água',                grupo:'ind', sel:['#home-metrics .met[onclick*="openAgua"]'] },
-  { k:'conquistas',  nome:'Conquistas',          grupo:'ind', sel:['#home-metrics .met[onclick*="openTrophies"]', '#home-trofeus'] },
+  // RC 4: 'conquistas' saiu do Início (fica só na aba Desafios)
   { k:'plano',       nome:'Fase do plano',       desc:'semana do ciclo e fase atual', sel:['#scr-home .plan-card'] },
   { k:'sugestao',    nome:'Sugestão inteligente', desc:'dica do dia e plano de retomada', sel:['#home-smart'] },
   { k:'desafio',     nome:'Desafio do mês',      sel:['#card-monthly'] },
@@ -7004,16 +7045,7 @@ function aplicaInicio(){
   const sels = INICIO_BLOCOS.filter(b=>oc.includes(b.k)).flatMap(b=>b.sel);
   st.textContent = sels.length ? sels.join(',\n') + '{display:none!important}' : '';
   try{ const c = $('card-access-info'); if(c) c.classList.toggle('ac-ok', accessDaysLeft() > 7); }catch(e){}
-  // indicadores: com número ímpar visível, o último ocupa a linha inteira; sem nenhum, some o bloco
-  try{
-    const m = $('home-metrics');
-    if(m){
-      const tiles = [...m.children]; tiles.forEach(t=>t.classList.remove('met-full'));
-      const vis = tiles.filter(t=>getComputedStyle(t).display !== 'none');
-      if(vis.length % 2 === 1 && vis.length > 1) vis[vis.length-1].classList.add('met-full');
-      m.classList.toggle('met-vazio', tiles.length > 0 && !vis.length);
-    }
-  }catch(e){}
+  // indicadores (último ímpar ocupa a linha, bloco vazio some): RC 4 — uma regra só, mtIndicadoresAjusta (parte 83)
   // rodapé da Home: atalho discreto para personalizar
   try{
     const wrap = document.querySelector('#scr-home .wrap');
@@ -7549,7 +7581,7 @@ window.medalSvg = function(glyph, label, extra, nivel){
   return `<svg viewBox="0 0 48 48">${extra||''}${aro}<circle class="tb-in" cx="24" cy="24" r="18.5"/>`
     + `<path class="tb-luz" d="M8.2 21.5A16 16 0 0 1 39.8 21.5A19 14 0 0 0 8.2 21.5Z"/><circle class="tb-sombra" cx="24" cy="24" r="18"/>`
     + `<g class="tb-g" transform="translate(${gx.toFixed(2)} ${gy.toFixed(2)}) scale(${esc})">${g}</g>`
-    + `${label?`<text x="24" y="41.6" class="tb-l">${mtEsc(label)}</text>`:''}</svg>`;
+    + `${label?`<text x="24" y="41.6" class="tb-l"${String(label).length >= 4 ? ' textLength="21" lengthAdjust="spacingAndGlyphs"' : ''}>${mtEsc(label)}</text>`:''}</svg>`;
 };
 window.trophyIco = function(t, dim){
   if(!t) return '';
@@ -8006,7 +8038,16 @@ const MTS_KICKER = { musculacao:'Treino de musculação', corrida:'Corrida', bik
   especial:'Conquista especial', desafio:'Desafio concluído', recorde:'Recorde pessoal', evolucao:'Evolução de carga', semana:'Minha semana' };
 
 // estado da Central (só na memória; a escolha de formato/estilo fica lembrada no aparelho)
-const MTS = { d:null, foto:null, zoom:1, px:0, py:0, escurecer:.45, nome:false, classico:null };
+const MTS = { d:null, foto:null, zoom:1, px:0, py:0, escurecer:.45, nome:false, classico:null, vol:false, logo:'app', pos:'baixo' };
+// RC 4: a marca do card usa a MESMA logo cadastrada no painel do administrador (mural › logo — a mesma da barra
+// do app). Sem logo cadastrada, continua o ícone "M". Proporção e transparência preservadas (desenho "contido").
+let _mtsLogoCache = { src:null, img:null };
+function _mtsLogoSrc(){ try{ return (typeof _murAtuais === 'function' ? _murAtuais().logo : (coachMural && coachMural.foto)) || null; }catch(e){ return null; } }
+async function _mtsLogo(){
+  const src = _mtsLogoSrc(); if(!src) return null; if(_mtsLogoCache.src === src) return _mtsLogoCache.img;
+  const img = await new Promise(r=>{ const i = new Image(); if(!/^data:/.test(src)) i.crossOrigin = 'anonymous'; i.onload = ()=>r(i); i.onerror = ()=>r(null); i.src = src; });
+  _mtsLogoCache = { src, img }; return img;
+}
 function _mtsPref(k, padrao){ try{ return localStorage.getItem('mt_share_'+k) || padrao; }catch(e){ return padrao; } }
 function _mtsSalvaPref(k, v){ try{ localStorage.setItem('mt_share_'+k, v); }catch(e){} }
 
@@ -8063,7 +8104,7 @@ function mtsDeHistorico(x){
   const ids = (x.exercisesDone||[]).map(e=>e.id);
   let series = 0, vol = 0;
   const dia = mtDia0(x.at);
-  ids.forEach(id=>{ (state.progress[id]||[]).forEach(p=>{ if(mtDia0(p.date) === dia){ (p.sets||[]).forEach(s=>{ series++; vol += (+s.peso||0)*(+s.reps||0); }); } }); });
+  void dia; (typeof mtEntradasDaSessao === 'function' ? mtEntradasDaSessao(x) : []).forEach(en=>(en.sets||[]).forEach(s=>{ series++; vol += (+s.peso||0)*(+s.reps||0); }));   // RC 4: séries DESTE treino (sid)
   let partes = []; try{ partes = (typeof partsFromEntry==='function' ? partsFromEntry(x) : []).map(_mtsSemEmoji).filter(Boolean); }catch(e){}
   const d = _mtsDur(x.duration);
   const nums = [{ l:'Duração', v:d.v, u:d.u }];
@@ -8190,6 +8231,7 @@ function _mtsPadrao(x, W, H, tipo, cor){
   x.restore();
 }
 async function mtsDesenhar(cv, d, o){
+  if(d && d._volTxt !== undefined) d.desc = [d._descBase, (o.vol && d._volTxt) ? d._volTxt : ''].filter(Boolean).join('. ');   // RC 4: volume opcional
   const F = MTS_FORMATOS[o.fmt] || MTS_FORMATOS.story; const W = F.w, H = F.h;
   cv.width = W; cv.height = H; const x = cv.getContext('2d');
   try{ await document.fonts.load('800 80px Outfit'); await document.fonts.load('300 80px Outfit'); }catch(e){}
@@ -8206,6 +8248,7 @@ async function mtsDesenhar(cv, d, o){
     x.fillStyle = `rgba(0,0,0,${k*0.45})`; x.fillRect(0,0,W,H);
     let g = x.createLinearGradient(0,0,0,H*0.22); g.addColorStop(0,`rgba(0,0,0,${Math.min(.75,.35+k*.4)})`); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0,0,W,H*0.22);
     g = x.createLinearGradient(0,H*0.42,0,H); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,`rgba(0,0,0,${Math.min(.92,.5+k*.5)})`); x.fillStyle = g; x.fillRect(0,H*0.42,W,H*0.58);
+    if(o.pos === 'topo' && _mtsPosLivre(d)){ g = x.createLinearGradient(0,0,0,H*0.62); g.addColorStop(0,`rgba(0,0,0,${Math.min(.9,.45+k*.5)})`); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0,0,W,H*0.62); }   // dados no alto: o alto escurece para ficar legível
   } else {
     const g = x.createLinearGradient(0,0,W,H); g.addColorStop(0,P.bg1); g.addColorStop(1,P.bg2); x.fillStyle = g; x.fillRect(0,0,W,H);
     const rg = x.createRadialGradient(W*0.85, H*0.12, 0, W*0.85, H*0.12, W*0.9); rg.addColorStop(0, _mtsRgba(P.acc, o.estilo==='claro'?.14:.22)); rg.addColorStop(1, _mtsRgba(P.acc, 0));
@@ -8214,8 +8257,10 @@ async function mtsDesenhar(cv, d, o){
   }
   // cabeçalho: marca + data
   const ms = W*0.075, my = pad*0.9;
-  x.fillStyle = P.acc; _mtsRet(x, pad, my, ms, ms, ms*0.26); x.fill();
-  x.fillStyle = P.marcaTxt; x.font = `800 ${ms*0.56}px ${FF}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('M', pad+ms/2, my+ms/2+ms*0.02);
+  const logo = o.logo !== 'm' ? await _mtsLogo() : null;
+  if(logo){ x.save(); _mtsRet(x, pad, my, ms, ms, ms*0.26); x.clip(); const k = Math.min(ms/logo.width, ms/logo.height); const lw = logo.width*k, lh = logo.height*k; x.drawImage(logo, pad + (ms-lw)/2, my + (ms-lh)/2, lw, lh); x.restore(); x.textBaseline = 'middle'; }
+  else { x.fillStyle = P.acc; _mtsRet(x, pad, my, ms, ms, ms*0.26); x.fill();
+  x.fillStyle = P.marcaTxt; x.font = `800 ${ms*0.56}px ${FF}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('M', pad+ms/2, my+ms/2+ms*0.02); }
   x.fillStyle = P.txt; x.textAlign = 'left'; x.font = `800 ${W*0.026}px ${FF}`;
   if(x.letterSpacing !== undefined) x.letterSpacing = `${W*0.006}px`;
   x.fillText('METATREINO', pad+ms+W*0.025, my+ms/2);
@@ -8336,6 +8381,8 @@ async function mtsDesenhar(cv, d, o){
   let y;
   if(disp === 'grade' && !foto) y = Math.min(rodapeY - W*0.07 - alturaBloco, Math.max(my+ms+W*0.08 + medTam, (H - alturaBloco)/2 + medTam*0.4));
   else y = rodapeY - W*0.06 - padBaixo - alturaBloco;
+  // RC 4: com foto, o aluno pode pôr os dados no alto (posições prontas; nunca fora da imagem)
+  if(foto && o.pos === 'topo' && _mtsPosLivre(d)) y = Math.min(y, my + ms + W*0.1);
   // faixa (compacto): painel atrás do bloco
   if(disp === 'compacto'){
     x.fillStyle = foto ? 'rgba(8,10,14,.62)' : P.painel; _mtsRet(x, faixaX, y - W*0.045, faixaW, alturaBloco + W*0.045 + padBaixo, W*0.04); x.fill();
@@ -8380,7 +8427,8 @@ function mtsAbrir(d, classico){
   // Trocar formato/estilo/disposição reabre com o mesmo item (MTS.d) e mantém tudo.
   if(d !== MTS.d){ MTS.foto = null; MTS.zoom = 1; MTS.px = 0; MTS.py = 0; }
   MTS.d = d; MTS.classico = classico || null;
-  MTS.fmt = _mtsPref('fmt', 'story'); MTS.estilo = _mtsPref('estilo', 'escuro'); MTS.disp = _mtsPref('disp', 'destaque');
+  MTS.fmt = _mtsPref('fmt', 'story'); MTS.estilo = _mtsPref('estilo', 'escuro'); MTS.disp = _mtsPref('disp', 'destaque'); MTS.vol = _mtsPref('vol', '0') === '1';
+  MTS.logo = _mtsPref('logo', 'app'); MTS.pos = _mtsPref('pos', 'baixo');
   if(!MTS_FORMATOS[MTS.fmt]) MTS.fmt = 'story';
   const chips = (grupo, obj, atual, fn)=>`<div class="mts-chips" role="radiogroup" aria-label="${grupo}">${Object.entries(obj).map(([k,v])=>`<button type="button" role="radio" aria-checked="${k===atual}" class="${k===atual?'on':''}" onclick="${fn}('${k}')">${typeof v==='string'?v:`${v.nome} <small>${v.sub}</small>`}</button>`).join('')}</div>`;
   const video = d.tipo === 'especial' && typeof saFormatoVideo==='function' && saFormatoVideo();
@@ -8398,8 +8446,11 @@ function mtsAbrir(d, classico){
     ${MTS.foto ? `<label class="mts-sl">Zoom <input type="range" min="1" max="3" step="0.01" value="${MTS.zoom}" oninput="MTS.zoom=+this.value;mtsDesenhaPrev()"></label>
       <label class="mts-sl">Escurecer <input type="range" min="0" max="0.9" step="0.01" value="${MTS.escurecer}" oninput="MTS.escurecer=+this.value;mtsDesenhaPrev()"></label>`
       : `${chips('Estilo', MTS_ESTILOS, MTS.estilo, 'mtsEstilo')}`}
+    ${MTS.foto && _mtsPosLivre(d) ? `<div class="mts-sec">Posição dos dados</div>${chips('Posição dos dados', { baixo:'Embaixo', topo:'Em cima' }, MTS.pos, 'mtsPos')}` : ''}
     <div class="mts-sec">Disposição</div>${chips('Disposição', MTS_DISP, MTS.disp, 'mtsDisp')}
+    ${_mtsLogoSrc() ? `<div class="mts-sec">Marca</div>${chips('Marca', { app:'Logo do MetaTreino', m:'Só o ícone M' }, MTS.logo, 'mtsLogo')}` : ''}
     <label class="mts-nome"><input type="checkbox" ${MTS.nome?'checked':''} onchange="MTS.nome=this.checked;mtsDesenhaPrev()"> Mostrar meu primeiro nome</label>
+    ${d._volTxt ? `<label class="mts-nome"><input type="checkbox" ${MTS.vol?'checked':''} onchange="MTS.vol=this.checked;_mtsSalvaPref('vol', this.checked?'1':'0');mtsDesenhaPrev()"> Mostrar volume registrado (kg)</label><div class="mts-nota">Soma de carga × repetições das séries, como foram digitadas. Não é o peso total levantado: halteres e exercícios de um lado só contam pelo número registrado.</div>` : ''}
     <div class="mts-acoes">
       <button class="btn btn-primary" id="mts-comp" onclick="mtsCompartilhar()">Compartilhar</button>
       <button class="btn btn-outline" onclick="mtsSalvar()">Salvar imagem</button>
@@ -8420,6 +8471,10 @@ async function mtsDesenhaPrev(){
 function mtsFmt(k){ MTS.fmt = k; _mtsSalvaPref('fmt', k); mtsAbrir(MTS.d, MTS.classico); }
 function mtsEstilo(k){ MTS.estilo = k; _mtsSalvaPref('estilo', k); mtsAbrir(MTS.d, MTS.classico); }
 function mtsDisp(k){ MTS.disp = k; _mtsSalvaPref('disp', k); mtsAbrir(MTS.d, MTS.classico); }
+function mtsLogo(k){ MTS.logo = k; _mtsSalvaPref('logo', k); mtsAbrir(MTS.d, MTS.classico); }
+function mtsPos(k){ MTS.pos = k; _mtsSalvaPref('pos', k); mtsAbrir(MTS.d, MTS.classico); }
+// a posição só muda em cards sem medalha nem percurso (esses desenhos ocupam o alto do card)
+function _mtsPosLivre(d){ return !!d && !d.medalha && !(d.medalhas && d.medalhas.length) && !(d.rota && d.rota.length > 1) && !d.emoji; }
 function mtsSemFoto(){ MTS.foto = null; MTS.zoom = 1; MTS.px = 0; MTS.py = 0; mtsAbrir(MTS.d, MTS.classico); }
 function mtsFoto(ev){
   const f = ev.target.files && ev.target.files[0]; if(!f) return;
@@ -8534,7 +8589,7 @@ mtGancho('openExProgress', { depois(exId){
   if(fechar) fechar.before(b); else mi.appendChild(b);
 }});
 
-Object.assign(window, { MTS, mtsAbrir, mtsDesenhar, mtsDesenhaPrev, mtsFmt, mtsEstilo, mtsDisp, mtsFoto, mtsSemFoto, mtsCompartilhar, mtsSalvar, mtsClassico,
+Object.assign(window, { MTS, mtsAbrir, mtsDesenhar, mtsDesenhaPrev, mtsFmt, mtsEstilo, mtsDisp, mtsLogo, mtsPos, mtsFoto, mtsSemFoto, mtsCompartilhar, mtsSalvar, mtsClassico,
   mtsDeHistorico, mtsDeConquista, mtsDeColecao, mtsDeEspecial, mtsDeDesafio, mtsDeSemana, mtsDeRecorde, mtsDeEvolucao });
 
 // =====================================================================
@@ -8907,15 +8962,7 @@ function inicioAplicaOrdem(){
     inicioOrdemInd().forEach((k, i)=>{ const b = INICIO_BLOCOS.find(x=>x.k===k); if(b) regras.push(b.sel.filter(s=>s.startsWith('#home-metrics')).join(',') + `{order:${i+1}!important}`); });
   }
   st.textContent = regras.join('\n');
-  // indicador que fica sozinho na última linha ocupa a largura toda (agora pela ordem que aparece)
-  try{
-    const m = $('home-metrics');
-    if(m){
-      const tiles = [...m.children]; tiles.forEach(t=>t.classList.remove('met-full'));
-      const vis = tiles.filter(t=>getComputedStyle(t).display !== 'none').map((t,i)=>({t, o:parseInt(getComputedStyle(t).order,10)||0, i})).sort((a,b)=>(a.o-b.o)||(a.i-b.i)).map(x=>x.t);
-      if(vis.length % 2 === 1 && vis.length > 1) vis[vis.length-1].classList.add('met-full');
-    }
-  }catch(e){}
+  // indicador sozinho na última linha: RC 4 — uma regra só, mtIndicadoresAjusta (parte 83), que roda depois daqui
   try{ mtDeskOrdenaHome(); }catch(e){}
 }
 mtGancho('aplicaInicio', { depois(){ try{ inicioAplicaOrdem(); }catch(e){ console.log('ordem do início', e); } }});
@@ -9122,10 +9169,9 @@ function dkKpis(){
     { l: lift ? 'Treinos na semana' : 'Atividades na semana', v: `${feitos}<small>/${meta}</small>`, s: meta ? `${Math.min(100, Math.round(feitos/meta*100))}% da meta` : '', go:"goTab('perf')", bar: meta ? Math.min(1, feitos/meta) : 0 },
     { l:'Sequência', v:`${seq}<small>${seq===1?'dia':'dias'}</small>`, s:'dias seguidos com atividade', go:"goTab('perf')" },
     { l:'Tempo na semana', v: dur, s:`${ws.total} ${ws.total===1?'registro':'registros'} desde segunda`, go:"goTab('history')" },
-    lift ? { l:'Volume na semana', v: vol >= 1000 ? `${(vol/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})}<small>t</small>` : `${vol}<small>kg</small>`, s:'peso × repetições registradas', go:"goTab('history')" }
-         : { l:'Distância na semana', v:`${km.toLocaleString('pt-BR',{maximumFractionDigits:1})}<small>km</small>`, s:'corrida, caminhada e bike', go:"goTab('history')" },
-    { l:'Conquistas', v:`${(state.trophies||[]).length}<small>/${TROPHIES.length}</small>`, s:'medalhas e selos', go:'openTrophies()' }
-  ];
+    lift ? { l:'Volume registrado', v: `${Math.round(vol).toLocaleString('pt-BR')}<small>kg</small>`, s:'soma de carga × repetições na semana', go:"goTab('history')" }
+         : { l:'Distância na semana', v:`${km.toLocaleString('pt-BR',{maximumFractionDigits:1})}<small>km</small>`, s:'corrida, caminhada e bike', go:"goTab('history')" }
+  ];   // RC 4: conquistas ficam na aba Desafios
   el.innerHTML = tiles.map(t=>`<button type="button" class="dk-kpi" onclick="${t.go}"><span class="dk-kpi-l">${t.l}</span><span class="dk-kpi-v">${t.v}</span>${t.bar!=null && t.bar!==undefined && t.l.includes('semana') && t.s.includes('meta') ? `<span class="dk-kpi-bar"><i style="width:${Math.round(t.bar*100)}%"></i></span>` : ''}<span class="dk-kpi-s">${t.s}</span></button>`).join('');
 }
 
@@ -10142,7 +10188,7 @@ const NR_CAMPOS = {
   'nc-g':{ tit:'Gorduras', min:0, max:400, step:1, un:'g', def:60 },
   'ef-alvo':{ tit:'Meta de dias ativos', min:1, max:60, step:1, un:'dias', def:8 },
   'rl-km':{ tipo:'dist', tit:'Distância' }, 'he-km':{ tipo:'dist', tit:'Distância' }, 'act-km':{ tipo:'dist', tit:'Distância' },
-  'rl-min':{ tipo:'dur', tit:'Tempo total', h:true }, 'he-dur':{ tipo:'dur', tit:'Duração', h:false, maxMin:300 }   // he-dur é "min:seg"
+  'rl-min':{ tipo:'dur', tit:'Tempo total', h:true }   // RC 4: he-dur e act-min viraram o grupo h:m:s (.tempo-hms) — usam o controle 'hms'
 };
 function _nrNum(v){ const n = parseFloat(String(v==null?'':v).replace(',','.')); return isFinite(n) ? n : null; }
 function _nrFmt(v, step){ const dec = step < 1 ? (String(step).split('.')[1]||'').length : 0; return Number(v).toFixed(dec).replace('.',','); }
@@ -14959,7 +15005,7 @@ Object.assign(window, { openReceitas, openReceita, rcCat, rcVar, rcRef, rcVer, r
 // =====================================================================
 // 48. Beta 44 — Conquistas no fim do registro, aviso na aba Desafios e "não vou treinar hoje" coerente
 // =====================================================================
-// 1) Conquistas ao concluir um registro (treino, corrida ou atividade): depois que a tela de resumo do
+// 1) [RC 4: a janela virou um aviso pequeno no rodapé — mtAvisoConquista] Conquistas ao concluir um registro (treino, corrida ou atividade): depois que a tela de resumo do
 //    registro fecha, aparece UMA janela com o que foi desbloqueado agora ("Ver todas" / "Continuar").
 //    Fora do fim de um registro (abrir o app, sincronizar de outro aparelho) nada pula na tela — continua
 //    só o selo "Novidade" e o ponto na aba Desafios, como na Beta 41.
@@ -15005,28 +15051,28 @@ function _cqCelTenta(){
   if(!pend.length) return;
   pend.forEach(p=>{ p.cel = true; });
   try{ salvarLocal(); }catch(e){}
-  const lista = pend.slice().reverse();
-  _cqCelLista = lista;
-  const n = lista.length;
-  $('modal-inner').innerHTML = `<div class="cq cq-cel">
-    <div class="cq-topo"><h3>🏆 ${n === 1 ? 'Nova conquista!' : n + ' novas conquistas!'}</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
-    <div class="cel-trilho" id="cel-trilho" role="listbox" aria-label="Conquistas desbloqueadas — deslize para os lados">
-      ${lista.map((p,i)=>cqCelCartao(p, i)).join('')}
-    </div>
-    ${n > 1 ? `<div class="cel-nav"><button type="button" class="cel-seta" aria-label="Anterior" onclick="cqCelPasso(-1)">‹</button>
-      <span class="cel-pos" id="cel-pos" aria-live="polite">1 de ${n}</span>
-      <button type="button" class="cel-seta" aria-label="Próxima" onclick="cqCelPasso(1)">›</button></div>
-      <div class="cel-pontos">${lista.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>` : ''}
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();openTrophies()">Ver todas as conquistas</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
-  $('modal-back').classList.add('on');
-  const tr = document.getElementById('cel-trilho');
-  let parou = 0;
-  tr.addEventListener('scroll', ()=>{ clearTimeout(parou); parou = setTimeout(_cqCelAtual, 120); }, { passive:true });
-  _cqCelIdx = 0; _cqCelVer(0);
+  // RC 4: nada de janela grande por cima do fluxo de registro. Um aviso pequeno no rodapé ("Nova conquista
+  // desbloqueada"), que some sozinho; tocar leva à aba Desafios, onde ficam a conquista, a descrição e o progresso.
+  // A conquista continua "nova" (não é marcada como vista) até a pessoa abrir Conquistas.
+  mtAvisoConquista(pend.slice().reverse());
   try{ if(typeof mtVibrar === 'function') mtVibrar([20,40,20]); }catch(e){}
 }
 let _cqCelLista = [], _cqCelIdx = 0;
+function mtAvisoConquista(lista){
+  try{
+    const n = lista.length; if(!n) return; const p = lista[0];
+    const t = p.tid ? TROPHIES.find(x=>x.id===p.tid) : null; const nome = t ? t.name : (p.nome || '');
+    let el = document.getElementById('cq-aviso'); if(el) el.remove();
+    el = document.createElement('button'); el.type = 'button'; el.id = 'cq-aviso'; el.className = 'cq-aviso';
+    el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    el.innerHTML = `<span class="cqa-ico" aria-hidden="true">${t && typeof trophyIco === 'function' ? trophyIco(t) : '🏆'}</span><span class="cqa-tx"><b>${n === 1 ? 'Nova conquista desbloqueada' : n + ' novas conquistas desbloqueadas'}</b>${n === 1 && nome ? `<small>${mtEsc(nome)}</small>` : '<small>Veja na aba Desafios</small>'}</span><span class="cqa-ver">Ver</span>`;
+    el.onclick = ()=>{ el.remove(); goTab('challenges'); };
+    document.body.appendChild(el);
+    requestAnimationFrame(()=>el.classList.add('on'));
+    setTimeout(()=>{ el.classList.remove('on'); setTimeout(()=>el.remove(), 400); }, 5200);
+    try{ if(typeof mtVibrar === 'function') mtVibrar([20]); }catch(e){}
+  }catch(e){ console.log('aviso de conquista:', e); }
+}
 function cqCelCartao(p, i){
   const t = p.tid ? TROPHIES.find(x=>x.id===p.tid) : null;
   const nv = t ? medalNivel(t) : (p.kind==='medalha' || p.kind==='marco' ? 'rara' : p.kind==='secreto' ? 'especial' : 'comum');
@@ -15162,7 +15208,7 @@ mtGancho('finishLiftWorkout', { antes(k){
 #session-detail-slot.mt-pulado .ex,#session-detail-slot.mt-pulado .blk,#session-detail-slot.mt-pulado .block{opacity:.55}
 `; document.head.appendChild(s); })();
 
-Object.assign(window, { cqCelebrar, cqCelPasso });
+Object.assign(window, { cqCelebrar, cqCelPasso, mtAvisoConquista });
 
 // ---------- 4. fichas técnicas que estavam erradas ----------
 // A ficha era escolhida pela primeira palavra que casava no nome: "Remada na Máquina (Hammer)" caía no supino,
@@ -16611,39 +16657,9 @@ function cqCelCartaoGrupo(c, i){
   if(c.extras && c.extras.length) h = h.replace(/<\/div>\s*$/, `<span class="cel-extra">${c.primeira ? 'Junto com' : c.meta ? 'Inclui os níveis' : 'Inclui'}: ${c.extras.map(mtEsc).join(c.meta ? ' e ' : ' · ')}</span></div>`);
   return h;
 }
-window._cqCelTenta = function(){
-  const back = document.getElementById('modal-back');
-  const ocupado = back && back.classList.contains('on');
-  if(ocupado || !_cqTelaApp()){
-    if(Date.now() - _cqCelDesde > 4*60000){ _cqCelFila = []; _cqCelDesde = 0; return; }
-    _cqCelT = setTimeout(window._cqCelTenta, 700); return;
-  }
-  const pend = (state.conqPend||[]).filter(p=>_cqCelFila.includes(p.k) && !p.cel);
-  _cqCelFila = []; _cqCelDesde = 0;
-  if(!pend.length) return;
-  pend.forEach(p=>{ p.cel = true; });
-  try{ salvarLocal(); }catch(e){}
-  const cartoes = cqAgrupar(pend);
-  _cqCelLista = cartoes;
-  const n = cartoes.length, total = pend.length;
-  $('modal-inner').innerHTML = `<div class="cq cq-cel">
-    <div class="cq-topo"><h3>🏆 ${total === 1 ? 'Nova conquista!' : n === 1 ? 'Conquista desbloqueada' : 'Suas conquistas deste registro'}</h3><button class="cq-x" onclick="closeModal()" aria-label="Fechar">✕</button></div>
-    <div class="cel-trilho" id="cel-trilho" role="listbox" aria-label="Conquistas desbloqueadas — deslize para os lados">
-      ${cartoes.map((c,i)=>cqCelCartaoGrupo(c, i)).join('')}
-    </div>
-    ${n > 1 ? `<div class="cel-nav"><button type="button" class="cel-seta" aria-label="Anterior" onclick="cqCelPasso(-1)">‹</button>
-      <span class="cel-pos" id="cel-pos" aria-live="polite">1 de ${n}</span>
-      <button type="button" class="cel-seta" aria-label="Próxima" onclick="cqCelPasso(1)">›</button></div>
-      <div class="cel-pontos">${cartoes.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>` : ''}
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();openTrophies()">Ver todas as conquistas</button>
-    <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button></div>`;
-  $('modal-back').classList.add('on');
-  const tr = document.getElementById('cel-trilho');
-  let parou = 0;
-  tr.addEventListener('scroll', ()=>{ clearTimeout(parou); parou = setTimeout(_cqCelAtual, 120); }, { passive:true });
-  _cqCelIdx = 0; _cqCelVer(0);
-  try{ if(typeof mtVibrar === 'function') mtVibrar([20,40,20]); }catch(e){}
-};
+// RC 4: a janela de conquistas do fim do registro (que esta parte redesenhava por cima da versão da parte 48)
+// saiu. Há uma implementação só: _cqCelTenta, na parte 48, que mostra o aviso pequeno (mtAvisoConquista).
+// cqAgrupar e cqCelCartaoGrupo continuam disponíveis para quem quiser montar o resumo agrupado.
 // cartão visto = todas as conquistas que ele representa saem das "novas"
 window._cqCelVer = function(i){
   const c = _cqCelLista[i];
@@ -19883,7 +19899,7 @@ mtGancho('openHistoryEntry', { depois(idx){
     const dia = mtDia0(x.at);
     linhas.forEach((ln, i)=>{
       const e = x.exercisesDone[i];
-      const reg = ((state.progress||{})[e.id]||[]).find(p=>p && p.date && mtDia0(p.date) === dia && (p.sets||[]).length);
+      const arrP = ((state.progress||{})[e.id]||[]); const reg = x.sid ? arrP.find(p=>p && p.sid === x.sid && (p.sets||[]).length) : arrP.find(p=>p && p.date && !p.sid && mtDia0(p.date) === dia && (p.sets||[]).length);   // RC 4: séries DESTE treino (sid)
       const iso = (typeof exUsaTempo === 'function') && exUsaTempo(e.id);
       const series = reg ? reg.sets.map((s,j)=>`<span class="hd-s"><i>${j+1}</i>${+s.peso > 0 ? `${_fmtKg(s.peso)} kg × ${+s.reps||0}` : `${+s.reps||0} ${iso ? 's' : 'rep.'}`}</span>`).join('')
         : `<span class="hd-s">${e.sets}× · ${mtEsc(e.best||'')}</span>`;
@@ -20832,7 +20848,7 @@ try{
     pair: '<circle cx="8.5" cy="7" r="2.6"/><circle cx="15.8" cy="8" r="2.3"/><path d="M3.5 19.5c.3-3.6 2.3-5.8 5-5.8s4.7 2.2 5 5.8M13.2 13.9c.8-.6 1.7-.9 2.6-.9 2.4 0 4.2 2 4.5 5.4"/>'
   });
   Object.assign(TROPHY_ICO, {
-    cali_1:['rings','1º'], cali_10:['rings','10'], cali_prancha:['stopwatch','60s'], cali_degrau:['prup'], cali_barra5:['pullbar','5'], cali_skill:['star'], cali_mestre:['crown'],
+    cali_1:['rings','1º'], cali_10:['rings','10'], cali_prancha:['stopwatch','60s'], cali_degrau:['steps'], cali_barra5:['pullbar','5'], cali_skill:['star'], cali_mestre:['crown'],
     hib_semana:['hybrid','1'], hib_forte:['hybrid','2+2'], hib_4sem:['hybrid','4'], hib_12:['hybrid','12'],
     dupla_1:['pair','1º'], dupla_5:['pair','5'], dupla_20:['pair','20'],
     sec_diacompleto:['hybrid'], sec_cali4sem:['rings'], sec_dupla4sem:['pair'], sec_duplamix:['pair']
@@ -22444,18 +22460,31 @@ s.textContent = `.fam-alc{display:flex;flex-wrap:wrap;align-items:center;gap:6px
 //        (mantém, explicando). Nunca recua o plano por causa do sono;
 //      - musculação: com 2+ noites ruins, a orientação "subir carga" ganha "se o aquecimento pesar, mantenha".
 //  • Horas de sono não são garantia de recuperação nem diagnóstico: o texto diz isso.
-// Dados: state.sono = { on, n:{ 'AAAA-MM-DD':{ h, dor, aco, q, d } }, pulou } (campo novo e opcional;
+// Dados: state.sono = { on, n:{ 'AAAA-MM-DD':{ min, h, dor, aco, q, d, q5, d5 } }  (RC 4: min = minutos inteiros), pulou } (campo novo e opcional;
 // passa pela limpeza da nuvem). Guarda 180 noites.
 // =====================================================================
-const SONO_Q = { 1:['Mal','#e07a6a'], 2:['Ok','#e2b13c'], 3:['Bem','#3fbfa6'] };
+const SONO_Q = { 1:['Mal','#d64545'], 2:['Ok','#d4b62c'], 3:['Bem','#2fa86e'] };   // mesmas cores da escala de 5 (parte 81)
 const SONO_D = { 1:'Cansado(a)', 2:'Normal', 3:'Disposto(a)' };
 function sonoEst(){ state.sono = state.sono && typeof state.sono === 'object' ? state.sono : { on:false, n:{} }; state.sono.n = state.sono.n || {}; return state.sono; }
 function sonoLigado(){ return !!(state.sono && state.sono.on); }
 function _sonoHoje(){ return chaveDia(new Date()); }
 function _sonoMin(hhmm){ const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm||'')); return m ? (+m[1])*60 + (+m[2]) : null; }
-function sonoHorasDe(dor, aco){ const a = _sonoMin(dor), b = _sonoMin(aco); if(a == null || b == null) return null; let d = b - a; if(d <= 0) d += 1440; return Math.round(d/60*100)/100; }   // RC 3: em minutos exatos (antes 0,1 h)
+// RC 4 — FONTE ÚNICA da duração do sono, em MINUTOS INTEIROS (6 h 37 = 397 min em todo o app).
+// Dados: a noite guarda `min` (inteiro). `h` continua sendo gravado (= min/60, sem arredondar) só para quem ainda
+// estiver numa versão antiga ler alguma coisa; ninguém nesta versão lê `h` direto. Registros antigos (sem `min`)
+// não são reescritos: a leitura converte `round(h × 60)`. Com os dois horários, o total vem SEMPRE dos horários.
+function sonoMinutosDe(dor, aco){ const a = _sonoMin(dor), b = _sonoMin(aco); if(a == null || b == null) return null; let d = b - a; if(d <= 0) d += 1440; return d; }   // passa da meia-noite: 23:40 → 07:05 = 445 min
+function sonoHorasDe(dor, aco){ const m = sonoMinutosDe(dor, aco); return m == null ? null : m/60; }   // compatibilidade (horas sem arredondar)
+function sonoMinDe(x){
+  if(!x) return null;
+  if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m != null) return m; }
+  if(x.min != null && isFinite(+x.min)) return Math.round(+x.min);
+  if(x.h != null && isFinite(+x.h)) return Math.round(+x.h*60);
+  return null;
+}
+function sonoFmtMin(m){ if(m == null) return '—'; m = Math.round(m); const hh = Math.floor(m/60), mm = m % 60; return mm ? `${hh} h ${String(mm).padStart(2,'0')}` : `${hh} h`; }
 function sonoNoite(dk){ return ((state.sono||{}).n||{})[dk] || null; }
-function sonoRuim(x){ return !!x && (x.q === 1 || (x.h != null && x.h < 6) || x.d === 1); }
+function sonoRuim(x){ const m = sonoMinDe(x); return !!x && (x.q === 1 || (m != null && m < 360) || x.d === 1); }
 function _sonoUltimas(dias){ const out = []; for(let i=0; i<dias; i++){ const dk = chaveDia(new Date(Date.now() - i*86400000)); out.push({ dk, x:sonoNoite(dk) }); } return out; }
 // sinal de recuperação (null quando não há registro suficiente)
 function sonoSinal(){
@@ -22463,7 +22492,7 @@ function sonoSinal(){
   const u3 = _sonoUltimas(3); const hoje = u3[0].x;
   const ruins3 = u3.filter(o=>sonoRuim(o.x)).length;
   if(ruins3 >= 2) return { k:'varias', txt:'Duas ou mais noites ruins nos últimos dias. Priorize a recuperação: se o treino de hoje for intenso e o corpo pedir, faça a versão leve. Isso é orientação, não regra.' };
-  if(sonoRuim(hoje)) return { k:'noite', txt:`Noite ${hoje.h != null && hoje.h < 6 ? `curta (${String(hoje.h).replace('.',',')} h)` : 'ruim'}. Uma noite só não muda o plano: faça o treino de hoje no esforço mais baixo da faixa e aqueça com calma.` };
+  if(sonoRuim(hoje)){ const m = sonoMinDe(hoje); return { k:'noite', txt:`Noite ${m != null && m < 360 ? `curta (${sonoFmtMin(m)})` : 'ruim'}. Uma noite só não muda o plano: faça o treino de hoje no esforço mais baixo da faixa e aqueça com calma.` }; }
   return null;
 }
 function sonoSemanaRuins(semTs){
@@ -22475,47 +22504,17 @@ function sonoSemanaRuins(semTs){
 function sonoSalvar(dk, dados){
   const S = sonoEst(); const ant = S.n[dk] || {};
   const x = Object.assign({}, ant, dados);
-  if(x.dor && x.aco){ const h = sonoHorasDe(x.dor, x.aco); if(h) x.h = h; }
+  if(x.dor && x.aco){ const m = sonoMinutosDe(x.dor, x.aco); if(m){ x.min = m; x.h = m/60; } }
   Object.keys(x).forEach(k=>{ if(x[k] == null || x[k] === '') delete x[k]; });
   if(!Object.keys(x).length) delete S.n[dk]; else S.n[dk] = x;
   const lim = chaveDia(new Date(Date.now() - 180*86400000)); Object.keys(S.n).forEach(k=>{ if(k < lim) delete S.n[k]; });
   saveData();
 }
-function sonoRapido(q){ sonoSalvar(_sonoHoje(), { q }); toast(`Anotado: dormiu ${SONO_Q[q][0].toLowerCase()}.`); _sonoHomeDesenha(); }
+// sonoRapido (5 níveis): parte 81.
 function sonoPular(){ const S = sonoEst(); S.pulou = _sonoHoje(); saveData(); _sonoHomeDesenha(); }
-function sonoRegistrar(dk){
-  dk = dk || _sonoHoje(); const x = sonoNoite(dk) || {}; window.__sonoDk = dk; window.__sonoQ = x.q || null; window.__sonoD = x.d || null;
-  const modo = x.dor || x.aco ? 'hor' : 'h';
-  const hh = x.h != null && !x.dor ? Math.floor(x.h) : '', mm = x.h != null && !x.dor ? Math.round((x.h % 1)*60) : '';
-  const dt = new Date(dk + 'T12:00:00');
-  $('modal-inner').innerHTML = `<div id="sono-reg"><h3>Como você dormiu?</h3>
-    <p class="mt-muted" style="margin:2px 0 12px">Noite que terminou em ${dt.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit' })}. Tudo é opcional.</p>
-    <div class="sono-lbl">Qualidade</div>
-    <div class="sono-tri" id="sono-q">${[1,2,3].map(q=>`<button type="button" class="${x.q===q?'on':''}" data-v="${q}" onclick="_sonoMarca('q',${q})">${SONO_Q[q][0]}</button>`).join('')}</div>
-    <div class="sono-lbl">Quanto dormiu</div>
-    <div class="sono-tri sono-modo"><button type="button" class="${modo==='h'?'on':''}" onclick="_sonoModo('h')">Horas</button><button type="button" class="${modo==='hor'?'on':''}" onclick="_sonoModo('hor')">Horários</button></div>
-    <div id="sono-h" ${modo==='h'?'':'hidden'} class="sono-campos"><label>Horas<input class="input mono" type="number" min="0" max="16" inputmode="numeric" id="sono-hh" value="${hh}" placeholder="7"></label><label>Minutos<input class="input mono" type="number" min="0" max="59" step="5" inputmode="numeric" id="sono-mm" value="${mm}" placeholder="30"></label></div>
-    <div id="sono-hor" ${modo==='hor'?'':'hidden'} class="sono-campos"><label>Dormi<input class="input mono" type="time" id="sono-dor" value="${x.dor||''}"></label><label>Acordei<input class="input mono" type="time" id="sono-aco" value="${x.aco||''}"></label></div>
-    <div class="sono-lbl">Ao acordar</div>
-    <div class="sono-tri" id="sono-d">${[1,2,3].map(v=>`<button type="button" class="${x.d===v?'on':''}" data-v="${v}" onclick="_sonoMarca('d',${v})">${SONO_D[v]}</button>`).join('')}</div>
-    <div class="row" style="gap:8px;margin-top:16px"><button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button><button class="btn btn-primary btn-block" onclick="sonoRegSalva()">Salvar</button></div>
-    ${sonoNoite(dk) ? `<button class="link-mais" style="margin-top:10px" onclick="sonoApaga('${dk}')">Apagar esta noite</button>` : ''}</div>`;
-  $('modal-back').classList.add('on');
-}
-function _sonoMarca(k, v){ const cur = k === 'q' ? window.__sonoQ : window.__sonoD; const nv = cur === v ? null : v; if(k === 'q') window.__sonoQ = nv; else window.__sonoD = nv;
-  document.querySelectorAll(`#sono-${k} button`).forEach(b=>b.classList.toggle('on', +b.dataset.v === nv)); }
-function _sonoModo(m){ $('sono-h').hidden = m !== 'h'; $('sono-hor').hidden = m !== 'hor'; document.querySelectorAll('.sono-modo button').forEach((b,i)=>b.classList.toggle('on', (i===0) === (m==='h'))); }
-function sonoRegSalva(){
-  const dk = window.__sonoDk || _sonoHoje(); const d = { q: window.__sonoQ || null, d: window.__sonoD || null, h:null, dor:null, aco:null };
-  if(!$('sono-hor').hidden){ d.dor = $('sono-dor').value || null; d.aco = $('sono-aco').value || null; if(d.dor && d.aco) d.h = sonoHorasDe(d.dor, d.aco); }
-  else { const h = +$('sono-hh').value || 0, m = +$('sono-mm').value || 0; if(h > 16 || m > 59 || h < 0 || m < 0){ toast('Confira as horas e os minutos'); return; } if(h || m) d.h = Math.round((h + m/60)*10)/10; }
-  if(d.h != null && (d.h < 0.5 || d.h > 16)){ toast('Confira o tempo de sono'); return; }
-  const S = sonoEst(); const ant = S.n[dk] || {}; const novo = Object.assign({}, ant);
-  ['q','d','h','dor','aco'].forEach(k=>{ if(d[k] == null) delete novo[k]; else novo[k] = d[k]; });
-  if(!Object.keys(novo).length){ closeModal(); return; }
-  S.n[dk] = novo; saveData(); closeModal(); toast('Noite registrada.'); _sonoHomeDesenha();
-  try{ if($('sono-tela')) openSono(); }catch(e){}
-}
+// RC 4: o formulário de registro (sonoRegistrar / sonoRegSalva / _sonoModo) existe SÓ na parte 81.
+// O formulário antigo desta parte (3 níveis, minutos de 5 em 5, total em décimos de hora) era sobrescrito
+// pela 81 e foi retirado, para não existirem duas lógicas de gravação do sono.
 function sonoApaga(dk){ const S = sonoEst(); delete S.n[dk]; saveData(); openSono(); }
 function sonoLigar(on){ const S = sonoEst(); S.on = !!on; saveData(); _sonoHomeDesenha(); sonoEntrada(); if($('modal-back').classList.contains('on')) openSono(); toast(on ? 'Sono ligado: uma pergunta rápida de manhã, na Home.' : 'Sono desligado. Os registros ficam guardados.'); }
 // ---------- Home: uma linha de manhã ----------
@@ -22552,13 +22551,13 @@ mtGancho('goTab', { depois(t){ if(t === 'perf') sonoEntrada(); } });
 try{ if(typeof PERF_BLOCOS !== 'undefined' && !PERF_BLOCOS.some(b=>b.k === 'sono')){ PERF_BLOCOS.push({ k:'sono', nome:'Sono e recuperação', desc:'opcional', sel:['#sono-entrada'] }); if(typeof PERF_PADRAO !== 'undefined') PERF_PADRAO.push('sono'); } }catch(e){}
 function _sonoResumo(dias){
   const L = _sonoUltimas(dias).filter(o=>o.x);
-  const hs = L.filter(o=>o.x.h != null).map(o=>o.x.h); const med = hs.length ? hs.reduce((a,b)=>a+b,0)/hs.length : null;
+  const ms = L.map(o=>sonoMinDe(o.x)).filter(m=>m != null); const medMin = ms.length ? ms.reduce((a,b)=>a+b,0)/ms.length : null; const med = medMin != null ? medMin/60 : null;
   const ruins = L.filter(o=>sonoRuim(o.x)).length;
   const dor = L.filter(o=>o.x.dor).map(o=>{ let m = _sonoMin(o.x.dor); if(m < 12*60) m += 1440; return m; });
   let dp = null; if(dor.length >= 3){ const md = dor.reduce((a,b)=>a+b,0)/dor.length; dp = Math.round(Math.sqrt(dor.reduce((t,v)=>t + (v-md)**2, 0)/dor.length)); }
   const q = { 1:0, 2:0, 3:0 }; L.forEach(o=>{ if(o.x.q) q[o.x.q]++; });
-  const txt = L.length ? `${L.length} ${L.length===1?'noite':'noites'} em ${dias} dias${med ? ` · média ${String(Math.round(med*10)/10).replace('.',',')} h` : ''}` : 'Nenhuma noite registrada ainda';
-  return { n:L.length, med, ruins, dp, q, txt };
+  const txt = L.length ? `${L.length} ${L.length===1?'noite':'noites'} em ${dias} dias${medMin != null ? ` · média ${sonoFmtMin(medMin)}` : ''}` : 'Nenhuma noite registrada ainda';
+  return { n:L.length, med, medMin, ruins, dp, q, txt };
 }
 function sonoGrafico(dias){
   const L = _sonoUltimas(dias).reverse();
@@ -22569,7 +22568,8 @@ function sonoGrafico(dias){
     if(!o.x) return;
     const cor = o.x.q ? SONO_Q[o.x.q][1] : 'var(--text-mute)';
     const dt = new Date(o.dk + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
-    if(o.x.h != null) barras += `<rect x="${x.toFixed(1)}" y="${Y(o.x.h).toFixed(1)}" width="${w.toFixed(1)}" height="${(H - pb - Y(o.x.h)).toFixed(1)}" rx="2" fill="${cor}"><title>${dt}: ${String(o.x.h).replace('.',',')} h${o.x.q ? ' · ' + SONO_Q[o.x.q][0] : ''}</title></rect>`;
+    const hN = sonoMinDe(o.x) != null ? sonoMinDe(o.x)/60 : null;
+    if(hN != null) barras += `<rect x="${x.toFixed(1)}" y="${Y(hN).toFixed(1)}" width="${w.toFixed(1)}" height="${(H - pb - Y(hN)).toFixed(1)}" rx="2" fill="${cor}"><title>${dt}: ${sonoFmtMin(sonoMinDe(o.x))}${o.x.q ? ' · ' + SONO_Q[o.x.q][0] : ''}</title></rect>`;
     else barras += `<circle cx="${(x + w/2).toFixed(1)}" cy="${(H - pb - 6).toFixed(1)}" r="${Math.min(4, w/2+1).toFixed(1)}" fill="${cor}"><title>${dt}: ${o.x.q ? SONO_Q[o.x.q][0] : 'registrada'} (sem horas)</title></circle>`;
   });
   const faixa = `<rect x="${pl}" y="${Y(9).toFixed(1)}" width="${W-pl-6}" height="${(Y(7)-Y(9)).toFixed(1)}" fill="var(--primary)" opacity=".08"/><line x1="${pl}" x2="${W-6}" y1="${Y(7).toFixed(1)}" y2="${Y(7).toFixed(1)}" stroke="var(--text-mute)" stroke-dasharray="3 3" stroke-width="1"/>`;
@@ -22596,12 +22596,12 @@ function openSono(){
   const card = (r, v)=>`<div class="ip-c"><small>${r}</small><b>${v}</b></div>`;
   mi.innerHTML = `<div id="sono-tela"><h3>🌙 Sono e recuperação</h3>
     <div class="cd-chips cd-per">${[[7,'7 noites'],[30,'30 noites'],[90,'90 noites']].map(([d,n])=>`<button type="button" class="${_sonoDias===d?'on':''}" onclick="_sonoDias=${d};openSono()">${n}</button>`).join('')}</div>
-    <div class="ip-cards">${card('Registradas', `${R.n} de ${_sonoDias}`)}${card('Média', R.med ? `${String(Math.round(R.med*10)/10).replace('.',',')} h` : '—')}${card('Noites ruins', R.n ? `${R.ruins}` : '—')}${card('Horário de dormir', R.dp != null ? (R.dp <= 30 ? 'regular' : R.dp <= 60 ? 'varia um pouco' : 'irregular') : '—')}</div>
+    <div class="ip-cards">${card('Registradas', `${R.n} de ${_sonoDias}`)}${card('Média', R.medMin != null ? sonoFmtMin(R.medMin) : '—')}${card('Noites ruins', R.n ? `${R.ruins}` : '—')}${card('Horário de dormir', R.dp != null ? (R.dp <= 30 ? 'regular' : R.dp <= 60 ? 'varia um pouco' : 'irregular') : '—')}</div>
     <div class="cd-graf">${sonoGrafico(_sonoDias)}</div>
     <p class="integ-mini">Barras: horas da noite (cor = qualidade: <span style="color:${SONO_Q[3][1]}">bem</span>, <span style="color:${SONO_Q[2][1]}">ok</span>, <span style="color:${SONO_Q[1][1]}">mal</span>). Faixa clara: 7 a 9 h, a recomendação geral para adultos. Pontos: noite com qualidade, sem horas.</p>
     ${sinal ? `<div class="run-st-dec rx-ori rx-atencao" style="margin-top:10px">${sinal.txt}</div>` : ''}
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="sonoRegistrar()">${sonoNoite(_sonoHoje()) ? 'Editar a noite de hoje' : 'Registrar a noite de hoje'}</button>
-    ${lista.length ? `<div class="section-lbl" style="margin:14px 0 4px">Últimas noites</div>${lista.map(o=>`<button type="button" class="integ-item" onclick="sonoRegistrar('${o.dk}')"><span class="ii-tx"><b>${new Date(o.dk+'T12:00:00').toLocaleDateString('pt-BR',{ weekday:'short', day:'2-digit', month:'2-digit' })}</b><small>${[o.x.h != null ? String(o.x.h).replace('.',',') + ' h' : '', o.x.dor && o.x.aco ? `${o.x.dor}–${o.x.aco}` : '', o.x.q ? SONO_Q[o.x.q][0] : '', o.x.d ? SONO_D[o.x.d] : ''].filter(Boolean).join(' · ')}</small></span><span class="ii-seta">›</span></button>`).join('')}` : ''}
+    ${lista.length ? `<div class="section-lbl" style="margin:14px 0 4px">Últimas noites</div>${lista.map(o=>`<button type="button" class="integ-item" onclick="sonoRegistrar('${o.dk}')"><span class="ii-tx"><b>${new Date(o.dk+'T12:00:00').toLocaleDateString('pt-BR',{ weekday:'short', day:'2-digit', month:'2-digit' })}</b><small>${[sonoMinDe(o.x) != null ? sonoFmtMin(sonoMinDe(o.x)) : '', o.x.dor && o.x.aco ? `${o.x.dor}–${o.x.aco}` : '', o.x.q ? SONO_Q[o.x.q][0] : '', o.x.d ? SONO_D[o.x.d] : ''].filter(Boolean).join(' · ')}</small></span><span class="ii-seta">›</span></button>`).join('')}` : ''}
     <details class="integ-sec"><summary>Como o app usa o sono</summary>
       <p class="integ-mini">Noite ruim = qualidade "mal", menos de 6 h ou acordou cansado(a). Uma noite ruim: aviso no treino do dia. Duas nas últimas três: sugestão de priorizar a recuperação. Três ou mais na semana (com pelo menos 4 registradas): a corrida não avança naquela semana, mantém. A musculação lembra de não forçar carga nova se o aquecimento pesar. Nada é alterado por uma noite só, e noites sem registro não contam.</p></details>
     <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>
@@ -22752,7 +22752,7 @@ const MT_TROFEUS_RC2 = [
   { secret:true, id:'sec_provagrupo', emoji:'🏁', name:'Prova no Grupo', desc:'Alguém do desafio juntos concluiu uma prova', cat:'geral' }
 ];
 (function(){ try{ const ids = new Set(TROPHIES.map(t=>t.id)); MT_TROFEUS_RC2.forEach(t=>{ if(!ids.has(t.id)) TROPHIES.push(t); }); }catch(e){} })();
-try{ Object.assign(TROPHY_ICO, { jun_semana1:['pair','1'], jun_10:['pair','10'], jun_4sem:['pair','4'], sec_provagrupo:['pair'] }); }catch(e){}
+try{ Object.assign(TROPHY_ICO, { jun_semana1:['calcheck','1'], jun_10:['target','10'], jun_4sem:['calcheck','4'], sec_provagrupo:['flag'] }); }catch(e){}   // RC 4: semana cumprida = calendário; prova = bandeira (antes todos eram 'pair', iguais aos da dupla)
 function djChecaConquistas(){
   try{
     if(!djLigado()) return;
@@ -23038,11 +23038,9 @@ function mtVolumeEntradas(entradas){
   return R;
 }
 // séries de um treino do histórico (mesmo dia, exercícios do treino)
-function mtEntradasDoTreino(x){
-  const dia = mtDia0Ts(x.at); const out = [];
-  (x.exercisesDone||[]).forEach(e=>{ const p = (state.progress[e.id]||[]).find(q=>q && mtDia0Ts(q.date) === dia); if(p && p.sets && p.sets.length) out.push({ exId:e.id, sets:p.sets }); });
-  return out;
-}
+// RC 4: pelo identificador da sessão (sid) — dois treinos no mesmo dia com o mesmo exercício não se misturam.
+// A busca é a de app.js (mtEntradasDaSessao); registro antigo sem sid continua pelo dia.
+function mtEntradasDoTreino(x){ return mtEntradasDaSessao(x).map(e=>({ exId:e.exId, sets:e.sets })); }
 function mtVolumeTreino(x){ return mtVolumeEntradas(mtEntradasDoTreino(x)); }
 
 // ---------- 2. Cards de compartilhamento ----------
@@ -23060,6 +23058,11 @@ window.mtsDeHistorico = function(x){
     d.hero = V.series ? { v:String(V.series), u: V.series===1 ? 'série concluída' : 'séries concluídas' } : { v:dur.v, u:dur.u||'de treino' };
     d.nums = nums.slice(0,3);
     if(V.maior){ let nome = ''; try{ nome = nomeDoEx(V.maior.ex) || ''; }catch(e){} d.desc = `Maior carga: ${_mtsN(V.maior.kg, V.maior.kg % 1 ? 1 : 0)} kg${nome ? ' · ' + nome : ''}`; }
+    // RC 4: volume em kg como dado SECUNDÁRIO e opcional (o aluno liga em "Mostrar volume registrado" no card).
+    // É a soma de carga × repetições exatamente como foram registradas — não "peso total levantado": halteres,
+    // unilaterais e peso do corpo não são multiplicados nem somados (o registro não permite confirmar).
+    d._descBase = d.desc || '';
+    d._volTxt = V.kg > 0 ? `Volume registrado: ${_mtsN(V.kg)} kg (soma de carga × repetições)${V.kgExtra ? ` + ${_mtsN(V.kgExtra)} kg de carga extra` : ''}` : '';
     if(x.adicional) d.kick = 'Treino adicional';
   }catch(e){ console.log('card musculação:', e); }
   return d;
@@ -23295,25 +23298,27 @@ Object.assign(window, { mtVolumeEntradas, mtVolumeTreino, mtEntradasDoTreino, mt
 // Relógio: o app é um PWA e o navegador não tem acesso aos dados de sono do Health Connect / Apple Saúde /
 // Zepp; os arquivos de atividade (GPX/TCX/FIT) não trazem o sono. Integração automática exigiria um app nativo
 // — avaliada e não feita (ver relatório). O registro manual leva poucos segundos.
-const SONO_Q5 = { 1:['Péssima','#d9534f'], 2:['Ruim','#e07a6a'], 3:['Razoável','#e2b13c'], 4:['Boa','#5cc19f'], 5:['Ótima','#3fbfa6'] };
+// RC 4: cinco matizes bem distintos (antes: dois vermelhos e dois verdes quase iguais) — vermelho, laranja, amarelo, verde, azul.
+const SONO_Q5 = { 1:['Péssima','#d64545'], 2:['Ruim','#ee8a2e'], 3:['Razoável','#d4b62c'], 4:['Boa','#2fa86e'], 5:['Ótima','#3b82e0'] };
 const SONO_D5 = { 1:'Muito baixa', 2:'Baixa', 3:'Normal', 4:'Boa', 5:'Ótima' };   // disposição ao acordar (1–2 = acordou cansado)
 const _q3de5 = v=>v ? (v <= 2 ? 1 : v === 3 ? 2 : 3) : null;
 const _q5de3 = v=>v ? ({1:2, 2:3, 3:4})[v] : null;
 function _sonoQ5(x){ return x ? (x.q5 || _q5de3(x.q)) : null; }
 function _sonoD5(x){ return x ? (x.d5 || _q5de3(x.d)) : null; }
-function _sonoFmtH(h){ if(h == null) return '—'; const hh = Math.floor(h), mm = Math.round((h - hh)*60); return mm ? `${hh} h ${String(mm).padStart(2,'0')}` : `${hh} h`; }
+function _sonoFmtH(h){ return h == null ? '—' : sonoFmtMin(Math.round(h*60)); }   // compatibilidade: o app usa sonoFmtMin (parte 76)
 window.sonoRegistrar = function(dk){
   dk = dk || _sonoHoje(); const x = sonoNoite(dk) || {};
   window.__sonoDk = dk; window.__sonoQ5 = _sonoQ5(x); window.__sonoD5 = _sonoD5(x);
-  const modo = (x.h != null && !x.dor) ? 'h' : 'hor';
-  const hh = x.h != null && !x.dor ? Math.floor(x.h) : '', mm = x.h != null && !x.dor ? Math.round((x.h % 1)*60) : '';
+  const tot = sonoMinDe(x); const soTotal = tot != null && !(x.dor && x.aco);
+  const modo = (soTotal && !x.dor && !x.aco) ? 'h' : 'hor';
+  const hh = soTotal ? Math.floor(tot/60) : '', mm = soTotal ? tot % 60 : '';
   const dt = new Date(dk + 'T12:00:00');
   $('modal-inner').innerHTML = `<div id="sono-reg"><h3>🌙 Como foi a noite?</h3>
     <p class="mt-muted" style="margin:2px 0 6px">Noite que terminou em ${dt.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'2-digit' })}. Preencha só o que quiser.</p>
     <div class="sono-lbl">Horário</div>
     <div class="sono-tri sono-modo"><button type="button" class="${modo==='hor'?'on':''}" onclick="_sonoModo('hor')">Dormi / acordei</button><button type="button" class="${modo==='h'?'on':''}" onclick="_sonoModo('h')">Só o total</button></div>
     <div id="sono-hor" ${modo==='hor'?'':'hidden'} class="sono-campos"><label>Fui dormir<input class="input mono" type="time" id="sono-dor" value="${x.dor||''}" oninput="_sonoTotal()"></label><label>Acordei<input class="input mono" type="time" id="sono-aco" value="${x.aco||''}" oninput="_sonoTotal()"></label></div>
-    <div id="sono-h" ${modo==='h'?'':'hidden'} class="sono-campos"><label>Horas<input class="input mono" type="number" min="0" max="16" inputmode="numeric" id="sono-hh" value="${hh}" placeholder="7"></label><label>Minutos<input class="input mono" type="number" min="0" max="59" step="5" inputmode="numeric" id="sono-mm" value="${mm}" placeholder="30"></label></div>
+    <div id="sono-h" ${modo==='h'?'':'hidden'} class="sono-campos"><label>Horas<input class="input mono" type="number" min="0" max="16" inputmode="numeric" id="sono-hh" value="${hh}" placeholder="7" oninput="_sonoTotal()"></label><label>Minutos<input class="input mono" type="number" min="0" max="59" step="1" inputmode="numeric" id="sono-mm" value="${mm}" placeholder="30" oninput="_sonoTotal()"></label></div>
     <div class="sono-total" id="sono-total"></div>
     <div class="sono-lbl">Qualidade do sono</div>
     <div class="sono-5" id="sono-q5">${[1,2,3,4,5].map(v=>`<button type="button" class="${window.__sonoQ5===v?'on':''}" data-v="${v}" aria-pressed="${window.__sonoQ5===v}" onclick="_sonoMarca5('q5',${v})"><i style="background:${SONO_Q5[v][1]}"></i>${SONO_Q5[v][0]}</button>`).join('')}</div>
@@ -23324,23 +23329,28 @@ window.sonoRegistrar = function(dk){
   $('modal-back').classList.add('on'); _sonoTotal();
 };
 // total exato em minutos (o cálculo antigo arredondava a 0,1 h: 7 h 15 aparecia como 7 h 18)
-function sonoHorasExatas(dor, aco){ const a = _sonoMin(dor), b = _sonoMin(aco); if(a == null || b == null) return null; let d = b - a; if(d <= 0) d += 1440; return Math.round(d/60*100)/100; }
-function _sonoTotal(){ const el = $('sono-total'); if(!el) return; const a = $('sono-dor') && $('sono-dor').value, b = $('sono-aco') && $('sono-aco').value;
-  const h = (a && b) ? sonoHorasExatas(a, b) : null; el.textContent = h != null ? `Total: ${_sonoFmtH(h)} de sono` : ''; }
+function sonoHorasExatas(dor, aco){ return sonoHorasDe(dor, aco); }   // compatibilidade; a conta é sonoMinutosDe (parte 76)
+function _sonoLeTotal(){   // { min } do que está na tela, ou { erro }
+  if($('sono-hor') && !$('sono-hor').hidden){ const a = $('sono-dor') && $('sono-dor').value, b = $('sono-aco') && $('sono-aco').value; return { min: (a && b) ? sonoMinutosDe(a, b) : null }; }
+  const hv = String(($('sono-hh')||{}).value||'').trim(), mv = String(($('sono-mm')||{}).value||'').trim(); if(!hv && !mv) return { min:null };
+  const h = +hv || 0, m = +mv || 0; if(!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || h > 16 || m < 0 || m > 59) return { erro:'Horas de 0 a 16 e minutos de 0 a 59 (números inteiros).' };
+  return { min: h*60 + m };
+}
+function _sonoTotal(){ const el = $('sono-total'); if(!el) return; const T = _sonoLeTotal(); el.textContent = T.erro ? T.erro : (T.min != null ? `Total: ${sonoFmtMin(T.min)} de sono` : ''); }
 function _sonoMarca5(k, v){ const cur = window['__sono' + (k==='q5'?'Q5':'D5')]; const nv = cur === v ? null : v; window['__sono' + (k==='q5'?'Q5':'D5')] = nv;
   document.querySelectorAll(`#sono-${k} button`).forEach(b=>{ const on = +b.dataset.v === nv; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); }
 window._sonoModo = function(m){ $('sono-h').hidden = m !== 'h'; $('sono-hor').hidden = m !== 'hor'; document.querySelectorAll('.sono-modo button').forEach((b,i)=>b.classList.toggle('on', (i===0) === (m==='hor'))); _sonoTotal(); };
 window.sonoRegSalva = function(){
   const dk = window.__sonoDk || _sonoHoje();
   const q5 = window.__sonoQ5 || null, d5 = window.__sonoD5 || null;
-  const d = { q5, d5, q:_q3de5(q5), d:_q3de5(d5), h:null, dor:null, aco:null };
-  if(!$('sono-hor').hidden){ d.dor = $('sono-dor').value || null; d.aco = $('sono-aco').value || null;
-    if((d.dor && !d.aco) || (!d.dor && d.aco)){ /* só um horário: guarda, sem inventar o total */ }
-    if(d.dor && d.aco) d.h = sonoHorasExatas(d.dor, d.aco); }
-  else { const h = +$('sono-hh').value || 0, m = +$('sono-mm').value || 0; if(h > 16 || m > 59 || h < 0 || m < 0){ toast('Confira as horas e os minutos'); return; } if(h || m) d.h = Math.round((h + m/60)*10)/10; }
-  if(d.h != null && (d.h < 0.5 || d.h > 16)){ toast('Confira o horário: o total ficou em ' + _sonoFmtH(d.h)); return; }
+  const d = { q5, d5, q:_q3de5(q5), d:_q3de5(d5), min:null, h:null, dor:null, aco:null };
+  // os dois modos usam a mesma base: minutos inteiros (só um horário: guarda, sem inventar o total)
+  if(!$('sono-hor').hidden){ d.dor = $('sono-dor').value || null; d.aco = $('sono-aco').value || null; }
+  const T = _sonoLeTotal(); if(T.erro){ toast(T.erro); return; }
+  if(T.min != null && T.min > 0){ d.min = T.min; d.h = T.min/60; }
+  if(d.min != null && (d.min < 30 || d.min > 960)){ toast('Confira o horário: o total ficou em ' + sonoFmtMin(d.min)); return; }
   const S = sonoEst(); const ant = S.n[dk] || {}; const novo = Object.assign({}, ant);
-  ['q5','d5','q','d','h','dor','aco'].forEach(k=>{ if(d[k] == null) delete novo[k]; else novo[k] = d[k]; });
+  ['q5','d5','q','d','min','h','dor','aco'].forEach(k=>{ if(d[k] == null) delete novo[k]; else novo[k] = d[k]; });
   if(!Object.keys(novo).length){ closeModal(); return; }
   S.n[dk] = novo; if(!S.on) S.on = true;   // registrar uma noite liga o acompanhamento
   saveData(); closeModal(); toast('Noite registrada.'); try{ _sonoHomeDesenha(); renderHomeMetrics(); }catch(e){}
@@ -23360,47 +23370,72 @@ function _sonoMinsDe(hhmm, noite){ let m = _sonoMin(hhmm); if(m == null) return 
 function _sonoDp(v){ if(v.length < 3) return null; const md = _sonoMedia(v); return Math.round(Math.sqrt(v.reduce((t,x)=>t + (x-md)**2, 0)/v.length)); }
 function _sonoFmtMin(m){ if(m == null) return '—'; m = Math.round(m) % 1440; return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`; }
 function sonoAnalise(){
-  const S = state.sono || {}; const N = S.n || {};
+  const S = state.sono || {}; const N = S.n || {}; const DIA = 86400000;
   const semIni = mtSemanaIni(Date.now());
-  const noites = (a, b)=>Object.keys(N).filter(dk=>{ const t = new Date(dk + 'T12:00:00').getTime(); return t >= a && t < b; }).map(dk=>({ dk, x:N[dk] }));
-  // médias por semana (4 semanas) e por mês (3 meses), só com o que foi registrado
-  const semanas = [0,1,2,3].map(k=>{ const a = semIni - k*7*86400000; const L = noites(a, a + 7*86400000); const hs = L.filter(o=>o.x.h != null).map(o=>o.x.h);
-    return { a, n:L.length, nh:hs.length, med:_sonoMedia(hs), ruins:L.filter(o=>sonoRuim(o.x)).length }; });
+  const noites = (a, b)=>Object.keys(N).filter(dk=>{ const t = new Date(dk + 'T12:00:00').getTime(); return t >= a && t < b; }).map(dk=>({ dk, x:N[dk], m:sonoMinDe(N[dk]) }));
+  // atividades (musculação, corrida, caminhada, bike) com a noite ANTERIOR: a noite é guardada no dia em que a pessoa acordou
+  const ativ = [...(((state.modules.lift||{}).history)||[]).map(x=>Object.assign({ _m:'musculacao' }, x)),
+                ...(((state.modules.run||{}).history)||[]).map(x=>Object.assign({ _m: x.activity === 'bike' ? 'bike' : x.activity === 'caminhada' ? 'caminhada' : 'corrida' }, x))].filter(x=>x && x.at);
+  const ativEm = (a, b)=>ativ.filter(x=>x.at >= a && x.at < b);
+  // médias por semana (4) e por mês (3), só com o que foi registrado; treinos da mesma semana ao lado (associação, não causa)
+  const semanas = [0,1,2,3].map(k=>{ const a = semIni - k*7*DIA; const L = noites(a, a + 7*DIA); const ms = L.map(o=>o.m).filter(m=>m != null);
+    return { a, n:L.length, nh:ms.length, med:_sonoMedia(ms), ruins:L.filter(o=>sonoRuim(o.x)).length, treinos:ativEm(a, Math.min(a + 7*DIA, Date.now()+1)).length }; });
   const hoje = new Date(); const meses = [0,1,2].map(k=>{ const d0 = new Date(hoje.getFullYear(), hoje.getMonth()-k, 1).getTime(), d1 = new Date(hoje.getFullYear(), hoje.getMonth()-k+1, 1).getTime();
-    const L = noites(d0, d1); const hs = L.filter(o=>o.x.h != null).map(o=>o.x.h); return { d0, n:L.length, nh:hs.length, med:_sonoMedia(hs) }; });
+    const L = noites(d0, d1); const ms = L.map(o=>o.m).filter(m=>m != null); return { d0, n:L.length, nh:ms.length, med:_sonoMedia(ms), ruins:L.filter(o=>sonoRuim(o.x)).length, treinos:ativEm(d0, Math.min(d1, Date.now()+1)).length }; });
   // regularidade (30 dias): variação do horário de dormir e de acordar; tendência = 2 semanas recentes × 2 anteriores
-  const L30 = noites(Date.now() - 30*86400000, Date.now() + 86400000);
+  const L30 = noites(Date.now() - 30*DIA, Date.now() + DIA);
   const dor = L30.filter(o=>o.x.dor).map(o=>_sonoMinsDe(o.x.dor, true)), aco = L30.filter(o=>o.x.aco).map(o=>_sonoMinsDe(o.x.aco, false));
-  const rec = noites(Date.now() - 14*86400000, Date.now() + 86400000).filter(o=>o.x.dor).map(o=>_sonoMinsDe(o.x.dor, true));
-  const antes = noites(Date.now() - 28*86400000, Date.now() - 14*86400000).filter(o=>o.x.dor).map(o=>_sonoMinsDe(o.x.dor, true));
+  const rec = noites(Date.now() - 14*DIA, Date.now() + DIA).filter(o=>o.x.dor).map(o=>_sonoMinsDe(o.x.dor, true));
+  const antes = noites(Date.now() - 28*DIA, Date.now() - 14*DIA).filter(o=>o.x.dor).map(o=>_sonoMinsDe(o.x.dor, true));
   const dpR = _sonoDp(rec), dpA = _sonoDp(antes);
-  const tend = (dpR != null && dpA != null) ? (dpR + 10 < dpA ? 'melhorando' : dpR > dpA + 10 ? 'piorando' : 'estável') : null;
-  // sono × treinos (90 dias): esforço médio dos treinos depois de noite boa × noite ruim
-  const boa = [], ruim = [];
-  [...(((state.modules.lift||{}).history)||[]), ...(((state.modules.run||{}).history)||[])].filter(x=>x && x.at >= Date.now() - 90*86400000 && +x.rpe > 0).forEach(x=>{
-    const n = N[chaveDia(new Date(x.at))]; if(!n) return;
-    if(sonoRuim(n)) ruim.push(+x.rpe); else if((_sonoQ5(n)||0) >= 4 || (n.h != null && n.h >= 7)) boa.push(+x.rpe);
+  const tend = (dpR != null && dpA != null) ? (dpR + 10 < dpA ? 'mais regular' : dpR > dpA + 10 ? 'menos regular' : 'estável') : null;
+  // qualidade e disposição (30 dias): quantas noites em cada nível
+  const qual = {1:0,2:0,3:0,4:0,5:0}, disp = {1:0,2:0,3:0,4:0,5:0}; L30.forEach(o=>{ const q = _sonoQ5(o.x), d = _sonoD5(o.x); if(q) qual[q]++; if(d) disp[d]++; });
+  // sono × atividade (90 dias). Noite boa = qualidade boa/ótima ou 7 h+ sem ser ruim; noite ruim = regra do app (sonoRuim)
+  const boaN = x=>!!x && !sonoRuim(x) && ((_sonoQ5(x)||0) >= 4 || (sonoMinDe(x) != null && sonoMinDe(x) >= 420));
+  const G = { boa:{ noites:0, comAtiv:0, ativ:0, rpe:[], mod:{} }, ruim:{ noites:0, comAtiv:0, ativ:0, rpe:[], mod:{} } };
+  noites(Date.now() - 90*DIA, Date.now() + DIA).forEach(o=>{
+    const g = sonoRuim(o.x) ? G.ruim : boaN(o.x) ? G.boa : null; if(!g) return;
+    const t0 = new Date(o.dk + 'T00:00:00').getTime(); if(t0 > Date.now()) return;
+    const doDia = ativEm(t0, t0 + DIA); g.noites++; if(doDia.length) g.comAtiv++;
+    doDia.forEach(x=>{ g.ativ++; g.mod[x._m] = (g.mod[x._m]||0) + 1; if(+x.rpe > 0) g.rpe.push(+x.rpe); });
   });
-  return { semanas, meses, dorMed:_sonoMedia(dor), acoMed:_sonoMedia(aco), dpDor:_sonoDp(dor), dpAco:_sonoDp(aco), tend, boa, ruim };
+  return { semanas, meses, dorMed:_sonoMedia(dor), acoMed:_sonoMedia(aco), dpDor:_sonoDp(dor), dpAco:_sonoDp(aco), tend, qual, disp, n30:L30.length,
+    boa:G.boa.rpe, ruim:G.ruim.rpe, G };
 }
 function sonoAnaliseHTML(){
   const A = sonoAnalise(); const fmtD = t=>new Date(t).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
   const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-  const linhaSem = (s, i)=>`<tr><td>${i===0 ? 'Esta semana' : i===1 ? 'Semana passada' : 'Semana de ' + fmtD(s.a)}</td><td>${s.n}</td><td>${s.nh ? _sonoFmtH(s.med) : '—'}</td><td>${s.n ? s.ruins : '—'}</td></tr>`;
-  const linhaMes = m=>`<tr><td>${MES[new Date(m.d0).getMonth()]}/${String(new Date(m.d0).getFullYear()).slice(2)}</td><td>${m.n}</td><td>${m.nh ? _sonoFmtH(m.med) : '—'}</td><td></td></tr>`;
+  const linhaSem = (s, i)=>`<tr><td>${i===0 ? 'Esta semana' : i===1 ? 'Semana passada' : 'Semana de ' + fmtD(s.a)}</td><td>${s.n}</td><td>${s.nh ? sonoFmtMin(s.med) : '—'}</td><td>${s.n ? s.ruins : '—'}</td><td>${s.treinos}</td></tr>`;
+  const linhaMes = m=>`<tr><td>${MES[new Date(m.d0).getMonth()]}/${String(new Date(m.d0).getFullYear()).slice(2)}</td><td>${m.n}</td><td>${m.nh ? sonoFmtMin(m.med) : '—'}</td><td>${m.n ? m.ruins : '—'}</td><td>${m.treinos}</td></tr>`;
   const reg = dp=>dp == null ? 'poucos registros' : dp <= 30 ? `regular (±${dp} min)` : dp <= 60 ? `varia um pouco (±${dp} min)` : `irregular (±${dp} min)`;
-  const rel = (A.boa.length >= 3 && A.ruim.length >= 3)
-    ? `Treinos depois de <b>noite boa</b>: esforço médio <b>${(_sonoMedia(A.boa)).toFixed(1).replace('.',',')}/10</b> (${A.boa.length} treinos). Depois de <b>noite ruim</b>: <b>${(_sonoMedia(A.ruim)).toFixed(1).replace('.',',')}/10</b> (${A.ruim.length} treinos). É uma associação nos seus registros, não prova de causa.`
-    : `Ainda não dá para comparar: são precisos pelo menos 3 treinos com esforço registrado depois de noites boas e 3 depois de noites ruins (agora: ${A.boa.length} e ${A.ruim.length}).`;
+  const dist = (o, rot, cor)=>{ const tot = [1,2,3,4,5].reduce((t,v)=>t+o[v],0); if(!tot) return '<p class="integ-mini">Sem registros nos últimos 30 dias.</p>';
+    return `<div class="sono-dist" role="img" aria-label="${[1,2,3,4,5].filter(v=>o[v]).map(v=>`${rot(v)}: ${o[v]}`).join(', ')}">${[1,2,3,4,5].filter(v=>o[v]).map(v=>`<i style="flex:${o[v]};background:${cor(v)}"></i>`).join('')}</div>
+      <div class="sono-leg">${[1,2,3,4,5].filter(v=>o[v]).map(v=>`<span><i style="background:${cor(v)}"></i>${rot(v)} <b>${o[v]}</b></span>`).join('')}</div>`; };
+  const NOME_M = { musculacao:'musculação', corrida:'corrida', caminhada:'caminhada', bike:'bike' };
+  const mods = g=>Object.keys(g.mod).sort((a,b)=>g.mod[b]-g.mod[a]).map(k=>`${g.mod[k]} de ${NOME_M[k]}`).join(', ');
+  const B = A.G.boa, R = A.G.ruim; const pct = g=>Math.round(g.comAtiv/g.noites*100);
+  const lin = [];
+  if(B.noites >= 5 && R.noites >= 5) lin.push(`Depois de <b>noite boa</b> você se exercitou em <b>${pct(B)}%</b> dos dias (${B.comAtiv} de ${B.noites}); depois de <b>noite ruim</b>, em <b>${pct(R)}%</b> (${R.comAtiv} de ${R.noites}).`);
+  if(B.ativ) lin.push(`Atividades depois de noite boa: ${mods(B)}.`);
+  if(R.ativ) lin.push(`Depois de noite ruim: ${mods(R)}.`);
+  if(B.rpe.length >= 3 && R.rpe.length >= 3) lin.push(`Esforço registrado (1–10): <b>${_sonoMedia(B.rpe).toFixed(1).replace('.',',')}</b> depois de noite boa (${B.rpe.length} treinos) e <b>${_sonoMedia(R.rpe).toFixed(1).replace('.',',')}</b> depois de noite ruim (${R.rpe.length}).`);
+  const rel = lin.length && (B.noites + R.noites) >= 8
+    ? `${lin.map(l=>`<p class="integ-mini" style="font-size:12.5px;margin:4px 0">${l}</p>`).join('')}<p class="integ-mini">Isso mostra o que aconteceu junto nos seus registros dos últimos 90 dias. Não prova que o sono causou a diferença: agenda, clima e o tipo de treino do dia também pesam.</p>`
+    : `<p class="integ-mini" style="font-size:12.5px">Ainda não dá para comparar com segurança: são precisas pelo menos 5 noites boas e 5 ruins registradas, ou 3 treinos com esforço registrado depois de cada uma (agora: ${B.noites} noites boas, ${R.noites} ruins; ${B.rpe.length} e ${R.rpe.length} treinos com esforço).</p>`;
   return `<div class="sono-an">
     <div class="section-lbl" style="margin:16px 0 6px">Médias</div>
-    <table class="sono-tab"><thead><tr><th></th><th>Noites</th><th>Média</th><th>Ruins</th></tr></thead><tbody>${A.semanas.map(linhaSem).join('')}${A.meses.map(linhaMes).join('')}</tbody></table>
-    <p class="integ-mini">A média usa só as noites com horas informadas. Noites sem registro não contam.</p>
+    <table class="sono-tab"><thead><tr><th></th><th>Noites</th><th>Média</th><th>Ruins</th><th>Treinos</th></tr></thead><tbody>${A.semanas.map(linhaSem).join('')}${A.meses.map(linhaMes).join('')}</tbody></table>
+    <p class="integ-mini">A média usa só as noites com duração (horas ou os dois horários). Noites sem registro não contam. "Treinos" = musculação, corrida, caminhada e bike registradas no período.</p>
     <div class="section-lbl" style="margin:14px 0 6px">Regularidade (30 dias)</div>
     <div class="ip-cards"><div class="ip-c"><small>Dormir (média)</small><b>${_sonoFmtMin(A.dorMed)}</b><small>${reg(A.dpDor)}</small></div><div class="ip-c"><small>Acordar (média)</small><b>${_sonoFmtMin(A.acoMed)}</b><small>${reg(A.dpAco)}</small></div></div>
-    ${A.tend ? `<p class="integ-mini">Tendência do horário de dormir (2 semanas × 2 anteriores): <b>${A.tend}</b>.</p>` : ''}
-    <div class="section-lbl" style="margin:14px 0 6px">Sono e treinos</div>
-    <p class="integ-mini" style="font-size:12.5px">${rel}</p>
+    ${A.tend ? `<p class="integ-mini">Horário de dormir nas 2 últimas semanas, comparado às 2 anteriores: <b>${A.tend}</b>.</p>` : ''}
+    <div class="section-lbl" style="margin:14px 0 6px">Qualidade do sono (30 dias)</div>
+    ${dist(A.qual, v=>SONO_Q5[v][0], v=>SONO_Q5[v][1])}
+    <div class="section-lbl" style="margin:14px 0 6px">Disposição ao acordar (30 dias)</div>
+    ${dist(A.disp, v=>SONO_D5[v], v=>SONO_Q5[v][1])}
+    <div class="section-lbl" style="margin:14px 0 6px">Sono e atividade física</div>
+    ${rel}
   </div>`;
 }
 const _openSonoRC2 = window.openSono;
@@ -23412,9 +23447,9 @@ window.openSono = function(){
     const det = tela.querySelector('details.integ-sec'); if(det) det.insertAdjacentHTML('beforebegin', sonoAnaliseHTML());
     // lista: mostra a qualidade e a disposição de 5 níveis
     tela.querySelectorAll('.integ-item').forEach(b=>{ const m = /sonoRegistrar\('([\d-]+)'\)/.exec(b.getAttribute('onclick')||''); if(!m) return; const x = sonoNoite(m[1]); const sm = b.querySelector('small'); if(!x || !sm) return;
-      sm.textContent = [x.h != null ? _sonoFmtH(x.h) : '', x.dor && x.aco ? `${x.dor}–${x.aco}` : (x.dor ? `dormiu ${x.dor}` : x.aco ? `acordou ${x.aco}` : ''), _sonoQ5(x) ? SONO_Q5[_sonoQ5(x)][0] : '', _sonoD5(x) ? 'disposição ' + SONO_D5[_sonoD5(x)].toLowerCase() : ''].filter(Boolean).join(' · '); });
+      sm.textContent = [sonoMinDe(x) != null ? sonoFmtMin(sonoMinDe(x)) : '', x.dor && x.aco ? `${x.dor}–${x.aco}` : (x.dor ? `dormiu ${x.dor}` : x.aco ? `acordou ${x.aco}` : ''), _sonoQ5(x) ? SONO_Q5[_sonoQ5(x)][0] : '', _sonoD5(x) ? 'disposição ' + SONO_D5[_sonoD5(x)].toLowerCase() : ''].filter(Boolean).join(' · '); });
     const leg = [...tela.querySelectorAll('.integ-mini')].find(p=>/Barras: horas da noite/.test(p.textContent));
-    if(leg) leg.innerHTML = `Barras: horas de cada noite (cor = qualidade: ${[5,4,3,2,1].map(v=>`<span style="color:${SONO_Q5[v][1]}">${SONO_Q5[v][0].toLowerCase()}</span>`).join(', ')}). Faixa clara: 7 a 9 h (recomendação geral para adultos). Linha: média dos últimos 7 dias registrados.`;
+    if(leg) leg.innerHTML = `<span class="sono-leg">${[5,4,3,2,1].map(v=>`<span><i style="background:${SONO_Q5[v][1]}"></i>${SONO_Q5[v][0]}</span>`).join('')}<span><i class="sl-sem"></i>sem qualidade</span></span>Barras: duração de cada noite; a cor é a qualidade. Faixa clara: 7 a 9 h (recomendação geral para adultos). Linha: média dos últimos 7 dias registrados.`;
     const int = `<details class="integ-sec"><summary>Relógio e outros apps</summary><p class="integ-mini">O MetaTreino funciona no navegador e o navegador não tem acesso aos dados de sono do relógio (Health Connect, Apple Saúde, Zepp). Por isso o registro é manual e leva poucos segundos. Nenhum valor é estimado pelo app.</p></details>`;
     if(det) det.insertAdjacentHTML('afterend', int);
   }catch(e){ console.log('sono (tela):', e); }
@@ -23426,8 +23461,8 @@ window.sonoGrafico = function(dias){
   try{
     const L = _sonoUltimas(dias).reverse(); const W = 330, H = 170, pl = 26, pb = 22, pt = 8, max = 11; const bw = (W - pl - 6)/dias;
     const Y = h=>pt + (1 - Math.min(h, max)/max)*(H - pt - pb);
-    L.forEach(o=>{ if(!o.x || o.x.h == null) return; const q5 = _sonoQ5(o.x); if(q5) svg = svg.replace(new RegExp(`(<rect [^>]*fill=")[^"]*("><title>${new Date(o.dk + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }).replace('/', '\\/')}:)`), `$1${SONO_Q5[q5][1]}$2`); });
-    const pts = []; L.forEach((o,i)=>{ const janela = L.slice(Math.max(0, i-6), i+1).filter(z=>z.x && z.x.h != null); if(janela.length >= 3 && o.x) pts.push(`${(pl + i*bw + bw/2).toFixed(1)},${Y(_sonoMedia(janela.map(z=>z.x.h))).toFixed(1)}`); });
+    L.forEach(o=>{ if(!o.x || sonoMinDe(o.x) == null) return; const q5 = _sonoQ5(o.x); if(q5) svg = svg.replace(new RegExp(`(<rect [^>]*fill=")[^"]*("><title>${new Date(o.dk + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }).replace('/', '\\/')}:)`), `$1${SONO_Q5[q5][1]}$2`); });
+    const pts = []; L.forEach((o,i)=>{ const janela = L.slice(Math.max(0, i-6), i+1).filter(z=>z.x && sonoMinDe(z.x) != null); if(janela.length >= 3 && o.x) pts.push(`${(pl + i*bw + bw/2).toFixed(1)},${Y(_sonoMedia(janela.map(z=>sonoMinDe(z.x)))/60).toFixed(1)}`); });
     if(pts.length >= 2) svg = svg.replace('</svg>', `<polyline points="${pts.join(' ')}" fill="none" stroke="var(--text)" stroke-opacity=".55" stroke-width="1.6" stroke-linejoin="round"/></svg>`);
   }catch(e){}
   return svg;
@@ -23437,8 +23472,9 @@ window.sonoGrafico = function(dias){
 function _sonoTile(){
   const S = state.sono || {}; const x = sonoNoite(_sonoHoje()); const R = (typeof _sonoResumo === 'function') ? _sonoResumo(7) : null;
   const q5 = _sonoQ5(x);
-  const v = x && x.h != null ? `${_sonoFmtH(x.h).replace(' h', '<small>h</small>').replace(/ (\d\d)$/, '<small>$1</small>')}` : (x && q5 ? `<span style="font-size:20px">${SONO_Q5[q5][0]}</span>` : '–');
-  const sub = x ? [q5 && x.h != null ? SONO_Q5[q5][0] : '', R && R.med && R.n >= 2 ? `média 7 dias ${_sonoFmtH(R.med)}` : ''].filter(Boolean).join(' · ') || 'Noite registrada'
+  const xm = sonoMinDe(x);
+  const v = x && xm != null ? `${sonoFmtMin(xm).replace(' h', '<small>h</small>').replace(/ (\d\d)$/, '<small>$1</small>')}` : (x && q5 ? `<span style="font-size:20px">${SONO_Q5[q5][0]}</span>` : '–');
+  const sub = x ? [q5 && xm != null ? SONO_Q5[q5][0] : '', R && R.medMin != null && R.n >= 2 ? `média 7 dias ${sonoFmtMin(R.medMin)}` : ''].filter(Boolean).join(' · ') || 'Noite registrada'
     : (S.on ? 'Toque para registrar a noite' : 'Registre seu sono');
   return `<div class="met met-sono" onclick="${x ? 'openSono()' : 'sonoRegistrar()'}"><div class="met-h"><i>🌙</i>Sono</div><div class="met-v">${v}</div><div class="met-s">${mtEsc(sub)}</div></div>`;
 }
@@ -23507,44 +23543,120 @@ function mtSemanaAtiv(){
   if(metaSem){ if(Math.min(A.feitos, A.porSem) >= metaSem) semanas++; for(let k=1; k<=26; k++){ const a = ini - k*7*DIA; const B = mtAdesao(a, a + 7*DIA); if(Math.min(B.feitos, B.porSem) >= metaSem) semanas++; else break; } }
   return { feitos: Math.min(A.feitos, A.porSem || A.feitos), plan: A.porSem, extras: A.extras, dias, setsFeitas, setsPlan, temLift, semanas, metaSem, hoje };
 }
+// RC 4: cada parte do cartão abre o SEU detalhe (antes o cartão inteiro abria a mesma janela genérica):
+//  • placar/barra → treinos do plano desta semana (planejados e concluídos, com o dia em que foram feitos);
+//  • um dia → o que aconteceu naquele dia (atividades, o que estava planejado, descanso escolhido);
+//  • Séries → as séries registradas na semana, por exercício;  • Semanas na meta → como a sequência foi contada;
+//  • Extras → as atividades que ficaram fora do plano.
+// Visual: feito (cheio), feito em outro dia (contorno cheio + ✓), planejado (tracejado), hoje (anel), descanso
+// escolhido (cinza), faltou (contorno cinza com –), sem treino (só o fundo). Cores: só a do tema e tons neutros.
+function _awPlanoSemana(){
+  const ini = mtSemanaIni(Date.now()); const fim = ini + 7*DIA_MS; const hj = getDayIdx(); const DIAS = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const H = mtHist().filter(x=>x.at >= ini && x.at < fim);
+  const itens = [];
+  ['lift','run'].forEach(m=>{ const mod = state.modules[m]; ((mod && mod.plan && mod.plan.workouts)||[]).forEach(w=>{
+    if(w.motor && w.motor.tipo === 'prova') return;
+    const mH = (mod.history||[]).filter(h=>h.at >= ini && h.at < fim && !h.adicional);
+    // musculação: pelo treino (A, B…), em qualquer dia; corrida: pelo treino ou pela atividade feita no dia dele
+    const feito = (w.k != null ? mH.find(h=>h.id === w.k) : null) || (m === 'run' ? mH.find(h=>(new Date(h.at).getDay()||7) === w.dayIdx) : null);
+    const t = ini + (w.dayIdx-1)*DIA_MS;
+    const pulado = (state.skips||[]).some(s=>s.at === t && s.module === m && (typeof skipEDoTreino !== 'function' || skipEDoTreino(s, w)));
+    const st = feito ? ((new Date(feito.at).getDay()||7) === w.dayIdx ? 'feito' : 'movido') : pulado ? 'desc' : w.dayIdx < hj ? 'faltou' : w.dayIdx === hj ? 'hoje' : 'plan';
+    itens.push({ m, w, dia: DIAS[w.dayIdx-1], nome: m === 'lift' ? `Treino ${w.k} — ${w.name}` : w.name, st, feito });
+  }); });
+  return itens.sort((a,b)=>a.w.dayIdx - b.w.dayIdx || (a.m < b.m ? -1 : 1));
+}
+function _awExtras(){
+  const ini = mtSemanaIni(Date.now());
+  const planos = { lift: !!(state.modules.lift && state.modules.lift.plan), run: !!(state.modules.run && state.modules.run.plan) };
+  const runWs = (planos.run && state.modules.run.plan.workouts) || []; const cc = runWs.some(w=>w.motor && ['caminhada','camcorre'].includes(w.motor.tipo));
+  const modDe = x=>x._t === 'musculacao' ? (planos.lift ? 'lift' : null) : (x._t === 'corrida' || (x._t === 'caminhada' && cc)) ? (planos.run ? 'run' : null) : null;
+  const vistos = new Set(); const out = [];
+  mtHist().filter(x=>x.at >= ini).forEach(x=>{ if(x.adicional){ out.push(x); return; } const m = modDe(x); const k = m + '|' + mtDia0(x.at); if(m && !vistos.has(k)) vistos.add(k); else out.push(x); });
+  return out;
+}
+const _awNomeAtv = x=>x._t === 'musculacao' ? String(x.name||'Musculação') : ({ corrida:'Corrida', caminhada:'Caminhada', bike:'Bike' }[x._t] || 'Atividade');
+const _awDetAtv = x=>[x.duration ? fmtDur(x.duration) : '', x.distance ? `${mtFmtKm(x.distance)} km` : '', +x.rpe > 0 ? `esforço ${x.rpe}/10` : ''].filter(Boolean).join(' · ');
 window.renderQuickStats = function(){
   const el = $('home-quick'); if(!el) return;
   try{
     const S = mtSemanaAtiv(); const DN = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
     const pct = S.plan ? Math.min(100, Math.round(S.feitos/S.plan*100)) : 0;
-    const titSt = { feito:'feito', movido:'feito em outro dia', desc:'descanso escolhido', hoje:'hoje', 'livre-hoje':'hoje (livre)', faltou:'faltou', plan:'planejado', livre:'livre' };
-    const col = o=>`<div class="aw-d st-${o.st}${o.d===S.hoje?' hj':''}" title="${DN[o.d-1]}: ${titSt[o.st]}"><div class="aw-cap"><i style="height:${o.st==='feito'||o.st==='movido' ? 100 : o.p ? 100 : 0}%"></i>${o.f > 1 ? `<em>${o.f}</em>` : ''}</div><span>${DN[o.d-1]}</span></div>`;
-    const kpi = (lbl, val, sub, p)=>`<div class="aw-k"><small>${lbl}</small><b>${val}</b>${sub ? `<span>${sub}</span>` : ''}${p != null ? `<div class="aw-bar"><i style="width:${Math.min(100, Math.round(p*100))}%"></i></div>` : ''}</div>`;
+    const titSt = { feito:'feito', movido:'treino feito em outro dia', desc:'descanso escolhido', hoje:'hoje, a fazer', 'livre-hoje':'hoje, sem treino', faltou:'faltou', plan:'planejado', livre:'sem treino' };
+    const marca = { feito:'✓', movido:'✓', faltou:'–' };
+    const col = o=>`<button type="button" class="aw-d st-${o.st}${o.d===S.hoje?' hj':''}" onclick="event.stopPropagation();openAwDetalhe('dia',${o.d})" aria-label="${DN[o.d-1]}: ${titSt[o.st]}${o.f > 1 ? `, ${o.f} atividades` : ''}"><span class="aw-cap">${marca[o.st] ? `<i>${marca[o.st]}</i>` : ''}${o.f > 1 ? `<em>${o.f}</em>` : ''}</span><span class="aw-dn">${DN[o.d-1]}</span></button>`;
+    const kpi = (tipo, lbl, val, sub, p)=>`<button type="button" class="aw-k" onclick="event.stopPropagation();openAwDetalhe('${tipo}')"><small>${lbl}</small><b>${val}</b>${sub ? `<span>${sub}</span>` : ''}${p != null ? `<span class="aw-bar"><i style="width:${Math.min(100, Math.round(p*100))}%"></i></span>` : ''}</button>`;
+    const ativos = S.dias.filter(o=>o.f).length;
     el.innerHTML = `
-      <div class="act-head"><h3>Atividade da semana</h3><span>${S.plan ? `${S.feitos} de ${S.plan} treinos` : `${S.dias.filter(o=>o.f).length} ${S.dias.filter(o=>o.f).length===1?'dia ativo':'dias ativos'}`}</span></div>
+      <div class="act-head"><h3>Atividade da semana</h3><span>${S.plan ? `${S.feitos} de ${S.plan} treinos` : `${ativos} ${ativos===1?'dia ativo':'dias ativos'}`}</span></div>
       <div class="aw">
-        <div class="aw-top"><div class="aw-placar"><b>${S.plan ? S.feitos : S.dias.reduce((t,o)=>t+o.f,0)}</b><span>${S.plan ? `/${S.plan} treinos do plano` : ' atividades'}</span></div>
-          ${S.plan ? `<div class="aw-pct" aria-label="${pct}% dos treinos do plano">${pct}%</div>` : ''}</div>
-        ${S.plan ? `<div class="aw-meter" role="progressbar" aria-valuemin="0" aria-valuemax="${S.plan}" aria-valuenow="${S.feitos}"><i style="width:${pct}%"></i></div>` : ''}
+        <button type="button" class="aw-top" onclick="event.stopPropagation();openAwDetalhe('${S.plan ? 'plano' : 'extras'}')" aria-label="Ver os treinos da semana">
+          <span class="aw-placar"><b>${S.plan ? S.feitos : S.dias.reduce((t,o)=>t+o.f,0)}</b><span>${S.plan ? `/${S.plan} treinos do plano` : ' atividades'}</span></span>
+          ${S.plan ? `<span class="aw-pct">${pct}%</span>` : ''}
+          ${S.plan ? `<span class="aw-meter" role="progressbar" aria-valuemin="0" aria-valuemax="${S.plan}" aria-valuenow="${S.feitos}"><i style="width:${pct}%"></i></span>` : ''}
+        </button>
         <div class="aw-dias">${S.dias.map(col).join('')}</div>
-        <div class="aw-leg"><span><i class="lg-f"></i>feito</span><span><i class="lg-p"></i>planejado</span><span><i class="lg-x"></i>faltou</span><span><i class="lg-d"></i>descanso</span></div>
+        <div class="aw-leg"><span><i class="lg-f"></i>feito</span><span><i class="lg-m"></i>outro dia</span><span><i class="lg-p"></i>planejado</span><span><i class="lg-x"></i>faltou</span><span><i class="lg-d"></i>descanso</span></div>
         <div class="aw-ks">
-          ${S.temLift && S.setsPlan ? kpi('Séries', `${S.setsFeitas}<small>/${S.setsPlan}</small>`, 'na semana', S.setsFeitas/S.setsPlan) : ''}
-          ${S.plan ? kpi('Semanas na meta', `${S.semanas}`, `seguidas · ${S.metaSem}+ treinos`, null) : ''}
-          ${S.extras ? kpi('Extras', `${S.extras}`, S.extras===1 ? 'atividade fora do plano' : 'atividades fora do plano', null) : ''}
+          ${S.temLift && S.setsPlan ? kpi('series', 'Séries', `${S.setsFeitas}<small>/${S.setsPlan}</small>`, 'na semana', S.setsFeitas/S.setsPlan) : ''}
+          ${S.plan ? kpi('semanas', 'Semanas na meta', `${S.semanas}`, `seguidas · ${S.metaSem}+ treinos`, null) : ''}
+          ${S.extras ? kpi('extras', 'Extras', `${S.extras}`, S.extras===1 ? 'fora do plano' : 'fora do plano', null) : ''}
         </div>
       </div>`;
-    el.onclick = openAtividadeDetalhes;
+    el.onclick = null;
   }catch(e){ console.log('atividade da semana:', e); el.innerHTML = ''; }
   try{ renderHomeMetrics(); }catch(e){}
 };
-window.openAtividadeDetalhes = function(){
-  const S = mtSemanaAtiv(); const DN = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
-  const prox = (typeof proximoTreino==='function') ? proximoTreino() : null; const falta = Math.max(0, S.plan - S.feitos);
-  const txtSt = { feito:'✅ feito', movido:'✅ feito em outro dia', desc:'😴 descanso escolhido', hoje:'🟡 hoje', 'livre-hoje':'hoje · livre', faltou:'– faltou', plan:'planejado', livre:'livre' };
-  $('modal-inner').innerHTML = `<h3>📊 Atividade da semana</h3>
-    <div class="aw-lista">${S.dias.map(o=>`<div class="aw-li st-${o.st}"><b>${DN[o.d-1]}</b><span>${txtSt[o.st]}${o.f > 1 ? ` · ${o.f} atividades` : ''}</span></div>`).join('')}</div>
-    <p class="integ-p" style="margin-top:10px">${S.plan ? (falta ? `Faltam <b>${falta}</b> ${falta===1?'treino':'treinos'} do plano para fechar a semana${prox ? `. Próximo: <b>${mtEsc(prox.nome)}</b> (${mtEsc(prox.quando)}).` : '.'}` : 'Semana do plano completa. 🎉') : 'Sem plano ativo: aqui aparece só o que você registrou.'}</p>
-    ${S.temLift && S.setsPlan ? `<p class="integ-mini"><b>Séries</b>: ${S.setsFeitas} registradas na semana, contra ${S.setsPlan} previstas no seu plano de musculação.</p>` : ''}
-    ${S.plan ? `<p class="integ-mini"><b>Semanas na meta</b>: semanas seguidas com pelo menos ${S.metaSem} dos ${S.plan} treinos do plano (75%). Descanso escolhido não conta como falta. Treino adicional e atividades fora do plano aparecem como extras e não inflam o placar.</p>` : ''}
-    <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeModal()">Fechar</button>`;
+window.openAwDetalhe = function(tipo, d){
+  const S = mtSemanaAtiv(); const DN = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']; const DC = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const ini = mtSemanaIni(Date.now());
+  const stTxt = { feito:'✓ feito', movido:'✓ feito em outro dia', desc:'descanso escolhido', hoje:'hoje · a fazer', faltou:'faltou', plan:'planejado' };
+  const linha = (a, b, cls)=>`<div class="aw-li${cls ? ' ' + cls : ''}"><b>${a}</b><span>${b}</span></div>`;
+  let tit = '', corpo = '';
+  if(tipo === 'plano'){
+    const P = _awPlanoSemana(); const falta = Math.max(0, S.plan - S.feitos);
+    const prox = (typeof proximoTreino==='function') ? proximoTreino() : null;
+    tit = 'Treinos do plano nesta semana';
+    corpo = `<div class="aw-lista">${P.map(i=>linha(`${i.dia} · ${mtEsc(i.nome)}`, i.st === 'movido' && i.feito ? `✓ feito na ${['domingo','segunda','terça','quarta','quinta','sexta','sábado'][new Date(i.feito.at).getDay()]}` : stTxt[i.st], 'st-' + i.st)).join('') || '<p class="integ-mini">Sem treinos no plano.</p>'}</div>
+      <p class="integ-p" style="margin-top:10px">${falta ? `Faltam <b>${falta}</b> ${falta===1?'treino':'treinos'} do plano para fechar a semana${prox ? `. Próximo: <b>${mtEsc(prox.nome)}</b> (${mtEsc(prox.quando)}).` : '.'}` : 'Semana do plano completa.'}</p>
+      <p class="integ-mini">Conta no máximo um treino por modalidade por dia. Treino adicional e atividades fora do plano aparecem em "Extras".</p>`;
+  } else if(tipo === 'dia'){
+    const t0 = ini + (d-1)*DIA_MS; const o = S.dias.find(x=>x.d === d) || {};
+    const H = mtHist().filter(x=>x.at >= t0 && x.at < t0 + DIA_MS);
+    const P = _awPlanoSemana().filter(i=>i.w.dayIdx === d);
+    tit = `${DN[d-1]}, ${mtFmtData(t0)}`;
+    corpo = `<div class="section-lbl" style="margin:6px 0 4px">O que você fez</div>${H.length ? `<div class="aw-lista">${H.map(x=>linha(`${new Date(x.at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · ${mtEsc(_awNomeAtv(x))}${x.adicional ? ' (adicional)' : ''}`, mtEsc(_awDetAtv(x)))).join('')}</div>` : `<p class="integ-mini">${t0 > mtDia0() ? 'Este dia ainda não chegou.' : 'Nenhuma atividade registrada.'}</p>`}
+      <div class="section-lbl" style="margin:12px 0 4px">No plano</div>${P.length ? `<div class="aw-lista">${P.map(i=>linha(mtEsc(i.nome), i.st === 'movido' && i.feito ? `✓ feito na ${['domingo','segunda','terça','quarta','quinta','sexta','sábado'][new Date(i.feito.at).getDay()]}` : stTxt[i.st], 'st-' + i.st)).join('')}</div>` : '<p class="integ-mini">Sem treino planejado neste dia.</p>'}
+      ${o.st === 'desc' ? '<p class="integ-mini">Você marcou descanso neste dia: não conta como falta.</p>' : ''}`;
+  } else if(tipo === 'series'){
+    const porEx = [];
+    Object.keys(state.progress||{}).forEach(id=>(state.progress[id]||[]).forEach(p=>{ if(p && p.date >= ini && (p.sets||[]).length){ let nome = id; try{ nome = nomeDoEx(id) || id; }catch(e){}
+      const tempo = typeof exUsaTempo === 'function' && exUsaTempo(id);
+      porEx.push({ t:p.date, nome, n:p.sets.filter(s=>+s.reps > 0).length, txt:p.sets.filter(s=>+s.reps > 0).map(s=>tempo ? fmtTempo(s.reps) : `${+s.peso > 0 ? String(+s.peso).replace('.',',') + ' kg × ' : ''}${s.reps}`).join(' · '), aberto: !p.sid }); } }));
+    porEx.sort((a,b)=>a.t - b.t);
+    tit = 'Séries da semana';
+    corpo = `<p class="integ-p">${S.setsFeitas} séries registradas; o plano de musculação prevê ${S.setsPlan} por semana.</p>
+      ${porEx.length ? `<div class="aw-lista">${porEx.map(e=>linha(`${DC[(new Date(e.t).getDay()||7)-1]} · ${mtEsc(e.nome)}`, `${e.n} ${e.n===1?'série':'séries'}${e.aberto ? ' (treino em andamento)' : ''}<br><small>${mtEsc(e.txt)}</small>`)).join('')}</div>` : '<p class="integ-mini">Nenhuma série registrada nesta semana.</p>'}`;
+  } else if(tipo === 'semanas'){
+    const linhas = [];
+    for(let k=0; k<8; k++){ const a = ini - k*7*DIA_MS; const B = mtAdesao(a, a + 7*DIA_MS); const f = Math.min(B.feitos, B.porSem);
+      const antesDoPlano = B.inicio != null && B.inicio >= a + 7*DIA_MS; const ok = f >= S.metaSem;
+      linhas.push(linha(k === 0 ? 'Esta semana' : `Semana de ${mtFmtData(a)}`, antesDoPlano ? 'antes do plano' : `${f} de ${B.porSem} · ${ok ? '✓ na meta' : k === 0 ? 'em andamento' : 'abaixo'}`, ok ? 'st-feito' : ''));
+      if(antesDoPlano) break; }
+    tit = 'Semanas na meta';
+    corpo = `<p class="integ-p">Meta da semana: pelo menos <b>${S.metaSem}</b> dos ${S.plan} treinos do plano (75%). A sequência conta semanas seguidas na meta, de trás para a frente; a primeira semana abaixo da meta encerra a contagem. A semana atual entra quando já bateu a meta.</p>
+      <div class="aw-lista">${linhas.join('')}</div>
+      <p class="integ-mini">Descanso escolhido não conta como falta. Treino adicional e atividades fora do plano não entram no placar.</p>`;
+  } else {
+    const E = _awExtras();
+    tit = 'Extras da semana';
+    corpo = E.length ? `<p class="integ-p">Atividades que não são sessões do plano: treino adicional, caminhada ou bike avulsa e um segundo treino da mesma modalidade no mesmo dia. Contam como atividade (dias ativos, conquistas, estatísticas), mas não no placar do plano.</p>
+      <div class="aw-lista">${E.map(x=>linha(`${DC[(new Date(x.at).getDay()||7)-1]} · ${mtEsc(_awNomeAtv(x))}${x.adicional ? ' (adicional)' : ''}`, mtEsc(_awDetAtv(x)))).join('')}</div>` : '<p class="integ-mini">Nenhuma atividade fora do plano nesta semana.</p>';
+  }
+  $('modal-inner').innerHTML = `<h3>${tit}</h3>${corpo}<button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="closeModal()">Fechar</button>`;
   $('modal-back').classList.add('on');
 };
+window.openAtividadeDetalhes = function(){ return openAwDetalhe(mtSemanaAtiv().plan ? 'plano' : 'extras'); };   // compatibilidade
 
 (function(){ if(document.getElementById('rc3-e3-css')) return; const s = document.createElement('style'); s.id = 'rc3-e3-css';
 s.textContent = `
@@ -23561,6 +23673,9 @@ s.textContent = `
 .sono-tab td{padding:6px;border-top:1px solid var(--border);text-align:right}.sono-tab td:first-child,.sono-tab th:first-child{text-align:left;color:var(--text-dim)}
 .sono-an .ip-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
 .sono-an .ip-c small:last-child{display:block;margin-top:2px}
+.sono-dist{display:flex;height:12px;border-radius:99px;overflow:hidden;gap:2px;margin:4px 0 6px}.sono-dist i{display:block;min-width:4px}
+.sono-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--text-dim);margin:2px 0 6px}.sono-leg span{display:inline-flex;align-items:center;gap:5px}.sono-leg i{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}.sono-leg i.sl-sem{background:var(--text-mute)}
+.sono-leg b{color:var(--text);font-weight:800}
 .met-sono .met-v small{font-size:13px}
 .nutri-agua{margin:10px 0 12px;padding:12px 14px;border-radius:var(--radius-card,16px);border:1px solid var(--border);background:var(--surface)}
 .nutri-agua .na-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13.5px}
@@ -23568,40 +23683,312 @@ s.textContent = `
 .nutri-agua .na-link{border:0;background:none;color:var(--text-dim);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:6px 2px}
 .nutri-agua .na-link:disabled{opacity:.4;cursor:default}
 .nutri-agua .na-link:last-child{margin-left:auto}
-/* Atividade da semana */
-.aw{padding:14px 14px 12px;border-radius:var(--radius-card,18px);border:1px solid var(--border);background:linear-gradient(160deg,rgba(var(--primary-rgb),.10),transparent 55%),var(--surface)}
-.aw-top{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
-.aw-placar b{font-size:38px;line-height:1;font-weight:800;letter-spacing:-1px}.aw-placar span{font-size:13px;color:var(--text-dim);font-weight:600;margin-left:3px}
+/* Atividade da semana (RC 4) */
+.aw{padding:14px 14px 12px;border-radius:var(--radius-card,18px);border:1px solid var(--border);background:var(--surface)}
+.aw button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.aw-top{display:grid!important;grid-template-columns:1fr auto;align-items:end;gap:6px 10px;width:100%}
+.aw-placar b{font-size:36px;line-height:1;font-weight:800;letter-spacing:-1px}.aw-placar span{font-size:13px;color:var(--text-dim);font-weight:600;margin-left:3px}
 .aw-pct{font-size:13px;font-weight:800;color:var(--primary-2);padding:4px 10px;border-radius:99px;background:var(--tint-primary)}
-.aw-meter{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin:10px 0 14px}.aw-meter i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--primary),var(--primary-2));transition:width .5s var(--mt-ease,ease)}
+.aw-meter{grid-column:1/-1;display:block;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin:6px 0 12px}.aw-meter i{display:block;height:100%;border-radius:inherit;background:var(--primary);transition:width .5s var(--mt-ease,ease)}
 .aw-dias{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end}
-.aw-d{display:flex;flex-direction:column;align-items:center;gap:5px}
-.aw-d span{font-size:10.5px;color:var(--text-dim);font-weight:600}
-.aw-d.hj span{color:var(--primary-2);font-weight:800}
-.aw-cap{position:relative;width:100%;max-width:30px;height:46px;border-radius:10px;background:var(--surface-2);overflow:hidden;display:flex;align-items:flex-end}
-.aw-cap i{display:block;width:100%;border-radius:inherit}
-.aw-cap em{position:absolute;top:3px;left:0;right:0;text-align:center;font-style:normal;font-size:10px;font-weight:800;color:var(--on-primary)}
-.aw-d.st-feito .aw-cap i,.aw-d.st-movido .aw-cap i{background:linear-gradient(180deg,var(--primary-2),var(--primary))}
-.aw-d.st-movido .aw-cap i{opacity:.65}
-.aw-d.st-plan .aw-cap,.aw-d.st-hoje .aw-cap{background:transparent;border:1.5px dashed var(--line-primary,var(--border))}
-.aw-d.st-plan .aw-cap i,.aw-d.st-hoje .aw-cap i{height:0!important}
-.aw-d.st-hoje .aw-cap{border-style:solid;border-color:var(--primary);box-shadow:0 0 0 3px rgba(var(--primary-rgb),.15)}
-.aw-d.st-faltou .aw-cap{background:transparent;border:1.5px solid var(--border)}.aw-d.st-faltou .aw-cap i{height:2px!important;background:var(--text-mute);margin:0 25% 50%;width:50%}
-.aw-d.st-desc .aw-cap{background:var(--surface-2)}.aw-d.st-desc .aw-cap i{height:30%!important;background:var(--text-mute);opacity:.35}
-.aw-d.st-livre .aw-cap i,.aw-d.st-livre-hoje .aw-cap i{height:0!important}
-.aw-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin:10px 0 2px;font-size:10.5px;color:var(--text-mute)}
-.aw-leg span{display:flex;align-items:center;gap:5px}.aw-leg i{width:9px;height:9px;border-radius:3px;display:block}
-.aw-leg .lg-f{background:var(--primary)}.aw-leg .lg-p{border:1.5px dashed var(--line-primary,var(--border))}.aw-leg .lg-x{border:1.5px solid var(--border)}.aw-leg .lg-d{background:var(--text-mute);opacity:.4}
+.aw-d{display:flex!important;flex-direction:column;align-items:center;gap:5px;min-width:0;min-height:44px}
+.aw-dn{font-size:11px;color:var(--text-dim);font-weight:600}
+.aw-d.hj .aw-dn{color:var(--primary-2);font-weight:800}
+.aw-cap{position:relative;display:flex;align-items:center;justify-content:center;width:100%;max-width:34px;height:40px;border-radius:10px;background:var(--surface-2);box-sizing:border-box}
+.aw-cap i{font-style:normal;font-size:15px;font-weight:800;line-height:1}
+.aw-cap em{position:absolute;top:-6px;right:-4px;min-width:16px;height:16px;padding:0 3px;border-radius:99px;font-style:normal;font-size:10px;font-weight:800;line-height:16px;text-align:center;background:var(--text);color:var(--bg)}
+.aw-d.st-feito .aw-cap{background:var(--primary);color:var(--on-primary)}
+.aw-d.st-movido .aw-cap{background:transparent;border:2px solid var(--primary);color:var(--primary-2)}
+.aw-d.st-plan .aw-cap{background:transparent;border:1.5px dashed var(--text-mute)}
+.aw-d.st-hoje .aw-cap{background:transparent;border:2px solid var(--primary);box-shadow:0 0 0 3px rgba(var(--primary-rgb),.16)}
+.aw-d.st-faltou .aw-cap{background:transparent;border:1.5px solid var(--border);color:var(--text-mute)}
+.aw-d.st-desc .aw-cap{background:var(--surface-2);opacity:.75}
+.aw-d.st-livre .aw-cap,.aw-d.st-livre-hoje .aw-cap{background:var(--surface-2);opacity:.45}
+.aw-d.st-livre-hoje .aw-cap{opacity:.7;box-shadow:inset 0 0 0 1.5px var(--text-mute)}
+.aw-leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin:10px 0 2px;font-size:11px;color:var(--text-mute)}
+.aw-leg span{display:flex;align-items:center;gap:5px}.aw-leg i{width:10px;height:10px;border-radius:3px;display:block;box-sizing:border-box}
+.aw-leg .lg-f{background:var(--primary)}.aw-leg .lg-m{border:2px solid var(--primary)}.aw-leg .lg-p{border:1.5px dashed var(--text-mute)}.aw-leg .lg-x{border:1.5px solid var(--text-mute)}.aw-leg .lg-d{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
 .aw-ks{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:12px}
-.aw-k{padding:9px 10px;border-radius:12px;background:var(--bg-2,var(--surface-2));min-width:0}
+.aw-k{display:block!important;padding:9px 10px!important;border-radius:12px;background:var(--bg-2,var(--surface-2))!important;min-width:0}
 .aw-k small{display:block;font-size:10.5px;color:var(--text-mute);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
 .aw-k b{display:block;font-size:19px;font-weight:800;margin-top:2px}.aw-k b small{display:inline;font-size:12px;text-transform:none;letter-spacing:0}
 .aw-k span{display:block;font-size:11px;color:var(--text-dim);margin-top:1px;line-height:1.3}
-.aw-bar{height:4px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:6px}.aw-bar i{display:block;height:100%;background:var(--accent)}
+.aw-bar{height:4px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:6px}.aw-bar i{display:block;height:100%;background:var(--primary)}
+.aw-d:focus-visible,.aw-k:focus-visible,.aw-top:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:12px}
 .aw-lista{display:flex;flex-direction:column;gap:2px;margin-top:6px}
-.aw-li{display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--border);font-size:13.5px}.aw-li span{color:var(--text-dim)}
+.aw-li{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border);font-size:13.5px}.aw-li b{font-weight:700;min-width:0}.aw-li span{color:var(--text-dim);text-align:right;flex:none;max-width:55%}
+.aw-li span small{color:var(--text-mute);font-size:11.5px}
 .aw-li.st-faltou span{color:var(--text-mute)}.aw-li.st-feito span,.aw-li.st-movido span{color:var(--primary-2)}
+@media (max-width:370px){.aw-cap{height:36px}.aw-dias{gap:4px}.aw-leg{gap:3px 9px}}
 @media (prefers-reduced-motion:reduce){.aw-meter i{transition:none}}
 `; document.head.appendChild(s); })();
 
-Object.assign(window, { sonoAnalise, sonoAnaliseHTML, mtSemanaAtiv, _sonoTotal, _sonoMarca5, _sonoTile });
+Object.assign(window, { sonoAnalise, sonoAnaliseHTML, mtSemanaAtiv, _sonoTotal, _sonoMarca5, _sonoTile, _awPlanoSemana, _awExtras });
+// ===================================================================================================
+// RC 4 — Etapa 1: sessões de musculação, "hoje" nas duas modalidades e retorno previsível à aba Treinos
+// (as correções de lógica ficam nas próprias funções — app.js e partes 05, 26, 61, 76, 80, 81; aqui só o que é
+// novo e não tem dono anterior)
+// ===================================================================================================
+
+// ---------- 1. Sessões: migração única dos registros antigos (ver mtSessaoMigrar no app.js) ----------
+// Roda na verificação de forma do estado (a cada entrada); só a primeira vez muda alguma coisa. Grava no aparelho
+// e a nuvem recebe junto com a próxima gravação normal (não dispara gravação extra na nuvem).
+mtGancho('ensureStateShape', { depois(){ try{ if(typeof mtSessaoMigrar === 'function' && mtSessaoMigrar()) salvarLocal(); }catch(e){} } });
+
+// ---------- 2. Início: o dia de hoje nas DUAS modalidades ----------
+// Com musculação e corrida, o seletor mostrava só uma de cada vez e o cartão de descanso de uma parecia descanso
+// geral. Agora, logo abaixo do seletor, uma linha diz o que cada uma tem hoje, com o estado real (feito, a fazer,
+// feito em outro dia da semana, descanso escolhido ou sem treino). Tocar troca de modalidade. Nada no plano muda.
+function mtHojeModalidade(m){
+  const mod = state.modules[m]; if(!mod || !mod.plan) return null;
+  const hj = getDayIdx(); const h0 = mtDia0();
+  const w = (mod.plan.workouts||[]).find(x=>x.dayIdx === hj) || null;
+  const feitos = (typeof entriesHoje === 'function') ? entriesHoje(mod) : [];
+  const pulado = !!(w && (state.skips||[]).some(s=>s.at === h0 && s.module === m && (typeof skipEDoTreino !== 'function' || skipEDoTreino(s, w))));
+  let antes = null; try{ if(w && m === 'lift' && !feitos.length){ const e = entradaConcluidaSemana(w, 'lift'); if(e && mtDia0(e.at) !== h0) antes = e; } }catch(e){}
+  const nome = w ? (m === 'lift' ? 'Treino ' + w.k : String(w.name||'Corrida').split('(')[0].trim()) : '';
+  let st, txt;
+  if(feitos.length && w){ st = 'feito'; txt = `${nome} · feito`; }
+  else if(feitos.length){ st = 'feito'; txt = feitos.length > 1 ? `${feitos.length} atividades extras` : 'atividade extra feita'; }
+  else if(antes){ st = 'feito'; txt = `${nome} · feito na ${['domingo','segunda','terça','quarta','quinta','sexta','sábado'][new Date(antes.at).getDay()]}`; }
+  else if(pulado){ st = 'desc'; txt = 'descanso escolhido'; }
+  else if(w){ st = 'hoje'; txt = nome; }
+  else { st = 'livre'; txt = 'sem treino hoje'; }
+  return { m, w, st, txt };
+}
+function mtHojeDuoDesenha(){
+  try{
+    const velho = $('hoje-duo'); if(velho) velho.remove();
+    const tg = $('mod-toggle'); if(!tg) return;
+    const L = mtHojeModalidade('lift'), R = mtHojeModalidade('run'); if(!L || !R) return;   // só com as duas modalidades
+    const item = (o, nome)=>`<button type="button" class="hd-m st-${o.st}${state.active === o.m ? ' on' : ''}" onclick="${state.active === o.m ? `goTab('sessions')` : `switchModule('${o.m}')`}" aria-label="${nome}: ${mtEsc(o.txt)}">
+      <b>${nome}</b><small>${o.st === 'feito' ? '✓ ' : ''}${mtEsc(o.txt)}</small></button>`;
+    tg.insertAdjacentHTML('afterend', `<div class="hoje-duo" id="hoje-duo" role="group" aria-label="Hoje nas duas modalidades">${item(L, 'Musculação')}${item(R, 'Corrida')}</div>`);
+    // o Início ordena os blocos com CSS (parte 28): a linha fica na mesma posição do seletor, logo depois dele
+    const el = $('hoje-duo'); const o = getComputedStyle(tg).order; if(el && o) el.style.order = o;
+  }catch(e){ console.log('hoje (duas modalidades):', e); }
+}
+mtGancho('renderHome', { depois(){ mtHojeDuoDesenha(); } });
+
+// ---------- 3. Aba Treinos: volta previsível ----------
+// Antes, o treino escolhido ficava gravado sem data: dias depois a aba abria num treino de outro dia. Regra nova,
+// aplicada ao ENTRAR na aba vindo de outra tela (dentro da aba, a escolha do aluno é respeitada):
+//  1) treino de musculação EM ANDAMENTO hoje (séries registradas e ainda não salvo) → ele, com as séries intactas;
+//  2) senão, o treino de HOJE (mesmo já concluído — mostra o cartão de concluído);
+//  3) senão (dia sem treino), a tela padrão: o próximo treino da semana ainda não feito.
+// Abrir um treino de propósito (botão "Ver sessão", lista de treinos) continua indo direto nele. Nada é apagado
+// nem reiniciado: as séries ficam no registro e o treino em andamento continua de onde parou.
+function mtSessaoPadrao(mod, m){
+  const ws = (mod && mod.plan && mod.plan.workouts) || []; if(!ws.length) return null;
+  if(m === 'lift'){ const and = ws.find(w=>(w.exercises||[]).some(ex=>typeof mtTemSeriesAbertasHoje === 'function' && mtTemSeriesAbertasHoje(ex.id))); if(and) return and; }
+  const hj = getDayIdx(); const deHoje = ws.find(w=>w.dayIdx === hj); if(deHoje) return deHoje;
+  const naoFeito = w=>{ try{ return !entradaConcluidaSemana(w, m); }catch(e){ return true; } };
+  const ord = ws.slice().sort((a,b)=>a.dayIdx - b.dayIdx);
+  return ord.find(w=>w.dayIdx > hj && naoFeito(w)) || ord.find(w=>naoFeito(w)) || ord.find(w=>w.dayIdx > hj) || ord[0];
+}
+mtGancho('openSession', { antes(){ window.__mtSessExplicita = true; window.__mtSelEm = Date.now(); }, depois(){ window.__mtSessExplicita = false; } });
+// escolher um treino e ir para a aba logo em seguida (qualquer caminho do app que faça isso) também é escolha explícita
+mtGancho('selectSession', { antes(){ window.__mtSelEm = Date.now(); } });
+mtGancho('goTab', { antes(tab){
+  try{
+    if(tab !== 'sessions' || window.__mtSessExplicita || !state || !state.ui) return;
+    if(Date.now() - (window.__mtSelEm || 0) < 3000) return;   // acabou de escolher um treino: vai direto nele
+    const vindo = state.ui.tab; if(vindo === 'sessions' || vindo === 'plan' || vindo === 'library') return;
+    const m = state.active, mod = state.modules[m]; const w = mtSessaoPadrao(mod, m); if(!w) return;
+    state.ui.selectedSession = String(w.k || w.dayIdx);
+  }catch(e){ console.log('treinos (padrão):', e); }
+} });
+
+(function(){ if(document.getElementById('rc4-e1-css')) return; const s = document.createElement('style'); s.id = 'rc4-e1-css';
+s.textContent = `
+.hoje-duo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 4px}
+.hoje-duo .hd-m{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;padding:8px 12px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.hoje-duo .hd-m b{font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-mute);font-weight:800}
+.hoje-duo .hd-m small{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hoje-duo .hd-m.on{border-color:var(--line-primary,var(--primary))}
+.hoje-duo .hd-m.st-feito small{color:var(--primary-2)}
+.hoje-duo .hd-m.st-livre small,.hoje-duo .hd-m.st-desc small{color:var(--text-dim);font-weight:600}
+.rest-outro{margin:10px auto 0;max-width:320px;font-size:13px;line-height:1.45;color:var(--text-dim)}
+.rest-outro b{color:var(--text)}
+.rest-outro .link-mais{display:inline;margin-left:4px;padding:0;border:0;background:none;color:var(--primary-2);font:inherit;font-weight:700;cursor:pointer}
+`; document.head.appendChild(s); })();
+
+Object.assign(window, { mtHojeModalidade, mtHojeDuoDesenha, mtSessaoPadrao });
+// ===================================================================================================
+// RC 4 — Etapa 2: aba Desafios organizada, Início mais limpo (conquistas e desafio do mês) e acabamentos
+// ===================================================================================================
+
+// ---------- 1. Aba Desafios: uma ordem só, sem cartões repetidos ----------
+// Antes: novidades, desafio, missões, recompensa, em breve e quatro atalhos ("Metas do mês", "Conquistas",
+// "Medalhas e metas", "Histórico"), alguns levando à mesma tela e repetindo contadores. Agora, de cima para baixo:
+//  1) Desafio atual — o desafio temático (o que é, quanto falta, missões, recompensa) e as metas do mês;
+//  2) Em grupo — o desafio juntos, só para quem tem grupo;
+//  3) Conquistas — um cartão: quantas tem, quais são novas, atalhos para as ganhas e as que faltam;
+//  4) Histórico — desafios anteriores e medalhas guardadas;
+//  5) Em breve — o próximo desafio, discreto, no fim.
+// Os blocos são os MESMOS que as outras partes desenham (nada é recalculado aqui): esta parte só os reorganiza
+// e troca os quatro atalhos por um cartão de conquistas e uma lista de histórico.
+function _chalSec(tit, sub){ const s = document.createElement('section'); s.className = 'chal-sec'; s.innerHTML = `<h2 class="chal-h">${tit}${sub ? `<small>${sub}</small>` : ''}</h2>`; return s; }
+function _chalInicioConta(){ try{ const sts = ['lift','run'].map(m=>state.modules[m] && planStartTs(state.modules[m])).filter(Boolean); return sts.length ? mtDia0(Math.min(...sts)) : 0; }catch(e){ return 0; } }
+function mtDesafiosOrganiza(){
+  const root = $('chal-root'); if(!root || root.querySelector(':scope > .chal-sec')) return;
+  const kids = [...root.children]; const G = {}; let sec = 'topo'; let nov = null, resg = null;
+  kids.forEach(k=>{
+    if(k.id === 'mt-novidades'){ nov = k; return; }
+    if(k.id === 'ev-resgate'){ resg = k; return; }
+    if(k.classList.contains('mt-sec')){ sec = k.textContent.trim(); return; }
+    (G[sec] = G[sec] || []).push(k);
+  });
+  const frag = document.createDocumentFragment();
+  // 1) desafio atual
+  const s1 = _chalSec('Desafio atual');
+  if(resg) s1.appendChild(resg);
+  (G.topo||[]).forEach(n=>s1.appendChild(n));
+  if((G['Missões']||[]).length){ const l = document.createElement('div'); l.className = 'chal-sub'; l.textContent = 'Missões'; s1.appendChild(l); G['Missões'].forEach(n=>s1.appendChild(n)); }
+  (G['Recompensa']||[]).forEach(n=>{ n.classList.add('chal-recomp'); s1.appendChild(n); });
+  if((G['Também acontecendo']||[]).length){ const l = document.createElement('div'); l.className = 'chal-sub'; l.textContent = 'Também acontecendo'; s1.appendChild(l); G['Também acontecendo'].forEach(n=>s1.appendChild(n)); }
+  try{ s1.insertAdjacentHTML('beforeend', _chalMetasMes()); }catch(e){}
+  frag.appendChild(s1);
+  // 2) em grupo
+  try{ const dj = (typeof djSecao === 'function') ? djSecao() : ''; if(dj){ const s2 = _chalSec('Em grupo'); s2.insertAdjacentHTML('beforeend', dj.replace('id="dj-box"', 'id="dj-box-chal"')); frag.appendChild(s2); } }catch(e){}
+  // 3) conquistas
+  const s3 = _chalSec('Conquistas'); s3.insertAdjacentHTML('beforeend', _chalConquistas()); frag.appendChild(s3);
+  // 4) histórico
+  const s4 = _chalSec('Histórico'); s4.insertAdjacentHTML('beforeend', _chalHistorico()); frag.appendChild(s4);
+  // 5) em breve
+  if((G['Em breve']||[]).length){ const s5 = _chalSec('Em breve'); G['Em breve'].forEach(n=>s5.appendChild(n)); frag.appendChild(s5); }
+  void nov;   // as novidades viram o "N novas" do cartão de conquistas e o aviso no histórico (sem lista repetida)
+  root.innerHTML = ''; root.appendChild(frag);
+  // missões de semanas que terminaram antes de a pessoa começar: não são cobradas
+  try{
+    const ini = _chalInicioConta(); const e = eventoPrincipal();
+    if(ini && e){ const ms = missoesDoEvento(e); root.querySelectorAll('.ev-mission').forEach((row, i)=>{ const m = ms[i]; if(!m || m.ok) return;
+      const fimSem = /entre (\d\d)\/(\d\d) e (\d\d)\/(\d\d)/.exec(m.desc||''); if(!fimSem) return;
+      const fim = new Date(new Date(e.ini).getFullYear(), +fimSem[4]-1, +fimSem[3]).getTime();
+      if(fim < ini){ row.classList.add('past', 'antes-inicio'); const v = row.querySelector('.ev-mv'); if(v) v.textContent = '—'; const sm = row.querySelector('.ev-mt small'); if(sm) sm.textContent = 'Antes do início do seu plano — não conta.'; } }); }
+  }catch(e){}
+}
+// metas do mês (bronze, prata e ouro): uma linha, com o que falta para o próximo degrau do foco do mês
+function _chalMetasMes(){
+  ensureMonthly(); const grupos = desafiosDoMes(); const tot = grupos.length*NIVEIS_DESAFIO.length;
+  const feitos = grupos.reduce((s,g)=>s + g.niveis.filter(c=>state.monthly.done.includes(c.id)).length, 0);
+  const selo = state.monthly.done.includes('selo:' + state.monthly.key);
+  const prox = grupos.filter(g=>g.destaque).map(g=>{ const c = g.niveis.find(c=>!state.monthly.done.includes(c.id)); if(!c) return null; const [a, al] = c.prog(); return { c, a:Math.min(a, al), al, p:Math.min(1, a/al) }; }).filter(Boolean).sort((x,y)=>y.p - x.p)[0];
+  const r = daysLeftInMonth();
+  return `<button type="button" class="chal-linha" onclick="openMonthly()"><span class="cl-ico" aria-hidden="true">${medalSvgInline('medal')}</span>
+    <span class="cl-tx"><b>Metas do mês</b><small>${feitos} de ${tot} degraus${selo ? ' · selo conquistado' : ` · selo com ${SELO_MIN_NIVEIS}`} · ${r === 0 ? 'último dia' : r + (r === 1 ? ' dia restante' : ' dias restantes')}</small>
+    ${prox ? `<small class="cl-prox">Próximo: ${mtEsc(prox.c.nome.replace(/\s*\S+$/, ''))} ${NIVEIS_DESAFIO.find(n=>n.id===prox.c.nivel).lbl.toLowerCase()} · ${prox.a}/${prox.al}</small>` : ''}</span><span class="ii-seta">›</span></button>`;
+}
+function _chalConquistas(){
+  const tot = TROPHIES.length, tenho = (state.trophies||[]).length; const pend = (typeof cqPendentes === 'function') ? cqPendentes() : { itens:[], meses:[] };
+  const novas = pend.itens;   // o mesmo número do ponto da aba (conquistas e medalhas novas)
+  const datas = state.trophyDates || {};
+  const rec = TROPHIES.filter(t=>state.trophies.includes(t.id)).sort((a,b)=>(datas[b.id]||0)-(datas[a.id]||0)).slice(0, 4);
+  return `<div class="card chal-cq">
+    <button type="button" class="chal-cq-top" onclick="openTrophies()"><span class="chal-cq-n"><b>${tenho}</b><small>de ${tot}</small></span>
+      <span class="chal-cq-tx"><b>${tenho === 1 ? '1 conquista desbloqueada' : `${tenho} conquistas desbloqueadas`}</b>${novas.length ? `<small class="cq-novas-txt">${novas.length === 1 ? '1 nova: ' + mtEsc((TROPHIES.find(t=>t.id===novas[0].tid)||{}).name || novas[0].nome || '') : novas.length + ' novas para ver'}</small>` : '<small>Toque para ver todas, com descrição e progresso</small>'}</span>
+      ${rec.length ? `<span class="chal-cq-rec" aria-hidden="true">${rec.map(t=>trophyIco(t)).join('')}</span>` : ''}</button>
+    <div class="chal-cq-bts"><button type="button" class="btn btn-ghost" onclick="_cqFiltro='ok';openTrophies()">Desbloqueadas</button><button type="button" class="btn btn-ghost" onclick="_cqFiltro='and';openTrophies()">Disponíveis</button></div></div>`;
+}
+function _chalHistorico(){
+  const pend = (typeof cqPendentes === 'function') ? cqPendentes() : { meses:[] };
+  const nEv = (state.medals||[]).filter(m=>String(m.id).startsWith('ev:')).length;
+  const nMed = (state.medals||[]).length;
+  const linhas = [];
+  pend.meses.forEach(d=>linhas.push(`<button type="button" class="chal-linha chal-novo" onclick="openTrophies()"><span class="cl-tx"><b>Desafio do mês encerrado: ${mtEsc((d.tema||{}).nome||'')}</b><small>Veja o resultado</small></span><span class="ii-seta">›</span></button>`));
+  linhas.push(`<button type="button" class="chal-linha" onclick="openHistoricoEventos()"><span class="cl-tx"><b>Desafios anteriores</b><small>${nEv ? `${nEv} ${nEv===1?'medalha de desafio':'medalhas de desafio'}` : 'Os desafios temáticos que já passaram'}</small></span><span class="ii-seta">›</span></button>`);
+  linhas.push(`<button type="button" class="chal-linha" onclick="openMedals()"><span class="cl-tx"><b>Medalhas e metas dos meses</b><small>${nMed ? `${nMed} no arquivo` : 'Ficam guardadas mesmo depois que o mês vira'}</small></span><span class="ii-seta">›</span></button>`);
+  return `<div class="card chal-lista">${linhas.join('')}</div>`;
+}
+mtGancho('renderChallenges', { depois(){ try{ mtDesafiosOrganiza(); }catch(e){ console.log('desafios (organização):', e); } } });
+
+// ---------- 2. Início: desafio do mês em UMA linha (opção B, enxuta) ----------
+// O cartão antigo tinha o desafio temático + três barras de metas (o mesmo que está em Desafios). Agora: uma linha
+// só, enquanto houver algo a fazer no desafio temático ("Reta Final · falta 1 dia ativo · 4 dias restantes").
+// Concluído o desafio (ou sem desafio no período), a linha some. Os detalhes ficam na aba Desafios.
+mtGancho('renderMonthlyCard', { depois(){
+  try{
+    const card = $('card-monthly'); if(!card) return;
+    let e = null; try{ e = eventoPrincipal(); }catch(err){}
+    const reg = e && (state.eventos||{})[e.key];
+    const p = e ? progressoEvento(e) : null;
+    // os elementos antigos do cartão ficam (outras partes os atualizam), só escondidos; a linha nova vai por cima
+    let row = card.querySelector(':scope > .hmd-row');
+    if(!e || !p || (reg && reg.concluidoEm) || (reg && p.dias >= p.alvo)){ card.classList.add('hidden'); if(row) row.remove(); return; }
+    const falta = Math.max(0, p.alvo - p.dias);
+    card.classList.add('hm-desafio'); card.style.cssText = ''; card.setAttribute('onclick', "goTab('challenges')");
+    card.setAttribute('role', 'button'); card.setAttribute('aria-label', `Desafio ${e.nome}: ver detalhes em Desafios`);
+    if(!row){ row = document.createElement('div'); row.className = 'hmd-row'; card.appendChild(row); }
+    row.innerHTML = `<span class="hmd-med" aria-hidden="true">${eventoMedalha(e, 34)}</span><span class="hmd-tx"><b>${mtEsc(e.nome)}</b><small>${reg ? `${falta === 1 ? 'falta 1 dia ativo' : `faltam ${falta} dias ativos`}` : 'toque para participar'} · ${p.restam === 0 ? 'último dia' : p.restam + (p.restam === 1 ? ' dia restante' : ' dias restantes')}</small></span><span class="hmd-bar" aria-hidden="true"><i style="width:${Math.round(p.pct*100)}%"></i></span><span class="ii-seta">›</span>`;
+  }catch(err){ console.log('início (desafio):', err); }
+} });
+
+// ---------- 3. Indicadores do Início: 1, 2, 3 ou 4 cartões sem buraco ----------
+// A regra "o último ímpar ocupa a linha" existia, mas só rodava quando a personalização mudava; depois de um
+// redesenho dos indicadores (ex.: o atalho do sono trocado na hora) a marca ficava no cartão errado. Agora roda
+// a cada desenho, pela ordem VISUAL, e o número de cartões fica no próprio bloco (data-n) para o CSS.
+function mtIndicadoresAjusta(){
+  try{
+    const m = $('home-metrics'); if(!m) return;
+    const tiles = [...m.children]; tiles.forEach(t=>t.classList.remove('met-full'));
+    const vis = tiles.filter(t=>getComputedStyle(t).display !== 'none').map((t,i)=>({ t, o:parseInt(getComputedStyle(t).order,10)||0, i })).sort((a,b)=>(a.o-b.o)||(a.i-b.i)).map(x=>x.t);
+    if(vis.length % 2 === 1) vis[vis.length-1].classList.add('met-full');
+    m.dataset.n = String(vis.length); m.classList.toggle('met-vazio', !vis.length);
+  }catch(e){}
+}
+mtGancho('renderHomeMetrics', { depois(){ mtIndicadoresAjusta(); } });
+mtGancho('aplicaInicio', { depois(){ mtIndicadoresAjusta(); } });
+
+(function(){ if(document.getElementById('rc4-e2-css')) return; const s = document.createElement('style'); s.id = 'rc4-e2-css';
+s.textContent = `
+#home-trofeus{display:none!important}
+.chal-sec{margin:0 0 20px}
+.chal-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-mute);margin:6px 2px 8px}
+.chal-h small{font-size:11.5px;letter-spacing:0;text-transform:none;font-weight:600}
+.chal-sub{font-size:12px;font-weight:700;color:var(--text-dim);margin:12px 2px 6px}
+.chal-sec .chal-recomp{margin-top:10px}
+.chal-linha{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;margin-top:10px;border-radius:var(--radius-card,16px);border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer;min-height:52px}
+.chal-lista .chal-linha{margin:0;border:0;border-radius:0;background:none;padding:12px 2px;border-bottom:1px solid var(--border)}
+.chal-lista .chal-linha:last-child{border-bottom:0}
+.chal-lista{padding:2px 14px}
+.chal-linha .cl-ico .tbadge{width:34px;height:34px}
+.chal-linha .cl-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.chal-linha .cl-tx b{font-size:14px}.chal-linha .cl-tx small{font-size:12px;color:var(--text-dim)}
+.chal-linha .cl-prox{color:var(--primary-2)!important;font-weight:700}
+.chal-novo .cl-tx b{color:var(--primary-2)}
+.chal-cq{padding:12px 14px}
+.chal-cq-top{display:flex;align-items:center;gap:12px;width:100%;padding:0;border:0;background:none;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.chal-cq-n{display:flex;flex-direction:column;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;border:3px solid var(--line-primary,var(--primary));flex:none}
+.chal-cq-n b{font-size:19px;line-height:1}.chal-cq-n small{font-size:10px;color:var(--text-mute)}
+.chal-cq-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.chal-cq-tx b{font-size:14.5px}.chal-cq-tx small{font-size:12px;color:var(--text-dim)}
+.chal-cq-tx .cq-novas-txt{color:var(--primary-2);font-weight:700}
+.chal-cq-rec{display:flex;gap:2px;flex:none}.chal-cq-rec .tbadge{width:28px;height:28px}
+@media (max-width:380px){.chal-cq-rec .tbadge:nth-child(n+3){display:none}}
+.chal-cq-bts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.chal-cq-bts .btn{padding:9px 8px;font-size:13px}
+.ev-mission.antes-inicio{opacity:.55}
+.hm-desafio{padding:10px 14px!important;margin-top:12px;cursor:pointer}
+.hm-desafio > :not(.hmd-row){display:none!important}
+.hm-desafio > .hmd-row{display:flex;align-items:center;gap:10px;position:relative;padding-bottom:6px}
+.hm-desafio .hmd-med{flex:none;display:flex}
+.hm-desafio .hmd-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hm-desafio .hmd-tx b{font-size:14px}.hm-desafio .hmd-tx small{font-size:12px;color:var(--text-dim)}
+.hm-desafio .hmd-bar{position:absolute;left:44px;right:0;bottom:0;height:3px;border-radius:99px;background:var(--surface-2);overflow:hidden}.hm-desafio .hmd-bar i{display:block;height:100%;background:var(--primary)}
+.metrics[data-n="1"]{grid-template-columns:1fr}
+.cq-aviso{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translate(-50%,16px);opacity:0;z-index:9000;display:flex;align-items:center;gap:10px;max-width:min(92vw,420px);padding:8px 12px 8px 8px;border-radius:16px;border:1px solid var(--line-primary,var(--border));background:var(--surface);color:var(--text);box-shadow:0 8px 28px rgba(0,0,0,.35);font:inherit;text-align:left;cursor:pointer;transition:opacity .25s ease,transform .25s ease}
+.cq-aviso.on{opacity:1;transform:translate(-50%,0)}
+.cq-aviso .cqa-ico{display:flex;flex:none}.cq-aviso .cqa-ico .tbadge{width:34px;height:34px}
+.cq-aviso .cqa-tx{display:flex;flex-direction:column;min-width:0}.cq-aviso .cqa-tx b{font-size:13px}.cq-aviso .cqa-tx small{font-size:11.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cq-aviso .cqa-ver{font-size:12.5px;font-weight:800;color:var(--primary-2);padding-left:4px}
+@media (prefers-reduced-motion:reduce){.cq-aviso{transition:none}}
+details.note-clima > summary{list-style:none;cursor:pointer;display:block}
+details.note-clima > summary::-webkit-details-marker{display:none}
+details.note-clima .note-title{display:block}
+details.note-clima .nc-1{display:block;font-size:13px;line-height:1.45;margin-top:2px}
+details.note-clima .nc-mais{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:var(--info-soft,var(--primary-2));text-decoration:underline}
+details.note-clima[open] .nc-mais{display:none}
+details.note-clima .nc-obs{color:var(--text-mute);font-size:11.5px;margin-top:4px}
+.mes-mais{margin-top:4px}.mes-mais > summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--text-dim);padding:6px 2px}
+.mts-nota{font-size:11.5px;color:var(--text-mute);line-height:1.4;margin:-2px 0 8px 28px}
+`; document.head.appendChild(s); })();
+
+Object.assign(window, { mtDesafiosOrganiza, mtIndicadoresAjusta });

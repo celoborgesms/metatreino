@@ -1,5 +1,5 @@
-// ===== MetaTreino 2027 RC 3 =====
-const APP_VERSION = '2027-rc.3';
+// ===== MetaTreino 2027 RC 4 =====
+const APP_VERSION = '2027-rc.4';
 const DATA_PREFIX = 'metatreino_cache_'; // cache local (fallback offline), agora indexado por UID do Google
 const ADMIN_EMAIL = 'celoborgesms@gmail.com';
 
@@ -542,7 +542,9 @@ function mesclaEstado(base, outra, opts){
       (outra.progress[id]||[]).forEach(p=>{
         if(!p || !diasNovos.has(chaveDia(p.date))) return;
         const arr = base.progress[id] = base.progress[id] || [];
-        if(!arr.some(q=>chaveDia(q.date)===chaveDia(p.date))) arr.push(p);
+        // RC 4: com sid, cada sessão é uma entrada própria (dois treinos no mesmo dia não se confundem)
+        const igual = arr.find(q=>p.sid ? (q.sid === p.sid || (!q.sid && q.date === p.date)) : (chaveDia(q.date)===chaveDia(p.date) && (!q.sid || q.date === p.date)));
+        if(!igual) arr.push(p); else if(p.sid && !igual.sid) igual.sid = p.sid;   // a mesma entrada, já fechada no outro aparelho
       });
       if(base.progress[id]) base.progress[id].sort((a,b)=>a.date-b.date);
     });
@@ -3032,9 +3034,18 @@ function homeStatusLine(){
   const w = mod && mod.plan && Array.isArray(mod.plan.workouts) && mod.plan.workouts.find(x=>x.dayIdx===getDayIdx());
   const nomeOutro = isLift ? 'corrida' : 'musculação';
   const nomeAtivo = isLift ? 'musculação' : 'corrida';
+  // RC 4: o treino de HOJE da outra modalidade (plano real; nada é alterado) — a saudação não fala em "descanso"
+  // quando só esta modalidade descansa, e não diz "missão cumprida" com a outra ainda por fazer
+  const wOutro = outroMod && outroMod.plan && Array.isArray(outroMod.plan.workouts) ? outroMod.plan.workouts.find(x=>x.dayIdx===getDayIdx()) : null;
+  const outroPulado = !!(wOutro && (state.skips||[]).some(s=>s.at===hoje.getTime() && s.module===(isLift?'run':'lift') && (typeof skipEDoTreino!=='function' || skipEDoTreino(s, wOutro))));
+  const nomeTreinoOutro = wOutro ? (isLift ? String(wOutro.name||'corrida').toLowerCase() : 'Treino '+wOutro.k+' de musculação') : '';
 
   // 1) já treinou hoje NESTE módulo
   if(feitosAtivo.length){
+    if(wOutro && !feitosOutro.length && !outroPulado){
+      const minA = Math.round(feitosAtivo.reduce((s,x)=>s+(x.duration||0),0));
+      return `${isLift?'Musculação':'Corrida'} de hoje feita (${minA} min). Na ${nomeOutro} ainda tem ${nomeTreinoOutro} no plano.`;
+    }
     const min = Math.round(feitosAtivo.reduce((s,x)=>s+(x.duration||0),0));
     if(feitosAtivo.length>1) return `Dois treinos de ${nomeAtivo} hoje, ${min} min no total. Isso é dedicação. 🔥`;
     if(feitosOutro.length) return `${isLift?'Musculação':'Corrida'} e ${nomeOutro} no mesmo dia. Dia cheio — agora hidrate e coma bem. 💪`;
@@ -3103,7 +3114,7 @@ function homeStatusLine(){
     if(h < 21) return pickDay([
       `Ainda dá tempo: hoje tem ${oQue}. Uma hora agora vale mais que a intenção de amanhã. 🌆`,
       `Fim de tarde é ótimo para ${oQue}. Fecha o dia com chave de ouro. 🌆`,
-      `Depois do dia corrido, nada como descarregar tudo no ${oQue}. 💪`,
+      `Depois de um dia corrido, o treino de hoje (${oQue}) ajuda a fechar o dia bem.`,
       `Hoje tem ${oQue}. Você no fim do dia vai agradecer por ter ido. 🙌`
     ]);
     if(h < 23) return `Tarde da noite, mas ainda dá para fazer ${oQue}. Se estiver muito cansado, dormir bem também é treino. 🌙`;
@@ -3111,6 +3122,8 @@ function homeStatusLine(){
   }
 
   // 6) dia de descanso neste módulo
+  // RC 4: descanso SÓ desta modalidade não é descanso geral
+  if(wOutro && !outroPulado && h >= 5 && h < 23) return `Hoje a ${nomeAtivo} descansa. Na ${nomeOutro} tem ${nomeTreinoOutro} (toque em ${isLift?'Corrida':'Musculação'} no seletor abaixo).`;
   if(h < 3) return '🦉 Madrugada alta e nem treino tem hoje. Aproveite: durma. É de graça e funciona.';
   if(streak>=5) return `Descanso na ${nomeAtivo} — e você tem ${streak} dias de sequência. Descansar é parte do treino. 😴`;
   if(h >= 21) return pickDay([
@@ -3315,9 +3328,8 @@ function renderHomeMetrics(){
     <div class="met" onclick="openAgua()"><div class="met-h"><i>💧</i>Água</div>
       <div class="met-v">${fmtL(aguaHoje())}<small>L</small></div>
       <div class="act-bar" style="margin:0"><i style="width:${Math.min(100,Math.round(aguaHoje()/aguaMeta()*100))}%;background:var(--accent)"></i></div>
-      <div style="display:flex;justify-content:space-between;align-items:center"><span class="met-s">meta ${fmtL(aguaMeta())} L</span><button class="aguabtn" onclick="event.stopPropagation();aguaAdd(250)">+250</button></div></div>
-    <div class="met" onclick="openTrophies()"><div class="met-h"><i>🏆</i>Conquistas</div>
-      <div class="met-v">${(state.trophies||[]).length}<small>/ ${TROPHIES.length}</small></div><div class="met-s">Medalhas e selos</div></div>`;
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="met-s">meta ${fmtL(aguaMeta())} L</span><button class="aguabtn" onclick="event.stopPropagation();aguaAdd(250)">+250</button></div></div>`;
+  // RC 4: o atalho "Conquistas" saiu do Início — conquistas, medalhas e desafios ficam na aba Desafios
 }
 function switchModule(to){
   // Corrida sem plano (com ou sem registros) → abre a tela de escolha, não o setup direto
@@ -3642,10 +3654,23 @@ function renderHome(){
       if(t1) t1.textContent='Pernas ainda em recuperação';
       // O texto muda se HÁ corrida hoje ou não — antes dizia "faça hoje em ritmo leve"
       // até em dia de descanso, o que não fazia sentido.
-      const temHoje = !!(mod && mod.plan && (mod.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx()));
-      if(s1) s1.textContent = temHoje
-        ? 'Você treinou pernas forte há pouco. Se sentir peso na passada, faça a corrida de hoje em ritmo leve ou troque por uma caminhada — ela rende mais com as pernas descansadas.'
-        : 'Você treinou pernas forte há pouco e hoje é dia de descanso — perfeito para recuperar. Na próxima corrida, se sentir peso na passada, comece mais leve.';
+      // RC 4: e muda se a atividade de hoje JÁ FOI FEITA. Antes, depois de registrar a caminhada, o cartão
+      // continuava falando da corrida "de hoje" como se ainda fosse acontecer. Caminhada leve não é tratada como
+      // corrida intensa: feita com esforço até 6/10, o cartão some. "Descanso" aqui é só da corrida (a
+      // musculação pode ter treino hoje — o texto diz isso em vez de "dia de descanso").
+      const runMod = state.modules.run;
+      const temHoje = !!(runMod && runMod.plan && (runMod.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx()));
+      const feitasHoje = entriesHoje(runMod);
+      const liftHoje = !!(state.modules.lift && state.modules.lift.plan && (state.modules.lift.plan.workouts||[]).some(x=>x.dayIdx===getDayIdx()));
+      if(feitasHoje.length){
+        const ult = feitasHoje[feitasHoje.length-1]; const rpe = +ult.rpe || 0;
+        const tipo = ult.activity==='caminhada' ? 'caminhada' : ult.activity==='bike' ? 'pedal' : 'corrida';
+        if(rpe && rpe <= 6){ ac.classList.add('hidden'); }
+        else if(t1){ t1.textContent='Pernas: hora de recuperar';
+          if(s1) s1.textContent = `A ${tipo} de hoje já foi registrada${rpe ? ` (esforço ${rpe}/10)` : ''}, depois de um treino de pernas recente. Para fechar o dia: hidratação, proteína nas refeições e uma boa noite de sono.`; }
+      } else if(s1) s1.textContent = temHoje
+        ? 'Você treinou pernas forte há pouco. Se sentir peso na passada, faça a corrida de hoje em ritmo leve ou troque por uma caminhada — ela rende mais com as pernas descansadas. É uma sugestão, não uma regra.'
+        : `Você treinou pernas forte há pouco e hoje não tem corrida no plano${liftHoje ? ' (a musculação tem treino hoje)' : ''} — bom para recuperar. Na próxima corrida, se sentir peso na passada, comece mais leve.`;
     }
   }catch(e){}
   // aviso de dor: corrida com dor em perna/joelho/tornozelo → sugerir caminhada ou bike
@@ -3735,10 +3760,11 @@ function renderTodayWorkout(w, isLift){
         <div class="note-title">⚠️ Cuidado com o volume</div>
         <div class="note-line">Você correu <b>${v.atual}km</b> nesta semana, ${v.alta>=100?'mais que o dobro':v.alta+'% acima'} da sua média (${v.media}km). Subir rápido demais é a maior causa de lesão em corrida — se sentir dor nova, pegue leve.</div>
       </div>`:'')(volumeAlert()) : ''}
-    ${(!isLift && typeof runWeatherTips==='function') ? (t=>t?`<div class="note note-info">
-        <div class="note-title">${t.titulo}</div>
-        ${t.dicas.map(d=>`<div class="note-line">• ${d}</div>`).join('')}
-      </div>`:'')(runWeatherTips()) : ''}
+    ${(!isLift && typeof runWeatherTips==='function') ? (t=>t?`<details class="note note-info note-clima">
+        <summary><span class="note-title">${t.titulo}</span><span class="nc-1">${t.dicas[0]}</span>${t.dicas.length > 1 ? `<span class="nc-mais">+${t.dicas.length-1} ${t.dicas.length-1===1?'dica':'dicas'}</span>` : ''}</summary>
+        ${t.dicas.slice(1).map(d=>`<div class="note-line">• ${d}</div>`).join('')}
+        <div class="note-line nc-obs">Sugestões para o clima de agora — adapte ao seu dia, não são obrigação.</div>
+      </details>`:'')(runWeatherTips()) : ''}
     <div class="today-meta">
       <span class="chip mono">⏱️ ${w.duration} min</span>
       ${w.distance?`<span class="chip mono">📍 ${w.distance}</span>`:''}
@@ -3835,7 +3861,19 @@ function renderRestDay(mod){
   const isLift = mod.plan.type==='lift';
   const ws = mod.plan.workouts.slice(0,3);
   const freeRunBtn = (state.active==='run' && state.modules.run) ? `<div class="rest-divider">— ou —</div><button class="btn btn-outline btn-block hl-warn" style=";color:var(--accent-2)" onclick="openRunLog('livre')">🏃 Registrar corrida, caminhada ou bike livre</button>` : '';
-  return `<div class="rest-card"><div class="rest-emoji">😴</div><div class="rest-title">Dia de Descanso</div><div class="rest-sub">Aproveite para recuperar. Você volta amanhã mais forte!</div><div class="rest-divider">— ou —</div><div style="font-weight:700">Quer antecipar algum treino?</div><div class="anticipate">${ws.map(w=>`<div class="antic-card" onclick="openSession('${w.k||w.dayIdx}')"><div class="antic-letter">${(w.k||'').charAt(0)||'S'}</div><div class="antic-name">${isLift?'Treino '+w.k:w.name.split(' ')[0]}</div><div class="antic-day">${w.dayName}</div></div>`).join('')}</div>${freeRunBtn}</div>`;
+  // RC 4: com as duas modalidades, o cartão diz QUAL descansa e o que a outra tem hoje (feito, pulado ou por fazer)
+  const outro = isLift ? 'run' : 'lift', om = state.modules[outro];
+  const wO = om && om.plan ? (om.plan.workouts||[]).find(x=>x.dayIdx===getDayIdx()) : null;
+  const h0 = new Date(); h0.setHours(0,0,0,0);
+  const feitoO = entriesHoje(om), puladoO = !!(wO && (state.skips||[]).some(s=>s.at===h0.getTime() && s.module===outro && (typeof skipEDoTreino!=='function' || skipEDoTreino(s, wO))));
+  const nomeM = isLift ? 'Musculação' : 'Corrida', nomeO = isLift ? 'corrida' : 'musculação';
+  const linhaOutro = !(om && om.plan) ? '' : wO
+    ? (feitoO.length ? `<div class="rest-outro">✓ ${isLift?'Corrida':'Musculação'} de hoje já registrada.</div>`
+      : puladoO ? `<div class="rest-outro">Você marcou descanso também na ${nomeO} hoje.</div>`
+      : `<div class="rest-outro">Hoje tem <b>${isLift ? mtEsc(wO.name) : 'Treino '+wO.k+' — '+mtEsc(wO.name)}</b> na ${nomeO}. <button type="button" class="link-mais" onclick="switchModule('${outro}')">Ver ${nomeO} ›</button></div>`)
+    : `<div class="rest-outro">A ${nomeO} também descansa hoje.</div>`;
+  const titulo = (om && om.plan) ? `${nomeM}: descanso hoje` : 'Dia de Descanso';
+  return `<div class="rest-card"><div class="rest-emoji">😴</div><div class="rest-title">${titulo}</div><div class="rest-sub">${(om && om.plan && wO && !puladoO) ? 'Só esta modalidade descansa hoje.' : 'Aproveite para recuperar. Você volta amanhã mais forte!'}</div>${linhaOutro}<div class="rest-divider">— ou —</div><div style="font-weight:700">Quer antecipar algum treino?</div><div class="anticipate">${ws.map(w=>`<div class="antic-card" onclick="openSession('${w.k||w.dayIdx}')"><div class="antic-letter">${(w.k||'').charAt(0)||'S'}</div><div class="antic-name">${isLift?'Treino '+w.k:w.name.split(' ')[0]}</div><div class="antic-day">${w.dayName}</div></div>`).join('')}</div>${freeRunBtn}</div>`;
 }
 
 function renderWeekGrid(mod){
@@ -4072,6 +4110,8 @@ function renderSessionDetail(w){
   const _entSem = entradaConcluidaSemana(w, state.active);
   const concluidoAnterior = !!(_entSem && !(isLift ? lockedToday : runDoneToday(w)));
   curSessionDoneEntry = (isLift && concluidoAnterior) ? _entSem : null;
+  // RC 4: treino já salvo HOJE e aberto na tela → as séries mostradas são as DELE (pelo sid), não as de outro treino do dia
+  try{ const _h0 = new Date(); _h0.setHours(0,0,0,0); const _hj = isLift && lockedToday ? (state.modules.lift.history||[]).filter(h=>h.id===w.k && h.at>=_h0.getTime()).pop() : null; window.__mtSidVista = _hj && _hj.sid || null; }catch(e){ window.__mtSidVista = null; }
   const html = `
     <div class="detail-hero">
       <h2>${isLift?`Treino ${w.k} — ${w.name}`:w.name}</h2>
@@ -4112,7 +4152,7 @@ function checkLiftDone(w){
   if(!w || !Array.isArray(w.exercises)) return false;   // plano corrompido não derruba a tela
   return w.exercises.some(ex=>{
     const arr = state.progress[ex.id]||[];
-    return arr.some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime() && p.sets && p.sets.length>0; });
+    return arr.some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return !p.sid && d.getTime()===today.getTime() && p.sets && p.sets.length>0; });   // RC 4: só o treino em andamento
   });
 }
 
@@ -4149,7 +4189,7 @@ function renderLiftBlocksBase(w){
   // Um grupo está "pronto" quando todos os seus exercícios foram registrados hoje.
   // O primeiro grupo AINDA não concluído abre sozinho — a pessoa não precisa ficar clicando.
   const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const exFeito = ex => (state.progress[ex.id]||[]).some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===hoje.getTime() && p.sets.length>0; });
+  const exFeito = ex => (state.progress[ex.id]||[]).some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return !p.sid && d.getTime()===hoje.getTime() && p.sets.length>0; });   // RC 4: treino em andamento
   const entradas = Object.entries(groups);
   const feitoAntes = ex => !!(curSessionDoneEntry && (curSessionDoneEntry.exercisesDone||[]).some(e=>e.id===ex.id));
   const prontos = entradas.map(([,exs])=>exs.every(ex=>exFeito(ex)||feitoAntes(ex)));
@@ -4202,7 +4242,7 @@ function extrasDeHoje(){ return (((state.extras||{})[chaveDia(new Date())])||[])
 function renderLiftBlocks(w){
   const base = renderLiftBlocksBase(w);
   const ex = extrasDeHoje();
-  const feitos = ex.filter(e=>((state.progress[e.id]||[]).some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); const h=new Date(); h.setHours(0,0,0,0); return d.getTime()===h.getTime() && p.sets.length; }))).length;
+  const feitos = ex.filter(e=>((state.progress[e.id]||[]).some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); const h=new Date(); h.setHours(0,0,0,0); return d.getTime()===h.getTime() && p.sets.length; }))).length;   // extras do dia: contam as do dia inteiro
   const blocoExtras = ex.length ? `<div class="block open"><div class="block-head main" onclick="this.parentNode.classList.toggle('open')"><span style="font-size:22px">➕</span><div class="block-head-txt"><div class="block-name">Extras de hoje</div><div class="block-sub">${feitos}/${ex.length} registrados · fora do plano</div></div><div class="block-chev">▾</div></div><div class="block-body"><div class="block-inner">${ex.map((e,i)=>renderExerciseCard(e,i)).join('')}</div></div></div>` : '';
   return base + blocoExtras + `<button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="openAddExtra()">➕ Adicionar exercício extra</button>`;
 }
@@ -4210,7 +4250,7 @@ function renderExerciseCard(ex, idx){
   const last = getLastLog(ex.id);
   const pr = state.prs[ex.id];
   const today = new Date(); today.setHours(0,0,0,0);
-  const todayLogs = (state.progress[ex.id]||[]).filter(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime(); });
+  const todayLogs = (state.progress[ex.id]||[]).filter(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return (!p.sid || (window.__mtSidVista && p.sid === window.__mtSidVista)) && d.getTime()===today.getTime(); });   // RC 4: o treino em andamento, ou o treino aberto na tela se ele já foi salvo hoje
   const todayEntry = todayLogs.length? todayLogs[todayLogs.length-1] : null;
   const doneToday = todayEntry && todayEntry.sets.length>0;
   const _fa = (!doneToday && curSessionDoneEntry) ? (curSessionDoneEntry.exercisesDone||[]).find(e=>e.id===ex.id) : null;
@@ -4310,7 +4350,8 @@ function syncExtrasHistorico(){
   const doDia = mod.history.filter(x=>x.module==='lift' && x.at>=hoje.getTime()); if(!doDia.length) return;
   const h = doDia[doDia.length-1]; h.exercisesDone = h.exercisesDone || [];
   extras.forEach(ex=>{
-    const p = (state.progress[ex.id]||[]).find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===hoje.getTime() && p.sets.length; });
+    const p = (state.progress[ex.id]||[]).find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return (!p.sid || p.sid === h.sid) && d.getTime()===hoje.getTime() && p.sets.length; });
+    if(p && h.sid && !p.sid) p.sid = h.sid;   // RC 4: o extra registrado depois de salvar entra no último treino do dia
     const idx = h.exercisesDone.findIndex(e=>e.id===ex.id);
     if(!p){ if(idx>=0) h.exercisesDone.splice(idx,1); return; }
     const top = p.sets.reduce((b,s)=>((s.peso||0)*(s.reps||0) > (b.peso||0)*(b.reps||0) ? s : b), p.sets[0]);
@@ -4319,11 +4360,55 @@ function syncExtrasHistorico(){
   });
   saveData();
 }
+// ---------- RC 4: SESSÕES de musculação ----------
+// Antes, as séries ficavam numa entrada por EXERCÍCIO por DIA (state.progress[ex] = [{date, sets}]). Dois treinos
+// no mesmo dia que repetissem um exercício (ex.: prancha no treino A de manhã e no B à noite) caíam na MESMA
+// entrada: o segundo treino aparecia já "feito", as séries se somavam e o volume, o card, o PDF e os recordes
+// misturavam as duas sessões. Agora:
+//  • cada treino salvo ganha um identificador próprio (sid) — no histórico e em cada entrada de séries dele;
+//  • entrada SEM sid = séries do treino EM ANDAMENTO hoje; com sid = de um treino já salvo (fechado);
+//  • o registro de hoje sempre usa a entrada aberta (sem sid); fechou o treino, o próximo começa outra entrada;
+//  • histórico ↔ séries pelo sid; registros antigos recebem o sid uma vez (mtSessaoMigrar), sem apagar nada.
+function mtSidNovo(at){ return 's' + Math.round(+at || Date.now()).toString(36); }
+function mtEntradaAbertaHoje(exId){ const h = mtDia0Ts(Date.now()); return (state.progress[exId]||[]).find(p=>p && !p.sid && mtDia0Ts(p.date) === h) || null; }
+function mtTemSeriesAbertasHoje(exId){ const p = mtEntradaAbertaHoje(exId); return !!(p && p.sets && p.sets.length); }
+// séries de um treino do histórico: pelo sid; registro antigo sem sid → mesmo dia, entradas sem sid
+function mtEntradasDaSessao(x){
+  const out = []; if(!x) return out; const dia = mtDia0Ts(x.at);
+  (x.exercisesDone||[]).forEach(e=>{
+    const id = e.id || (typeof slug==='function' ? slug(e.name) : e.name);
+    const arr = state.progress[id] || [];
+    const p = x.sid ? arr.find(q=>q && q.sid === x.sid) : arr.find(q=>q && !q.sid && mtDia0Ts(q.date) === dia);
+    if(p && p.sets && p.sets.length) out.push({ exId:id, sets:p.sets, entrada:p });
+  });
+  return out;
+}
+// migração única e idempotente: dá sid aos treinos de musculação já salvos e às séries que são inequivocamente
+// deles (um único treino naquele dia com aquele exercício). Caso ambíguo (dois treinos antigos no mesmo dia com o
+// mesmo exercício, já misturados numa entrada só) fica como estava — não há como separar sem inventar.
+function mtSessaoMigrar(){
+  try{
+    const H = ((state.modules.lift||{}).history)||[]; if(!H.length) return false; let mudou = false;
+    const porDia = {};
+    H.forEach(x=>{ if(!x || !x.at || x.imp) return; if(!x.sid){ x.sid = mtSidNovo(x.at); mudou = true; } const d = mtDia0Ts(x.at); (porDia[d] = porDia[d] || []).push(x); });
+    Object.keys(porDia).forEach(d=>{
+      const doDia = porDia[d]; const conta = {};
+      doDia.forEach(x=>(x.exercisesDone||[]).forEach(e=>{ const id = e.id || slug(e.name); conta[id] = (conta[id]||0) + 1; }));
+      doDia.forEach(x=>(x.exercisesDone||[]).forEach(e=>{
+        const id = e.id || slug(e.name); if(conta[id] !== 1) return;
+        if((state.progress[id]||[]).some(q=>q && q.sid === x.sid)) return;   // este treino já tem as séries dele
+        const p = (state.progress[id]||[]).find(q=>q && !q.sid && mtDia0Ts(q.date) === +d && q.sets && q.sets.length);
+        if(p && (mtDia0Ts(p.date) !== mtDia0Ts(Date.now()) || p.date <= x.at)){ p.sid = x.sid; mudou = true; }
+      }));
+    });
+    return mudou;
+  }catch(e){ return false; }
+}
 function openSetLog(exId, exName){
   telaLigadaPedir('registro'); treinoAtivoIniciar(); // mantém a tela ligada enquanto registra o exercício
   const today = new Date(); today.setHours(0,0,0,0);
   const logs = state.progress[exId]||[];
-  let entry = logs.find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime(); });
+  let entry = logs.find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return !p.sid && d.getTime()===today.getTime(); });   // RC 4: só a entrada do treino em andamento
   if(!entry){ entry = { date:Date.now(), sets:[] }; logs.push(entry); state.progress[exId] = logs; }
   curLog = { exId, exName, entry, feitas: entry.sets.map(()=>true) };   // Beta 36: o que já estava salvo hoje conta como concluído
   renderSetLogModal();
@@ -4633,7 +4718,7 @@ function nextUnloggedExercise(afterExId){
   const w = modL && modL.plan ? currentSelectedWorkout(modL) : null;
   if(!w || !w.exercises) return null;
   const today = new Date(); today.setHours(0,0,0,0);
-  const isLogged = id => ((state.progress[id]||[]).some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime() && p.sets.length>0; }));
+  const isLogged = id => ((state.progress[id]||[]).some(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return !p.sid && d.getTime()===today.getTime() && p.sets.length>0; }));   // RC 4: treino em andamento
   const list = w.exercises;
   const idx = list.findIndex(e=>e.id===afterExId);
   // procura a partir do seguinte, dando a volta na lista
@@ -4672,9 +4757,11 @@ function confirmLiftWorkout(k){
   // captura o que foi feito hoje em cada exercício (para histórico e compartilhamento)
   const today = new Date(); today.setHours(0,0,0,0);
   let firstLogAt = null;
+  const _sid = mtSidNovo(Date.now()); const _entradas = [];   // RC 4: identificador desta sessão
   const exercisesDone = [...(w.exercises||[]), ...extrasDeHoje()].map(ex=>{
-    const entry = (state.progress[ex.id]||[]).find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime() && p.sets.length; });
+    const entry = (state.progress[ex.id]||[]).find(p=>{ const d=new Date(p.date); d.setHours(0,0,0,0); return !p.sid && d.getTime()===today.getTime() && p.sets.length; });
     if(!entry) return null;
+    _entradas.push(entry);
     if(!firstLogAt || entry.date < firstLogAt) firstLogAt = entry.date;
     const top = entry.sets.reduce((b,s)=>((s.peso||0)*(s.reps||0) > (b.peso||0)*(b.reps||0) ? s : b), entry.sets[0]);
     return { id:ex.id, name:ex.name, part:ex.part, sets:entry.sets.length, best: top.peso>0 ? `${top.peso}kg×${top.reps}` : `${top.reps} reps`, extra: ex.extra || undefined };
@@ -4693,7 +4780,8 @@ function confirmLiftWorkout(k){
   const _jaNaSemana = entradaConcluidaSemana(w, 'lift');
   const _adicional = !!(_jaNaSemana && mtDia0Ts(_jaNaSemana.at) !== mtDia0Ts(Date.now()));
   mod.history.push({ id:w.k, name:'Treino '+w.k+' — '+w.name+(_adicional?' (adicional)':''), at:Date.now(), duration:realDuration, plannedDuration:w.duration, module:'lift', feel, rpe, parts:[...(w.parts||[])], exercisesDone,
-    adaptedWith: adaptInfo.active ? adaptReasonText() : null, adicional: _adicional || undefined });
+    adaptedWith: adaptInfo.active ? adaptReasonText() : null, adicional: _adicional || undefined, sid: _sid });
+  _entradas.forEach(en=>{ en.sid = _sid; });   // as séries deste treino ficam presas a ele (fecha a sessão)
   ensureStats(); // deriva liftTotal do histórico — NÃO somar manualmente (contava em dobro)
   checkTrophies();
   saveData();
@@ -5625,7 +5713,7 @@ const DESAFIO_BASES = {
   series:    {cat:'lift',  emo:'🧱', nome:'Construtor de Séries',desc:t=>`${t} séries registradas no mês`,                  tiers:[60,120,200], val:()=>{ const ini=monthStartTs(); let n=0; Object.values(_progMes()).forEach(arr=>(arr||[]).forEach(p=>{ if(p.date>=ini) n+=(p.sets||[]).length; })); return n; }},
   variedade: {cat:'lift',  emo:'🧭', nome:'Explorador',         desc:t=>`Treine ${t} exercícios diferentes`,                tiers:[10,16,24],   val:()=>{ const ini=monthStartTs(); return Object.values(_progMes()).filter(arr=>(arr||[]).some(p=>p.date>=ini && (p.sets||[]).length)).length; }},
   grupos:    {cat:'lift',  emo:'🧬', nome:'Corpo Inteiro',      desc:t=>`Treine ${t} grupos musculares diferentes`,         tiers:[4,6,8],      val:()=>{ const set=new Set(); (state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs()).forEach(x=>(x.parts||[]).forEach(p=>set.add(p))); return set.size; }},
-  prs:       {cat:'lift',  emo:'💥', nome:'Quebrador de Limites',desc:t=>`Bata ${t} recorde${t>1?'s':''} pessoal${t>1?'is':''}`,tiers:[1,3,5],   val:()=>Object.values(state.prs||{}).filter(p=>p.at>=monthStartTs()).length},
+  prs:       {cat:'lift',  emo:'💥', nome:'Quebrador de Limites',desc:t=>`Bata ${t} recorde${t>1?'s':''} pessoal${t>1?'is':''}`,tiers:[1,3,5],   val:()=>((typeof mtPrsReais==='function') ? mtPrsReais() : []).filter(p=>p.at>=monthStartTs()).length},   // RC 4: a referência do 1º registro não é recorde
   pernas:    {cat:'lift',  emo:'🦵', nome:'Dia de Perna Garantido',desc:t=>`${t} treinos com pernas ou glúteos`,            tiers:[2,4,6],      val:()=>(state.modules.lift?.history||[]).filter(x=>x.at>=monthStartTs() && (x.parts||[]).some(p=>['Pernas','Glúteos','Panturrilha'].includes(p))).length},
   km:        {cat:'run',   emo:'🏃', nome:'Maratonista do Mês', desc:t=>`Corra ${t} km somados no mês`,                     tiers:[15,30,50],   val:()=>+somaKm((state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs() && (!x.activity||x.activity==='corrida'))).toFixed(1)},
   cardio:    {cat:'run',   emo:'🫀', nome:'Cardio em Dia',      desc:t=>`${t} atividades de cardio no mês`,                 tiers:[4,8,12],     val:()=>(state.modules.run?.history||[]).filter(x=>x.at>=monthStartTs()).length},
@@ -5637,9 +5725,26 @@ function _escalaDesafio(){
   const lv = (state.modules.lift&&state.modules.lift.setup&&state.modules.lift.setup.level) || (state.modules.run&&state.modules.run.setup&&state.modules.run.setup.level) || 'intermediario';
   return {iniciante:0.75, intermediario:1, avancado:1.3}[lv] || 1;
 }
-function mkDesafio(baseId, nivel){
+// RC 4: quem começa o plano no meio ou no fim do mês tem menos dias para as metas daquele mês. No PRIMEIRO mês
+// (o mês em que o plano começou), as metas são proporcionais aos dias que restavam a partir do início (mínimo
+// 25%). Metas que não dependem de quantidade (recordes, longão, grupos) não mudam. Os meses seguintes são
+// inteiros. Os níveis já conquistados (state.monthly.done) não mudam.
+const _DESAFIO_FIXO = { prs:1, longao:1, grupos:1 };
+function _fatorInicioMes(){
+  try{
+    const sts = ['lift','run'].map(m=>state.modules[m] && planStartTs(state.modules[m])).filter(Boolean); if(!sts.length) return 1;
+    const st = Math.min(...sts); const ini = new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
+    const fim = new Date(ini.getFullYear(), ini.getMonth()+1, 1).getTime();
+    if(st <= ini.getTime() || st >= fim) return 1;
+    const dias = Math.round((fim - ini.getTime())/86400000); const d0 = new Date(st); d0.setHours(0,0,0,0);
+    const restam = Math.round((fim - d0.getTime())/86400000);
+    return Math.max(0.25, Math.min(1, restam/dias));
+  }catch(e){ return 1; }
+}
+function mkDesafio(baseId, nivel, fator){
   const b = DESAFIO_BASES[baseId]; const idx = NIVEIS_DESAFIO.findIndex(n=>n.id===nivel);
-  const alvo = Math.max(1, Math.round(b.tiers[idx]*_escalaDesafio()));
+  const f = (fator && !_DESAFIO_FIXO[baseId]) ? fator : 1;
+  const alvo = Math.max(1, Math.round(b.tiers[idx]*_escalaDesafio()*f));
   return { id: baseId+'_'+nivel, base: baseId, nivel, emo: b.emo, cat: b.cat, nome: b.nome+' '+NIVEIS_DESAFIO[idx].emo, desc: b.desc(alvo), alvo,
            prog: ()=>[ b.val(), alvo ] };
 }
@@ -5664,7 +5769,8 @@ function desafiosDoMes(){
   // o tema muda o que vem na frente, mas ninguém fica com menos desafios que antes.
   const destaque = tema.bases.filter(serve);
   const resto = Object.keys(DESAFIO_BASES).filter(id=>serve(id) && !destaque.includes(id));
-  return [...destaque, ...resto].map(id=>({ base:id, destaque:destaque.includes(id), info:DESAFIO_BASES[id], niveis:NIVEIS_DESAFIO.map(n=>mkDesafio(id,n.id)) }));
+  const fator = _fatorInicioMes();   // RC 4: mês em que o plano começou → metas proporcionais
+  return [...destaque, ...resto].map(id=>({ base:id, destaque:destaque.includes(id), info:DESAFIO_BASES[id], niveis:NIVEIS_DESAFIO.map(n=>mkDesafio(id,n.id,fator)), proporcional: fator < 1 && !_DESAFIO_FIXO[id] }));
 }
 // lista plana (compatível com o resto do app)
 function visibleChallenges(){ return desafiosDoMes().flatMap(g=>g.niveis); }
@@ -5838,7 +5944,9 @@ function openMonthly(){
   const tema = mesTema();
   const feitosN = grupos.reduce((s,g)=>s+g.niveis.filter(c=>state.monthly.done.includes(c.id)).length,0);
   const selo = state.monthly.done.includes('selo:'+state.monthly.key);
-  const linhas = grupos.map(g=>{
+  // RC 4: primeiro os desafios do FOCO do mês (o que importa agora); os outros ficam recolhidos em "Mais metas
+  // do mês". Nenhuma meta é retirada (os níveis já ganhos continuam valendo), só deixa de aparecer tudo de uma vez.
+  const linhaG = g=>{
     const val = g.info.val();
     const prox = g.niveis.find(c=>!state.monthly.done.includes(c.id));
     const alvoProx = prox ? prox.alvo : g.niveis[g.niveis.length-1].alvo;
@@ -5857,7 +5965,11 @@ function openMonthly(){
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">${pills}</div>
       ${prox?`<div class="tprog" style="margin-top:8px"><div class="tprog-fill" style="width:${pct}%"></div></div>`:''}
     </div>`;
-  }).join('');
+  };
+  const gFoco = grupos.filter(g=>g.destaque), gResto = grupos.filter(g=>!g.destaque);
+  const linhas = gFoco.map(linhaG).join('')
+    + (gResto.length ? `<details class="mes-mais"><summary>Mais metas do mês (${gResto.length})</summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${gResto.map(linhaG).join('')}</div></details>` : '')
+    + (grupos.some(g=>g.proporcional) ? `<p style="font-size:11.5px;color:var(--text-mute);margin:4px 2px 0;line-height:1.45">Seu plano começou neste mês: as metas de quantidade estão proporcionais aos dias que você teve. No próximo mês elas voltam ao tamanho normal.</p>` : '');
   $('modal-inner').innerHTML = `
     <div style="text-align:center">
       <div style="font-size:42px;line-height:1">${tema.emo}</div>
@@ -5865,6 +5977,7 @@ function openMonthly(){
       <div style="font-size:12.5px;color:var(--text-dim)">Foco do mês: <b>${tema.foco}</b> · ${tema.frase}</div>
     </div>
     <p style="color:var(--text-dim);font-size:12.5px;margin:12px 0 0;text-align:center">${monthName(state.monthly.key)} · ${restam===0?'último dia!':`faltam ${restam} dias`} · feche <b>${SELO_MIN_NIVEIS} níveis</b> para ganhar o <b>selo ${tema.emo}</b> ${selo?'— <span style="color:var(--primary-2);font-weight:800">conquistado!</span>':`(${Math.min(feitosN,SELO_MIN_NIVEIS)}/${SELO_MIN_NIVEIS})`}</p>
+    <p style="color:var(--text-dim);font-size:12px;margin:6px 0 0;text-align:center;line-height:1.45">Cada meta tem 3 degraus (bronze, prata e ouro): o degrau seguinte só pede um pouco mais do mesmo hábito. As barras mostram quanto falta para o próximo.</p>
     <div style="max-height:52vh;overflow-y:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px">${linhas}</div>
     <button class="btn btn-outline btn-block hl-warn" style="margin-top:14px" onclick="closeModal();openMedals()">🏅 Ver minhas medalhas e selos</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">Fechar</button>`;
@@ -7574,8 +7687,8 @@ function openActivityLog(){
     <div class="row" style="gap:6px;margin-bottom:12px">${opt('corrida','🏃','Corrida')}${opt('caminhada','🚶','Caminhada')}${opt('bike','🚴','Bike')}</div>
     <div class="row" style="gap:10px">
       <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Distância (km)</label><input class="input" id="act-km" inputmode="decimal" placeholder="ex: 8" style="margin-top:4px"></div>
-      <div style="flex:1"><label style="font-size:12px;color:var(--text-dim)">Tempo (min:seg)</label><input class="input" id="act-min" inputmode="text" placeholder="ex: 30:45 ou 30.45" style="margin-top:4px"></div>
     </div>
+    <div class="field" style="margin-top:12px"><label style="font-size:12px;color:var(--text-dim)">Tempo (horas : minutos : segundos)</label>${mtTempoHmsHtml('act', 0, 'act-min')}</div>
     <div class="field" style="margin-top:14px"><label style="font-size:12px;color:var(--text-dim)">Esforço percebido (RPE, de 1 a 10)</label>${rpeHtml(5)}</div>
     <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="saveActivityLog()">✅ Registrar</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Voltar</button>`;
@@ -7584,7 +7697,8 @@ function openActivityLog(){
 function setActLogType(v){ actLogType=v; document.querySelectorAll('[data-actlog]').forEach(o=>o.classList.toggle('on', o.dataset.actlog===v)); }
 function saveActivityLog(){
   const km = parseFloat(($('act-km').value||'').replace(',','.'));
-  const min = parseTimeToMin($('act-min').value||'');
+  const _T = $('act-h') ? mtTempoHmsLer('act') : null; if(_T && _T.erro){ toast('⚠️ ' + _T.erro); return; }
+  const min = _T ? _T.seg/60 : parseTimeToMin($('act-min').value||'');
   if(!km || km<=0 || km>200 || !min || min<=0 || min>600){ toast('⚠️ Confira a distância e o tempo.'); return; }
   const r = maLogActivity(actLogType, km, min, window.__rpe || 5);
   closeModal();
@@ -8031,7 +8145,7 @@ function maInsight(){
   const porDia=[0,0,0,0,0,0,0]; all.forEach(x=>porDia[new Date(x.at).getDay()]++);
   const maxDia=porDia.indexOf(Math.max(...porDia));
   let manha=0,noite=0; all.forEach(x=>{ const h=new Date(x.at).getHours(); if(h<12)manha++; else if(h>=18)noite++; });
-  const prs=Object.values(state.prs||{}).map(p=>p.at).filter(Boolean).sort((a,b)=>a-b);
+  const prs=((typeof mtPrsReais==='function') ? mtPrsReais() : []).map(p=>p.at).filter(Boolean).sort((a,b)=>a-b);   // RC 4: só recordes reais
   const semPr = prs.length?Math.floor((Date.now()-prs[prs.length-1])/86400000):999;
   const ins=[];
   if(state.active==='lift'){
@@ -8319,7 +8433,8 @@ function maNudge(){
     // 🟣 ROXO — raro
     if([100,200,365].includes(total)) return {text:`🟣 Você chegou no seu ${total}º treino! Pouquíssima gente chega aqui. Vamos comemorar?`, tone:'rare'};
     // 🟠 LARANJA — importante
-    const prs=Object.values(state.prs||{}).map(x=>x&&x.at).filter(Boolean);
+    // RC 4: só recorde DE VERDADE (a referência do 1º registro de um exercício não é recorde)
+    const prs=((typeof mtPrsReais==='function') ? mtPrsReais() : []).map(x=>x&&x.at).filter(Boolean);
     if(prs.some(t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()===hoje.getTime();})) return {text:`🏆 Você bateu um recorde hoje!`, tone:'important'};
     const prox=[10,25,50,100,200,365].find(m=>m>total);
     if(prox && total>0 && (prox-total)<=2) return {text:`🎯 Falta ${prox-total===1?'1 treino':(prox-total)+' treinos'} para o seu ${prox}º treino!`, tone:'important', dica:{completa:`🎯 Você tem <b>${total}</b> treinos registrados e está a <b>${prox-total}</b> do marco de <b>${prox}</b>. Cada treino conta, inclusive um mais leve ou uma caminhada registrada como atividade.`}};
@@ -8335,7 +8450,18 @@ function maNudge(){
         return {text:`💧 Você bebeu só ${fmtL(ml)} L hoje. Meta: ${fmtL(meta)} L.`, tone:'curio', dica:{bolha:`💧 Você bebeu só ${fmtL(ml)} L hoje. Meta: ${fmtL(meta)} L.`, completa:`💧 Até agora você registrou <b>${fmtL(ml)} L</b> de água, e a meta de hoje é <b>${fmtL(meta)} L</b>. Um copo agora já ajuda. Quer registrar?<br><br><button class="btn btn-primary" style="padding:9px 16px;font-size:13px" onclick="aguaAdd(250);closeAssistant()">+250 ml</button> <button class="btn btn-ghost" style="padding:9px 16px;font-size:13px" onclick="aguaAdd(500);closeAssistant()">+500 ml</button>`}}; } }
     }catch(e){}
     if(!vac && total>=4){ const dc = maDicaConcreta(); if(dc) return {text:dc.bolha, tone:'curio', dica:dc}; }
-    if(!vac && temTreinoHoje && typeof fatigueInsight==='function' && fatigueInsight() && total>=4) return {text:`🧠 Dei uma olhada na sua recuperação — tenho uma dica para hoje.`, tone:'curio'};
+    // RC 4: o balão só promete uma dica quando a dica EXISTE e é para ANTES do treino de hoje. Antes ele dizia
+    // "Dei uma olhada na sua recuperação — tenho uma dica para hoje" sem levar a dica: ao abrir, o assistente
+    // mostrava só o resumo dos treinos já feitos. Agora o texto do balão é a própria conclusão e a resposta é a
+    // dica inteira; com o treino de hoje já feito (ou sem treino hoje) não há balão.
+    const feitoHojeN = all.some(x=>{ const d=new Date(x.at); d.setHours(0,0,0,0); return d.getTime()===hoje.getTime(); });
+    if(!vac && temTreinoHoje && !feitoHojeN && total>=4 && typeof fatigueInsight==='function'){
+      const fi = fatigueInsight();
+      if(fi && !/^✅/.test(fi)){
+        const resumo = fi.replace(/<[^>]+>/g,'').replace(/^\S+\s/, '').split(/\.\s/)[0].slice(0, 90);
+        return {text:`🧠 ${resumo}.`, tone:'curio', dica:{ completa: fi }};
+      }
+    }
     return null;
   }catch(e){ return null; }
 }
@@ -8416,7 +8542,7 @@ function nudgeResposta(n){
     }
     if(t==='important'){
       const partes = [];
-      const prs = Object.entries(state.prs||{}).filter(([,x])=>{ if(!x||!x.at) return false; const d=new Date(x.at); d.setHours(0,0,0,0); const h=new Date(); h.setHours(0,0,0,0); return d.getTime()===h.getTime(); });
+      const prs = Object.entries(state.prs||{}).filter(([,x])=>{ if(!x||!x.at||x.ref||!(x.quebras>0)) return false; const d=new Date(x.at); d.setHours(0,0,0,0); const h=new Date(); h.setHours(0,0,0,0); return d.getTime()===h.getTime(); });
       if(prs.length){
         partes.push(prs.slice(0,3).map(([id])=>`<button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;margin:2px 4px 2px 0" onclick="closeAssistant();setTimeout(()=>openExProgress('${id}'),200)">📈 ${nomeDoEx(id)}</button>`).join(''));
         partes.unshift('🏆 <b>Recordes de hoje:</b><br>' + prs.slice(0,4).map(([id,x])=>`• ${nomeDoEx(id)}: <b>${exBankIsIso(id) ? ((x.peso||x.weight||0)>0?(x.peso||x.weight)+'kg · ':'')+fmtTempo(x.reps) : (x.peso||x.weight||'—')+'kg × '+(x.reps||'—')}</b>`).join('<br>'));
@@ -11161,7 +11287,7 @@ function openHistoryEntry(idx){
     ${exBlock}
     <div class="field" style="margin-top:12px"><label>Nome</label><input class="input" id="he-name" value="${x.name.replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Data</label><input class="input" type="datetime-local" id="he-date" value="${toLocalDT(d)}" style="color-scheme:dark"></div>
-    <div class="field"><label>Duração (min:seg)</label><input class="input mono" type="text" inputmode="numeric" id="he-dur" value="${durToEdit(x.duration||0)}"></div>
+    <div class="field"><label>Duração (horas : minutos : segundos)</label>${mtTempoHmsHtml('he', x.duration||0, 'he-dur')}</div>
     ${isRun?`<div class="field"><label>Distância (km)</label><input class="input mono" type="number" step="0.1" id="he-km" value="${x.distance||''}"></div>`:''}
     <div class="row" style="gap:8px;margin-top:14px">
       <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
@@ -11177,10 +11303,12 @@ function saveHistoryEntry(idx){
   const mod = state.modules[state.active];
   const x = (mod.history||[])[idx]; if(!x) return;
   const kmAntes = x.distance || 0;   // guarda o valor antigo para ajustar os contadores
+  if($('he-h')){ const T0 = mtTempoHmsLer('he'); if(T0.erro){ toast('⚠️ ' + T0.erro); return; } }   // RC 4: valida antes de mudar qualquer campo
   x.name = $('he-name').value.trim() || x.name;
   const dv = $('he-date').value;
   if(dv){ const nd = new Date(dv); if(!isNaN(nd) && nd.getTime() !== x.at){ marcaExcluido(state.active, x); x.at = nd.getTime(); const kN = chaveHist(state.active, x); state.histExcluidos = (state.histExcluidos||[]).filter(k=>k!==kN); } }   // Beta 33: a data antiga não volta pela sincronização
-  x.duration = parseTimeToMin($('he-dur').value) || x.duration;
+  if($('he-h')){ const T = mtTempoHmsLer('he'); if(T.seg > 0) x.duration = T.seg/60; }
+  else x.duration = parseTimeToMin($('he-dur').value) || x.duration;
   // Beta 33: aceita vírgula ("5,2"), bike continua em km/h e o ritmo nunca sai "5:60/km"
   const kmEl = $('he-km'); if(kmEl){ const km = parseFloat(String(kmEl.value).replace(',','.')); if(km>0){ x.distance = km; if(x.duration) { const pace = x.duration/km; x.pace = x.activity==='bike' ? (km/(x.duration/60)).toFixed(1)+' km/h' : fmtPaceMin(pace); } } }
   // corrigiu a distância? os contadores vitalícios precisam acompanhar,
@@ -11306,10 +11434,16 @@ function deleteHistoryEntry(idx){
       const ids = (x.exercisesDone||[]).map(e=>e.id || slug(e.name));
       ids.forEach(id=>{
         if(!state.progress[id]) return;
-        state.progress[id] = state.progress[id].filter(pp=>{ const pd=new Date(pp.date); pd.setHours(0,0,0,0); return pd.getTime()!==today.getTime(); });
+        // RC 4: apaga só as séries DESTE treino (pelo sid). Antes apagava as do dia inteiro — inclusive as de outro
+        // treino feito no mesmo dia. Registro antigo sem sid: as séries sem sid daquele dia (comportamento anterior).
+        const diaX = new Date(x.at); diaX.setHours(0,0,0,0);
+        state.progress[id] = state.progress[id].filter(pp=>{ if(x.sid) return pp.sid !== x.sid; const pd=new Date(pp.date); pd.setHours(0,0,0,0); return pp.sid || pd.getTime()!==diaX.getTime(); });
         if(!state.progress[id].length) delete state.progress[id];
       });
       ids.forEach(id=>recomputePR(id, today.getTime()));
+    } else if(x && x.module==='lift' && x.sid && mtDia0Ts(x.at)===mtDia0Ts(Date.now())){
+      // RC 4: treino de hoje excluído mantendo as séries → elas voltam a ser o treino em andamento (dá para salvar de novo)
+      Object.keys(state.progress||{}).forEach(id=>(state.progress[id]||[]).forEach(pp=>{ if(pp && pp.sid === x.sid) delete pp.sid; }));
     }
     const removido = mod.history[idx];
     marcaExcluido(state.active, removido);   // Beta 33: não volta pela sincronização
@@ -11515,6 +11649,32 @@ function fmtDur(min, semSeg){
   if(h>0) return h+' h '+String(m).padStart(2,'0')+' min'+s;
   return m+' min'+s;
 }
+// RC 4: UM campo de tempo para todo registro e edição de atividade (corrida, caminhada, bike, avulsa, edição
+// do histórico): horas : minutos : segundos. Antes o registro avulso e a edição pediam "min:seg" num campo de
+// texto (e a régua da edição ia só até 300 min). O valor continua indo para o mesmo campo oculto de antes
+// (act-min / he-dur, em "h:mm:ss"), então todas as validações que já liam esse campo seguem valendo.
+// Internamente a duração continua em minutos com fração de segundo (sem perda: 1:02:42 = 62,7 min).
+function mtTempoHmsHtml(pref, min, alvo){
+  const t = Math.round((+min||0)*60), tem = t > 0;
+  const h = Math.floor(t/3600), m = Math.floor((t%3600)/60), s = t%60;
+  const inp = (suf, max, ph, lbl, v)=>`<input class="input mono" type="number" min="0" max="${max}" step="1" inputmode="numeric" id="${pref}-${suf}" placeholder="${ph}" aria-label="${lbl}" value="${tem ? v : ''}">`;
+  return `<div class="tempo-hms" id="${pref}-hms" oninput="mtTempoHmsSync('${pref}','${alvo}')">${inp('h', 23, 'h', 'horas', h)}<span>:</span>${inp('m', 59, 'min', 'minutos', m)}<span>:</span>${inp('s', 59, 's', 'segundos', s)}</div>`
+    + `<input type="hidden" id="${alvo}" value="${tem ? durToEdit(min) : ''}">`;
+}
+function mtTempoHmsLer(pref){
+  const g = k=>String(((document.getElementById(pref + '-' + k))||{}).value||'').trim();
+  const hv = g('h'), mv = g('m'), sv = g('s');
+  if(!hv && !mv && !sv) return { seg:0 };
+  const h = +hv || 0, m = +mv || 0, s = +sv || 0;
+  if(![h, m, s].every(Number.isInteger) || h < 0 || m < 0 || s < 0) return { erro:'Use só números inteiros no tempo.' };
+  if(m > 59 || s > 59) return { erro:'Minutos e segundos vão de 0 a 59.' };
+  return { seg: h*3600 + m*60 + s };
+}
+function mtTempoHmsSync(pref, alvo){
+  const el = document.getElementById(alvo); if(!el) return;
+  const T = mtTempoHmsLer(pref);
+  el.value = (T.erro || !T.seg) ? '' : durToEdit(T.seg/60);
+}
 // formato editável (mm:ss ou h:mm:ss) que o parseTimeToMin consegue reler
 function durToEdit(min){
   const t=Math.round((min||0)*60); const h=Math.floor(t/3600),m=Math.floor((t%3600)/60),sec=t%60;
@@ -11694,7 +11854,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // A tela de login/carregamento é controlada pelo listener fbAuth.onAuthStateChanged (ver seção AUTH)
 });
 
-Object.assign(window,{applyHeroCapa,processaMuralFoto,doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,listaPendentes,abrirPendente,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,concluirSerie,setDescansoAutomatico,descansoAutomatico,seriesPlanejadas,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
+Object.assign(window,{mtTempoHmsHtml,mtTempoHmsLer,mtTempoHmsSync,applyHeroCapa,processaMuralFoto,doGoogleSignIn,doLogout,doDeleteAccount,pickModule,finishSetup,switchModule,switchModuleUI,openSetupScreen,goTab,openSession,selectSession,openModal,closeModal,saveProfileEdit,regenPlan,cancelRunPlan,restoreWorkout,openDayDetail,saveDayNote,updateLevelHint,listaPendentes,abrirPendente,confirmaExclusaoFinal,showMesFechado,fecharMesFechado,explicaPersonalizado,explicaAdaptado,explicaRotina,sairDoSetup,doEmailAuth,resetAuthUI,dicaLogin,retryAccessCheck,resendVerification,toggleAuthMode,doResetPassword,openChangePassword,doChangePassword,toggleEquip,setRotina,toggleMobCard,shareWeekSummary,clearVideoLink,openSuggestions,maClearThread,sairDoPainel,deleteSuggestion,clearAllSuggestions,checkNewFeedback,pickSharePhoto,onSharePhotoPicked,setLibFilter,filterLib,openExercise,playExercise,saveQuiz,openSetLog,updateSet,delSet,addSet,closeSetLog,finishLiftWorkout,confirmLiftWorkout,markRunDone,openTrophies,pickPhoto,onPhotoPicked,removePhoto,saveWeight,goAdmin,setAdminFilter,renderAdminList,admGoPage,doAddStudent,openStudent,adjustDays,toggleStudent,removeStudent,exportData,openSwapExercise,doSwapExercise,unpinExercise,openRunLog,saveRunLog,openActivityLog,setActLogType,saveActivityLog,openHistoryEntry,saveHistoryEntry,deleteHistoryEntry,quickChangeEquip,quickChangeTerrain,openVideoAdmin,saveVideoLink,openAssistant,closeAssistant,maAsk,maAskText,openMuralAdmin,onMuralFotoPicked,saveMural,openSpecialAwardAdmin,saveSpecialAward,openContactAdmin,saveCoachContact,toggleTheme,applyTheme,toggleDeco,updateDeco,updateFab,toggleVacation,skipWorkout,unskipWorkout,setLifetime,unsetLifetime,doRestart,startRestFor,startRestTimer,stopRestTimer,concluirSerie,setDescansoAutomatico,descansoAutomatico,seriesPlanejadas,toggleRestMute,importMyData,savePain,clearPain,openWeekSummary,shareWeekImage,shareWorkoutImage,shareTrophiesImage,offerShareAfterWorkout,openMonthly,openMedals,histShowMore,calMove,openTrophyDetail,shareTrophyImage,awardNav,closeAwards,doShareNow,doSaveToDevice,testVideoLink});
 
 // carrega o contato do treinador ANTES do login (a tela de login mostra o botão do WhatsApp).
 // Fica no fim do arquivo para garantir que `coachContact` já foi declarado.
@@ -12847,7 +13007,9 @@ setTimeout(()=>{ try{ const t = +localStorage.getItem('mt_upd_chk')||0; if(Date.
 // Status coloridos (✅ 🟢 🟡 ⚪ medalhas) continuam como são.
 const ICO_SVG = {
   dumbbell:'<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
-  run:'<circle cx="14.5" cy="4.5" r="1.7"/><path d="M9 21l2.5-5-2.5-2 2-4.5 3.5 2 2.5 2.5M6.5 12.5l3-3.5"/>',
+  // RC 4: boneco com as duas pernas (uma à frente com o joelho dobrado, outra atrás empurrando) e os dois braços
+  // em oposição. O desenho antigo tinha uma perna só.
+  run:'<circle cx="14.6" cy="4.3" r="1.8"/><path d="M13.7 7.5l-2.1 5.6M13.3 8.8l3 1.9 2.1-1.5M12.9 9l-3.1 1.4-1.7 2.4M11.6 13.1l3.1 2.1-1 4.3M11.6 13.1l-1.9 3.9-3.7 1.5"/>',
   bike:'<circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-8h5l3 8M10 8l3 8M9 6h3"/>',
   flame:'<path d="M12 3c.8 3 4.5 4.8 4.5 9a4.5 4.5 0 0 1-9 0c0-1.8.8-3 1.8-4 .3 1.2 1 1.8 1.7 2 .2-2 .3-4.5 1-7z"/>',
   scale:'<path d="M12 4v15M7 20h10M5 8h14M5 8l-2.5 6a3 3 0 0 0 5 0L5 8zM19 8l-2.5 6a3 3 0 0 0 5 0L19 8z"/>',

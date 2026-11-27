@@ -1,3 +1,42 @@
+# MetaTreino 2027 RC 4 — dados certos e um app mais organizado
+
+**Não precisa publicar o `firestore.rules`.** Nada mudou nas regras. Os campos novos ficam no estado do próprio aluno e nada foi apagado. Detalhes técnicos em `RELATORIO-RC4.md`. Testes no celular em `ROTEIRO-DE-TESTES.md`, seção 2027 RC 4.
+
+## Lógica e confiabilidade
+1. **Sono em minutos exatos.** 6 h 37 é 6 h 37 (397 min) em todo lugar, nos dois jeitos de registrar. Aceita qualquer minuto de 0 a 59. As noites antigas continuam como estavam.
+2. **Tempo em horas : minutos : segundos** também no registro avulso e na edição de uma atividade do histórico.
+3. **Análise do mês justa.** Conta a partir do dia em que o plano começou. Com poucos dias de plano, não tira conclusão.
+4. **Meta Assistente sem promessa vazia.** O balão só aparece quando há uma dica de verdade, e já traz a dica.
+5. **Musculação e corrida conversam no Início:**
+   - a linha "Hoje" mostra as duas modalidades;
+   - o descanso de uma não vira "dia de descanso";
+   - o aviso das pernas sabe quando a caminhada de hoje já foi feita.
+6. **Atividade da semana.** Visual novo, e cada parte abre o seu detalhe: treinos do plano, cada dia, séries, semanas na meta e extras.
+7. **Volume em kg** no card de compartilhar, opcional e explicado. As séries continuam como número principal.
+8. **Dois treinos no mesmo dia** com o mesmo exercício não se misturam mais: histórico, card, PDF, recordes e sincronização.
+9. **Aba Treinos** volta no treino de hoje, ou no que está em andamento, com as séries intactas.
+10. **Sono × atividade física:**
+    - médias com os treinos da semana;
+    - qualidade e disposição dos últimos 30 dias;
+    - relação com os treinos, apresentada como associação.
+    
+    As cores dos níveis agora são bem diferentes entre si.
+
+## Experiência
+11. **Conquistas fora do Início.** Ficam na aba Desafios.
+12. **Sem janela grande depois do treino.** Aparece um aviso pequeno, "Nova conquista desbloqueada"; tocar nele abre Desafios.
+13. **Desafios organizado:** Desafio atual → Em grupo → Conquistas → Histórico → Em breve, sem atalhos repetidos. As semanas do desafio anteriores ao seu início não são cobradas.
+14. **Metas do mês (bronze, prata e ouro):** mantidas, mas mais simples (primeiro as do foco do mês) e proporcionais para quem começou no meio do mês.
+15. **Desafio do mês no Início** em uma linha, só enquanto houver algo a fazer.
+16. **Indicadores do Início** alinhados com 1, 2, 3 ou 4 cartões.
+17. **Ícones das conquistas** revistos: cada um representa a própria conquista.
+18. Nenhuma conquista, treino ou registro de sono foi apagado.
+19. **Compartilhar** com a logo cadastrada no painel e, com foto, os dados em cima ou embaixo.
+20. **Boneco da corrida** com as duas pernas.
+21. Textos revistos ("Depois de um dia corrido…") e dicas de clima recolhidas, apresentadas como sugestões.
+
+---
+
 # MetaTreino 2027 RC 3 — estabilidade, dados certos e sono completo
 
 **Não precisa publicar o `firestore.rules`.** Nada mudou nas regras (conferido pelo `testes/regras.js`). Os campos novos são opcionais e ficam no estado do próprio aluno. Detalhes técnicos em `RELATORIO-RC3.md`.

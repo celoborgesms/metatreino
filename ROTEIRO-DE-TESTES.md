@@ -2,6 +2,45 @@
 
 Leva uns 50 minutos. Anote **modelo do celular, sistema (Android/iOS) e navegador**, e mande print de tudo o que parecer estranho. As regras do Firestore não mudaram nesta versão.
 
+## 00000. 2027 RC 4 — em aparelho real (Android, iPhone e computador)
+Leva uns 40 minutos. Anote o modelo do celular e mande print do que parecer estranho. **As regras do Firestore não mudaram.**
+
+**Sono**
+1. Início › Sono › "Só o total": digite 6 h e **37** min (qualquer minuto de 0 a 59 é aceito). Salve e reabra: tem que aparecer 6 h 37 no Início, na lista de noites e na média. Tente 75 minutos: o app avisa e não salva.
+2. "Dormi / acordei": 23:40 e 06:55 → total 7 h 15. Uma noite antiga (de antes desta versão) continua aparecendo com o mesmo valor de antes.
+3. Progresso › Sono e recuperação: as cores da qualidade são vermelho, laranja, amarelo, verde e azul (dá para distinguir no sol?). Em "Sono e atividade física", a comparação só aparece com dados suficientes e diz que é associação, não causa.
+
+**Tempo das atividades**
+4. Registre uma caminhada avulsa com 1 : 19 : 20 (h : min : s). Abra pelo Histórico e edite a duração: os três campos (horas, minutos, segundos) aparecem preenchidos. Troque para 1 : 02 : 42 e confira no histórico, no card de compartilhar e no PDF.
+
+**Musculação: dois treinos no mesmo dia**
+5. Faça o treino do dia e salve. Depois, no mesmo dia, abra outro treino que repita um exercício (ex.: prancha) e registre: ele **não** pode aparecer já feito com as séries do primeiro treino. Salve. No Histórico, cada treino mostra só as próprias séries (abra os dois). Compartilhe cada um: as séries são diferentes. Exclua o segundo (limpando as séries): o primeiro continua inteiro.
+
+**Aba Treinos**
+6. Abra um treino de outro dia, vá para o Início, espere alguns segundos e volte para Treinos: abre o treino de **hoje**. Comece um treino (registre uma série), vá para outra aba e volte: o treino em andamento continua com a série. Em dia sem treino, a aba abre no próximo treino da semana.
+
+**Início: musculação × corrida**
+7. Num dia em que só a corrida tem treino, com Musculação selecionada: o cartão diz "Musculação: descanso hoje" e o que a corrida tem hoje; a saudação não fala em descanso geral. A linha "Hoje" (abaixo do seletor) mostra as duas modalidades.
+8. Depois de treinar pernas, no dia seguinte registre uma **caminhada leve** (esforço até 6): o aviso "faça a corrida de hoje em ritmo leve" tem que sumir.
+9. Com chuva, as dicas de clima aparecem recolhidas (uma linha + "mais dicas"). A frase "Depois do dia corrido" não aparece mais.
+
+**Análise e assistente**
+10. Pergunte ao assistente "análise do mês". Se o plano começou neste mês, ele diz a data de início e não diz que você "planejou demais"; com poucos dias de plano, a mensagem é neutra.
+11. Se o balão do assistente aparecer, ele já traz a dica (ex.: pernas se recuperando). Depois do treino do dia, o balão "dica para hoje" não aparece.
+
+**Atividade da semana e compartilhamento**
+12. Toque no placar, num dia, em "Séries", em "Semanas na meta" e em "Extras": cada um abre um detalhe diferente. Confira em tema claro e escuro.
+13. Compartilhe um treino de musculação: o número grande são as séries. Ligue "Mostrar volume registrado (kg)": aparece "Volume registrado: … kg (soma de carga × repetições)". Desligue: some.
+14. Com foto da galeria: escolha "Em cima" e "Embaixo" em Posição dos dados; os dados ficam legíveis e dentro da imagem. Em Marca, "Logo do MetaTreino" usa a logo cadastrada no painel; "Só o ícone M" volta ao M. Confira com e sem o nome.
+
+**Conquistas e Desafios**
+15. Ganhe uma conquista ao registrar (ex.: primeiro treino de uma conta de teste): **não** abre janela grande; aparece um aviso pequeno no rodapé "Nova conquista desbloqueada". Toque nele: abre Desafios.
+16. Desafios: a ordem é Desafio atual → (Em grupo, se tiver grupo) → Conquistas → Histórico → Em breve. Semanas do desafio antes do início do seu plano aparecem como "Antes do início do seu plano". "Disponíveis" abre as conquistas já filtradas.
+17. Início: não tem mais Conquistas. Em Personalizar início, esconda 1, 2 e depois 3 indicadores: os que sobram ocupam a linha sem buraco (o último sozinho ocupa a largura toda). O desafio do mês aparece numa linha só (some quando o desafio é concluído).
+18. Conta em dupla: os dois celulares mostram a seção "Em grupo" em Desafios.
+19. Ícones: confira "Nem a Preguiça" (bateria), "Sem Drama" (calendário com check), "Sabedoria" (escudo com coração), "Sofá Que Espere" (calendário S·D), km caminhados e pedalados com o desenho da modalidade.
+20. O boneco da corrida (seletor Musculação/Corrida) tem as duas pernas.
+
 ## 00000. 2027 RC 3 — em aparelho real (Android, iPhone e computador)
 **Contas e sessão**
 1. Entre com a conta A, escolha um tema e converse com o Meta Assistente. Saia. A tela de entrada volta no tema padrão.
